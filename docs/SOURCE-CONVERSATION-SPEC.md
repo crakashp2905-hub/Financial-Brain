@@ -1373,3 +1373,122 @@ repository found so far as **BUILD / INTEGRATE / WRAP / STUDY / REJECT**, record
 - where it sits in Financial-Brain
 
 That produces the **master repository / technology map**, instead of collecting more repos.
+
+---
+
+## 16. FinLLMs — the academic map of LLMs in finance
+
+**Repo:** [adlnlp/FinLLMs](https://github.com/adlnlp/FinLLMs) · ~387 stars ·
+**no LICENSE file** (curated list + figures; treat as reference, not code) ·
+last updated Aug 2026.
+
+Companion to the survey *"A Survey of Large Language Models in Finance (FinLLMs)"*
+([arXiv 2402.02315](https://arxiv.org/abs/2402.02315)), published in *Neural Computing
+and Applications* (2025). It contains **no runnable code** — README, figures, paper and
+dataset links only.
+
+### Why it matters here
+Every other repo in this spec is *machinery*. This one is the **evaluation and
+methodology map**: it tells us which financial-NLP tasks are solved, which are not, what
+the benchmark datasets are, and how much headroom actually exists. It is the reference
+for the Research Brain's *evaluation* discipline and for deciding where a language model
+belongs in Financial-Brain at all.
+
+### Evolution: general LMs → financial LMs
+- **General-domain**: GPT-1/2/3/4, BERT, T5, ELECTRA, BLOOM, LLaMA, LLaMA2
+- **Financial-domain**: FinBERT-19 (ProsusAI), FinBERT-20, FinBERT-21 (IJCAI),
+  FLANG (EMNLP 2022), **BloombergGPT**, **FinMA / PIXIU**, **InvestLM**, **FinGPT**
+  (AI4Finance — same foundation as FinRL, already in our stack)
+
+### Five techniques (the taxonomy to steer our own model choices)
+| Technique | Exemplars |
+|---|---|
+| Continual pre-training | FinBERT-19 |
+| Domain-specific pre-training from scratch | FinBERT-20 |
+| Mixed-domain pre-training | FinBERT-21, FLANG |
+| Mixed-domain LLM + prompt engineering | BloombergGPT |
+| Instruction fine-tuned LLM + prompt engineering | FinMA, InvestLM, FinGPT |
+
+**Implication for us:** pre-training from scratch is off the table; the viable path is
+**instruction fine-tuning + prompt engineering on top of a strong general model**, with
+small specialist encoders (FinBERT-class) for narrow, high-volume classification jobs
+(sentiment tagging of news/filings) where an LLM call per document is wasteful.
+
+### Six benchmark tasks and their datasets
+| Task | Datasets |
+|---|---|
+| Sentiment Analysis (SA) | Financial PhraseBank (FPB), FiQA-SA, SemEval-2017, StockEmotions |
+| Text Classification (TC) | Headline, FedNLP, **FOMC (Trillion Dollar Words)**, Banking77 |
+| Named Entity Recognition (NER) | FIN, **FiNER-139** (XBRL tagging) |
+| Question Answering (QA) | FiQA-QA, **FinQA**, **ConvFinQA**, **TAT-QA**, PACIFIC |
+| Stock Movement Prediction (SMP) | StockNet, CIKM18, BigData22 |
+| Text Summarization (Summ) | **ECTSum** (earnings-call bullet summarisation), MultiLing 2019 |
+
+Evaluation compares FinPLMs (FLANG), FinLLMs (BloombergGPT, FinMA), general LLMs
+(ChatGPT, GPT-4) and task-specific SOTA. Note the survey's own caveat: **FinPLMs were
+never run on the harder tasks** (hybrid QA, SMP, summarisation), so those cells are
+absent rather than lost.
+
+### Eight advanced tasks
+Relation Extraction (**FinRED**) · Event Detection (**EDT** — corporate events for
+news-driven trading) · Causality Detection (FinCausal20) · Numerical Reasoning
+(FiNER-139, FinQA, ConvFinQA, TAT-QA, PACIFIC) · Structure Recognition (**FinTabNet** —
+table extraction) · Multimodal Understanding (**MAEC**, **MONOPOLY** — earnings-call and
+policy-conference audio/video) · Machine Translation (MINDS-14, **MultiFin** —
+multilingual financial NLP) · Market Forecasting.
+
+### Where each task maps into Financial-Brain
+| FinLLM task | Financial-Brain module |
+|---|---|
+| Sentiment Analysis | Social & Sentiment Intelligence layer |
+| Text Classification | Event Intelligence (hawkish/dovish RBI policy ≈ FOMC task) |
+| NER / Structure Recognition | Document Intelligence → knowledge-graph entity extraction; table extraction from annual reports |
+| QA / Numerical Reasoning | Market Copilot; reasoning over filings and statements |
+| Relation Extraction | **Indian Market Knowledge Graph edge construction** (supplier/customer/promoter links) |
+| Event Detection | Event Intelligence Engine; news → stock impact |
+| Causality Detection | Event → sector → company propagation |
+| Summarization (ECTSum) | Earnings-call and filing digests; "what changed since yesterday" |
+| Multimodal (MAEC, MONOPOLY) | Earnings-call audio analysis (management tone) |
+| Machine Translation (MultiFin) | **Multilingual Indian financial documents** — the differentiator already flagged for Sarvam |
+| Stock Movement Prediction | ⚠ see below |
+
+### ⚠ The most important lesson from this repo
+SMP is a benchmark task with **weak, contested effect sizes** across StockNet / CIKM18 /
+BigData22 — and the survey's comparison shows no model, FinLLM or otherwise, achieving
+anything resembling a reliable edge. This is direct empirical support for the rule
+already in §14:
+
+> **The LLM is not the alpha source.** Use FinLLM capability for *reading* — extraction,
+> classification, relation-building, summarisation, QA — and leave *prediction* to the
+> quant stack behind the Alpha Validation Firewall (§15).
+
+### The India gap this exposes
+Every dataset above is **English and almost entirely US/EU-centric** (FPB, FiQA, FOMC,
+FinQA, ECTSum, StockNet are all US). There is **no Indian equivalent** in the benchmark
+set. Consequences:
+
+1. We cannot evaluate Indian financial NLP against any published baseline — we must
+   **build our own evaluation set** (a labelled corpus of NSE/BSE announcements, Indian
+   earnings-call transcripts, RBI policy statements).
+2. **RBI policy statements are the Indian FOMC task** — hawkish/dovish classification
+   transfers conceptually and is worth building as our first labelled dataset.
+3. **MultiFin / MINDS-14** are the only multilingual footholds; Indian regional-language
+   financial text is essentially unbenchmarked. That is an open research gap *and* our
+   stated differentiator.
+4. Indian filings are largely in English (helpful), but earnings calls carry heavy
+   accent/code-switching that off-the-shelf ASR handles worse than US calls — a real
+   cost on the MAEC-style multimodal path.
+
+### Classification
+**STUDY** — not INTEGRATE. No code, no license. Use it for:
+- choosing model architecture per task (encoder vs LLM)
+- designing the Research Brain's evaluation harness
+- the reading list of datasets to mirror for India
+- resisting the temptation to make the LLM predict prices
+
+Also worth pulling from the ecosystem it points at: **FinGPT** (AI4Finance — instruction
+tuning, already adjacent to FinRL in our stack) and **PIXIU/FLARE** (the leaderboard
+harness), both of which *are* runnable and permissively adjacent to what we already use.
+
+Related venues to track: FNP, FinNLP, ECONLP, AAAI AI-for-Financial-Services bridge,
+MUFFIN, KDF.
