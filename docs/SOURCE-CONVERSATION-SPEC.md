@@ -1492,3 +1492,248 @@ harness), both of which *are* runnable and permissively adjacent to what we alre
 
 Related venues to track: FNP, FinNLP, ECONLP, AAAI AI-for-Financial-Services bridge,
 MUFFIN, KDF.
+
+---
+
+## 17. From a design dossier to a Financial Brain — missing operating contracts
+
+### The central correction
+
+The project does **not** become a Financial Brain by adding more agents, repositories,
+or model providers. It becomes one by operating a reliable, measurable, and governed
+closed loop:
+
+```text
+Observe -> Verify -> Model the market -> Form a thesis -> Size risk
+   -> Decide -> Record -> Observe outcome -> Diagnose -> Improve
+```
+
+The durable intellectual property is therefore:
+
+```text
+Evidence -> Thesis -> Decision -> Outcome -> Postmortem -> Calibrated future judgement
+```
+
+It is neither a chatbot, a RAG system, nor a swarm of agents. The LLM may help to
+investigate, extract, summarise and argue; deterministic data, validation, policy, and
+risk controls decide what may be proposed or executed.
+
+### 17.1 Product charter comes before architecture
+
+Choose a single initial user and job before building further:
+
+- long-term Indian-equity investor;
+- active swing trader;
+- registered advisor/research team; or
+- institutional investor.
+
+These are different products. They imply different decision horizons, data latency,
+portfolio constraints, evaluation metrics, user experience, compliance requirements,
+and acceptable automation. The recommended first user is a **self-directed,
+long-term Indian-equity investor**. The first job is: *understand what changed in my
+portfolio/watchlist, why it matters, and whether any recorded thesis has strengthened
+or weakened.*
+
+Do not market the initial product as a stock-tip engine. If the service provides
+buy/sell/hold calls, targets, stop losses, model portfolios, or personalised investment
+recommendations to others, obtain specialist SEBI legal advice and design the product,
+disclosures, records, and operating model accordingly.
+
+### 17.2 Canonical, point-in-time market data model
+
+Before agents, establish a canonical security master and time-aware data contracts.
+One company/security must resolve across NSE, BSE, Kite, Screener, Moneycontrol, and
+company filings, including:
+
+- ISIN, exchange identifiers, symbols, company and group identity;
+- corporate actions, mergers, splits, bonuses, dividends, symbol changes, suspensions,
+  and delistings;
+- adjusted and unadjusted OHLCV, with an explicit adjustment policy;
+- financial-statement period, filing date, publication time, revisions/restatements,
+  and source document;
+- instrument universe membership at each historic point; and
+- entitlement, license, freshness, and quality metadata for every feed.
+
+Every fact must distinguish **event time** (when it occurred), **publication time**
+(when it became public), **ingestion time** (when Financial-Brain saw it), and
+**effective/as-of time** (the latest information that could validly have informed a
+decision). This is indispensable for preventing look-ahead and survivorship bias.
+
+### 17.3 Evidence ledger and provenance
+
+Citation is not enough. Store an immutable evidence ledger for numbers, statements,
+extracted claims, and derived conclusions:
+
+```text
+evidence_id -> source URI/document -> source tier -> content hash -> retrieval time
+            -> event/publication time -> extraction/transformation -> confidence
+            -> data-quality status -> world-state version -> decisions that used it
+```
+
+Claims must never silently overwrite their source. A revised result, corrected filing,
+or reclassified entity creates a new version and retains the old one. This makes every
+recommendation reproducible and auditable.
+
+### 17.4 Market World State
+
+Agents must reason from a versioned **Market World State**, not independently browse
+the web and improvise. A world-state snapshot includes:
+
+- price, liquidity, volatility, breadth, index and sector state;
+- company fundamentals, filings, events, and disclosure status;
+- macro/regime variables and their data-as-of time;
+- known relationships in the company/sector/policy graph;
+- portfolio positions, cash, exposures, constraints, and open orders;
+- unresolved hypotheses, thesis invalidations, anomalies, and missing data; and
+- a complete evidence set and data-quality assessment.
+
+The Orchestrator may request research that produces candidate evidence. Only verified,
+typed evidence updates the world state. Every decision references one immutable
+world-state version.
+
+### 17.5 Separate knowledge, context, and experience in concrete stores
+
+The three-store principle must be implemented, not merely named:
+
+| Store | Purpose | Examples |
+|---|---|---|
+| Knowledge | Slow-changing, sourced facts and relationships | ownership, products, sector, supplier links, policy concepts |
+| Context | Current, time-bounded market world state | today's price, regime, results, event, portfolio exposure |
+| Experience | Decision/outcome history | prior thesis, observed return, attribution, postmortem, calibration |
+
+No vector database or graph replaces the decision database. The decision database is
+the system's empirical memory; the knowledge graph represents relationships, and
+retrieval helps agents find evidence.
+
+### 17.6 Decision contract and state machine
+
+Make every recommendation a structured, immutable decision record rather than prose:
+
+```text
+decision_id, instrument, universe, horizon, action, thesis,
+supporting_evidence, contrary_evidence, primary_uncertainty,
+world_state_version, expected payoff/scenarios, invalidation conditions,
+entry/exit logic, sizing/risk budget, portfolio impact, approver,
+execution status, outcome window, postmortem status
+```
+
+Use a strict lifecycle:
+
+```text
+DRAFT -> EVIDENCE VERIFIED -> RISK REVIEWED -> PAPER CANDIDATE
+      -> HUMAN-APPROVED -> PROPOSED TO BROKER -> EXECUTED
+      -> OUTCOME MEASURED -> POSTMORTEM COMPLETE
+```
+
+Only the human-approval/execution policy may advance a live-trade proposal. An LLM,
+web page, document, social post, or agent workflow cannot bypass this state machine.
+
+### 17.7 Two decision lanes, not one
+
+The existing statement "no BUY without a backtest" applies to deterministic,
+repeatable quantitative strategies, not cleanly to every single-company fundamental
+thesis. Keep two explicit lanes:
+
+1. **Quantitative strategy lane** — versioned code; point-in-time universe and data;
+   realistic costs, slippage and liquidity; train/test separation; walk-forward,
+   out-of-sample, robustness, and capacity validation; paper trading before promotion.
+2. **Fundamental/discretionary research lane** — source quality; falsifiable thesis;
+   comparable historical case studies where possible; scenario/risk analysis;
+   portfolio constraints; continuous invalidation monitoring; outcome postmortem.
+
+Both lanes use the same evidence ledger, world-state, decision record, risk gate, and
+outcome store. Neither lane is allowed to change live trading rules directly.
+
+### 17.8 Scores must be calibrated decision aids, not predictions
+
+An AI/entry score is meaningful only if it declares:
+
+- the instrument universe and time horizon;
+- the benchmark and definition of success;
+- point-in-time features and missing-data policy;
+- transaction-cost, liquidity, and capacity assumptions;
+- historical calibration/reliability by score band, regime, and market-cap segment; and
+- uncertainty, data quality, and disagreement separately from the score.
+
+Never show a number such as `82/100` as a price-prediction probability. It is a
+decision aid whose usefulness must be measured against a transparent benchmark.
+
+### 17.9 Outcome attribution and controlled learning
+
+Raw return is not learning. For each completed decision, attribute the result where
+possible to market beta, sector move, factor exposure, earnings surprise, valuation
+change, timing, execution cost, thesis error, risk-rule error, or luck. Track accuracy
+by horizon, market regime, sector, market-cap band, strategy, and decision type.
+
+The adaptation loop may create a *candidate* improvement only through:
+
+```text
+Observed outcome -> attribution -> hypothesis -> versioned experiment
+-> validation -> paper trade -> risk committee -> human-approved promotion
+```
+
+It must support rollback, preserve old versions, and never make a silent prompt,
+model, score, or live-rule change.
+
+### 17.10 Evaluation harness and acceptance criteria
+
+Build evaluation before broad autonomy. Maintain labelled Indian data and tests for:
+
+- entity resolution and corporate-action accuracy;
+- filing/event extraction, classification, and timeliness;
+- citation correctness, claim-to-evidence support, and contradiction detection;
+- data freshness, missing-data handling, and source-tier precedence;
+- regime classification stability;
+- thesis-invalidation alert recall and false-positive rate;
+- decision calibration and performance versus declared benchmarks;
+- quant backtest reproducibility, point-in-time integrity, costs, and leakage checks;
+- prompt-injection resistance and tool-permission enforcement; and
+- portfolio-risk and order-policy rejection tests.
+
+The governing measure is not "did the AI sound insightful?" It is: *did this system
+improve evidence quality, decision discipline, calibrated judgement, and risk-adjusted
+outcomes relative to the stated benchmark?*
+
+### 17.11 Security, data, and operational governance
+
+Every browser page, PDF, social post, transcript, external tool result, and user upload
+is untrusted content. The harness must provide prompt-injection detection/isolation,
+credential vaulting, secret redaction, tool allowlists, least-privilege access,
+transaction scopes, immutable audit logs, sandboxed code execution, and data
+exfiltration controls.
+
+Production readiness also requires explicit data entitlements and retention rules;
+source licensing; privacy/consent policy for portfolio data and uploaded documents;
+observability; incident response; backups/disaster recovery; and legal/compliance
+review of recommendation and execution features.
+
+### 17.12 Minimum viable Financial Brain
+
+The first real vertical slice should be deliberately narrow:
+
+1. Official NSE/BSE disclosures plus licensed or permitted EOD price data and one
+   canonical security master.
+2. A versioned watchlist/portfolio world state.
+3. A cited **What changed since yesterday?** briefing.
+4. A company thesis card showing supporting evidence, contrary evidence, uncertainty,
+   invalidation conditions, and data quality.
+5. Immutable decisions, alerts, outcome records, and postmortems.
+6. Portfolio risk/concentration analysis and paper-only proposed actions.
+
+Only after that slice proves reliable should the project add real-time data, broad
+social ingestion, complex graph inference, agent organisations, strategy discovery,
+and human-approved broker execution.
+
+### What this project does not need initially
+
+- twenty integrated repositories;
+- autonomous execution or reinforcement learning;
+- a Bloomberg-scale terminal;
+- a large multi-agent hierarchy;
+- a knowledge graph for every possible relationship; or
+- a promise to predict winning stocks.
+
+The first product should be named and evaluated as an **Indian Equity Research &
+Portfolio Copilot**. Its job is to make the investor more informed, consistent,
+auditable, and risk-aware. A Financial Brain emerges only after repeated evidence,
+decisions, and measured outcomes demonstrate calibrated improvement.
