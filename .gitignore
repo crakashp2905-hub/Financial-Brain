@@ -1,0 +1,15 @@
+# Obsidian per-machine state (vault content IS tracked)
+brain/.obsidian/workspace*.json
+brain/.obsidian/cache
+brain/.trash/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# OS
+Thumbs.db
+.DS_Store

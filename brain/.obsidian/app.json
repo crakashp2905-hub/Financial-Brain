@@ -1,0 +1,10 @@
+{
+  "alwaysUpdateLinks": true,
+  "newLinkFormat": "shortest",
+  "useMarkdownLinks": false,
+  "attachmentFolderPath": "00-Meta/attachments",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "09-Journal",
+  "showUnsupportedFiles": false,
+  "strictLineBreaks": false
+}
