@@ -67,7 +67,9 @@ The classification the design work kept deferring. Every resource, one line.
 | [skfolio](https://github.com/skfolio/skfolio) | Portfolio | 🟢 BSD-3 | **INTEGRATE** | Portfolio optimisation |
 | [Riskfolio-Lib](https://github.com/dcajasn/Riskfolio-Lib) | Portfolio | 🟢 BSD-3 | **INTEGRATE** | Risk measures, constrained optimisation |
 | [PyPortfolioOpt](https://github.com/robertmartin8/PyPortfolioOpt) | Portfolio | 🟢 MIT | **INTEGRATE** | Efficient frontier, Black-Litterman, HRP |
-| [TA-Lib (python)](https://github.com/TA-Lib/ta-lib-python) | Quant | 🟢 BSD-2 | **INTEGRATE** | Deterministic indicator service |
+| [TA-Lib (python)](https://github.com/TA-Lib/ta-lib-python) | Quant | 🟢 BSD-2 | **INTEGRATE** | Deterministic indicator service (Phase 2) |
+| [Docling](https://github.com/docling-project/docling) | Documents | 🟢 MIT | **INTEGRATE** | Filing/PDF/table/XBRL parsing — Phase 1–2 |
+| [Dagster](https://docs.dagster.io/) | Orchestration | 🟢 Apache-2.0 | **DEFER** | Only when idempotent jobs + a scheduler stop being enough |
 | [TradingAgents](https://github.com/TauricResearch/TradingAgents) | Agents | 🟢 Apache-2.0 | **INTEGRATE** | Investment-committee graph |
 | [NautilusTrader](https://github.com/nautechsystems/nautilus_trader) | Execution | 🟡 LGPL-3.0 | **WRAP** | Event-driven backtest + execution core |
 | [OpenBB](https://github.com/OpenBB-finance/OpenBB) | Data | 🔴 AGPL-3.0 | **WRAP** | Data abstraction — behind our provider API |
@@ -538,6 +540,86 @@ The layer none of them provides: the **overnight situational-awareness brief** �
 
 **Venues to track:** FNP (Financial Narrative Processing) · FinNLP · ECONLP ·
 AAAI AI-for-Financial-Services bridge · MUFFIN · KDF.
+
+---
+
+## 9a. Document ingestion and orchestration
+
+### Docling — **INTEGRATE** (Phase 1–2)
+`docling-project/docling` · MIT
+
+The gap the original register left open. Annual reports, results PDFs and investor
+presentations are core inputs, and the register named **Browser Use** for them — which is
+an acquisition tool, not a parser. Docling handles PDFs, tables, XBRL, Office documents
+and OCR with structured export.
+
+Correct division of labour:
+- **Browser Use** — *find and fetch* the document (last-mile, sandboxed)
+- **Docling** — *parse* it into structure
+- **C00 raw lake** — keep the original bytes either way
+
+Feeds [C11 Document intelligence](BUILD-FLOW.md) and the Structure Recognition /
+Numerical Reasoning tasks in §7.
+
+### Dagster — **DEFER**
+Evaluate for scheduled data assets and lineage, but **only once simple idempotent jobs
+and a scheduler are no longer enough**. Phase 0 already provides idempotence,
+replayability, lineage, quarantine and run history in ~300 lines (`ingest/job.py`);
+adding an orchestration framework now would be tooling ahead of need.
+
+Migrate when: multiple interdependent asset graphs, backfill coordination across sources,
+or partition-aware retries become the daily problem.
+
+---
+
+## 9b. Efficient use of the register
+
+The register is directionally right; the practical core should be smaller.
+
+| Group | Use efficiently | Do not do |
+|---|---|---|
+| **Build ourselves** | Security master, PIT store, Indian cost model, evidence ledger, world state, decision database, outcome attribution, India implementability gate | Delegate these to a generic repo |
+| **Integrate early** | TA-Lib (deterministic indicators), Docling (filings), one portfolio library later | Add agent frameworks before the data exists |
+| **Evaluate, then pick one** | Qlib **or** Vibe-Trading; skfolio **or** Riskfolio-Lib | Run overlapping engines in production |
+| **Wrap behind interfaces** | NautilusTrader, Browser Use, OpenBB, OpenViking | Let their data/models/licences become lock-in |
+| **Study only** | Fincept, Paperclip, OntoBricks, EntroPy, FinRL, FinRL-Meta, FinGPT, MLFinLab methods | Make them runtime dependencies now |
+| **Reject / defer** | Hummingbot, cloudQuant/backtrader, Bloomberg-scale UI, autonomous trading, X firehose | Build anything with no India-specific payoff |
+
+### Revised per-repo decisions
+
+- **TA-Lib** — integrate in Phase 2. A deterministic feature service, not an AI dependency.
+- **Docling** — the missing Phase-1/2 document-ingestion resource. Added above.
+- **TradingAgents** — reuse the committee pattern and structured-output ideas; do **not**
+  import its US-centric tools, data paths or workflow unchanged.
+- **Vibe-Trading** — contained proof-of-concept, **not a core dependency yet**. Its India
+  support uses Yahoo/yfinance-style NSE/BSE symbols: fine for research prototypes,
+  inadequate as the canonical, licensed, point-in-time spine — which Phase 0 now provides
+  properly. Downgraded from INTEGRATE to *evaluate-then-choose*.
+- **Qlib** — Phase 3, for factor research and experiment structure. Choose it if we want
+  maximum control; otherwise validate Vibe-Trading first. **Not both as primary.**
+- **NautilusTrader** — best candidate for event-driven backtesting and paper execution,
+  behind our own interface. LGPL is workable, but **there is no official Kite adapter** —
+  we build and test that ourselves. Budget for it.
+- **skfolio vs Riskfolio-Lib** — pick one primary after a small benchmark against our
+  actual constraints; PyPortfolioOpt stays a cross-check, not a parallel core.
+- **OpenBB** — **not the data plane.** AGPL-3.0, and it does not solve Indian official
+  feeds, filings or PIT data. Optional provider adapter behind `providers/base.py` only.
+- **OpenViking** — **skip for the MVP.** PostgreSQL/pgvector plus object storage and the
+  decision database are enough. Revisit only if hierarchical retrieval becomes a
+  *measured* bottleneck. This supersedes open decision #4: the answer is "neither, yet".
+- **Fincept** — study terminal/workflow ergonomics; do not fork for any commercial path.
+- **Paperclip** — defer until multiple agents genuinely need budgets, delegation and
+  long-running task ownership.
+- **FinRL / FinRL-Meta** — research only, never on a live or paper-trading control path.
+- **MLFinLab / EntroPy** — take methodology (deflated Sharpe, multiple-testing controls,
+  leakage checks), not code, unless licensing and maturity are verified.
+
+> Repositories should accelerate commodity capabilities. They must not define the product.
+
+What Financial-Brain must own: India-specific point-in-time data · ISIN-based identity and
+corporate-action history · promoter/group/pledging intelligence · evidence → decision →
+outcome memory · India-valid strategy and cost validation. That is where the defensible
+advantage accumulates — and Phase 0 has started the first two.
 
 ---
 
