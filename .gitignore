@@ -13,3 +13,16 @@ venv/
 # OS
 Thumbs.db
 .DS_Store
+
+# Data stays out of git.
+# Two reasons: it is large and rebuildable, and redistributing exchange data
+# requires an agreement with the exchange (docs/FEASIBILITY-INDIA.md "Data rights").
+# The lake is the irreplaceable asset - back it up separately, do not push it.
+data/
+*.duckdb
+*.duckdb.wal
+
+# Packaging
+*.egg-info/
+build/
+dist/

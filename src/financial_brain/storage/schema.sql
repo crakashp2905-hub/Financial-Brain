@@ -1,0 +1,212 @@
+-- Financial-Brain Phase 0 schema.
+--
+-- Engine note (ADR-0001): DuckDB today, PostgreSQL + TimescaleDB later. All curated
+-- market data lands as Parquet, which is engine-independent, so the migration is a load
+-- script rather than a rewrite. Nothing here uses DuckDB-only SQL beyond the Parquet
+-- views at the bottom.
+
+-- ---------------------------------------------------------------- provenance
+-- Mirror of the raw lake's sidecar metadata, so provenance is queryable in SQL.
+CREATE TABLE IF NOT EXISTS lake_manifest (
+    key             VARCHAR PRIMARY KEY,
+    source          VARCHAR NOT NULL,
+    dataset         VARCHAR NOT NULL,
+    business_date   DATE    NOT NULL,
+    filename        VARCHAR NOT NULL,
+    url             VARCHAR NOT NULL,
+    retrieved_at    TIMESTAMPTZ NOT NULL,
+    sha256          VARCHAR NOT NULL,
+    size_bytes      BIGINT  NOT NULL,
+    http_status     INTEGER NOT NULL,
+    content_type    VARCHAR
+);
+
+-- One row per ingestion attempt. Lineage and replayability live here.
+CREATE TABLE IF NOT EXISTS ingest_runs (
+    run_id          VARCHAR PRIMARY KEY,
+    job             VARCHAR NOT NULL,
+    source          VARCHAR NOT NULL,
+    dataset         VARCHAR NOT NULL,
+    business_date   DATE,
+    started_at      TIMESTAMPTZ NOT NULL,
+    finished_at     TIMESTAMPTZ,
+    status          VARCHAR NOT NULL,   -- ok | skipped | not_published | quarantined | failed
+    rows_in         BIGINT,
+    rows_out        BIGINT,
+    rows_rejected   BIGINT DEFAULT 0,
+    lake_key        VARCHAR,
+    message         VARCHAR
+);
+
+-- Data-quality contract results. A failed check quarantines the payload.
+CREATE TABLE IF NOT EXISTS dq_results (
+    run_id          VARCHAR NOT NULL,
+    check_name      VARCHAR NOT NULL,
+    severity        VARCHAR NOT NULL,   -- error | warn
+    passed          BOOLEAN NOT NULL,
+    scope           VARCHAR DEFAULT 'file',  -- file | row
+    observed        VARCHAR,
+    detail          VARCHAR,
+    checked_at      TIMESTAMPTZ NOT NULL
+);
+
+-- ------------------------------------------------------------ security master
+-- C01. ISIN is the primary key: symbols change, exchange codes differ, companies
+-- restructure. ISIN is the only stable join key in Indian markets.
+CREATE TABLE IF NOT EXISTS securities (
+    isin            VARCHAR PRIMARY KEY,
+    first_seen      DATE NOT NULL,
+    last_seen       DATE NOT NULL,
+    instrument_type VARCHAR,            -- STK, GB, ETF, ...
+    status          VARCHAR DEFAULT 'active'
+);
+
+-- Symbol history. One row per (isin, exchange, ticker, series) span actually observed
+-- in the data - this is how a symbol change becomes a fact rather than a guess.
+CREATE TABLE IF NOT EXISTS security_listings (
+    isin            VARCHAR NOT NULL,
+    exchange        VARCHAR NOT NULL,
+    ticker          VARCHAR NOT NULL,
+    series          VARCHAR,
+    instrument_id   VARCHAR,            -- BSE scrip code / NSE token
+    first_seen      DATE NOT NULL,
+    last_seen       DATE NOT NULL,
+    PRIMARY KEY (isin, exchange, ticker, series)
+);
+
+CREATE TABLE IF NOT EXISTS security_names (
+    isin            VARCHAR NOT NULL,
+    exchange        VARCHAR NOT NULL,
+    name            VARCHAR NOT NULL,
+    first_seen      DATE NOT NULL,
+    last_seen       DATE NOT NULL,
+    PRIMARY KEY (isin, exchange, name)
+);
+
+-- --------------------------------------------------------- corporate actions
+-- Splits, bonuses, rights, dividends, mergers, symbol changes, delistings.
+-- Adjustment factors are derived from these; prices are stored unadjusted.
+CREATE TABLE IF NOT EXISTS corporate_actions (
+    action_id       VARCHAR PRIMARY KEY,
+    isin            VARCHAR NOT NULL,
+    exchange        VARCHAR,
+    action_type     VARCHAR NOT NULL,   -- SPLIT | BONUS | RIGHTS | DIVIDEND | MERGER | SYMBOL_CHANGE | DELISTING
+    ex_date         DATE NOT NULL,
+    record_date     DATE,
+    ratio_from      DOUBLE,             -- e.g. SPLIT 1 -> 5 : ratio_from=1, ratio_to=5
+    ratio_to        DOUBLE,
+    amount          DOUBLE,             -- dividend per share
+    details         VARCHAR,
+    source          VARCHAR NOT NULL,
+    source_tier     INTEGER NOT NULL,
+    published_at    TIMESTAMPTZ,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    evidence_key    VARCHAR             -- lake_manifest.key
+);
+
+-- Derived: cumulative price/volume adjustment factor effective from a date.
+CREATE TABLE IF NOT EXISTS adjustment_factors (
+    isin            VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    price_factor    DOUBLE NOT NULL,
+    volume_factor   DOUBLE NOT NULL,
+    derived_from    VARCHAR,
+    computed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (isin, effective_from)
+);
+
+-- ---------------------------------------------------- point-in-time universe
+-- C04. What was actually tradable on each date. Without this, backtests silently
+-- survivor-bias: the failures are exactly the names absent from a current universe.
+CREATE TABLE IF NOT EXISTS universe_snapshots (
+    business_date   DATE NOT NULL,
+    isin            VARCHAR NOT NULL,
+    exchange        VARCHAR NOT NULL,
+    ticker          VARCHAR NOT NULL,
+    series          VARCHAR,
+    instrument_type VARCHAR,
+    traded_volume   BIGINT,
+    turnover        DOUBLE,
+    trades          BIGINT,
+    close_price     DOUBLE,
+    tradable        BOOLEAN NOT NULL,
+    PRIMARY KEY (business_date, isin, exchange, series)
+);
+
+-- Segment / surveillance flags that change tradability: T2T, ASM, GSM, suspensions.
+CREATE TABLE IF NOT EXISTS security_flags (
+    isin            VARCHAR NOT NULL,
+    exchange        VARCHAR,
+    flag            VARCHAR NOT NULL,   -- T2T | ASM | GSM | SUSPENDED | FNO_ELIGIBLE
+    valid_from      DATE NOT NULL,
+    valid_to        DATE,
+    source          VARCHAR NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (isin, flag, valid_from)
+);
+
+-- ------------------------------------------------------- point-in-time facts
+-- C03. THE component whose cost rises with every month of delay.
+--
+-- Append-only. Nothing in this table is ever updated or deleted. A restatement is a new
+-- row with a later observed_at, so we can always reconstruct what was knowable on any
+-- past date - which no Indian vendor sells affordably.
+CREATE TABLE IF NOT EXISTS pit_observations (
+    observation_id  VARCHAR PRIMARY KEY,
+    entity_type     VARCHAR NOT NULL,   -- security | index | macro
+    entity_key      VARCHAR NOT NULL,   -- ISIN, index name, series code
+    attribute       VARCHAR NOT NULL,   -- revenue, eps, roce, repo_rate, ...
+    period_start    DATE,
+    period_end      DATE,
+    value_num       DOUBLE,
+    value_text      VARCHAR,
+    unit            VARCHAR,
+    -- the four timestamps (docs/ARCHITECTURE.md)
+    event_time      TIMESTAMPTZ,        -- when it happened
+    published_at    TIMESTAMPTZ,        -- when it became public  <- the PIT anchor
+    observed_at     TIMESTAMPTZ NOT NULL,  -- when we saw it
+    source          VARCHAR NOT NULL,
+    source_tier     INTEGER NOT NULL,
+    evidence_key    VARCHAR,            -- lake_manifest.key
+    revision_of     VARCHAR,            -- prior observation_id if this restates it
+    notes           VARCHAR
+);
+
+-- ----------------------------------------------------------- index benchmarks
+CREATE TABLE IF NOT EXISTS index_levels (
+    business_date   DATE NOT NULL,
+    index_name      VARCHAR NOT NULL,
+    open_level      DOUBLE,
+    high_level      DOUBLE,
+    low_level       DOUBLE,
+    close_level     DOUBLE,
+    variant         VARCHAR DEFAULT 'PRICE',  -- PRICE | TRI
+    source          VARCHAR NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (business_date, index_name, variant)
+);
+
+-- Constituent history: not freely published in clean form, so we accumulate it.
+CREATE TABLE IF NOT EXISTS index_constituents (
+    index_name      VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    valid_from      DATE NOT NULL,
+    valid_to        DATE,
+    weight          DOUBLE,
+    source          VARCHAR NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (index_name, isin, valid_from)
+);
+
+-- Rows rejected by a row-scope quality contract. Kept, not discarded: an exchange
+-- publishing an impossible row is itself a finding, and we need the audit trail.
+CREATE TABLE IF NOT EXISTS rejected_rows (
+    run_id          VARCHAR NOT NULL,
+    source          VARCHAR NOT NULL,
+    business_date   DATE NOT NULL,
+    isin            VARCHAR,
+    ticker          VARCHAR,
+    reject_reason   VARCHAR NOT NULL,
+    raw_row         VARCHAR,
+    rejected_at     TIMESTAMPTZ NOT NULL
+);

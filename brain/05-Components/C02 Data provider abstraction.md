@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 0
-status: not-started
+status: done
 resources:
   - "[[OpenBB]]"
 depends-on:
@@ -12,6 +12,9 @@ tags:
 ---
 
 # C02 Data provider abstraction
+
+> [!success] Delivered in Phase 0
+> See `docs/PHASE-0.md` and `src/financial_brain/`.
 
 **Phase 0** · One interface, many providers
 

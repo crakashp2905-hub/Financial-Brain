@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 0
-status: not-started
+status: done
 resources:
   - "[[NSE bhavcopy]]"
   - "[[BSE bhavcopy]]"
@@ -13,6 +13,9 @@ tags:
 ---
 
 # C01 Security master
+
+> [!success] Delivered in Phase 0
+> See `docs/PHASE-0.md` and `src/financial_brain/`.
 
 **Phase 0** · Canonical identity across NSE, BSE, Kite, Screener, filings
 

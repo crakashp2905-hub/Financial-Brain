@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 0
-status: not-started
+status: done
 resources: []
 depends-on:
   - "[[C04 Universe snapshots]]"
@@ -11,6 +11,9 @@ tags:
 ---
 
 # C05 Indian cost model
+
+> [!success] Delivered in Phase 0
+> See `docs/PHASE-0.md` and `src/financial_brain/`.
 
 **Phase 0** · Makes backtests non-fictional
 

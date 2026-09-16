@@ -7,8 +7,15 @@ rather than the interface.
 > the investor's own philosophy = source of truth.
 > `Data → Evidence → Context → Thesis → Risk → Decision → Outcome → Learning`
 
-**Status:** design complete, implementation not started. First deliverable is Phase 0 —
-the security master, bhavcopy ingestion and the point-in-time fundamentals store.
+**Status:** Phase 0 delivered. Immutable raw lake, ISIN-keyed security master,
+point-in-time observation store, universe snapshots and the Indian cost model are
+implemented, tested and holding 65 trading days of NSE + BSE data. Next: Phase 1
+(perception) — see [docs/BUILD-FLOW.md](docs/BUILD-FLOW.md).
+
+```bash
+pip install -e .
+fb migrate && fb ingest --start 2026-09-01 --end 2026-09-15 && fb status
+```
 
 ## Documentation
 
@@ -18,6 +25,8 @@ the security master, bhavcopy ingestion and the point-in-time fundamentals store
 | [docs/RESOURCES.md](docs/RESOURCES.md) | Every external resource — repos, data sources, models, datasets, benchmarks — with licence, role and a single verdict (INTEGRATE / WRAP / STUDY / REFERENCE / BUILD / REJECT) |
 | [docs/FEASIBILITY-INDIA.md](docs/FEASIBILITY-INDIA.md) | Layer-by-layer feasibility scorecard, the five real blockers, what to cut or defer, India-adjusted build order |
 | [docs/BUILD-FLOW.md](docs/BUILD-FLOW.md) | What must be built in what order, the resources each piece needs, critical path, milestones |
+| [docs/PHASE-0.md](docs/PHASE-0.md) | What Phase 0 delivered, what the first real backfill discovered, and the gaps carried forward |
+| [docs/adr/](docs/adr/) | Architecture decision records |
 | [brain/](brain/) | Obsidian vault — the same material as a linked graph. Open `brain/` as a vault; start at `00-Meta/Home.md` |
 
 ## The short version

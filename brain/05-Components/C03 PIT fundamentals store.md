@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 0
-status: not-started
+status: done
 resources:
   - "[[Company filings]]"
   - "[[NSE BSE announcements]]"
@@ -14,6 +14,9 @@ tags:
 ---
 
 # C03 PIT fundamentals store
+
+> [!success] Delivered in Phase 0
+> See `docs/PHASE-0.md` and `src/financial_brain/`.
 
 **Phase 0** · The only dataset that compounds
 
