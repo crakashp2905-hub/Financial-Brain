@@ -108,9 +108,10 @@ def _make_eod_view(con, rows):
     """Stand in for the curated Parquet view with an in-memory table."""
     con.execute("""CREATE OR REPLACE TEMP TABLE _eod (
         business_date DATE, exchange VARCHAR, isin VARCHAR, ticker VARCHAR,
-        series VARCHAR, instrument_type VARCHAR, close_price DOUBLE, prev_close DOUBLE)""")
+        series VARCHAR, instrument_type VARCHAR, instrument_id VARCHAR,
+        close_price DOUBLE, prev_close DOUBLE)""")
     for r in rows:
-        con.execute("INSERT INTO _eod VALUES (?,?,?,?,?,'STK',?,?)", list(r))
+        con.execute("INSERT INTO _eod VALUES (?,?,?,?,?,'STK','1',?,?)", list(r))
     con.execute("CREATE OR REPLACE TEMP VIEW eod_prices AS SELECT * FROM _eod")
 
 
@@ -304,10 +305,10 @@ class TestGapDetector:
 def _make_eod_view_with_turnover(con, rows):
     con.execute("""CREATE OR REPLACE TEMP TABLE _eod2 (
         business_date DATE, exchange VARCHAR, isin VARCHAR, ticker VARCHAR,
-        series VARCHAR, instrument_type VARCHAR, close_price DOUBLE,
-        prev_close DOUBLE, turnover DOUBLE)""")
+        series VARCHAR, instrument_type VARCHAR, instrument_id VARCHAR,
+        close_price DOUBLE, prev_close DOUBLE, turnover DOUBLE)""")
     for d, exch, isin, tk, ser, close, turnover in rows:
-        con.execute("INSERT INTO _eod2 VALUES (?,?,?,?,?,'STK',?,NULL,?)",
+        con.execute("INSERT INTO _eod2 VALUES (?,?,?,?,?,'STK','1',?,NULL,?)",
                     [d, exch, isin, tk, ser, close, turnover])
     con.execute("CREATE OR REPLACE TEMP VIEW eod_prices AS SELECT * FROM _eod2")
 
@@ -414,3 +415,57 @@ class TestLegacyNormalisation:
 
 from financial_brain.providers.bhavcopy import UDIFF_COLUMNS as _UC
 HDR_UDIFF = ",".join(_UC)
+
+
+class TestInstrumentIdentity:
+    """Regression: 194 days were quarantined as 'duplicates' that were not duplicates.
+
+    BSE lists some securities under two scrip codes sharing one ISIN - IDFC traded as
+    both 532659 and 632659 on 2016-12-08, at different closes (57.55 and 59.20). Those
+    are two instruments, not a duplicated one. Omitting the exchange's own instrument id
+    from the uniqueness key threw away every such day.
+    """
+
+    def test_twin_scrip_codes_are_not_duplicates(self, cfg, db):
+        from financial_brain.ingest import quality
+        from financial_brain.providers.bhavcopy import UDIFF_COLUMNS
+
+        def row(code, close):
+            vals = {"TradDt": "2016-12-08", "BizDt": "2016-12-08", "Sgmt": "CM",
+                    "Src": "BSE", "FinInstrmTp": "STK", "FinInstrmId": code,
+                    "ISIN": "INE043D01016", "TckrSymb": "IDFC", "SctySrs": "A",
+                    "FinInstrmNm": "IDFC", "OpnPric": close, "HghPric": close,
+                    "LwPric": close, "ClsPric": close, "LastPric": close,
+                    "PrvsClsgPric": close, "TtlTradgVol": 100, "TtlTrfVal": 100.0,
+                    "TtlNbOfTxsExctd": 5, "SsnId": "F1", "NewBrdLotQty": 1}
+            return ",".join(str(vals.get(c, "")) for c in UDIFF_COLUMNS)
+
+        csv_text = ",".join(UDIFF_COLUMNS) + "\n" + row("532659", 57.55) + "\n" + \
+            row("632659", 59.20) + "\n"
+        path = cfg.quarantine / "twins.csv"
+        path.write_text(csv_text, encoding="utf-8")
+
+        with db.connect() as con:
+            con.execute("CREATE OR REPLACE TEMP TABLE raw AS SELECT * FROM "
+                        f"read_csv_auto('{path.as_posix()}', header=true, all_varchar=true)")
+            report = quality.check_bhavcopy(con, "raw", business_date=date(2016, 12, 8),
+                                            min_rows=1)
+        assert report.publishable, "two scrip codes are two instruments, not a duplicate"
+        assert all(r.passed for r in report.results if r.name == "no_duplicate_instrument_rows")
+
+    def test_a_genuine_duplicate_is_still_caught(self, cfg, db):
+        from financial_brain.ingest import quality
+        from financial_brain.providers.bhavcopy import UDIFF_COLUMNS
+        vals = {"TradDt": "2016-12-08", "Sgmt": "CM", "Src": "BSE", "FinInstrmTp": "STK",
+                "FinInstrmId": "532659", "ISIN": "INE043D01016", "TckrSymb": "IDFC",
+                "SctySrs": "A", "ClsPric": 57.55, "HghPric": 57.55, "LwPric": 57.55}
+        line = ",".join(str(vals.get(c, "")) for c in UDIFF_COLUMNS)
+        path = cfg.quarantine / "dupe.csv"
+        path.write_text(",".join(UDIFF_COLUMNS) + "\n" + line + "\n" + line + "\n",
+                        encoding="utf-8")
+        with db.connect() as con:
+            con.execute("CREATE OR REPLACE TEMP TABLE raw AS SELECT * FROM "
+                        f"read_csv_auto('{path.as_posix()}', header=true, all_varchar=true)")
+            report = quality.check_bhavcopy(con, "raw", business_date=date(2016, 12, 8),
+                                            min_rows=1)
+        assert not report.publishable, "the same instrument id twice is a real duplicate"

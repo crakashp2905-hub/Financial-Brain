@@ -124,7 +124,8 @@ def find_candidates(con, *, min_deviation: float = MIN_FACTOR_DEVIATION) -> list
     series_list = ",".join(f"'{s}'" for s in PRIMARY_SERIES)
     cur = con.execute(f"""
         WITH px AS (
-            SELECT business_date, exchange, isin, ticker, series, close_price, prev_close
+            SELECT business_date, exchange, isin, ticker, series, instrument_id,
+                   close_price, prev_close
             FROM eod_prices
             WHERE instrument_type = 'STK' AND close_price > 0
               AND series IN ({series_list})
@@ -135,10 +136,13 @@ def find_candidates(con, *, min_deviation: float = MIN_FACTOR_DEVIATION) -> list
             FROM px t
             JOIN px y
               ON  y.isin = t.isin AND y.exchange = t.exchange AND y.series = t.series
+             AND  y.instrument_id IS NOT DISTINCT FROM t.instrument_id
              AND  y.business_date = (
                     SELECT MAX(business_date) FROM px p
                     WHERE p.isin = t.isin AND p.exchange = t.exchange
-                      AND p.series = t.series AND p.business_date < t.business_date)
+                      AND p.series = t.series
+                      AND p.instrument_id IS NOT DISTINCT FROM t.instrument_id
+                      AND p.business_date < t.business_date)
             WHERE t.prev_close IS NOT NULL AND y.close_price > 0
         )
         SELECT business_date AS ex_date, exchange, isin, ticker, series,
@@ -278,13 +282,15 @@ def find_gap_candidates(con, *, min_move: float = MIN_GAP_MOVE,
         f"ticker NOT LIKE '%{suf}'" for suf in EXCLUDED_TICKER_SUFFIXES)
     cur = con.execute(f"""
         WITH px AS (
-            SELECT business_date, exchange, isin, ticker, series, close_price, turnover
+            SELECT business_date, exchange, isin, ticker, series, instrument_id,
+                   close_price, turnover
             FROM eod_prices
             WHERE instrument_type = 'STK' AND close_price > 0
               AND series IN ({series_list}) AND {suffix_filter}
         ), gapped AS (
             SELECT business_date AS ex_date, exchange, isin, ticker, series, close_price,
-                   LAG(close_price) OVER (PARTITION BY isin, exchange, series
+                   LAG(close_price) OVER (PARTITION BY isin, exchange, series,
+                                                       instrument_id
                                           ORDER BY business_date) AS prev_close,
                    turnover
             FROM px

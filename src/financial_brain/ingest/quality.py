@@ -120,13 +120,19 @@ def check_bhavcopy(con, table: str, *, business_date: date, min_rows: int = 500)
         "trade_date_matches_request", ERROR, wrong_date == 0, str(wrong_date),
         f"rows whose TradDt is not {business_date}", FILE))
 
+    # FinInstrmId is part of instrument identity, not decoration. BSE lists some
+    # securities under two scrip codes sharing one ISIN - IDFC traded as both 532659 and
+    # 632659 on 2016-12-08, at different closes. Those are two instruments, not a
+    # duplicated one, and omitting the id from this key quarantined 194 otherwise-good
+    # days.
     dup = scalar(
         f"""SELECT COALESCE(MAX(n), 0) FROM (
               SELECT COUNT(*) AS n FROM {table}
-              GROUP BY ISIN, TckrSymb, SctySrs, FinInstrmTp, XpryDt, StrkPric, OptnTp)""")
+              GROUP BY ISIN, FinInstrmId, TckrSymb, SctySrs, FinInstrmTp,
+                       XpryDt, StrkPric, OptnTp)""")
     out.append(CheckResult(
         "no_duplicate_instrument_rows", ERROR, dup <= 1, str(dup),
-        "an instrument appears more than once in one file", FILE))
+        "the same instrument appears more than once in one file", FILE))
 
     equities = scalar(f"SELECT COUNT(*) FROM {table} WHERE FinInstrmTp = 'STK'")
     out.append(CheckResult(

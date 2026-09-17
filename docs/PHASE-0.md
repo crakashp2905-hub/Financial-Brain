@@ -125,7 +125,9 @@ India Implementability Gate (C19) directly.
 
 ```bash
 fb migrate                                   # create/upgrade the schema
-fb ingest --start 2026-06-15 --end 2026-09-15   # both exchanges
+fb prefetch --start 2015-01-01 --end 2026-09-16  # parallel, network only
+fb ingest --start 2015-01-01 --end 2026-09-16 --from-lake  # serial, DB only
+fb ingest --start 2026-09-15 --end 2026-09-16    # daily catch-up (fetch + load)
 fb ingest --start 2026-09-11 --from-lake     # rebuild from stored bytes, no network
 fb status                                    # what the system holds
 fb runs --failed                             # what needs attention
