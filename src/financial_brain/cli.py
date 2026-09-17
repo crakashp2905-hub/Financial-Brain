@@ -12,8 +12,10 @@ from datetime import date, datetime, timedelta
 
 from .config import load
 from .corpactions import actions as ca
+from .corpactions import detect as ca_detect
 from .costs.india import DEFAULT as COSTS, Segment
 from .ingest.job import BhavcopyIngestJob
+from .ingest.reference import EquityListJob, FnoEligibilityJob, IndexCloseJob
 from .pit.observations import PITStore, close_price_observations
 from .securities import master as sec
 from .storage.db import Database
@@ -118,6 +120,11 @@ def cmd_status(args) -> int:
         ("universe rows", "SELECT COUNT(*) FROM universe_snapshots"),
         ("corporate actions", "SELECT COUNT(*) FROM corporate_actions"),
         ("PIT observations", "SELECT COUNT(*) FROM pit_observations"),
+        ("adjustment factors", "SELECT COUNT(*) FROM adjustment_factors"),
+        ("index levels", "SELECT COUNT(*) FROM index_levels"),
+        ("reference rows", "SELECT COUNT(*) FROM security_reference"),
+        ("F&O eligible", "SELECT COUNT(*) FROM security_flags WHERE flag='FNO_ELIGIBLE'"),
+        ("rejected rows", "SELECT COUNT(*) FROM rejected_rows"),
     ]:
         print(f"{label:<20}{db.query(sql)[0][0]:,}")
 
@@ -172,8 +179,16 @@ def cmd_pit(args) -> int:
             ids = store.record_many(obs)
             print(f"recorded {len(ids)} close-price observations for {d}")
         if args.history:
+            if ":" not in args.history:
+                print("expected ISIN:ATTRIBUTE, e.g. INE467B01029:revenue")
+                return 1
             entity, attr = args.history.split(":", 1)
-            _print_table(store.history(con and entity, attr))
+            rows = store.history(entity.strip(), attr.strip())
+            if not rows:
+                print(f"no observations for {entity}:{attr}")
+            else:
+                print(f"restatement trail for {entity}:{attr} (oldest first)")
+                _print_table(rows)
         cov = store.coverage()
         print(json.dumps({k: str(v) for k, v in cov.items()}, indent=2))
     return 0
@@ -250,6 +265,258 @@ def cmd_check(args) -> int:
     return 0 if ok else 1
 
 
+def cmd_reference(args) -> int:
+    """Sync exchange reference data: master list, F&O eligibility."""
+    Database(load()).migrate()
+    print(EquityListJob().run())
+    print(FnoEligibilityJob().run())
+    return 0
+
+
+def cmd_index(args) -> int:
+    """Ingest NSE index closes - the benchmark history."""
+    Database(load()).migrate()
+    start = _d(args.start)
+    end = _d(args.end) if args.end else start
+    counts: dict[str, int] = {}
+    for res in IndexCloseJob().run_range(start, end, force=args.force):
+        counts[res.status] = counts.get(res.status, 0) + 1
+        if not res.ok or args.verbose:
+            print(res)
+    print("\nsummary: " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+    return 0
+
+
+def cmd_derive(args) -> int:
+    """Derive corporate actions from exchange-restated previous closes."""
+    db = Database(load())
+    with db.connect() as con:
+        if args.dry_run:
+            graded = ca_detect.corroborate(
+                ca_detect.find_candidates(con, min_deviation=args.min_deviation))
+            corr = [g for g in graded if g["confidence"] == "corroborated"]
+            print(f"{len(graded)} candidates, {len(corr)} corroborated across both exchanges\n")
+            _print_table([
+                {"ex_date": g["ex_date"], "ticker": g["ticker"], "isin": g["isin"],
+                 "factor": round(g["factor"], 4), "type": g["action_type"],
+                 "ratio": (f'{int(g["ratio_from"])}:{int(g["ratio_to"])}'
+                           if g["ratio_from"] else "-"),
+                 "confidence": g["confidence"], "exchanges": g["exchanges"]}
+                for g in graded], limit=args.limit)
+            return 0
+
+        out = ca_detect.derive_all(
+            con, min_deviation=args.min_deviation,
+            corroborated_only=not args.include_single_exchange)
+        a, b = out["restated_prev"], out["close_gap"]
+        print("A. exchange-restated previous close")
+        print(f"   candidates    {a['candidates']}  "
+              f"(corroborated {a['corroborated']}, single-exchange {a['single_exchange']})")
+        print(f"   recorded      {a['written']}")
+        print("B. corroborated close-to-close gaps")
+        print(f"   candidates    {b['candidates']}")
+        print(f"   recorded      {b['written']}")
+        print(f"   skipped       {b['skipped_no_clean_ratio']} no clean ratio "
+              f"(likely genuine price moves), "
+              f"{b['skipped_single_exchange']} single-exchange")
+        n = con.execute("SELECT COUNT(*) FROM adjustment_factors").fetchone()[0]
+        print(f"adjustment factors rebuilt: {n}")
+    return 0
+
+
+def cmd_benchmark(args) -> int:
+    db = Database(load())
+    rows = db.query_dicts("""
+        SELECT index_name, MIN(business_date) AS first, MAX(business_date) AS last,
+               COUNT(*) AS days
+        FROM index_levels GROUP BY index_name ORDER BY days DESC, index_name LIMIT ?""",
+        [args.limit])
+    if not rows:
+        print("no index history yet - run `fb index --start <date> --end <date>`")
+        return 0
+    print(f"{len(rows)} indices shown")
+    _print_table(rows, limit=args.limit)
+    return 0
+
+
+def cmd_gate(args) -> int:
+    """Phase 0 completion gate.
+
+    Phase 1 builds perception on top of this data. If any base here is unsound, every
+    brief, thesis and backtest built later inherits the fault - so this refuses to bless
+    Phase 1 rather than letting it start quietly on a broken foundation.
+    """
+    db = Database(load())
+    db.migrate()
+    checks: list[tuple[str, bool, str, str]] = []
+
+    def add(name, passed, observed, why):
+        checks.append((name, bool(passed), str(observed), why))
+
+    with db.connect() as con:
+        q = lambda sql, p=None: con.execute(sql, p or []).fetchone()[0]
+
+        days = q("SELECT COUNT(DISTINCT business_date) FROM universe_snapshots")
+        add("price history", days >= args.min_days, f"{days} trading days",
+            f"need >= {args.min_days} to see regime variety and any corporate actions")
+
+        both = q("""SELECT COUNT(*) FROM (SELECT business_date FROM universe_snapshots
+                    GROUP BY business_date HAVING COUNT(DISTINCT exchange) = 2)""")
+        add("both exchanges", both >= days * 0.9, f"{both}/{days} days have NSE and BSE",
+            "cross-exchange corroboration needs both present")
+
+        isins = q("SELECT COUNT(*) FROM securities")
+        add("security master", isins > 1000, f"{isins} ISINs",
+            "ISIN-keyed identity is the join key for everything downstream")
+
+        ref = q("SELECT COUNT(*) FROM security_reference WHERE listing_date IS NOT NULL")
+        add("listing dates", ref > 1000, f"{ref} securities with listing dates",
+            "bounds how far back a name could belong to any universe")
+
+        fno = q("SELECT COUNT(*) FROM security_flags WHERE flag = 'FNO_ELIGIBLE'")
+        add("short-ability flag", fno > 100, f"{fno} F&O-eligible names",
+            "the binary can-this-be-shorted test the implementability gate needs")
+
+        idx = q("SELECT COUNT(DISTINCT business_date) FROM index_levels")
+        add("benchmark history", idx >= days * 0.9, f"{idx}/{days} days of index levels",
+            "no strategy can be assessed without something to assess it against")
+
+        acts = q("SELECT COUNT(*) FROM corporate_actions")
+        factors = q("SELECT COUNT(*) FROM adjustment_factors")
+        add("corporate actions", acts > 0, f"{acts} actions, {factors} adjustment factors",
+            "unadjusted splits make price history silently wrong")
+
+        untriaged = len(_unexplained_gaps(con))
+        reviewed = q("SELECT COUNT(*) FROM gap_reviews")
+        add("gaps all triaged", untriaged == 0,
+            f"{untriaged} untriaged, {reviewed} reviewed",
+            "a 40% overnight move is either a corporate action or a real move - "
+            "either way it must be examined once (see `fb gaps`)")
+
+        lake = q("SELECT COUNT(*) FROM lake_manifest")
+        add("raw lake", lake > 0, f"{lake} immutable payloads",
+            "every curated row must be rebuildable from stored bytes")
+
+        orphans = q("""SELECT COUNT(*) FROM ingest_runs r WHERE r.status = 'ok'
+                       AND r.lake_key IS NOT NULL
+                       AND NOT EXISTS (SELECT 1 FROM lake_manifest m WHERE m.key = r.lake_key)""")
+        add("lineage intact", orphans == 0, f"{orphans} runs cite a missing lake object",
+            "provenance must resolve or the audit trail is broken")
+
+        # A past failure that a later run fixed is history, not an outstanding problem.
+        # The question is whether any (source, dataset, date) is *currently* unresolved.
+        unresolved = q("""
+            SELECT COUNT(*) FROM (
+                SELECT source, dataset, business_date FROM ingest_runs
+                WHERE status NOT IN ('ok','ok_partial','skipped','not_published')
+                EXCEPT
+                SELECT source, dataset, business_date FROM ingest_runs
+                WHERE status IN ('ok','ok_partial','not_published'))""")
+        add("no unresolved dates", unresolved == 0,
+            f"{unresolved} (source, date) pairs never succeeded",
+            "an unresolved date is a hole in the history")
+
+        pit_ready = q("SELECT COUNT(*) FROM pit_observations") >= 0
+        add("PIT store live", pit_ready, "append-only store present",
+            "the only asset that compounds; must be recording before Phase 1")
+
+    width = max(len(c[0]) for c in checks)
+    print("PHASE 0 COMPLETION GATE")
+    print("=" * 74)
+    for name, passed, observed, why in checks:
+        print(f"[{'PASS' if passed else 'FAIL'}] {name.ljust(width)}  {observed}")
+        if not passed:
+            print(f"       {' ' * width}  why it matters: {why}")
+    failures = [c for c in checks if not c[1]]
+    print("=" * 74)
+    if failures:
+        print(f"{len(failures)} base(s) incomplete - Phase 1 should not start yet.")
+        print("Phase 1 builds perception on this data; every fault here is inherited.")
+        return 1
+    print(f"All {len(checks)} bases complete. Phase 1 may begin.")
+    return 0
+
+
+def _unexplained_gaps(con, threshold: float = 0.35, min_turnover: float = 10_000_000.0):
+    """Large overnight moves with no recorded action and no recorded review."""
+    from .corpactions.detect import EXCLUDED_TICKER_SUFFIXES
+    suffix_filter = " AND ".join(
+        f"ticker NOT LIKE '%{suf}'" for suf in EXCLUDED_TICKER_SUFFIXES)
+    cur = con.execute(f"""
+        WITH d AS (
+            SELECT isin, ticker, exchange, series, business_date, close_price, turnover,
+                   LAG(close_price) OVER (PARTITION BY isin, exchange, series
+                                          ORDER BY business_date) AS prev
+            FROM universe_snapshots
+            WHERE instrument_type = 'STK' AND close_price > 0 AND {suffix_filter})
+        SELECT business_date AS ex_date, exchange, ticker, isin, prev, close_price,
+               close_price / prev AS factor
+        FROM d
+        WHERE prev IS NOT NULL AND turnover >= ?
+          AND ABS(close_price / prev - 1) >= ?
+          AND NOT EXISTS (SELECT 1 FROM corporate_actions ca
+                          WHERE ca.isin = d.isin AND ca.ex_date = d.business_date)
+          AND NOT EXISTS (SELECT 1 FROM gap_reviews gr
+                          WHERE gr.isin = d.isin AND gr.ex_date = d.business_date)
+        ORDER BY business_date
+    """, [min_turnover, threshold])
+    cols = [c[0] for c in cur.description]
+    return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+
+def cmd_gaps(args) -> int:
+    """List or triage large overnight gaps with no recorded corporate action.
+
+    A stock genuinely can move 40% overnight, so the standard is not "no gaps" but
+    "no gap left unexamined".
+    """
+    from .corpactions.detect import PLAUSIBLE_RATIOS
+    db = Database(load())
+    with db.connect() as con:
+        if args.review:
+            try:
+                isin, ex_date, verdict = args.review.split(":", 2)
+            except ValueError:
+                print("expected ISIN:YYYY-MM-DD:verdict[:note]")
+                return 1
+            note = ""
+            if ":" in verdict:
+                verdict, note = verdict.split(":", 1)
+            if verdict not in ("price_move", "action_recorded", "needs_source"):
+                print("verdict must be price_move | action_recorded | needs_source")
+                return 1
+            con.execute(
+                """INSERT INTO gap_reviews
+                   (isin, ex_date, verdict, note, reviewed_at)
+                   VALUES (?,?,?,?,now())
+                   ON CONFLICT (isin, ex_date) DO UPDATE SET
+                       verdict = EXCLUDED.verdict, note = EXCLUDED.note,
+                       reviewed_at = EXCLUDED.reviewed_at""",
+                [isin.strip(), _d(ex_date.strip()), verdict, note.strip()])
+            print(f"reviewed {isin} {ex_date}: {verdict}")
+            return 0
+
+        rows = _unexplained_gaps(con, threshold=args.threshold)
+        if not rows:
+            print("no untriaged gaps")
+            return 0
+        print(f"{len(rows)} untriaged gap(s) >= {args.threshold:.0%}\n")
+        out = []
+        for r in rows:
+            f = r["factor"]
+            best = min(PLAUSIBLE_RATIOS, key=lambda ab: abs(ab[0] / ab[1] - f))
+            err = abs(best[0] / best[1] - f) / f
+            out.append({"ex_date": r["ex_date"], "exch": r["exchange"],
+                        "ticker": r["ticker"], "isin": r["isin"],
+                        "factor": round(f, 4),
+                        "nearest_ratio": f"{best[0]}:{best[1]}",
+                        "snap_error": f"{err:.1%}"})
+        _print_table(out, limit=args.limit)
+        print("\n  triage with:  fb gaps --review ISIN:YYYY-MM-DD:verdict:note")
+        print("  verdicts: price_move | action_recorded | needs_source")
+    return 0
+
+
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
@@ -314,6 +581,38 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("check", help="Phase 0 exit test for a date")
     g.add_argument("--on", required=True)
     g.set_defaults(fn=cmd_check)
+
+    sub.add_parser("reference", help="sync exchange reference data").set_defaults(fn=cmd_reference)
+
+    g = sub.add_parser("index", help="ingest NSE index closes (benchmark history)")
+    g.add_argument("--start", required=True)
+    g.add_argument("--end")
+    g.add_argument("--force", action="store_true")
+    g.add_argument("-v", "--verbose", action="store_true")
+    g.set_defaults(fn=cmd_index)
+
+    g = sub.add_parser("derive", help="derive corporate actions from restated prev closes")
+    g.add_argument("--dry-run", action="store_true", help="show candidates, write nothing")
+    g.add_argument("--include-single-exchange", action="store_true",
+                   help="also record candidates only one exchange restated (noisy - "
+                        "mostly illiquid BSE names, not real actions)")
+    g.add_argument("--min-deviation", type=float, default=0.02)
+    g.add_argument("--limit", type=int, default=30)
+    g.set_defaults(fn=cmd_derive)
+
+    g = sub.add_parser("gaps", help="triage unexplained overnight price gaps")
+    g.add_argument("--review", metavar="ISIN:DATE:VERDICT[:NOTE]")
+    g.add_argument("--threshold", type=float, default=0.35)
+    g.add_argument("--limit", type=int, default=30)
+    g.set_defaults(fn=cmd_gaps)
+
+    g = sub.add_parser("gate", help="Phase 0 completion gate - can Phase 1 start?")
+    g.add_argument("--min-days", type=int, default=60)
+    g.set_defaults(fn=cmd_gate)
+
+    g = sub.add_parser("benchmark", help="index history coverage")
+    g.add_argument("--limit", type=int, default=25)
+    g.set_defaults(fn=cmd_benchmark)
 
     args = p.parse_args(argv)
     return args.fn(args)

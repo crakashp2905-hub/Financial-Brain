@@ -20,7 +20,10 @@ The same material is navigable as a graph in the [Obsidian vault](../brain/00-Me
       C02 Provider abstraction ────────┤
       C03 PIT fundamentals store ──────┤   ← start this month
       C04 Universe snapshots ──────────┤
-      C05 Indian cost model ───────────┘
+      C05 Indian cost model ───────────┤
+      C26 Corporate actions ───────────┤
+      C27 Benchmark history ───────────┤
+      C28 Reference + F&O flag ────────┘
                                        │
                         ┌──────────────▼──────────────┐
                         │   PHASE 1 · PERCEPTION      │
@@ -85,6 +88,9 @@ known-at-the-time fundamentals for any past date, from cold storage.
 | **C03** | PIT fundamentals store | `observed_at` on every fact, never overwrite; key to filing timestamps | NSE/BSE announcements · company filings · Screener *(non-PIT, flagged)* |
 | **C04** | Universe snapshots | Daily investable-universe snapshot: listings, delistings, suspensions, T2T, ASM/GSM | NSE/BSE bhavcopy |
 | **C05** | Indian cost model | STT both legs, stamp duty, exchange + SEBI fees, GST, brokerage, impact by liquidity bucket, circuit/ASM/T2T flags | NSE circulars, broker schedules |
+| **C26** | Corporate action history | Actions derived from exchange-restated `prev_close`, graded by cross-exchange corroboration; adjustment factors | NSE + BSE bhavcopy (already held) |
+| **C27** | Benchmark and index history | Daily close for ~165 NSE indices, plus P/E, P/B, dividend yield | NSE index archive |
+| **C28** | Reference data + F&O eligibility | Listing dates, face value, market lot; the `FNO_ELIGIBLE` short-ability flag | NSE EQUITY_L, fo_mktlots |
 
 **Why it is first:** [point-in-time fundamentals](FEASIBILITY-INDIA.md#21-point-in-time-fundamentals--the-killer)
 and [survivorship](FEASIBILITY-INDIA.md#22-survivorship-and-universe-reconstruction) are

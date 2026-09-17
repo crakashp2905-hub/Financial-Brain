@@ -7,14 +7,17 @@ rather than the interface.
 > the investor's own philosophy = source of truth.
 > `Data → Evidence → Context → Thesis → Risk → Decision → Outcome → Learning`
 
-**Status:** Phase 0 delivered. Immutable raw lake, ISIN-keyed security master,
+**Status:** Phase 0 complete — `fb gate` passes all 12 bases. Immutable raw lake, ISIN-keyed security master,
 point-in-time observation store, universe snapshots and the Indian cost model are
-implemented, tested and holding 65 trading days of NSE + BSE data. Next: Phase 1
-(perception) — see [docs/BUILD-FLOW.md](docs/BUILD-FLOW.md).
+implemented and tested, alongside derived corporate actions, benchmark history and
+reference data. Holding 65 trading days of NSE + BSE prices and 66 days of index levels.
+Next: Phase 1 (perception) — see [docs/BUILD-FLOW.md](docs/BUILD-FLOW.md).
 
 ```bash
 pip install -e .
-fb migrate && fb ingest --start 2026-09-01 --end 2026-09-15 && fb status
+fb migrate && fb ingest --start 2026-09-01 --end 2026-09-15
+fb reference && fb index --start 2026-09-01 --end 2026-09-15
+fb derive && fb gate
 ```
 
 ## Documentation

@@ -11,8 +11,10 @@ Full flow with resource mapping: `docs/BUILD-FLOW.md`.
 Scope discipline: [[Minimum viable Financial Brain]].
 
 ## Phase 0 — Foundations
-[[C01 Security master]] · [[C02 Data provider abstraction]] ·
-[[C03 PIT fundamentals store]] · [[C04 Universe snapshots]] · [[C05 Indian cost model]]
+[[C00 Raw data lake]] · [[C01 Security master]] · [[C02 Data provider abstraction]] ·
+[[C03 PIT fundamentals store]] · [[C04 Universe snapshots]] · [[C05 Indian cost model]] ·
+[[C26 Corporate action history]] · [[C27 Benchmark and index history]] ·
+[[C28 Reference data and F&O eligibility]]
 
 ## Phase 1 — Perception
 [[C06 Event intelligence]] · [[C07 Market Regime Brain]] · [[C08 World state]] ·

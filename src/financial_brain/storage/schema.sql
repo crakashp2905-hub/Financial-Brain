@@ -101,7 +101,9 @@ CREATE TABLE IF NOT EXISTS corporate_actions (
     source_tier     INTEGER NOT NULL,
     published_at    TIMESTAMPTZ,
     observed_at     TIMESTAMPTZ NOT NULL,
-    evidence_key    VARCHAR             -- lake_manifest.key
+    evidence_key    VARCHAR,            -- lake_manifest.key
+    confidence      VARCHAR,            -- corroborated | single_exchange | reported
+    derived_factor  DOUBLE              -- factor observed in the data, if derived
 );
 
 -- Derived: cumulative price/volume adjustment factor effective from a date.
@@ -209,4 +211,38 @@ CREATE TABLE IF NOT EXISTS rejected_rows (
     reject_reason   VARCHAR NOT NULL,
     raw_row         VARCHAR,
     rejected_at     TIMESTAMPTZ NOT NULL
+);
+
+-- ------------------------------------------------------------ reference data
+-- Static-ish security attributes from the exchange's own master list: listing date,
+-- face value, market lot. Listing date matters because it bounds how far back a name
+-- could possibly have been in any universe.
+CREATE TABLE IF NOT EXISTS security_reference (
+    isin            VARCHAR NOT NULL,
+    exchange        VARCHAR NOT NULL,
+    symbol          VARCHAR,
+    company_name    VARCHAR,
+    series          VARCHAR,
+    listing_date    DATE,
+    paid_up_value   DOUBLE,
+    face_value      DOUBLE,
+    market_lot      BIGINT,
+    source          VARCHAR NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    evidence_key    VARCHAR,
+    PRIMARY KEY (isin, exchange, series)
+);
+
+-- Triage log for large overnight gaps with no recorded corporate action.
+-- A stock genuinely can move 40% overnight, so the standard is not "no gaps" but
+-- "no gap left unexamined". Each entry records a decision, once, with a reason.
+CREATE TABLE IF NOT EXISTS gap_reviews (
+    isin            VARCHAR NOT NULL,
+    ex_date         DATE NOT NULL,
+    exchange        VARCHAR,
+    observed_factor DOUBLE,
+    verdict         VARCHAR NOT NULL,   -- price_move | action_recorded | needs_source
+    note            VARCHAR,
+    reviewed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (isin, ex_date)
 );
