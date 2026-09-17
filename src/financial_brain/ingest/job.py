@@ -169,8 +169,19 @@ class BhavcopyIngestJob:
         return bool(row and row[0])
 
     def _lake_object_for(self, business_date: date) -> LakeObject | None:
-        for obj in self.lake.iter_objects(self.provider.source, self.provider.dataset):
-            if obj.business_date == business_date.isoformat():
+        """Look up the day's payload by path.
+
+        Scanning every lake object per date is O(n) and becomes the bottleneck once the
+        lake holds a decade, so the day folder is addressed directly.
+        """
+        day_dir = (self.cfg.lake / self.provider.source / self.provider.dataset /
+                   f"{business_date:%Y}" / f"{business_date:%m}" / f"{business_date:%d}")
+        if not day_dir.exists():
+            return None
+        for meta in sorted(day_dir.glob("*.meta.json")):
+            rel = meta.relative_to(self.cfg.lake).as_posix()[: -len(".meta.json")]
+            obj = self.lake.meta(rel)
+            if obj:
                 return obj
         return None
 

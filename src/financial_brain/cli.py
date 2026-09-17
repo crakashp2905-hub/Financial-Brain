@@ -15,6 +15,7 @@ from .corpactions import actions as ca
 from .corpactions import detect as ca_detect
 from .costs.india import DEFAULT as COSTS, Segment
 from .ingest.job import BhavcopyIngestJob
+from .ingest.prefetch import prefetch
 from .ingest.reference import EquityListJob, FnoEligibilityJob, IndexCloseJob
 from .pit.observations import PITStore, close_price_observations
 from .securities import master as sec
@@ -534,6 +535,30 @@ def cmd_gaps(args) -> int:
     return 0
 
 
+def cmd_prefetch(args) -> int:
+    """Fill the raw lake from the network in parallel. Touches no database."""
+    start, end = _d(args.start), _d(args.end) if args.end else (_d(args.start),) * 2
+    if args.end:
+        end = _d(args.end)
+    else:
+        end = start
+
+    def progress(done, total, stats):
+        pct = done / total * 100
+        print(f"  {done}/{total} ({pct:.0f}%)  {stats}", flush=True)
+
+    stats = prefetch(start, end, sources=args.source, kind=args.kind,
+                     workers=args.workers, progress=progress)
+    print(f"{chr(10)}prefetch complete: {stats}")
+    if stats.failures:
+        print(f"{chr(10)}{len(stats.failures)} failure(s), first few:")
+        for f in stats.failures[:10]:
+            print("  ", f)
+    print(f"{chr(10)}now load it with:  fb ingest --start "
+          f"{args.start} --end {args.end or args.start} --from-lake")
+    return 0
+
+
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
@@ -551,6 +576,14 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--strict", action="store_true", help="non-zero exit if any run failed")
     g.add_argument("-v", "--verbose", action="store_true")
     g.set_defaults(fn=cmd_ingest)
+
+    g = sub.add_parser("prefetch", help="fill the raw lake in parallel (network only)")
+    g.add_argument("--start", required=True)
+    g.add_argument("--end")
+    g.add_argument("--source", action="append", choices=["NSE", "BSE"])
+    g.add_argument("--kind", default="bhavcopy", choices=["bhavcopy", "index"])
+    g.add_argument("--workers", type=int, default=6)
+    g.set_defaults(fn=cmd_prefetch)
 
     g = sub.add_parser("runs", help="ingestion history")
     g.add_argument("--failed", action="store_true")
