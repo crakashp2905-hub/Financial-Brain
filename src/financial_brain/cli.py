@@ -133,10 +133,15 @@ def cmd_status(args) -> int:
         days = db.query("SELECT COUNT(DISTINCT business_date) FROM universe_snapshots")[0][0]
         print(f"{'coverage':<20}{rng[0]} .. {rng[1]}  ({days} trading days)")
 
-    failed = db.query(
-        "SELECT COUNT(*) FROM ingest_runs WHERE status NOT IN ('ok','skipped','not_published')"
-    )[0][0]
-    print(f"{'runs needing help':<20}{failed}")
+    # A past failure that a later run fixed is history, not an outstanding problem.
+    unresolved = db.query("""
+        SELECT COUNT(*) FROM (
+            SELECT source, dataset, business_date FROM ingest_runs
+            WHERE status NOT IN ('ok','ok_partial','skipped','not_published')
+            EXCEPT
+            SELECT source, dataset, business_date FROM ingest_runs
+            WHERE status IN ('ok','ok_partial','not_published'))""")[0][0]
+    print(f"{'unresolved dates':<20}{unresolved}")
     return 0
 
 
@@ -416,9 +421,21 @@ def cmd_gate(args) -> int:
             f"{unresolved} (source, date) pairs never succeeded",
             "an unresolved date is a hole in the history")
 
-        pit_ready = q("SELECT COUNT(*) FROM pit_observations") >= 0
-        add("PIT store live", pit_ready, "append-only store present",
-            "the only asset that compounds; must be recording before Phase 1")
+        # A check that cannot fail is worse than no check. Phase 0 cannot *populate*
+        # the PIT store - fundamentals arrive with filings ingestion in Phase 2 - so what
+        # it can guarantee is that the store is structurally correct and ready to record.
+        # PRAGMA table_info returns (cid, name, type, notnull, dflt_value, pk).
+        cols = {r[1] for r in con.execute("PRAGMA table_info('pit_observations')").fetchall()}
+        required = {"observation_id", "entity_key", "attribute", "published_at",
+                    "observed_at", "source_tier", "revision_of", "evidence_key"}
+        missing = required - cols
+        n_obs = q("SELECT COUNT(*) FROM pit_observations")
+        no_ts = q("SELECT COUNT(*) FROM pit_observations WHERE observed_at IS NULL")
+        add("PIT store correct", not missing and no_ts == 0,
+            (f"{n_obs} observations, schema complete"
+             if not missing else f"missing columns: {sorted(missing)}"),
+            "published_at/observed_at/revision_of are what make as_of() honest; "
+            "population begins with filings in Phase 2")
 
     width = max(len(c[0]) for c in checks)
     print("PHASE 0 COMPLETION GATE")
