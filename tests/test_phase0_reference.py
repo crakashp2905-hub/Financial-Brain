@@ -321,3 +321,96 @@ class TestPlausibleRatios:
     def test_real_split_and_bonus_ratios_are_plausible(self):
         for ratio in [(1, 2), (1, 5), (1, 10), (2, 3), (3, 2), (1, 6), (1, 3)]:
             assert ratio in detect.PLAUSIBLE_RATIOS
+
+
+# ------------------------------------------------- legacy format normalisation
+NSE_LEGACY_CSV = (
+    "SYMBOL,SERIES,OPEN,HIGH,LOW,CLOSE,LAST,PREVCLOSE,TOTTRDQTY,TOTTRDVAL,"
+    "TIMESTAMP,TOTALTRADES,ISIN,\n"
+    "20MICRONS,EQ,36,36.8,35.25,35.8,35.65,35.2,49077,1764577.1,01-JAN-2020,370,"
+    "INE144J01027,\n"
+    "TCS,EQ,2150,2180,2140,2175,2174,2145,100000,217500000,01-JAN-2020,5000,"
+    "INE467B01029,\n"
+)
+
+BSE_LEGACY_CSV = (
+    "SC_CODE,SC_NAME,SC_GROUP,SC_TYPE,OPEN,HIGH,LOW,CLOSE,LAST,PREVCLOSE,NO_TRADES,"
+    "NO_OF_SHRS,NET_TURNOV,TDCLOINDI,ISIN_CODE,TRADING_DATE,FILLER2,FILLER3\n"
+    "500002,ABB LTD.    ,A ,Q,2700.00,2700.00,2673.25,2688.30,2687.65,2681.00,751,"
+    "4344,11669853.00,,INE117A01022,03-Jan-23,,\n"
+)
+
+
+def _rows(csv_bytes):
+    import csv as _csv, io as _io
+    return list(_csv.DictReader(_io.StringIO(csv_bytes.decode())))
+
+
+class TestLegacyNormalisation:
+    """Both exchanges moved to UDiFF in July 2024; before that each had its own format.
+
+    The legacy formats are normalised *into* UDiFF so the ingest job, quality contracts,
+    security master and universe code are identical for a 2015 file and a 2026 one.
+    """
+
+    def test_nse_legacy_becomes_udiff(self):
+        from financial_brain.providers.bhavcopy import normalise
+        rows = _rows(normalise(NSE_LEGACY_CSV.encode()))
+        assert len(rows) == 2
+        tcs = [r for r in rows if r["TckrSymb"] == "TCS"][0]
+        assert tcs["TradDt"] == "2020-01-01", "legacy '01-JAN-2020' must become ISO"
+        assert tcs["ISIN"] == "INE467B01029"
+        assert tcs["ClsPric"] == "2175"
+        assert tcs["FinInstrmTp"] == "STK"
+        assert tcs["TtlTradgVol"] == "100000"
+
+    def test_bse_legacy_becomes_udiff(self):
+        from financial_brain.providers.bhavcopy import normalise
+        rows = _rows(normalise(BSE_LEGACY_CSV.encode()))
+        assert len(rows) == 1
+        abb = rows[0]
+        assert abb["TradDt"] == "2023-01-03", "legacy '03-Jan-23' must become ISO"
+        assert abb["ISIN"] == "INE117A01022"
+        assert abb["FinInstrmId"] == "500002", "BSE scrip code is kept"
+        assert abb["SctySrs"] == "A"
+        assert abb["TtlTradgVol"] == "4344"
+
+    def test_udiff_passes_through_untouched(self):
+        from financial_brain.providers.bhavcopy import normalise
+        payload = (HDR_UDIFF + "\n").encode()
+        assert normalise(payload) == payload
+
+    def test_format_is_sniffed_not_assumed_from_date(self):
+        """A mislabelled file must not be parsed with the wrong reader."""
+        from financial_brain.providers.bhavcopy import normalise
+        rows = _rows(normalise(BSE_LEGACY_CSV.encode()))
+        assert rows[0]["Src"] == "BSE", "sniffed as BSE legacy regardless of any date"
+
+    def test_unknown_format_is_rejected_loudly(self):
+        from financial_brain.providers.base import FetchError
+        from financial_brain.providers.bhavcopy import normalise
+        with pytest.raises(FetchError, match="unrecognised bhavcopy format"):
+            normalise(b"col1,col2\n1,2\n")
+
+    def test_rows_without_isin_are_dropped(self):
+        from financial_brain.providers.bhavcopy import normalise
+        csv_text = NSE_LEGACY_CSV + (
+            "NOISIN,EQ,1,1,1,1,1,1,1,1,01-JAN-2020,1,,\n")
+        assert len(_rows(normalise(csv_text.encode()))) == 2, "ISIN is the key; no ISIN, no row"
+
+    def test_legacy_output_satisfies_the_quality_contracts(self, cfg, db):
+        """The point of normalising: one set of contracts covers every era."""
+        from financial_brain.ingest import quality
+        from financial_brain.providers.bhavcopy import normalise
+        path = cfg.quarantine / "legacy.csv"
+        path.write_bytes(normalise(NSE_LEGACY_CSV.encode()))
+        with db.connect() as con:
+            con.execute("CREATE OR REPLACE TEMP TABLE raw AS SELECT * FROM "
+                        f"read_csv_auto('{path.as_posix()}', header=true, all_varchar=true)")
+            report = quality.check_bhavcopy(con, "raw", business_date=date(2020, 1, 1),
+                                            min_rows=1)
+        assert report.publishable and not report.failed
+
+
+from financial_brain.providers.bhavcopy import UDIFF_COLUMNS as _UC
+HDR_UDIFF = ",".join(_UC)
