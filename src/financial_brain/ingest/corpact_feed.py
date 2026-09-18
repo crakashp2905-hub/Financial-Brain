@@ -139,10 +139,14 @@ def reconcile(con, *, window_days: int = 3, factor_tol: float = 0.02) -> dict:
                (SELECT MIN(ABS(r.ratio_from / r.ratio_to / d.derived_factor - 1))
                 FROM corporate_actions r
                 WHERE r.confidence = 'reported' AND r.ratio_to IS NOT NULL
-                  AND r.isin = d.isin
+                  AND (r.isin = d.isin OR EXISTS (SELECT 1 FROM isin_successions s
+                        WHERE (s.old_isin = d.isin AND s.new_isin = r.isin)
+                           OR (s.old_isin = r.isin AND s.new_isin = d.isin)))
                   AND ABS(date_diff('day', r.ex_date, d.ex_date)) <= ?) AS err,
                (SELECT COUNT(*) FROM corporate_actions r
-                WHERE r.confidence = 'reported' AND r.isin = d.isin
+                WHERE r.confidence = 'reported' AND (r.isin = d.isin OR EXISTS (SELECT 1 FROM isin_successions s
+                        WHERE (s.old_isin = d.isin AND s.new_isin = r.isin)
+                           OR (s.old_isin = r.isin AND s.new_isin = d.isin)))
                   AND ABS(date_diff('day', r.ex_date, d.ex_date)) <= ?) AS any_reported
         FROM corporate_actions d WHERE d.derived_factor IS NOT NULL
     """, [window_days, window_days]).fetchall()
@@ -153,7 +157,9 @@ def reconcile(con, *, window_days: int = 3, factor_tol: float = 0.02) -> dict:
     reported = con.execute("""
         SELECT r.isin, r.ex_date,
                EXISTS (SELECT 1 FROM corporate_actions d WHERE d.derived_factor IS NOT NULL
-                       AND d.isin = r.isin
+                       AND (r.isin = d.isin OR EXISTS (SELECT 1 FROM isin_successions s
+                        WHERE (s.old_isin = d.isin AND s.new_isin = r.isin)
+                           OR (s.old_isin = r.isin AND s.new_isin = d.isin)))
                        AND ABS(date_diff('day', d.ex_date, r.ex_date)) <= ?) AS found
         FROM corporate_actions r
         WHERE r.confidence = 'reported' AND r.action_type IN ('SPLIT', 'BONUS')

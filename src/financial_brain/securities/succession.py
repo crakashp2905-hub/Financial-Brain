@@ -37,6 +37,10 @@ _PAIRS_SQL = """
                isin, MIN(first_seen) AS f, MAX(last_seen) AS l
         FROM security_listings
         WHERE CASE WHEN exchange = 'BSE' THEN instrument_id ELSE ticker END <> ''
+          -- Equity shares (ISIN security type '01') and fund units (INF...) only. A
+          -- debenture's ISIN also changes on partial redemption (INE721A07ON4 showed a
+          -- 0.75 "split"), and that is not an adjustment to anything we price.
+          AND (isin LIKE 'INF%' OR substr(isin, 8, 2) = '01')
         GROUP BY 1, 2, 3
     ), pairs AS (
         SELECT a.exchange, a.handle, a.isin AS old_isin, b.isin AS new_isin,

@@ -507,7 +507,7 @@ def cmd_gaps(args) -> int:
                                              redo=args.redo)
             print(f"auto-triaged {out['events']} gap event(s)")
             print(f"  action_recorded {out['action_recorded']}  "
-                  f"(explained by a recorded split via ISIN succession)")
+                  f"(explained by a BSE-reported or derived action)")
             print(f"  price_move      {out['price_move']}  "
                   f"(shock day, intraday move, or one-sided on a cross-listed ISIN)")
             print(f"  needs_source    {out['needs_source']}  "

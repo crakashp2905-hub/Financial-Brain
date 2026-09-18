@@ -270,11 +270,17 @@ def rebuild_derived_factors(con) -> int:
                             THEN ratio_from / ratio_to END) IS NOT NULL
           -- A reported action (Tier-1 feed) supersedes a derived one for the same
           -- event; applying both would adjust the history twice.
+          -- "Same event" spans an ISIN succession: on Yes Bank's 1:5 (2017-09-21) BSE
+          -- reported the split on the new ISIN while NSE's gap sat on the old one.
           AND NOT (d.derived_factor IS NOT NULL AND EXISTS (
                 SELECT 1 FROM corporate_actions r
                 WHERE r.confidence = 'reported' AND r.derived_factor IS NULL
-                  AND r.ratio_to IS NOT NULL AND r.isin = d.isin
-                  AND ABS(date_diff('day', r.ex_date, d.ex_date)) <= 3))
+                  AND r.ratio_to IS NOT NULL
+                  AND ABS(date_diff('day', r.ex_date, d.ex_date)) <= 3
+                  AND (r.isin = d.isin OR EXISTS (
+                        SELECT 1 FROM isin_successions s
+                        WHERE (s.old_isin = d.isin AND s.new_isin = r.isin)
+                           OR (s.old_isin = r.isin AND s.new_isin = d.isin)))))
         ORDER BY isin, ex_date DESC
     """).fetchall()
 
@@ -454,8 +460,12 @@ def derive_from_successions(con) -> dict:
         if action_type != "SPLIT" or not r_from:
             no_ratio += 1
             continue
+        # Only *derived* actions count as duplicates. Derivation must stay blind to the
+        # reported feed, or reconciling one against the other measures nothing;
+        # reported-over-derived precedence is applied in the factors instead.
         if con.execute(
                 """SELECT 1 FROM corporate_actions WHERE isin IN (?, ?)
+                   AND derived_factor IS NOT NULL
                    AND ex_date BETWEEN CAST(? AS DATE) - 3 AND CAST(? AS DATE) + 3""",
                 [old, new, eff, eff]).fetchone():
             duplicate += 1
@@ -611,7 +621,22 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
                  AND s.effective_date BETWEEN CAST(? AS DATE) - 5 AND CAST(? AS DATE) + 5
                LIMIT 1""", [isin, ex_date, ex_date]).fetchone()
 
-        if succ:
+        reported = con.execute(
+            """SELECT r.action_type, r.ex_date, r.details FROM corporate_actions r
+               WHERE r.confidence = 'reported'
+                 AND r.action_type NOT IN ('DIVIDEND', 'MEETING', 'DISTRIBUTION', 'OTHER')
+                 AND ABS(date_diff('day', r.ex_date, CAST(? AS DATE))) <= 3
+                 AND (r.isin = ? OR EXISTS (SELECT 1 FROM isin_successions s
+                        WHERE (s.old_isin = ? AND s.new_isin = r.isin)
+                           OR (s.old_isin = r.isin AND s.new_isin = ?)))
+               ORDER BY ABS(date_diff('day', r.ex_date, CAST(? AS DATE))) LIMIT 1""",
+            [ex_date, isin, isin, isin, ex_date]).fetchone()
+
+        if reported:
+            verdict = "action_recorded"
+            note = (f"{ticker} factor={factor:.4f}; BSE reported {reported[0]} with ex-date "
+                    f"{reported[1]} - {reported[2]}")
+        elif succ:
             verdict = "action_recorded"
             note = (f"{ticker} factor={factor:.4f}; explained by ISIN succession "
                     f"{succ[0]} -> {succ[1]} on {succ[2]}, recorded as "

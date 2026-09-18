@@ -105,7 +105,11 @@ full dataset.
 Plan: `docs/BUILD-FLOW.md` §3. Exit test: *a cited daily brief you would actually read
 before the market opens.* Order:
 
-- [ ] **P1-1 C06 Event intelligence** — ingest NSE + BSE corporate announcements through
+- [x] **P1-1a C06 BSE corporate-action feed** — done 2026-09-19: `fb corpact-feed`
+  (22,274 reported actions 2015–2026), `fb corpact-reconcile` (derived precision 73.7%,
+  recall 67.9%), reported supersedes derived in factors, gaps open 201 → 65. See
+  `docs/PHASE-1.md`. Monthly: re-run `fb corpact-feed --start <this month>`.
+- [ ] **P1-1b C06 Event intelligence** — ingest NSE + BSE corporate announcements through
   the same lake → manifest → quality → curated path; classify event type
   (results, dividend/split/bonus, order win, promoter activity, pledge, rating, …) with
   deterministic rules first. Link events to ISIN via the security master. Use them to
@@ -147,3 +151,7 @@ before the market opens.* Order:
   across the ex-date because exchanges switch on different days); one shared untriaged-gap
   definition (the gate's drifted copy reported 2,201 phantom gaps). **Phase 0 gate: 12/12.
   Phase 0 closed; Phase 1 begins with P1-1.**
+- 2026-09-19 — P1-1a: BSE corporate-action feed ingested and reconciled against
+  derivation. Found and fixed double adjustment across ISIN successions (Yes Bank 2017),
+  and derivation suppressing itself when reported actions existed. Next: P1-1b
+  announcements (BSE `AnnSubCategoryGetData` works without a session, 50 per page).

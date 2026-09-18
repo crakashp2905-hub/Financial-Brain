@@ -150,3 +150,47 @@ def test_reported_action_supersedes_a_derived_one_in_the_factors(cfg, db):
     assert len(f) == 1 and abs(f[0][0] - 0.2) < 1e-9, "one factor, not 0.2 x 0.2"
     assert f[0][1] != "derived", "the reported action is the one applied"
     assert rec["derived_matched"] == 1 and rec["precision"] == 1.0
+
+
+def test_same_event_across_an_isin_succession_is_adjusted_once(cfg, db):
+    """Yes Bank 1:5, 2017-09-21: BSE reported the split on the new ISIN; NSE's gap was
+    derived on the old one. Linked by a succession they are one event, one factor."""
+    from financial_brain.corpactions.detect import rebuild_derived_factors
+    from financial_brain.ingest import corpact_feed
+    old, new, ex = "INE528G01019", "INE528G01027", date(2017, 9, 21)
+    with db.connect() as con:
+        con.execute("""INSERT INTO isin_successions VALUES (?, ?, ?, 'BSE+NSE', 0.2,
+                       'corroborated', 'test', NOW())""", [old, new, ex])
+        con.execute("""INSERT INTO corporate_actions (action_id, isin, action_type, ex_date,
+            source, source_tier, observed_at, confidence, derived_factor)
+            VALUES ('derived-old', ?, 'SPLIT', ?, 'NSE', 1, NOW(), 'single_exchange_gap', 0.2)""",
+                    [old, ex])
+        con.execute("""INSERT INTO corporate_actions (action_id, isin, action_type, ex_date,
+            ratio_from, ratio_to, source, source_tier, observed_at, confidence)
+            VALUES ('reported-new', ?, 'SPLIT', ?, 1, 5, 'BSE', 1, NOW(), 'reported')""",
+                    [new, ex])
+        rebuild_derived_factors(con)
+        factors = con.execute("SELECT isin, derived_from FROM adjustment_factors").fetchall()
+        rec = corpact_feed.reconcile(con)
+    assert factors == [(new, "reported-new")], "applying both would split history twice"
+    assert rec["derived_matched"] == 1, "matched across the succession"
+
+
+def test_a_reported_spin_off_explains_the_gap(cfg, db):
+    """A demerger drops the price; BSE's feed reports it as SPIN_OFF - here with an
+    ex-date one session off the gap, which exact-date matching would miss."""
+    from financial_brain.corpactions.detect import auto_triage_gaps, find_untriaged_gaps
+    isin, d1, d2 = "INE003A01024", date(2025, 4, 4), date(2025, 4, 7)
+    with db.connect() as con:
+        for d, c in ((d1, 5000.0), (d2, 3000.0)):
+            con.execute("""INSERT INTO universe_snapshots (business_date, isin, exchange, ticker,
+                series, instrument_type, turnover, close_price, tradable)
+                VALUES (?, ?, 'NSE', 'SIEMENS', 'EQ', 'STK', 5e9, ?, TRUE)""", [d, isin, c])
+        con.execute("""INSERT INTO corporate_actions (action_id, isin, action_type, ex_date,
+            details, source, source_tier, observed_at, confidence)
+            VALUES ('spin', ?, 'SPIN_OFF', ?, 'BSE feed: Spin Off (scrip 500550)', 'BSE', 1,
+                    NOW(), 'reported')""", [isin, date(2025, 4, 8)])
+        assert len(find_untriaged_gaps(con)) == 1
+        auto_triage_gaps(con)
+        verdict, note = con.execute("SELECT verdict, note FROM gap_reviews").fetchone()
+    assert verdict == "action_recorded" and "SPIN_OFF" in note
