@@ -166,7 +166,11 @@ class TestIngestion:
         fetches_after_first = job.provider.fetches
 
         job.provider.payloads = {}              # network now returns nothing at all
-        res = job.run(d, from_lake=True)
+
+        # A day already published is skipped even from the lake; replay needs --force.
+        assert job.run(d, from_lake=True).status == "skipped"
+
+        res = job.run(d, force=True, from_lake=True)
         assert res.status == STATUS_OK
         assert res.rows_out == 600
         assert job.provider.fetches == fetches_after_first

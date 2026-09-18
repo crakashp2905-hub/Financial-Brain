@@ -514,6 +514,15 @@ def cmd_gaps(args) -> int:
             print(f"reviewed {isin} {ex_date}: {verdict}")
             return 0
 
+        if args.auto_review:
+            out = ca_detect.auto_triage_gaps(con, threshold=args.threshold)
+            print(f"auto-triaged {out['events']} gap event(s)")
+            print(f"  price_move    {out['price_move']}  "
+                  f"(gapped on one exchange while listed on both)")
+            print(f"  needs_source  {out['needs_source']}  "
+                  f"(undecidable without a corporate-action feed)")
+            return 0
+
         rows = _unexplained_gaps(con, threshold=args.threshold)
         if not rows:
             print("no untriaged gaps")
@@ -559,6 +568,32 @@ def cmd_prefetch(args) -> int:
     return 0
 
 
+def cmd_lake_register(args) -> int:
+    """Register every lake object in lake_manifest.
+
+    `fb prefetch` lands bytes without touching the database, so objects it fetched have
+    no provenance row until they are loaded. This closes that gap in one pass; it is
+    idempotent and reads only sidecar metadata, never the payloads.
+    """
+    from .lake.store import RawLake
+    cfg = load()
+    lake = RawLake(cfg.lake)
+    db = Database(cfg)
+    rows = [[o.key, o.source, o.dataset, o.business_date, o.filename, o.url,
+             o.retrieved_at, o.sha256, o.size_bytes, o.http_status, o.content_type]
+            for o in lake.iter_objects()]
+    with db.connect() as con:
+        before = con.execute("SELECT COUNT(*) FROM lake_manifest").fetchone()[0]
+        con.executemany(
+            """INSERT INTO lake_manifest
+               (key, source, dataset, business_date, filename, url, retrieved_at,
+                sha256, size_bytes, http_status, content_type)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (key) DO NOTHING""", rows)
+        after = con.execute("SELECT COUNT(*) FROM lake_manifest").fetchone()[0]
+    print(f"{len(rows)} lake objects; manifest {before} -> {after} (+{after - before})")
+    return 0
+
+
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
@@ -584,6 +619,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--kind", default="bhavcopy", choices=["bhavcopy", "index"])
     g.add_argument("--workers", type=int, default=6)
     g.set_defaults(fn=cmd_prefetch)
+
+    g = sub.add_parser("lake-register", help="register every lake object in lake_manifest")
+    g.set_defaults(fn=cmd_lake_register)
 
     g = sub.add_parser("runs", help="ingestion history")
     g.add_argument("--failed", action="store_true")
@@ -652,6 +690,8 @@ def main(argv: list[str] | None = None) -> int:
 
     g = sub.add_parser("gaps", help="triage unexplained overnight price gaps")
     g.add_argument("--review", metavar="ISIN:DATE:VERDICT[:NOTE]")
+    g.add_argument("--auto-review", action="store_true",
+                   help="apply the documented triage rule to every untriaged gap")
     g.add_argument("--threshold", type=float, default=0.35)
     g.add_argument("--limit", type=int, default=30)
     g.set_defaults(fn=cmd_gaps)

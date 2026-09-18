@@ -226,7 +226,22 @@ engineering makes that distinguishable in every case. So the standard is not "no
 but **"no gap left unexamined"**: `fb gaps` lists untriaged ones with their nearest ratio
 and snap error, and `fb gaps --review` records a verdict.
 
-Seven remain, all marked `needs_source`. Every one is **single-listed**, so
+At three months, seven remained and hand-review was reasonable. Over eleven years it is
+not, and rubber-stamping hundreds would be worse than not reviewing them - so the
+reasoning used on the original seven is encoded as `fb gaps --auto-review`:
+
+1. **Cross-listed but only one exchange gapped → `price_move`.** A corporate action
+   affects the security, so it must move both listings. One-sided is positive evidence
+   that it is *not* an action - the strongest verdict available here.
+2. **Single-listed → `needs_source`.** Corroboration is structurally impossible and the
+   ratio did not snap tightly, so it cannot be resolved without an authoritative feed.
+3. **Both gapped but no clean ratio → `needs_source`.** Action-like, but not a ratio a
+   real action uses.
+
+Nothing there guesses. Rule 1 is a finding; rules 2 and 3 record precisely why the
+question stays open, keeping the residual dependency visible rather than buried.
+
+In the original three-month window, seven remained, all marked `needs_source`. Every one is **single-listed**, so
 cross-exchange corroboration is structurally impossible, and none snaps tightly enough to
 record on ratio evidence alone (best: TIRUPATIFL at 1.5% from 3:2). That verdict is the
 truthful one — it makes the residual dependency on a real corporate-action feed explicit

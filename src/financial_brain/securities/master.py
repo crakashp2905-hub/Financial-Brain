@@ -23,7 +23,10 @@ def upsert_from_bhavcopy(con, raw_table: str, business_date: date, exchange: str
             TRIM(ISIN)                AS isin,
             '{exchange}'              AS exchange,
             TRIM(TckrSymb)            AS ticker,
-            NULLIF(TRIM(SctySrs), '') AS series,
+            -- Same '-' sentinel as universe/snapshot.py. Exchanges do publish real
+            -- instruments with no series/group: BSE listed UPL's convertible
+            -- preference shares (710055, UPLOCPS) with a blank SC_GROUP in Dec 2016.
+            COALESCE(NULLIF(TRIM(SctySrs), ''), '-') AS series,
             TRIM(FinInstrmId)         AS instrument_id,
             TRIM(FinInstrmTp)         AS instrument_type,
             TRIM(FinInstrmNm)         AS name

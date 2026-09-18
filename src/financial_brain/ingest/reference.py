@@ -43,6 +43,28 @@ class _RefJobBase:
              obj.retrieved_at, obj.sha256, obj.size_bytes, obj.http_status, obj.content_type])
         return res.payload, obj
 
+    def _from_lake(self, con, provider, business_date: date):
+        """Return (payload, obj) if the lake already holds this day, else None."""
+        day_dir = (self.cfg.lake / provider.source / provider.dataset /
+                   f"{business_date:%Y}" / f"{business_date:%m}" / f"{business_date:%d}")
+        if not day_dir.exists():
+            return None
+        for meta in sorted(day_dir.glob("*.meta.json")):
+            obj = self.lake.meta(meta.relative_to(self.cfg.lake).as_posix()[: -len(".meta.json")])
+            if obj:
+                self._register(con, obj)
+                return self.lake.read(obj), obj
+        return None
+
+    def _register(self, con, obj) -> None:
+        con.execute(
+            """INSERT INTO lake_manifest
+               (key, source, dataset, business_date, filename, url, retrieved_at,
+                sha256, size_bytes, http_status, content_type)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (key) DO NOTHING""",
+            [obj.key, obj.source, obj.dataset, obj.business_date, obj.filename, obj.url,
+             obj.retrieved_at, obj.sha256, obj.size_bytes, obj.http_status, obj.content_type])
+
     def _finish(self, con, result: RunResult, started, obj, dataset: str) -> RunResult:
         con.execute(
             """INSERT INTO ingest_runs
@@ -73,7 +95,11 @@ class IndexCloseJob(_RefJobBase):
                                                    "NSE", message="already ingested"),
                                     started, None, "index_close")
         try:
-            payload, obj = self._land(con, NSEIndexCloseProvider(), business_date)
+            # Lake first: `fb prefetch --kind index` lands these bytes without the
+            # database, and bytes we already hold are never fetched again.
+            held = self._from_lake(con, NSEIndexCloseProvider(), business_date)
+            payload, obj = held if held else self._land(
+                con, NSEIndexCloseProvider(), business_date)
         except NotPublished as e:
             return self._finish(con, RunResult(run_id, STATUS_NOT_PUBLISHED, business_date,
                                                "NSE", message=str(e)), started, None,

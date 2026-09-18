@@ -84,7 +84,10 @@ class BhavcopyIngestJob:
         started = datetime.now(timezone.utc)
         src = self.provider.source
 
-        if not force and not from_lake and self._already_done(con, business_date):
+        # Replaying from the lake still skips days already published. Re-processing a
+        # day after a parser change is what --force is for; without this check a
+        # "reload the 194 failed days" run silently re-processed all ~5,100 of them.
+        if not force and self._already_done(con, business_date):
             return self._finish(con, RunResult(run_id, STATUS_SKIPPED, business_date, src,
                                                message="already ingested"), started, None)
 
@@ -97,6 +100,9 @@ class BhavcopyIngestJob:
                     return self._finish(con, RunResult(run_id, STATUS_SKIPPED, business_date,
                                                        src, message="not in lake"), started, None)
                 payload = self.lake.read(obj)
+                # Prefetch lands bytes without touching the database, so the manifest
+                # row is written here, at first use. Idempotent.
+                self._record_manifest(con, obj)
             else:
                 res = self.provider.fetch(business_date)
                 obj = self.lake.put(

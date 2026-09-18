@@ -353,3 +353,84 @@ def derive_all(con, **kw) -> dict:
     a = derive_and_record(con, **kw)
     b = derive_from_gaps(con)
     return {"restated_prev": a, "close_gap": b}
+
+
+def auto_triage_gaps(con, *, threshold: float = 0.35,
+                     min_turnover: float = 10_000_000.0) -> dict:
+    """Apply the documented triage rule to every untriaged gap.
+
+    Hand-reviewing seven gaps over three months was reasonable. Over eleven years it is
+    not, and rubber-stamping hundreds would be worse than not reviewing them. So the
+    reasoning used on the original seven is encoded instead:
+
+    1. **Cross-listed but only one exchange gapped** -> ``price_move``. A corporate
+       action affects the security, so it must move both listings. One-sided is positive
+       evidence that it is *not* an action - the strongest verdict available here.
+    2. **Single-listed** -> ``needs_source``. Corroboration is structurally impossible
+       and the ratio did not snap tightly, so it cannot be resolved without an
+       authoritative corporate-action feed. Undecidable, and recorded as such.
+    3. **Both exchanges gapped but no clean ratio** -> ``needs_source``. Action-like, but
+       the ratio is not one a real action uses.
+
+    Nothing here guesses. Verdict 1 is a finding; verdicts 2 and 3 record precisely why
+    the question stays open, which keeps the residual dependency visible.
+    """
+    from .. import config  # noqa: F401  (kept for symmetry with other modules)
+
+    suffix_filter = " AND ".join(
+        f"ticker NOT LIKE '%{suf}'" for suf in EXCLUDED_TICKER_SUFFIXES)
+    rows = con.execute(f"""
+        WITH d AS (
+            SELECT isin, ticker, exchange, series, business_date, close_price, turnover,
+                   LAG(close_price) OVER (PARTITION BY isin, exchange, series
+                                          ORDER BY business_date) AS prev
+            FROM universe_snapshots
+            WHERE instrument_type = 'STK' AND close_price > 0 AND {suffix_filter})
+        SELECT business_date, exchange, ticker, isin, close_price / prev AS factor
+        FROM d
+        WHERE prev IS NOT NULL AND turnover >= ?
+          AND ABS(close_price / prev - 1) >= ?
+          AND NOT EXISTS (SELECT 1 FROM corporate_actions ca
+                          WHERE ca.isin = d.isin AND ca.ex_date = d.business_date)
+          AND NOT EXISTS (SELECT 1 FROM gap_reviews gr
+                          WHERE gr.isin = d.isin AND gr.ex_date = d.business_date)
+    """, [min_turnover, threshold]).fetchall()
+
+    # Collapse to one decision per (isin, date) - a gap on two exchanges is one event.
+    events: dict[tuple, list] = {}
+    for business_date, exchange, ticker, isin, factor in rows:
+        events.setdefault((isin, business_date), []).append((exchange, ticker, factor))
+
+    now = datetime.now(timezone.utc)
+    counts = {"price_move": 0, "needs_source": 0}
+
+    for (isin, ex_date), obs in events.items():
+        gapped = {e for e, _, _ in obs}
+        listed = {r[0] for r in con.execute(
+            """SELECT DISTINCT exchange FROM universe_snapshots
+               WHERE isin = ? AND business_date = ?""", [isin, ex_date]).fetchall()}
+        factor = sorted(f for _, _, f in obs)[len(obs) // 2]
+        ticker = obs[0][1]
+
+        if len(listed) > 1 and len(gapped) == 1:
+            verdict = "price_move"
+            note = (f"{ticker} gapped on {sorted(gapped)[0]} only while also listed on "
+                    f"{sorted(listed - gapped)[0]}; a corporate action would move both")
+        elif len(listed) == 1:
+            verdict = "needs_source"
+            note = (f"{ticker} factor={factor:.4f}; single-listed on {sorted(listed)[0]}, "
+                    f"so corroboration is impossible and no clean ratio snapped")
+        else:
+            verdict = "needs_source"
+            note = (f"{ticker} factor={factor:.4f}; both exchanges gapped but the ratio "
+                    f"is not one a real corporate action uses")
+
+        con.execute(
+            """INSERT INTO gap_reviews
+               (isin, ex_date, exchange, observed_factor, verdict, note, reviewed_at)
+               VALUES (?,?,?,?,?,?,?)
+               ON CONFLICT (isin, ex_date) DO NOTHING""",
+            [isin, ex_date, "+".join(sorted(gapped)), factor, verdict, note, now])
+        counts[verdict] += 1
+
+    return {"events": len(events), **counts}
