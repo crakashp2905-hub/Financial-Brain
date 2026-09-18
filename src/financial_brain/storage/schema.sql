@@ -353,3 +353,26 @@ CREATE TABLE IF NOT EXISTS world_states (
     evidence_count  INTEGER NOT NULL,
     builder         VARCHAR NOT NULL       -- builder version
 );
+
+-- Decisions (decisions/record.py). Content is frozen; the lifecycle is an append-only
+-- event log. Nothing here is ever updated or deleted.
+CREATE TABLE IF NOT EXISTS decisions (
+    decision_id         VARCHAR PRIMARY KEY,   -- hash of content
+    isin                VARCHAR NOT NULL,
+    action              VARCHAR NOT NULL,
+    horizon_days        INTEGER NOT NULL,
+    world_state_version VARCHAR NOT NULL,
+    content             VARCHAR NOT NULL,      -- JSON: thesis, evidence, uncertainty, ...
+    author              VARCHAR NOT NULL,
+    created_at          TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS decision_events (
+    decision_id     VARCHAR NOT NULL,
+    seq             INTEGER NOT NULL,
+    from_state      VARCHAR,
+    to_state        VARCHAR NOT NULL,
+    actor           VARCHAR NOT NULL,
+    note            VARCHAR,
+    event_at        TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (decision_id, seq)
+);
