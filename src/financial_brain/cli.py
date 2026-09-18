@@ -671,6 +671,74 @@ def cmd_regime(args) -> int:
     return 0
 
 
+def cmd_daily(args) -> int:
+    """The whole daily cycle, idempotent and safe to schedule.
+
+    Each step reports and the next still runs: a missing corporate-action month should
+    not cost the morning brief. Exit code is non-zero if any step failed.
+    """
+    import traceback
+    from .ingest import corpact_feed
+    from .ingest.announcements import AnnouncementsJob
+    from .regime import brain
+    cfg = load()
+    Database(cfg).migrate()
+    d = _d(args.date) if args.date else date.today()
+    failed: list[str] = []
+
+    def step(name, fn):
+        print(f"== {name}")
+        try:
+            out = fn()
+            if out is not None:
+                print(f"   {out}")
+        except Exception as e:  # noqa: BLE001 - report and continue
+            failed.append(name)
+            print(f"   FAILED: {type(e).__name__}: {e}")
+            if args.verbose:
+                traceback.print_exc()
+
+    def prices():
+        res = [r for s in ("NSE", "BSE") for r in BhavcopyIngestJob(s).run_range(d, d)]
+        return "; ".join(f"{r.source} {r.status} {r.rows_out}" for r in res)
+
+    def indices():
+        return "; ".join(f"{r.status} {r.message}" for r in IndexCloseJob().run_range(d, d))
+
+    def corporate_actions():
+        with Database(cfg).connect() as con:
+            st = corpact_feed.ingest(con, cfg, d.replace(day=1), d)
+            ca_detect.rebuild_derived_factors(con)
+        return f"{st['recorded']} new reported actions"
+
+    def announcements():
+        res = AnnouncementsJob(cfg).run_range(d - timedelta(days=1), d, force=True)
+        return "; ".join(f"{r.business_date} {r.status} {r.message}" for r in res)
+
+    def derive():
+        with Database(cfg).connect() as con:
+            ca_detect.derive_all(con)
+            return ca_detect.auto_triage_gaps(con)
+
+    def regime():
+        with Database(cfg).connect() as con:
+            return brain.build(con)
+
+    step("prices (NSE + BSE bhavcopy)", prices)
+    step("index levels", indices)
+    step("BSE corporate actions (this month)", corporate_actions)
+    step("announcements (yesterday and today)", announcements)
+    if args.full:
+        step("derive corporate actions + triage gaps", derive)
+    step("market regime", regime)
+    if not args.no_brief:
+        class _A:  # reuse `fb brief`
+            date = None
+        step("daily brief", lambda: cmd_brief(_A()))
+    print(f"\n{'OK' if not failed else 'FAILED: ' + ', '.join(failed)}")
+    return 1 if failed else 0
+
+
 def cmd_trace(args) -> int:
     """Follow one claim to its bytes, and every derived claim to its inputs."""
     from .evidence import ledger
@@ -740,6 +808,14 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--kind", default="bhavcopy", choices=["bhavcopy", "index", "announcements"])
     g.add_argument("--workers", type=int, default=6)
     g.set_defaults(fn=cmd_prefetch)
+
+    g = sub.add_parser("daily", help="the whole daily cycle: ingest, regime, brief")
+    g.add_argument("--date", help="session date (default: today)")
+    g.add_argument("--full", action="store_true",
+                   help="also re-derive corporate actions and triage gaps (~12 min)")
+    g.add_argument("--no-brief", action="store_true")
+    g.add_argument("-v", "--verbose", action="store_true")
+    g.set_defaults(fn=cmd_daily)
 
     g = sub.add_parser("trace", help="follow a claim to its bytes and inputs")
     g.add_argument("evidence_id")
