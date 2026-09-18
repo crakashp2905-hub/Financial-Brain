@@ -6,11 +6,12 @@ shapes rather than the network.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
 from financial_brain.config import Config
+from financial_brain.providers.base import FetchResult
 from financial_brain.corpactions import detect
 from financial_brain.providers.reference import (NSEEquityListProvider, NSEFnoLotsProvider,
                                                  NSEIndexCloseProvider)
@@ -306,10 +307,14 @@ def _make_eod_view_with_turnover(con, rows):
     con.execute("""CREATE OR REPLACE TEMP TABLE _eod2 (
         business_date DATE, exchange VARCHAR, isin VARCHAR, ticker VARCHAR,
         series VARCHAR, instrument_type VARCHAR, instrument_id VARCHAR,
-        close_price DOUBLE, prev_close DOUBLE, turnover DOUBLE)""")
-    for d, exch, isin, tk, ser, close, turnover in rows:
-        con.execute("INSERT INTO _eod2 VALUES (?,?,?,?,?,'STK','1',?,NULL,?)",
-                    [d, exch, isin, tk, ser, close, turnover])
+        open_price DOUBLE, close_price DOUBLE, prev_close DOUBLE, turnover DOUBLE)""")
+    # open = close: a real action is applied before the open, so the stock *opens* at
+    # the adjusted price. Tests of intraday moves pass their own open.
+    for row in rows:
+        d, exch, isin, tk, ser, close, turnover, *rest = row
+        opn = rest[0] if rest else close
+        con.execute("INSERT INTO _eod2 VALUES (?,?,?,?,?,'STK','1',?,?,NULL,?)",
+                    [d, exch, isin, tk, ser, opn, close, turnover])
     con.execute("CREATE OR REPLACE TEMP VIEW eod_prices AS SELECT * FROM _eod2")
 
 
@@ -622,3 +627,211 @@ class TestGapAutoTriage:
             self._px(con, "INE000000E01", "BSE", date(2020, 3, 2), 100.0, turnover=1000)
             self._px(con, "INE000000E01", "BSE", date(2020, 3, 3), 10.0, turnover=1000)
             assert auto_triage_gaps(con)["events"] == 0
+
+
+class TestConsecutiveSessions:
+    """A comparison is only valid against the exchange's immediately previous session.
+
+    Over 2015-2026 two artefacts produced ~6,000 phantom 'adjustments':
+      * weekend special sessions missing from the data (now ingested), and
+      * surveillance series transfers: on a stock's first BE day, the LAG within BE is
+        whatever BE printed months earlier, while the stated previous close is
+        yesterday's EQ close.
+    """
+
+    def _days(self):
+        return [date(2026, 3, 2), date(2026, 3, 3), date(2026, 3, 4), date(2026, 3, 5)]
+
+    def test_series_transfer_is_not_a_corporate_action(self, cfg, db):
+        from financial_brain.corpactions.detect import find_candidates
+        d0, d1, d2, d3 = self._days()
+        rows = [(d, "NSE", "INE000000019", "BENCH", "EQ", 100.0, 100.0) for d in (d0, d1, d2, d3)]
+        rows += [
+            (d0, "NSE", "INE000000027", "SICK", "BE", 50.0, 50.0),    # an old BE print
+            (d1, "NSE", "INE000000027", "SICK", "EQ", 100.0, 100.0),
+            (d2, "NSE", "INE000000027", "SICK", "EQ", 100.0, 100.0),
+            (d3, "NSE", "INE000000027", "SICK", "BE", 101.0, 100.0),  # moved to BE
+        ]
+        with db.connect() as con:
+            _make_eod_view(con, rows)
+            found = find_candidates(con)
+        assert [c for c in found if c["isin"] == "INE000000027"] == [], \
+            "BE's previous row is from d0, not the previous session - nothing to compare"
+
+    def test_a_real_restatement_on_consecutive_sessions_is_still_found(self, cfg, db):
+        from financial_brain.corpactions.detect import find_candidates
+        d0, d1, d2, d3 = self._days()
+        rows = [(d, "NSE", "INE000000019", "BENCH", "EQ", 100.0, 100.0) for d in (d0, d1, d2, d3)]
+        rows += [(d2, "NSE", "INE000000035", "SPLT", "EQ", 500.0, 498.0),
+                 (d3, "NSE", "INE000000035", "SPLT", "EQ", 101.0, 100.0)]
+        with db.connect() as con:
+            _make_eod_view(con, rows)
+            found = [c for c in find_candidates(con) if c["isin"] == "INE000000035"]
+        assert len(found) == 1 and abs(found[0]["factor"] - 0.2) < 1e-9
+
+    def test_rebuild_clears_only_derived_actions(self, cfg, db):
+        from financial_brain.corpactions.detect import clear_derived
+        with db.connect() as con:
+            for aid, derived in (("derived", 0.5), ("from_feed", None)):
+                con.execute("""INSERT INTO corporate_actions (action_id, isin, action_type,
+                    ex_date, source, source_tier, observed_at, derived_factor)
+                    VALUES (?, 'INE000000019', 'SPLIT', DATE '2026-03-03', 'x', 1, NOW(), ?)""",
+                            [aid, derived])
+            assert clear_derived(con) == 1
+            left = [r[0] for r in con.execute("SELECT action_id FROM corporate_actions").fetchall()]
+        assert left == ["from_feed"], "a sourced action must never be deleted by a rebuild"
+
+
+class TestKiteIndexFill:
+    """Kite (Tier 2) may fill index days NSE lacks - validated, and never overwriting."""
+
+    def _world(self, con, days, gap):
+        for d in days:
+            con.execute("""INSERT INTO universe_snapshots (business_date, isin, exchange,
+                ticker, series, close_price, tradable)
+                VALUES (?, 'INE000000019', 'NSE', 'X', 'EQ', 1, TRUE)""", [d])
+            if d != gap:
+                con.execute("""INSERT INTO index_levels (business_date, index_name,
+                    close_level, variant, source, observed_at)
+                    VALUES (?, 'Nifty 50', ?, 'PRICE', 'NSE', NOW())""", [d, 1000.0 + d.day])
+
+    class Fake:
+        source, dataset, tier = "KITE", "index_daily", 2
+
+        def __init__(self, bias=0.0):
+            self.bias = bias
+
+        def index_tokens(self):
+            return {"NIFTY 50": 256265}
+
+        def fetch_range(self, token, start, end):
+            import json as _j
+            from datetime import timedelta as _td
+            candles, d = [], start
+            while d <= end:
+                c = (1000.0 + d.day) * (1 + self.bias)
+                candles.append([f"{d}T00:00:00+0530", c, c, c, c, 0])
+                d += _td(days=1)
+            body = _j.dumps({"status": "success", "data": {"candles": candles}}).encode()
+            return FetchResult(payload=body, url="https://api.kite.test/x",
+                               retrieved_at=datetime.now(timezone.utc),
+                               filename="k.json", content_type="application/json")
+
+        parse = staticmethod(__import__("financial_brain.providers.kite",
+                                        fromlist=["x"]).KiteIndexHistoryProvider.parse)
+
+    def _run(self, cfg, db, bias):
+        from financial_brain.ingest import kite_fill
+        from financial_brain.lake.store import RawLake
+        days = [date(2015, 1, 1) + timedelta(days=i) for i in range(45)]
+        gap = days[20]
+        with db.connect() as con:
+            self._world(con, days, gap)
+            out = kite_fill.fill(con, self.Fake(bias), RawLake(cfg.lake))
+            got = con.execute("SELECT close_level, source FROM index_levels "
+                              "WHERE business_date = ?", [gap]).fetchall()
+            nse_untouched = con.execute("SELECT COUNT(*) FROM index_levels "
+                                        "WHERE source = 'NSE'").fetchone()[0]
+        return out, got, gap, nse_untouched
+
+    def test_fills_only_the_missing_date_when_kite_agrees_with_nse(self, cfg, db):
+        out, got, gap, nse = self._run(cfg, db, bias=0.0)
+        assert got == [(1000.0 + gap.day, "KITE")]
+        assert nse == 44, "NSE Tier-1 levels are never overwritten"
+        assert "filled 1 of 1" in out["indices"]["NIFTY 50"]
+
+    def test_refuses_when_kite_disagrees_with_nse(self, cfg, db):
+        out, got, _, _ = self._run(cfg, db, bias=0.02)   # a different series, 2% off
+        assert got == [], "a mismatched instrument must write nothing"
+        assert out["indices"]["NIFTY 50"].startswith("refused")
+
+    def test_missing_credentials_fail_before_any_network_call(self, monkeypatch):
+        from financial_brain.providers.kite import KiteNotConfigured, credentials
+        monkeypatch.delenv("KITE_API_KEY", raising=False)
+        monkeypatch.delenv("KITE_ACCESS_TOKEN", raising=False)
+        with pytest.raises(KiteNotConfigured):
+            credentials()
+
+
+class TestGapGuards:
+    """Large genuine moves must not be read as corporate actions (11-year findings)."""
+
+    D1, D2 = date(2023, 1, 31), date(2023, 2, 1)
+
+    def _found(self, con, rows):
+        from financial_brain.corpactions.detect import find_gap_candidates
+        _make_eod_view_with_turnover(con, rows)
+        return {c["isin"] for c in find_gap_candidates(con)}
+
+    def test_a_bonus_opens_at_the_adjusted_price_and_is_found(self, cfg, db):
+        """Wipro's 1:3 bonus, 2019-03-06: opened 0.755x, closed 0.763x the prior close."""
+        with db.connect() as con:
+            got = self._found(con, [
+                (self.D1, "NSE", "INE075A01022", "WIPRO", "EQ", 400.0, 5e8),
+                (self.D2, "NSE", "INE075A01022", "WIPRO", "EQ", 305.2, 5e8, 302.0)])
+        assert got == {"INE075A01022"}
+
+    def test_an_intraday_selloff_is_not_an_action(self, cfg, db):
+        """Adani Enterprises 2023-02-01: opened 1.007x, closed 0.718x - moved in session."""
+        with db.connect() as con:
+            got = self._found(con, [
+                (self.D1, "NSE", "INE423A01024", "ADANIENT", "EQ", 2975.0, 5e9),
+                (self.D2, "NSE", "INE423A01024", "ADANIENT", "EQ", 2135.0, 5e9, 2996.0)])
+        assert got == set()
+
+    def test_a_price_rise_is_never_an_inferred_split(self, cfg, db):
+        """RCOM 2017-12-20 closed 1.357x - bonuses and splits only lower the price."""
+        with db.connect() as con:
+            got = self._found(con, [
+                (self.D1, "NSE", "INE330H01018", "RCOM", "EQ", 15.0, 5e8),
+                (self.D2, "NSE", "INE330H01018", "RCOM", "EQ", 20.0, 5e8, 20.0)])
+        assert got == set()
+
+    def test_no_inference_on_a_market_shock_day(self, cfg, db):
+        """2020-03-23: Nifty -13%, circuit breaker at the open, banks gapped ~0.75x."""
+        with db.connect() as con:
+            for d, lvl in ((self.D1, 8745.45), (self.D2, 7610.25)):
+                con.execute("""INSERT INTO index_levels (business_date, index_name,
+                    close_level, variant, source, observed_at)
+                    VALUES (?, 'Nifty 50', ?, 'PRICE', 'NSE', NOW())""", [d, lvl])
+            got = self._found(con, [
+                (self.D1, "NSE", "INE238A01034", "AXISBANK", "EQ", 400.0, 5e9),
+                (self.D2, "NSE", "INE238A01034", "AXISBANK", "EQ", 300.0, 5e9, 300.0)])
+        assert got == set()
+
+
+class TestGapTriageFindings:
+    """Shock days and intraday moves are findings (price_move), not open questions."""
+
+    D1, D2 = date(2023, 1, 31), date(2023, 2, 1)
+
+    def _one(self, con, *, open_px, nifty=None):
+        t = TestGapAutoTriage()
+        t._px(con, "INE423A01024", "NSE", self.D1, 2975.0)
+        t._px(con, "INE423A01024", "NSE", self.D2, 1785.0)
+        _make_eod_view_with_turnover(con, [
+            (self.D1, "NSE", "INE423A01024", "ADANIENT", "EQ", 2975.0, 5e9),
+            (self.D2, "NSE", "INE423A01024", "ADANIENT", "EQ", 1785.0, 5e9, open_px)])
+        if nifty:
+            for d, lvl in zip((self.D1, self.D2), nifty):
+                con.execute("""INSERT INTO index_levels (business_date, index_name,
+                    close_level, variant, source, observed_at)
+                    VALUES (?, 'Nifty 50', ?, 'PRICE', 'NSE', NOW())""", [d, lvl])
+        from financial_brain.corpactions.detect import auto_triage_gaps
+        auto_triage_gaps(con)
+        return con.execute("SELECT verdict, note FROM gap_reviews").fetchone()
+
+    def test_an_intraday_selloff_is_a_price_move(self, cfg, db):
+        with db.connect() as con:
+            verdict, note = self._one(con, open_px=2996.0)      # opened flat, fell 40% in session
+        assert verdict == "price_move" and "during the session" in note
+
+    def test_a_shock_day_is_a_price_move(self, cfg, db):
+        with db.connect() as con:
+            verdict, note = self._one(con, open_px=1785.0, nifty=(8745.45, 7610.25))
+        assert verdict == "price_move" and "market-wide shock" in note
+
+    def test_an_open_gap_on_a_quiet_single_listed_day_stays_open(self, cfg, db):
+        with db.connect() as con:
+            verdict, _ = self._one(con, open_px=1785.0)
+        assert verdict == "needs_source", "action-like but unconfirmable: stays visible"

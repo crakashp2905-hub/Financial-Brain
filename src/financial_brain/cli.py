@@ -311,6 +311,8 @@ def cmd_derive(args) -> int:
                 for g in graded], limit=args.limit)
             return 0
 
+        if args.rebuild:
+            print(f"cleared {ca_detect.clear_derived(con)} derived action(s) for rebuild")
         out = ca_detect.derive_all(
             con, min_deviation=args.min_deviation,
             corroborated_only=not args.include_single_exchange)
@@ -594,6 +596,26 @@ def cmd_lake_register(args) -> int:
     return 0
 
 
+def cmd_kite_index_fill(args) -> int:
+    """Fill index-close sessions NSE does not hold, from Kite (validated, fill-only)."""
+    from .ingest import kite_fill
+    from .lake.store import RawLake
+    from .providers.kite import KiteIndexHistoryProvider, KiteNotConfigured, credentials
+    try:
+        credentials()
+    except KiteNotConfigured as e:
+        print(e)
+        return 2
+    cfg = load()
+    with Database(cfg).connect() as con:
+        out = kite_fill.fill(con, KiteIndexHistoryProvider(), RawLake(cfg.lake),
+                             indices=args.index or None)
+    print(f"{out['missing_dates']} session(s) without index levels")
+    for name, msg in sorted(out["indices"].items()):
+        print(f"  {name:<28} {msg}")
+    return 0
+
+
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
@@ -619,6 +641,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--kind", default="bhavcopy", choices=["bhavcopy", "index"])
     g.add_argument("--workers", type=int, default=6)
     g.set_defaults(fn=cmd_prefetch)
+
+    g = sub.add_parser("kite-index-fill",
+                       help="fill index days NSE lacks, from Kite (needs KITE_API_KEY/KITE_ACCESS_TOKEN)")
+    g.add_argument("--index", action="append", help="limit to these index names")
+    g.set_defaults(fn=cmd_kite_index_fill)
 
     g = sub.add_parser("lake-register", help="register every lake object in lake_manifest")
     g.set_defaults(fn=cmd_lake_register)
@@ -686,6 +713,8 @@ def main(argv: list[str] | None = None) -> int:
                         "mostly illiquid BSE names, not real actions)")
     g.add_argument("--min-deviation", type=float, default=0.02)
     g.add_argument("--limit", type=int, default=30)
+    g.add_argument("--rebuild", action="store_true",
+                   help="clear all derived actions first (use after a detector fix)")
     g.set_defaults(fn=cmd_derive)
 
     g = sub.add_parser("gaps", help="triage unexplained overnight price gaps")

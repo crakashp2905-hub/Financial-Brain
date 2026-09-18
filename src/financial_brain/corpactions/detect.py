@@ -65,6 +65,10 @@ PRIMARY_SERIES = ("EQ", "BE", "A", "B", "T", "X", "XT", "M", "MT", "W")
 
 #: Ignore moves smaller than this - rounding and price bands create tiny discrepancies.
 MIN_FACTOR_DEVIATION = 0.02
+#: The open must already reflect the gap: |(open/prev) / (close/prev) - 1| at most this.
+OPEN_GAP_TOLERANCE = 0.08
+#: No action is inferred on a day Nifty 50 moved at least this much.
+MARKET_SHOCK = 0.05
 #: A close-to-close gap must be at least this large before it is even a candidate.
 MIN_GAP_MOVE = 0.20
 #: Gap-derived factors carry the day's real price move too, so they need a looser snap
@@ -92,6 +96,22 @@ PLAUSIBLE_RATIOS = sorted(
      and min(a, b) <= 3 and max(a, b) <= 25},
     key=lambda ab: ab[0] / ab[1],
 )
+
+
+#: Each exchange's previous session, taken from the very rows being compared.
+#:
+#: A price comparison is only meaningful between consecutive sessions. Partitioning by
+#: series is not enough: when a stock is moved EQ -> BE (surveillance reviews move them
+#: in batches), its first BE row's LAG is whatever BE printed months earlier, while the
+#: exchange's stated previous close is yesterday's EQ close. Over 2015-2026 that made
+#: clusters of 30-75 distressed small caps (RELCAPITAL, ANSALHSG, ...) look like
+#: corporate actions on review dates. Comparing only when the instrument's previous row
+#: *is* the exchange's previous session removes them.
+_CALENDAR_CTE = """cal AS (
+            SELECT exchange, business_date,
+                   LAG(business_date) OVER (PARTITION BY exchange
+                                            ORDER BY business_date) AS prev_session
+            FROM (SELECT DISTINCT exchange, business_date FROM px))"""
 
 
 def classify(factor: float, tolerance: float = 0.005) -> tuple[str, float | None, float | None]:
@@ -122,6 +142,7 @@ def classify(factor: float, tolerance: float = 0.005) -> tuple[str, float | None
 def find_candidates(con, *, min_deviation: float = MIN_FACTOR_DEVIATION) -> list[dict]:
     """Every (date, exchange, security) where the exchange restated the previous close."""
     series_list = ",".join(f"'{s}'" for s in PRIMARY_SERIES)
+    cal, consecutive_note = _CALENDAR_CTE, "consecutive sessions only"
     cur = con.execute(f"""
         WITH px AS (
             SELECT business_date, exchange, isin, ticker, series, instrument_id,
@@ -129,21 +150,24 @@ def find_candidates(con, *, min_deviation: float = MIN_FACTOR_DEVIATION) -> list
             FROM eod_prices
             WHERE instrument_type = 'STK' AND close_price > 0
               AND series IN ({series_list})
-        ), lagged AS (
+        ), {cal}, lagged AS (
             -- The previous *traded* row for the same instrument, in one window pass.
             -- This was a correlated MAX(business_date) subquery: fine on three months,
             -- but over 11 years it ran 16+ CPU-minutes and 8.5 GB without finishing.
             SELECT business_date, exchange, isin, ticker, series, prev_close,
-                   LAG(close_price) OVER (
-                       PARTITION BY isin, exchange, series, instrument_id
-                       ORDER BY business_date) AS actual_prev
+                   LAG(close_price) OVER w AS actual_prev,
+                   LAG(business_date) OVER w AS prev_date
             FROM px
+            WINDOW w AS (PARTITION BY isin, exchange, series, instrument_id
+                         ORDER BY business_date)
         ), joined AS (
-            SELECT business_date, exchange, isin, ticker, series,
-                   actual_prev, prev_close AS stated_prev,
-                   prev_close / actual_prev AS factor
-            FROM lagged
-            WHERE prev_close IS NOT NULL AND actual_prev > 0
+            SELECT l.business_date, l.exchange, l.isin, l.ticker, l.series,
+                   l.actual_prev, l.prev_close AS stated_prev,
+                   l.prev_close / l.actual_prev AS factor
+            FROM lagged l
+            JOIN cal c ON c.exchange = l.exchange AND c.business_date = l.business_date
+            WHERE l.prev_close IS NOT NULL AND l.actual_prev > 0
+              AND l.prev_date = c.prev_session   -- {consecutive_note}
         )
         SELECT business_date AS ex_date, exchange, isin, ticker, series,
                actual_prev, stated_prev, factor
@@ -276,6 +300,20 @@ def find_gap_candidates(con, *, min_move: float = MIN_GAP_MOVE,
 
     Restricted to liquid names, because on an illiquid stock a 40% print means very
     little. Rights entitlements are excluded: they are volatile by construction.
+
+    Three guards added once the history reached eleven years, where large genuine moves
+    started snapping to clean ratios (Adani Enterprises' 2023-02-01 selloff as "3:4",
+    RCOM's +36% day as "4:3", eight banks on the COVID crash day as "3:4"):
+
+    * **The gap must be at the open.** An action is applied before the session opens,
+      so the stock *opens* at the adjusted price: Wipro's 2019 bonus opened at 0.755x
+      and closed at 0.763x the previous close. Adani opened at 1.007x and fell during
+      the day. Open/prev must be within ``OPEN_GAP_TOLERANCE`` of close/prev.
+    * **The price must fall.** Splits and bonuses only ever lower it; a consolidation
+      must be sourced, not inferred.
+    * **Not on a market-shock day.** When Nifty 50 moves ``MARKET_SHOCK`` or more, many
+      stocks gap at the open together (2020-03-23: -13%, circuit breaker at the open),
+      and no action is inferred.
     """
     series_list = ",".join(f"'{s}'" for s in PRIMARY_SERIES)
     suffix_filter = " AND ".join(
@@ -283,25 +321,39 @@ def find_gap_candidates(con, *, min_move: float = MIN_GAP_MOVE,
     cur = con.execute(f"""
         WITH px AS (
             SELECT business_date, exchange, isin, ticker, series, instrument_id,
-                   close_price, turnover
+                   open_price, close_price, turnover
             FROM eod_prices
             WHERE instrument_type = 'STK' AND close_price > 0
               AND series IN ({series_list}) AND {suffix_filter}
+        ), {_CALENDAR_CTE}, mkt AS (
+            SELECT business_date,
+                   close_level / LAG(close_level) OVER (ORDER BY business_date) - 1 AS ret
+            FROM index_levels WHERE index_name = 'Nifty 50' AND variant = 'PRICE'
         ), gapped AS (
             SELECT business_date AS ex_date, exchange, isin, ticker, series, close_price,
-                   LAG(close_price) OVER (PARTITION BY isin, exchange, series,
-                                                       instrument_id
-                                          ORDER BY business_date) AS prev_close,
+                   open_price,
+                   LAG(close_price) OVER w AS prev_close,
+                   LAG(business_date) OVER w AS prev_date,
                    turnover
             FROM px
+            WINDOW w AS (PARTITION BY isin, exchange, series, instrument_id
+                         ORDER BY business_date)
         )
-        SELECT ex_date, exchange, isin, ticker, series, prev_close AS actual_prev,
-               close_price AS stated_prev, close_price / prev_close AS factor
-        FROM gapped
-        WHERE prev_close IS NOT NULL AND prev_close > 0
-          AND turnover >= ?
-          AND ABS(close_price / prev_close - 1) >= ?
-        ORDER BY ex_date, isin
+        SELECT g.ex_date, g.exchange, g.isin, g.ticker, g.series, g.prev_close AS actual_prev,
+               g.close_price AS stated_prev, g.close_price / g.prev_close AS factor
+        FROM gapped g
+        JOIN cal c ON c.exchange = g.exchange AND c.business_date = g.ex_date
+        LEFT JOIN mkt m ON m.business_date = g.ex_date
+        WHERE g.prev_close IS NOT NULL AND g.prev_close > 0
+          AND g.prev_date = c.prev_session
+          AND g.close_price < g.prev_close
+          AND g.open_price > 0
+          AND ABS((g.open_price / g.prev_close) / (g.close_price / g.prev_close) - 1)
+              <= {OPEN_GAP_TOLERANCE}
+          AND COALESCE(ABS(m.ret), 0) < {MARKET_SHOCK}
+          AND g.turnover >= ?
+          AND ABS(g.close_price / g.prev_close - 1) >= ?
+        ORDER BY g.ex_date, g.isin
     """, [min_turnover, min_move])
     cols = [c[0] for c in cur.description]
     return [dict(zip(cols, r)) for r in cur.fetchall()]
@@ -348,11 +400,33 @@ def derive_from_gaps(con, *, min_move: float = MIN_GAP_MOVE) -> dict:
             "skipped_single_exchange": skipped_single}
 
 
+def clear_derived(con) -> int:
+    """Delete every *derived* corporate action, ahead of a full re-derivation.
+
+    Derived actions are a pure function of the price history, not observations of a
+    source, so rebuilding them is legitimate - and necessary when the detector is
+    corrected: derivation only appends, so ~5,000 phantom actions from missing weekend
+    sessions would otherwise sit beside the corrected set forever. Rows with no
+    ``derived_factor`` (recorded from an announcement or feed) are never touched.
+    """
+    n = con.execute(
+        "SELECT COUNT(*) FROM corporate_actions WHERE derived_factor IS NOT NULL").fetchone()[0]
+    con.execute("DELETE FROM corporate_actions WHERE derived_factor IS NOT NULL")
+    return n
+
+
 def derive_all(con, **kw) -> dict:
     """Run both detectors. Restated-prev first (precise), then gaps (broader)."""
     a = derive_and_record(con, **kw)
     b = derive_from_gaps(con)
     return {"restated_prev": a, "close_gap": b}
+
+
+def _close_of(con, isin: str, exchange: str, d) -> float | None:
+    r = con.execute("""SELECT MAX(close_price) FROM universe_snapshots
+                       WHERE isin = ? AND exchange = ? AND business_date = ?""",
+                    [isin, exchange, d]).fetchone()
+    return r[0] if r else None
 
 
 def auto_triage_gaps(con, *, threshold: float = 0.35,
@@ -374,21 +448,32 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
 
     Nothing here guesses. Verdict 1 is a finding; verdicts 2 and 3 record precisely why
     the question stays open, which keeps the residual dependency visible.
+
+    Two further findings run first, learned from the eleven-year history, where large
+    genuine moves (Adani Enterprises 2023-02-01, the COVID crash 2020-03-23) otherwise
+    fall through to ``needs_source``:
+
+    0a. **Market-wide shock** (Nifty 50 moved >= ``MARKET_SHOCK``) -> ``price_move``.
+    0b. **Moved during the session** (opened within ``OPEN_GAP_TOLERANCE`` of the previous
+        close) -> ``price_move``. Corporate actions apply before the open; a stock that
+        opened flat and then moved 30% was not split.
     """
     from .. import config  # noqa: F401  (kept for symmetry with other modules)
 
     suffix_filter = " AND ".join(
         f"ticker NOT LIKE '%{suf}'" for suf in EXCLUDED_TICKER_SUFFIXES)
     rows = con.execute(f"""
-        WITH d AS (
-            SELECT isin, ticker, exchange, series, business_date, close_price, turnover,
-                   LAG(close_price) OVER (PARTITION BY isin, exchange, series
-                                          ORDER BY business_date) AS prev
+        WITH px AS (
+            SELECT isin, ticker, exchange, series, business_date, close_price, turnover
             FROM universe_snapshots
-            WHERE instrument_type = 'STK' AND close_price > 0 AND {suffix_filter})
-        SELECT business_date, exchange, ticker, isin, close_price / prev AS factor
-        FROM d
-        WHERE prev IS NOT NULL AND turnover >= ?
+            WHERE instrument_type = 'STK' AND close_price > 0 AND {suffix_filter}
+        ), {_CALENDAR_CTE}, d AS (
+            SELECT x.*, LAG(close_price) OVER w AS prev, LAG(business_date) OVER w AS prev_date
+            FROM px x
+            WINDOW w AS (PARTITION BY isin, exchange, series ORDER BY business_date))
+        SELECT d.business_date, d.exchange, d.ticker, d.isin, d.close_price / d.prev AS factor
+        FROM d JOIN cal c ON c.exchange = d.exchange AND c.business_date = d.business_date
+        WHERE d.prev IS NOT NULL AND d.prev_date = c.prev_session AND d.turnover >= ?
           AND ABS(close_price / prev - 1) >= ?
           AND NOT EXISTS (SELECT 1 FROM corporate_actions ca
                           WHERE ca.isin = d.isin AND ca.ex_date = d.business_date)
@@ -401,6 +486,20 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
     for business_date, exchange, ticker, isin, factor in rows:
         events.setdefault((isin, business_date), []).append((exchange, ticker, factor))
 
+    # Open prices for every candidate in one pass over the curated prices.
+    con.execute("CREATE OR REPLACE TEMP TABLE _gap_cand (isin VARCHAR, exchange VARCHAR, "
+                "business_date DATE)")
+    if rows:
+        con.executemany("INSERT INTO _gap_cand VALUES (?,?,?)",
+                        [[r[3], r[1], r[0]] for r in rows])
+    opens = {(i, e, d): o for i, e, d, o in con.execute("""
+        SELECT e.isin, e.exchange, e.business_date, MAX(e.open_price)
+        FROM eod_prices e JOIN _gap_cand c USING (isin, exchange, business_date)
+        WHERE e.open_price > 0 GROUP BY 1, 2, 3""").fetchall()}
+    shock = dict(con.execute("""
+        SELECT business_date, close_level / LAG(close_level) OVER (ORDER BY business_date) - 1
+        FROM index_levels WHERE index_name = 'Nifty 50' AND variant = 'PRICE'""").fetchall())
+
     now = datetime.now(timezone.utc)
     counts = {"price_move": 0, "needs_source": 0}
 
@@ -411,8 +510,24 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
                WHERE isin = ? AND business_date = ?""", [isin, ex_date]).fetchall()}
         factor = sorted(f for _, _, f in obs)[len(obs) // 2]
         ticker = obs[0][1]
+        open_ratio = None                     # open / previous close
+        for e, _, f in obs:
+            o, c = opens.get((isin, e, ex_date)), _close_of(con, isin, e, ex_date)
+            if o and c:
+                open_ratio = o / (c / f)          # previous close = close / factor
+                break
+        mkt = shock.get(ex_date)
 
-        if len(listed) > 1 and len(gapped) == 1:
+        if mkt is not None and abs(mkt) >= MARKET_SHOCK:
+            verdict = "price_move"
+            note = (f"{ticker} factor={factor:.4f} on a market-wide shock day "
+                    f"(Nifty 50 {mkt:+.1%}); no action is inferred from such days")
+        elif open_ratio is not None and abs(open_ratio - 1) <= OPEN_GAP_TOLERANCE:
+            verdict = "price_move"
+            note = (f"{ticker} opened at {open_ratio:.3f}x and closed at {factor:.3f}x the "
+                    f"previous close - it moved during the session; corporate actions "
+                    f"apply before the open")
+        elif len(listed) > 1 and len(gapped) == 1:
             verdict = "price_move"
             note = (f"{ticker} gapped on {sorted(gapped)[0]} only while also listed on "
                     f"{sorted(listed - gapped)[0]}; a corporate action would move both")
