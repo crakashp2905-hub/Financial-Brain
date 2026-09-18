@@ -16,7 +16,7 @@ from financial_brain.events.classify import classify
      ("PROMOTER_PLEDGE", "high")),
     ("Insider Trading / SAST",
      "Disclosures under Reg. 29(2) of SEBI (SAST) Regulations, 2011", "",
-     ("SUBSTANTIAL_ACQUISITION", "high")),
+     ("SUBSTANTIAL_ACQUISITION", "medium")),
     ("Insider Trading / SAST", "Closure of Trading Window", "", ("TRADING_WINDOW", "low")),
     ("Company Update", "Credit Rating", "", ("CREDIT_RATING", "high")),
     ("Company Update", "Clarification", "", ("CLARIFICATION", "high")),

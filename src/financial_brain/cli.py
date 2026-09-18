@@ -671,6 +671,50 @@ def cmd_regime(args) -> int:
     return 0
 
 
+def cmd_trace(args) -> int:
+    """Follow one claim to its bytes, and every derived claim to its inputs."""
+    from .evidence import ledger
+    with Database(load()).connect() as con:
+        def show(eid: str, depth: int = 0) -> None:
+            t = ledger.trace(con, eid)
+            pad = "  " * depth
+            print(f"{pad}{t['evidence_id']}  [{t['kind']}] {t['claim']}")
+            print(f"{pad}  source {t['source']} tier {t['source_tier']}, derivation "
+                  f"'{t['derivation']}', as of {t['as_of']}, observed {t['observed_at']}")
+            if t.get("url"):
+                print(f"{pad}  bytes  {t['url']}")
+                print(f"{pad}         sha256 {t['sha256']}  lake {t['lake_key']}")
+            if t.get("superseded_by"):
+                print(f"{pad}  SUPERSEDED by {t['superseded_by']}")
+            if depth == 0 and t["used_by"]:
+                print(f"{pad}  used by " + ", ".join(f"{u['used_by_kind']} {u['used_by_id']}"
+                                                     for u in t["used_by"]))
+            for i in t["inputs"]:
+                show(i, depth + 1)
+        show(args.evidence_id)
+    return 0
+
+
+def cmd_brief(args) -> int:
+    """Build the world state for a session and render its cited daily brief."""
+    from .brief.render import render
+    from .evidence import ledger
+    from .worldstate import build as ws
+    cfg = load()
+    with Database(cfg).connect() as con:
+        d = _d(args.date) if args.date else con.execute(
+            "SELECT MAX(business_date) FROM universe_snapshots WHERE exchange = 'NSE'"
+        ).fetchone()[0]
+        state = ws.build(con, d)
+        md, cited = render(con, state, watchlist_path=cfg.data_root / "watchlist.txt")
+        ledger.use(con, cited, used_by_kind="brief", used_by_id=f"brief_{d}")
+    out = cfg.data_root / "briefs" / f"{d}.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(md, encoding="utf-8")
+    print(f"world state {state['version_id']}; {len(cited)} citations -> {out}")
+    return 0
+
+
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
@@ -696,6 +740,14 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--kind", default="bhavcopy", choices=["bhavcopy", "index", "announcements"])
     g.add_argument("--workers", type=int, default=6)
     g.set_defaults(fn=cmd_prefetch)
+
+    g = sub.add_parser("trace", help="follow a claim to its bytes and inputs")
+    g.add_argument("evidence_id")
+    g.set_defaults(fn=cmd_trace)
+
+    g = sub.add_parser("brief", help="build the world state and render the cited daily brief")
+    g.add_argument("--date", help="session date (default: latest)")
+    g.set_defaults(fn=cmd_brief)
 
     g = sub.add_parser("regime", help="market regime per session (build with --build)")
     g.add_argument("--build", action="store_true")

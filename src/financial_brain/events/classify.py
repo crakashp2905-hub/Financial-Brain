@@ -39,7 +39,9 @@ _BY_SUBCATEGORY: list[tuple[str, str, str]] = [
     (r"resignation of statutory auditor", "AUDITOR_RESIGNATION", HIGH),
     (r"appointment of statutory auditor", "AUDITOR_CHANGE", MEDIUM),
     (r"reg\.?\s*31\s*\(1\)|31\(2\)|encumbrance|pledge", "PROMOTER_PLEDGE", HIGH),
-    (r"reg\.?\s*29|sast", "SUBSTANTIAL_ACQUISITION", HIGH),
+    # Medium, not high: mostly routine threshold crossings (a fund passing 5%). 65 of
+    # 179 "high" events on 2026-09-18 were these. Promoter pledges (Reg. 31) stay high.
+    (r"reg\.?\s*29|sast", "SUBSTANTIAL_ACQUISITION", MEDIUM),
     (r"closure of trading window", "TRADING_WINDOW", LOW),
     (r"reg\.?\s*7\s*\(|insider trading|\(pit\)", "INSIDER_DISCLOSURE", MEDIUM),
     (r"credit rating", "CREDIT_RATING", HIGH),
@@ -92,6 +94,21 @@ _LEGAL = re.compile(
     r"imposed a fine|fine of rs)\b", re.I)
 
 
+#: Shareholder communications about tax deducted on dividends are not legal orders
+#: (Bajaj Holdings, 2026-09-17: "TDS on Interim Dividend").
+_NOT_LEGAL = re.compile(r"\b(tds|tax deducted at source|withholding tax)\b", re.I)
+#: Legal outcomes that are good news for the company.
+_FAVOURABLE = re.compile(
+    r"\b(favou?rable|in favou?r of the company|dropped|quashed|set aside|withdrawn|"
+    r"dismissed the (petition|appeal|case) (filed )?against|allowed the appeal|"
+    r"relief|stay granted|no liability)\b", re.I)
+
+
+def legal_tone(text: str) -> str | None:
+    """'favourable' when a legal/regulatory filing reports a good outcome."""
+    return "favourable" if _FAVOURABLE.search(text or "") else None
+
+
 def classify(category: str, subcategory: str, headline: str = "",
              subject: str = "") -> tuple[str, str, str]:
     """Return ``(event_type, materiality, rule)`` - ``rule`` records why."""
@@ -121,7 +138,8 @@ def classify(category: str, subcategory: str, headline: str = "",
     # Legal/regulatory orders are checked before order wins, and override even BSE's
     # own "Receipt of Order" label: a tax-demand order filed under that heading is
     # still a tax demand.
-    if (kind in _COARSE or kind == "ORDER_WIN") and _LEGAL.search(text):
+    if ((kind in _COARSE or kind == "ORDER_WIN") and _LEGAL.search(text)
+            and not _NOT_LEGAL.search(text)):
         return "LEGAL_REGULATORY", HIGH, "headline legal/tax/penalty keywords"
     if kind in _COARSE and _ORDER_WIN.search(text):
         return "ORDER_WIN", HIGH, "headline order/contract keywords"

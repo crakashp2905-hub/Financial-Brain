@@ -314,3 +314,42 @@ CREATE TABLE IF NOT EXISTS market_regime (
     computed_at     TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (business_date, version)
 );
+
+-- Evidence ledger (evidence/ledger.py). Immutable: corrections are new rows that
+-- supersede old ones; nothing is ever updated.
+CREATE TABLE IF NOT EXISTS evidence (
+    evidence_id     VARCHAR PRIMARY KEY,   -- hash of kind, subject, as_of, value, derivation
+    kind            VARCHAR NOT NULL,      -- index_close | regime | announcement | price_move | ...
+    subject         VARCHAR NOT NULL,      -- ISIN, index name, or MARKET
+    as_of           TIMESTAMP NOT NULL,    -- event time the claim is true at
+    published_at    TIMESTAMP,             -- when it became public (point-in-time use)
+    claim           VARCHAR NOT NULL,      -- the human-readable statement
+    value           VARCHAR,               -- JSON
+    source          VARCHAR NOT NULL,
+    source_tier     INTEGER NOT NULL,
+    lake_key        VARCHAR,               -- lake_manifest.key: the bytes it came from
+    derivation      VARCHAR NOT NULL,      -- rule / version that produced it
+    confidence      VARCHAR NOT NULL,
+    quality         VARCHAR NOT NULL,
+    supersedes      VARCHAR,               -- evidence_id this corrects
+    inputs          VARCHAR,               -- JSON list of evidence_ids a derived claim used
+    observed_at     TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS evidence_use (
+    evidence_id     VARCHAR NOT NULL,
+    used_by_kind    VARCHAR NOT NULL,      -- world_state | brief | decision
+    used_by_id      VARCHAR NOT NULL,
+    used_at         TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (evidence_id, used_by_kind, used_by_id)
+);
+
+-- World state (worldstate/build.py): one immutable, content-addressed snapshot per
+-- session. Every item inside cites evidence_ids.
+CREATE TABLE IF NOT EXISTS world_states (
+    version_id      VARCHAR PRIMARY KEY,   -- hash of content
+    business_date   DATE NOT NULL,
+    built_at        TIMESTAMPTZ NOT NULL,
+    content         VARCHAR NOT NULL,      -- JSON
+    evidence_count  INTEGER NOT NULL,
+    builder         VARCHAR NOT NULL       -- builder version
+);
