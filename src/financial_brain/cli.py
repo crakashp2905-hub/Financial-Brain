@@ -327,6 +327,13 @@ def cmd_derive(args) -> int:
         print(f"   skipped       {b['skipped_no_clean_ratio']} no clean ratio "
               f"(likely genuine price moves), "
               f"{b['skipped_single_exchange']} single-exchange")
+        c = out["succession"]
+        print("C. ISIN successions (split changes the ISIN)")
+        print(f"   successions   {c['successions']}  (corroborated {c['corroborated']})")
+        print(f"   recorded      {c['written']}")
+        print(f"   skipped       {c['identity_only']} identity-only, "
+              f"{c['no_clean_ratio']} no clean ratio, "
+              f"{c['already_recorded']} already recorded")
         n = con.execute("SELECT COUNT(*) FROM adjustment_factors").fetchone()[0]
         print(f"adjustment factors rebuilt: {n}")
     return 0
@@ -517,11 +524,14 @@ def cmd_gaps(args) -> int:
             return 0
 
         if args.auto_review:
-            out = ca_detect.auto_triage_gaps(con, threshold=args.threshold)
+            out = ca_detect.auto_triage_gaps(con, threshold=args.threshold,
+                                             redo=args.redo)
             print(f"auto-triaged {out['events']} gap event(s)")
-            print(f"  price_move    {out['price_move']}  "
-                  f"(gapped on one exchange while listed on both)")
-            print(f"  needs_source  {out['needs_source']}  "
+            print(f"  action_recorded {out['action_recorded']}  "
+                  f"(explained by a recorded split via ISIN succession)")
+            print(f"  price_move      {out['price_move']}  "
+                  f"(shock day, intraday move, or one-sided on a cross-listed ISIN)")
+            print(f"  needs_source    {out['needs_source']}  "
                   f"(undecidable without a corporate-action feed)")
             return 0
 
@@ -721,6 +731,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--review", metavar="ISIN:DATE:VERDICT[:NOTE]")
     g.add_argument("--auto-review", action="store_true",
                    help="apply the documented triage rule to every untriaged gap")
+    g.add_argument("--redo", action="store_true",
+                   help="with --auto-review: replace earlier automatic verdicts "
+                        "(manual ones are never touched)")
     g.add_argument("--threshold", type=float, default=0.35)
     g.add_argument("--limit", type=int, default=30)
     g.set_defaults(fn=cmd_gaps)

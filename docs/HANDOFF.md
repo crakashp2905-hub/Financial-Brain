@@ -59,21 +59,23 @@ Phase 1. If session limits hit, autostart after the limit period is over."*
 
 ---
 
-## Current state (2026-09-18)
+## Current state (2026-09-18, evening)
 
-- **Prices:** NSE + BSE bhavcopy, **2015-01-01 → 2026-09-16, all 2,890 trading days
-  resolved**. Legacy (pre-July-2024) formats are normalised into UDiFF; verified
-  equivalent on the overlap (2,806 rows, zero mismatches).
-- **Scale:** 14.7M universe rows, 16,864 ISINs, 42,543 listings, 8,186 lake objects
-  (~1 GB), all registered in `lake_manifest`.
-- **Indexes:** covering indexes added on `universe_snapshots`, `ingest_runs`,
-  `security_listings`, `corporate_actions`.
-- **Index history:** 2,881 NSE index-close files prefetched into the lake;
-  `fb index --start 2015-01-01 --end 2026-09-16` was loading them (lake-first) when this
-  file was written. Verify with the query in step P0-1.
-- Tests: 65 passing. Last commit `2553054`.
-
----
+- **Prices:** NSE + BSE bhavcopy, **2015-01-01 → 2026-09-18, 2,905 sessions each, zero
+  one-sided days** (the two exchanges share one calendar - that agreement is the
+  completeness check). Includes weekend special sessions (Budget, Muhurat, 2024 DR
+  drills), which the old weekdays-only calendar never fetched.
+- **BSE before 2016-12-08** has no ISIN in the source; rows are resolved by scrip code
+  with same-day NSE corroboration (`ingest/bse_isin.py`) - ~45% of rows, essentially
+  the whole cross-listed set; BSE-only scrips for that period are unrecoverable.
+- **Index levels:** 2015 → 2026, 228 indices. **9 NSE sessions in 2015-16 have no index
+  file** (genuine 404s: 2015-02-02, 03-12, 03-13, 05-19, 07-08, 09-04, 10-16, 12-01,
+  2016-06-20). `fb kite-index-fill` can fill them once Kite credentials exist.
+- **Guards added today:** stale-republication detection (BSE re-served Friday as
+  Saturday 2020-06-20 / 10-17); 403 is a failure, only 404 means "not published";
+  consecutive-session rule and open-gap / price-fall / market-shock guards in
+  corporate-action inference.
+- Tests: 90 passing. Lake ~1.1 GB, fully registered in `lake_manifest`.
 
 ## Checklist
 
@@ -83,16 +85,15 @@ Phase 1. If session limits hit, autostart after the limit period is over."*
 the whole history, **every** unexplained price gap triaged, and `fb gate` passing on the
 full dataset.
 
-- [ ] **P0-1 Index history loaded.** Verify:
+- [x] **P0-1 Index history loaded.** (done 2026-09-18; 9 source gaps listed above) Verify:
   `SELECT COUNT(DISTINCT business_date), MIN(business_date) FROM index_levels` → ~2,880
   days from 2015. If short, re-run `fb index --start 2015-01-01 --end 2026-09-16`
   (idempotent, lake-first). Sanity: Nifty 50 bottomed on 2020-03-23.
-- [ ] **P0-2 Derive corporate actions** over the full history: `fb derive`. Record counts.
-- [ ] **P0-3 Test `fb gaps --auto-review`** (written but *not yet tested* — see
-  `auto_triage_gaps` in `src/financial_brain/corpactions/detect.py`). Add offline tests
-  for all three rules (one-sided on a cross-listed ISIN → `price_move`; single-listed →
-  `needs_source`; both-gapped without a clean ratio → `needs_source`), then run it.
-  Check `fb gaps` shows zero untriaged.
+- [ ] **P0-2 Derive corporate actions** over the full history: `fb derive --rebuild` (rebuild clears derived rows first). Then `fb gaps --auto-review` and confirm `fb gaps` shows zero untriaged. Record counts.
+- [x] **P0-3 Test `fb gaps --auto-review`** — `auto_triage_gaps` in
+  `src/financial_brain/corpactions/detect.py`, tested 2026-09-18 for all rules: shock
+  day / intraday move / one-sided on a cross-listed ISIN → `price_move`; single-listed
+  or both-gapped without a clean ratio → `needs_source`. Running it is part of P0-2.
 - [ ] **P0-4 `fb gate`** on the full dataset — every base must pass. Any failure: find
   the cause, fix, re-run. Do not weaken a check to make it pass.
 - [ ] **P0-5 Document** the 11-year results in `docs/PHASE-0.md` (coverage, counts,
@@ -123,7 +124,10 @@ before the market opens.* Order:
 
 ## Needs the owner
 
-- **Kite Connect API key/secret** — for the portfolio section of the daily brief (P1-5).
+- **Kite Connect credentials** — set `KITE_API_KEY` and `KITE_ACCESS_TOKEN` in the
+  environment (the token comes from Kite's daily login). Unlocks `fb kite-index-fill`
+  (the 9 missing index sessions) and the portfolio section of the daily brief (P1-5).
+  Never ask for, store or invent these.
 - **LLM API access** — first LLM use is Phase 1 summarisation (never prediction).
 - **Decision D1: personal tool or product?** — see `docs/RESOURCES.md` §11.
 
@@ -132,3 +136,10 @@ before the market opens.* Order:
 - 2026-09-18 — 11-year backfill complete; fixed replay-skips-check, prefetch provenance
   gap, lake-blind index job, blank-series constraint. Set up this handoff and the
   hourly `financial-brain-resume` scheduled task.
+- 2026-09-18 (later) — BSE 2015-16 recovered via NSE-corroborated scrip mapping; weekend
+  special sessions found and loaded (calendar is now every calendar day); republication
+  guard; 403 ≠ 404; corporate-action inference corrected (8,944 derived "actions" were
+  ~all artefacts of missing sessions and series transfers - Detector A finds zero real
+  restatements; gap detection now guarded). Kite provider built, awaiting credentials.
+  Owner asked about TradingView / Investing.com: declined (no API; scraping breaches
+  their terms and needs bot-evasion). yfinance is grey - cross-check use only.

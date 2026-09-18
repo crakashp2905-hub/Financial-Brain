@@ -246,3 +246,20 @@ CREATE TABLE IF NOT EXISTS gap_reviews (
     reviewed_at     TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (isin, ex_date)
 );
+
+-- ISIN successions: the same security continuing under a new ISIN.
+-- In India a face-value split changes the ISIN, so without this table a company's
+-- history breaks into two unrelated securities on every split. Detected from what stays
+-- stable through the change - BSE's scrip code and NSE's ticker - on consecutive
+-- sessions, and corroborated when both exchanges show the same (old, new) pair.
+CREATE TABLE IF NOT EXISTS isin_successions (
+    old_isin        VARCHAR NOT NULL,
+    new_isin        VARCHAR NOT NULL,
+    effective_date  DATE NOT NULL,      -- first session under the new ISIN (earliest exchange)
+    exchanges       VARCHAR NOT NULL,   -- BSE | NSE | BSE+NSE
+    price_ratio     DOUBLE,             -- first new close / last old close (median over exchanges)
+    confidence      VARCHAR NOT NULL,   -- corroborated | single_exchange
+    evidence        VARCHAR,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (old_isin, new_isin)
+);

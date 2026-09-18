@@ -415,11 +415,67 @@ def clear_derived(con) -> int:
     return n
 
 
+#: A price ratio within this of 1 across an ISIN change is an identity-only change
+#: (scheme restructure, re-issue) - the security continues, nothing is adjusted.
+IDENTITY_ONLY_BAND = 0.10
+
+
+def derive_from_successions(con) -> dict:
+    """Record splits evidenced by an ISIN succession whose price ratio snaps cleanly.
+
+    The succession itself proves an event happened (the exchange published a new ISIN
+    for the same scrip code or ticker), so the only open question is the ratio - which
+    is why the corroborated gap tolerance applies whether one exchange or both show the
+    switch. Confidence is recorded separately. Actions are attached to the new ISIN on
+    the first session under it; the ``isin_successions`` row links the old history.
+    """
+    from ..securities import succession
+    counts = succession.record(con)
+    now = datetime.now(timezone.utc)
+    written = identity_only = no_ratio = duplicate = 0
+
+    for old, new, eff, exchanges, ratio, conf in con.execute(
+            """SELECT old_isin, new_isin, effective_date, exchanges, price_ratio, confidence
+               FROM isin_successions ORDER BY effective_date""").fetchall():
+        if ratio is None:
+            no_ratio += 1
+            continue
+        if abs(ratio - 1) < IDENTITY_ONLY_BAND:
+            identity_only += 1
+            continue
+        action_type, r_from, r_to = classify(ratio, tolerance=GAP_RATIO_TOLERANCE)
+        if action_type != "SPLIT" or not r_from:
+            no_ratio += 1
+            continue
+        if con.execute(
+                """SELECT 1 FROM corporate_actions WHERE isin IN (?, ?)
+                   AND ex_date BETWEEN CAST(? AS DATE) - 3 AND CAST(? AS DATE) + 3""",
+                [old, new, eff, eff]).fetchone():
+            duplicate += 1
+            continue
+        detail = (f"derived from ISIN succession {old} -> {new}; observed={ratio:.6f}; "
+                  f"snapped={int(r_from)}:{int(r_to)}; exchanges={exchanges}")
+        aid = ca.action_id(new, action_type, eff, detail)
+        con.execute(
+            """INSERT INTO corporate_actions
+               (action_id, isin, exchange, action_type, ex_date, ratio_from, ratio_to,
+                details, source, source_tier, observed_at, confidence, derived_factor)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            [aid, new, exchanges, action_type, eff, r_from, r_to, detail, "NSE",
+             TIER["NSE"], now, f"{conf}_succession", r_from / r_to])
+        written += 1
+
+    rebuild_derived_factors(con)
+    return {**counts, "written": written, "identity_only": identity_only,
+            "no_clean_ratio": no_ratio, "already_recorded": duplicate}
+
+
 def derive_all(con, **kw) -> dict:
-    """Run both detectors. Restated-prev first (precise), then gaps (broader)."""
+    """Run every detector: restated prev close, close-to-close gaps, ISIN successions."""
     a = derive_and_record(con, **kw)
     b = derive_from_gaps(con)
-    return {"restated_prev": a, "close_gap": b}
+    c = derive_from_successions(con)
+    return {"restated_prev": a, "close_gap": b, "succession": c}
 
 
 def _close_of(con, isin: str, exchange: str, d) -> float | None:
@@ -430,7 +486,7 @@ def _close_of(con, isin: str, exchange: str, d) -> float | None:
 
 
 def auto_triage_gaps(con, *, threshold: float = 0.35,
-                     min_turnover: float = 10_000_000.0) -> dict:
+                     min_turnover: float = 10_000_000.0, redo: bool = False) -> dict:
     """Apply the documented triage rule to every untriaged gap.
 
     Hand-reviewing seven gaps over three months was reasonable. Over eleven years it is
@@ -458,7 +514,9 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
         close) -> ``price_move``. Corporate actions apply before the open; a stock that
         opened flat and then moved 30% was not split.
     """
-    from .. import config  # noqa: F401  (kept for symmetry with other modules)
+    if redo:
+        # Automatic verdicts are re-derivable; a person's verdict never is.
+        con.execute("DELETE FROM gap_reviews WHERE reviewed_by = 'auto'")
 
     suffix_filter = " AND ".join(
         f"ticker NOT LIKE '%{suf}'" for suf in EXCLUDED_TICKER_SUFFIXES)
@@ -501,7 +559,7 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
         FROM index_levels WHERE index_name = 'Nifty 50' AND variant = 'PRICE'""").fetchall())
 
     now = datetime.now(timezone.utc)
-    counts = {"price_move": 0, "needs_source": 0}
+    counts = {"action_recorded": 0, "price_move": 0, "needs_source": 0}
 
     for (isin, ex_date), obs in events.items():
         gapped = {e for e, _, _ in obs}
@@ -517,8 +575,22 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
                 open_ratio = o / (c / f)          # previous close = close / factor
                 break
         mkt = shock.get(ex_date)
+        succ = con.execute(
+            """SELECT s.old_isin, s.new_isin, s.effective_date, ca.ratio_from, ca.ratio_to
+               FROM isin_successions s
+               JOIN corporate_actions ca ON ca.isin = s.new_isin
+                    AND ca.ex_date = s.effective_date
+               WHERE ? IN (s.old_isin, s.new_isin)
+                 AND s.effective_date BETWEEN CAST(? AS DATE) - 5 AND CAST(? AS DATE) + 5
+               LIMIT 1""", [isin, ex_date, ex_date]).fetchone()
 
-        if mkt is not None and abs(mkt) >= MARKET_SHOCK:
+        if succ:
+            verdict = "action_recorded"
+            note = (f"{ticker} factor={factor:.4f}; explained by ISIN succession "
+                    f"{succ[0]} -> {succ[1]} on {succ[2]}, recorded as "
+                    f"{int(succ[3])}:{int(succ[4])} (a split changes the ISIN, so one "
+                    f"exchange showed the gap while the other already had the new ISIN)")
+        elif mkt is not None and abs(mkt) >= MARKET_SHOCK:
             verdict = "price_move"
             note = (f"{ticker} factor={factor:.4f} on a market-wide shock day "
                     f"(Nifty 50 {mkt:+.1%}); no action is inferred from such days")
@@ -542,8 +614,9 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
 
         con.execute(
             """INSERT INTO gap_reviews
-               (isin, ex_date, exchange, observed_factor, verdict, note, reviewed_at)
-               VALUES (?,?,?,?,?,?,?)
+               (isin, ex_date, exchange, observed_factor, verdict, note, reviewed_at,
+                reviewed_by)
+               VALUES (?,?,?,?,?,?,?,'auto')
                ON CONFLICT (isin, ex_date) DO NOTHING""",
             [isin, ex_date, "+".join(sorted(gapped)), factor, verdict, note, now])
         counts[verdict] += 1

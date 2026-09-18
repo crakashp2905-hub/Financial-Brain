@@ -35,6 +35,8 @@ class Database:
         "ALTER TABLE dq_results  ADD COLUMN IF NOT EXISTS scope VARCHAR DEFAULT 'file'",
         "ALTER TABLE corporate_actions ADD COLUMN IF NOT EXISTS confidence VARCHAR",
         "ALTER TABLE corporate_actions ADD COLUMN IF NOT EXISTS derived_factor DOUBLE",
+        # 'auto' (fb gaps --auto-review, re-runnable) vs 'manual' (a person's verdict).
+        "ALTER TABLE gap_reviews ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR DEFAULT 'manual'",
     ]
 
     def migrate(self) -> None:

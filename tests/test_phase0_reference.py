@@ -598,7 +598,7 @@ class TestGapAutoTriage:
         assert got == {"INE000000A01": "price_move",
                        "INE000000B01": "needs_source",
                        "INE000000C01": "needs_source"}
-        assert out == {"events": 3, "price_move": 1, "needs_source": 2}
+        assert out == {"events": 3, "action_recorded": 0, "price_move": 1, "needs_source": 2}
 
     def test_a_gap_on_two_exchanges_is_one_event(self, db):
         from financial_brain.corpactions.detect import auto_triage_gaps
@@ -835,3 +835,127 @@ class TestGapTriageFindings:
         with db.connect() as con:
             verdict, _ = self._one(con, open_px=1785.0)
         assert verdict == "needs_source", "action-like but unconfirmable: stays visible"
+
+
+class TestIsinSuccession:
+    """A face-value split changes the ISIN; the scrip code / ticker carries through."""
+
+    D1, D2 = date(2022, 2, 9), date(2022, 2, 10)       # GREENLAM 1:5, 2022-02-10
+
+    def _world(self, con, *, nse_switches=True):
+        rows = [  # (exchange, handle-field, isin, first, last, close on that day)
+            ("BSE", "538979", "INE544R01013", self.D1, self.D1, 500.0),
+            ("BSE", "538979", "INE544R01021", self.D2, self.D2, 100.0),
+        ]
+        if nse_switches:
+            rows += [("NSE", "GREENLAM", "INE544R01013", self.D1, self.D1, 500.0),
+                     ("NSE", "GREENLAM", "INE544R01021", self.D2, self.D2, 100.0)]
+        for exch, handle, isin, f, l, close in rows:
+            iid, tk = (handle, "GREENLAM LTD") if exch == "BSE" else ("", handle)
+            con.execute("INSERT INTO security_listings VALUES (?,?,?,?,?,?,?)",
+                        [isin, exch, tk, "EQ", iid, f, l])
+            con.execute("""INSERT INTO universe_snapshots (business_date, isin, exchange,
+                ticker, series, close_price, tradable) VALUES (?,?,?,?, 'EQ', ?, TRUE)""",
+                        [f, isin, exch, tk, close])
+
+    def test_detects_a_corroborated_succession_with_its_ratio(self, db):
+        from financial_brain.securities import succession
+        with db.connect() as con:
+            self._world(con)
+            found = succession.detect(con)
+        assert len(found) == 1
+        s = found[0]
+        assert (s["old_isin"], s["new_isin"]) == ("INE544R01013", "INE544R01021")
+        assert s["effective_date"] == self.D2 and s["confidence"] == "corroborated"
+        assert abs(s["price_ratio"] - 0.2) < 1e-9
+
+    def test_one_exchange_is_single_exchange_evidence(self, db):
+        from financial_brain.securities import succession
+        with db.connect() as con:
+            self._world(con, nse_switches=False)
+            assert succession.detect(con)[0]["confidence"] == "single_exchange"
+
+    def test_a_non_consecutive_handle_reuse_is_not_a_succession(self, db):
+        """A ticker reused months later for an unrelated company must not link them."""
+        from financial_brain.securities import succession
+        with db.connect() as con:
+            for d in (date(2022, 1, 3), date(2022, 1, 4), date(2022, 6, 1)):   # the calendar
+                con.execute("""INSERT INTO universe_snapshots (business_date, isin, exchange,
+                    ticker, series, close_price, tradable)
+                    VALUES (?, 'INE000000019', 'NSE', 'BENCH', 'EQ', 1, TRUE)""", [d])
+            for isin, f, l in (("INE000000A01", date(2022, 1, 3), date(2022, 1, 3)),
+                               ("INE000000B01", date(2022, 6, 1), date(2022, 6, 1))):
+                con.execute("INSERT INTO security_listings VALUES (?, 'NSE', 'REUSED', 'EQ', '', ?, ?)",
+                            [isin, f, l])
+            assert succession.detect(con) == []
+
+    def test_split_is_recorded_and_explains_the_gap(self, cfg, db):
+        from financial_brain.corpactions.detect import auto_triage_gaps, derive_from_successions
+        with db.connect() as con:
+            self._world(con)
+            out = derive_from_successions(con)
+            action = con.execute("SELECT isin, ratio_from, ratio_to, confidence "
+                                 "FROM corporate_actions").fetchall()
+            # the old ISIN still gapped on one exchange that day (NSE kept it a session)
+            con.execute("""INSERT INTO universe_snapshots (business_date, isin, exchange,
+                ticker, series, turnover, close_price, tradable, instrument_type)
+                VALUES (?, 'INE544R01013', 'NSE', 'GREENLAM', 'BE', 5e7, 500, TRUE, 'STK'),
+                       (?, 'INE544R01013', 'NSE', 'GREENLAM', 'BE', 5e7, 100, TRUE, 'STK')""",
+                        [self.D1, self.D2])
+            auto_triage_gaps(con)
+            verdict = con.execute("SELECT verdict FROM gap_reviews").fetchone()[0]
+        assert out["written"] == 1
+        assert action == [("INE544R01021", 1.0, 5.0, "corroborated_succession")]
+        assert verdict == "action_recorded"
+
+    def test_identity_only_change_adjusts_nothing(self, db):
+        from financial_brain.corpactions.detect import derive_from_successions
+        with db.connect() as con:
+            self._world(con)
+            con.execute("UPDATE universe_snapshots SET close_price = 501 "
+                        "WHERE isin = 'INE544R01021'")
+            out = derive_from_successions(con)
+        assert out["identity_only"] == 1 and out["written"] == 0
+
+    def test_redo_replaces_auto_verdicts_but_never_manual_ones(self, db):
+        from financial_brain.corpactions.detect import auto_triage_gaps
+        with db.connect() as con:
+            con.execute("""INSERT INTO gap_reviews VALUES
+                ('INE000000A01', DATE '2020-01-01', 'NSE', 0.5, 'needs_source', 'x', NOW(), 'auto'),
+                ('INE000000B01', DATE '2020-01-01', 'NSE', 0.5, 'price_move', 'y', NOW(), 'manual')""")
+            auto_triage_gaps(con, redo=True)
+            left = con.execute("SELECT isin FROM gap_reviews").fetchall()
+        assert left == [("INE000000B01",)]
+
+
+class TestStaggeredSuccession:
+    """Schaeffler 1:5, 2022-02-08: BSE switched ISIN that day; NSE kept the old ISIN one
+    more session at the already-split price. The ratio must be measured across the
+    ex-date, not old-last -> new-first per exchange (which gave a bogus 3:5)."""
+
+    def test_ratio_is_measured_across_the_first_switch(self, db):
+        from financial_brain.securities import succession
+        d1, d2, d3 = date(2022, 2, 7), date(2022, 2, 8), date(2022, 2, 9)
+        old, new = "INE513A01014", "INE513A01022"
+        rows = [  # exchange, handle, isin, date, close
+            ("BSE", "505790", old, d1, 8930.85), ("BSE", "505790", new, d2, 1762.45),
+            ("BSE", "505790", new, d3, 1708.95),
+            ("NSE", "SCHAEFFLER", old, d1, 8933.30), ("NSE", "SCHAEFFLER", old, d2, 1764.90),
+            ("NSE", "SCHAEFFLER", new, d3, 1702.50),
+        ]
+        spans = {}
+        with db.connect() as con:
+            for exch, h, isin, d, c in rows:
+                tk, iid = ("SCHAEFFLER", h) if exch == "BSE" else (h, "")
+                con.execute("""INSERT INTO universe_snapshots (business_date, isin, exchange,
+                    ticker, series, close_price, tradable) VALUES (?,?,?,?,'EQ',?,TRUE)""",
+                            [d, isin, exch, tk, c])
+                k = (exch, h, isin, tk, iid)
+                spans[k] = (min(spans.get(k, (d, d))[0], d), max(spans.get(k, (d, d))[1], d))
+            for (exch, h, isin, tk, iid), (f, l) in spans.items():
+                con.execute("INSERT INTO security_listings VALUES (?,?,?, 'EQ', ?,?,?)",
+                            [isin, exch, tk, iid, f, l])
+            s = succession.detect(con)
+        assert len(s) == 1 and s[0]["confidence"] == "corroborated"
+        assert s[0]["effective_date"] == d2, "the ex-date is the first switch on either exchange"
+        assert abs(s[0]["price_ratio"] - 0.1975) < 0.001, s[0]["price_ratio"]
