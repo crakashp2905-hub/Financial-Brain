@@ -51,7 +51,9 @@ class Database:
             self._refresh_views(con)
 
     def _refresh_views(self, con) -> None:
-        """Views over the curated Parquet datasets."""
+        """Views over the curated Parquet datasets, plus derived views."""
+        from ..indices.lineage import CANONICAL_VIEW
+        con.execute(CANONICAL_VIEW)
         eod = (self.cfg.curated / "eod_prices").as_posix()
         if any((self.cfg.curated / "eod_prices").rglob("*.parquet")):
             con.execute(

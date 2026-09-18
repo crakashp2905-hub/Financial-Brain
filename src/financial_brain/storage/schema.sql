@@ -289,3 +289,13 @@ CREATE TABLE IF NOT EXISTS announcements (
     evidence_key    VARCHAR NOT NULL,    -- lake_manifest.key
     observed_at     TIMESTAMPTZ NOT NULL
 );
+
+-- Index renames, so each index is one continuous series (see indices/lineage.py).
+CREATE TABLE IF NOT EXISTS index_aliases (
+    old_name        VARCHAR PRIMARY KEY,
+    new_name        VARCHAR NOT NULL,
+    effective_date  DATE NOT NULL,        -- first session under the new name
+    ratio           DOUBLE,               -- new open / old close across the rename
+    family_median   DOUBLE,               -- median ratio of all renames that day
+    observed_at     TIMESTAMPTZ NOT NULL
+);
