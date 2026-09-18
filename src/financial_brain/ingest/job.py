@@ -28,7 +28,7 @@ from ..providers.bhavcopy import PROVIDERS
 from ..securities import master as sec_master
 from ..storage.db import Database
 from ..universe import snapshot as universe
-from . import quality
+from . import bse_isin, quality
 
 STATUS_OK = "ok"
 STATUS_SKIPPED = "skipped"
@@ -132,7 +132,20 @@ class BhavcopyIngestJob:
             )
             rows_in = con.execute("SELECT COUNT(*) FROM raw").fetchone()[0]
 
+            # Pre-Dec-2016 BSE files carry no ISIN. Resolve before the contracts run,
+            # so resolved rows face exactly the same checks as every other row.
+            extra = []
+            if src == "BSE" and bse_isin.needs_resolution(con, "raw"):
+                resolved, unresolved = bse_isin.resolve(con, "raw", business_date)
+                extra.append(quality.CheckResult(
+                    "bse_pre_isin_resolution", quality.WARN, unresolved == 0,
+                    f"{resolved}/{resolved + unresolved}",
+                    "rows whose scrip code resolved to an ISIN NSE corroborated that day; "
+                    "the rest (mostly BSE-only scrips) are dropped, not guessed",
+                    quality.FILE))
+
             report = quality.check_bhavcopy(con, "raw", business_date=business_date)
+            report.results.extend(extra)
             self._record_dq(con, run_id, report)
 
             # A file-scope failure means the payload as a whole is untrustworthy.

@@ -469,3 +469,84 @@ class TestInstrumentIdentity:
             report = quality.check_bhavcopy(con, "raw", business_date=date(2016, 12, 8),
                                             min_rows=1)
         assert not report.publishable, "the same instrument id twice is a real duplicate"
+
+
+class TestBsePreIsin:
+    """Before 8 Dec 2016 BSE published no ISIN and no date column.
+
+    Scrip codes outlive ISIN changes (884 BSE codes carry more than one ISIN), so each
+    mapping must be corroborated by NSE trading the same ISIN, same day, within 3%.
+    """
+
+    PRE_ISIN_CSV = (
+        "SC_CODE,SC_NAME,SC_GROUP,SC_TYPE,OPEN,HIGH,LOW,CLOSE,LAST,PREVCLOSE,NO_TRADES,"
+        "NO_OF_SHRS,NET_TURNOV,TDCLOINDI\n"
+        "500002,ABB LTD.    ,A ,Q,1250.00,1260.00,1240.00,1255.00,1255.00,1248.00,500,"
+        "4000,5000000.00,\n")
+
+    def _zip(self, inner: str, text: str) -> bytes:
+        import io
+        import zipfile as _zf
+        buf = io.BytesIO()
+        with _zf.ZipFile(buf, "w") as z:
+            z.writestr(inner, text)
+        return buf.getvalue()
+
+    def test_date_comes_from_the_inner_filename_and_isin_is_left_blank(self):
+        from financial_brain.providers.bhavcopy import normalise
+        rows = _rows(normalise(self._zip("EQ020215.CSV", self.PRE_ISIN_CSV)))
+        assert rows[0]["TradDt"] == "2015-02-02"
+        assert rows[0]["FinInstrmId"] == "500002"
+        assert rows[0]["ISIN"] == "", "ISIN must never be guessed inside the parser"
+
+    def _setup(self, con, *, listings, nse):
+        for iid, isin, first in listings:
+            con.execute("INSERT INTO security_listings VALUES (?, 'BSE', 'X', 'A', ?, ?, ?)",
+                        [isin, iid, first, first])
+        for isin, close in nse:
+            con.execute("""INSERT INTO universe_snapshots
+                (business_date, isin, exchange, ticker, series, close_price, tradable)
+                VALUES ('2015-02-02', ?, 'NSE', 'X', 'EQ', ?, TRUE)""", [isin, close])
+        con.execute("""CREATE OR REPLACE TEMP TABLE raw AS
+            SELECT FinInstrmId::VARCHAR AS FinInstrmId, ISIN::VARCHAR AS ISIN,
+                   ClsPric::VARCHAR AS ClsPric
+            FROM (VALUES ('500002', NULL, '1255.00'), ('999999', NULL, '10.00'))
+                 t(FinInstrmId, ISIN, ClsPric)""")
+
+    def test_corroborated_mapping_resolves_and_bse_only_scrip_is_dropped(self, db):
+        from financial_brain.ingest import bse_isin
+        with db.connect() as con:
+            self._setup(con, listings=[("500002", "INE117A01022", date(2016, 12, 8))],
+                        nse=[("INE117A01022", 1252.00)])
+            assert bse_isin.needs_resolution(con, "raw")
+            resolved, unresolved = bse_isin.resolve(con, "raw", date(2015, 2, 2))
+            left = con.execute("SELECT FinInstrmId, ISIN FROM raw").fetchall()
+        assert (resolved, unresolved) == (1, 1)
+        assert left == [("500002", "INE117A01022")], "999999 has no mapping: dropped, not guessed"
+
+    def test_post_split_isin_is_refused_not_mislabelled(self, db):
+        """The code's earliest-seen ISIN did not trade on NSE that day -> reject the row."""
+        from financial_brain.ingest import bse_isin
+        with db.connect() as con:
+            self._setup(con, listings=[("500002", "INE117A01030", date(2016, 12, 8))],
+                        nse=[("INE117A01022", 1252.00)])   # NSE traded the *old* ISIN
+            resolved, _ = bse_isin.resolve(con, "raw", date(2015, 2, 2))
+        assert resolved == 0
+
+    def test_price_disagreement_blocks_the_mapping(self, db):
+        from financial_brain.ingest import bse_isin
+        with db.connect() as con:
+            self._setup(con, listings=[("500002", "INE117A01022", date(2016, 12, 8))],
+                        nse=[("INE117A01022", 627.50)])    # a 2:1 split apart
+            resolved, _ = bse_isin.resolve(con, "raw", date(2015, 2, 2))
+        assert resolved == 0
+
+    def test_earliest_seen_isin_is_the_candidate(self, db):
+        from financial_brain.ingest import bse_isin
+        with db.connect() as con:
+            self._setup(con, listings=[("500002", "INE117A01022", date(2016, 12, 8)),
+                                       ("500002", "INE117A01030", date(2021, 6, 17))],
+                        nse=[("INE117A01022", 1252.00)])
+            resolved, _ = bse_isin.resolve(con, "raw", date(2015, 2, 2))
+            isin = con.execute("SELECT ISIN FROM raw").fetchone()[0]
+        assert resolved == 1 and isin == "INE117A01022"

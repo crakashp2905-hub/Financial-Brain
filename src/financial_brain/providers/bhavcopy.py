@@ -66,7 +66,7 @@ def _sniff(text: str) -> str:
     if "SYMBOL" in head and "SERIES" in head:
         return "nse_legacy"
     if "SC_CODE" in head:
-        return "bse_legacy"
+        return "bse_legacy" if "ISIN_CODE" in head else "bse_pre_isin"
     return "unknown"
 
 
@@ -117,15 +117,52 @@ def _normalise_bse_legacy(text: str) -> bytes:
     return ("\n".join(out) + "\n").encode()
 
 
+def _normalise_bse_pre_isin(text: str, inner_name: str) -> bytes:
+    """BSE before 8 Dec 2016: EQddmmyy.CSV - no ISIN and no date column.
+
+    The date comes from the exchange's own inner filename. ISIN is left blank here:
+    it cannot be derived from the payload alone, and guessing it from the scrip code
+    is unsafe because a code survives the ISIN change a face-value split causes
+    (884 BSE codes have carried more than one ISIN). Resolution happens in the ingest
+    job, against the database, with same-day NSE corroboration - see
+    ``ingest/bse_isin.py``.
+    """
+    stem = inner_name.upper().rsplit("/", 1)[-1]
+    try:
+        d = datetime.strptime(stem[2:8], "%d%m%y").date().isoformat()
+    except ValueError as e:
+        raise FetchError(f"cannot read a date from BSE file name {inner_name!r}",
+                         retryable=False) from e
+    out = [",".join(UDIFF_COLUMNS)]
+    for r in csv.DictReader(io.StringIO(text)):
+        row = {(k or "").strip(): (v or "").strip() for k, v in r.items() if k}
+        if not row.get("SC_CODE"):
+            continue
+        out.append(_udiff_line(
+            TradDt=d, BizDt=d, Sgmt="CM", Src="BSE", FinInstrmTp="STK",
+            FinInstrmId=row.get("SC_CODE", ""), ISIN="",
+            TckrSymb=row.get("SC_NAME", ""), SctySrs=row.get("SC_GROUP", ""),
+            FinInstrmNm=row.get("SC_NAME", ""),
+            OpnPric=row.get("OPEN", ""), HghPric=row.get("HIGH", ""),
+            LwPric=row.get("LOW", ""), ClsPric=row.get("CLOSE", ""),
+            LastPric=row.get("LAST", ""), PrvsClsgPric=row.get("PREVCLOSE", ""),
+            SttlmPric=row.get("CLOSE", ""), TtlTradgVol=row.get("NO_OF_SHRS", ""),
+            TtlTrfVal=row.get("NET_TURNOV", ""), TtlNbOfTxsExctd=row.get("NO_TRADES", ""),
+            SsnId="F1", NewBrdLotQty="1"))
+    return ("\n".join(out) + "\n").encode()
+
+
 def normalise(payload: bytes) -> bytes:
     """Return UDiFF CSV bytes for any supported bhavcopy payload, zipped or not.
 
     Format is sniffed from the content rather than inferred from the date, so a
     mislabelled or re-dated file cannot be parsed with the wrong reader.
     """
+    inner_name = ""
     if payload[:2] == b"PK":
         with zipfile.ZipFile(io.BytesIO(payload)) as zf:
-            payload = zf.read(zf.namelist()[0])
+            inner_name = zf.namelist()[0]
+            payload = zf.read(inner_name)
     text = payload.decode("utf-8", errors="replace")
     kind = _sniff(text)
     if kind == "udiff":
@@ -134,6 +171,8 @@ def normalise(payload: bytes) -> bytes:
         return _normalise_nse_legacy(text)
     if kind == "bse_legacy":
         return _normalise_bse_legacy(text)
+    if kind == "bse_pre_isin":
+        return _normalise_bse_pre_isin(text, inner_name)
     raise FetchError(f"unrecognised bhavcopy format (head: {text[:60]!r})", retryable=False)
 
 
@@ -206,6 +245,9 @@ class BSEBhavcopyProvider(Provider):
         "BhavCopy_BSE_CM_0_0_0_{yyyymmdd}_F_0000.CSV"
     )
     #: Pre-July-2024 archive, zipped, dated ddmmyy.
+    #: Pre-8-Dec-2016 archive: no ISIN, no date column.
+    PRE_ISIN_URL = ("https://www.bseindia.com/download/BhavCopy/Equity/"
+                    "EQ{ddmmyy}_CSV.ZIP")
     LEGACY_URL = ("https://www.bseindia.com/download/BhavCopy/Equity/"
                   "EQ_ISINCODE_{ddmmyy}.zip")
 
@@ -253,7 +295,21 @@ class BSEBhavcopyProvider(Provider):
                     f"BSE has no legacy bhavcopy for {business_date}") from e
             raise
         if payload[:2] != b"PK":
-            raise NotPublished(f"BSE has no bhavcopy for {business_date} (not a zip)")
+            # Before 8 Dec 2016 BSE published only EQddmmyy_CSV.ZIP (no ISIN).
+            url = self.PRE_ISIN_URL.format(ddmmyy=business_date.strftime("%d%m%y"))
+            try:
+                payload, status, ctype = self._http_get(
+                    url, headers={"Referer": "https://www.bseindia.com/"})
+            except FetchError as e:
+                if e.status in (403, 404):
+                    raise NotPublished(f"BSE has no bhavcopy for {business_date}") from e
+                raise
+            if payload[:2] != b"PK":
+                raise NotPublished(f"BSE has no bhavcopy for {business_date} (not a zip)")
+            return FetchResult(
+                payload=payload, url=url, retrieved_at=self._now(),
+                filename=f"EQ_{business_date:%Y%m%d}_pre_isin.zip",
+                content_type=ctype, http_status=status, extra={"format": "pre_isin"})
         return FetchResult(
             payload=payload, url=url, retrieved_at=self._now(),
             filename=f"EQ_ISINCODE_{business_date:%Y%m%d}.zip",
