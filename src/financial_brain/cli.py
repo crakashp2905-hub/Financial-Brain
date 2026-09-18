@@ -655,6 +655,17 @@ def cmd_announcements(args) -> int:
     return 0
 
 
+def cmd_features(args) -> int:
+    """Build adjusted continuous prices and the versioned feature table (P2-1)."""
+    from .features import indicators
+    with Database(load()).connect() as con:
+        print(indicators.build(con))
+        for r in con.execute("""SELECT business_date, COUNT(*), COUNT(ret_250d), COUNT(vol_60)
+                                FROM features GROUP BY 1 ORDER BY 1 DESC LIMIT 3""").fetchall():
+            print(f"{r[0]}  lineages {r[1]}  with ret_250d {r[2]}  with vol_60 {r[3]}")
+    return 0
+
+
 def cmd_regime(args) -> int:
     """Build (or show) the market regime for every session."""
     from .regime import brain
@@ -824,6 +835,9 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("brief", help="build the world state and render the cited daily brief")
     g.add_argument("--date", help="session date (default: latest)")
     g.set_defaults(fn=cmd_brief)
+
+    g = sub.add_parser("features", help="build adjusted prices + features (Phase 2)")
+    g.set_defaults(fn=cmd_features)
 
     g = sub.add_parser("regime", help="market regime per session (build with --build)")
     g.add_argument("--build", action="store_true")
