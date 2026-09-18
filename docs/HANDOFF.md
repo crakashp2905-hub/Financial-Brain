@@ -117,12 +117,34 @@ before the market opens.* Order:
 - [x] **P1-2 C07 Market Regime Brain** — done: `fb regime --build` (v2, 12/13 known episodes). Original scope: — from index history (P0-1), breadth from
   universe snapshots, India VIX, FII/DII flows. Deterministic, versioned classifier;
   backtest its stability across 2015–2026 (it must call 2020-03 risk-off).
-- [ ] **P1-3 C09 Evidence ledger** — immutable provenance chain per ARCHITECTURE.md §5.4.
-- [ ] **P1-4 C08 World state** — versioned immutable snapshot built from C06 + C07 + C09.
-- [ ] **P1-5 C10 Daily brief** — "what changed since yesterday", every line cited to the
-  evidence ledger. Market/sector section needs no credentials. Portfolio section needs
-  Kite (read-only) and the prose layer needs an LLM API — both owner-supplied; build
-  the deterministic brief first.
+- [x] **P1-3 C09 Evidence ledger** — done 2026-09-19 (`evidence/ledger.py`, `fb trace`).
+- [x] **P1-4 C08 World state** — done 2026-09-19 (`worldstate/build.py`, content-addressed).
+- [x] **P1-5 C10 Daily brief** — deterministic cited brief done: `fb brief [--date]` →
+  `data/briefs/<date>.md`. Still owner-gated: portfolio section (Kite) and the LLM prose
+  layer. Optional personal watchlist: `data/watchlist.txt`.
+- [ ] **P1-6 Announcement history load** — prefetch finished (4,148 days, 4.2 GB, 0
+  failures). Load was started 2026-09-19 → `data/load_ann.log`. Verify:
+  `SELECT COUNT(*), MIN(business_date) FROM announcements` (expect millions from 2015).
+  If incomplete, re-run `fb announcements --start 2015-01-01 --end 2026-06-19`
+  (idempotent, lake-first). Then re-run `fb gaps --auto-review --redo`: announcements
+  (e.g. CLARIFICATION, SCHEME) may explain more of the 65 open gaps.
+- [ ] **P1-7 Daily operation** — a single `fb daily` that runs, in order: bhavcopy
+  ingest (today), index, corporate-action feed (this month), announcements (today),
+  derive, regime --build, brief. Idempotent, so safe to schedule.
+
+### Phase 2 — Research and committee (after P1-6, P1-7)
+
+Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials first:
+
+- [ ] **P2-1 C12 Feature service** — deterministic, versioned indicators/factors from
+  adjusted prices (uses adjustment_factors + isin_successions for continuous history).
+- [ ] **P2-2 C17 Decision record & lifecycle** — immutable decision contract + state
+  machine (ARCHITECTURE.md §11); every decision references one world_state version.
+- [ ] **P2-3 C21 India evaluation benchmark** — start with labelled announcement types
+  (measure classifier precision on a hand-checked sample) and RBI hawkish/dovish.
+- [ ] **P2-4 C24 Knowledge graph** — promoter groups, pledges, related entities.
+- [ ] **P2-5 C11/C14/C16** — document intelligence, Investment Constitution, committee:
+  need an LLM API (owner) — build interfaces and tests, gate the model calls.
 
 ---
 
@@ -136,6 +158,11 @@ before the market opens.* Order:
 - **Decision D1 — decided 2026-09-19:** personal use now; product only if it works out.
   Keep AGPL dependencies behind our own interfaces; never redistribute exchange data.
 - **Kite credentials** — owner will provide later; do not block on them.
+- **Autostart needs one-time tool approval.** The hourly `financial-brain-resume` task
+  restarts correctly after a limit reset, but its run at 2026-09-18 21:51 UTC sat on a
+  permission prompt at its first shell command. Owner: open *Scheduled* in the sidebar →
+  `financial-brain-resume` → **Run now**, and approve its tools ("always allow"); approvals
+  persist for future runs. (Runs during the limit itself fail by design.)
 
 ## Session log
 
@@ -160,3 +187,7 @@ before the market opens.* Order:
 - 2026-09-19 — P1-1b announcements (classifier fixed on real residue: tax demands vs
   order wins); index lineage across NSE renames; P1-2 regime brain v2. Announcement
   history prefetch running in background (see checklist). Next: P1-3 evidence ledger.
+- 2026-09-19 — P1-3 evidence ledger, P1-4 world state, P1-5 cited daily brief
+  (`fb brief`, `fb trace`). First real brief read as a reader drove 8 fixes (see commit
+  55b70d5). Announcement history load started (P1-6). Found autostart blocked on a
+  permission prompt; noted under Needs the owner.

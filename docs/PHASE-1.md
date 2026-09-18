@@ -10,9 +10,9 @@ Plan: [BUILD-FLOW.md](BUILD-FLOW.md) §3. Live checklist: [HANDOFF.md](HANDOFF.m
 | P1-1a | C06 · BSE corporate-action feed (Tier 1) | **done** |
 | P1-1b | C06 · BSE announcements + event classification | **done** (history backfilling) |
 | P1-2 | C07 · Market Regime Brain | **done** (v2) |
-| P1-3 | C09 · Evidence ledger | — |
-| P1-4 | C08 · World state | — |
-| P1-5 | C10 · Daily brief | — |
+| P1-3 | C09 · Evidence ledger | **done** |
+| P1-4 | C08 · World state | **done** |
+| P1-5 | C10 · Daily brief | **done** (deterministic; LLM prose and portfolio owner-gated) |
 
 ---
 
@@ -134,3 +134,24 @@ v1 → v2, both kept:
 
 A regime held by hysteresis says it is held ("holding RISK_OFF: today alone indicates
 NEUTRAL…") rather than explaining a regime the day's own signals do not support.
+
+## P1-3 / P1-4 / P1-5 — evidence, world state, daily brief
+
+**Evidence ledger.** Every claim is an immutable row carrying its source and tier, the
+lake file and SHA-256, event and publication time, derivation, and every consumer.
+Idempotent (the id hashes what the claim says); corrections supersede, never overwrite;
+derived claims list their inputs. `fb trace <id>` follows the 2026-09-18 RISK_OFF call to
+the bhavcopy and index files that produced it.
+
+**World state.** One content-addressed snapshot per session. Point-in-time: session D
+covers events published in (D 09:00, next session 09:00] IST.
+
+**Daily brief.** `fb brief` → `data/briefs/<date>.md`, every line cited, sources grouped
+by file. Reading the first real one as a reader drove eight fixes, among them: movers
+show their own filings (TIMEX +16.9% beside a CGST order dropping all proceedings),
+favourable orders are marked, ETFs are excluded from movers, routine SAST Reg. 29
+disclosures are medium not high, and one filing is always one evidence id.
+
+**Exit test** — *a brief you would actually read before the market opens* — is the
+owner's call. What it does not yet have: a portfolio section (needs Kite) and prose
+(needs an LLM API); both are designed to cite the same evidence.
