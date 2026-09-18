@@ -263,3 +263,29 @@ CREATE TABLE IF NOT EXISTS isin_successions (
     observed_at     TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (old_isin, new_isin)
 );
+
+-- Corporate announcements (Tier 1, BSE), classified deterministically.
+-- Timestamps are IST wall-clock as published. A decision may use an announcement only
+-- from published_at onwards (ARCHITECTURE.md §5.2); observed_at is when we saw it.
+CREATE TABLE IF NOT EXISTS announcements (
+    news_id         VARCHAR PRIMARY KEY,
+    source          VARCHAR NOT NULL,
+    business_date   DATE NOT NULL,       -- the day queried
+    scrip_code      VARCHAR,
+    isin            VARCHAR,             -- resolved as of business_date; NULL if unlisted
+    company         VARCHAR,
+    category        VARCHAR,
+    subcategory     VARCHAR,
+    headline        VARCHAR,
+    subject         VARCHAR,
+    event_type      VARCHAR NOT NULL,
+    materiality     VARCHAR NOT NULL,    -- high | medium | low
+    rule            VARCHAR,             -- which classification rule fired
+    critical        BOOLEAN,
+    submitted_at    TIMESTAMP,
+    published_at    TIMESTAMP,
+    news_at         TIMESTAMP,
+    attachment      VARCHAR,
+    evidence_key    VARCHAR NOT NULL,    -- lake_manifest.key
+    observed_at     TIMESTAMPTZ NOT NULL
+);

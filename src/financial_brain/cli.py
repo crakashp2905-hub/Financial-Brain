@@ -641,6 +641,20 @@ def _print_reconcile(r: dict) -> None:
           f"{r['reported_liquid']} reported splits/bonuses on liquid names were derived")
 
 
+def cmd_announcements(args) -> int:
+    """Ingest BSE announcements (lake-first) and classify them."""
+    from .ingest.announcements import AnnouncementsJob
+    Database(load()).migrate()
+    start, end = _d(args.start), _d(args.end) if args.end else _d(args.start)
+    counts: dict[str, int] = {}
+    for res in AnnouncementsJob().run_range(start, end, force=args.force):
+        counts[res.status] = counts.get(res.status, 0) + 1
+        if args.verbose or res.status not in ("ok", "skipped", "not_published"):
+            print(res)
+    print("summary: " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+    return 0
+
+
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
@@ -663,9 +677,16 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--start", required=True)
     g.add_argument("--end")
     g.add_argument("--source", action="append", choices=["NSE", "BSE"])
-    g.add_argument("--kind", default="bhavcopy", choices=["bhavcopy", "index"])
+    g.add_argument("--kind", default="bhavcopy", choices=["bhavcopy", "index", "announcements"])
     g.add_argument("--workers", type=int, default=6)
     g.set_defaults(fn=cmd_prefetch)
+
+    g = sub.add_parser("announcements", help="ingest + classify BSE announcements")
+    g.add_argument("--start", required=True)
+    g.add_argument("--end")
+    g.add_argument("--force", action="store_true")
+    g.add_argument("-v", "--verbose", action="store_true")
+    g.set_defaults(fn=cmd_announcements)
 
     g = sub.add_parser("corpact-feed", help="ingest BSE corporate actions (Tier 1)")
     g.add_argument("--start", required=True, help="YYYY-MM")

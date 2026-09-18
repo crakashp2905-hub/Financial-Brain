@@ -54,6 +54,9 @@ class PrefetchStats:
 def _provider_for(kind: str, source: str):
     if kind == "index":
         return NSEIndexCloseProvider()
+    if kind == "announcements":
+        from ..providers.bse_announcements import BSEAnnouncementsProvider
+        return BSEAnnouncementsProvider()
     return PROVIDERS[source]()
 
 
@@ -64,7 +67,8 @@ def prefetch(start: date, end: date, *, sources: list[str] | None = None,
     cfg = cfg or load()
     lake = RawLake(cfg.lake)
     stats = PrefetchStats()
-    sources = sources or (["NSE"] if kind == "index" else ["NSE", "BSE"])
+    sources = sources or ({"index": ["NSE"], "announcements": ["BSE"]}.get(kind)
+                          or ["NSE", "BSE"])
 
     tasks = [(src, d) for src in sources for d in business_days(start, end)]
 

@@ -133,7 +133,9 @@ before the market opens.* Order:
   (the 9 missing index sessions) and the portfolio section of the daily brief (P1-5).
   Never ask for, store or invent these.
 - **LLM API access** — first LLM use is Phase 1 summarisation (never prediction).
-- **Decision D1: personal tool or product?** — see `docs/RESOURCES.md` §11.
+- **Decision D1 — decided 2026-09-19:** personal use now; product only if it works out.
+  Keep AGPL dependencies behind our own interfaces; never redistribute exchange data.
+- **Kite credentials** — owner will provide later; do not block on them.
 
 ## Session log
 

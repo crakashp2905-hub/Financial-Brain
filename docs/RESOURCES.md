@@ -655,7 +655,7 @@ advantage accumulates — and Phase 0 has started the first two.
 
 | # | Decision | Blocks | Status |
 |---|---|---|---|
-| 1 | Personal tool or commercial product? | AGPL exposure, data budget, SEBI RA/RIA critical path | **Open — decide first** |
+| 1 | Personal tool or commercial product? | AGPL exposure, data budget, SEBI RA/RIA critical path | **Decided 2026-09-19: personal use now; a product only if it works out.** AGPL tools usable, but kept behind our own interfaces so a later product switch is cheap; no redistribution of exchange data; no recommendations to others |
 | 2 | Start the PIT snapshot store this month? | The only dataset that compounds and cannot be bought back | **Open — every month costs data** |
 | 3 | One execution engine: Nautilus vs backtrader vs own | Execution layer design | Recommend **Nautilus** |
 | 4 | Does OpenViking replace part of our memory, or add a third store? | Memory architecture | **Open** |
