@@ -264,10 +264,17 @@ def rebuild_derived_factors(con) -> int:
                         CASE WHEN ratio_from IS NOT NULL AND ratio_to IS NOT NULL
                              THEN ratio_from / ratio_to END) AS factor,
                action_id
-        FROM corporate_actions
+        FROM corporate_actions d
         WHERE COALESCE(derived_factor,
                        CASE WHEN ratio_from IS NOT NULL AND ratio_to IS NOT NULL
                             THEN ratio_from / ratio_to END) IS NOT NULL
+          -- A reported action (Tier-1 feed) supersedes a derived one for the same
+          -- event; applying both would adjust the history twice.
+          AND NOT (d.derived_factor IS NOT NULL AND EXISTS (
+                SELECT 1 FROM corporate_actions r
+                WHERE r.confidence = 'reported' AND r.derived_factor IS NULL
+                  AND r.ratio_to IS NOT NULL AND r.isin = d.isin
+                  AND ABS(date_diff('day', r.ex_date, d.ex_date)) <= 3))
         ORDER BY isin, ex_date DESC
     """).fetchall()
 

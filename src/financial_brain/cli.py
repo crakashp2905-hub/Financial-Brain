@@ -605,6 +605,42 @@ def cmd_kite_index_fill(args) -> int:
     return 0
 
 
+def cmd_corpact_feed(args) -> int:
+    """Ingest BSE's corporate-action feed (Tier 1), then rebuild factors and reconcile."""
+    from .ingest import corpact_feed
+    cfg = load()
+    start = datetime.strptime(args.start, "%Y-%m").date()
+    end = datetime.strptime(args.end, "%Y-%m").date() if args.end else date.today()
+    with Database(cfg).connect() as con:
+        st = corpact_feed.ingest(con, cfg, start, end)
+        print(f"{st['months']} month(s), {st['fetched']} fetched, {st['rows']} feed rows")
+        print(f"  recorded   {st['recorded']} reported action(s)")
+        print(f"  unmapped   {st['unmapped']} (scrip code not listed on BSE near the ex-date)")
+        print(f"  no ex-date {st['no_ex_date']}")
+        n = ca_detect.rebuild_derived_factors(con)
+        print(f"adjustment factors rebuilt: {n}")
+        _print_reconcile(corpact_feed.reconcile(con))
+    return 0
+
+
+def cmd_corpact_reconcile(args) -> int:
+    from .ingest import corpact_feed
+    with Database(load()).connect() as con:
+        _print_reconcile(corpact_feed.reconcile(con))
+    return 0
+
+
+def _print_reconcile(r: dict) -> None:
+    pct = lambda x: "n/a" if x is None else f"{x:.1%}"
+    print("derived vs reported (BSE feed)")
+    print(f"  precision  {pct(r['precision'])}  - {r['derived_matched']} of {r['derived']} "
+          f"derived actions match a reported one")
+    print(f"             {r['derived_wrong_ratio']} matched in time but wrong ratio, "
+          f"{r['derived_unreported']} with nothing reported")
+    print(f"  recall     {pct(r['recall'])}  - {r['reported_found']} of "
+          f"{r['reported_liquid']} reported splits/bonuses on liquid names were derived")
+
+
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
@@ -630,6 +666,14 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--kind", default="bhavcopy", choices=["bhavcopy", "index"])
     g.add_argument("--workers", type=int, default=6)
     g.set_defaults(fn=cmd_prefetch)
+
+    g = sub.add_parser("corpact-feed", help="ingest BSE corporate actions (Tier 1)")
+    g.add_argument("--start", required=True, help="YYYY-MM")
+    g.add_argument("--end", help="YYYY-MM (default: this month)")
+    g.set_defaults(fn=cmd_corpact_feed)
+
+    g = sub.add_parser("corpact-reconcile", help="measure derived vs reported actions")
+    g.set_defaults(fn=cmd_corpact_reconcile)
 
     g = sub.add_parser("kite-index-fill",
                        help="fill index days NSE lacks, from Kite (needs KITE_API_KEY/KITE_ACCESS_TOKEN)")
