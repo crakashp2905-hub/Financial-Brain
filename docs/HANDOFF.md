@@ -109,12 +109,12 @@ before the market opens.* Order:
   (22,274 reported actions 2015–2026), `fb corpact-reconcile` (derived precision 73.7%,
   recall 67.9%), reported supersedes derived in factors, gaps open 201 → 65. See
   `docs/PHASE-1.md`. Monthly: re-run `fb corpact-feed --start <this month>`.
-- [ ] **P1-1b C06 Event intelligence** — ingest NSE + BSE corporate announcements through
+- [x] **P1-1b C06 BSE announcements** — done for 2026-06-20→09-18 (101,461, classified). **History: `data/prefetch_ann.log` shows the background prefetch 2015→2026-06; when it finishes, load with `fb announcements --start 2015-01-01 --end 2026-06-19` (lake-first, ~0.35 s/day).** Original scope: — ingest NSE + BSE corporate announcements through
   the same lake → manifest → quality → curated path; classify event type
   (results, dividend/split/bonus, order win, promoter activity, pledge, rating, …) with
   deterministic rules first. Link events to ISIN via the security master. Use them to
   resolve `needs_source` gaps where an announcement explains the move.
-- [ ] **P1-2 C07 Market Regime Brain** — from index history (P0-1), breadth from
+- [x] **P1-2 C07 Market Regime Brain** — done: `fb regime --build` (v2, 12/13 known episodes). Original scope: — from index history (P0-1), breadth from
   universe snapshots, India VIX, FII/DII flows. Deterministic, versioned classifier;
   backtest its stability across 2015–2026 (it must call 2020-03 risk-off).
 - [ ] **P1-3 C09 Evidence ledger** — immutable provenance chain per ARCHITECTURE.md §5.4.
@@ -157,3 +157,6 @@ before the market opens.* Order:
   derivation. Found and fixed double adjustment across ISIN successions (Yes Bank 2017),
   and derivation suppressing itself when reported actions existed. Next: P1-1b
   announcements (BSE `AnnSubCategoryGetData` works without a session, 50 per page).
+- 2026-09-19 — P1-1b announcements (classifier fixed on real residue: tax demands vs
+  order wins); index lineage across NSE renames; P1-2 regime brain v2. Announcement
+  history prefetch running in background (see checklist). Next: P1-3 evidence ledger.

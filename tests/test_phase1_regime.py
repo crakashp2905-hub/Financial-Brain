@@ -73,3 +73,44 @@ class TestIndexLineage:
                                ).fetchone()
         assert out["verified"] == 1
         assert rows == (4, 4), "every date once, under the current name"
+
+
+# ------------------------------------------------------------------ regime rules
+def _f(**kw):
+    base = dict(c=110.0, ma50=105.0, ma200=100.0, k200=200, ma200_slope=0.01, dd=-0.02,
+                ret20=0.01, rv20=0.12, vix=14.0, above_200=0.65)
+    base.update(kw)
+    return base
+
+
+class TestRegimeRules:
+    def test_covid_crash_is_crisis(self):
+        """2020-03-23: VIX 72, realised vol 70%, -38% drawdown."""
+        from financial_brain.regime.brain import indicate
+        regime, why = indicate(_f(vix=72.0, rv20=0.70, dd=-0.38, ret20=-0.37, c=80.0))
+        assert regime == "CRISIS" and any("VIX" in w for w in why)
+
+    def test_healthy_index_with_weak_breadth_is_narrow_not_risk_off(self):
+        """2019: Nifty at highs while only ~31% of stocks were above their 200-day."""
+        from financial_brain.regime.brain import indicate
+        assert indicate(_f(above_200=0.31))[0] == "NARROW"
+
+    def test_broken_trend_is_risk_off(self):
+        from financial_brain.regime.brain import indicate
+        regime, why = indicate(_f(c=90.0, ma50=95.0, ma200=100.0, ma200_slope=-0.02,
+                                  above_200=0.22, dd=-0.15))
+        assert regime == "RISK_OFF" and len(why) == 3
+
+    def test_post_covid_vix_does_not_block_a_bull_market(self):
+        """2021: VIX 22-25 through a strong bull - v1's VIX < 20 called it NEUTRAL."""
+        from financial_brain.regime.brain import indicate
+        assert indicate(_f(vix=23.0))[0] == "RISK_ON"
+
+    def test_hysteresis_needs_three_sessions_but_crisis_is_immediate(self):
+        from financial_brain.regime.brain import classify_history
+        on, off = _f(), _f(c=90.0, ma50=95.0, ma200_slope=-0.02, above_200=0.2, dd=-0.12)
+        crisis = _f(vix=45.0)
+        seq = classify_history([on, on, off, off, off, on, crisis])
+        assert [s["regime"] for s in seq] == ["RISK_ON", "RISK_ON", "RISK_ON", "RISK_ON",
+                                              "RISK_OFF", "RISK_OFF", "CRISIS"]
+        assert seq[2]["reasons"].startswith("holding RISK_ON"), "a held regime says so"

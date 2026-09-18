@@ -299,3 +299,18 @@ CREATE TABLE IF NOT EXISTS index_aliases (
     family_median   DOUBLE,               -- median ratio of all renames that day
     observed_at     TIMESTAMPTZ NOT NULL
 );
+
+-- Market regime per session (regime/brain.py). Versioned: a rule change is a new
+-- version, never a silent rewrite of history.
+CREATE TABLE IF NOT EXISTS market_regime (
+    business_date   DATE NOT NULL,
+    version         VARCHAR NOT NULL,
+    regime          VARCHAR NOT NULL,   -- after hysteresis: CRISIS | RISK_OFF | NEUTRAL | RISK_ON
+    raw_regime      VARCHAR NOT NULL,   -- what this session alone indicated
+    reasons         VARCHAR,
+    nifty_close     DOUBLE, ma50 DOUBLE, ma200 DOUBLE, drawdown DOUBLE, ret20 DOUBLE,
+    rv20            DOUBLE, vix DOUBLE, breadth_200 DOUBLE, breadth_50 DOUBLE,
+    advances        BIGINT, declines BIGINT,
+    computed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (business_date, version)
+);

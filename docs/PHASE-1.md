@@ -8,8 +8,8 @@ Plan: [BUILD-FLOW.md](BUILD-FLOW.md) §3. Live checklist: [HANDOFF.md](HANDOFF.m
 | Step | Component | State |
 |---|---|---|
 | P1-1a | C06 · BSE corporate-action feed (Tier 1) | **done** |
-| P1-1b | C06 · NSE/BSE announcements + event classification | next |
-| P1-2 | C07 · Market Regime Brain | — |
+| P1-1b | C06 · BSE announcements + event classification | **done** (history backfilling) |
+| P1-2 | C07 · Market Regime Brain | **done** (v2) |
 | P1-3 | C09 · Evidence ledger | — |
 | P1-4 | C08 · World state | — |
 | P1-5 | C10 · Daily brief | — |
@@ -80,3 +80,57 @@ capital reduction, merger, scheme, rights) on the same or a succession-linked IS
 | open (`needs_source`) | 201 | **65** |
 
 `fb gate`: still 12/12 — now with 23,168 corporate actions and 1,610 adjustment factors.
+
+---
+
+## P1-1b — BSE announcements
+
+`fb announcements --start … --end …`. BSE's announcement API needs no session; one lake
+object per day holds every page verbatim. Each announcement is typed from **BSE's own
+category/subcategory** (Tier 1), refined by headline rules only where BSE is coarse, and
+every label records the rule that fired.
+
+First 90 days: **101,461 announcements, 96% resolved to an ISIN, every day complete**
+against BSE's declared row count (the job's own quality contract). The residue drove the
+rules before any backfill:
+
+- **A tax demand is not an order win.** "received order of revised demand from Deputy
+  Commissioner… TNGST Act" (APL Apollo) was an ORDER_WIN. Tax, penalty, court and
+  regulator orders are now `LEGAL_REGULATORY` (743 in 90 days), overriding order wins.
+- Types that matter in India get their own class: promoter pledges (SAST Reg. 31),
+  auditor resignations, insolvency (Committee of Creditors: 225), clarifications.
+- Performance: row-by-row inserts cost ~1.2 ms/row; a JSONL bulk load took a day from
+  7 s to 0.35 s.
+
+History (2015 → 2026-06) is being prefetched in the background, then loaded.
+
+## Index lineage
+
+NSE renamed its whole index family on 2015-11-09 and restructured Midcap/Smallcap 100
+twice. Level continuity alone mis-paired renames ("CNX Nifty" → "Nifty Auto"), and a
+fixed continuity threshold failed on the Bihar-result gap day, so a name rule proposes
+each rename and the data verifies it against the family's gap that day: 40 of 43
+verified. `index_levels_canonical` gives Nifty 50, Bank, 500, Midcap 100, Smallcap 100
+and India VIX as continuous 2015–2026 series.
+
+## P1-2 — Market Regime Brain
+
+`fb regime --build`. Deterministic and **versioned**: a rule change is a new version,
+never a rewrite. Inputs: Nifty 50 trend/drawdown/realised vol, India VIX, and breadth
+(share of NSE stocks above their own 200/50-session averages). Regimes: `CRISIS`,
+`RISK_OFF`, `NARROW`, `NEUTRAL`, `RISK_ON`, each stored with the reasons that fired;
+changes need 3 consecutive sessions, except CRISIS, which is immediate.
+
+Validated against known episodes — **12 of 13**: 2016 sell-off, demonetisation, 2017
+bull, IL&FS 2018, COVID (CRISIS, VIX 72), 2021 bull, 2022 drawdown, 2023 rally, the
+2024–25 correction.
+
+v1 → v2, both kept:
+- v1's `VIX < 20` for RISK_ON called the 2021 bull NEUTRAL — post-COVID VIX sat at
+  20–25. Now 25.
+- v1 read 2019 — a year of new Nifty highs — as 225 sessions of RISK_OFF. It was a
+  **narrow** market: large caps up, small and mid caps down ~40%. `NARROW` now says so
+  (199 sessions across 2018–19).
+
+A regime held by hysteresis says it is held ("holding RISK_OFF: today alone indicates
+NEUTRAL…") rather than explaining a regime the day's own signals do not support.

@@ -655,6 +655,22 @@ def cmd_announcements(args) -> int:
     return 0
 
 
+def cmd_regime(args) -> int:
+    """Build (or show) the market regime for every session."""
+    from .regime import brain
+    with Database(load()).connect() as con:
+        if args.build:
+            print(brain.build(con))
+        rows = con.execute(
+            """SELECT business_date, regime, raw_regime, ROUND(vix, 1) vix,
+                      ROUND(breadth_200 * 100) breadth_pct, ROUND(drawdown * 100, 1) dd_pct,
+                      reasons FROM market_regime WHERE version = ?
+               ORDER BY business_date DESC LIMIT ?""", [brain.VERSION, args.limit]).fetchall()
+    for r in rows:
+        print(f"{r[0]}  {r[1]:<9} vix {r[3]}  breadth {r[4]}%  dd {r[5]}%  | {r[6]}")
+    return 0
+
+
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
@@ -680,6 +696,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--kind", default="bhavcopy", choices=["bhavcopy", "index", "announcements"])
     g.add_argument("--workers", type=int, default=6)
     g.set_defaults(fn=cmd_prefetch)
+
+    g = sub.add_parser("regime", help="market regime per session (build with --build)")
+    g.add_argument("--build", action="store_true")
+    g.add_argument("--limit", type=int, default=10)
+    g.set_defaults(fn=cmd_regime)
 
     g = sub.add_parser("announcements", help="ingest + classify BSE announcements")
     g.add_argument("--start", required=True)
