@@ -465,30 +465,9 @@ def cmd_gate(args) -> int:
 
 
 def _unexplained_gaps(con, threshold: float = 0.35, min_turnover: float = 10_000_000.0):
-    """Large overnight moves with no recorded action and no recorded review."""
-    from .corpactions.detect import EXCLUDED_TICKER_SUFFIXES
-    suffix_filter = " AND ".join(
-        f"ticker NOT LIKE '%{suf}'" for suf in EXCLUDED_TICKER_SUFFIXES)
-    cur = con.execute(f"""
-        WITH d AS (
-            SELECT isin, ticker, exchange, series, business_date, close_price, turnover,
-                   LAG(close_price) OVER (PARTITION BY isin, exchange, series
-                                          ORDER BY business_date) AS prev
-            FROM universe_snapshots
-            WHERE instrument_type = 'STK' AND close_price > 0 AND {suffix_filter})
-        SELECT business_date AS ex_date, exchange, ticker, isin, prev, close_price,
-               close_price / prev AS factor
-        FROM d
-        WHERE prev IS NOT NULL AND turnover >= ?
-          AND ABS(close_price / prev - 1) >= ?
-          AND NOT EXISTS (SELECT 1 FROM corporate_actions ca
-                          WHERE ca.isin = d.isin AND ca.ex_date = d.business_date)
-          AND NOT EXISTS (SELECT 1 FROM gap_reviews gr
-                          WHERE gr.isin = d.isin AND gr.ex_date = d.business_date)
-        ORDER BY business_date
-    """, [min_turnover, threshold])
-    cols = [c[0] for c in cur.description]
-    return [dict(zip(cols, r)) for r in cur.fetchall()]
+    """Large moves with no recorded action or review - one shared definition."""
+    return ca_detect.find_untriaged_gaps(con, threshold=threshold,
+                                         min_turnover=min_turnover)
 
 
 def cmd_gaps(args) -> int:

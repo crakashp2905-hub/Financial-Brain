@@ -485,6 +485,41 @@ def _close_of(con, isin: str, exchange: str, d) -> float | None:
     return r[0] if r else None
 
 
+def find_untriaged_gaps(con, *, threshold: float = 0.35,
+                        min_turnover: float = 10_000_000.0) -> list[dict]:
+    """Large moves between consecutive sessions with no recorded action or review.
+
+    The single definition of "an unexamined gap", used by triage, by `fb gaps` and by
+    the Phase 0 gate. It used to exist twice; the copy the gate used never gained the
+    consecutive-session rule and reported 2,201 "untriaged gaps" that were comparisons
+    of illiquid stocks against closes weeks or months old.
+    """
+    suffix_filter = " AND ".join(
+        f"ticker NOT LIKE '%{suf}'" for suf in EXCLUDED_TICKER_SUFFIXES)
+    cur = con.execute(f"""
+        WITH px AS (
+            SELECT isin, ticker, exchange, series, business_date, close_price, turnover
+            FROM universe_snapshots
+            WHERE instrument_type = 'STK' AND close_price > 0 AND {suffix_filter}
+        ), {_CALENDAR_CTE}, d AS (
+            SELECT x.*, LAG(close_price) OVER w AS prev, LAG(business_date) OVER w AS prev_date
+            FROM px x
+            WINDOW w AS (PARTITION BY isin, exchange, series ORDER BY business_date))
+        SELECT d.business_date AS ex_date, d.exchange, d.ticker, d.isin, d.prev,
+               d.close_price, d.close_price / d.prev AS factor
+        FROM d JOIN cal c ON c.exchange = d.exchange AND c.business_date = d.business_date
+        WHERE d.prev IS NOT NULL AND d.prev_date = c.prev_session AND d.turnover >= ?
+          AND ABS(d.close_price / d.prev - 1) >= ?
+          AND NOT EXISTS (SELECT 1 FROM corporate_actions ca
+                          WHERE ca.isin = d.isin AND ca.ex_date = d.business_date)
+          AND NOT EXISTS (SELECT 1 FROM gap_reviews gr
+                          WHERE gr.isin = d.isin AND gr.ex_date = d.business_date)
+        ORDER BY d.business_date
+    """, [min_turnover, threshold])
+    cols = [c[0] for c in cur.description]
+    return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+
 def auto_triage_gaps(con, *, threshold: float = 0.35,
                      min_turnover: float = 10_000_000.0, redo: bool = False) -> dict:
     """Apply the documented triage rule to every untriaged gap.
@@ -520,24 +555,9 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
 
     suffix_filter = " AND ".join(
         f"ticker NOT LIKE '%{suf}'" for suf in EXCLUDED_TICKER_SUFFIXES)
-    rows = con.execute(f"""
-        WITH px AS (
-            SELECT isin, ticker, exchange, series, business_date, close_price, turnover
-            FROM universe_snapshots
-            WHERE instrument_type = 'STK' AND close_price > 0 AND {suffix_filter}
-        ), {_CALENDAR_CTE}, d AS (
-            SELECT x.*, LAG(close_price) OVER w AS prev, LAG(business_date) OVER w AS prev_date
-            FROM px x
-            WINDOW w AS (PARTITION BY isin, exchange, series ORDER BY business_date))
-        SELECT d.business_date, d.exchange, d.ticker, d.isin, d.close_price / d.prev AS factor
-        FROM d JOIN cal c ON c.exchange = d.exchange AND c.business_date = d.business_date
-        WHERE d.prev IS NOT NULL AND d.prev_date = c.prev_session AND d.turnover >= ?
-          AND ABS(close_price / prev - 1) >= ?
-          AND NOT EXISTS (SELECT 1 FROM corporate_actions ca
-                          WHERE ca.isin = d.isin AND ca.ex_date = d.business_date)
-          AND NOT EXISTS (SELECT 1 FROM gap_reviews gr
-                          WHERE gr.isin = d.isin AND gr.ex_date = d.business_date)
-    """, [min_turnover, threshold]).fetchall()
+    rows = [(g["ex_date"], g["exchange"], g["ticker"], g["isin"], g["factor"])
+            for g in find_untriaged_gaps(con, threshold=threshold,
+                                         min_turnover=min_turnover)]
 
     # Collapse to one decision per (isin, date) - a gap on two exchanges is one event.
     events: dict[tuple, list] = {}

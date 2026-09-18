@@ -959,3 +959,18 @@ class TestStaggeredSuccession:
         assert len(s) == 1 and s[0]["confidence"] == "corroborated"
         assert s[0]["effective_date"] == d2, "the ex-date is the first switch on either exchange"
         assert abs(s[0]["price_ratio"] - 0.1975) < 0.001, s[0]["price_ratio"]
+
+
+class TestOneGapDefinition:
+    def test_after_triage_nothing_is_untriaged(self, db):
+        """Triage and the gate must share one definition of a gap. A drifted copy once
+        made the gate report 2,201 'untriaged' gaps that triage had correctly ignored."""
+        from financial_brain.corpactions.detect import auto_triage_gaps, find_untriaged_gaps
+        with db.connect() as con:
+            TestGapAutoTriage()._world(con)
+            # plus a stale, non-consecutive comparison that must never count as a gap
+            for d, c in ((date(2020, 1, 2), 100.0), (date(2020, 3, 3), 30.0)):
+                TestGapAutoTriage()._px(con, "INE000000Z01", "NSE", d, c)
+            assert find_untriaged_gaps(con)
+            auto_triage_gaps(con)
+            assert find_untriaged_gaps(con) == []

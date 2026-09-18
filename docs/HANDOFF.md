@@ -61,7 +61,7 @@ Phase 1. If session limits hit, autostart after the limit period is over."*
 
 ## Current state (2026-09-18, evening)
 
-- **Prices:** NSE + BSE bhavcopy, **2015-01-01 → 2026-09-18, 2,905 sessions each, zero
+- **Prices:** NSE + BSE bhavcopy, **2015-01-01 → 2026-09-18, 2,903 sessions each, zero
   one-sided days** (the two exchanges share one calendar - that agreement is the
   completeness check). Includes weekend special sessions (Budget, Muhurat, 2024 DR
   drills), which the old weekdays-only calendar never fetched.
@@ -75,7 +75,7 @@ Phase 1. If session limits hit, autostart after the limit period is over."*
   Saturday 2020-06-20 / 10-17); 403 is a failure, only 404 means "not published";
   consecutive-session rule and open-gap / price-fall / market-shock guards in
   corporate-action inference.
-- Tests: 90 passing. Lake ~1.1 GB, fully registered in `lake_manifest`.
+- Tests: 98 passing. `isin_successions` links companies across split-driven ISIN changes. Lake ~1.1 GB, fully registered in `lake_manifest`.
 
 ## Checklist
 
@@ -89,14 +89,14 @@ full dataset.
   `SELECT COUNT(DISTINCT business_date), MIN(business_date) FROM index_levels` → ~2,880
   days from 2015. If short, re-run `fb index --start 2015-01-01 --end 2026-09-16`
   (idempotent, lake-first). Sanity: Nifty 50 bottomed on 2020-03-23.
-- [ ] **P0-2 Derive corporate actions** over the full history: `fb derive --rebuild` (rebuild clears derived rows first). Then `fb gaps --auto-review` and confirm `fb gaps` shows zero untriaged. Record counts.
+- [x] **P0-2 Derive corporate actions** (done: 895 actions — 237 gap, 658 ISIN succession; 375 gaps reviewed, 0 untriaged) over the full history: `fb derive --rebuild` (rebuild clears derived rows first). Then `fb gaps --auto-review` and confirm `fb gaps` shows zero untriaged. Record counts.
 - [x] **P0-3 Test `fb gaps --auto-review`** — `auto_triage_gaps` in
   `src/financial_brain/corpactions/detect.py`, tested 2026-09-18 for all rules: shock
   day / intraday move / one-sided on a cross-listed ISIN → `price_move`; single-listed
   or both-gapped without a clean ratio → `needs_source`. Running it is part of P0-2.
-- [ ] **P0-4 `fb gate`** on the full dataset — every base must pass. Any failure: find
+- [x] **P0-4 `fb gate`** (done 2026-09-18: all 12 bases pass) on the full dataset — every base must pass. Any failure: find
   the cause, fix, re-run. Do not weaken a check to make it pass.
-- [ ] **P0-5 Document** the 11-year results in `docs/PHASE-0.md` (coverage, counts,
+- [x] **P0-5 Document** the 11-year results in `docs/PHASE-0.md` (coverage, counts,
   quarantine causes, gap-triage outcome, gate result) and update `README.md` status.
   Commit + push.
 
@@ -143,3 +143,7 @@ before the market opens.* Order:
   restatements; gap detection now guarded). Kite provider built, awaiting credentials.
   Owner asked about TradingView / Investing.com: declined (no API; scraping breaches
   their terms and needs bot-evasion). yfinance is grey - cross-check use only.
+- 2026-09-18 (night) — ISIN successions (864 found, 658 splits recorded; ratio measured
+  across the ex-date because exchanges switch on different days); one shared untriaged-gap
+  definition (the gate's drifted copy reported 2,201 phantom gaps). **Phase 0 gate: 12/12.
+  Phase 0 closed; Phase 1 begins with P1-1.**

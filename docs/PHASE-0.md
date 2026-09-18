@@ -24,23 +24,94 @@ PASS - the day is reconstructable from cold storage.
 | C04 | Universe snapshots | `universe/snapshot.py` | done |
 | C05 | Indian cost model | `costs/india.py` | done |
 | — | Ingestion jobs, DQ contracts, lineage | `ingest/` | done |
-| C26 | Corporate actions + adjustments | `corpactions/actions.py`, `detect.py` | done — derived from Tier-1 data, two detectors |
-| C27 | Benchmark / index history | `providers/reference.py` | done — 66 days, ~165 indices |
+| C26 | Corporate actions + adjustments | `corpactions/actions.py`, `detect.py` | done — derived from Tier-1 data: gap detection + ISIN successions |
+| C29 | ISIN successions | `securities/succession.py` | done — links a company across the ISIN change a split causes |
+| C27 | Benchmark / index history | `providers/reference.py` | done — 2015–2026, 228 indices; Kite fill-only fallback built |
 | C28 | Reference data + F&O eligibility | `providers/reference.py` | done — listing dates, short-ability flag |
 | — | Phase 0 completion gate | `cli.py::cmd_gate` | done — 12 bases, exits non-zero on failure |
 
-56 tests, all passing, all offline — the network is not a test dependency.
+98 tests, all passing, all offline — the network is not a test dependency.
 
 ## Current holdings
 
 ```
-raw lake            404 files, 67.9 MB
-lake manifest       130 objects
-securities (ISIN)   8,689
-listings            14,013
-universe rows       550,213
-coverage            2026-06-15 .. 2026-09-15  (65 trading days, NSE + BSE)
+raw lake            1,031 MB, 8,704 immutable payloads (all in lake_manifest)
+securities (ISIN)   17,060
+listings            43,116
+universe rows       16,017,284
+coverage            2015-01-01 .. 2026-09-18  (2,903 sessions, NSE and BSE on every one)
+index levels        268,321  (228 indices, 2,894 of 2,903 sessions)
+corporate actions   895  (237 gap-derived, 658 via ISIN succession)
+ISIN successions    864  (357 corroborated by both exchanges)
+gaps reviewed       375  (0 untriaged)
+rejected rows       552  (498 impossible OHLC, 54 malformed ISIN) across 275 partial days
 ```
+
+`fb gate`: **all 12 bases pass.**
+
+## The 11-year backfill (2015–2026) — what depth exposed
+
+Three months of data hid problems that eleven years did not. Every one below was found
+in the data, traced to a cause, fixed at the cause, and pinned with a test.
+
+**Reaching back.** Both exchanges moved to UDiFF in July 2024. The older archives are
+still served and carry ISIN (NSE to at least 2000; BSE's ISIN-coded format to Dec 2016),
+so they are **normalised into UDiFF** and one pipeline covers every era. Verified on the
+Jan–Jul 2024 overlap: 2,806 rows, zero close or volume mismatches between parsers.
+
+**BSE before 8 Dec 2016 has no ISIN at all** (`EQddmmyy_CSV.ZIP`, date only in the
+file name). Mapping scrip code → ISIN blindly is unsafe: a code survives the ISIN change a
+split causes, and 884 codes carry more than one ISIN. Each row is kept only if NSE traded
+that ISIN the same day within 3% (`ingest/bse_isin.py`): 649,591 of 1,440,537 rows —
+essentially the whole cross-listed set. BSE-only scrips for that period are unrecoverable.
+
+**Markets open on weekends.** The calendar assumed they didn't. Budget days (Sat
+2015-02-28, 2020-02-01, 2025-02-01; Sun 2026-02-01), Diwali Muhurat sessions and the 2024
+DR drills all traded. Missing them made each following weekday look like a mass
+restatement: **~5,000 phantom corporate actions** clustered on those dates. The calendar is
+now every calendar day and the exchange decides. NSE and BSE now agree on 2,903 sessions
+with zero one-sided days — the completeness check.
+
+**A stale file is not a session.** BSE re-served Friday's bhavcopy as Saturday
+2020-06-20 and 2020-10-17: every close and non-zero volume identical. A republication
+guard now rejects any file repeating the previous session exactly.
+
+**403 is not 404.** NSE's 2019-10-27 Muhurat file exists; a bot-protection 403 had been
+read as "not published", silently skipping a session. Only 404 now means "no session";
+403 retries and then fails loudly.
+
+**Market structure that looked like corrupt data.** BSE lists some securities under two
+scrip codes sharing one ISIN (IDFC 532659 / 632659): 194 days had been quarantined as
+"duplicates". And BSE listed UPL's preference shares with no group code at all. Both are
+real, and now handled.
+
+**Corporate-action inference, corrected three times:**
+- Comparing a close against a row that was *not the previous session* (a stock moved
+  EQ → BE compared with a BE print months old) manufactured clusters of distressed
+  small-cap "actions" on surveillance-review dates. Every price comparison now requires
+  consecutive sessions.
+- Detector A (restated previous close) then finds **zero** corroborated restatements in
+  eleven years — consistent with the finding below that NSE does not restate for splits
+  and bonuses. Its earlier counts were artefacts of the two problems above.
+- Large genuine moves snapped to clean ratios — Adani Enterprises' 2023-02-01 selloff as
+  "3:4", RCOM's +36% day as "4:3", eight banks on the COVID crash day. Gap inference now
+  requires the gap **at the open** (actions apply before the session), a **price fall**,
+  and **no market-shock day** (Nifty 50 ±5%).
+
+**ISIN successions.** A face-value split changes the ISIN, so the company's history broke
+in two and the split itself became an uncorroborable gap. Successions are now detected
+from what survives the change — BSE scrip code, NSE ticker — on consecutive sessions:
+864 found, 357 corroborated, **658 recorded as splits**. The ratio is measured across the
+ex-date (the first switch on either exchange), because exchanges switch on different days:
+measuring per exchange once turned Schaeffler's 1:5 into "3:5". Verified exactly against
+seven known splits (BDL, SCHAEFFLER, VTL, ISGEC, SARDAEN, GREENLAM, AMRUTANJAN).
+
+**Scale defects.** A correlated subquery that ran 16+ CPU-minutes without finishing was
+replaced by a window function (12 minutes for the whole detector); a `--from-lake` replay
+that silently reprocessed every day now skips published ones; prefetched bytes are
+registered in the manifest (7,307 had no provenance row); the index job reads the lake
+before the network; the gate and triage share one definition of an untriaged gap (a
+drifted copy had reported 2,201 phantom gaps).
 
 ## What the first real backfill discovered
 
@@ -189,6 +260,11 @@ the first one alone turned out to be insufficient.
 `PrvsClsgPric` on the ex-date, making `stated_prev / actual_prev` the adjustment factor
 straight from the exchange. 116 candidates over 66 days, **17 corroborated**.
 
+> **Superseded (11-year backfill).** Those 17 were artefacts: with weekend sessions loaded
+> and comparisons restricted to consecutive sessions, Detector A finds **zero**
+> corroborated restatements across 2015–2026. It stays in the pipeline as a cheap check,
+> but every recorded action now comes from gap detection or ISIN succession.
+
 **B. Close-to-close gap.** Testing A against real splits showed NSE **does not restate**
 for ordinary splits and bonuses — ZFCVINDIA (2026-06-24), GOODLUCK (2026-08-21) and PGIL
 (2026-09-11) all carried the raw unadjusted previous close and simply gapped. Detector A
@@ -241,6 +317,15 @@ reasoning used on the original seven is encoded as `fb gaps --auto-review`:
 Nothing there guesses. Rule 1 is a finding; rules 2 and 3 record precisely why the
 question stays open, keeping the residual dependency visible rather than buried.
 
+Two findings now run first — a **market-shock day** or a stock that **moved during the
+session** is recorded as `price_move` with the evidence — and a gap explained by a split
+recorded via **ISIN succession** is `action_recorded`. Automatic verdicts are marked
+`reviewed_by='auto'` and `--redo` replaces them; a person's verdict is never touched.
+
+Over 2015–2026: **375 reviewed — 91 action_recorded, 83 price_move, 201 needs_source**
+(7 of those by hand). The needs_source set is what an authoritative corporate-action feed
+would resolve; Phase 1's announcement ingestion (C06) is the planned route.
+
 In the original three-month window, seven remained, all marked `needs_source`. Every one is **single-listed**, so
 cross-exchange corroboration is structurally impossible, and none snaps tightly enough to
 record on ratio evidence alone (best: TIRUPATIFL at 1.5% from 3:2). That verdict is the
@@ -250,7 +335,11 @@ rather than papering over it with a guess.
 ### Benchmark history — closed
 `ind_close_all_DDMMYYYY.csv` gives ~165 NSE indices per day with OHLC **plus P/E, P/B and
 dividend yield** — a valuation-context bonus that will matter to the Market Regime Brain.
-**66 days ingested, 2 non-trading days correctly skipped.**
+Now **2015–2026: 268,321 levels, 228 indices, 2,894 of 2,903 sessions.** The nine
+missing sessions (2015-02-02, 03-12, 03-13, 05-19, 07-08, 09-04, 10-16, 12-01,
+2016-06-20) return genuine 404s — NSE's archive does not hold them. `fb kite-index-fill`
+can fill them from Kite (fill-only, validated against NSE on the overlap) once
+`KITE_API_KEY` / `KITE_ACCESS_TOKEN` are set.
 
 Constituent history remains unsourced: NSE does not publish "NIFTY 500 membership as of
 date X" in clean form. Levels are enough to benchmark returns; constituents are needed to
@@ -274,28 +363,23 @@ with a regression test.
 
 ## What is still genuinely missing
 
-1. **An authoritative corporate-action feed.** Derivation covers corroborated and
-   tightly-snapping cases; seven triaged gaps are marked `needs_source` precisely because
-   they cannot be resolved without one. Candidates: a paid feed, or a browser-session
-   fetch of NSE's API run as a separate attended job.
-2. **ASM / GSM / T2T surveillance flags.** No archive-host endpoint; they sit behind the
-   403-gated API. `security_flags` therefore carries F&O eligibility only. These affect
-   margins and position limits rather than the binary can-we-trade-it question, so the
-   most important gate input is covered.
-3. **Index constituent history.** Not freely published in clean form.
-4. **Depth of history.** 65 trading days. The archives go back much further; backfilling
-   is a long-running job, not a design question, and it should run before Phase 3 needs
-   regime variety.
-5. **Reads block during ingest** (ADR-0001). Acceptable for a scheduled single-writer
+1. **An authoritative corporate-action feed.** 201 gaps are `needs_source`. Phase 1 C06
+   (NSE/BSE announcements) is the planned route; a paid feed is the alternative.
+2. **Point-in-time fundamentals.** The PIT store is built and tested but holds **no
+   observations** yet: nothing ingests fundamentals. The first real PIT data arrives with
+   filings/results ingestion. This is the dataset that compounds — start it as early as
+   Phase 1 allows (decision D2).
+3. **Nine index sessions (2015–16).** Source gap; Kite fill is built, awaiting credentials.
+4. **BSE-only scrips before Dec 2016.** No ISIN in the source; unrecoverable from BSE.
+5. **ASM / GSM / T2T surveillance flags** and **index constituent history** — not freely
+   published in clean form.
+6. **Reads block during ingest** (ADR-0001). Acceptable for a scheduled single-writer
    job; removed by the PostgreSQL migration.
 
 ## Next
 
-Phase 1 (Perception): event intelligence from NSE/BSE announcements, the Market Regime
-Brain from FII/DII + VIX + breadth, versioned world state, evidence ledger, and the daily
-"what changed since yesterday?" brief. See [BUILD-FLOW.md](BUILD-FLOW.md).
-
-Two things remain worth doing early because they only get more expensive:
-**backfill the lake as far as the archives go**, and **acquire an authoritative
-corporate-action feed** to resolve the seven `needs_source` gaps and everything like them
-in deeper history.
+Phase 1 (Perception) — see [BUILD-FLOW.md](BUILD-FLOW.md) and the checklist in
+[HANDOFF.md](HANDOFF.md): event intelligence from NSE/BSE announcements (C06, which also
+resolves `needs_source` gaps), the Market Regime Brain (C07) over 2015–2026 — it must
+call March 2020 risk-off — the evidence ledger (C09), versioned world state (C08), and the
+daily "what changed since yesterday?" brief (C10).

@@ -7,17 +7,18 @@ rather than the interface.
 > the investor's own philosophy = source of truth.
 > `Data → Evidence → Context → Thesis → Risk → Decision → Outcome → Learning`
 
-**Status:** Phase 0 complete — `fb gate` passes all 12 bases. Immutable raw lake, ISIN-keyed security master,
-point-in-time observation store, universe snapshots and the Indian cost model are
-implemented and tested, alongside derived corporate actions, benchmark history and
-reference data. Holding 65 trading days of NSE + BSE prices and 66 days of index levels.
-Next: Phase 1 (perception) — see [docs/BUILD-FLOW.md](docs/BUILD-FLOW.md).
+**Status:** Phase 0 complete — `fb gate` passes all 12 bases on **2015–2026**: 2,903
+sessions of NSE + BSE prices (16M universe rows, 17,060 ISINs), 228 indices, 895 corporate
+actions including ISIN successions, every price gap triaged. Next: Phase 1 (perception) —
+see [docs/HANDOFF.md](docs/HANDOFF.md) and [docs/BUILD-FLOW.md](docs/BUILD-FLOW.md).
 
 ```bash
 pip install -e .
-fb migrate && fb ingest --start 2026-09-01 --end 2026-09-15
-fb reference && fb index --start 2026-09-01 --end 2026-09-15
-fb derive && fb gate
+fb migrate
+fb prefetch --start 2015-01-01 --end 2026-09-18     # parallel, network only
+fb ingest --start 2015-01-01 --end 2026-09-18 --from-lake
+fb reference && fb index --start 2015-01-01 --end 2026-09-18
+fb derive --rebuild && fb gaps --auto-review --redo && fb gate
 ```
 
 ## Documentation
