@@ -132,6 +132,17 @@ class BhavcopyIngestJob:
             )
             rows_in = con.execute("SELECT COUNT(*) FROM raw").fetchone()[0]
 
+            # First: is this a session at all, or yesterday's file re-served?
+            repub = quality.check_republication(
+                con, "raw", curated_root=self.cfg.curated, exchange=src,
+                business_date=business_date)
+            if not repub.passed:
+                self._record_dq(con, run_id, quality.QualityReport([repub]))
+                return self._finish(con, RunResult(
+                    run_id, STATUS_NOT_PUBLISHED, business_date, src, rows_in=rows_in,
+                    message=f"not a session - republication: {repub.observed}"),
+                    started, obj)
+
             # Pre-Dec-2016 BSE files carry no ISIN. Resolve before the contracts run,
             # so resolved rows face exactly the same checks as every other row.
             extra = []
@@ -304,10 +315,21 @@ class BhavcopyIngestJob:
         return out
 
 
-def business_days(start: date, end: date):
-    """Weekdays between two dates. Exchange holidays surface as ``not_published``."""
+def session_candidates(start: date, end: date):
+    """Every calendar day between two dates; the exchange decides which were sessions.
+
+    Holidays already surfaced as ``not_published``; weekends now do too. Assuming
+    markets never open on a weekend was wrong: Budget days (Sat 2015-02-28, Sat
+    2020-02-01, Sat 2025-02-01, Sun 2026-02-01), Diwali Muhurat sessions and the 2024
+    disaster-recovery drills all traded. Missing them made the next weekday's
+    exchange-stated previous close look like a restatement, and ~5,000 of 7,962 derived
+    "adjustments" over 2015-2026 were those phantom actions.
+    """
     d = start
     while d <= end:
-        if d.weekday() < 5:
-            yield d
+        yield d
         d += timedelta(days=1)
+
+
+#: Kept for existing callers; the name predates weekend sessions.
+business_days = session_candidates

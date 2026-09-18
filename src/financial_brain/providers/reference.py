@@ -40,7 +40,7 @@ class NSEIndexCloseProvider(Provider):
         try:
             payload, status, ctype = self._http_get(url, headers=NSE_REFERER)
         except FetchError as e:
-            if e.status in (403, 404):
+            if e.status == 404:
                 raise NotPublished(f"NSE has no index close for {business_date}") from e
             raise
         if b"Index Name" not in payload[:200]:

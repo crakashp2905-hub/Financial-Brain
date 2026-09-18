@@ -206,7 +206,7 @@ class NSEBhavcopyProvider(Provider):
         try:
             payload, status, ctype = self._http_get(url, headers=headers)
         except FetchError as e:
-            if e.status in (403, 404):
+            if e.status == 404:
                 raise NotPublished(f"NSE has no bhavcopy for {business_date} ({e.status})") from e
             raise
 
@@ -258,7 +258,7 @@ class BSEBhavcopyProvider(Provider):
         try:
             payload, status, ctype = self._http_get(url, headers={"Referer": "https://www.bseindia.com/"})
         except FetchError as e:
-            if e.status in (403, 404):
+            if e.status == 404:
                 raise NotPublished(f"BSE has no bhavcopy for {business_date} ({e.status})") from e
             raise
 
@@ -290,7 +290,7 @@ class BSEBhavcopyProvider(Provider):
             payload, status, ctype = self._http_get(
                 url, headers={"Referer": "https://www.bseindia.com/"})
         except FetchError as e:
-            if e.status in (403, 404):
+            if e.status == 404:
                 raise NotPublished(
                     f"BSE has no legacy bhavcopy for {business_date}") from e
             raise
@@ -301,7 +301,7 @@ class BSEBhavcopyProvider(Provider):
                 payload, status, ctype = self._http_get(
                     url, headers={"Referer": "https://www.bseindia.com/"})
             except FetchError as e:
-                if e.status in (403, 404):
+                if e.status == 404:
                     raise NotPublished(f"BSE has no bhavcopy for {business_date}") from e
                 raise
             if payload[:2] != b"PK":

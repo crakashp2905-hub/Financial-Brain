@@ -234,9 +234,34 @@ class TestIngestion:
             runs = con.execute("SELECT status, lake_key FROM ingest_runs").fetchall()
         assert len(runs) == 1 and runs[0][0] == STATUS_OK and runs[0][1]
 
-    def test_business_days_skips_weekends(self):
-        days = list(business_days(date(2026, 9, 11), date(2026, 9, 14)))  # Fri..Mon
-        assert days == [date(2026, 9, 11), date(2026, 9, 14)]
+    def test_weekends_are_candidates_because_markets_do_open(self):
+        """Budget Saturday 2025-02-01 was a full session; the exchange decides, not us."""
+        days = list(business_days(date(2025, 1, 31), date(2025, 2, 3)))  # Fri..Mon
+        assert days == [date(2025, 1, 31), date(2025, 2, 1), date(2025, 2, 2),
+                        date(2025, 2, 3)]
+
+    def test_a_republished_file_is_not_a_session(self, cfg, db):
+        """BSE re-served Friday 2020-06-19 as Saturday 2020-06-20: every close and
+        non-zero volume identical. That is not a session and must not be published."""
+        fri, sat = date(2020, 6, 19), date(2020, 6, 20)
+        job = make_job(cfg, {fri: udiff_csv("2020-06-19"),
+                             sat: udiff_csv("2020-06-20")})   # same prices, same volumes
+        assert job.run(fri).status == STATUS_OK
+        res = job.run(sat)
+        assert res.status == "not_published"
+        assert "republication" in res.message
+
+    def test_a_quiet_real_session_is_not_mistaken_for_a_republication(self, cfg, db):
+        """Unchanged closes alone are normal; unchanged volumes everywhere are not."""
+        d1, d2 = date(2026, 9, 10), date(2026, 9, 11)
+        job = make_job(cfg, {d1: udiff_csv("2026-09-10"),
+                             d2: udiff_csv("2026-09-11", vol=12_345)})
+        job.run(d1)
+        assert job.run(d2).status == STATUS_OK
+
+    def test_a_weekend_with_no_session_is_not_a_failure(self, cfg, db):
+        job = make_job(cfg, {})
+        assert job.run(date(2026, 9, 12)).status == "not_published"   # a plain Saturday
 
 
 # ---------------------------------------------------------- security master

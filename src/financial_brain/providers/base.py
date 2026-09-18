@@ -98,10 +98,17 @@ class Provider(ABC):
                         resp.headers.get("Content-Type", "application/octet-stream"),
                     )
             except urllib.error.HTTPError as e:
-                if e.code in (403, 404):
-                    # 404 is usually "no trading that day"; the caller decides.
-                    raise FetchError(f"HTTP {e.code} for {url}", retryable=False, status=e.code)
+                if e.code == 404:
+                    # "No such file" - usually no session that day; the caller decides.
+                    raise FetchError(f"HTTP 404 for {url}", retryable=False, status=404)
+                # 403 is bot protection, not absence. It used to be treated like 404,
+                # so a transient block became a phantom holiday: NSE's 2019-10-27
+                # Muhurat session was silently skipped that way. Retry it, then fail
+                # loudly (status 403) rather than report "not published".
                 last = e
+                if e.code == 403 and attempt == retries - 1:
+                    raise FetchError(f"HTTP 403 (blocked) for {url} after {retries} attempts",
+                                     retryable=True, status=403) from e
             except Exception as e:  # noqa: BLE001 - network is genuinely unpredictable
                 last = e
             if attempt < retries - 1:

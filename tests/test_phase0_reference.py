@@ -550,3 +550,75 @@ class TestBsePreIsin:
             resolved, _ = bse_isin.resolve(con, "raw", date(2015, 2, 2))
             isin = con.execute("SELECT ISIN FROM raw").fetchone()[0]
         assert resolved == 1 and isin == "INE117A01022"
+
+
+class TestGapAutoTriage:
+    """`fb gaps --auto-review` encodes the rule applied by hand to the first seven gaps.
+
+    1. cross-listed, only one exchange gapped -> price_move (an action moves both)
+    2. single-listed -> needs_source (corroboration impossible)
+    3. both gapped, no clean ratio -> needs_source
+    """
+
+    def _px(self, con, isin, exch, d, close, turnover=5e7):
+        con.execute("""INSERT INTO universe_snapshots
+            (business_date, isin, exchange, ticker, series, instrument_type, turnover,
+             close_price, tradable) VALUES (?, ?, ?, ?, 'EQ', 'STK', ?, ?, TRUE)""",
+                    [d, isin, exch, isin[-4:], turnover, close])
+
+    def _world(self, con):
+        d1, d2 = date(2020, 3, 2), date(2020, 3, 3)
+        # rule 1: listed on both, NSE gaps -50%, BSE flat
+        for e in ("NSE", "BSE"):
+            self._px(con, "INE000000A01", e, d1, 100.0)
+        self._px(con, "INE000000A01", "NSE", d2, 50.0)
+        self._px(con, "INE000000A01", "BSE", d2, 100.0)
+        # rule 2: NSE only, gaps -60%
+        self._px(con, "INE000000B01", "NSE", d1, 100.0)
+        self._px(con, "INE000000B01", "NSE", d2, 40.0)
+        # rule 3: both gap -43% (no split/bonus ratio gives 0.57)
+        for e in ("NSE", "BSE"):
+            self._px(con, "INE000000C01", e, d1, 100.0)
+            self._px(con, "INE000000C01", e, d2, 57.0)
+        # a normal day - must not be touched
+        for dd, c in ((d1, 100.0), (d2, 101.0)):
+            self._px(con, "INE000000D01", "NSE", dd, c)
+
+    def test_each_rule_gives_its_verdict(self, db):
+        from financial_brain.corpactions.detect import auto_triage_gaps
+        with db.connect() as con:
+            self._world(con)
+            out = auto_triage_gaps(con)
+            got = dict(con.execute("SELECT isin, verdict FROM gap_reviews").fetchall())
+        assert got == {"INE000000A01": "price_move",
+                       "INE000000B01": "needs_source",
+                       "INE000000C01": "needs_source"}
+        assert out == {"events": 3, "price_move": 1, "needs_source": 2}
+
+    def test_a_gap_on_two_exchanges_is_one_event(self, db):
+        from financial_brain.corpactions.detect import auto_triage_gaps
+        with db.connect() as con:
+            self._world(con)
+            auto_triage_gaps(con)
+            n, exch = con.execute("SELECT COUNT(*), ANY_VALUE(exchange) FROM gap_reviews "
+                                  "WHERE isin = 'INE000000C01'").fetchone()
+        assert n == 1 and exch == "BSE+NSE"
+
+    def test_idempotent_and_skips_recorded_actions(self, db):
+        from financial_brain.corpactions.detect import auto_triage_gaps
+        with db.connect() as con:
+            self._world(con)
+            con.execute("""INSERT INTO corporate_actions (action_id, isin, action_type,
+                ex_date, source, source_tier, observed_at)
+                VALUES ('x', 'INE000000C01', 'SPLIT', DATE '2020-03-03', 'test', 1, NOW())""")
+            first = auto_triage_gaps(con)
+            second = auto_triage_gaps(con)
+        assert first["events"] == 2, "a gap already explained by an action is not a gap"
+        assert second["events"] == 0, "re-running triages nothing new"
+
+    def test_illiquid_moves_are_ignored(self, db):
+        from financial_brain.corpactions.detect import auto_triage_gaps
+        with db.connect() as con:
+            self._px(con, "INE000000E01", "BSE", date(2020, 3, 2), 100.0, turnover=1000)
+            self._px(con, "INE000000E01", "BSE", date(2020, 3, 3), 10.0, turnover=1000)
+            assert auto_triage_gaps(con)["events"] == 0

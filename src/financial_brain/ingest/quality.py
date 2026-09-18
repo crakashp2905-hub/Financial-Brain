@@ -178,3 +178,55 @@ def partition_rows(con, table: str, report: QualityReport, *, clean: str = "raw_
     con.execute(f"CREATE OR REPLACE TEMP TABLE {clean} AS "
                 f"SELECT * FROM {table} WHERE NOT ({bad_any})")
     return con.execute(f"SELECT COUNT(*) FROM {rejected}").fetchone()[0]
+
+
+#: Share of matched instruments that must repeat the previous session exactly (same
+#: close *and* same non-zero volume) before a file is judged a republication.
+REPUBLICATION_SHARE = 0.95
+
+
+def check_republication(con, table: str, *, curated_root, exchange: str,
+                        business_date: date) -> CheckResult:
+    """Is this file just the previous session re-served under a new date?
+
+    BSE served Friday 2020-06-19's bhavcopy again as Saturday 2020-06-20 and 2020-10-17:
+    all ~2,700 matched closes identical, volumes non-zero. A real session cannot do
+    that - volumes never repeat across thousands of instruments - so a file that does
+    is not a session and must not be published as one. Those two only failed by
+    accident (their format needed ISIN resolution); an ISIN-format republication would
+    have loaded as a phantom trading day.
+
+    Compared against the previous session's curated file directly, matching on
+    instrument id (present in every format) and falling back to ISIN.
+    """
+    base = curated_root / "eod_prices" / f"exchange={exchange}"
+    prev = [p for p in base.glob("business_date=*")
+            if p.name.split("=", 1)[1] < business_date.isoformat()] if base.exists() else []
+    if not prev:
+        return CheckResult("not_a_republication", ERROR, True, "no previous session",
+                           "nothing to compare against", FILE)
+    prev_dir = max(prev, key=lambda p: p.name)
+    files = sorted(prev_dir.glob("*.parquet"))
+    if not files:
+        return CheckResult("not_a_republication", ERROR, True, "no previous file",
+                           "nothing to compare against", FILE)
+
+    matched, same = con.execute(f"""
+        WITH p AS (SELECT * FROM read_parquet('{files[0].as_posix()}'))
+        SELECT COUNT(*),
+               COUNT(*) FILTER (WHERE TRY_CAST(t.ClsPric AS DOUBLE) = p.close_price
+                                  AND TRY_CAST(t.TtlTradgVol AS BIGINT) = p.traded_volume
+                                  AND p.traded_volume > 0)
+        FROM {table} t JOIN p
+          ON (NULLIF(TRIM(t.FinInstrmId), '') IS NOT NULL
+              AND TRIM(t.FinInstrmId) = p.instrument_id)
+          OR (NULLIF(TRIM(t.FinInstrmId), '') IS NULL
+              AND NULLIF(TRIM(t.ISIN), '') IS NOT NULL AND TRIM(t.ISIN) = p.isin)
+    """).fetchone()
+    share = same / matched if matched else 0.0
+    prev_date = prev_dir.name.split("=", 1)[1]
+    return CheckResult(
+        "not_a_republication", ERROR, not (matched >= 100 and share >= REPUBLICATION_SHARE),
+        f"{share:.0%} of {matched} identical to {prev_date}",
+        f"share of instruments repeating {prev_date} exactly (close and non-zero volume)",
+        FILE)

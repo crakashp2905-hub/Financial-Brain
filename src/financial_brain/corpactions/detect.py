@@ -129,21 +129,21 @@ def find_candidates(con, *, min_deviation: float = MIN_FACTOR_DEVIATION) -> list
             FROM eod_prices
             WHERE instrument_type = 'STK' AND close_price > 0
               AND series IN ({series_list})
+        ), lagged AS (
+            -- The previous *traded* row for the same instrument, in one window pass.
+            -- This was a correlated MAX(business_date) subquery: fine on three months,
+            -- but over 11 years it ran 16+ CPU-minutes and 8.5 GB without finishing.
+            SELECT business_date, exchange, isin, ticker, series, prev_close,
+                   LAG(close_price) OVER (
+                       PARTITION BY isin, exchange, series, instrument_id
+                       ORDER BY business_date) AS actual_prev
+            FROM px
         ), joined AS (
-            SELECT t.business_date, t.exchange, t.isin, t.ticker, t.series,
-                   y.close_price AS actual_prev, t.prev_close AS stated_prev,
-                   t.prev_close / y.close_price AS factor
-            FROM px t
-            JOIN px y
-              ON  y.isin = t.isin AND y.exchange = t.exchange AND y.series = t.series
-             AND  y.instrument_id IS NOT DISTINCT FROM t.instrument_id
-             AND  y.business_date = (
-                    SELECT MAX(business_date) FROM px p
-                    WHERE p.isin = t.isin AND p.exchange = t.exchange
-                      AND p.series = t.series
-                      AND p.instrument_id IS NOT DISTINCT FROM t.instrument_id
-                      AND p.business_date < t.business_date)
-            WHERE t.prev_close IS NOT NULL AND y.close_price > 0
+            SELECT business_date, exchange, isin, ticker, series,
+                   actual_prev, prev_close AS stated_prev,
+                   prev_close / actual_prev AS factor
+            FROM lagged
+            WHERE prev_close IS NOT NULL AND actual_prev > 0
         )
         SELECT business_date AS ex_date, exchange, isin, ticker, series,
                actual_prev, stated_prev, factor
