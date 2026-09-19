@@ -89,14 +89,40 @@ _LEGAL = re.compile(
     # Deliberately not bare "fine", "notice" or "appeal": too common as ordinary words.
     r"\b(demand|penalty|penalt(y|ies)|show[- ]cause|tax|gst|cgst|sgst|igst|income[- ]tax|"
     r"commissioner|assessment order|tribunal|nclt|nclat|high court|supreme court|"
-    r"court|sebi order|adjudicat\w*|litigation|arbitration|levied|raid|"
+    r"court|sebi order|adjudicat\w*|litigation|arbitration|arbitral|levied|raid|"
     r"search and seizure|enforcement directorate|demand notice|tax notice|"
     r"imposed a fine|fine of rs)\b", re.I)
 
 
 #: Shareholder communications about tax deducted on dividends are not legal orders
 #: (Bajaj Holdings, 2026-09-17: "TDS on Interim Dividend").
-_NOT_LEGAL = re.compile(r"\b(tds|tax deducted at source|withholding tax)\b", re.I)
+#: So are appointments of a tax or internal auditor.
+_NOT_LEGAL = re.compile(r"\b(tds|tax deducted at source|tax deduction|deduction of tax|withholding tax|"
+                        r"(tax|internal|cost|secretarial) auditors?)\b", re.I)
+
+# Refinements found by the hand-checked sample (tests/fixtures/announcement_labels.json):
+# BSE's labels are right about the topic but too coarse about what happened.
+#: Housekeeping of subsidiaries, filed under "Acquisition" or "Restructuring".
+_SUBSIDIARY = re.compile(
+    r"incorporat\w* (of )?(a |an )?(new )?(wholly[- ]owned |step[- ]down |overseas )?"
+    r"subsidiar|setting up of (a )?new (entity|subsidiary|company)|"
+    r"(dissolution|liquidation|striking off|strike off) of (a |an |its )?"
+    r"(wholly[- ]owned |step[- ]down )?(\w+ )?subsidiar", re.I)
+#: Delisting and capital reduction change what a share is - often ordered by the NCLT
+#: under a resolution plan, but a corporate action first, not a legal dispute.
+_DELISTING = re.compile(r"delisting|reduction of (equity )?share capital", re.I)
+_GROUP_STRUCTURE = re.compile(r"group structure|internal restructuring", re.I)
+_RELATED_PARTY = re.compile(r"related party transaction", re.I)
+#: Routine debt (NCDs, commercial paper) filed as "Issue of Securities".
+_DEBT = re.compile(r"\b(commercial papers?|cps?|non[- ]convertible debentures?|ncds?|"
+                   r"debentures?|key information document|bonds?)\b", re.I)
+_EQUITY = re.compile(r"\b(equity|qip|rights issue|warrants?|preferential)\b", re.I)
+#: Director changes filed as "Change in Management" / "Cessation".
+_BOARD_ONLY = re.compile(r"\b(independent|non[- ]executive|additional|nominee) directors?",
+                         re.I)
+_EXECUTIVE = re.compile(r"\b(ceo|cfo|coo|chief|managing director|whole[- ]time|"
+                        r"(?<!non[- ])executive director|kmp|key managerial|"
+                        r"company secretary|senior management|management control)\b", re.I)
 #: Legal outcomes that are good news for the company.
 _FAVOURABLE = re.compile(
     r"\b(favou?rable|in favou?r of the company|dropped|quashed|set aside|withdrawn|"
@@ -135,6 +161,8 @@ def classify(category: str, subcategory: str, headline: str = "",
         elif "insider" in cat or "sast" in cat:
             kind, mat, rule = "INSIDER_DISCLOSURE", MEDIUM, "category Insider/SAST"
 
+    if kind in _COARSE and _DELISTING.search(text):
+        return "CORPORATE_ACTION", HIGH, "headline delisting / capital reduction"
     # Legal/regulatory orders are checked before order wins, and override even BSE's
     # own "Receipt of Order" label: a tax-demand order filed under that heading is
     # still a tax demand.
@@ -143,4 +171,15 @@ def classify(category: str, subcategory: str, headline: str = "",
         return "LEGAL_REGULATORY", HIGH, "headline legal/tax/penalty keywords"
     if kind in _COARSE and _ORDER_WIN.search(text):
         return "ORDER_WIN", HIGH, "headline order/contract keywords"
+    if kind in ("ACQUISITION", "SCHEME") and _SUBSIDIARY.search(text):
+        return "SUBSIDIARY_CHANGE", LOW, "headline subsidiary housekeeping"
+    if kind == "ACQUISITION" and _RELATED_PARTY.search(text):
+        return "RELATED_PARTY", MEDIUM, "headline related-party transaction"
+    if kind == "ACQUISITION" and _GROUP_STRUCTURE.search(text):
+        return "SCHEME", HIGH, "headline group restructuring"
+    if kind == "FUND_RAISING" and _DEBT.search(text) and not _EQUITY.search(text):
+        return "DEBT_ISSUE", LOW, "headline debt instrument, no equity"
+    if (kind == "MANAGEMENT_CHANGE" and _BOARD_ONLY.search(text)
+            and not _EXECUTIVE.search(text)):
+        return "BOARD_CHANGE", MEDIUM, "headline non-executive director change"
     return kind, mat, rule

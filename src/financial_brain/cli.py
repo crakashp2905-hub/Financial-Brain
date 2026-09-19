@@ -668,7 +668,14 @@ def cmd_features(args) -> int:
 
 def cmd_evaluate(args) -> int:
     """Rank-IC benchmark of each feature at a horizon (P2-3). Facts about the past."""
-    from .evaluation import benchmark
+    from .evaluation import benchmark, labels
+    if args.classifier:
+        for name in labels.SETS:
+            r = labels.score(name)
+            print(f"classifier on {name:<8} {r['correct']}/{r['n']} = {r['precision']:.1%}")
+            for m in r["misses"]:
+                print(f"   miss {m['predicted']} -> {m['gold']}  {m['note']}")
+        return 0
     feats = args.feature or sorted(benchmark.FEATURES)
     with Database(load()).connect() as con:
         for f in feats:
@@ -879,6 +886,8 @@ def main(argv: list[str] | None = None) -> int:
 
     g = sub.add_parser("evaluate", help="rank-IC benchmark of features (Phase 2)")
     g.add_argument("--feature", action="append")
+    g.add_argument("--classifier", action="store_true",
+                   help="announcement classifier precision on the hand-checked samples")
     g.add_argument("--horizon", type=int, default=20)
     g.add_argument("--start")
     g.add_argument("--end")
