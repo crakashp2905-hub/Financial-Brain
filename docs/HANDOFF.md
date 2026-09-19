@@ -122,7 +122,14 @@ before the market opens.* Order:
 - [x] **P1-5 C10 Daily brief** — deterministic cited brief done: `fb brief [--date]` →
   `data/briefs/<date>.md`. Still owner-gated: portfolio section (Kite) and the LLM prose
   layer. Optional personal watchlist: `data/watchlist.txt`.
-- [ ] **P1-6 Announcement history load** — prefetch finished (4,148 days, 4.2 GB, 0
+- [ ] **P1-6 Announcement history load** — first load died after 2015→2019-04; resumed
+  2026-09-19 as `fb announcements --start 2019-03-25 --end 2026-06-19` → `data/load_ann2.log`.
+  **After it finishes, run in order (one writer at a time):**
+  1. `fb announcements --start 2015-01-01 --end 2026-09-18 --force` — reclassifies with
+     classifier v2 and repairs headlines stored cut off ("....") from BSE's MORE field.
+  2. `fb graph --build` (P2-4), `fb features` (P2-1), `fb gaps --auto-review --redo`.
+  3. `fb evaluate --horizon 20` and `fb daily` (P1-7). Record results here.
+  Original note: prefetch finished (4,148 days, 4.2 GB, 0
   failures). Load was started 2026-09-19 → `data/load_ann.log`. Verify:
   `SELECT COUNT(*), MIN(business_date) FROM announcements` (expect millions from 2015).
   If incomplete, re-run `fb announcements --start 2015-01-01 --end 2026-06-19`
@@ -136,14 +143,29 @@ before the market opens.* Order:
 
 Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials first:
 
-- [ ] **P2-1 C12 Feature service** — deterministic, versioned indicators/factors from
+- [x] **P2-1 C12 Feature service** — done (code+tests): `features/prices.py` (continuous
+  adjusted series across ISIN successions, ASOF step join), `features/indicators.py` (f1:
+  returns, 12-1 momentum, vol, 52w distance, MAs, ADV20; NULL until the window is full).
+  `fb features`. Full build pending the DB (see P1-6). Original scope: — deterministic, versioned indicators/factors from
   adjusted prices (uses adjustment_factors + isin_successions for continuous history).
-- [ ] **P2-2 C17 Decision record & lifecycle** — immutable decision contract + state
+- [x] **P2-2 C17 Decision record & lifecycle** — immutable decision contract + state
   machine (ARCHITECTURE.md §11); every decision references one world_state version.
-- [ ] **P2-3 C21 India evaluation benchmark** — start with labelled announcement types
+- [x] **P2-3 C21 India evaluation benchmark** — done: factor rank-IC benchmark
+  (`evaluation/benchmark.py`, `fb evaluate`) and classifier precision on hand-checked
+  samples (`evaluation/labels.py`, `fb evaluate --classifier`): v1 88.7% on the tuning
+  sample; v2 94.1% on a held-out sample before any change it prompted. RBI hawkish/dovish
+  still to do (needs RBI statements ingested). Original scope: — start with labelled announcement types
   (measure classifier precision on a hand-checked sample) and RBI hawkish/dovish.
-- [ ] **P2-4 C24 Knowledge graph** — promoter groups, pledges, related entities.
-- [ ] **P2-5 C11/C14/C16** — document intelligence, Investment Constitution, committee:
+- [x] **P2-4 C24 Knowledge graph** — done: filers extracted from SAST/insider headlines
+  (`graph/extract.py`), promoter groups on corroborated links only (`graph/build.py`,
+  `fb graph --build`, `fb graph --isin X`). Prototype on 148k lake disclosures recovered
+  Tata, JSW/Jindal, Adani, Adventz, Future, Godrej, Max; Birla family merges via Pilani
+  (stated limit).
+- [~] **P2-5 C11/C14/C16** — groundwork done: Investment Constitution enforced at
+  RISK_REVIEWED (`constitution/rules.py`, example in `docs/constitution.example.toml` —
+  **owner: write `data/constitution.toml`**); closed-by-default LLM gate (`llm/gate.py`,
+  `FB_LLM_ENABLED=1` + SDK credentials; whitelisted purposes; every call recorded). Still
+  to build: document intelligence over filings, the committee agents. Original: — document intelligence, Investment Constitution, committee:
   need an LLM API (owner) — build interfaces and tests, gate the model calls.
 
 ---
@@ -191,3 +213,6 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   (`fb brief`, `fb trace`). First real brief read as a reader drove 8 fixes (see commit
   55b70d5). Announcement history load started (P1-6). Found autostart blocked on a
   permission prompt; noted under Needs the owner.
+- 2026-09-19 (later) — P2-1 features, P2-3 benchmarks, P2-4 knowledge graph, P2-5
+  constitution + LLM gate (commits 3374cc0..f8e018e). Found BSE truncates HEADLINE (full
+  text in MORE) - fixed; needs a --force replay. Announcement load resumed from 2019-03-25.
