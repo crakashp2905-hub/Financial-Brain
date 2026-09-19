@@ -110,3 +110,27 @@ def test_tds_on_a_dividend_is_not_a_legal_order():
 ])
 def test_legal_tone(text, tone):
     assert legal_tone(text) == tone
+
+
+def test_a_red_flag_names_the_promoter_group(db):
+    """Group contagion: a pledge at one Tata company shows its listed siblings, cited."""
+    from financial_brain.brief import render
+    from financial_brain.worldstate import build as ws
+    with db.connect() as con:
+        _world(con)
+        con.execute("""INSERT INTO announcements (news_id, source, business_date, isin, company,
+            headline, event_type, materiality, published_at, evidence_key, observed_at)
+            VALUES ('pledge', 'BSE', ?, 'INE092A01019', 'Tata Chemicals Ltd',
+            'Disclosure of encumbrance by promoter', 'PROMOTER_PLEDGE', 'high', ?, 'k', NOW())""",
+                    [D1, datetime(2026, 9, 18, 18, 0)])
+        for i, (isin, co) in enumerate([("INE092A01019", "Tata Chemicals Ltd"),
+                                        ("INE081A01020", "Tata Steel Ltd")] * 2):
+            con.execute("""INSERT INTO holder_filings VALUES (?, DATE '2025-01-01', NULL, '1', ?, ?,
+                           'PLEDGE', 'Tata Sons Pvt Ltd', 'TATA SONS PVT LTD', 'organisation')""",
+                        [f"h{i}", isin, co])
+        s = ws.build(con, D1)
+        text, _ = render.render(con, s)
+    pledge = next(e for e in s["events"] if e["news_id"] == "pledge")
+    assert pledge["group"]["anchor"] == "Tata Sons Pvt Ltd"
+    assert pledge["group"]["siblings"] == ["Tata Steel Ltd"]
+    assert re.search(r"group: Tata Sons Pvt Ltd, 2 listed — also Tata Steel Ltd \[\d+\]", text)

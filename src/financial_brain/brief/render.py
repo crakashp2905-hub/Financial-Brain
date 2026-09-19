@@ -10,6 +10,8 @@ Ordering is the editorial judgement, made explicit:
   tax orders), then results, ratings, orders, deals, fund raising, management changes;
 * within a type, by the company's traded value that session - a large company's news
   outranks a micro-cap's;
+* a red flag in a company that belongs to a promoter group names the group and its
+  other listed companies (P2-4) - group contagion is India's distinctive risk;
 * the reader's own watchlist (``data/watchlist.txt``: one ticker or ISIN per line,
   personal, never committed) before everything else.
 
@@ -162,6 +164,10 @@ def render(con, state: dict, *, watchlist_path=None) -> tuple[str, list[str]]:
             name = tickers.get(e.get("isin")) or e["company"]
             tone = " _(favourable)_" if e.get("tone") == "favourable" else ""
             out.append(f"- **{name}**{tone} — {e['text'][:180]} {cite(e['evidence'])}")
+            if e.get("group"):
+                g = e["group"]
+                out.append(f"  - group: {g['anchor'] or 'promoter group'}, {g['size']} listed"
+                           f" — also {', '.join(g['siblings'])} {cite(g['evidence'])}")
             shown += 1
         if len(rows) > PER_TYPE:
             out.append(f"- …and {len(rows) - PER_TYPE} smaller companies")

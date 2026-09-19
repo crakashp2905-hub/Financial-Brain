@@ -28,7 +28,7 @@ from ..config import TIER
 from ..events.classify import legal_tone
 from ..evidence import ledger
 
-BUILDER = "worldstate v2"
+BUILDER = "worldstate v3"                  # v3: promoter-group context on red flags
 KEY_INDICES = ["Nifty 50", "Nifty Bank", "Nifty 500", "NIFTY Midcap 100",
                "NIFTY Smallcap 100", "India VIX"]
 SECTORS = ["Nifty IT", "Nifty Auto", "Nifty FMCG", "Nifty Pharma", "Nifty Metal",
@@ -193,6 +193,32 @@ def build(con, d: date, *, as_of: datetime | None = None) -> dict:
         SELECT {ann_cols} FROM announcements
         WHERE materiality = 'high' AND published_at > ? AND published_at <= ?
         ORDER BY published_at""", [window_start, as_of]).fetchall()]
+
+    # ---- group contagion: a red flag in one company touches its promoter group ----
+    red = {"INSOLVENCY", "AUDITOR_RESIGNATION", "PROMOTER_PLEDGE", "LEGAL_REGULATORY"}
+    flagged = [e for e in events if e["event_type"] in red and e["isin"]
+               and e.get("tone") != "favourable"]
+    if flagged and con.execute("""SELECT 1 FROM information_schema.tables
+                                  WHERE table_name = 'holder_filings'""").fetchone():
+        from ..graph import build as graph
+        member_of = {m: g for g in graph.groups(con, as_of=d) for m in g["members"]}
+        for e in flagged:
+            g = member_of.get(e["isin"])
+            if not g:
+                continue
+            siblings = [c for m, c in zip(g["members"], g["companies"]) if m != e["isin"]]
+            gid = ledger.mint(
+                con, kind="promoter_group", subject=e["isin"], as_of=close_ts,
+                claim=f"{e['company']} is in the {g['anchor'] or 'unnamed'} promoter group "
+                      f"({len(g['members'])} listed companies) as known on {d}",
+                value={"group_id": g["group_id"], "anchor": g["anchor"],
+                       "members": g["members"]},
+                source="BSE", source_tier=TIER["BSE"],
+                derivation="graph/build: corroborated Reg. 31 / Reg. 10 promoter filers",
+                inputs=[e["evidence"]])
+            cited.append(gid)
+            e["group"] = {"anchor": g["anchor"], "size": len(g["members"]),
+                          "siblings": siblings[:6], "evidence": gid}
 
     # ---- why did the big movers move? their filings since the previous morning --
     for m in gainers + losers:
