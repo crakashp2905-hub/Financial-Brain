@@ -1,0 +1,70 @@
+"""Evaluation benchmark (P2-3): does a signal predict anything, honestly measured?
+
+For a feature and a horizon *h*, on each rebalance date *t*:
+
+* the universe is lineages with a feature value on *t* and 20-day average traded value
+  of at least ``min_adv`` - known on *t*, so the filter adds no look-ahead;
+* the outcome is the adjusted return from close *t* to close *t+h sessions* of the
+  *same lineage* (a delisted name with no *t+h* price is dropped and counted, never
+  silently filled);
+* the score is the Spearman rank IC between feature and outcome, and the top-minus-
+  bottom quintile return spread.
+
+Rebalance dates are spaced *h* sessions apart so outcomes do not overlap; the t-stat of
+the mean IC is then not inflated by autocorrelation. Every number here is a fact about
+the past, not advice.
+"""
+from __future__ import annotations
+
+import math
+
+FEATURES = {"ret_1d", "ret_5d", "ret_20d", "ret_60d", "ret_250d", "mom_12_1", "vol_20",
+            "vol_60", "dist_52w_high"}
+
+
+def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
+             start: str | None = None, end: str | None = None) -> dict:
+    if feature not in FEATURES:
+        raise ValueError(f"feature must be one of {sorted(FEATURES)}")
+    rows = con.execute(f"""
+        WITH cal AS (
+            SELECT business_date, ROW_NUMBER() OVER (ORDER BY business_date) AS k
+            FROM (SELECT DISTINCT business_date FROM adjusted_prices)
+        ), fwd AS (
+            SELECT a.lineage, c.k, a.close_adj FROM adjusted_prices a JOIN cal c USING (business_date)
+        ), panel AS (
+            SELECT c.business_date, f.lineage, f.{feature} AS x,
+                   b.close_adj / a.close_adj - 1 AS y
+            FROM features f JOIN cal c USING (business_date)
+            JOIN fwd a ON a.lineage = f.lineage AND a.k = c.k
+            LEFT JOIN fwd b ON b.lineage = f.lineage AND b.k = c.k + ?
+            WHERE (c.k - 1) % ? = 0 AND f.{feature} IS NOT NULL AND f.adv20 >= ?
+              AND (? IS NULL OR c.business_date >= CAST(? AS DATE))
+              AND (? IS NULL OR c.business_date <= CAST(? AS DATE))
+              AND c.k + ? <= (SELECT MAX(k) FROM cal)
+        ), ranked AS (
+            SELECT *, RANK() OVER (PARTITION BY business_date ORDER BY x) AS rx,
+                      RANK() OVER (PARTITION BY business_date ORDER BY y) AS ry,
+                      NTILE(5) OVER (PARTITION BY business_date ORDER BY x) AS q
+            FROM panel WHERE y IS NOT NULL
+        )
+        SELECT business_date, COUNT(*) AS n, CORR(rx, ry) AS ic,
+               AVG(y) FILTER (WHERE q = 5) - AVG(y) FILTER (WHERE q = 1) AS spread,
+               (SELECT COUNT(*) FROM panel p WHERE p.business_date = r.business_date
+                  AND p.y IS NULL) AS dropped
+        FROM ranked r GROUP BY business_date HAVING COUNT(*) >= 20 ORDER BY 1
+    """, [horizon, horizon, min_adv, start, start, end, end, horizon]).fetchall()
+    ics = [r[2] for r in rows if r[2] is not None]
+    spreads = [r[3] for r in rows if r[3] is not None]
+    n = len(ics)
+    mean = sum(ics) / n if n else float("nan")
+    sd = math.sqrt(sum((x - mean) ** 2 for x in ics) / (n - 1)) if n > 1 else float("nan")
+    return {
+        "feature": feature, "horizon": horizon, "dates": n,
+        "mean_ic": mean, "ic_t": mean / sd * math.sqrt(n) if n > 1 and sd > 0 else float("nan"),
+        "hit_rate": sum(1 for x in ics if x > 0) / n if n else float("nan"),
+        "mean_spread": sum(spreads) / len(spreads) if spreads else float("nan"),
+        "avg_names": sum(r[1] for r in rows) / len(rows) if rows else 0,
+        "dropped_no_outcome": sum(r[4] for r in rows),
+        "first": rows[0][0] if rows else None, "last": rows[-1][0] if rows else None,
+    }

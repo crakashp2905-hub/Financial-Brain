@@ -666,6 +666,19 @@ def cmd_features(args) -> int:
     return 0
 
 
+def cmd_evaluate(args) -> int:
+    """Rank-IC benchmark of each feature at a horizon (P2-3). Facts about the past."""
+    from .evaluation import benchmark
+    feats = args.feature or sorted(benchmark.FEATURES)
+    with Database(load()).connect() as con:
+        for f in feats:
+            r = benchmark.evaluate(con, f, args.horizon, start=args.start, end=args.end)
+            print(f"{f:<14} h={r['horizon']:<3} dates {r['dates']:<4} IC {r['mean_ic']:+.3f} "
+                  f"t {r['ic_t']:+.1f} hit {r['hit_rate']:.0%} Q5-Q1 {r['mean_spread']:+.2%} "
+                  f"names {r['avg_names']:.0f} dropped {r['dropped_no_outcome']}")
+    return 0
+
+
 def cmd_regime(args) -> int:
     """Build (or show) the market regime for every session."""
     from .regime import brain
@@ -838,6 +851,13 @@ def main(argv: list[str] | None = None) -> int:
 
     g = sub.add_parser("features", help="build adjusted prices + features (Phase 2)")
     g.set_defaults(fn=cmd_features)
+
+    g = sub.add_parser("evaluate", help="rank-IC benchmark of features (Phase 2)")
+    g.add_argument("--feature", action="append")
+    g.add_argument("--horizon", type=int, default=20)
+    g.add_argument("--start")
+    g.add_argument("--end")
+    g.set_defaults(fn=cmd_evaluate)
 
     g = sub.add_parser("regime", help="market regime per session (build with --build)")
     g.add_argument("--build", action="store_true")
