@@ -122,9 +122,18 @@ before the market opens.* Order:
 - [x] **P1-5 C10 Daily brief** — deterministic cited brief done: `fb brief [--date]` →
   `data/briefs/<date>.md`. Still owner-gated: portfolio section (Kite) and the LLM prose
   layer. Optional personal watchlist: `data/watchlist.txt`.
-- [~] **P1-6 Announcement history load** — **loaded 2026-09-19: 3,079,172 announcements,
-  2015-01-01→2026-09-18, 4,239 days** (resume run ok=2634, skipped=10). Step 1 below
-  (forced replay, 1.40M truncated headlines to repair) started → `data/replay_ann.log`.
+- [x] **P1-6 Announcement history load** — **done 2026-09-19: 3,079,172 announcements,
+  2015-01-01→2026-09-18, 4,239 days.** Forced replay (ok=4239) reclassified with v2 and
+  repaired headlines: truncated 1,403,429 → 1,038 (rows BSE sent without MORE). Replay
+  took ~6 h (row-wise upserts); next time prefer a set-based repair. Gaps re-triaged:
+  needs_source 65 → 58; gate 12/12.
+  Post-load results (`data/after_replay.log`): graph 161 groups / 447 companies;
+  features 4.92M rows, 3,397 lineages; firewall fw1 PROMOTED mom_12_1 (IC +0.049, t 3.7,
+  DSR 0.97, +0.52%/20d net, trial 2) and REJECTED the other eight (reversal and low-vol
+  fail on costs; dist_52w_high DSR 0.95 borderline). **Caveat:** names without a t+h
+  price (delistings) are dropped, ~1,500 across 132 dates - survivorship bias to fix
+  before trusting any PROMOTE (score a delisting at its last price or -100%).
+  Original steps:
   **After it finishes, run in order (one writer at a time):**
   1. `fb announcements --start 2015-01-01 --end 2026-09-18 --force` — reclassifies with
      classifier v2 and repairs headlines stored cut off ("....") from BSE's MORE field.
@@ -136,7 +145,8 @@ before the market opens.* Order:
   If incomplete, re-run `fb announcements --start 2015-01-01 --end 2026-06-19`
   (idempotent, lake-first). Then re-run `fb gaps --auto-review --redo`: announcements
   (e.g. CLARIFICATION, SCHEME) may explain more of the 65 open gaps.
-- [ ] **P1-7 Daily operation** — a single `fb daily` that runs, in order: bhavcopy
+- [x] **P1-7 Daily operation** — `fb daily` ran end to end 2026-09-19 (brief for
+  2026-09-18, 88 citations, with promoter-group context on red flags). Original: — a single `fb daily` that runs, in order: bhavcopy
   ingest (today), index, corporate-action feed (this month), announcements (today),
   derive, regime --build, brief. Idempotent, so safe to schedule.
 
@@ -217,3 +227,9 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
 - 2026-09-19 (later) — P2-1 features, P2-3 benchmarks, P2-4 knowledge graph, P2-5
   constitution + LLM gate (commits 3374cc0..f8e018e). Found BSE truncates HEADLINE (full
   text in MORE) - fixed; needs a --force replay. Announcement load resumed from 2019-03-25.
+- 2026-09-19 (evening) — announcement history complete and replayed; graph keyed by
+  scrip code (no duplicate members); India Implementability Gate; Alpha Validation
+  Firewall run on real data (1 PROMOTE, 8 REJECT; survivorship caveat above). Brief
+  shows promoter groups (e.g. Vedanta pledge -> 4 demerged Vedanta companies).
+  Next: fix survivorship in the benchmark; RBI statements provider (P2-3 remainder);
+  document intelligence + committee once the owner enables the LLM gate.
