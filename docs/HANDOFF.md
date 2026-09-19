@@ -279,3 +279,24 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   copied to `D:\ollama\models` (39.2 GB, verified); switch-over (OLLAMA_MODELS user env
   var + Ollama restart, then delete the C: copy) pending the end of the benchmark round
   (`data/bench_sentiment2.log`). Then register Fin-R1 (`data/models/Modelfile.finr1`).
+- 2026-09-20 (early) — **Router calibration corrected by a held-out set.** Labelled
+  `tests/fixtures/sentiment_labels_holdout.json` (104 headlines 2021-2023, positive-
+  enriched, labelled before any model saw them). The in-sample route
+  (finbert -> llama3.2:3b -> llama3.1:8b, "89.1% at 1.26 s") scored **65.4% with 23.6% of
+  accepted answers wrong**. `fb models route --verify-on sentiment_holdout` now rejects
+  any chain whose accepted answers exceed the error bar on held-out data; every cascade
+  was rejected, **qwen2.5:7b alone** passed (86.5%, 7% wrong when accepted, declines 34%)
+  and is the stored route. `fb tone` therefore accepts only confident *neutral* today -
+  no filing is flagged positive/negative, because no verified model has earned a
+  "positive" threshold (the tuning set holds just 14 positives). Benchmarking gemma2 and
+  phi4 (which do have positive thresholds in-sample) on the held-out set is running ->
+  `data/bench_holdout.log`; re-run `fb models route --verify-on sentiment_holdout` after.
+  Next calibration step: cross-fit (fit on A verify on B *and* the reverse), and label
+  more positives/negatives.
+  **Also:** `num_ctx` capped (2k typed / 4k generation) - the default 16k context made
+  Ollama allocate a 2 GB KV cache and fail to load 8B models on this laptop.
+  **Owner action pending:** Ollama app -> Settings -> Model location -> `D:\ollama\models`
+  (39.2 GB copy already verified there), then delete `C:\Users\CR Ramesh\.ollama\models`
+  to reclaim ~39 GB; C: is at ~3 GB free and this blocks registering Fin-R1
+  (`data/models/Modelfile.finr1`).
+
