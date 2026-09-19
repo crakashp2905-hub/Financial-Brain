@@ -236,5 +236,11 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   scrip code (no duplicate members); India Implementability Gate; Alpha Validation
   Firewall run on real data (1 PROMOTE, 8 REJECT; survivorship caveat above). Brief
   shows promoter groups (e.g. Vedanta pledge -> 4 demerged Vedanta companies).
-  Next: fix survivorship in the benchmark; RBI statements provider (P2-3 remainder);
+  RBI (P2-3 remainder) probed: rbi.org.in's WAF refuses automated requests (robots.txt
+  -> 418 "Unauthorised Access") - not worked around (no bot evasion). The press-release
+  RSS (`https://www.rbi.org.in/pressreleases_rss.xml`) is machine-readable but holds only
+  the last 10 items (< 1 day), so no history. Hawkish/dovish benchmark needs the ~70 MPC
+  statements since 2015 from a sanctioned source (DBIE, or the owner's downloads into
+  `data/inbox/rbi/`). **Owner decision.**
+  Next: 
   document intelligence + committee once the owner enables the LLM gate.
