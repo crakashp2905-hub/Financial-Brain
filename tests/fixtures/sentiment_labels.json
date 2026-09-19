@@ -1,0 +1,996 @@
+{
+ "about": "Sentiment for shareholders, from the headline alone: 165 BSE announcements 2024-01..2026-06, 11 per event type (hash-ordered, seed 'sent-2026'). Labelled by Claude, not the owner, with one rule: negative only when the text states an adverse fact (auditor resignation, tax demand/penalty/payment notice, CFO resignation); positive only when it states a favourable one (orders/contracts won, alliance, operations started, dividend recommended); everything without a stated direction is neutral - including results without numbers and fund raising (dilution cuts both ways). Overrule by editing gold.",
+ "labelled": "2026-09-19",
+ "rows": [
+  {
+   "news_id": "fb4535be-e31d-4a9a-a02b-a7d84878e08e",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Intimation under Regulations 30 and 51 of the SEBI (LODR) Regulations, 2015.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "7157bd62-5cae-484f-99e2-1e34a5124766",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Update on Corporate Announcement dated 6th November, 2025 and 21st January, 2026 regarding acquisition of LNJ Greenpet Private Limited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "fcdd6c67-87ae-44b1-b948-46e0465e18b2",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Disclosure under Regulation 30 of SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "afc8ea95-d250-4f67-b37b-ef3c9d6a799b",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Acquisition of stake held by JV Partner in L&T Sapura Shipping Private Limited",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d7433a21-59a9-4e2a-b321-a166ebc8cf78",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Update on the Acquisition of AluChem Companies, Inc. by Aditya Holdings LLC a step-down wholly owned subsidiary of a Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ae3dcb4b-edca-4be6-9c38-51ea2287ba83",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Investment by the Company in Jio Leasing Services Limited, a wholly owned subsidiary",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "85aedc74-94b7-4ba6-9edb-f2ac2ec60feb",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Acquisition of 100% Equity of Northern Superchargers Limited, a Company registered in London, United Kingdom.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "44c9613a-7985-41b2-abcb-9b66038ca590",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Intimation regarding Investment in Special Purpose Vehicle for sourcing energy through solar power",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "6613944c-198a-4767-9de9-48d3fca848a4",
+   "event_type_v2": "ACQUISITION",
+   "headline": "The Company acquired Optionally Convertible Redeemable Preference Shares in an Associate Company",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "03669817-8105-4174-8969-a9f67a804344",
+   "event_type_v2": "ACQUISITION",
+   "headline": "PDS Limited has informed the Stock Exchange regarding the acquisition.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "6df4688c-2778-4dc6-be79-ca05b7f410cc",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Disclosure pursuant to Regulation 30 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1eaeb046-84ab-4e95-85d2-54765dcb3711",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Intimation about the resignation letter received from the Statutory Auditor of the Company",
+   "gold": "negative"
+  },
+  {
+   "news_id": "641524df-22a3-4cca-bfce-f5cb85a255fa",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Intimation of Material events pursuant to Regulation 30 of SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015-Resignation of Statutory Auditor.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "4f16376d-679c-4db6-932a-7956a886917a",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Resignation of Mr. Girish L. Shethia, Chartered Accountant, as Statutory Auditor of the Company w.e.f. November 12, 2025",
+   "gold": "negative"
+  },
+  {
+   "news_id": "34ffb1f1-5850-4807-bcfe-5661c6fe91a9",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Please note that M/s Manoj Acharya & Associates, statutory auditors of the Company have submitted resignation due to their inability to continue as statutory auditors of the Company as they have left India.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "aff788b3-e44e-4707-9a40-c519050eb629",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Resignation of M/s SNDK & Associates & LLP as Statutory Auditor of the Company w.e.f. 14.11.2025.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "0ae021e4-860c-484c-8fe1-417b793b28c4",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "R Ramalingam & Associates, Chartered Accountants vide their letter dated 03rd September 2024 tendered their resignation as statutory auditors of the company with effect from 30th September 2024.  Resignation letter received as aforementioned is attached.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "cd374a60-c93a-48eb-83d0-a2acfe21bf04",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Additional Details required for corporate announcement filed under Regulation 30 of SEBI (LODR) Regulations, 2015- Exchange communication vide e-mail dated 05th July, 2025",
+   "gold": "negative"
+  },
+  {
+   "news_id": "be576753-aadb-4c8a-a51e-7037c6efeb67",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Additional Details Required For Corporate Announcement Filed Under Regulation 30 of SEBI (LODR) Regulation, 2015 , corporate announcement of CA Resignation Dated on 14 November 2025",
+   "gold": "negative"
+  },
+  {
+   "news_id": "50791660-21bb-41aa-9713-67efd293b077",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "The Board of Directors at its meeting held today also noted that there are no other reasons other than\r\nmentioned in the resignation letter received from the Statutory Auditor dated November 14, 2024. Copies\r\nof the resignation letter along with its annexure dated November 14, 2024.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "7aa14e4b-2f5c-497a-ad4f-43c9c43cda2c",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Revised Intimation of Resignation of Statutory Auditor of the Company for the Original Corporate Announcement filed on 09th October, 2024",
+   "gold": "negative"
+  },
+  {
+   "news_id": "39eb5094-761c-491c-b938-1147e777420b",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Dear Sir,\r\n\r\nThis is to inform you that the Statutory Auditor of the Company, M/s Goel Satish & Co., Chartered Accountants (Firm No.010693N) have tendered their resignation from the position of the Statutory Auditor of the Company with effect from 12.12.2023.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "fd3fb4f4-d6dc-463f-bf48-69ca23594b79",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "Approval for the Appointment of M/s Sarang  Shivajirao Chavan & Associates as the Statutory of the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4c165291-a0a1-4948-8a95-be2b499fdf4e",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "Outcome of the Board Meeting held on 22nd January 2026, pursuant to the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9871c714-1a9e-4ae0-90c9-4c43f637fcc7",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "Outcome of Board Meeting for Unaudited (Standalone and Consolidated) Financial Results for the quarter and half year ended September 30, 2025.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1b9d6cb4-f588-4ce3-ad7d-fa7223afdeb6",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "the Board of Directors of the Company at its Meeting held on today i.e. Thursday, the 29th May, 2025 have approved and taken on record the Audited Financial Results for the 4th Quarter and Year ended 31st March, 2025",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a9ebe6db-2bde-435e-ba76-1841bff04036",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "The Board of Directors at their meeting held on 4th February, 2025  inter alia approve the Un-Audited Financial Results for the  third Quarter and Nine Months ended on 31.12.2024 and other matters, as annexed herewith.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a27c0809-0886-4ba4-ae3c-cd4e75a6b8cd",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "approved Appointment of Mr. Sarabjeet Singh Anand (DIN: 06910481), Ms. Himanshi Sachdeva (DIN: 10645448), Mr. Santosh Kumar Gupta (DIN:06420711), Mr. Mohit Raghav (DIN:09586693)",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "b9b0938b-6077-4e70-a973-7a4864b1c870",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "OUTCOME OF THE BOARD MEETING FOR THE QUARTER AND YEAR ENDED 31/03/2024.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2a97f83a-82a5-4876-844d-5508645a3940",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "Outcome of the Board Meeting held on 11/11/2024 to consider and approve inter-alia the financial results for quarter and half year ended 30.09.2024",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9e5c8d85-289b-4054-9a80-7eaf7f85e70f",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "Un-Audited Standalone and Consolidated Financial Results of the Company for the Quarter and Half-Year ended September 30, 2024",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "f7b60e1d-4ecc-4b3e-9f26-344c04abee9e",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "To consider and approve unaudited financial results and limited review report for the quarter and half year ended 30/09/2024.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "8bf44aef-2971-455f-ab80-aef525528fed",
+   "event_type_v2": "BOARD_OUTCOME",
+   "headline": "Outcome of Board Meeting for Audited Financial Results For the year ended 31.03.2024",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "0536ccde-c6af-4988-818c-bed93d6ba336",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from Galada Finance Ltd on January 24, 2024 with reference to significant movement in price, in order to ensure that investors have latest relevant information about the company and to inform the market so that the interest of the investors is safeguarded.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "f59e9af5-359b-4bfa-bc08-debe33c07937",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from Fineotex Chemical Ltd on September 12, 2024, with reference to Movement in Volume.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "e48bff2d-7d7d-4415-84b9-bf7b982f9384",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from Alliance Integrated Metaliks Ltd on March 4, 2024, with reference to significant movement in price, in order to ensure that investors have latest relevant information about the company and to inform the market so that the interest of the investors is safeguarded.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "e75d48d6-07e4-4e4b-a12b-bb7de95d2154",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from Dynamic Industries Ltd on September 26, 2025 with reference to significant movement in price, in order to ensure that investors have latest relevant information about the company and to inform the market so that the interest of the investors is safeguarded.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "aa28753d-ab0d-416b-9d34-07eef0b2f2bf",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from Ramkrishna Forgings Ltd on January 13, 2025, with reference to Movement in Volume.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2f59f122-d0bd-42ed-8584-995850e32eab",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from AMD Industries Ltd on March 25, 2025 with reference to significant movement in price, in order to ensure that investors have latest relevant information about the company and to inform the market so that the interest of the investors is safeguarded.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "b44233dd-c190-4a59-977d-04099b098a7b",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from Titan Securities Ltd on March 27, 2026 with reference to significant movement in price, in order to ensure that investors have latest relevant information about the company and to inform the market so that the interest of the investors is safeguarded.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4febba6d-ba14-4df8-a9f4-1443033e7618",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from Raj Television Network Ltd on June 3, 2026 with reference to significant movement in price, in order to ensure that investors have latest relevant information about the company and to inform the market so that the interest of the investors is safeguarded.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ad14001e-271c-43be-83a9-d6889207df7a",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from First Custodian Fund India Ltd on May 29, 2024 with reference to significant movement in price, in order to ensure that investors have latest relevant information about the company and to inform the market so that the interest of the investors is safeguarded.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "14940303-95ba-456b-98be-aafb5ec58ad3",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from Ddev Plastiks Industries Ltd on July 15, 2025, with reference to Movement in Volume<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c8d5a123-ef86-4d04-85ee-246bfe246551",
+   "event_type_v2": "CLARIFICATION",
+   "headline": "The Exchange has sought clarification from NINtec Systems Ltd on September 18, 2024 with reference to significant movement in price, in order to ensure that investors have latest relevant information about the company and to inform the market so that the interest of the investors is safeguarded.<BR><BR>The reply is awaited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "97e27753-1497-4b46-b6a3-93fa66c6bd32",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Pursuant to Regulation 30 read with Clause 3 of Para A of Part A of Schedule III of the SEBI Listing Regulations, 2015 and our letter dated 2nd October, 2025, this is to inform you that Crisil Ratings Limited, a SEBI Registered Credit Rating Agency vide its Email dated 9th October, 2025, has communicated the Rating Actions to the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "8f5dbc3b-9267-4958-9f79-1296db3f7d04",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Intimation regarding Credit Rating under Regulation 30 of SEBI(Listing Obligations and Disclosure Requirements) Regulation 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c97b7309-78a0-40bd-af39-7a9a6bb4c1af",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Solara Active Pharma Sciences Limited has informed the Stock Exchange regarding Credit Rating received from Crisil Ratings Limited",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4c3e0974-baa6-4a8b-9aaa-041d7352ff3d",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "we wish to inform that CARE Ratings Limited has given the latest company''s Credit rating",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "63f06730-0818-460e-a4d2-6157c17f63f5",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "We wish to inform you that ACUITE Ratings and Research Limited, the Credit Rating Agency, have assigned the credit rating of the Company vide its email dated August 02, 2024 which are attached herewith. \r\n\r\nKindly take the same on record.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ff501bfd-9d5d-4c98-9c57-5bf6ca818bf1",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Japan Credit Rating Agency Limited (JCR), Japan has assigned an Issuer Rating to JSW Steel Limited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "0e900f49-ef74-4b98-8634-f287275b4c8c",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "It is hereby informed that Infomerics Valuation and Rating Private Limited, has assigned the credit rating for Bank facilities of the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "cc877a10-0762-425a-8073-f58f0a20cff5",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "In terms of Regulation 30 of the SEBI Listing Regulations, 2015, we are pleased to inform you that Credit Rating  assigned to Company''s Long term and Short term bank facilities have been reviewed by CARE Ratings Limited (CARE). CARE vide its press release dated September 1, 2025 has maintained the existing credit rating as it is/ reaffirmed the same.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2528d63d-d890-46b9-9c9d-a1fbd4017463",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Issuance of Credit Rating by ICRA Limited with respect to the debt facilities availed by the Company, is enclosed.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ebba7316-ed69-49fe-8086-0f3b013e3626",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Kindly refer the attachment about Credit Rating for Company''s commercial paper",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2e0b920c-9f98-4921-bb42-c684e5900eb3",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Announcement under Regulation 30 of SEBI (LODR) Regulations, 2015- Credit Rating",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ea7f7e19-e8b1-49bc-b074-e26daeb3d5d1",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Record Date approved by the Board of Directors for the payment of interim Dividend for the FY 2025-26 is October 21, 2025",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "251ba179-d9a7-48ab-bfca-7e328993a7a1",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Recommendation of Final Dividend for year ended March, 2024 by the Board of Directors.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "226d2207-2aab-426f-b237-beacb26be7aa",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Pursuant to regulation 42 of SEBI (LODR) Regulations, 2015, the Record date to ascertain the list of shareholders who are entitle to dividend id fixed on Monday 22nd July, 2024.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "93b3f3b7-763c-4e0e-b27c-3b851779b328",
+   "event_type_v2": "DIVIDEND",
+   "headline": "EMS Limited has informed the Exchange that Record Date for the purpose of Final Dividend is September 20, 2024.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "b4331bbe-c4c1-4cc4-82a4-d008841f41e1",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Consider and recommendation of final dividend, if any, for the year ended March 31, 2025.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "abb8e4b4-94a3-404f-8d2e-c40331a13d33",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Pursuant to Regulation 42 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015, the Company has fixed Friday, August 09, 2024 as the record date for determining entitlement of Members to final dividend, if approved by the Members at the Annual General Meeting.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a3b77b33-342e-4b51-a4fa-af2e7656ccaa",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Please find enclosed Intimation of Book Closure pursuant to Regulation 42 of SEBI (LODR) Regulations, 2015.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "92856148-e652-4d9c-9906-cd7b5e449364",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Pursuant to Regulation 42 of SEBI(LODR)Regulation, 2015, the company has fixed Monday, August 18, 2025 as the \" RECORD DATE\" for the purpose of ascertaining the eligibility of the shareholders for the payment of Final Dividend for the financial year 2024-2025.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "70890816-9365-4ab3-a67c-7c11097a2b25",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Fixation of record Date of 13th September, 2024 for determining entitlement of the Equity Shareholders for the purpose of Sub-division/split of the Equity Shares of the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2f35fd51-ef5a-47fb-8274-803ba6b9c53a",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Dear sir/ madam\r\nPlease find attached the letter for book closure notification from 23rd september 2025 to 29th september 2025 for your information and records.\r\nkindly do the needful\r\nRegards\r\nK.Rajasekaran",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "498569d7-7731-4fca-a588-1b8f7b67de1c",
+   "event_type_v2": "DIVIDEND",
+   "headline": "Please find attached intimation regarding Dividend, record date and payment date.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4afc8ded-a19d-41c9-8509-24e38f56e549",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "Span Divergent Limited - Disclosure under Regulation 30 of the Securities and Exchange Board of India (Listing Obligations and Disclosure Requirements) Regulations, 2015 in relation to the allotment of 18,01,481 Equity Shares on preferential basis",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c751e786-5f5c-4e50-9441-7f041bc9e10d",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "Additional Disclosure under Regulation 30 of SEBI (LODR) Regulation, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4c317b4a-cabb-4fe0-a334-79b7901929d2",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "Approval of the proposal of fund raising by issue of Equity Shares through Rights Issue.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "10cf5ad7-92f7-4574-a634-ec5e67ca2ba7",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "Please find enclosed outcome of Board Meeting held on May 28, 2024 for approving raising of funds for an amount not exceeding Rs. 600 Crore by way of QIP, subject to shareholders approval",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c612b605-7836-46f3-848e-1c71adee9dfb",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "Meeting update for preferential issue of equity share and convertible warrants",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "f61777f8-bba6-47b5-a930-c9dae88f77a9",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "We wish to inform that the Board of Directors in its meeting held on 29th April, 2024 has inter-alia approved the following terms of Rights Issue :\r\n\r\na) Instrument : Partly Paid up Equity Shares\r\nb) Rights Issue Size : Not exceeding Rs. 25,00,00,000/- (Rupees Twenty Five Crores Only)",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "46afa99b-bd3d-4ef6-ac4d-6a3cde6bedd6",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "The Board of Directors of the Company at their meeting held on April 3, 2026 has inter alia considered and approved the issuance of fully paid up equity shares of the company of face value of Rs. 2 each, for an amount not exceeding Rs. 160 Crore by the way of rights issue.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "424dc80b-6cd1-4bd9-94d6-1eb53abcb729",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "meeting of board of directors will be held on 14.06.2024 to discuss the agend aof fund raising",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "099f5fb1-5638-4a5c-9b5f-0f0fbdc9657b",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "Intimation of the decision of board held on 29.02.2024 for issuance of securities.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "20e3ab8b-1b02-4666-a7ba-4d4f4c24fc1a",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "Please find attached the Letter of Offer for the proposed Rights Issue of the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4e99c87c-0671-4a58-ad4d-bf32d6369412",
+   "event_type_v2": "FUND_RAISING",
+   "headline": "Please note that the Shares / Warrants Allotment Committee at its Meeting held today i. e. October 29, 2024 , allotted 1,04,215 Equity shares upon conversion of Warrants to Promoters and Non-Promoters",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "3c41c010-e7c0-4ade-a1af-5cbb1775b289",
+   "event_type_v2": "GENERAL",
+   "headline": "NON APPLICABILITY OF LARGE CORPORATE (LC) STATUS AS PER SEBI CIRCULAR SEBI/HO/DDHS/P/2018/144 DATED NOVEMBER 26,2018.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1745edb1-62fd-4cfb-b3d6-3c3d6a17d08a",
+   "event_type_v2": "GENERAL",
+   "headline": "Disclosure under Regulation 30 of SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "616d9277-95e5-4207-88b6-16a27717d088",
+   "event_type_v2": "GENERAL",
+   "headline": "With reference to BSE email dated 20th February, 2025, in respect of additional details required for Corporate announcement filed on 19th February, 2025 under Regulation 30 of the Securities and Exchange Board of India (Listing Obligations and Disclosure Requirements), Regulations 2015.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "6973d835-7302-48c4-872a-1d87a28f7881",
+   "event_type_v2": "GENERAL",
+   "headline": "Enclosed Herewith Notice of 02nd Extra Ordinary General Meeting dated 19th December 2025 on 02:00 PM through Video Conferencing",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "23a4cef6-99cd-4719-8b7c-17e3ea660e9e",
+   "event_type_v2": "GENERAL",
+   "headline": "Please find enclosed herewith the disclosure pursuant to Reg. 30 of the SEBI (LODR) Regulations, 2015.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "049ff33b-7ecf-4b78-a88b-93ac1da250e5",
+   "event_type_v2": "GENERAL",
+   "headline": "Dispatch of Letter to shareholders whose E-mail addresses are not registered with Company/Registrar & transfer agent/depositories",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9c6e5b45-cbfc-4f90-b4e6-f3a77b085330",
+   "event_type_v2": "GENERAL",
+   "headline": "Non Applicability of Regulation 23(9) of SEBI (LODR) Regulations, 2015, for the quarter ended June 30, 2025",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9f98951b-dac7-4ee1-b4a6-d443fb3f6e98",
+   "event_type_v2": "GENERAL",
+   "headline": "With reference to the captioned subject, we enclose herewith the newspaper clippings of the unaudited financial results pursuant to the Regulation 47 of the SEBI (LODR) Regulations 2015 for the quarter and nine months ended 31st December 2024 published by the Company in the newspaper named as \"Financial Express (English Newspaper) and Jansatta (Hindi Language) dated 14th February 2025",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d149180a-2336-46a6-b98c-5a62a40a52a3",
+   "event_type_v2": "GENERAL",
+   "headline": "As per Reg 47 of SEBI (LODR) Reg 2015, Newspaper advertisement advertisement of Notice of 1st EGM of the Company is attached.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "30f89c35-b200-43b5-825d-1b58e39fb76f",
+   "event_type_v2": "GENERAL",
+   "headline": "Disclosure U/r 30 for commencement of operational activity from its warehouse at Ludhiana, Punjab",
+   "gold": "positive"
+  },
+  {
+   "news_id": "5832b9a7-1918-40a8-8f28-14ff9c4d4ab6",
+   "event_type_v2": "GENERAL",
+   "headline": "Exemption from Corporate Governance Report under regulation 27(2) of SEBI LODR, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "608d4516-e287-4726-ba74-55326407cecd",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Outcome of 19th and 20th Committe of Creditors (COC) Meeting of Bloom Dekor Ltd",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "b280a5f8-7690-490e-8617-b7e7bef865ee",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Alps Industries Limited has informed the Exchange about the intimation for postponement of next meeting of committee of creditors (''COC\") to now be held on Friday, 16 May, 2025.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "71a8614e-3550-4694-bb8e-b98b27a9b86b",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Outcome of the first meeting of monitoring committee held on 15.10.2025.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "da6a882c-0d10-460b-b16b-1d3b5f7d6ce5",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "SKIL Infrastructure Limited has informed the Exchange about the Pre Facto Intimation of the Fifth (5th) Committee of Creditors meeting to be held on Wednesday, April 08, 2026",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "36af41ff-1ff4-4c82-aeef-b5a3a75acc0d",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Pursuant to Regulation 30 of SEBI (LODR) Regulations, 2015, the company wish to inform you that the 44th meeting of Committee of Creditors is scheduled to be held on 27th May, 2016.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "7e9834ce-62b2-4965-9364-47105cee4b25",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Pursuant to Regulations 30 of SEBI (LODR) Regulations, 2015, (Listing Regulations) and all other applicable provisions, if any, we wish to inform you that the Third Meeting of the Monitoring Committee of ARSS Infrastructure Projects Limited is scheduled on Friday, 26th September, 2025 at 11.00 A.M. \r\n\r\nYou are requested to take the above information on record.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1e8571a4-6b28-4048-b94f-bdb619abbf9e",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "We wish to inform that the Honable National Company Law Tribunal, Ahmedabad Bench has vide its Order pronounced on June 18, 2026 in IA (Plan) 8 (AHM) of 2026 in CP IB 127 (AHM) of 2020 approved the Resolution Plan submitted by Resolution Applicant.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "0ca7ce82-7618-48eb-9a2a-a3ef68e37b3e",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Pursuant to Regulation 30 SEBI (LODR) Regulations, 2015 and in accordance with the requirements of Schedule III of the Listing Regulations, we wish to inform you that the 19th CoC meeting of Parenteral Drugs (India) Limited is scheduled to be held on Thursday, 05.12.2024 at 5:30 p.m.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d5d0e3e8-19dc-4989-81d9-80ab7ca925b8",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "The Company informed the Stock Exchange about the minutes of the 07th meeting of committee of creditors for ''serene Residency Group housing project of the Company'' situated at Sector ETA II, Greater Noida, scheduled to be held on 12.04.2024, which was postponed and held on 15.04.2024.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "96f587c9-d2e5-4ba0-9f4a-c96779684035",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Disclouser under (i) Regulation 30 read with Schedule III, Part A, Para A, Clause 16; (ii) Regulation 51 read with Clause 24(k) of Para A of Part B of Schedule III; and (iii) other applicable Regulation of SEBI (LODR) Regulation, 2015, as amended (\"Listing Regulations\")",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c61e7be9-3609-4fdc-9ef8-c1644cd6f01e",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "We Would like to Inform that the COC Members at its 21st COC held on 6th feb 2024 have approved  opening of the resolution plans submitted by three prospective resolution Applicant received upto 05.02.24",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c96c15c1-2006-4247-a1c1-e3c6b3d1d797",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Revised Demand Notice received from Tamilnadu Power Distribution Corporation Ltd",
+   "gold": "negative"
+  },
+  {
+   "news_id": "74eb861f-919a-46fc-a1e1-d5ced71c9f10",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Please find attached details of receipt of assessment order from Income Tax Department",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "e5b8b939-4c96-4c70-b266-6114a05c3bfc",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Demand notice received by Zydus Healthcare Limited, a wholly owned subsidiary company, from GST department",
+   "gold": "negative"
+  },
+  {
+   "news_id": "c375b0e9-51a5-4a47-a925-3d95eb4473ee",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Pursuant to Regulation 30 of SEBI (LODR) Regulation 2015, We hereby inform you that the company has received a letter from Sub Divisional Officer Water Resources, Sub-division, Bilaspur for payment of water charges and penalty thereon for non-execution of Agreement, details enclosed.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "d6178848-3151-4312-adea-ea215e085942",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Disclosure u/r 30 of SEBI Listing Regulations. w.r.t. Assessment Order/ Demand Notice under Income-tax Act, 1961, for the Assessment Year 2023-24.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "6989d4d1-1301-4c9b-bfd6-34bfc7260cd4",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Intimation under Regulation 30 of SEBI (LODR) Regulations, 2015 with respect to an order passed by the Commissioner, Indore Municipal Corporation",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "5e955120-8e2d-4069-a3d6-012b50566fa5",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "The Company has received demand Notice for the Assessment Year 2022-23 from Income Tax Authoritities. The requisite details under the listing regulations is attached herewith.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "265aae25-326d-47ed-9ce5-59a5a6311b3f",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "We wish to clarify that officials of the Company were evaluating the impact and finalizing the course of action before submitting the same to the Exchange which resulted in delay in filing the order. Also, since the amount of penalty was less than Rs. 1,00,000, as per SEBI Listing Regulations the same was voluntarily filed by the Company.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "423b116a-4e9b-4087-91b5-f21396bf85b3",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "We would like to inform the exchange that the Company has received an Order from Commissioner of Customs (Appeals) Mumbai imposing Penalty.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "1c7d7f55-37e5-4c82-8c8b-b602027a265f",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Disclosure under Regulation 30 of SEBI (LODR) Regulations, 2015 - Material Litigation",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "20022f93-bffd-4125-95e8-4db6e616a381",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Intimation of order received from Office of Assistant Commissioner, State Tax Department, Rudrapur, Uttarakhand",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "6165286d-b9e2-446c-9d7a-07e8f1c7d4e3",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Appointment of Mr. Anuj Arora as a Chief Financial Officer (Key Managerial Personnel) of the Company w.e.f. 05th August, 2025.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "cd627840-8a2b-4dee-943c-08a61bf9b7bd",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Attached herewith the details about Change in Senior Management Personnel of the Bank.\r\n\r\nKindly Acknowledge Receipt.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "0db884c9-4c4e-49d1-bf73-c1d77746ebdd",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Re-designation of Senior Management Personnel. Detailed disclosure attached.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "179c8087-7c01-4372-bfa6-8bcbaa254d19",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Subject:Intimation Under Regulation 30 of Sebi(Lodr) Regulations,2015- Resignation of Chief Financial Officer(CFO) of the Company.\r\n\r\nReference: Your Email Dated 15.05.2025 for additional details required for corporate announcement filed under regulation 30 of Sebi(Lodr), Regulations, 2015.\r\nPlease find attachment.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "85556b9d-0b01-45de-adc8-780ba11472df",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "VXL Instruments Ltd has informed the Exchange regarding resignation of Company Secretary and Compliance Officer.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ffdc8fe3-1ae7-4ee6-85a9-76e769de0835",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Appointment of Chief Financial Officer (CFO), Appointment of Chief Technology Officer (CTO and Re-appointment of Cost Auditors",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "bb946a44-133a-4eb7-bf97-932116a32524",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Tamilnad Mercantile Bank Limited has informed the Exchange about the extension of service period of the Chief Risk Officer of the Bank.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "563287d1-c4c0-4f94-a1ba-f652803a05f9",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Intimation under Regulation 30 of SEBI (Listing obligation and Disclosure Requirement Regulations, 2015)",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "3001dfee-04a9-46f5-8067-e94f0e5e43a1",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Pursuant to the SEBI Listing Regulations, we hereby inform you that, based on the recommendation of the Nomination and Remuneration Committee, the Board of Directors of the Company on May 26, 2026 have approved the appointment of Mr. Vikas Gulati as Chief Procurement Officer and Senior Management Personnel of the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "046fcbc9-032f-4edf-94d3-2552595f9012",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Appointment of Shri M. Ravi Sankar Chowdary as Senior Management of the Company w.e.f. 10th June, 2025.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "0883cec9-88f0-4511-bfba-ffb953411c31",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Resubmission of Intimation under Regulation 30 of the SEBI (LODR) Regulations, 2015 for  Resignation of Senior Management Personnel (SMP) dated June 19, 2024",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "576dca9b-9e19-4062-9350-de05587d134f",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Pursuant to Regulation 30 of SEBI LODR 2015, the intimation regarding the receipt of work order is hereby given to the Stock Exchange.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "9f863921-7052-4188-9140-b8a200c9e988",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Intimation of receipt of work order by our wholly owned subsidiary company i.e. Dynasty Modular Furnitures Pvt. Ltd.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "686333be-ec46-4a08-aa8d-883c8f94571a",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Press release for Receipt of Contract under Mukhyamantri Ujjawal Jharkhand Yojana (MUJY)",
+   "gold": "positive"
+  },
+  {
+   "news_id": "1b3e7793-5c2d-44e5-82eb-7040bb1ea361",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Intimation of receipt of Letter of Intent for development, operation and maintenance of berth no. 13 at Deendayal Port,",
+   "gold": "positive"
+  },
+  {
+   "news_id": "bd38ef8d-dbe3-4eac-8b46-d43c3a5e92c5",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Please find attached herewith disclosure under regulation 30 of SEBI LODR Regulation 2015 regarding M/s. Afcons-Hindustan JV (Joint venture) being declared as Lowest Bidder (L1) for Water supply project under Jal Jeevan Mission from Government of Rajasthan .",
+   "gold": "positive"
+  },
+  {
+   "news_id": "8ce5bd1d-5dcd-4b77-8fa0-5435135a6405",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Intimation regarding major order secured from National Institute of Mental Health & Neuro Science.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "b7681def-88d4-4e8f-ab8a-ee03140f0315",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Patel Retail Limited has informed the Exchange about Bagging/ Receiving of Orders/ Contracts.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "4617a28a-d30f-4d3a-99c5-17f28f223db3",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "The Company has received work order from Cosmos Green Power Technologies for providing solar Module.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "5a30fd20-5456-4186-abcb-ad757d9f06c8",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Receipt of Letter of Award (LOA) from Tripura State Electricity Corporation Limited (TSECL)",
+   "gold": "positive"
+  },
+  {
+   "news_id": "7871d9e6-665a-42fb-959a-29515234339f",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Pursuant to Regulation 30 of SEBI (LODR) Regulations 2015. this is to inform you that the Zaggle Prepaid Ocean Services Limited has entered into Service Provider Agreement with Axis Bank Limited.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "15dbf9dc-8c06-4875-bd9b-85da00519d58",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Disclosure under Regulation 30 of SEBI (LODR) Regulation, 2015 - Intimation of Stay Order",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "46ece3b2-c866-4e50-9700-456be4df7862",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Please find enclosed Press Release regarding securing of major Order for 152mm Artillery Shells in the Defence Sector.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "ae13b9ca-039a-47af-9cc7-698960f90056",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Updates on unaudited Financial Results (Standalone and Consolidated ) for the quarter and nine months ended on 31 December 2025",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "3db8bedc-b1f6-44fc-9d7d-df038a25bd53",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Press release on the financial results for the quarter ended 30.06.2024",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "52aa3fb9-fc14-4275-bd12-ec4165216824",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Pursuant to Regulation 30 and other applicable provisions of SEBI (LODR) regulations, 2015, Please find attached herewith press release in relation to the announcement of merger of Himachal Fibres  Limited with Shiva Texfabs Limited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d04a3c6d-9daf-4600-85cc-78256b8cde81",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "EaseMyTrip and OneBanc Announce Strategic Alliance to Revolutionize Corporate Travel in India with AI Integration.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "63e3b5b6-d477-41aa-983d-2741489b0ccf",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Please find enclosed herewith a copy of the press release from the Company for your information and records.\r\n\r\nThis information will also be hosted on the Company''s website at www.rattanindia.com",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "e2f4da80-0513-4227-a05d-b82eb68e4ef2",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Pursuant to Regulation 30 of SEBI (LODR), we are enclosing  herewith the press release dated 23rd February, 2026",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c5d7fc0b-7700-4457-800e-d6c86e12b835",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Press Release- Unaudited Financial Results (Standalone and Consolidated) for the quarter ended June 30, 2024.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "14517332-146c-4396-9f25-5cf8cf98e920",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Press Release - Knowledge Marine & Engineering Works Limited raises INR 284.81 Crores through Preferential Issue led by advised by Convergent Finance LLP",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "dbfd3757-9249-4c87-b3b3-a9db25d7b726",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Intimation with respect to Press Release - \"Blackstone-backed EPL appoints Hemant Bakshi as MD and Global CEO\", is enclosed herewith.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "610cabfe-f713-4db0-8b8d-eb1104120936",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "The Company has submitted Press Release regarding its Financial Results for period ended on 31.03.2026",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "5f59724e-628f-4299-b7d0-b0d65f45119c",
+   "event_type_v2": "RESULTS",
+   "headline": "Statement of Standalone and Consolidated Unaudited Financial Results of the Company for the Quarter and Nine Months ended on 31st December, 2024.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a2b9754c-3e37-44fa-aa40-3c896232a764",
+   "event_type_v2": "RESULTS",
+   "headline": "Financial results for the quarter ended 30.09.2025 along with limited review report",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4ff8f788-c3f1-42e7-8971-f8affa7f4504",
+   "event_type_v2": "RESULTS",
+   "headline": "Finacial Results for the quarter and nine months ended December 31, 2024",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "977f0fa0-221f-4be4-a574-5fa555881731",
+   "event_type_v2": "RESULTS",
+   "headline": "Approved Statement Standalone Audited Financial Results for the financial year ended December 31, 2024, recommended dividend and approved proposal for split / sub-division of Equity Shares of the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "63859ad0-2ebc-4089-8b60-b9057a69209a",
+   "event_type_v2": "RESULTS",
+   "headline": "Enclosed herewith is the Unaudited Standalone and Consolidated Financial Results for the quarter and nine months ended 31.12.2025",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d4daae3d-78d3-4f24-83b4-e765abf3a892",
+   "event_type_v2": "RESULTS",
+   "headline": "In this regard we enclose the Limited Review Report dated 3.02.2026 issued by M/s AMK & Associate (Firm Registration No-327817E)Statutory Auditor of the Company on the Un-Audited Financial result of the Company for the quarter and nine months ended on 31.12.2025 which was placed before the Board of Directors after being reviewed by the Audit committee",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a011fd1d-0ed5-4ca4-878e-d781fe59dbc8",
+   "event_type_v2": "RESULTS",
+   "headline": "Audited Financial Results for the quarter and year ended 31st March 2025",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "18c5da1e-021e-4291-9386-9135588af37c",
+   "event_type_v2": "RESULTS",
+   "headline": "The Board considered and approved the unaudited financial results for the quarter and half year ended 30.09.2025",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9f81eb12-82f1-4d47-ad5c-8d27f88985e2",
+   "event_type_v2": "RESULTS",
+   "headline": "Outcome of board meeting and results for the quarter ended June 2025 along with review audit report from auditors",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "97f87f20-dcc5-4389-ac8a-2d723cd48009",
+   "event_type_v2": "RESULTS",
+   "headline": "Unaudited Financial Result for the quarter and nine months ended as on 31st December, 2025",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "cbfca49b-db4e-4024-abd8-be244456793a",
+   "event_type_v2": "RESULTS",
+   "headline": "Consider and approve the Standalone and Consolidated Audited Financial Results of the Company as per Indian Accounting Standards (IND-AS) for the quarter and year ended 31st March, 2024 as review and recommended by the Audit Committee.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "bc4eef54-793a-4c51-8b5d-36217d9fa59c",
+   "event_type_v2": "SCHEME",
+   "headline": "Sanction of Scheme of Merger by Absorption of Jayant Finvest Limited (Transferor Company) with Jayant Agro-Organics Limited (Transferee Company) and their respective shareholders and creditors.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "95c5c778-009a-4684-913d-a467455625e0",
+   "event_type_v2": "SCHEME",
+   "headline": "Stake Sale in Delhi Aviation Services Private Limited, an associate company by Delhi International Airport Limited",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "7b4656ef-d8a7-4b5d-8633-da0283aea7ab",
+   "event_type_v2": "SCHEME",
+   "headline": "Pursuant to Regulation 30 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015, intimation is hereby given regarding the sale/disposal of the undertaking to Hind Aluminium Industries Limited, which is in the nature of a Material Related Party Transaction, subject to the approval of the shareholders through Postal Ballot.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "75a932f3-c1be-40ed-b3a2-0089e96b5462",
+   "event_type_v2": "SCHEME",
+   "headline": "Intimation under Regulation 30 of SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1199c312-4785-4162-9af2-adf4ba8c5883",
+   "event_type_v2": "SCHEME",
+   "headline": "Pursuant to Regulation 30 read with Schedule III of Listing Regulations, we wish to inform that Board has approved the Composite Scheme of Arrangement amongst Shanti Educational Initiatives Limited, Shanti Learning Initiatives Pvt Ltd & Grew Energy Pvt Ltd and their respective shareholders and Creditors.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "fa4dff99-2afd-4caa-827a-d0647875062d",
+   "event_type_v2": "SCHEME",
+   "headline": "Update on the Scheme of Arrangement between Inox Green Energy Services Limited and Inox Renewable Solutions Limited and their respective shareholders (Scheme)- Notice for convening of the Meetings",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "af0b8e89-d0e7-4ff2-979e-10e4cc4776e6",
+   "event_type_v2": "SCHEME",
+   "headline": "Effective date of the scheme of Arrangement between Hindustan Zinc Limited and their respective shareholders",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9a9d1722-b4c8-4be7-ad2a-b71a6ea98e41",
+   "event_type_v2": "SCHEME",
+   "headline": "The Company has informed the exchange regarding Certificate on Abridge Prospectus of unlisted entities involving in Scheme of Amalgamation.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c57a5e32-4831-401f-8cdc-d8c16c020e65",
+   "event_type_v2": "SCHEME",
+   "headline": "Intimation of Record date in the Scheme of Amalgamtion of The Tinplate Company of India Limited and Tata Steel Limited and their respective shareholders",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4a7cc508-8d5e-47f7-8b1c-f5ad5ff91509",
+   "event_type_v2": "SCHEME",
+   "headline": "Pursuant to Reg 30 of SEBI(LODR), 2015 we wish to inform you that the Hon''ble National Company Law Tribunal has vide its order dated June 11, 2026 issued further directions in connection with the petition filed by the company under Sections 230 to 232 of the Companies Act, 2013 seeking approval of the Scheme of Arrangement between the Company and its Shareholders.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "7a32cfc0-d66f-4513-863c-985d015646c2",
+   "event_type_v2": "SCHEME",
+   "headline": "Disclosure of Scheme of Arrangement under Regulation 30 of SEBI (LODR) Regulations, 2015",
+   "gold": "neutral"
+  }
+ ]
+}

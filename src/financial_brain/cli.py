@@ -762,6 +762,37 @@ def cmd_paper(args) -> int:
     return 0
 
 
+def cmd_models(args) -> int:
+    """Tiered models (ADR-0002): registry, benchmark on labelled tasks, router plan."""
+    from .evaluation import models as bench
+    from .llm import backends, router
+    with Database(load()).connect() as con:
+        if args.action == "bench":
+            for model in args.model:
+                r = bench.bench(con, args.task, model, target=args.target, limit=args.limit)
+                print(f"{model:<20} acc {r['accuracy']:.3f} F1 {r['macro_f1']:.3f} "
+                      f"threshold {r['threshold']} coverage {r['coverage']:.2f} "
+                      f"{r['latency_ms']:.0f} ms  {r['top_confusions'][:3]}")
+        elif args.action == "plan":
+            for s in router.plan(con, args.task):
+                print(f"tier {s['tier']}  {s['model']:<20} accept at >= {s['threshold']:.3f}"
+                      f"  F1 {s['macro_f1']:.3f}  {s['latency_ms']:.0f} ms")
+        else:
+            local = backends.ollama_models()
+            latest = {(t, m): (f1, thr, lat) for t, m, f1, thr, lat in con.execute("""
+                SELECT task, model, macro_f1, threshold, latency_ms FROM (SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY task, model ORDER BY run_at DESC) rk
+                FROM model_bench) WHERE rk = 1""").fetchall()}
+            names = ["rules", "finbert"] + list(router.registry())
+            for n in names:
+                here = "local" if n in local or n in router.BUILTIN_TIER else (
+                    "cloud" if router.tier(n) >= 3 else "not pulled")
+                res = "; ".join(f"{t}: F1 {v[0]:.2f} thr {v[1]} {v[2]:.0f}ms"
+                                for (t, m), v in latest.items() if m == n)
+                print(f"tier {router.tier(n)}  {n:<22} {here:<10} {res}")
+    return 0
+
+
 def cmd_regime(args) -> int:
     """Build (or show) the market regime for every session."""
     from .regime import brain
@@ -978,6 +1009,14 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("action", choices=["open", "mark", "list"])
     g.add_argument("decision_id", nargs="?")
     g.set_defaults(fn=cmd_paper)
+
+    g = sub.add_parser("models", help="tiered models: list, bench, plan (ADR-0002)")
+    g.add_argument("action", choices=["list", "bench", "plan"])
+    g.add_argument("--task", default="sentiment", choices=["sentiment", "event_type"])
+    g.add_argument("--model", action="append", default=[])
+    g.add_argument("--target", type=float, default=0.9)
+    g.add_argument("--limit", type=int)
+    g.set_defaults(fn=cmd_models)
 
     g = sub.add_parser("regime", help="market regime per session (build with --build)")
     g.add_argument("--build", action="store_true")

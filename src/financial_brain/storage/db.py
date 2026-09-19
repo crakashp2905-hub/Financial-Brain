@@ -37,6 +37,11 @@ class Database:
         "ALTER TABLE corporate_actions ADD COLUMN IF NOT EXISTS derived_factor DOUBLE",
         # 'auto' (fb gaps --auto-review, re-runnable) vs 'manual' (a person's verdict).
         "ALTER TABLE gap_reviews ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR DEFAULT 'manual'",
+        # ADR-0002 router: which task, tier and model; latency and money per call.
+        "ALTER TABLE llm_calls ADD COLUMN IF NOT EXISTS task VARCHAR",
+        "ALTER TABLE llm_calls ADD COLUMN IF NOT EXISTS tier INTEGER",
+        "ALTER TABLE llm_calls ADD COLUMN IF NOT EXISTS latency_ms INTEGER",
+        "ALTER TABLE llm_calls ADD COLUMN IF NOT EXISTS cost_usd DOUBLE",
     ]
 
     def migrate(self) -> None:

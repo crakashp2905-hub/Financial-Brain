@@ -1,0 +1,62 @@
+# Model registry (ADR-0002). Tier 0 is not here: deterministic code needs no model.
+#
+#   tier 1  tiny specialists (<= 3B)        local, free, high volume
+#   tier 2  local general 7-14B             local, free, slow on this CPU
+#   tier 3  cheap cloud                     paid, gated (FB_LLM_ENABLED=1)
+#   tier 4  frontier                        paid, gated, only for hard problems
+#
+# A model is *eligible* for a task only after `fb models bench` has measured it on that
+# task's labelled set and it cleared the task's bar. Reputation is not a qualification.
+# Prices are USD per million tokens (input, output); local models cost 0.
+
+[[model]]
+name = "llama-guard3:1b"
+backend = "ollama"
+tier = 1
+role = "safety classification only (prompt/response moderation)"
+
+[[model]]
+name = "qwen2.5:7b"
+backend = "ollama"
+tier = 2
+role = "classification, extraction, short summaries"
+
+[[model]]
+name = "llama3.1:8b"
+backend = "ollama"
+tier = 2
+role = "classification, extraction"
+
+[[model]]
+name = "gemma2:latest"
+backend = "ollama"
+tier = 2
+role = "classification, summaries"
+
+[[model]]
+name = "phi4:latest"
+backend = "ollama"
+tier = 2
+role = "reasoning over supplied facts"
+
+[[model]]
+name = "deepseek-r1:14b"
+backend = "ollama"
+tier = 2
+role = "step-by-step reasoning (slow: emits long thinking)"
+
+[[model]]
+name = "claude-haiku-4-5"
+backend = "anthropic"
+tier = 3
+price_in = 1.0
+price_out = 5.0
+role = "cheap cloud: large documents, moderate reasoning"
+
+[[model]]
+name = "claude-opus-5"
+backend = "anthropic"
+tier = 4
+price_in = 5.0
+price_out = 25.0
+role = "frontier: deep research, synthesis, committee chair"

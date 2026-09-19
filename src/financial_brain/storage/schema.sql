@@ -468,3 +468,18 @@ CREATE TABLE IF NOT EXISTS paper_trades (
     opened_at       TIMESTAMPTZ NOT NULL,
     closed_at       TIMESTAMPTZ
 );
+
+-- Model benchmark: every (task, model) measurement, append-only (evaluation/models.py).
+CREATE TABLE IF NOT EXISTS model_bench (
+    run_at          TIMESTAMPTZ NOT NULL,
+    task            VARCHAR NOT NULL,
+    model           VARCHAR NOT NULL,
+    n               INTEGER NOT NULL,
+    accuracy        DOUBLE,
+    macro_f1        DOUBLE,
+    latency_ms      DOUBLE,
+    target          DOUBLE,
+    threshold       DOUBLE,              -- NULL: confidence never reached the target
+    coverage        DOUBLE,
+    detail          VARCHAR
+);

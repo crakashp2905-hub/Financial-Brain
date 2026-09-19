@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 MODEL = "claude-opus-5"
-PURPOSES = {"summarise", "extract", "argue_for", "argue_against"}
+PURPOSES = {"summarise", "extract", "classify", "argue_for", "argue_against"}
 
 
 class LLMUnavailable(RuntimeError):
