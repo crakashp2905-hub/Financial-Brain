@@ -25,9 +25,13 @@ FEATURES = {"ret_1d", "ret_5d", "ret_20d", "ret_60d", "ret_250d", "mom_12_1", "v
 
 
 def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
-             start: str | None = None, end: str | None = None) -> dict:
+             start: str | None = None, end: str | None = None, direction: int = 1) -> dict:
+    """``direction=-1`` states the hypothesis "low is good" (e.g. low volatility): the
+    signal is ranked reversed, so a positive IC always means the hypothesis held."""
     if feature not in FEATURES:
         raise ValueError(f"feature must be one of {sorted(FEATURES)}")
+    if direction not in (1, -1):
+        raise ValueError("direction must be 1 or -1")
     rows = con.execute(f"""
         WITH cal AS (
             SELECT business_date, ROW_NUMBER() OVER (ORDER BY business_date) AS k
@@ -35,7 +39,7 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
         ), fwd AS (
             SELECT a.lineage, c.k, a.close_adj FROM adjusted_prices a JOIN cal c USING (business_date)
         ), panel AS (
-            SELECT c.business_date, f.lineage, f.{feature} AS x,
+            SELECT c.business_date, f.lineage, f.{feature} * {direction} AS x,
                    COALESCE(b.close_adj,
                             (SELECT arg_max(l.close_adj, l.k) FROM fwd l
                              WHERE l.lineage = f.lineage AND l.k > c.k AND l.k < c.k + ?),

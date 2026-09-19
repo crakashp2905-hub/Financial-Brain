@@ -722,6 +722,29 @@ def cmd_graph(args) -> int:
     return 0
 
 
+def cmd_hypothesis(args) -> int:
+    """Pre-registered hypotheses: register (from TOML), test once in-sample, then OOS."""
+    import tomllib
+    from .evaluation import registry
+    with Database(load()).connect() as con:
+        if args.action == "register":
+            spec = tomllib.loads(open(args.target, encoding="utf-8").read())
+            print(registry.register(con, spec))
+        elif args.action == "test":
+            r = registry.test(con, args.target,
+                              mode="out_of_sample" if args.oos else "in_sample")
+            print(f"{r['hypothesis_id']} {r['mode']}: {r['verdict']}")
+            for why in r.get("reasons", []):
+                print(f"    - {why}")
+        else:
+            for row in con.execute("""SELECT h.hypothesis_id, h.name, h.data_cutoff,
+                    STRING_AGG(t.mode || '=' || t.verdict, ', ' ORDER BY t.tested_at)
+                    FROM hypotheses h LEFT JOIN hypothesis_tests t USING (hypothesis_id)
+                    GROUP BY ALL ORDER BY MIN(h.registered_at)""").fetchall():
+                print(f"{row[0]}  {row[1]:<40} cutoff {row[2]}  {row[3] or 'untested'}")
+    return 0
+
+
 def cmd_regime(args) -> int:
     """Build (or show) the market regime for every session."""
     from .regime import brain
@@ -912,6 +935,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--as-of")
     g.add_argument("--limit", type=int, default=20)
     g.set_defaults(fn=cmd_graph)
+
+    g = sub.add_parser("hypothesis", help="pre-registered hypotheses (register/test/list)")
+    g.add_argument("action", choices=["register", "test", "list"])
+    g.add_argument("target", nargs="?", help="spec .toml to register, or hypothesis id")
+    g.add_argument("--oos", action="store_true", help="out-of-sample test")
+    g.set_defaults(fn=cmd_hypothesis)
 
     g = sub.add_parser("regime", help="market regime per session (build with --build)")
     g.add_argument("--build", action="store_true")

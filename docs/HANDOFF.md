@@ -244,3 +244,12 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   `data/inbox/rbi/`). **Owner decision.**
   Next: 
   document intelligence + committee once the owner enables the LLM gate.
+- 2026-09-19 (night) — Pre-registered hypotheses (`evaluation/registry.py`,
+  `fb hypothesis register|test|list`): spec frozen with its data cutoff; one in-sample
+  test ever; out-of-sample only on data after the cutoff (>= 12 rebalances, checked
+  before a trial is spent). Signals take a direction (-1 = low is good). Registered
+  three for **out-of-sample only** (cutoff 2026-09-18; first verdicts ~Sep 2027):
+  12-1 momentum `hy_36e6a075cee59cf3`, low volatility `hy_6acfdb23c48891b9`, near
+  52-week high `hy_041b042053188d36` (specs in `docs/hypotheses/`). **Do not run their
+  in-sample tests** - they were already seen in-sample. New ideas: write a spec, register,
+  then test.

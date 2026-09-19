@@ -427,3 +427,20 @@ CREATE TABLE IF NOT EXISTS evaluation_runs (
     verdict         VARCHAR NOT NULL,
     reasons         VARCHAR[]
 );
+
+-- Pre-registered hypotheses and every test of them (evaluation/registry.py).
+CREATE TABLE IF NOT EXISTS hypotheses (
+    hypothesis_id   VARCHAR PRIMARY KEY,   -- hash of the spec (name excluded)
+    name            VARCHAR NOT NULL,
+    spec            VARCHAR NOT NULL,
+    data_cutoff     DATE,                  -- last feature date when registered
+    registered_at   TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS hypothesis_tests (
+    hypothesis_id   VARCHAR NOT NULL,
+    mode            VARCHAR NOT NULL,      -- in_sample | out_of_sample
+    tested_at       TIMESTAMPTZ NOT NULL,
+    verdict         VARCHAR NOT NULL,
+    result          VARCHAR NOT NULL
+);

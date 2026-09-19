@@ -1,0 +1,10 @@
+name = "Near 52-week high, NSE EQ, monthly"
+signal = "dist_52w_high"
+direction = 1
+horizon = 20
+positions = 20
+aum_inr = 5_000_000
+expected_edge_per_rebalance = 0.01
+rationale = """George & Hwang (2004): stocks near their 52-week high keep outperforming
+(anchoring). In-sample 2026-09-19 IC +0.060, t 3.8, rejected on deflated Sharpe.
+Registered for OUT-OF-SAMPLE evidence only."""

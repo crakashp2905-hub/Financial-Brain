@@ -1,0 +1,10 @@
+name = "12-1 momentum, NSE EQ, monthly"
+signal = "mom_12_1"
+direction = 1
+horizon = 20
+positions = 20
+aum_inr = 5_000_000
+expected_edge_per_rebalance = 0.01
+rationale = """Jegadeesh-Titman momentum, skipping the last month. Documented in Indian
+equities. Already seen in-sample on 2026-09-19 (fw1 REJECT after 18 trials, net +0.57%
+per 20d) - registered for OUT-OF-SAMPLE evidence only; do not run the in-sample test."""

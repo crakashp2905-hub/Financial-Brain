@@ -1,0 +1,10 @@
+name = "Low 60-day volatility, NSE EQ, monthly"
+signal = "vol_60"
+direction = -1
+horizon = 20
+positions = 20
+aum_inr = 5_000_000
+expected_edge_per_rebalance = 0.008
+rationale = """Low-volatility anomaly (Ang et al.; Blitz & van Vliet), reported in India.
+Stated as low-is-good. In-sample 2026-09-19 the high-vol quintile lost after costs, i.e.
+the raw IC was negative as this predicts. Registered for OUT-OF-SAMPLE evidence only."""
