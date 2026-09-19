@@ -82,10 +82,6 @@ def extract_filings(con) -> dict:
     return {"disclosures": seen, "with_filer": named}
 
 
-def _company(isin, scrip) -> str:
-    return isin or f"BSE:{scrip}"
-
-
 def groups(con, as_of: date | None = None) -> list[dict]:
     """Promoter groups as known on ``as_of`` (all history if None)."""
     rows = con.execute("""
@@ -95,17 +91,27 @@ def groups(con, as_of: date | None = None) -> list[dict]:
         WHERE relation IN ('PLEDGE', 'EXEMPT') AND filer_kind <> 'institution'
           AND (CAST(? AS DATE) IS NULL OR business_date <= CAST(? AS DATE))
         GROUP BY ALL""", [as_of, as_of]).fetchall()
+    # One company is one member across ISIN changes (splits, face-value changes, rows
+    # filed before the ISIN resolved): key by BSE scrip code, which survives all of them,
+    # and name each member by its most recent ISIN.
     by_filer: dict[str, set] = defaultdict(set)
     n: Counter = Counter()
-    kinds, label = {}, {}
+    kinds, label, isins = {}, {}, defaultdict(set)
+    latest: dict[str, date] = {}
+    latest_isin: dict[str, tuple] = {}
     spelling: Counter = Counter()
-    for isin, scrip, company, k, name, kind, cnt, _, _ in rows:
-        c = _company(isin, scrip)
+    for isin, scrip, company, k, name, kind, cnt, _, last in rows:
+        c = f"BSE:{scrip}" if scrip else isin
+        if isin and (c not in latest_isin or last > latest_isin[c][0]):
+            latest_isin[c] = (last, isin)
         by_filer[k].add(c)
         n[(k, c)] += cnt
         kinds[k] = kind
         spelling[(k, name)] += cnt
-        label[c] = company
+        if isin:
+            isins[c].add(isin)
+        if c not in latest or last > latest[c]:                # the most recent name
+            latest[c], label[c] = last, company
     names = {}                                   # each filer shown as most often spelt
     for (k, name), cnt in sorted(spelling.items(), key=lambda kv: kv[1]):
         names[k] = name
@@ -136,6 +142,12 @@ def groups(con, as_of: date | None = None) -> list[dict]:
     members: dict[str, list] = defaultdict(list)
     for c in list(parent):
         members[find(c)].append(c)
+    rename = {c: latest_isin[c][1] if c in latest_isin else c for c in parent}
+    n = Counter({(k, rename.get(c, c)): v for (k, c), v in n.items()})
+    label = {rename.get(c, c): v for c, v in label.items()}
+    isins = {rename.get(c, c): v for c, v in isins.items()}
+    links = [(rename.get(a, a), rename.get(b, b), ks) for a, b, ks in links]
+    members = {r: [rename[c] for c in cs] for r, cs in members.items()}
     out = []
     for cs in members.values():
         weight = Counter()
@@ -147,6 +159,9 @@ def groups(con, as_of: date | None = None) -> list[dict]:
         out.append({"group_id": "grp_" + hashlib.sha256("|".join(cs).encode()).hexdigest()[:12],
                     "anchor": names.get(anchor, ""), "members": cs,
                     "companies": [label[c] for c in cs],
+                    "isins": sorted(i for c in cs for i in isins.get(c, set()) | {c}
+                                    if not i.startswith("BSE:")),
+                    "member_isins": {c: sorted(isins.get(c, set()) | {c}) for c in cs},
                     "links": [lk for lk in links if lk[0] in cs]})
     return sorted(out, key=lambda g: -len(g["members"]))
 
@@ -178,7 +193,7 @@ def profile(con, isin: str, as_of: date | None = None, days: int = 365) -> dict:
           AND business_date > COALESCE(CAST(? AS DATE), CURRENT_DATE) - ?
           AND (CAST(? AS DATE) IS NULL OR business_date <= CAST(? AS DATE))""",
                          [isin, as_of, days, as_of, as_of]).fetchone()
-    group = next((g for g in groups(con, as_of) if isin in g["members"]), None)
+    group = next((g for g in groups(con, as_of) if isin in g["isins"]), None)
     return {"isin": isin,
             "filers": [dict(zip(["relation", "filer", "kind", "filings", "last", "news_ids"],
                                 r)) for r in filers],

@@ -123,11 +123,11 @@ def test_a_red_flag_names_the_promoter_group(db):
             VALUES ('pledge', 'BSE', ?, 'INE092A01019', 'Tata Chemicals Ltd',
             'Disclosure of encumbrance by promoter', 'PROMOTER_PLEDGE', 'high', ?, 'k', NOW())""",
                     [D1, datetime(2026, 9, 18, 18, 0)])
-        for i, (isin, co) in enumerate([("INE092A01019", "Tata Chemicals Ltd"),
-                                        ("INE081A01020", "Tata Steel Ltd")] * 2):
-            con.execute("""INSERT INTO holder_filings VALUES (?, DATE '2025-01-01', NULL, '1', ?, ?,
+        for i, (scrip, isin, co) in enumerate([("500770", "INE092A01019", "Tata Chemicals Ltd"),
+                                               ("500470", "INE081A01020", "Tata Steel Ltd")] * 2):
+            con.execute("""INSERT INTO holder_filings VALUES (?, DATE '2025-01-01', NULL, ?, ?, ?,
                            'PLEDGE', 'Tata Sons Pvt Ltd', 'TATA SONS PVT LTD', 'organisation')""",
-                        [f"h{i}", isin, co])
+                        [f"h{i}", scrip, isin, co])
         s = ws.build(con, D1)
         text, _ = render.render(con, s)
     pledge = next(e for e in s["events"] if e["news_id"] == "pledge")

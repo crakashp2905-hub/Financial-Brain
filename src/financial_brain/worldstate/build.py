@@ -201,12 +201,13 @@ def build(con, d: date, *, as_of: datetime | None = None) -> dict:
     if flagged and con.execute("""SELECT 1 FROM information_schema.tables
                                   WHERE table_name = 'holder_filings'""").fetchone():
         from ..graph import build as graph
-        member_of = {m: g for g in graph.groups(con, as_of=d) for m in g["members"]}
+        member_of = {i: g for g in graph.groups(con, as_of=d) for i in g["isins"]}
         for e in flagged:
             g = member_of.get(e["isin"])
             if not g:
                 continue
-            siblings = [c for m, c in zip(g["members"], g["companies"]) if m != e["isin"]]
+            siblings = [name for m, name in zip(g["members"], g["companies"])
+                        if e["isin"] not in g["member_isins"][m]]
             gid = ledger.mint(
                 con, kind="promoter_group", subject=e["isin"], as_of=close_ts,
                 claim=f"{e['company']} is in the {g['anchor'] or 'unnamed'} promoter group "
