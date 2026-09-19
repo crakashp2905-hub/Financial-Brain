@@ -7,9 +7,11 @@ in Indian cash equities at the owner's size - before a single backtest is spent 
 Checks:
 
 ``long_only``     shorting cash equity overnight is not available; a short leg needs
-                  single-stock futures, and the F&O eligibility list is not ingested yet,
-                  so a hypothesis that needs shorts FAILS (closed) rather than passing on
-                  hope
+                  single-stock futures. It passes only if an F&O eligibility list valid on
+                  the test date (``security_flags`` FNO_ELIGIBLE) covers the book; with no
+                  point-in-time list it FAILS closed rather than passing on hope. (Held
+                  from 2026-09-17 only - earlier dates fail.) Futures roll and margin
+                  costs are not modelled.
 ``capacity``      at ``aum_inr`` with ``positions`` equal weights, each position must be
                   at most ``max_participation`` of the name's 20-session traded value -
                   for enough names in the universe to fill the book
@@ -45,9 +47,20 @@ class Hypothesis:
 def check(con, h: Hypothesis, as_of=None) -> dict:
     checks: dict[str, tuple[str, str]] = {}
 
-    checks["long_only"] = (FAIL, "needs a short leg; F&O eligibility is not ingested, so "
-                           "shorting is not assumed possible") if h.needs_short else \
-        (PASS, "long-only")
+    if not h.needs_short:
+        checks["long_only"] = (PASS, "long-only")
+    else:
+        on = as_of or con.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
+        n_fno = con.execute("""SELECT COUNT(DISTINCT isin) FROM security_flags
+                               WHERE flag = 'FNO_ELIGIBLE' AND valid_from <= ?
+                                 AND (valid_to IS NULL OR valid_to >= ?)""",
+                            [on, on]).fetchone()[0]
+        checks["long_only"] = (
+            (PASS, f"short leg via single-stock futures: {n_fno} F&O names on {on} "
+                   "(roll and margin costs not modelled)")
+            if n_fno >= 5 * h.positions else
+            (FAIL, f"needs a short leg; {n_fno} F&O-eligible names known on {on} - no "
+                   "point-in-time list covers the book, so shorting is not assumed"))
 
     per_name = h.aum_inr / h.positions
     need_adv = per_name / h.max_participation

@@ -745,6 +745,23 @@ def cmd_hypothesis(args) -> int:
     return 0
 
 
+def cmd_paper(args) -> int:
+    """Paper trading for decisions at PAPER_CANDIDATE: open, mark (close due), list."""
+    from .paper import ledger as paper
+    with Database(load()).connect() as con:
+        if args.action == "open":
+            print(paper.open_trade(con, args.decision_id))
+        elif args.action == "mark":
+            print(paper.mark(con))
+        for r in con.execute("""SELECT decision_id, action, isin, entry_date, due_date, status,
+                                ROUND(excess * 100, 2) FROM paper_trades
+                                ORDER BY entry_date DESC LIMIT 20""").fetchall():
+            print(f"{r[0]}  {r[1]:<6} {r[2]}  {r[3]} -> {r[4]}  {r[5]:<6} "
+                  f"{'' if r[6] is None else f'excess {r[6]:+.2f}%'}")
+        print(paper.scoreboard(con))
+    return 0
+
+
 def cmd_regime(args) -> int:
     """Build (or show) the market regime for every session."""
     from .regime import brain
@@ -814,6 +831,19 @@ def cmd_daily(args) -> int:
         with Database(cfg).connect() as con:
             return brain.build(con)
 
+    def features_graph():
+        from .features import indicators
+        from .graph import build as graph
+        with Database(cfg).connect() as con:
+            f = indicators.build(con)
+            g = graph.build(con)
+            return {"feature_rows": f["feature_rows"], "groups": g["groups"]}
+
+    def paper_mark():
+        from .paper import ledger as paper
+        with Database(cfg).connect() as con:
+            return paper.mark(con)
+
     step("prices (NSE + BSE bhavcopy)", prices)
     step("index levels", indices)
     step("BSE corporate actions (this month)", corporate_actions)
@@ -821,6 +851,8 @@ def cmd_daily(args) -> int:
     if args.full:
         step("derive corporate actions + triage gaps", derive)
     step("market regime", regime)
+    step("features + promoter graph", features_graph)
+    step("paper trades (close those due)", paper_mark)
     if not args.no_brief:
         class _A:  # reuse `fb brief`
             date = None
@@ -941,6 +973,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("target", nargs="?", help="spec .toml to register, or hypothesis id")
     g.add_argument("--oos", action="store_true", help="out-of-sample test")
     g.set_defaults(fn=cmd_hypothesis)
+
+    g = sub.add_parser("paper", help="paper trades for PAPER_CANDIDATE decisions")
+    g.add_argument("action", choices=["open", "mark", "list"])
+    g.add_argument("decision_id", nargs="?")
+    g.set_defaults(fn=cmd_paper)
 
     g = sub.add_parser("regime", help="market regime per session (build with --build)")
     g.add_argument("--build", action="store_true")

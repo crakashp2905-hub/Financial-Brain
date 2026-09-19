@@ -253,3 +253,9 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   52-week high `hy_041b042053188d36` (specs in `docs/hypotheses/`). **Do not run their
   in-sample tests** - they were already seen in-sample. New ideas: write a spec, register,
   then test.
+- 2026-09-19 (night, later) — Paper trading (`paper/ledger.py`, `fb paper open|mark|list`):
+  entry at the first close on/after the world state's as-of, exit after horizon_days,
+  Indian round-trip cost by liquidity bucket, excess vs Nifty 50, direction from the
+  action; split-safe (entry re-read on the current adjusted basis). `fb daily` now also
+  refreshes features + promoter graph and closes due paper trades. Implementability
+  gate uses the point-in-time F&O list (held from 2026-09-17 only).

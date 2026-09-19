@@ -444,3 +444,27 @@ CREATE TABLE IF NOT EXISTS hypothesis_tests (
     verdict         VARCHAR NOT NULL,
     result          VARCHAR NOT NULL
 );
+
+-- Paper trades for decisions at PAPER_CANDIDATE (paper/ledger.py).
+CREATE TABLE IF NOT EXISTS paper_trades (
+    decision_id     VARCHAR PRIMARY KEY,
+    isin            VARCHAR NOT NULL,
+    lineage         VARCHAR NOT NULL,
+    action          VARCHAR NOT NULL,
+    direction       INTEGER NOT NULL,      -- +1 long, -1 avoid/exit, 0 watch
+    weight          DOUBLE,
+    entry_date      DATE NOT NULL,
+    entry_price     DOUBLE NOT NULL,       -- adjusted close
+    entry_nifty     DOUBLE,
+    due_date        DATE NOT NULL,
+    cost            DOUBLE NOT NULL,       -- round trip, fraction
+    bucket          VARCHAR,
+    status          VARCHAR NOT NULL,      -- open | closed
+    exit_date       DATE,
+    exit_price      DOUBLE,
+    stock_return    DOUBLE,
+    nifty_return    DOUBLE,
+    excess          DOUBLE,                -- direction x (stock - nifty) - cost
+    opened_at       TIMESTAMPTZ NOT NULL,
+    closed_at       TIMESTAMPTZ
+);
