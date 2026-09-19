@@ -156,7 +156,12 @@ def render(con, state: dict, *, watchlist_path=None) -> tuple[str, list[str]]:
         by_type.setdefault(e["event_type"], []).append(e)
     shown = 0
     for kind in EVENT_ORDER + sorted(set(by_type) - set(EVENT_ORDER)):
-        rows = sorted(by_type.get(kind, []), key=lambda e: -(liq.get(e.get("isin")) or 0))
+        # Within a type: a filing a model reads as adverse comes first, then by the
+        # company's traded value. Reordering only - the tone itself is shown as that
+        # model's reading, cited, never as a fact.
+        rows = sorted(by_type.get(kind, []),
+                      key=lambda e: (0 if (e.get("model_tone") or {}).get("tone") == "negative"
+                                     else 1, -(liq.get(e.get("isin")) or 0)))
         if not rows:
             continue
         out.append(f"\n**{LABEL.get(kind, kind.title())}** ({len(rows)})")
