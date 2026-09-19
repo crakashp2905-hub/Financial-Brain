@@ -130,9 +130,14 @@ before the market opens.* Order:
   Post-load results (`data/after_replay.log`): graph 161 groups / 447 companies;
   features 4.92M rows, 3,397 lineages; firewall fw1 PROMOTED mom_12_1 (IC +0.049, t 3.7,
   DSR 0.97, +0.52%/20d net, trial 2) and REJECTED the other eight (reversal and low-vol
-  fail on costs; dist_52w_high DSR 0.95 borderline). **Caveat:** names without a t+h
-  price (delistings) are dropped, ~1,500 across 132 dates - survivorship bias to fix
-  before trusting any PROMOTE (score a delisting at its last price or -100%).
+  fail on costs; dist_52w_high DSR 0.95 borderline). Survivorship fixed the same
+  evening: names without a t+h price (~1,500 across 132 dates) are now scored at their
+  last traded price. ICs barely moved (mom_12_1 +0.049, t 3.8; net +0.57%/20d), but on
+  trials 10-18 **all nine are REJECTED**: the deflated-Sharpe bar after 18 trials (with
+  several strongly negative ones widening the cross-trial Sharpe variance) exceeds every
+  net Sharpe. Working as designed - do not loosen it; a signal must now be strong enough
+  to survive the trials already spent. Next research step: new, *pre-registered*
+  hypotheses rather than re-running these.
   Original steps:
   **After it finishes, run in order (one writer at a time):**
   1. `fb announcements --start 2015-01-01 --end 2026-09-18 --force` — reclassifies with

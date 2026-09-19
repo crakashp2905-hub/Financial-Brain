@@ -693,7 +693,7 @@ def cmd_evaluate(args) -> int:
             r = benchmark.evaluate(con, f, args.horizon, start=args.start, end=args.end)
             print(f"{f:<14} h={r['horizon']:<3} dates {r['dates']:<4} IC {r['mean_ic']:+.3f} "
                   f"t {r['ic_t']:+.1f} hit {r['hit_rate']:.0%} Q5-Q1 {r['mean_spread']:+.2%} "
-                  f"names {r['avg_names']:.0f} dropped {r['dropped_no_outcome']}")
+                  f"names {r['avg_names']:.0f} filled {r['filled_no_outcome']}")
     return 0
 
 

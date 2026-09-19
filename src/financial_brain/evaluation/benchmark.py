@@ -5,8 +5,10 @@ For a feature and a horizon *h*, on each rebalance date *t*:
 * the universe is lineages with a feature value on *t* and 20-day average traded value
   of at least ``min_adv`` - known on *t*, so the filter adds no look-ahead;
 * the outcome is the adjusted return from close *t* to close *t+h sessions* of the
-  *same lineage* (a delisted name with no *t+h* price is dropped and counted, never
-  silently filled);
+  *same lineage*. A name with no *t+h* price (delisted, suspended) is **not dropped** -
+  dropping it is survivorship bias, since such names skew to disasters. It is scored at
+  its last traded price inside the window, or flat if it never traded again, and the
+  count is reported as ``filled``. (fw1 runs before 2026-09-19 evening dropped them.)
 * the score is the Spearman rank IC between feature and outcome, and the top-minus-
   bottom quintile return spread.
 
@@ -34,7 +36,11 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
             SELECT a.lineage, c.k, a.close_adj FROM adjusted_prices a JOIN cal c USING (business_date)
         ), panel AS (
             SELECT c.business_date, f.lineage, f.{feature} AS x,
-                   b.close_adj / a.close_adj - 1 AS y
+                   COALESCE(b.close_adj,
+                            (SELECT arg_max(l.close_adj, l.k) FROM fwd l
+                             WHERE l.lineage = f.lineage AND l.k > c.k AND l.k < c.k + ?),
+                            a.close_adj) / a.close_adj - 1 AS y,
+                   b.close_adj IS NULL AS filled
             FROM features f JOIN cal c USING (business_date)
             JOIN fwd a ON a.lineage = f.lineage AND a.k = c.k
             LEFT JOIN fwd b ON b.lineage = f.lineage AND b.k = c.k + ?
@@ -50,12 +56,11 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
         )
         SELECT business_date, COUNT(*) AS n, CORR(rx, ry) AS ic,
                AVG(y) FILTER (WHERE q = 5) - AVG(y) FILTER (WHERE q = 1) AS spread,
-               (SELECT COUNT(*) FROM panel p WHERE p.business_date = r.business_date
-                  AND p.y IS NULL) AS dropped,
+               COUNT(*) FILTER (WHERE filled) AS filled,
                AVG(y) FILTER (WHERE q = 5) - AVG(y) AS top_excess,
                LIST(lineage) FILTER (WHERE q = 5) AS top
         FROM ranked r GROUP BY business_date HAVING COUNT(*) >= 20 ORDER BY 1
-    """, [horizon, horizon, min_adv, start, start, end, end, horizon]).fetchall()
+    """, [horizon, horizon, horizon, min_adv, start, start, end, end, horizon]).fetchall()
     ics = [r[2] for r in rows if r[2] is not None]
     spreads = [r[3] for r in rows if r[3] is not None]
     n = len(ics)
@@ -67,7 +72,7 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
         "hit_rate": sum(1 for x in ics if x > 0) / n if n else float("nan"),
         "mean_spread": sum(spreads) / len(spreads) if spreads else float("nan"),
         "avg_names": sum(r[1] for r in rows) / len(rows) if rows else 0,
-        "dropped_no_outcome": sum(r[4] for r in rows),
+        "filled_no_outcome": sum(r[4] for r in rows),
         "first": rows[0][0] if rows else None, "last": rows[-1][0] if rows else None,
         # Per rebalance date, for the validation firewall: rank IC, Q5-Q1 spread, the
         # long-only top quintile's excess over the universe, and its members.

@@ -61,3 +61,20 @@ def test_unknown_feature_refused(con):
     from financial_brain.evaluation import benchmark
     with pytest.raises(ValueError):
         benchmark.evaluate(con, "close_adj; DROP TABLE x", 20)
+
+
+def test_a_name_that_stops_trading_is_scored_not_dropped(con):
+    """Survivorship: a crash followed by delisting must count against the signal."""
+    from financial_brain.evaluation import benchmark
+    _market(con, drift_by_rank=0.0)
+    before = benchmark.evaluate(con, "ret_60d", horizon=20)
+    # The name crashes 90% on day 200 and never trades again.
+    con.execute("""UPDATE universe_snapshots SET close_price = close_price * 0.1
+                   WHERE isin = 'INE000A01010' AND business_date = DATE '2020-07-19'""")
+    con.execute("""DELETE FROM universe_snapshots WHERE isin = 'INE000A01010'
+                   AND business_date > DATE '2020-07-19'""")
+    from financial_brain.features import indicators
+    indicators.build(con)
+    after = benchmark.evaluate(con, "ret_60d", horizon=20)
+    assert before["filled_no_outcome"] == 0 and after["filled_no_outcome"] >= 1
+    assert after["dates"] == before["dates"], "no rebalance date lost its outcome"
