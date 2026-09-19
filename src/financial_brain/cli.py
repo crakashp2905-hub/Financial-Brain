@@ -773,11 +773,28 @@ def cmd_models(args) -> int:
                 print(f"{model:<20} acc {r['accuracy']:.3f} F1 {r['macro_f1']:.3f} "
                       f"threshold {r['threshold']} coverage {r['coverage']:.2f} "
                       f"{r['latency_ms']:.0f} ms  {r['top_confusions'][:3]}")
+        elif args.action == "rescore":
+            for r in bench.rescore(con, args.task, target=args.target):
+                t = {k: v for k, v in r["thresholds"].items() if v is not None}
+                print(f"{r['model']:<20} F1 {r['macro_f1']:.3f} coverage {r['coverage']:.2f}"
+                      f"  per-label thresholds {t}")
+        elif args.action == "route":
+            best = router.choose(con, args.task, budget_ms=args.budget_ms)
+            if not best.get("chain"):
+                print(best.get("note"))
+            else:
+                sim = best["simulated"]
+                print(" -> ".join(s["model"] for s in best["chain"]))
+                print(f"accuracy {sim['accuracy']:.3f}, uncertain {sim['uncertain']:.0%}, "
+                      f"{sim['latency_ms']:.0f} ms/item, answered by " + ", ".join(
+                          f"{m} {v:.0%}" for m, v in sim["answered_by"].items()))
         elif args.action == "plan":
             steps = router.plan(con, args.task)
             for s in steps:
-                print(f"tier {s['tier']}  {s['model']:<20} accept at >= {s['threshold']:.3f}"
-                      f"  F1 {s['macro_f1']:.3f}  {s['latency_ms']:.0f} ms")
+                per = {k: v for k, v in (s.get("thresholds") or {}).items() if v is not None}
+                bars = ", ".join(f"{k} >= {v:.3f}" for k, v in per.items()) or                     f">= {s['threshold']:.3f}"
+                print(f"tier {s['tier']}  {s['model']:<20} F1 {s['macro_f1']:.3f}  "
+                      f"{s['latency_ms']:.0f} ms  accepts: {bars}")
             try:
                 r = bench.simulate_route(con, args.task, steps)
                 print(f"route end-to-end: accuracy {r['accuracy']:.3f}, uncertain "
@@ -1062,7 +1079,8 @@ def main(argv: list[str] | None = None) -> int:
     g.set_defaults(fn=cmd_paper)
 
     g = sub.add_parser("models", help="tiered models: list, bench, plan (ADR-0002)")
-    g.add_argument("action", choices=["list", "bench", "plan"])
+    g.add_argument("action", choices=["list", "bench", "rescore", "route", "plan"])
+    g.add_argument("--budget-ms", type=float, default=4000)
     g.add_argument("--task", default="sentiment", choices=["sentiment", "event_type"])
     g.add_argument("--model", action="append", default=[])
     g.add_argument("--target", type=float, default=0.9)

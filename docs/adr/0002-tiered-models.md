@@ -48,6 +48,20 @@ probabilities - to be used or rebuilt.
   macro-F1 0.45** - it calls 17 of 19 adverse filings neutral. Reputation is not a
   qualification; local LLM results are in `data/bench_sentiment.log`.
 
+## Routing result (2026-09-20)
+
+Thresholds are **per predicted label** (a model's "neutral" must itself be right >= 90%
+of the time when confident, min. 3 examples) - overall accuracy let a model that says
+"neutral" to everything qualify on this neutral-heavy set. Replaying stored answers
+(`fb models route`), the stored sentiment route is
+
+    finbert -> llama3.2:3b -> llama3.1:8b     89.1% accuracy, 3% uncertain, 1.26 s/item
+
+against the best single model (llama3.1:8b) at 90.3% and 5.3 s/item: a quarter of the
+latency for 1.2 points. FinBERT survives only as the first filter for confident
+"neutral" (52% of items); anything else escalates. **Caveat:** thresholds and route
+were chosen on the same 165 items - optimistic until a held-out sentiment set confirms.
+
 ## Consequences
 
 * Adding a model is a registry line plus a benchmark run; nothing else changes.

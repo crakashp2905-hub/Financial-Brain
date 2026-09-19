@@ -26,6 +26,7 @@ from ..events.classify import classify
 from ..llm import backends, system1
 
 FIXTURES = Path(__file__).resolve().parents[3] / "tests" / "fixtures"
+MIN_SUPPORT = 3                 # a label's threshold needs at least this many examples
 
 SENTIMENT_CHOICES = ["positive", "negative", "neutral"]
 SENTIMENT_NOTES = {"positive": "states a favourable fact for shareholders (order won, "
@@ -103,15 +104,27 @@ def score(golds: list[str], decisions: list, target: float) -> dict:
         fp = sum(1 for d, g in zip(decisions, golds) if d.label == lab != g)
         fn = sum(1 for d, g in zip(decisions, golds) if g == lab != d.label)
         f1s.append(2 * tp / (2 * tp + fp + fn) if tp else 0.0)
-    threshold, coverage = None, 0.0
-    for t in sorted({round(d.confidence, 4) for d in decisions}):
-        kept = [c for d, c in zip(decisions, correct) if d.confidence >= t]
-        if kept and sum(kept) / len(kept) >= target:
-            threshold, coverage = t, len(kept) / len(decisions)
-            break
+    # Per predicted label: the lowest confidence at which that label's confident
+    # predictions were right >= target of the time (min MIN_SUPPORT of them). Overall
+    # accuracy would let a model that confidently says "neutral" to everything qualify on
+    # an imbalanced set while missing every adverse filing.
+    thresholds = {}
+    for lab in labels:
+        preds = [(d.confidence, c) for d, c in zip(decisions, correct) if d.label == lab]
+        thresholds[lab] = None
+        for t in sorted({round(conf, 4) for conf, _ in preds}):
+            kept = [c for conf, c in preds if conf >= t]
+            if len(kept) >= MIN_SUPPORT and sum(kept) / len(kept) >= target:
+                thresholds[lab] = t
+                break
+    accepted = [d for d in decisions if thresholds.get(d.label) is not None
+                and d.confidence >= thresholds[d.label]]
+    usable = [t for t in thresholds.values() if t is not None]
     confusion = Counter((g, d.label) for d, g in zip(decisions, golds) if d.label != g)
     return {"n": len(golds), "accuracy": sum(correct) / len(golds),
-            "macro_f1": sum(f1s) / len(f1s), "threshold": threshold, "coverage": coverage,
+            "macro_f1": sum(f1s) / len(f1s), "thresholds": thresholds,
+            "threshold": min(usable) if usable else None,
+            "coverage": len(accepted) / len(decisions),
             "target": target, "labels": labels,
             "top_confusions": [f"{g} -> {p} x{n}" for (g, p), n in confusion.most_common(5)]}
 
@@ -155,7 +168,7 @@ def simulate_route(con, task: str, steps: list[dict]) -> dict:
             lab, conf, lat = items[s["model"]][i]
             paid += lat
             label = lab
-            if conf >= s["threshold"]:
+            if accepts(s, lab, conf):
                 answered_by[s["model"]] += 1
                 break
         else:
@@ -164,3 +177,61 @@ def simulate_route(con, task: str, steps: list[dict]) -> dict:
     n = len(golds)
     return {"accuracy": right / n, "latency_ms": paid / n, "uncertain": uncertain / n,
             "answered_by": {m: c / n for m, c in answered_by.items()}}
+
+
+def accepts(step: dict, label: str, confidence: float) -> bool:
+    """Does this route step trust this answer? Per-label thresholds when known."""
+    per = step.get("thresholds")
+    if per is not None:
+        t = per.get(label)
+        return t is not None and confidence >= t
+    return step.get("threshold") is not None and confidence >= step["threshold"]
+
+
+def rescore(con, task: str, *, target: float = 0.9) -> list[dict]:
+    """Recompute thresholds for each model's latest run from its stored items - no model
+    calls. Appends new rows marked ``rescored``."""
+    golds = [r["gold"] for r in _rows(task)]
+    out = []
+    for model, detail, lat in con.execute("""
+            SELECT model, detail, latency_ms FROM (SELECT *, ROW_NUMBER() OVER (
+            PARTITION BY model ORDER BY run_at DESC) rk FROM model_bench WHERE task = ?)
+            WHERE rk = 1""", [task]).fetchall():
+        items = json.loads(detail or "{}").get("items")
+        if not items or len(items) != len(golds):
+            continue
+        ds = [system1.Decision(label=a, probs={}, confidence=c, model=model, latency_ms=ms)
+              for a, c, ms in items]
+        r = score(golds, ds, target)
+        r.update(task=task, model=model, latency_ms=lat, items=items, rescored=True)
+        con.execute("""INSERT INTO model_bench (run_at, task, model, n, accuracy, macro_f1,
+                       latency_ms, target, threshold, coverage, detail)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                    [datetime.now(timezone.utc), task, model, r["n"], r["accuracy"],
+                     r["macro_f1"], lat, target, r["threshold"], r["coverage"],
+                     json.dumps(r)])
+        out.append(r)
+    return out
+
+
+def optimise_route(con, task: str, *, budget_ms: float = 4000, max_len: int = 3) -> dict:
+    """Search chains (each ordered cheapest first) of up to ``max_len`` calibrated models
+    and keep the one scoring best - accuracy minus the uncertain share, since an
+    unresolved answer is no answer - within a mean-latency budget; ties go to speed."""
+    from itertools import combinations
+
+    from ..llm import router
+    steps = router.plan(con, task, optimised=False)
+    best = None
+    for k in range(1, max_len + 1):
+        for chain in combinations(steps, k):
+            try:
+                sim = simulate_route(con, task, list(chain))
+            except ValueError:
+                continue
+            key = (sim["accuracy"] - sim["uncertain"], -sim["latency_ms"])
+            if sim["latency_ms"] <= budget_ms and (best is None or key > best[0]):
+                best = (key, list(chain), sim)
+    if not best:
+        return {"task": task, "chain": [], "note": f"nothing fits {budget_ms:.0f} ms"}
+    return {"task": task, "chain": best[1], "simulated": best[2], "budget_ms": budget_ms}

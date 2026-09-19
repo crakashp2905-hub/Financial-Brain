@@ -504,3 +504,12 @@ CREATE TABLE IF NOT EXISTS committee_runs (
     decision_id         VARCHAR,
     run_at              TIMESTAMPTZ NOT NULL
 );
+
+-- The chosen route per task (evaluation/models.optimise_route); newest wins.
+CREATE TABLE IF NOT EXISTS model_routes (
+    task            VARCHAR NOT NULL,
+    steps           VARCHAR NOT NULL,      -- JSON route steps incl. per-label thresholds
+    simulated       VARCHAR,               -- accuracy / uncertain / latency when chosen
+    budget_ms       DOUBLE,
+    chosen_at       TIMESTAMPTZ NOT NULL
+);

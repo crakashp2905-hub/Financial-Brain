@@ -24,12 +24,21 @@ def D(label, conf, model="m"):
     return system1.Decision(label=label, probs={}, confidence=conf, model=model)
 
 
-def test_threshold_is_where_confident_answers_are_right_enough():
-    golds = ["a", "a", "b", "b", "a"]
-    ds = [D("a", 0.99), D("a", 0.95), D("a", 0.60), D("b", 0.90), D("b", 0.55)]
-    s = bench.score(golds, ds, target=0.9)
-    assert s["accuracy"] == pytest.approx(0.6)
-    assert s["threshold"] == 0.9 and s["coverage"] == pytest.approx(0.6)
+def test_thresholds_are_per_label_so_a_confident_neutral_cannot_hide_misses():
+    """8 neutrals, 2 negatives. The model says neutral to all ten at 0.95: overall
+    accuracy among confident answers is 80%, but its 'neutral' is wrong 2 times in 10 -
+    so 'neutral' earns no threshold at target 0.9 and everything escalates."""
+    golds = ["neutral"] * 8 + ["negative"] * 2
+    lazy = [D("neutral", 0.95)] * 10
+    s = bench.score(golds, lazy, target=0.9)
+    assert s["thresholds"]["neutral"] is None and s["coverage"] == 0
+    # A model that is right when confident about each label earns per-label thresholds.
+    good = [D("neutral", 0.97)] * 8 + [D("negative", 0.6), D("negative", 0.9)]
+    golds2 = ["neutral"] * 8 + ["negative", "negative"]
+    s2 = bench.score(golds2, good, target=0.9)
+    assert s2["thresholds"]["neutral"] == 0.97
+    assert s2["thresholds"]["negative"] is None, "only 2 examples: below MIN_SUPPORT"
+    assert s2["coverage"] == pytest.approx(0.8)
 
 
 def test_uninformative_confidence_earns_no_threshold():

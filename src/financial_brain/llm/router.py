@@ -19,6 +19,7 @@ hashed, not stored).
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import tomllib
 from dataclasses import dataclass, field
@@ -49,16 +50,35 @@ class Routed:
     route: list[dict] = field(default_factory=list)
 
 
-def plan(con, task: str) -> list[dict]:
+def plan(con, task: str, *, optimised: bool = True) -> list[dict]:
+    """The route for a task: the chain chosen by ``fb models route`` if one is stored,
+    else every calibrated model, cheapest first."""
+    cloud_ok = os.environ.get("FB_LLM_ENABLED") == "1"
+    if optimised:
+        r = con.execute("""SELECT steps FROM model_routes WHERE task = ?
+                           ORDER BY chosen_at DESC LIMIT 1""", [task]).fetchone()
+        if r:
+            return [s for s in json.loads(r[0]) if s["tier"] < 3 or cloud_ok]
     rows = con.execute("""
-        SELECT model, threshold, latency_ms, macro_f1 FROM (
+        SELECT model, threshold, latency_ms, macro_f1, detail FROM (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY model ORDER BY run_at DESC) rk
             FROM model_bench WHERE task = ?) WHERE rk = 1 AND threshold IS NOT NULL""",
                        [task]).fetchall()
-    cloud_ok = os.environ.get("FB_LLM_ENABLED") == "1"
-    steps = [{"model": m, "threshold": t, "latency_ms": lat, "macro_f1": f1, "tier": tier(m)}
-             for m, t, lat, f1 in rows if tier(m) < 3 or cloud_ok]
+    steps = [{"model": m, "threshold": t, "latency_ms": lat, "macro_f1": f1, "tier": tier(m),
+              "thresholds": json.loads(det or "{}").get("thresholds")}
+             for m, t, lat, f1, det in rows if tier(m) < 3 or cloud_ok]
     return sorted(steps, key=lambda s: (s["tier"], s["latency_ms"] or 0))
+
+
+def choose(con, task: str, *, budget_ms: float = 4000) -> dict:
+    """Pick and store the best route within a latency budget (replayed, no model calls)."""
+    best = bench.optimise_route(con, task, budget_ms=budget_ms)
+    if best.get("chain"):
+        con.execute("""INSERT INTO model_routes (task, steps, simulated, budget_ms, chosen_at)
+                       VALUES (?,?,?,?,?)""",
+                    [task, json.dumps(best["chain"]), json.dumps(best["simulated"]),
+                     budget_ms, datetime.now(timezone.utc)])
+    return best
 
 
 def _record(con, task: str, state: str, d: system1.Decision, t: int) -> None:
@@ -84,7 +104,7 @@ def decide(con, task: str, row: dict, *, steps: list[dict] | None = None) -> Rou
         d = bench.decider(task, s["model"])(row)
         if s["model"] not in BUILTIN_TIER:
             _record(con, task, row["state"], d, s["tier"])
-        ok = d.confidence >= s["threshold"]
+        ok = bench.accepts(s, d.label, d.confidence)
         route.append({"model": s["model"], "label": d.label,
                       "confidence": round(d.confidence, 4), "accepted": ok})
         last = d
