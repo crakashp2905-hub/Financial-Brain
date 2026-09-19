@@ -16,6 +16,9 @@ control:
 * **Current evidence.** A claim that has since been superseded cannot be cited.
 * **Both sides.** Verification needs supporting *and* contrary evidence, a named primary
   uncertainty, and explicit invalidation conditions.
+* **The constitution binds.** Risk review checks every machine-checkable rule of the
+  owner's Investment Constitution (``constitution/rules.py``) as of the decision's
+  world state; any violation blocks, and names the rule and the facts.
 * **Only a human approves.** An ``agent:`` identity can never move a decision to
   HUMAN_APPROVED.
 * **No broker path while execution is off.** It is off by default (Kite is read-only);
@@ -133,7 +136,7 @@ def _verify_evidence(con, c: dict) -> None:
 
 
 def advance(con, did: str, *, actor: str, note: str = "",
-            execution_enabled: bool = False) -> str:
+            execution_enabled: bool = False, constitution: dict | None = None) -> str:
     """Move a decision one step forward, enforcing the rule for that step."""
     frm = _state(con, did)
     if frm in TERMINAL:
@@ -142,8 +145,16 @@ def advance(con, did: str, *, actor: str, note: str = "",
     c = content(con, did)
     if to == "EVIDENCE_VERIFIED":
         _verify_evidence(con, c)
-    elif to == "RISK_REVIEWED" and not c.get("sizing"):
-        raise DecisionError("risk review needs sizing / a risk budget")
+    elif to == "RISK_REVIEWED":
+        if not c.get("sizing"):
+            raise DecisionError("risk review needs sizing / a risk budget")
+        from ..config import load
+        from ..constitution import rules
+        book = constitution if constitution is not None else rules.load(load().data_root)
+        broken = rules.check(con, c, book)
+        if broken:
+            raise DecisionError("constitution: " + "; ".join(
+                f"{v['rule']} ({v['fact']})" for v in broken))
     elif to == "HUMAN_APPROVED" and (not actor or actor.startswith("agent:")):
         raise DecisionError("only a human can approve; agents may propose, never approve")
     elif to == "PROPOSED_TO_BROKER" and not execution_enabled:

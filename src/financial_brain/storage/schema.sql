@@ -399,3 +399,15 @@ CREATE TABLE IF NOT EXISTS promoter_groups (
     size            INTEGER NOT NULL,
     PRIMARY KEY (group_id, member)
 );
+
+-- P2-5 every language-model call, gated and recorded (llm/gate.py). Prompts are hashed.
+CREATE TABLE IF NOT EXISTS llm_calls (
+    called_at       TIMESTAMPTZ NOT NULL,
+    purpose         VARCHAR NOT NULL,
+    model           VARCHAR NOT NULL,
+    prompt_sha256   VARCHAR NOT NULL,
+    output_sha256   VARCHAR NOT NULL,
+    input_tokens    INTEGER,
+    output_tokens   INTEGER,
+    evidence        VARCHAR[]
+);

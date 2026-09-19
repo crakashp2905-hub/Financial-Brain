@@ -1,0 +1,29 @@
+# Investment Constitution - EXAMPLE (C14, ARCHITECTURE.md §8)
+#
+# PLACEHOLDERS, NOT THE OWNER'S RULES. Every number below is a conservative default
+# chosen so the machinery has something to enforce. Copy this file to
+# data/constitution.toml (private, never committed) and make it yours; that file wins.
+#
+# Only machine-checkable rules go here. Judgement (valuation, chart reading, what a
+# good business looks like) belongs in prose the agents retrieve, not in this file.
+
+[position]
+max_weight = 0.05                 # no single holding above 5% of the portfolio
+
+[liquidity]
+min_adv20_inr = 50_000_000        # Rs 5 crore average daily traded value, 20 sessions
+
+[exclusions]
+isins = []                        # never buy these
+
+[governance]
+max_pledge_filings = 3            # promoter pledge (Reg. 31) filings tolerated...
+pledge_lookback_days = 365        # ...in this window
+auditor_resignation_days = 365    # no new buy within a year of an auditor resigning
+exclude_insolvency = true         # no new buy in a company in CIRP
+
+[regime]
+no_new_buys_in = ["CRISIS"]       # regime brain v2 labels
+
+[process]
+min_horizon_days = 20             # shorter than a month is trading, not investing
