@@ -48,19 +48,33 @@ probabilities - to be used or rebuilt.
   macro-F1 0.45** - it calls 17 of 19 adverse filings neutral. Reputation is not a
   qualification; local LLM results are in `data/bench_sentiment.log`.
 
-## Routing result (2026-09-20)
+## Routing result (2026-09-20) - and the correction that followed
 
 Thresholds are **per predicted label** (a model's "neutral" must itself be right >= 90%
-of the time when confident, min. 3 examples) - overall accuracy let a model that says
-"neutral" to everything qualify on this neutral-heavy set. Replaying stored answers
-(`fb models route`), the stored sentiment route is
+of the time when confident, min. 3 examples): overall accuracy let a model that says
+"neutral" to everything qualify on a neutral-heavy set.
 
-    finbert -> llama3.2:3b -> llama3.1:8b     89.1% accuracy, 3% uncertain, 1.26 s/item
+The first route was chosen *and judged* on the same 165 items:
+`finbert -> llama3.2:3b -> llama3.1:8b`, 89.1% at 1.26 s/item. A held-out set was then
+labelled (104 headlines, 2021-2023, positive-enriched, labelled before any model saw
+them) and that route scored **65.4%**, accepting a wrong answer **23.6%** of the time,
+with zero recall on positives. In-sample calibration is worthless.
 
-against the best single model (llama3.1:8b) at 90.3% and 5.3 s/item: a quarter of the
-latency for 1.2 points. FinBERT survives only as the first filter for confident
-"neutral" (52% of items); anything else escalates. **Caveat:** thresholds and route
-were chosen on the same 165 items - optimistic until a held-out sentiment set confirms.
+Route selection therefore **requires out-of-sample verification**
+(`fb models route --verify-on sentiment_holdout`): candidates are ranked on the tuning
+set, then each is replayed on the held-out set and kept only if its accepted answers are
+wrong at most 10% of the time. Result:
+
+| chain | tuning | held out |
+|---|---|---|
+| finbert -> llama3.2:3b -> llama3.1:8b | 89.1%, 1.26 s | 65.4%, **23.6% wrong when accepted** - rejected |
+| finbert -> qwen2.5:1.5b -> llama3.1:8b | - | 18.6% wrong when accepted - rejected |
+| **qwen2.5:7b alone** | 85.5%, 5.3 s | **86.5%, 7% wrong when accepted**, declines 34% - **stored** |
+
+The deployed sentiment route is one 7B model at ~4.6 s/item. Cheap cascades are not
+ruled out in principle - none has yet earned trust on data it was not fitted to. A model
+that cannot verify is not routed to, and a task with no verified route is declined
+rather than answered badly.
 
 ## Consequences
 

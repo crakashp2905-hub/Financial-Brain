@@ -93,3 +93,36 @@ def test_cascade_is_replayed_from_stored_items(con, monkeypatch):
     assert r["accuracy"] == 1.0 and r["uncertain"] == 0
     assert r["answered_by"] == pytest.approx({"small": 1 / 3, "big": 2 / 3})
     assert r["latency_ms"] == pytest.approx((10 + 110 + 110) / 3)
+
+
+def test_a_route_must_survive_a_set_it_was_not_tuned_on(con, monkeypatch):
+    """Thresholds fitted and judged on one set flatter themselves: a route is stored only
+    if its accepted answers hold up on a set that had no part in fitting them."""
+    import json
+    tune = ["neutral"] * 6 + ["negative"] * 2
+    held = ["negative"] * 6 + ["neutral"] * 2
+    rows = {"t": [{"state": str(i), "gold": g} for i, g in enumerate(tune)],
+            "t_holdout": [{"state": str(i), "gold": g} for i, g in enumerate(held)]}
+    monkeypatch.setattr(bench, "_rows", lambda task: rows[task])
+    # "lazy" is confidently neutral about everything: right on the tuning set, wrong on
+    # the held-out one. "careful" is right on both but slower.
+    for task, model, items in (
+            ("t", "lazy", [["neutral", 0.99, 5]] * 6 + [["negative", 0.99, 5]] * 2),
+            ("t_holdout", "lazy", [["neutral", 0.99, 5]] * 8),
+            ("t", "careful", [["neutral", 0.95, 500]] * 6 + [["negative", 0.95, 500]] * 2),
+            ("t_holdout", "careful", [["negative", 0.95, 500]] * 6
+             + [["neutral", 0.95, 500]] * 2)):
+        r = bench.score([x["gold"] for x in rows[task]],
+                        [system1.Decision(label=a, probs={}, confidence=c, model=model,
+                                          latency_ms=ms) for a, c, ms in items], 0.9)
+        r["items"] = items
+        con.execute("""INSERT INTO model_bench (run_at, task, model, n, threshold,
+                       latency_ms, detail) VALUES (NOW(), ?, ?, ?, ?, ?, ?)""",
+                    [task, model, len(items), r["threshold"],
+                     sum(i[2] for i in items) / len(items), json.dumps(r)])
+    unverified = bench.optimise_route(con, "t", budget_ms=10_000)
+    assert [s["model"] for s in unverified["chain"]] == ["lazy"], "fastest, looks perfect"
+    verified = router.choose(con, "t", budget_ms=10_000, verify_on="t_holdout")
+    assert [s["model"] for s in verified["chain"]] == ["careful"]
+    assert verified["verified"]["wrong_when_accepted"] == 0
+    assert any(r["chain"] == ["lazy"] for r in verified["rejected"])

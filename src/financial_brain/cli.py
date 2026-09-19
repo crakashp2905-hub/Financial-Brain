@@ -779,15 +779,21 @@ def cmd_models(args) -> int:
                 print(f"{r['model']:<20} F1 {r['macro_f1']:.3f} coverage {r['coverage']:.2f}"
                       f"  per-label thresholds {t}")
         elif args.action == "route":
-            best = router.choose(con, args.task, budget_ms=args.budget_ms)
+            best = router.choose(con, args.task, budget_ms=args.budget_ms,
+                                 verify_on=args.verify_on,
+                                 max_accepted_error=args.max_accepted_error)
             if not best.get("chain"):
                 print(best.get("note"))
+                for r in best.get("rejected", []):
+                    print(f"   rejected {r}")
             else:
-                sim = best["simulated"]
                 print(" -> ".join(s["model"] for s in best["chain"]))
-                print(f"accuracy {sim['accuracy']:.3f}, uncertain {sim['uncertain']:.0%}, "
-                      f"{sim['latency_ms']:.0f} ms/item, answered by " + ", ".join(
-                          f"{m} {v:.0%}" for m, v in sim["answered_by"].items()))
+                for name in ("simulated", "verified"):
+                    sim = best.get(name)
+                    if sim:
+                        print(f"  {name:<9} ({sim['set']}): accuracy {sim['accuracy']:.3f}, "
+                              f"uncertain {sim['uncertain']:.0%}, wrong when accepted "
+                              f"{sim['wrong_when_accepted']:.0%}, {sim['latency_ms']:.0f} ms")
         elif args.action == "plan":
             steps = router.plan(con, args.task)
             for s in steps:
@@ -1081,7 +1087,11 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("models", help="tiered models: list, bench, plan (ADR-0002)")
     g.add_argument("action", choices=["list", "bench", "rescore", "route", "plan"])
     g.add_argument("--budget-ms", type=float, default=4000)
-    g.add_argument("--task", default="sentiment", choices=["sentiment", "event_type"])
+    g.add_argument("--verify-on", help="labelled set the route must hold up on "
+                   "(e.g. sentiment_holdout)")
+    g.add_argument("--max-accepted-error", type=float, default=0.10)
+    g.add_argument("--task", default="sentiment",
+                   choices=["sentiment", "event_type", "sentiment_holdout"])
     g.add_argument("--model", action="append", default=[])
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)

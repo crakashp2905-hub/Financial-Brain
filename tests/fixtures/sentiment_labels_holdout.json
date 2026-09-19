@@ -1,0 +1,630 @@
+{
+ "about": "HELD-OUT sentiment set: 104 BSE headlines 2021-01..2023-12 (the tuning set is 2024-2026), positive-enriched, hash-ordered (seed 'holdout-sent'). Labelled by Claude with the same rule as sentiment_labels.json BEFORE any model saw it. Used only to check the route and thresholds chosen on the tuning set - never to tune them.",
+ "labelled": "2026-09-20",
+ "rows": [
+  {
+   "news_id": "381bc289-0f02-4100-ab73-ee0fec2369d5",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "In continuation to our intimation dated November 26, 2022, regarding receipt of LOA - the capacity of the project for execution has been increased from 52.5 MWp DC to 70 MWpDC.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "c7bbe377-ddf0-481a-b9ad-c2b47a2d897c",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Dear Sir/Ma'am,\r\nWe are pleased to inform all the stakeholders that the Company has received the Export Orders aggregating to Rs. 225 Lakhs received from Madhya Pradesh, Assam, Hyderabad for Cap Closure & Preform.\r\nThe Details are attached in annexed file.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "d6a7b9a4-a415-4bd9-b6ef-885f61c8e955",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Pursuant to Regulation 30 of Listing Regulations, we would like to inform you that the Board of Directors at their Meeting held today i.e. May 20, 2022 through Video Conferencing (\"VC'') / Other Audio Visual Means (\"OAVM\") have taken on record, the resignation of Mr. Nachiket Pantvaidya, Group Chief Executive Officer of the Company, effective from closing of business hours on May 31, 2022.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "23680b02-26f4-4885-9a5f-3d3d9361ad02",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Pursuant to Regulation 30 of SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015 (LODR), and in accordance with the requirements of sub-clause 16(g) of Clause A of Part A of Schedule Ill of LODR, we wish to inform you that 13\" Meeting of Committee of Creditors was held on Saturday, the 21st day of August 2021.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "bb629071-0841-410a-8ef9-46b214668a91",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Cupid Limited is hereby informing BSE about press release on award / Receipt of order.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "1547b44c-4ba8-43fb-9e0d-963c4f7bc78b",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Intimation of change in Statutory Auditors of the Company under Regulation 30 of the SEBI (Listing\r\nObligations and Disclosure Requirements), 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2d222d29-b6a2-481a-a409-b5f4e13a2fde",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Disclosure of the Receipt of new order of US $ 1515676.25 Approx from Bangladesh.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "449b626f-39ec-4ca8-811e-5032e4e222ee",
+   "event_type_v2": "GENERAL",
+   "headline": "CreditAccess Grameen Ltd has informed BSE regarding \"Intimation of Schedule of Investors Meetings/Calls\".",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9beda7a1-b2e5-4355-bde4-3237203dfb91",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "This is to inform that ICRA Ltd. has assigned a long-term rating of [ICRA] A (pronounced ICRA A) to the captioned LOC ('Rating') and short-term rating of [ICRA]A1 (pronounced ICRA A one). The Outlook on the long-term rating is Stable. The instrument wise rating actions have been detailed in the Ratings Letter issued by ICRA Ltd as enclosed.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2897c4dc-bf98-491b-b477-8765e2759d06",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Change in Statutory Auditor of Company and its material subsidiaries.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "fc4efa1d-4f9e-444a-9cce-752310f41aaf",
+   "event_type_v2": "RESULTS",
+   "headline": "Audited Financial Results (Standalone & Consolidated) for the quarter and year ended on March 31, 2023 along with Audit Report",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2ba60de5-6782-4191-813f-f4c54fa1c8b5",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "KIRLOSKAR PNEUMATIC COMPANY LIMITED HAS INFORMED THE EXCHANGE ABOUT CHANGE IN SENIOR MANAGEMENT PERSONNEL",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "052309b7-5c8f-4333-9270-6ac53c1e07e5",
+   "event_type_v2": "GENERAL",
+   "headline": "JM Financial Ltd (\"Manager to the Offer\") has submitted to BSE a copy of Letter of Offer to the Public Shareholders of  New Delhi Television Ltd (\"Target Company\").",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c7b61f69-b328-4acd-978a-6ea95a32c186",
+   "event_type_v2": "RESULTS",
+   "headline": "We enclose herewith disclosure of Related Party Transactions as per IND <BR> AS 24 on Standalone basis for the half year ended on 30th September, 2021 pursuant to Regulation 23(9) of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015.  <BR>",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4054d267-f126-436c-b662-99e47a3d447e",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Media Release- Intellect Global Transaction Banking (iGTB) launches Banking-as-a-Service (BaaS)",
+   "gold": "positive"
+  },
+  {
+   "news_id": "6c90e1b4-4e4f-440d-b65e-7258b613ace8",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Pursuant to Regulation 30 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015 ('LODR') and in accordance with the requirements of sub-clause 16(g) of Clause A of Part A of Schedule III of the LODR, Eleventh Meeting of Committee of Creditors (meeting held pursuant to Hon'ble NCLAT Order dated 31st January, 2022) held today i.e. Friday, February 24, 2023.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "aa571cf4-3833-4d5a-b85a-17bcb278f7d5",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "We enclose herewith press release to inform that the Company is expanding its geographical reach to cater to more markets as the demand for textile products showing excellent strength in both domestic and international markets led by increasing demand for fashion and furnishing products.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "6769b051-6b7e-451c-9470-d413009dc047",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Pursuant to Regulation 30 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015, we wish to inform you that Brickwork Ratings India Pvt. Ltd. have re-affirmed its existing rating in respect to Bank Loan Facilities - Fund Based, vide its letter dated August 27, 2021 (received by the Company on August 30, 2021)",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "6a1a6d32-e14f-4818-91c6-79b2edb8e34c",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Pursuant to regulation 30 and other relevant regulations of SEBI(LODR) Regulations, 2015, we hereby inform that the company has received a notice of resignation letter.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a3f598f9-e56e-4901-8f69-377e93b7f709",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "In continuation of our letter dated October 28, 2021, please find attached herewith the Business Update and Investors' Presentations which is being released to the media.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2c88ad42-9819-42ea-a76c-8f7770de698b",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Pursuant to Regulation 30 and other relevant regulation of SEBI (Listing Obligations and Disclosure Requirements) Regulation, 2015, we hereby inform you that  M/s. Bharat H Shah & Co., Chartered Accountants has resigned from the post of Statutory Auditors of the Company with effect from today as per the reason stated in their resignation letter received from the Auditor.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "31c28da7-4b3d-44d1-9b67-7788a26cf1e7",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Update on acquisition of additional 49% stake in Kalyani Strategic Systems Limited.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "39916a39-b716-4c91-ae81-238559dec7b8",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Intimation under Regulation 30 of the SEBI (Listing Obligations and Disclosures Requirements) Regulations, 2015 - Change in Statutory Auditors of the Company",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "06238365-1fe7-49cf-b40a-b9d475d08644",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "We wish to inform you that Sharika Enterprises has received the order from GE T&D India Limited for Installation, Testing and Commissioning of 11KV & 33kV RMU amounting 3,68,66,245.58 (INR Three Crore Sixty Eight Lacs Sixty Six Thousand Two Hundred Fourty Five and Fifty Eighty Paisa Only) Including Taxes <BR>",
+   "gold": "positive"
+  },
+  {
+   "news_id": "4cc829e5-c083-4175-b89c-e191a8364e31",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Reply to Clarification sought on price movement of the shares of the Company by the exchange dated 02.01.2023",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "909d1ae1-789c-412b-8f1c-56bd8853e28e",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Intimation under Regulation 30 of the Securities and Exchange Board of India (Listing Obligations and Disclosure Requirements) Regulations, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "7e80b413-d8dd-462e-b509-06b7ac31f9b5",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Pursuant to Regulations 29(2) as per the SEBI (Substantial Acquisition of Shares & Takeovers) Regulations, 2011, please find enclosed necessary details for your record.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "dd12360a-cc35-48ce-911c-394d04268ac2",
+   "event_type_v2": "RESULTS",
+   "headline": "Pursuant to the provisions of Regulation 23(9) of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015, please find enclosed herewith the disclosure of Related Party Transactions for the half year ended on 31-03-2022.\r\n\r\nWe hope that you will find the above in order. You are requested to kindly take the above information on records and acknowledge receipt of the same.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "14955876-b7fe-49c2-85b8-750748e9c1a5",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Press Release - TVS Motor Company launches its revolutionary premium electric crossover, TVS X; sets new global benchmarks in the EV industry",
+   "gold": "positive"
+  },
+  {
+   "news_id": "3be538aa-3ce3-4eb5-a432-e47da1dc05b8",
+   "event_type_v2": "RESULTS",
+   "headline": "Disclosure of Related Party Transactions pursuant to Regulation 23(9) of SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "0510c252-1619-44fa-b964-bdd057169981",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "With reference to the captioned subject above, we hereby submitted Outcome of Board Meeting for approval of Board Report and other items.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "72aa4968-acab-4cb0-bcc2-1c78cd0aa051",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Intimation from Income Tax Authority - Income Tax assessment proceedings for assessment year 2022-23",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "20fdd3e0-3536-438f-be86-76c1154c0f24",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "This is to inform that one unsecured financial creditor company who had given us Inter Corporate Loan , has filed application under section 7 of the Insolvency and Bankruptcy Code,2016 before the National Company Law Tribunal.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "518bcebb-7eb5-492a-9e80-19aa359e9ccb",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Pursuant to Regulation 30 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015, we are pleased to inform you that CRISIL Limited ('CRISIL') has re-affirmed credit rating .",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "3a62da7a-6614-4dc6-9d2a-5bc3dd2dda73",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Securities Subscription Agreement and Shareholders' Agreement between the Company and British International Investment Plc ('BII') setting out the terms and conditions of the Proposed Investment in EVCo",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1a37352a-193e-485b-b42e-6a63303ad0cb",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Post-Facto Intimation of the Seventeenth Meeting of Committee of Creditors ('CoC') of Premier Limited, the Corporate Debtor was held on Saturday, January 22, 2022 at 04:30 P.M.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4b9f5d4c-3538-4713-929c-9a27c293a36e",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Zydus Announces Settlement of Patent Litigation for Generic Revlimid® in U.S.'.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "294f6e98-df9c-4c9a-8f90-c11b1e8dd8f9",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Disclosure under Regulation 30 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015 - Update on ongoing litigation",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "fd349414-767e-46c9-a407-79d53e656a0e",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "NCLT convened Meeting of the Unsecured creditors of Adani Ports and Special Economic Zone Limited scheduled on September 20, 2021",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "41a6b09d-1654-46b0-95e3-5335f48a138e",
+   "event_type_v2": "RESULTS",
+   "headline": "Century Enka Limited  has informed the Exchange about Board Meeting held on 21-Oct-2022 to consider unaudited standalone and consolidated financial results for the quarter and half year ended 30th September 2022 along with Limited Review Report thereon",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ec829111-8465-466d-bd45-6b36b67d832d",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Intimation under regulation 30 of SEBI (LODR) Regulation 2015 / Receipt of Exclusion of litigation period from 3rd July 2023 till 11th August 2023 from Corporate Insolvency Resolution Process, pursuant to Section 12 read with Section 60(5) of the Insolvency & Bankruptcy Code 2016.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1226ff0e-a3d7-440e-86c9-c4d73d428dee",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Pursuant to the Regulation 30 of SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015, we would like to inform that, CARE has re-affirmed the existing rating for the enhanced Long Term & Short Term Bank Facilities.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "121b2bf2-573e-4b7e-b16c-31ae8c85f334",
+   "event_type_v2": "RESULTS",
+   "headline": "Unaudited Financial Results for the quarter ended June 30, 2021",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "f541612a-83f5-475d-9ec4-e5c52c5d0546",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "TCS Recognized as a Leader in Enterprise Quality Assurance Services by Everest Group",
+   "gold": "positive"
+  },
+  {
+   "news_id": "0e82f261-62f0-4e73-888b-4e9fb9ddbd21",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Tata Power receives Letter of Award from RUMSL for setting up of 330MW Solar Project in Madhya Pradesh",
+   "gold": "positive"
+  },
+  {
+   "news_id": "0851d646-f6d0-470b-bb19-de17f3d95d9a",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "A statement from Mr. Analjit Singh, Founder and Chairman, Max Group on recent coverage of the NCLT petition regarding an unlisted promoter entity is enclosed. \r\nYou are requested to take note of above and arrange to disseminate the same for the information of public.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "931ee89d-a3c4-4dfc-ac6f-ecde05c9399a",
+   "event_type_v2": "GENERAL",
+   "headline": "Interactive Financial Services Ltd (\"Manager to the Offer\") has submitted to BSE a copy of Letter of Offer to the Public Shareholders of Aryavan Enterprise Ltd (\"Target Company\").",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "15ddd6b2-703d-4995-9d18-80eafafa1471",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Sub:  L&T Construction Awarded (Large*) Contracts for its \r\nPower Transmission & Distribution Business\r\n\r\nWe send herewith a copy of Press Release that is being issued by the Company today, in connection with the above.\r\n\r\nWe request you to take note of the same.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "de4b7287-166a-4648-b183-8a0304c5d964",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Pursuant to Reg 33 of SEBI (LODR) Regulations, 2015, remittance of penalty issued by exchange for late submission of Standalone Assets & Liabilities and Cash Flow Statement for the quarter ended September 2023",
+   "gold": "negative"
+  },
+  {
+   "news_id": "fa8632c5-c46d-4f4b-b05e-8514cc091366",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Press Release on Unaudited Financial Results for Quarter and Half-year ended 30th September, 2022 (Standalone and Consolidated)",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "13a1676c-7128-4de6-b79d-10fd0f794155",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "With reference to the abovementioned subject, we would like to inform you that the CRISIL Limited vide its letter dated 16th  May 2023, has placed its rating on the banking facility(ies) of the Company as mentioned in the attached letter.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "573dd4df-89dd-46a9-ae67-bbaabea54a88",
+   "event_type_v2": "GENERAL",
+   "headline": "The Board of Directors in their meeting held today have decided to convene Annual General meeting of the Company on Thursday the 21st September, 2023 at 12.00 noon through video conferencing (VC)/Other audio visual means (OAVM).",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "8e00e747-6e8b-4314-af87-3408c04976f7",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "We wish to inform you that Sharika Enterprises has received order from Punjab Energy Development Agency for Design, Supply, Installation and Commissioning including 12 Watt<BR> LED based 500 Solar Lighting Systems with 12.8-30Ah, Lithium Ferro Phosphate Battery with 5 years warranty amounting 81,30,000/- (INR Eighty One Lacs Thirty Thousand Only)<BR> Including Taxes <BR>",
+   "gold": "positive"
+  },
+  {
+   "news_id": "6c5e6e28-86cd-4053-a3b0-07a51b4fb9f5",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "CARE Ratings has reviewed and reaffirmed the ratings to Company''s long term / short term bank facilities",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "b6353969-6ff9-4004-82cf-46e573020aad",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Update on acquisition of stake in Kogo Tech Labs Private Limited",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "7b6dddc8-73ef-4aa0-9a83-9f9efff0190e",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Disclosure under Regulation 30 of SEBI (Listing Obligation and Disclosure Requirements) Regulations, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "f17a9aa7-8a70-41a3-a634-ac93701ac74f",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Pursuant to Regulation 30 of the SEBI (LODR) regulation 2015 listing agreement, we wish to inform that the Board on the recommendation of Nomination & Remuneration Committee and Audit & Risk Management Committee, had approved appointment of Mr. Sandeep Modi currently Interim CFO, as\r\nChief Financial Officer (KMP) of the Company w.e.f. April 21, 2023.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1fc97d60-dffb-4ccb-a7da-9ab298016268",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Hitachi Energy India Limited has informed the Exchange regarding the Appointment of Senior Management Personnel of the Company",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "db4adc55-fe64-4940-9dae-99743796eb4b",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Lupin Receives Approval from U.S. FDA for Diazepam Rectal Gel.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "321078e1-b1a3-4621-9958-20a0620548ca",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Notice of NCLT convened Meeting of the Unsecured creditors of Adani Ports and Special Economic Zone Limited scheduled on March 14, 2022",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2060ef30-78c5-4660-92e9-64b341b978ce",
+   "event_type_v2": "RESULTS",
+   "headline": "Unaudited Financial Results for the quarter and nine months ended 31.12.2020",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "0b143a2c-e5a4-4cb7-9c46-0dae5d9a2b2d",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Disclosure under Regulation 30 of Securities and Exchange Board of India (Listing Obligations and Disclosure Requirements) Regulations, 2015 - Intimation\r\nregarding Order passed by Hon'ble NCLT, Mumbai Bench on 11th April, 2023 in IA No. 1263 of 2023 in C.P.(IB)-70(MB)/2022.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "69cc7faa-cba1-4cff-9061-3fe2c44b5b8e",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "The company has temporarily suspended production in the plant due to lower market demand amid the ongoing COVID-19 pandemic.<BR>",
+   "gold": "negative"
+  },
+  {
+   "news_id": "66e46b3e-bf51-43e8-95ec-cf6df3543dec",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Pursuant to Regulation 30 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations,2015, we are pleased to inform you that India Ratings and Research (Ind-Ra) has reaffirmed IFB Agro Industries Limited's Long-Term Issuer Rating at 'IND A+'. (Report Enclosed) \r\n\r\nThis is for your kind information and records.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "dc8bc2af-1c0d-4bd0-9bd3-d0cc6579368f",
+   "event_type_v2": "GENERAL",
+   "headline": "This is to inform you that the Board of Directors of the Company at their meeting held today, i.e., 21st May, 2022, inter-alia, considered and approved the re-appointment of Shri Narender Surana as Managing Director of the Company for a further period of three (3) years with effect from 23rd May, 2022 to 22nd May, 2025, subject to approval of the shareholders of the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "f92adffe-34f5-4454-afb1-773a285bb23b",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Intimation under Regulation 30 of the Securities and Exchange Board of India (Listing Obligations and Disclosure Requirements) Regulations, 2015 - Press Release",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "eb758f29-db1b-44bd-8df3-c2563b775536",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Acquisition of equity share capital in Duqm Cement Project International, LLC, Oman",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2dbb67bc-e61e-4903-b115-21b67d3f3714",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Intimation of Credit rating under Regulation 30 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ec01c794-2830-4b09-bfd6-f3fd0050eabe",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Press / Media Release by Shiseido Company, Limited ('Shiseido') - 'Shiseido to Expand Brand Footprint in India' (Launch of its global makeup brand NARS Cosmetics, through a strategic distribution partnership agreement with Global SSBeauty Brands Limited, a subsidiary of Shoppers Stop Limited enclosed herewith.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "5ebe8c62-c78c-4079-b3c7-6c93e739d4da",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Please refer the attached file for details regarding GST order received by the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "f0578613-b044-426b-ae83-e54fe25559c5",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "TVS Motor Company to provide free COVID-19 vaccination to all employees and their immediate family members",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c6df33df-756f-4cee-b8f7-5c284f471c72",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Rating action on Bank''s outstanding/ proposed Additional Tier 1 and Tier 2 Bonds by CARE Ratings Ltd.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "8ef9435e-325e-400b-83f4-822bc8486e11",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "We are pleased to inform you that Board of Directors of the Company in their meeting held today i.e. 30.09.2023 inter-alia resolved the following",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4256a8ab-4a49-440b-bd3a-6c64087ab5cb",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "Resignation of Statutory Auditors in order to facilitate their merger with another firm of auditors",
+   "gold": "negative"
+  },
+  {
+   "news_id": "2bbdbfea-27fb-4db0-97b2-1aca925cfa85",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "End of Tenure of Mr. Venkata Sudhakar Simhadri as managing Director of the Company as on 25-October-2023 closing business hours.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "39aa7d63-575b-49a6-aeb6-ed27be27deb9",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": "Disclosure under clause 20, Para A, Part A of Schedule III of LODR  Regulations 2023",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "569bca2b-72ef-46dd-9abf-64b560b3f1e4",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Pursuant to Regulation 30 and all other applicable regulations, if any, of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015, we are enclosing herewith the credit ratings of the Company as reaffirmed by the CARE Ratings Limited, Credit Rating Agency.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "788db677-de7e-4060-9425-8f36a7db033b",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "With reference to above, we wish to inform that credit rating agency 'CARE Ratings' has reviewed various credit facilities of the company and reaffirmed the ratings.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "74d56af5-1367-46be-b059-4a9b6c86ea28",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Receipt of orders worth about USD 22.12 Mn (approximately Rs 174.6 Crores)",
+   "gold": "positive"
+  },
+  {
+   "news_id": "8ea16645-0c0c-4173-adb7-090277b3b2a3",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "M/s. J Gupta & Co LLP, Chartered Accountants, have tendered their resignation as the Statutory Auditor of the Company.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "2649d10b-cd1a-4996-b835-c83b9a55a6ef",
+   "event_type_v2": "GENERAL",
+   "headline": "Default in Payment of Interest due on Non-Convertible Debentures (NCDs)",
+   "gold": "negative"
+  },
+  {
+   "news_id": "c6bd5c32-4492-4a19-9dd2-f1d023282a75",
+   "event_type_v2": "GENERAL",
+   "headline": "Grant of Stock Options to the eligible employees under the Employee Stock Options Schemes of the Company.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c5e1b2b4-ea62-461a-967f-c99ee87a5234",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Press Release issued by JMC Projects (India) Limited, a Listed subsidiary of the Company, titled 'JMC secures new orders of <BR> Rs. 1,451 Crores'<BR>",
+   "gold": "positive"
+  },
+  {
+   "news_id": "bcfe4617-ebf9-425f-a670-2372a76e0cac",
+   "event_type_v2": "RESULTS",
+   "headline": "Sapphire Foods India Limited  has informed the Exchange about Board Meeting held on 17-May-2022 to consider financial statements for the period ended March 2022",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "85acba38-dedc-45c1-8df2-e46a23aa2094",
+   "event_type_v2": "GENERAL",
+   "headline": "Appointment of Ms. Malini Chopra as an Additional Independent Director",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "573c74a0-b5ea-47ab-8066-e7ae0b2e00cb",
+   "event_type_v2": "LEGAL_REGULATORY",
+   "headline": ".: Disclosure under Regulation 30 of the SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015 - Copy of Hon'ble National Company Law Tribunal, Ahmedabad bench order and Appointment of Interim Resolution Professional (IRP) of Sintex Plastics Technology Limited ('Company')",
+   "gold": "negative"
+  },
+  {
+   "news_id": "b1b58bf2-a177-4212-aa93-6bb4e08e0651",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Please find attached a copy of the intimation letter to investors about getting various work orders received to construct various Industrial Projects from various reputed clients.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "f119f856-439a-4f13-969a-4262c61fc1cd",
+   "event_type_v2": "ACQUISITION",
+   "headline": "Pursuant to Regulation 30 of SEBI (Listing Obligations and Disclosure Requirements) Regulation, 2015, as amended, M/s. Attribute Shares & Securities Private Limited, member of Promoter Group of the Company has sold 3,00,000 equity shares in the Open Market through Stock Exchange Mechanism on 21st December, 2022.\r\nThe disclosure in this regard is enclosed.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d28d996a-84c7-41d1-bd22-8d6de60e6c53",
+   "event_type_v2": "MANAGEMENT_CHANGE",
+   "headline": "Global Surfaces Limited has informed the Exchange above Appointment of Senior Mangement Personnel (SMP)",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "5fff388b-8783-49d1-8289-b24103d611b9",
+   "event_type_v2": "AUDITOR_RESIGNATION",
+   "headline": "This is to bring to your kind notice  that  the Auditor of the company had resigned, letter of the same is enclosed herewith for your kind reference.                                                                                Company is in the process of find out the new Auditor for the company, kindly make a note of it.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "c5732c8b-044f-4117-a29f-48101c42ad6e",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Please find enclosed herewith intimation regarding receipt of Major Purchase Order from the Grasim Industries Limited.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "4702e062-bf21-43ee-8a43-b4c84da60691",
+   "event_type_v2": "ACQUISITION",
+   "headline": "PDS Multinational Fashions Limited has informed the Exchange that Subsidiary of the Company, viz., Smart Notch Industrial Limited, incorporated and registered in Hong Kong, has entered into Series Seed Preferred Stock Purchase Agreement with Bigthinx, Inc., a Delaware corporation.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "68efb448-a56b-4b26-8224-7245db54f309",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Press release relating to 'MCX collaborates with Chittagong Stock Exchange Limited (CSE) to establish Bangladesh's first Commodity Exchange'.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "d8c9b29a-9836-4adb-b425-c8f73ca0609d",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "INDOCO REMEDIES RECEIVES TENTATIVE ANDA APPROVAL FROM USFDA FOR CANAGLIFLOZIN TABLETS",
+   "gold": "positive"
+  },
+  {
+   "news_id": "6cb3d0c1-1f78-4fc6-a202-1791e2ad00f8",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Intimation under guidance note for companies undergoing Corporate Insolvency Resolution Process dated 9th July 2021 (bearing reference number 20210709-9).",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "b3185146-dd94-43ff-a808-6bd9b90b9348",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Intimation of press release titled \"IndiGrid and G R Infraprojects partner together for Power Transmission Bids\"",
+   "gold": "positive"
+  },
+  {
+   "news_id": "a8d0ef24-6a1a-4eb1-99b6-f460d9d9b9f9",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Pursuant to Regulation 30 of the Listing Regulations, we wish to inform you that ICRA Limited has re-affirmed the long term rating of \"[ICRA]A+(pronounced ICRA A plus)\" and short term rating of \"[ICRA]A1 (pronounced ICRA A one)\". Out look on the long-term rating is stable.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "896c438c-87fd-422c-ab6d-6cdbde6442db",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Update on next hearing fixed for 04.01.2022 at Hon''ble NCLT, Principal Bench, New Delhi",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a0fd2980-1b16-4bcf-8a7e-c6c05cb5dc97",
+   "event_type_v2": "PRESS_RELEASE",
+   "headline": "Rama Steel Tubes Limited submitted with Exchange a copy of Media Release dated July 25, 2022.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c7ae26f9-f350-4e2b-a628-92b5163c5707",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "In terms of Regulation 30(6) of SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015, we hereby inform that ACUITE Ratings and Research Limited has upgraded its rating on the Bank Loans/Debt Instruments of the Company, from 'ACUITE BBB-, Outlook 'Stable' to ACUITE BBB, Outlook 'Stable'",
+   "gold": "positive"
+  },
+  {
+   "news_id": "e4d7277f-053a-470a-a415-a5e23ab8c44d",
+   "event_type_v2": "INSOLVENCY",
+   "headline": "Committee of Creditors approval for Resignation of Chief Financial Officer",
+   "gold": "negative"
+  },
+  {
+   "news_id": "ab0e52a2-15b1-43c6-a2b2-b2047190559e",
+   "event_type_v2": "CREDIT_RATING",
+   "headline": "Intimation of revision in the credit rating under regulation 30 of the SEBI (Listing Obligation and Disclosure Requirements) Regulations, 2015",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "813a8582-a70e-42c5-a4a0-22a691e2f0a7",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "Faze Three Autofab Limited has informed Stakeholders regarding \"Receipt of Delisting Order dated October 31, 2023\" from the Stock Exchange where Equity Shares of the Company are presently Listed i.e. BSE Limited.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "f6b7f46b-0814-4d11-8d58-f6f8f6036df0",
+   "event_type_v2": "ORDER_WIN",
+   "headline": "SEML achieves yet another milestone order of INR 85 Million.",
+   "gold": "positive"
+  }
+ ]
+}

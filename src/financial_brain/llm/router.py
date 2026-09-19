@@ -70,13 +70,18 @@ def plan(con, task: str, *, optimised: bool = True) -> list[dict]:
     return sorted(steps, key=lambda s: (s["tier"], s["latency_ms"] or 0))
 
 
-def choose(con, task: str, *, budget_ms: float = 4000) -> dict:
-    """Pick and store the best route within a latency budget (replayed, no model calls)."""
-    best = bench.optimise_route(con, task, budget_ms=budget_ms)
+def choose(con, task: str, *, budget_ms: float = 4000, verify_on: str | None = None,
+           max_accepted_error: float = 0.10) -> dict:
+    """Pick and store a route (replayed, no model calls). With ``verify_on`` the route
+    must hold up on a set that had no part in fitting its thresholds; if none does,
+    nothing is stored and the router declines the task."""
+    best = bench.optimise_route(con, task, budget_ms=budget_ms, verify_on=verify_on,
+                                max_accepted_error=max_accepted_error)
     if best.get("chain"):
         con.execute("""INSERT INTO model_routes (task, steps, simulated, budget_ms, chosen_at)
                        VALUES (?,?,?,?,?)""",
-                    [task, json.dumps(best["chain"]), json.dumps(best["simulated"]),
+                    [task, json.dumps(best["chain"]),
+                     json.dumps({"tuning": best["simulated"], "verified": best.get("verified")}),
                      budget_ms, datetime.now(timezone.utc)])
     return best
 

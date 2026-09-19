@@ -82,7 +82,10 @@ def ollama_decide(model: str, instruction: str, state: str, choices: list[str], 
                          {"role": "user", "content":
                           _word_prompt(instruction, state, choices) if words else
                           _prompt(instruction, state, choices, notes)}],
-            "options": {"temperature": 0, "num_predict": 1, "seed": 7}}
+            # num_ctx: a typed decision prompt is < 1k tokens. Ollama otherwise sizes the
+            # KV cache for its default 16k context (~2 GB), which fails to allocate on a
+            # 16 GB laptop and forces needless reloads.
+            "options": {"temperature": 0, "num_predict": 1, "seed": 7, "num_ctx": 2048}}
     t0 = time.perf_counter()
     try:
         out = _post(body, timeout)

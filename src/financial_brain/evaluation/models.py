@@ -37,9 +37,10 @@ SENTIMENT_NOTES = {"positive": "states a favourable fact for shareholders (order
 
 
 def _rows(task: str) -> list[dict]:
-    if task == "sentiment":
+    if task in ("sentiment", "sentiment_holdout"):
+        f = "sentiment_labels.json" if task == "sentiment" else "sentiment_labels_holdout.json"
         return [{"state": r["headline"], "gold": r["gold"]} for r in
-                json.loads((FIXTURES / "sentiment_labels.json").read_text("utf-8"))["rows"]]
+                json.loads((FIXTURES / f).read_text("utf-8"))["rows"]]
     if task == "event_type":
         out = []
         for f in ("announcement_labels.json", "announcement_labels_holdout.json"):
@@ -51,8 +52,13 @@ def _rows(task: str) -> list[dict]:
     raise ValueError(f"unknown task {task}")
 
 
+def base(task: str) -> str:
+    """A held-out set is scored as its base task (same choices, prompt, thresholds)."""
+    return task.removesuffix("_holdout")
+
+
 def choices(task: str) -> list[str]:
-    if task == "sentiment":
+    if base(task) == "sentiment":
         return SENTIMENT_CHOICES
     return sorted({r["gold"] for r in _rows(task)})
 
@@ -68,6 +74,7 @@ INSTRUCTION = {
 def decider(task: str, model: str):
     """A function state -> Decision for this (task, model), or raise if unsupported."""
     ch = choices(task)
+    task = base(task) if task.endswith("_holdout") and model != "rules" else task
     if model == "rules":
         if task != "event_type":
             raise ValueError("rules only exist for event_type")
@@ -80,7 +87,7 @@ def decider(task: str, model: str):
             return system1.Decision(label=kind, probs={}, confidence=conf, model="rules")
         return rules
     if model == "finbert":
-        if task != "sentiment":
+        if base(task) != "sentiment":
             raise ValueError("finbert only does sentiment")
         from ..config import load
         fb = backends.FinBERT(load().data_root / "models" / "finbert")
@@ -89,7 +96,7 @@ def decider(task: str, model: str):
     if router.registry().get(model, {}).get("system_one", True) is False:
         raise ValueError(f"{model} is reasoning-only (system_one = false); it cannot give "
                          "a one-token typed decision")
-    notes = SENTIMENT_NOTES if task == "sentiment" else None
+    notes = SENTIMENT_NOTES if base(task) == "sentiment" else None
     style = router.registry().get(model, {}).get("answer_style", "letters")
     return lambda row: system1.ollama_decide(model, INSTRUCTION[task], row["state"], ch,
                                              notes=notes, style=style)
@@ -149,9 +156,12 @@ def bench(con, task: str, model: str, *, target: float = 0.9, limit: int | None 
     return out
 
 
-def simulate_route(con, task: str, steps: list[dict]) -> dict:
+def simulate_route(con, task: str, steps: list[dict], *, items_task: str | None = None) -> dict:
     """End-to-end result of a router cascade, replayed from stored benchmark items:
-    accuracy, share answered by each step, share left uncertain, mean latency paid."""
+    accuracy, share answered by each step, share left uncertain, mean latency paid, and
+    how often an *accepted* answer was wrong. ``items_task`` replays the same steps (and
+    their thresholds) on another set - that is how a route is verified out-of-sample."""
+    task = items_task or task
     golds = [r["gold"] for r in _rows(task)]
     items = {}
     for s in steps:
@@ -162,21 +172,30 @@ def simulate_route(con, task: str, steps: list[dict]) -> dict:
             raise ValueError(f"no per-item benchmark for {s['model']} on {task}; re-run bench")
         items[s["model"]] = stored
     right, paid, answered_by, uncertain = 0, 0.0, Counter(), 0
+    accepted, accepted_wrong, per_label = 0, 0, Counter()
     for i, g in enumerate(golds):
-        label = None
+        label, was_accepted = None, False
         for s in steps:
             lab, conf, lat = items[s["model"]][i]
             paid += lat
             label = lab
             if accepts(s, lab, conf):
                 answered_by[s["model"]] += 1
+                was_accepted = True
                 break
         else:
             uncertain += 1
         right += label == g
+        accepted += was_accepted
+        accepted_wrong += was_accepted and label != g
+        per_label[(g, label if was_accepted else "uncertain")] += 1
     n = len(golds)
+    recall = {g: per_label[(g, g)] / max(1, sum(v for (gg, _), v in per_label.items()
+                                                if gg == g)) for g in set(golds)}
     return {"accuracy": right / n, "latency_ms": paid / n, "uncertain": uncertain / n,
-            "answered_by": {m: c / n for m, c in answered_by.items()}}
+            "answered_by": {m: c / n for m, c in answered_by.items()},
+            "wrong_when_accepted": accepted_wrong / max(1, accepted),
+            "recall_when_accepted": recall, "set": task}
 
 
 def accepts(step: dict, label: str, confidence: float) -> bool:
@@ -214,24 +233,77 @@ def rescore(con, task: str, *, target: float = 0.9) -> list[dict]:
     return out
 
 
-def optimise_route(con, task: str, *, budget_ms: float = 4000, max_len: int = 3) -> dict:
-    """Search chains (each ordered cheapest first) of up to ``max_len`` calibrated models
-    and keep the one scoring best - accuracy minus the uncertain share, since an
-    unresolved answer is no answer - within a mean-latency budget; ties go to speed."""
+def optimise_route(con, task: str, *, budget_ms: float = 4000, max_len: int = 3,
+                   verify_on: str | None = None, max_accepted_error: float = 0.10) -> dict:
+    """Rank chains on ``task``, then **verify the best ones on ``verify_on``** - a set
+    whose labels played no part in choosing the thresholds - and return the first whose
+    accepted answers are wrong no more than ``max_accepted_error`` of the time.
+
+    Thresholds fitted and judged on one set are optimistic: the first sentiment route
+    scored 89% in-sample and 65% held out, accepting a wrong answer 24% of the time.
+    A route that cannot be verified is not returned - the router then declines rather
+    than answering badly.
+    """
     from itertools import combinations
 
     from ..llm import router
     steps = router.plan(con, task, optimised=False)
-    best = None
+    ranked = []
     for k in range(1, max_len + 1):
         for chain in combinations(steps, k):
             try:
                 sim = simulate_route(con, task, list(chain))
             except ValueError:
                 continue
-            key = (sim["accuracy"] - sim["uncertain"], -sim["latency_ms"])
-            if sim["latency_ms"] <= budget_ms and (best is None or key > best[0]):
-                best = (key, list(chain), sim)
-    if not best:
+            if sim["latency_ms"] <= budget_ms:
+                ranked.append(((sim["accuracy"] - sim["uncertain"], -sim["latency_ms"]),
+                               list(chain), sim))
+    ranked.sort(key=lambda r: r[0], reverse=True)
+    if not ranked:
         return {"task": task, "chain": [], "note": f"nothing fits {budget_ms:.0f} ms"}
-    return {"task": task, "chain": best[1], "simulated": best[2], "budget_ms": budget_ms}
+    if not verify_on:
+        _, chain, sim = ranked[0]
+        return {"task": task, "chain": chain, "simulated": sim, "budget_ms": budget_ms,
+                "verified": None, "note": "not verified out-of-sample"}
+    rejected = []
+    for _, chain, sim in ranked:
+        try:
+            held = simulate_route(con, task, chain, items_task=verify_on)
+        except ValueError as e:
+            rejected.append({"chain": [c["model"] for c in chain], "why": str(e)})
+            continue
+        if held["wrong_when_accepted"] <= max_accepted_error:
+            return {"task": task, "chain": chain, "simulated": sim, "verified": held,
+                    "budget_ms": budget_ms, "rejected": rejected[:5]}
+        rejected.append({"chain": [c["model"] for c in chain],
+                         "wrong_when_accepted": round(held["wrong_when_accepted"], 3),
+                         "uncertain": round(held["uncertain"], 3)})
+    return {"task": task, "chain": [], "rejected": rejected[:8],
+            "note": f"no chain kept accepted errors <= {max_accepted_error:.0%} on "
+                    f"{verify_on}; the router will decline this task"}
+
+
+def validate_route(con, route_task: str, holdout: str) -> dict:
+    """Run the *stored* route for ``route_task`` - thresholds and chain fixed on the
+    tuning set - live on a held-out set, and score it. Nothing is tuned here."""
+    from ..llm import router
+    steps = router.plan(con, route_task)
+    rows = _rows(holdout)
+    golds, labels, accepted, lat = [], [], 0, 0
+    per = Counter()
+    for r in rows:
+        routed = router.decide(con, route_task, r, steps=steps)
+        golds.append(r["gold"])
+        labels.append(routed.decision.label if routed.accepted else "uncertain")
+        accepted += routed.accepted
+        lat += sum(1 for _ in routed.route)
+        per[(r["gold"], labels[-1])] += 1
+    n = len(rows)
+    recall = {g: sum(v for (gg, p), v in per.items() if gg == g and p == g) /
+              max(1, sum(v for (gg, _), v in per.items() if gg == g)) for g in set(golds)}
+    wrong_accepted = sum(1 for g, p in zip(golds, labels) if p not in ("uncertain", g))
+    return {"route": [s["model"] for s in steps], "n": n,
+            "accuracy_counting_uncertain_as_wrong": sum(g == p for g, p in zip(golds, labels)) / n,
+            "uncertain": labels.count("uncertain") / n,
+            "wrong_when_accepted": wrong_accepted / max(1, accepted),
+            "recall": recall, "mean_steps": lat / n}

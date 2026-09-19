@@ -49,7 +49,8 @@ def ollama(model: str, system: str, prompt: str, *, schema: dict | None = None,
     body = {"model": model, "stream": False, "think": False,
             "messages": [{"role": "system", "content": system},
                          {"role": "user", "content": prompt}],
-            "options": {"temperature": temperature, "num_predict": max_tokens, "seed": 7}}
+            "options": {"temperature": temperature, "num_predict": max_tokens, "seed": 7,
+                        "num_ctx": 4096}}   # see system1.ollama_decide on KV cache size
     if schema:
         body["format"] = schema
     req = urllib.request.Request(f"{OLLAMA}/api/chat", data=json.dumps(body).encode(),
