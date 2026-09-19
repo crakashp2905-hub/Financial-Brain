@@ -259,3 +259,23 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   action; split-safe (entry re-read on the current adjusted basis). `fb daily` now also
   refreshes features + promoter graph and closes due paper trades. Implementability
   gate uses the point-in-time F&O list (held from 2026-09-17 only).
+- 2026-09-19/20 (night) — **Strategy change: ADR-0002 tiered models** (owner request).
+  Tier 0 deterministic first; every model call is a typed "System One" decision (Jev
+  pattern, TypeSafe AI) - `llm/system1.py`; backends Ollama (local, option-letter
+  log-probs), FinBERT (int8 ONNX), Anthropic (gated). `fb models list|bench|plan`
+  measures candidates on our labelled Indian tasks and sets calibrated acceptance
+  thresholds; `llm/router.py` goes cheapest-first and escalates. Sentiment fixture: 165
+  Claude-labelled filing headlines. Results so far (macro-F1): llama3.1:8b 0.82,
+  qwen2.5:7b 0.76, phi4 0.72, qwen2.5:3b 0.66, qwen2.5:1.5b 0.64, FinBERT 0.45,
+  FinSenti-1B 0.05; rules 98.9% on event type. Thinking models (qwen3:4b removed,
+  deepseek-r1, Fin-R1) can't give typed answers -> reasoning tier only.
+  Built on it: `fb tone` / daily step (shareholder tone of high-materiality filings,
+  shown in the brief only when a model cleared its bar, cited as MODEL tier);
+  `fb committee --isin` (dossier of cited facts -> analyst stances -> cited bull/bear
+  debate -> deterministic chair -> DRAFT decision). Square-root impact law in costs.
+  Shared resources (TradingAgents, HARLF, LLM strategy finding, QuantResearch) assessed
+  in RESOURCES §3.6a.
+  **Disk:** C: hit 0 GB free (Ollama store 41 GB on C:). Owner approved moving it:
+  copied to `D:\ollama\models` (39.2 GB, verified); switch-over (OLLAMA_MODELS user env
+  var + Ollama restart, then delete the C: copy) pending the end of the benchmark round
+  (`data/bench_sentiment2.log`). Then register Fin-R1 (`data/models/Modelfile.finr1`).
