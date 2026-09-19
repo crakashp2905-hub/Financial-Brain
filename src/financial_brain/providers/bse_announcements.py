@@ -88,13 +88,19 @@ class BSEAnnouncementsProvider(Provider):
                     continue
                 seen.add(nid)
                 att = (r.get("ATTACHMENTNAME") or "").strip()
+                # BSE cuts HEADLINE at ~200 characters, ending it "....", and carries the
+                # full text in MORE. The full text names the holder in SAST disclosures.
+                head = (r.get("HEADLINE") or "").strip()
+                more = (r.get("MORE") or "").strip()
+                if more and (not head or head.endswith("..")):
+                    head = more
                 rows.append({
                     "news_id": nid,
                     "scrip_code": str(r.get("SCRIP_CD") or "").strip(),
                     "company": (r.get("SLONGNAME") or "").strip(),
                     "category": (r.get("CATEGORYNAME") or "").strip(),
                     "subcategory": (r.get("SUBCATNAME") or "").strip(),
-                    "headline": (r.get("HEADLINE") or "").strip(),
+                    "headline": head,
                     "subject": (r.get("NEWSSUB") or "").strip(),
                     "critical": bool(r.get("CRITICALNEWS")),
                     "submitted_at": _ts(r.get("NEWS_SUBMISSION_DT")),

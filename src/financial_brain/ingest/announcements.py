@@ -153,8 +153,12 @@ class AnnouncementsJob:
             FROM _ann a LEFT JOIN pick p ON p.news_id = a.news_id AND p.rk = 1
             -- The announcement is the source; its classification is derived. A --force
             -- replay therefore re-applies the current classifier (and ISIN resolution),
-            -- but never alters what BSE published or when we first saw it.
+            -- but never alters what BSE published or when we first saw it. The one
+            -- exception repairs our own parsing: a headline stored cut off ("....")
+            -- takes the full text BSE sent in the same object.
             ON CONFLICT (news_id) DO UPDATE SET
+                headline = CASE WHEN announcements.headline LIKE '%..'
+                                THEN EXCLUDED.headline ELSE announcements.headline END,
                 event_type = EXCLUDED.event_type, materiality = EXCLUDED.materiality,
                 rule = EXCLUDED.rule, isin = COALESCE(EXCLUDED.isin, announcements.isin)
             RETURNING 1""", [obj.key, now]).fetchall()

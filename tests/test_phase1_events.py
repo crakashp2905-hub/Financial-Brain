@@ -204,3 +204,14 @@ def test_real_residue_from_the_first_90_days(cat, sub, headline, expected):
 def test_legal_keywords_need_word_boundaries_and_real_legal_phrasing(text, legal):
     from financial_brain.events.classify import _LEGAL
     assert bool(_LEGAL.search(text)) is legal
+
+
+def test_truncated_headline_takes_full_text_from_more():
+    full = ("The Exchange has received the disclosure under Regulation 29(2) of SEBI (SAST) "
+            "Regulations, 2011 for Kaushik Shah Shares & Securities Pvt Ltd & Kaushik Shah")
+    cut = dict(_row("n1", 1, "Disclosures under Reg. 29(2)", full[:150] + " ...."), MORE=full)
+    whole = dict(_row("n2", 2, "General", "Short and complete"), MORE="")
+    body = json.dumps({"date": "2026-09-17", "rowcount": 2,
+                       "pages": [json.dumps({"Table": [cut, whole]})]}).encode()
+    _, rows = BSEAnnouncementsProvider.parse(body)
+    assert [r["headline"] for r in rows] == [full, "Short and complete"]
