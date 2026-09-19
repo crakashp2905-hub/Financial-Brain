@@ -71,10 +71,18 @@ wrong at most 10% of the time. Result:
 | finbert -> qwen2.5:1.5b -> llama3.1:8b | - | 18.6% wrong when accepted - rejected |
 | **qwen2.5:7b alone** | 85.5%, 5.3 s | **86.5%, 7% wrong when accepted**, declines 34% - **stored** |
 
-The deployed sentiment route is one 7B model at ~4.6 s/item. Cheap cascades are not
-ruled out in principle - none has yet earned trust on data it was not fitted to. A model
-that cannot verify is not routed to, and a task with no verified route is declined
-rather than answered badly.
+With every model benchmarked on the held-out set too, the deployed route is
+
+| route | tuning | held out |
+|---|---|---|
+| qwen2.5:7b alone (error bar 10%) | 85.5% | 86.5%, 7% wrong when accepted, **declines 34%**, flags nothing but "neutral" |
+| **llama3.1:8b -> phi4 -> gemma2** (error bar 15%) | 91.5% | **85.6%, 14.6% wrong when accepted, declines 1%**; recall 75% of positives, 60% of negatives |
+
+The second is deployed: a tone *hint* in the brief is worth more at 85% precision with
+coverage than at 93% precision that never flags anything. It is labelled with the model
+that produced it and is MODEL-tier evidence - never a fact. The cheap-first cascades
+remain rejected; escalation here runs big-to-bigger, and 88% of items are settled by the
+first model. Cost: ~6.8 s per filing on this CPU, so the daily step is capped.
 
 ## Consequences
 

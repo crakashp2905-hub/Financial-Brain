@@ -19,6 +19,9 @@ from ..llm import router
 TASK = "sentiment"
 
 
+DAILY_LIMIT = 150               # ~6.8 s per filing on this CPU: cap what a daily run costs
+
+
 def classify_day(con, d: date, *, materiality: tuple[str, ...] = ("high",),
                  limit: int | None = None) -> dict:
     steps = router.plan(con, TASK)

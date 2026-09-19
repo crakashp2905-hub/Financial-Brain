@@ -955,7 +955,7 @@ def cmd_daily(args) -> int:
         from .events import tone
         with Database(cfg).connect() as con:
             d = con.execute("SELECT MAX(business_date) FROM universe_snapshots").fetchone()[0]
-            return tone.classify_day(con, d)
+            return tone.classify_day(con, d, limit=tone.DAILY_LIMIT)
     step("announcement tone (model router)", announcement_tone)
     step("paper trades (close those due)", paper_mark)
     if not args.no_brief:
