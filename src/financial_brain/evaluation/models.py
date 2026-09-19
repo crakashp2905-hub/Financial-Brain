@@ -84,9 +84,14 @@ def decider(task: str, model: str):
         from ..config import load
         fb = backends.FinBERT(load().data_root / "models" / "finbert")
         return lambda row: system1.finbert_decide(fb, row["state"])
+    from ..llm import router
+    if router.registry().get(model, {}).get("system_one", True) is False:
+        raise ValueError(f"{model} is reasoning-only (system_one = false); it cannot give "
+                         "a one-token typed decision")
     notes = SENTIMENT_NOTES if task == "sentiment" else None
+    style = router.registry().get(model, {}).get("answer_style", "letters")
     return lambda row: system1.ollama_decide(model, INSTRUCTION[task], row["state"], ch,
-                                             notes=notes)
+                                             notes=notes, style=style)
 
 
 def score(golds: list[str], decisions: list, target: float) -> dict:
@@ -118,7 +123,9 @@ def bench(con, task: str, model: str, *, target: float = 0.9, limit: int | None 
     decisions = [decide(r) for r in rows]
     out = score([r["gold"] for r in rows], decisions, target)
     out.update(task=task, model=model,
-               latency_ms=sum(d.latency_ms for d in decisions) / len(decisions))
+               latency_ms=sum(d.latency_ms for d in decisions) / len(decisions),
+               # per item, so a router cascade can be simulated without re-running models
+               items=[[d.label, round(d.confidence, 5), d.latency_ms] for d in decisions])
     if record:
         con.execute("""INSERT INTO model_bench (run_at, task, model, n, accuracy, macro_f1,
                        latency_ms, target, threshold, coverage, detail)
@@ -127,3 +134,33 @@ def bench(con, task: str, model: str, *, target: float = 0.9, limit: int | None 
                      out["macro_f1"], out["latency_ms"], target, out["threshold"],
                      out["coverage"], json.dumps(out)])
     return out
+
+
+def simulate_route(con, task: str, steps: list[dict]) -> dict:
+    """End-to-end result of a router cascade, replayed from stored benchmark items:
+    accuracy, share answered by each step, share left uncertain, mean latency paid."""
+    golds = [r["gold"] for r in _rows(task)]
+    items = {}
+    for s in steps:
+        row = con.execute("""SELECT detail FROM model_bench WHERE task = ? AND model = ?
+                             ORDER BY run_at DESC LIMIT 1""", [task, s["model"]]).fetchone()
+        stored = json.loads(row[0]).get("items") if row else None
+        if not stored or len(stored) != len(golds):
+            raise ValueError(f"no per-item benchmark for {s['model']} on {task}; re-run bench")
+        items[s["model"]] = stored
+    right, paid, answered_by, uncertain = 0, 0.0, Counter(), 0
+    for i, g in enumerate(golds):
+        label = None
+        for s in steps:
+            lab, conf, lat = items[s["model"]][i]
+            paid += lat
+            label = lab
+            if conf >= s["threshold"]:
+                answered_by[s["model"]] += 1
+                break
+        else:
+            uncertain += 1
+        right += label == g
+    n = len(golds)
+    return {"accuracy": right / n, "latency_ms": paid / n, "uncertain": uncertain / n,
+            "answered_by": {m: c / n for m, c in answered_by.items()}}

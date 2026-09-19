@@ -25,6 +25,7 @@ import json
 import math
 import string
 import time
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 
@@ -52,41 +53,72 @@ def _prompt(instruction: str, state: str, choices: list[str],
             f"\n\nInput:\n{state}\n\nAnswer with the single option letter only.")
 
 
+def _word_prompt(instruction: str, state: str, choices: list[str]) -> str:
+    return (f"{instruction}\n\nInput:\n{state}\n\nAnswer with exactly one word from: "
+            + ", ".join(choices) + ".")
+
+
+def _word_key(tok: str, choices: list[str]) -> str | None:
+    """The choice a first token begins, if it begins exactly one of them."""
+    t = tok.strip().lower()
+    if not t:
+        return None
+    hits = [c for c in choices if c.lower().startswith(t)]
+    return hits[0] if len(hits) == 1 else None
+
+
 def ollama_decide(model: str, instruction: str, state: str, choices: list[str], *,
-                  notes: dict[str, str] | None = None, timeout: int = 600) -> Decision:
+                  notes: dict[str, str] | None = None, timeout: int = 600,
+                  style: str = "letters") -> Decision:
+    """``style="letters"`` shows lettered options (general models); ``"words"`` asks for
+    the choice word itself (specialists fine-tuned to answer "positive", "negative"...)."""
     if not 2 <= len(choices) <= len(KEYS):
         raise ValueError(f"2..{len(KEYS)} choices")
     keys = KEYS[:len(choices)]
+    words = style == "words"
     body = {"model": model, "stream": False, "logprobs": True, "top_logprobs": 20,
+            "think": False,                    # thinking models must answer, not muse
             "messages": [{"role": "system", "content": "You are a precise classifier."},
-                         {"role": "user", "content": _prompt(instruction, state, choices,
-                                                             notes)}],
+                         {"role": "user", "content":
+                          _word_prompt(instruction, state, choices) if words else
+                          _prompt(instruction, state, choices, notes)}],
             "options": {"temperature": 0, "num_predict": 1, "seed": 7}}
-    req = urllib.request.Request(f"{backends.OLLAMA}/api/chat",
-                                 data=json.dumps(body).encode(),
-                                 headers={"Content-Type": "application/json"})
     t0 = time.perf_counter()
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            out = json.load(r)
+        out = _post(body, timeout)
+    except urllib.error.HTTPError as e:
+        if e.code != 400:
+            raise backends.BackendUnavailable(f"ollama {model}: {e}") from e
+        body.pop("think")                      # model has no thinking switch
+        out = _post(body, timeout)
     except OSError as e:
         raise backends.BackendUnavailable(f"ollama {model}: {e}") from e
-    mass = {k: 0.0 for k in keys}
+    mass = {c: 0.0 for c in choices}
     lp = (out.get("logprobs") or [{}])[0]
     for cand in lp.get("top_logprobs") or [lp] if lp else []:
         tok = (cand.get("token") or "").strip().rstrip(".):")
-        if tok in mass:
-            mass[tok] += math.exp(cand["logprob"])
+        c = _word_key(tok, choices) if words else (
+            choices[keys.index(tok)] if tok in keys else None)
+        if c:
+            mass[c] += math.exp(cand["logprob"])
     total = sum(mass.values())
     if total <= 0:                             # the model answered off-menu
         probs = {c: 1 / len(choices) for c in choices}
     else:
-        probs = {choices[keys.index(k)]: v / total for k, v in mass.items()}
+        probs = {c: v / total for c, v in mass.items()}
     label = max(probs, key=probs.get)
     return Decision(label=label, probs=probs, confidence=probs[label], model=model,
                     latency_ms=int((time.perf_counter() - t0) * 1000),
                     input_tokens=out.get("prompt_eval_count", 0),
                     extra={"off_menu": total <= 0, "captured_mass": total})
+
+
+def _post(body: dict, timeout: int) -> dict:
+    req = urllib.request.Request(f"{backends.OLLAMA}/api/chat",
+                                 data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.load(r)
 
 
 def finbert_decide(fb: backends.FinBERT, state: str) -> Decision:

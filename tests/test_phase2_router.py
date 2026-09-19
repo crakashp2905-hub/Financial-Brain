@@ -68,3 +68,19 @@ def test_router_escalates_and_marks_uncertain(con, monkeypatch):
     answers["big"] = D("negative", 0.5, "big")
     r = router.decide(con, "t", {"state": "x"}, steps=steps)
     assert not r.accepted, "an answer below every bar stays uncertain"
+
+
+def test_cascade_is_replayed_from_stored_items(con, monkeypatch):
+    import json
+    golds = ["a", "b", "a"]
+    monkeypatch.setattr(bench, "_rows", lambda task: [{"state": str(i), "gold": g}
+                                                       for i, g in enumerate(golds)])
+    for model, items in (("small", [["a", 0.99, 10], ["a", 0.5, 10], ["b", 0.4, 10]]),
+                         ("big", [["a", 0.9, 100], ["b", 0.95, 100], ["a", 0.95, 100]])):
+        con.execute("""INSERT INTO model_bench (run_at, task, model, n, detail)
+                       VALUES (NOW(), 't', ?, 3, ?)""", [model, json.dumps({"items": items})])
+    r = bench.simulate_route(con, "t", [{"model": "small", "threshold": 0.9},
+                                        {"model": "big", "threshold": 0.9}])
+    assert r["accuracy"] == 1.0 and r["uncertain"] == 0
+    assert r["answered_by"] == pytest.approx({"small": 1 / 3, "big": 2 / 3})
+    assert r["latency_ms"] == pytest.approx((10 + 110 + 110) / 3)

@@ -8,6 +8,41 @@
 # A model is *eligible* for a task only after `fb models bench` has measured it on that
 # task's labelled set and it cleared the task's bar. Reputation is not a qualification.
 # Prices are USD per million tokens (input, output); local models cost 0.
+# system_one = false marks reasoning-only models: they think before any answer, so they
+# cannot give a one-token typed decision (minutes per item on this CPU). They are for
+# rare hard questions, never for bulk classification, and the benchmark skips them.
+
+[[model]]
+name = "qwen2.5:1.5b"
+backend = "ollama"
+tier = 1
+role = "cheap typed decisions"
+
+[[model]]
+name = "qwen2.5:3b"
+backend = "ollama"
+tier = 1
+role = "cheap typed decisions"
+
+[[model]]
+name = "llama3.2:3b"
+backend = "ollama"
+tier = 1
+role = "cheap typed decisions"
+
+[[model]]
+name = "finsenti-llama3.2-1b"
+backend = "ollama"
+tier = 1
+answer_style = "words"            # fine-tuned to answer the label word, not a letter
+role = "financial sentiment specialist (FinSenti, Apache-2.0)"
+
+[[model]]
+name = "nomic-embed-text:latest"
+backend = "ollama"
+tier = 1
+system_one = false
+role = "embeddings for retrieval (not a classifier)"
 
 [[model]]
 name = "llama-guard3:1b"
@@ -43,7 +78,22 @@ role = "reasoning over supplied facts"
 name = "deepseek-r1:14b"
 backend = "ollama"
 tier = 2
+system_one = false
 role = "step-by-step reasoning (slow: emits long thinking)"
+
+[[model]]
+name = "qwen3:4b"
+backend = "ollama"
+tier = 2
+system_one = false
+role = "reasoning; always thinks first (ignores think=false and /no_think)"
+
+[[model]]
+name = "fin-r1"
+backend = "ollama"
+tier = 2
+system_one = false
+role = "financial reasoning (Fin-R1 7B, SUFE; licence unverified - personal use)"
 
 [[model]]
 name = "claude-haiku-4-5"

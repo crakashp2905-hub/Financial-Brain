@@ -774,9 +774,17 @@ def cmd_models(args) -> int:
                       f"threshold {r['threshold']} coverage {r['coverage']:.2f} "
                       f"{r['latency_ms']:.0f} ms  {r['top_confusions'][:3]}")
         elif args.action == "plan":
-            for s in router.plan(con, args.task):
+            steps = router.plan(con, args.task)
+            for s in steps:
                 print(f"tier {s['tier']}  {s['model']:<20} accept at >= {s['threshold']:.3f}"
                       f"  F1 {s['macro_f1']:.3f}  {s['latency_ms']:.0f} ms")
+            try:
+                r = bench.simulate_route(con, args.task, steps)
+                print(f"route end-to-end: accuracy {r['accuracy']:.3f}, uncertain "
+                      f"{r['uncertain']:.0%}, {r['latency_ms']:.0f} ms per item, answered by "
+                      + ", ".join(f"{m} {v:.0%}" for m, v in r["answered_by"].items()))
+            except ValueError as e:
+                print(f"(no replay: {e})")
         else:
             local = backends.ollama_models()
             latest = {(t, m): (f1, thr, lat) for t, m, f1, thr, lat in con.execute("""
