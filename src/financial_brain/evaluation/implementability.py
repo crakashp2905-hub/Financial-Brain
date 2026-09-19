@@ -16,8 +16,10 @@ Checks:
                   at most ``max_participation`` of the name's 20-session traded value -
                   for enough names in the universe to fill the book
 ``turnover``      the cost of the hypothesis's own rebalance frequency (round trip per
-                  rebalance, Indian delivery costs incl. STT both legs and impact) must
-                  leave the expected edge positive
+                  rebalance, Indian delivery costs incl. STT both legs, and
+                  square-root market impact for the book's actual order size at the
+                  median liquidity and volatility of eligible names) must leave the
+                  expected edge positive
 ``surveillance``  ASM / GSM / T2T lists are not ingested: reported UNCHECKED, never PASS
 
 The gate does not judge whether the idea works - that is the firewall's job, afterwards.
@@ -73,7 +75,16 @@ def check(con, h: Hypothesis, as_of=None) -> dict:
                           f"{per_name / 1e7:.2f} cr per position at {h.max_participation:.0%}"
                           f" of ADV); need {5 * h.positions} to choose {h.positions}")
 
-    rt = CostModel().round_trip(turnover=1_000_000, bucket=h.bucket)["bps"] / 10_000
+    # Price the book's real orders: square-root impact at the median liquidity and
+    # volatility of the names it can hold (bucket table only if features lack them).
+    med = con.execute(f"""SELECT MEDIAN(adv20), MEDIAN(vol_20) FROM features
+                          WHERE adv20 >= ? AND business_date = {date_sql}""",
+                      params).fetchone() if _has_col(con, "features", "vol_20") else None
+    if med and med[0] and med[1]:
+        rt = CostModel().round_trip_sized(order_value=per_name, adv_value=med[0],
+                                          daily_vol=med[1] / 252 ** 0.5)["total"]
+    else:
+        rt = CostModel().round_trip(turnover=1_000_000, bucket=h.bucket)["bps"] / 10_000
     per_year = 250 / h.rebalance_days
     if h.expected_edge_per_rebalance is None:
         checks["turnover"] = (UNCHECKED, f"no expected edge stated; costs are {rt:.2%} per "
@@ -88,3 +99,9 @@ def check(con, h: Hypothesis, as_of=None) -> dict:
     verdict = FAIL if any(v == FAIL for v, _ in checks.values()) else PASS
     return {"hypothesis": h.name, "verdict": verdict,
             "checks": {k: {"result": v, "why": w} for k, (v, w) in checks.items()}}
+
+
+def _has_col(con, table: str, col: str) -> bool:
+    return bool(con.execute("""SELECT 1 FROM information_schema.columns
+                               WHERE table_name = ? AND column_name = ?""",
+                            [table, col]).fetchone())

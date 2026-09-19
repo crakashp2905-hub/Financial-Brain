@@ -285,6 +285,18 @@ India Implementability Gate in front of it and the Alpha Validation Firewall beh
 Governing rule from that loop: **the AI is not allowed to declare itself successful.
 The validation layer does that.**
 
+### 3.6a Shared 2026-09-19 — assessed
+
+| Resource | Licence | Verdict | Where it fits |
+|---|---|---|---|
+| [TradingAgents](https://github.com/TauricResearch/TradingAgents) ([paper](https://arxiv.org/abs/2412.20138)) | 🟢 Apache-2.0 | **INTEGRATE** (already, §2.2) | Committee (C16) template: analysts → bull/bear debate → trader → risk. Here it runs on the ADR-0002 router: local models do analyst legwork over Tier-0 facts, a frontier model chairs. |
+| [HARLF](https://github.com/franjgs/llm-rl-finance-trader) ([paper](https://arxiv.org/abs/2507.18560)) | 🟢 MIT (5★) | **STUDY** | Hierarchical RL over LLM sentiment for allocation. Its sentiment input is FinBERT, which we measured at macro-F1 0.45 on Indian filings - any RL layer would inherit that. RL stays STUDY (§3.7); a policy would have to pass the firewall like any factor. |
+| [Automate Strategy Finding with LLM](https://github.com/kouzhizhuo/Automate-Strategy-Finding-with-LLM-in-Quant-investment) ([paper](https://arxiv.org/abs/2409.06289), EMNLP 2025) | 🔴 no licence | **STUDY (method only)** | LLM proposes alpha formulas, multi-agent filtering. Adopt the loop, not the code: every generated factor is registered (`fb hypothesis`) and every test is a firewall trial - generation at scale is exactly where multiple-testing control matters. |
+| [nburgessx/QuantResearch](https://github.com/nburgessx/QuantResearch) | 🔴 no licence | **REFERENCE** | Derivatives-pricing notes (bond futures, LSMC, HJM). No factor-zoo or impact code found. |
+| [letianzj/QuantResearch](https://github.com/letianzj/QuantResearch) | 🟢 MIT (3k★, 2023) | **STUDY** | Strategy notebooks incl. a volume-factor Alphalens study. |
+| Metaorder impact (square-root law: Almgren et al. 2005; Toth et al. 2011) | public science | **ADOPTED** | `CostModel.sqrt_impact` / `round_trip_sized`: impact = Y·σ·√(Q/V); the Implementability Gate now prices a book's real orders instead of a flat bucket. |
+| Factor zoo replication (Hou-Xue-Zhang 2020; Jensen-Kelly-Pedersen 2023) | public science | **PLANNED** | Price/volume factors are computable now (features f1 has 9); accounting factors need fundamentals, not yet ingested. Replicate as pre-registered hypotheses, never as a mined batch. |
+
 ### 3.7 Reinforcement learning — **STUDY only**
 `FinRL` 🟢 MIT ~16.3k ★ · `FinRL-Meta` 🟢 MIT ~1.9k ★
 
@@ -459,6 +471,22 @@ restructure. ISIN is the only stable join key.
 orchestration; use small FinBERT-class encoders for narrow, high-volume classification
 where an LLM call per document is wasteful. Never pre-train.
 
+**Superseded in part by [ADR-0002](adr/0002-tiered-models.md) (2026-09-19):** models are
+chosen by measurement on our own Indian tasks, not by this table. Measured on 165
+labelled BSE filing headlines (sentiment for shareholders, macro-F1): FinBERT (ProsusAI,
+🟢 Apache-2.0 code) **0.45** - it calls 17 of 19 adverse filings neutral; FinSenti-
+Llama-3.2-1B (🟢 Apache-2.0) **0.05** - "positive" for everything; general local models
+do far better (llama3.1:8b 0.82, qwen2.5:7b 0.76, phi4 0.72, qwen2.5:3b 0.66). Fin-R1
+(SUFE, 7B reasoning; ⚪ licence unlisted on HF) and other thinking models cannot give a
+one-token typed decision - reasoning tier only. Live results: `fb models list`.
+
+| Added 2026-09-19 | Licence | Verdict | Use here |
+|---|---|---|---|
+| [Fin-R1](https://huggingface.co/SUFE-AIFLM-Lab/Fin-R1) (GGUF: bartowski) | ⚪ unlisted | **STUDY** | Reasoning-tier candidate; benchmark before use |
+| [FinSenti-Llama-3.2-1B](https://huggingface.co/mradermacher/FinSenti-Llama-3.2-1B-GGUF) | 🟢 Apache-2.0 | **REJECT** (measured) | macro-F1 0.05 on Indian filings |
+| [FinBERT](https://github.com/ProsusAI/finBERT) | 🟢 Apache-2.0 | **REJECT for filings** (measured) | Maybe English news later - re-benchmark first |
+| Jev (TypeSafe AI, Sept 2026) - typed "System One" decisions | ⚪ cloud, waitlist | **STUDY → pattern adopted** | `llm/system1.py` rebuilds the pattern locally; Jev slots in as a backend once the owner has access |
+
 ---
 
 ## 7. Datasets and benchmarks
@@ -498,6 +526,10 @@ No model — FinLLM, general LLM or task-specific SOTA — demonstrates a reliab
 > Alpha Validation Firewall.
 
 ### The India benchmark gap — datasets we must build
+
+Built so far (`tests/fixtures`, Claude-labelled, owner to spot-check): announcement event
+type - 168 tuning + 102 held-out; shareholder sentiment - 165 headlines.
+
 1. **RBI policy hawkish/dovish classification** — the Indian FOMC task. Highest value,
    most tractable. Build first.
 2. Labelled NSE/BSE announcement corpus — event type, materiality, affected entities.

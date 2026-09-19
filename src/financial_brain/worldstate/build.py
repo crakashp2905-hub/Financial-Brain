@@ -28,7 +28,7 @@ from ..config import TIER
 from ..events.classify import legal_tone
 from ..evidence import ledger
 
-BUILDER = "worldstate v3"                  # v3: promoter-group context on red flags
+BUILDER = "worldstate v4"                  # v4: + model-read tone (ADR-0002)
 KEY_INDICES = ["Nifty 50", "Nifty Bank", "Nifty 500", "NIFTY Midcap 100",
                "NIFTY Smallcap 100", "India VIX"]
 SECTORS = ["Nifty IT", "Nifty Auto", "Nifty FMCG", "Nifty Pharma", "Nifty Metal",
@@ -193,6 +193,31 @@ def build(con, d: date, *, as_of: datetime | None = None) -> dict:
         SELECT {ann_cols} FROM announcements
         WHERE materiality = 'high' AND published_at > ? AND published_at <= ?
         ORDER BY published_at""", [window_start, as_of]).fetchall()]
+
+    # ---- shareholder tone read by a model (ADR-0002) - only answers that cleared
+    #      the answering model's calibrated bar; the claim names the model -------------
+    if events and con.execute("""SELECT 1 FROM information_schema.tables
+                                 WHERE table_name = 'announcement_tone'""").fetchone():
+        tones = {nid: (tone, conf, model) for nid, tone, conf, model in con.execute(
+            f"""SELECT news_id, tone, confidence, model FROM announcement_tone
+                WHERE accepted AND tone <> 'neutral' AND news_id IN
+                ({','.join('?' * len(events))})""", [e["news_id"] for e in events]
+        ).fetchall()}
+        for e in events:
+            if e["news_id"] in tones:
+                tone, conf, model = tones[e["news_id"]]
+                tid = ledger.mint(
+                    con, kind="tone", subject=e["isin"] or e["company"],
+                    as_of=e["published_at"],
+                    claim=f"{e['company']}: filing reads {tone} for shareholders "
+                          f"({model}, confidence {conf:.2f})",
+                    value={"news_id": e["news_id"], "tone": tone, "model": model,
+                           "confidence": round(conf, 4)},
+                    source="MODEL", source_tier=TIER["MODEL"],
+                    derivation=f"llm/router sentiment via {model}",
+                    inputs=[e["evidence"]])
+                cited.append(tid)
+                e["model_tone"] = {"tone": tone, "model": model, "evidence": tid}
 
     # ---- group contagion: a red flag in one company touches its promoter group ----
     red = {"INSOLVENCY", "AUDITOR_RESIGNATION", "PROMOTER_PLEDGE", "LEGAL_REGULATORY"}

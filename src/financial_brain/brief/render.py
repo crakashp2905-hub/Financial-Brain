@@ -163,6 +163,10 @@ def render(con, state: dict, *, watchlist_path=None) -> tuple[str, list[str]]:
         for e in rows[:PER_TYPE]:
             name = tickers.get(e.get("isin")) or e["company"]
             tone = " _(favourable)_" if e.get("tone") == "favourable" else ""
+            if e.get("model_tone"):
+                mt = e["model_tone"]
+                tone += (f" _({'adverse' if mt['tone'] == 'negative' else 'positive'}"
+                         f" per {mt['model']})_ {cite(mt['evidence'])}")
             out.append(f"- **{name}**{tone} — {e['text'][:180]} {cite(e['evidence'])}")
             if e.get("group"):
                 g = e["group"]

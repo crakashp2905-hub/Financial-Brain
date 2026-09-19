@@ -483,3 +483,14 @@ CREATE TABLE IF NOT EXISTS model_bench (
     coverage        DOUBLE,
     detail          VARCHAR
 );
+
+-- Shareholder tone per announcement, via the model router (events/tone.py).
+CREATE TABLE IF NOT EXISTS announcement_tone (
+    news_id         VARCHAR PRIMARY KEY,
+    tone            VARCHAR NOT NULL,      -- positive | negative | neutral
+    confidence      DOUBLE,
+    model           VARCHAR NOT NULL,
+    accepted        BOOLEAN NOT NULL,      -- cleared that model's calibrated bar
+    route           VARCHAR,
+    classified_at   TIMESTAMPTZ NOT NULL
+);

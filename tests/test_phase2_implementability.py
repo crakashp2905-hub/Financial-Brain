@@ -57,3 +57,12 @@ def test_capacity_fails_at_large_aum(con):
 def test_an_edge_smaller_than_costs_fails(con):
     r = check(con, _h(expected_edge_per_rebalance=0.001))
     assert r["checks"]["turnover"]["result"] == FAIL and r["verdict"] == FAIL
+
+
+def test_costs_rise_with_book_size_by_the_square_root_law(con):
+    con.execute("ALTER TABLE features ADD COLUMN vol_20 DOUBLE")
+    con.execute("UPDATE features SET vol_20 = 0.30")
+    small = check(con, _h(aum_inr=5e6))["checks"]["turnover"]["why"]
+    big = check(con, _h(aum_inr=5e8))["checks"]["turnover"]["why"]
+    cost = lambda why: float(why.split("round trip ")[1].split("%")[0])  # noqa: E731
+    assert cost(big) > cost(small) + 0.2, (small, big)   # fees fixed; impact grows

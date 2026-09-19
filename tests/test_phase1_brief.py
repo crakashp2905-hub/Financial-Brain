@@ -134,3 +134,34 @@ def test_a_red_flag_names_the_promoter_group(db):
     assert pledge["group"]["anchor"] == "Tata Sons Pvt Ltd"
     assert pledge["group"]["siblings"] == ["Tata Steel Ltd"]
     assert re.search(r"group: Tata Sons Pvt Ltd, 2 listed — also Tata Steel Ltd \[\d+\]", text)
+
+
+def test_model_tone_is_cited_only_when_the_model_cleared_its_bar(db, monkeypatch):
+    """ADR-0002: an accepted model reading is shown and cited as MODEL-tier evidence;
+    an unaccepted one is kept in the table but never reaches the brief."""
+    from financial_brain.brief import render
+    from financial_brain.events import tone
+    from financial_brain.evaluation import models as bench
+    from financial_brain.llm import system1
+    from financial_brain.worldstate import build as ws
+    answers = {"in-window": ("negative", 0.99), "short": ("negative", 0.4),
+               "before-window": ("neutral", 0.95)}
+    monkeypatch.setattr(bench, "decider", lambda task, m: (lambda row: system1.Decision(
+        label=answers[row["nid"]][0], probs={}, confidence=answers[row["nid"]][1],
+        model="stub")))
+    real_decide = tone.router.decide
+    with db.connect() as con:
+        _world(con)
+        rows = {r[1]: r[0] for r in con.execute(
+            "SELECT news_id, headline FROM announcements").fetchall()}
+        monkeypatch.setattr(tone.router, "decide", lambda c, task, row, steps: real_decide(
+            c, task, {**row, "nid": rows.get(row["state"], "short")}, steps=steps))
+        monkeypatch.setattr(tone.router, "plan", lambda c, task: [
+            {"model": "stub", "threshold": 0.9, "tier": 1}])
+        got = tone.classify_day(con, D1)
+        s = ws.build(con, D1)
+        text, _ = render.render(con, s)
+    assert got == {"classified": 3, "accepted": 2}
+    marked = {e["news_id"]: e.get("model_tone") for e in s["events"]}
+    assert marked["in-window"]["tone"] == "negative" and marked["short"] is None
+    assert re.search(r"_\(adverse per stub\)_ \[\d+\]", text)

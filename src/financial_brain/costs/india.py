@@ -156,6 +156,35 @@ class CostModel:
         return turnover_per_year * self.round_trip(
             turnover=1_000_000, segment=segment, bucket=bucket)["bps"] / 10_000
 
+    # --------------------------------------------------------------- impact law
+    @staticmethod
+    def sqrt_impact(*, order_value: float, adv_value: float, daily_vol: float,
+                    y: float = 1.0) -> float:
+        """One-way market impact of a metaorder, as a fraction of price, by the
+        square-root law (Almgren et al. 2005; Toth et al. 2011; Bouchaud et al.):
+
+            impact = Y * sigma_daily * sqrt(Q / V)
+
+        Q is the order's traded value, V the name's average daily traded value, sigma its
+        daily volatility. Y ~ 0.5-1 across markets; 1.0 is the conservative default. It
+        grows with *size relative to liquidity*, which the bucket table cannot express -
+        so capacity questions ("what happens at Rs 50 crore?") must use this.
+        """
+        if adv_value <= 0 or order_value <= 0:
+            return 0.0 if order_value <= 0 else float("inf")
+        return y * daily_vol * (order_value / adv_value) ** 0.5
+
+    def round_trip_sized(self, *, order_value: float, adv_value: float, daily_vol: float,
+                         y: float = 1.0, segment: Segment = Segment.DELIVERY) -> dict:
+        """Round trip of a real order: statutory + broker costs on its notional plus
+        square-root impact on each leg (replacing the bucket estimate)."""
+        base = self.round_trip(turnover=order_value, segment=segment, include_impact=False)
+        imp = 2 * self.sqrt_impact(order_value=order_value, adv_value=adv_value,
+                                   daily_vol=daily_vol, y=y)
+        frac = base["total"] / order_value + imp
+        return {"fees": base["total"] / order_value, "impact": imp, "total": frac,
+                "bps": frac * 10_000}
+
     def as_dict(self) -> dict:
         """Serialise the schedule so a backtest can record which costs it assumed."""
         return asdict(self)

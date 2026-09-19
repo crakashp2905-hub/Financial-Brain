@@ -61,4 +61,5 @@ TIER = {
     "MONEYCONTROL": 3,
     "NEWS": 3,
     "SOCIAL": 4,
+    "MODEL": 4,      # a model's reading of a source: never outranks the source itself
 }

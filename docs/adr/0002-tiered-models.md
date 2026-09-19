@@ -53,8 +53,8 @@ probabilities - to be used or rebuilt.
 * Adding a model is a registry line plus a benchmark run; nothing else changes.
 * Labelled Indian task sets are now a core asset (`tests/fixtures`). They were labelled
   by Claude and should be spot-checked by the owner.
-* Licences: FinBERT (ProsusAI) and Fin-R1 list no licence on Hugging Face - fine for
-  personal use (D1), must be verified before any product use.
+* Licences: FinBERT code is Apache-2.0 (github.com/ProsusAI/finBERT); Fin-R1 lists no
+  licence on Hugging Face - fine for personal use (D1), verify before any product use.
 * Not adopted: training our own model now. Fine-tuning (LoRA on Qwen-class models with
   FinGPT-style data plus our labelled Indian sets) becomes worthwhile only after the
   benchmark shows a gap no available model closes.

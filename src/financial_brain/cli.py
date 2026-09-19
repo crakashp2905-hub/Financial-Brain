@@ -801,6 +801,20 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_tone(args) -> int:
+    """Shareholder tone of a day's high-materiality announcements via the model router."""
+    from .events import tone
+    with Database(load()).connect() as con:
+        print(tone.classify_day(con, _d(args.date), limit=args.limit))
+        for r in con.execute("""SELECT t.tone, t.model, ROUND(t.confidence, 3), t.accepted,
+                a.company, LEFT(a.headline, 90) FROM announcement_tone t
+                JOIN announcements a USING (news_id) WHERE a.business_date = ?
+                AND t.tone <> 'neutral' ORDER BY t.accepted DESC, t.tone""",
+                             [_d(args.date)]).fetchall():
+            print(f"{r[0]:<8} {'ok ' if r[3] else '?? '} {r[1]:<14} {r[2]}  {r[4]}: {r[5]}")
+    return 0
+
+
 def cmd_regime(args) -> int:
     """Build (or show) the market regime for every session."""
     from .regime import brain
@@ -891,6 +905,13 @@ def cmd_daily(args) -> int:
         step("derive corporate actions + triage gaps", derive)
     step("market regime", regime)
     step("features + promoter graph", features_graph)
+
+    def announcement_tone():
+        from .events import tone
+        with Database(cfg).connect() as con:
+            d = con.execute("SELECT MAX(business_date) FROM universe_snapshots").fetchone()[0]
+            return tone.classify_day(con, d)
+    step("announcement tone (model router)", announcement_tone)
     step("paper trades (close those due)", paper_mark)
     if not args.no_brief:
         class _A:  # reuse `fb brief`
@@ -1025,6 +1046,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("tone", help="shareholder tone of announcements (model router)")
+    g.add_argument("--date", required=True)
+    g.add_argument("--limit", type=int)
+    g.set_defaults(fn=cmd_tone)
 
     g = sub.add_parser("regime", help="market regime per session (build with --build)")
     g.add_argument("--build", action="store_true")
