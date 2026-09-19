@@ -61,5 +61,6 @@ TIER = {
     "MONEYCONTROL": 3,
     "NEWS": 3,
     "SOCIAL": 4,
+    "DERIVED": 1,    # our deterministic computation over Tier-1 inputs (rules, checks)
     "MODEL": 4,      # a model's reading of a source: never outranks the source itself
 }

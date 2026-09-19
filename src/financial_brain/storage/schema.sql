@@ -494,3 +494,13 @@ CREATE TABLE IF NOT EXISTS announcement_tone (
     route           VARCHAR,
     classified_at   TIMESTAMPTZ NOT NULL
 );
+
+-- Investment committee runs (committee/run.py): stances, cited debate, drafted decision.
+CREATE TABLE IF NOT EXISTS committee_runs (
+    isin                VARCHAR NOT NULL,
+    world_state_version VARCHAR NOT NULL,
+    model               VARCHAR NOT NULL,
+    result              VARCHAR NOT NULL,
+    decision_id         VARCHAR,
+    run_at              TIMESTAMPTZ NOT NULL
+);

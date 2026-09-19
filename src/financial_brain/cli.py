@@ -815,6 +815,28 @@ def cmd_tone(args) -> int:
     return 0
 
 
+def cmd_committee(args) -> int:
+    """Convene the investment committee on one company (local models; drafts only)."""
+    from .committee import run as committee
+    from .worldstate import build as ws
+    with Database(load()).connect() as con:
+        state = ws.latest(con, _d(args.date) if args.date else None)
+        if not state:
+            print("no world state yet - run `fb brief` first")
+            return 1
+        r = committee.convene(con, args.isin, state["version_id"], model=args.model)
+    print(f"{args.isin} on {state['business_date']} ({state['version_id']}), model {r.model}")
+    for role, s in r.stances.items():
+        print(f"  {role:<11} {s['stance']:<8} {s['confidence']}")
+    for side, pts in (("BULL", r.bull), ("BEAR", r.bear)):
+        for p in pts:
+            print(f"  {side} {p['claim']}  {' '.join('[' + i + ']' for i in p['fact_ids'])}")
+    print(f"  dropped (uncited) points: {r.dropped_points}")
+    print(f"  chair: {r.action}" + (f"  -> draft {r.decision_id}" if r.decision_id else
+                                     "  (no draft: a side had no cited point)"))
+    return 0
+
+
 def cmd_regime(args) -> int:
     """Build (or show) the market regime for every session."""
     from .regime import brain
@@ -1051,6 +1073,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--date", required=True)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_tone)
+
+    g = sub.add_parser("committee", help="investment committee on one ISIN (drafts only)")
+    g.add_argument("--isin", required=True)
+    g.add_argument("--date")
+    g.add_argument("--model", default="llama3.1:8b")
+    g.set_defaults(fn=cmd_committee)
 
     g = sub.add_parser("regime", help="market regime per session (build with --build)")
     g.add_argument("--build", action="store_true")
