@@ -677,6 +677,17 @@ def cmd_evaluate(args) -> int:
                 print(f"   miss {m['predicted']} -> {m['gold']}  {m['note']}")
         return 0
     feats = args.feature or sorted(benchmark.FEATURES)
+    if args.validate:
+        from .evaluation import firewall
+        with Database(load()).connect() as con:
+            for f in feats:
+                r = firewall.validate(con, f, args.horizon, start=args.start, end=args.end)
+                print(f"{f:<14} {r['verdict']:<8} trial {r['trials']}  IC {r['mean_ic']:+.3f} "
+                      f"t {r['ic_t']:+.1f}  DSR {r['deflated_sharpe']:.2f}  "
+                      f"net/period {r['net_per_period']:+.2%}  turnover {r['turnover']:.0%}")
+                for why in r["reasons"]:
+                    print(f"    - {why}")
+        return 0
     with Database(load()).connect() as con:
         for f in feats:
             r = benchmark.evaluate(con, f, args.horizon, start=args.start, end=args.end)
@@ -886,6 +897,8 @@ def main(argv: list[str] | None = None) -> int:
 
     g = sub.add_parser("evaluate", help="rank-IC benchmark of features (Phase 2)")
     g.add_argument("--feature", action="append")
+    g.add_argument("--validate", action="store_true",
+                   help="run the Alpha Validation Firewall (each run counts as a trial)")
     g.add_argument("--classifier", action="store_true",
                    help="announcement classifier precision on the hand-checked samples")
     g.add_argument("--horizon", type=int, default=20)

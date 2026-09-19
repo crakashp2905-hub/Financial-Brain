@@ -51,7 +51,9 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
         SELECT business_date, COUNT(*) AS n, CORR(rx, ry) AS ic,
                AVG(y) FILTER (WHERE q = 5) - AVG(y) FILTER (WHERE q = 1) AS spread,
                (SELECT COUNT(*) FROM panel p WHERE p.business_date = r.business_date
-                  AND p.y IS NULL) AS dropped
+                  AND p.y IS NULL) AS dropped,
+               AVG(y) FILTER (WHERE q = 5) - AVG(y) AS top_excess,
+               LIST(lineage) FILTER (WHERE q = 5) AS top
         FROM ranked r GROUP BY business_date HAVING COUNT(*) >= 20 ORDER BY 1
     """, [horizon, horizon, min_adv, start, start, end, end, horizon]).fetchall()
     ics = [r[2] for r in rows if r[2] is not None]
@@ -67,4 +69,8 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
         "avg_names": sum(r[1] for r in rows) / len(rows) if rows else 0,
         "dropped_no_outcome": sum(r[4] for r in rows),
         "first": rows[0][0] if rows else None, "last": rows[-1][0] if rows else None,
+        # Per rebalance date, for the validation firewall: rank IC, Q5-Q1 spread, the
+        # long-only top quintile's excess over the universe, and its members.
+        "series": [{"date": r[0], "n": r[1], "ic": r[2], "spread": r[3],
+                    "top_excess": r[5], "top": r[6]} for r in rows],
     }

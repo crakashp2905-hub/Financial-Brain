@@ -411,3 +411,19 @@ CREATE TABLE IF NOT EXISTS llm_calls (
     output_tokens   INTEGER,
     evidence        VARCHAR[]
 );
+
+-- Every validation run is a trial; the firewall deflates by all of them (firewall.py).
+CREATE TABLE IF NOT EXISTS evaluation_runs (
+    run_at          TIMESTAMPTZ NOT NULL,
+    version         VARCHAR NOT NULL,
+    feature         VARCHAR NOT NULL,
+    horizon         INTEGER NOT NULL,
+    params          VARCHAR,
+    dates           INTEGER,
+    mean_ic         DOUBLE,
+    ic_t            DOUBLE,
+    sharpe          DOUBLE,
+    deflated_sharpe DOUBLE,
+    verdict         VARCHAR NOT NULL,
+    reasons         VARCHAR[]
+);
