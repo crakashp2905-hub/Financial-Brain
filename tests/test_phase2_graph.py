@@ -68,3 +68,78 @@ def test_key_merges_spellings_and_kind_separates_institutions():
     assert x.kind("Life Insurance Corporation of India") == "institution"
     assert x.kind("Jindal Power Ltd") == "organisation"
     assert x.kind("Rajendra Gandhi") == "person"
+
+
+# --------------------------------------------------------------------------- groups
+from datetime import date  # noqa: E402
+
+from financial_brain.config import Config  # noqa: E402
+from financial_brain.storage.db import Database  # noqa: E402
+
+PLEDGE = "Disclosures under Reg. 31(1) and 31(2) of SEBI (SAST) Regulations, 2011"
+EXEMPT = "Disclosures under Reg. 10(6) of SEBI (SAST) Regulations, 2011"
+SUBST = "Disclosures under Reg. 29(2) of SEBI (SAST) Regulations, 2011"
+
+
+@pytest.fixture
+def con(tmp_path):
+    d = Database(Config(data_root=tmp_path).ensure())
+    d.migrate()
+    with d.connect() as c:
+        yield c
+
+
+def _file(con, n, day, isin, sub, who):
+    head = ("The Exchange has received the disclosure under Regulation 31(1) of SEBI (SAST) "
+            f"Regulations, 2011 for {who}")
+    con.execute("""INSERT INTO announcements (news_id, source, business_date, scrip_code, isin,
+        company, category, subcategory, headline, event_type, materiality, evidence_key,
+        observed_at) VALUES (?, 'BSE', ?, ?, ?, ?, 'Company Update', ?, ?, 'X', 'low', 'k',
+        NOW())""", [f"n{n}", day, isin[-4:], isin, f"Co {isin[-4:]}", sub, head])
+
+
+def _history(con):
+    k = iter(range(10_000))
+    d1, d2 = date(2020, 1, 1), date(2023, 1, 1)
+    for isin in ("INE00000A001", "INE00000B001"):          # real group: one holdco, twice each
+        _file(con, next(k), d1, isin, PLEDGE, "Alpha Holdings Pvt Ltd")
+        _file(con, next(k), d1, isin, EXEMPT, "Alpha Holdings Private Limited")
+    _file(con, next(k), d2, "INE00000C001", PLEDGE, "Alpha Holdings Pvt Ltd")  # joins later
+    _file(con, next(k), d2, "INE00000C001", PLEDGE, "Alpha Holdings Pvt Ltd")
+    for isin in ("INE00000D001", "INE00000E001"):          # common name only: no group
+        _file(con, next(k), d1, isin, PLEDGE, "Rajesh Gupta")
+    for isin in ("INE00000F001", "INE00000G001"):          # one-off org filing: no group
+        _file(con, next(k), d1, isin, PLEDGE, "Beta Traders Pvt Ltd")
+    for isin in ("INE00000A001", "INE00000D001", "INE00000F001"):   # a fund: never bridges
+        _file(con, next(k), d1, isin, SUBST, "Big Mutual Fund")
+        _file(con, next(k), d1, isin, PLEDGE, "Big Mutual Fund")
+
+
+def test_groups_need_corroborated_promoter_links(con):
+    from financial_brain.graph import build
+    _history(con)
+    stats = build.build(con)
+    gs = build.groups(con)
+    assert stats["with_filer"] == 16
+    assert [g["members"] for g in gs] == [["INE00000A001", "INE00000B001", "INE00000C001"]]
+    assert gs[0]["anchor"] == "Alpha Holdings Pvt Ltd"
+    assert con.execute("SELECT COUNT(*) FROM promoter_groups").fetchone()[0] == 3
+
+
+def test_groups_are_point_in_time(con):
+    from financial_brain.graph import build
+    _history(con)
+    build.extract_filings(con)
+    early = build.groups(con, as_of=date(2021, 1, 1))
+    assert [g["members"] for g in early] == [["INE00000A001", "INE00000B001"]]
+
+
+def test_profile_traces_to_filings(con):
+    from financial_brain.graph import build
+    _history(con)
+    build.build(con)
+    p = build.profile(con, "INE00000C001", as_of=date(2023, 6, 1))
+    assert p["pledge_filings_recent"] == 2 and p["pledge_filers_recent"] == 1
+    assert p["filers"][0]["filer"] == "Alpha Holdings Pvt Ltd"
+    assert all(n.startswith("n") for n in p["filers"][0]["news_ids"])
+    assert p["group"]["anchor"] == "Alpha Holdings Pvt Ltd"

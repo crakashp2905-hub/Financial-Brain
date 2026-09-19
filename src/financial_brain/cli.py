@@ -679,6 +679,31 @@ def cmd_evaluate(args) -> int:
     return 0
 
 
+def cmd_graph(args) -> int:
+    """Promoter-group knowledge graph (P2-4): build it, or profile one company."""
+    from .graph import build
+    as_of = _d(args.as_of) if args.as_of else None
+    with Database(load()).connect() as con:
+        if args.build:
+            print(build.build(con))
+        if args.isin:
+            p = build.profile(con, args.isin, as_of)
+            g = p["group"]
+            print(f"{args.isin}  pledge filings last {p['recent_days']}d: "
+                  f"{p['pledge_filings_recent']} by {p['pledge_filers_recent']} filer(s)")
+            if g:
+                print(f"group ({len(g['members'])}, anchor {g['anchor']}): "
+                      + ", ".join(g["companies"]))
+            for f in p["filers"][:args.limit]:
+                print(f"  {f['relation']:<11} {f['filings']:>4}  last {f['last']}  "
+                      f"{f['filer']} [{f['kind']}]  e.g. {f['news_ids'][0]}")
+        else:
+            for g in build.groups(con, as_of)[:args.limit]:
+                print(f"{len(g['members']):>3}  {g['anchor'] or '-':<40} "
+                      + ", ".join(g["companies"][:6]) + (" ..." if len(g["members"]) > 6 else ""))
+    return 0
+
+
 def cmd_regime(args) -> int:
     """Build (or show) the market regime for every session."""
     from .regime import brain
@@ -858,6 +883,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--start")
     g.add_argument("--end")
     g.set_defaults(fn=cmd_evaluate)
+
+    g = sub.add_parser("graph", help="promoter-group knowledge graph (Phase 2)")
+    g.add_argument("--build", action="store_true")
+    g.add_argument("--isin")
+    g.add_argument("--as-of")
+    g.add_argument("--limit", type=int, default=20)
+    g.set_defaults(fn=cmd_graph)
 
     g = sub.add_parser("regime", help="market regime per session (build with --build)")
     g.add_argument("--build", action="store_true")

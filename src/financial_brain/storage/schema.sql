@@ -376,3 +376,26 @@ CREATE TABLE IF NOT EXISTS decision_events (
     event_at        TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (decision_id, seq)
 );
+
+-- P2-4 knowledge graph: filers named in SAST / insider disclosures (graph/build.py).
+CREATE TABLE IF NOT EXISTS holder_filings (
+    news_id         VARCHAR PRIMARY KEY,   -- announcements.news_id: the filing itself
+    business_date   DATE NOT NULL,
+    published_at    TIMESTAMP,
+    scrip_code      VARCHAR,
+    isin            VARCHAR,
+    company         VARCHAR,
+    relation        VARCHAR NOT NULL,      -- PLEDGE | EXEMPT | OPEN_OFFER | SUBSTANTIAL | INSIDER
+    filer           VARCHAR NOT NULL,
+    filer_key       VARCHAR NOT NULL,      -- normalised identity
+    filer_kind      VARCHAR NOT NULL       -- person | organisation | institution
+);
+
+CREATE TABLE IF NOT EXISTS promoter_groups (
+    group_id        VARCHAR NOT NULL,
+    anchor          VARCHAR,               -- the group's most active promoter organisation
+    member          VARCHAR NOT NULL,      -- ISIN, or BSE:<scrip> if unresolved
+    company         VARCHAR,
+    size            INTEGER NOT NULL,
+    PRIMARY KEY (group_id, member)
+);
