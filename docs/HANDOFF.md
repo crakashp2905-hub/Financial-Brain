@@ -122,8 +122,9 @@ before the market opens.* Order:
 - [x] **P1-5 C10 Daily brief** — deterministic cited brief done: `fb brief [--date]` →
   `data/briefs/<date>.md`. Still owner-gated: portfolio section (Kite) and the LLM prose
   layer. Optional personal watchlist: `data/watchlist.txt`.
-- [ ] **P1-6 Announcement history load** — first load died after 2015→2019-04; resumed
-  2026-09-19 as `fb announcements --start 2019-03-25 --end 2026-06-19` → `data/load_ann2.log`.
+- [~] **P1-6 Announcement history load** — **loaded 2026-09-19: 3,079,172 announcements,
+  2015-01-01→2026-09-18, 4,239 days** (resume run ok=2634, skipped=10). Step 1 below
+  (forced replay, 1.40M truncated headlines to repair) started → `data/replay_ann.log`.
   **After it finishes, run in order (one writer at a time):**
   1. `fb announcements --start 2015-01-01 --end 2026-09-18 --force` — reclassifies with
      classifier v2 and repairs headlines stored cut off ("....") from BSE's MORE field.
