@@ -1138,6 +1138,13 @@ def cmd_daily(args) -> int:
             return filings.read_day(con, cfg, day, limit=25)
     step("read filing documents (C11)", read_filing_documents)
 
+    def as_reported_financials():
+        from .ingest import results as ing
+        with Database(cfg).connect() as con:
+            day = con.execute("SELECT MAX(business_date) FROM universe_snapshots").fetchone()[0]
+            return ing.read_day(con, cfg, day, limit=40)
+    step("as-reported financials (C03)", as_reported_financials)
+
     def announcement_tone():
         from .events import tone
         with Database(cfg).connect() as con:

@@ -387,3 +387,30 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   benchmark and the output was suppressed, so `decision_alerts` was missing and the
   brief's "Theses under watch" section rendered empty while everything looked fine.
   Do not redirect migrate output.
+- 2026-09-20 (night) — **Research depth, first two layers.**
+  * **C11 document intelligence** (`fb filings`): reads the PDF a filing points at (2.78M
+    already carry a URL) and mints typed claims - order value, tax demand, penalty,
+    dividend per share. Three precision rules, each forced by a wrong claim in the first
+    run: a number must be *named*; it must agree with the exchange's event type (unknown
+    types mint nothing); a demand the tribunal *set aside* is relief, not a liability.
+    BSE moves old attachments to AttachHis - trying both paths took a 20-filing sample
+    from 11 fetch failures to none.
+  * **C03 as-reported financials** (`fb results`): quarterly revenue/PAT parsed from the
+    results PDF, stored **append-only** with `filed_at`, so a restatement is a new row
+    and `as_known_on()` answers what was knowable on a date. A results statement is a
+    table and PDF has no tables, so rows are rebuilt from coordinates
+    (`docintel/tables.py`); labels are matched through OCR damage ("13 Net Proflt/(Loss)
+    for the Period/Year (9+12)"); and **a statement must pass its own arithmetic** before
+    it is stored. Verified: Reliance Q1 FY27 consolidated revenue Rs 298,621 cr; Jindal
+    Poly Films revenue Rs 696 cr, PAT Rs 107 cr.
+    **Measured recall: ~14 statements per 60 results filings.** The rest are cover
+    letters with the results attached separately, scans with no text layer, or pages that
+    fail their own arithmetic and are refused. Precision was chosen over recall; raising
+    recall means an OCR engine, not looser rules.
+  * **Base rates** (`features/baserates.py`): every red-flag filing in the brief now
+    carries the company's own history and the market's, with the peer comparison stated.
+    A company is called a *pattern* only when it files more than the 90th percentile of
+    other filers of that type - otherwise a heavy but normal filer (NRB Bearing, 47
+    shareholding disclosures) is flagged forever.
+  Next for depth, in order: cross-source corroboration (filing + price move + volume),
+  more document extractors (counterparties, durations, sections), then Kite last.
