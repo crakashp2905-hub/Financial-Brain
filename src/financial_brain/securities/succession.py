@@ -103,7 +103,7 @@ def detect(con) -> list[dict]:
     if cand:
         con.executemany("INSERT INTO _succ_cand VALUES (?,?,?,?)", cand)
     ratios: dict[tuple, list] = {}
-    for exch, old, new, r in con.execute(_RATIO_SQL).fetchall():
+    for _exch, old, new, r in con.execute(_RATIO_SQL).fetchall():
         if r:
             ratios.setdefault((old, new), []).append(r)
 

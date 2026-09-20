@@ -100,7 +100,8 @@ class Provider(ABC):
             except urllib.error.HTTPError as e:
                 if e.code == 404:
                     # "No such file" - usually no session that day; the caller decides.
-                    raise FetchError(f"HTTP 404 for {url}", retryable=False, status=404)
+                    raise FetchError(f"HTTP 404 for {url}", retryable=False,
+                                     status=404) from e
                 # 403 is bot protection, not absence. It used to be treated like 404,
                 # so a transient block became a phantom holiday: NSE's 2019-10-27
                 # Muhurat session was silently skipped that way. Retry it, then fail

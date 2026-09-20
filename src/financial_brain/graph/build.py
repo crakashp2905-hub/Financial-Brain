@@ -113,7 +113,7 @@ def groups(con, as_of: date | None = None) -> list[dict]:
         if c not in latest or last > latest[c]:                # the most recent name
             latest[c], label[c] = last, company
     names = {}                                   # each filer shown as most often spelt
-    for (k, name), cnt in sorted(spelling.items(), key=lambda kv: kv[1]):
+    for (k, name), _count in sorted(spelling.items(), key=lambda kv: kv[1]):
         names[k] = name
     shared: dict[tuple, set] = defaultdict(set)
     for k, cs in by_filer.items():

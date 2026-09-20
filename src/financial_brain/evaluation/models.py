@@ -109,13 +109,16 @@ def decider(task: str, model: str):
 
 
 def score(golds: list[str], decisions: list, target: float) -> dict:
+    # strict=True throughout: a decisions/golds length mismatch means the benchmark ran
+    # on a different set than it is being scored against, which must fail loudly rather
+    # than silently truncate and report an accuracy for the wrong items.
     labels = sorted(set(golds) | {d.label for d in decisions})
-    correct = [d.label == g for d, g in zip(decisions, golds)]
+    correct = [d.label == g for d, g in zip(decisions, golds, strict=True)]
     f1s = []
     for lab in set(golds):
-        tp = sum(1 for d, g in zip(decisions, golds) if d.label == lab == g)
-        fp = sum(1 for d, g in zip(decisions, golds) if d.label == lab != g)
-        fn = sum(1 for d, g in zip(decisions, golds) if g == lab != d.label)
+        tp = sum(1 for d, g in zip(decisions, golds, strict=True) if d.label == lab == g)
+        fp = sum(1 for d, g in zip(decisions, golds, strict=True) if d.label == lab != g)
+        fn = sum(1 for d, g in zip(decisions, golds, strict=True) if g == lab != d.label)
         f1s.append(2 * tp / (2 * tp + fp + fn) if tp else 0.0)
     # Per predicted label: the lowest confidence at which that label's confident
     # predictions were right >= target of the time (min MIN_SUPPORT of them). Overall
@@ -123,7 +126,7 @@ def score(golds: list[str], decisions: list, target: float) -> dict:
     # an imbalanced set while missing every adverse filing.
     thresholds = {}
     for lab in labels:
-        preds = [(d.confidence, c) for d, c in zip(decisions, correct) if d.label == lab]
+        preds = [(d.confidence, c) for d, c in zip(decisions, correct, strict=True) if d.label == lab]
         thresholds[lab] = None
         for t in sorted({round(conf, 4) for conf, _ in preds}):
             kept = [c for conf, c in preds if conf >= t]
@@ -133,7 +136,7 @@ def score(golds: list[str], decisions: list, target: float) -> dict:
     accepted = [d for d in decisions if thresholds.get(d.label) is not None
                 and d.confidence >= thresholds[d.label]]
     usable = [t for t in thresholds.values() if t is not None]
-    confusion = Counter((g, d.label) for d, g in zip(decisions, golds) if d.label != g)
+    confusion = Counter((g, d.label) for d, g in zip(decisions, golds, strict=True) if d.label != g)
     return {"n": len(golds), "accuracy": sum(correct) / len(golds),
             "macro_f1": sum(f1s) / len(f1s), "thresholds": thresholds,
             "threshold": min(usable) if usable else None,
@@ -308,9 +311,9 @@ def validate_route(con, route_task: str, holdout: str) -> dict:
     n = len(rows)
     recall = {g: sum(v for (gg, p), v in per.items() if gg == g and p == g) /
               max(1, sum(v for (gg, _), v in per.items() if gg == g)) for g in set(golds)}
-    wrong_accepted = sum(1 for g, p in zip(golds, labels) if p not in ("uncertain", g))
+    wrong_accepted = sum(1 for g, p in zip(golds, labels, strict=True) if p not in ("uncertain", g))
     return {"route": [s["model"] for s in steps], "n": n,
-            "accuracy_counting_uncertain_as_wrong": sum(g == p for g, p in zip(golds, labels)) / n,
+            "accuracy_counting_uncertain_as_wrong": sum(g == p for g, p in zip(golds, labels, strict=True)) / n,
             "uncertain": labels.count("uncertain") / n,
             "wrong_when_accepted": wrong_accepted / max(1, accepted),
             "recall": recall, "mean_steps": lat / n}

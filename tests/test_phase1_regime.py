@@ -1,7 +1,7 @@
 """Phase 1 - index lineage and the Market Regime Brain."""
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
 

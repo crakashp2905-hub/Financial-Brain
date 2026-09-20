@@ -57,7 +57,7 @@ class NSEIndexCloseProvider(Provider):
             if not name:
                 continue
 
-            def num(key):
+            def num(key, r=r):          # bind this row; the name is reused each loop
                 v = (r.get(key) or "").strip().replace(",", "")
                 try:
                     return float(v)
@@ -107,7 +107,7 @@ class NSEEquityListProvider(Provider):
             if not isin:
                 continue
 
-            def num(key):
+            def num(key, clean=clean):  # bind this row; the name is reused each loop
                 try:
                     return float(clean.get(key, "") or 0) or None
                 except ValueError:

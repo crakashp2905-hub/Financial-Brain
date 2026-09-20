@@ -54,7 +54,7 @@ is a strong Tier-1 substitute for a corporate-action feed, not a replacement for
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from math import gcd
 
 from ..config import TIER
@@ -570,8 +570,7 @@ def auto_triage_gaps(con, *, threshold: float = 0.35,
         # Automatic verdicts are re-derivable; a person's verdict never is.
         con.execute("DELETE FROM gap_reviews WHERE reviewed_by = 'auto'")
 
-    suffix_filter = " AND ".join(
-        f"ticker NOT LIKE '%{suf}'" for suf in EXCLUDED_TICKER_SUFFIXES)
+    # (the suffix exclusion lives in find_untriaged_gaps, which produces these rows)
     rows = [(g["ex_date"], g["exchange"], g["ticker"], g["isin"], g["factor"])
             for g in find_untriaged_gaps(con, threshold=threshold,
                                          min_turnover=min_turnover)]

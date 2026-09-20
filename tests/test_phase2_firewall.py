@@ -2,7 +2,6 @@
 re-running trials raises the bar."""
 from __future__ import annotations
 
-import pytest
 
 from financial_brain.evaluation import firewall
 from test_phase2_benchmark import _market, con  # noqa: F401 (fixture)

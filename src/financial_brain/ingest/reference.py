@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 
-from ..config import TIER, Config, load
+from ..config import Config, load
 from ..lake.store import RawLake
 from ..providers.base import FetchError, NotPublished
 from ..providers.reference import (NSEEquityListProvider, NSEFnoLotsProvider,

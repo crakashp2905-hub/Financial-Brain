@@ -24,7 +24,6 @@ The four timestamps (docs/ARCHITECTURE.md):
 from __future__ import annotations
 
 import hashlib
-import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 

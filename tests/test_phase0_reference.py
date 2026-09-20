@@ -952,7 +952,7 @@ class TestStaggeredSuccession:
                             [d, isin, exch, tk, c])
                 k = (exch, h, isin, tk, iid)
                 spans[k] = (min(spans.get(k, (d, d))[0], d), max(spans.get(k, (d, d))[1], d))
-            for (exch, h, isin, tk, iid), (f, l) in spans.items():
+            for (exch, _h, isin, tk, iid), (f, l) in spans.items():
                 con.execute("INSERT INTO security_listings VALUES (?,?,?, 'EQ', ?,?,?)",
                             [isin, exch, tk, iid, f, l])
             s = succession.detect(con)

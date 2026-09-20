@@ -7,9 +7,7 @@ correctness, and a cost model that is actually punitive.
 """
 from __future__ import annotations
 
-import io
-import zipfile
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 

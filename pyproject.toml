@@ -20,3 +20,21 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 92
+target-version = "py313"
+
+[tool.ruff.lint]
+# Rules that catch real defects, not style opinions. F821 is here because a call to an
+# undefined name (a daily step using `db` where none was bound) passed tests for days:
+# every step is wrapped in try/except, so the NameError read as a step "failing".
+select = ["F", "E9", "B"]
+# B905 (zip without strict=) is off by default here because most zips in this codebase
+# pair a row with its own fields. Where a length mismatch would corrupt a *result* -
+# the model scorer pairing decisions with gold labels - strict=True is written
+# explicitly instead.
+ignore = ["B008", "B905", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
