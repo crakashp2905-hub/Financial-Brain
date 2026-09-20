@@ -2,6 +2,7 @@
 escalate on low confidence, never promote an uncertain answer."""
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -47,11 +48,14 @@ def test_uninformative_confidence_earns_no_threshold():
     assert bench.score(golds, ds, target=0.9)["threshold"] is None
 
 
-def _bench_row(con, model, threshold, latency):
+def _bench_row(con, model, threshold, latency, *, prompt=None):
+    """A benchmark row carries the prompt it was measured under; the router only
+    considers models measured under the prompt it is about to send (ADR-0003)."""
+    detail = json.dumps({"prompt_version": prompt or system1.prompt_version()})
     con.execute("""INSERT INTO model_bench (run_at, task, model, n, accuracy, macro_f1,
                    latency_ms, target, threshold, coverage, detail)
-                   VALUES (?, 't', ?, 10, 0.9, 0.9, ?, 0.9, ?, 0.5, '{}')""",
-                [datetime.now(timezone.utc), model, latency, threshold])
+                   VALUES (?, 't', ?, 10, 0.9, 0.9, ?, 0.9, ?, 0.5, ?)""",
+                [datetime.now(timezone.utc), model, latency, threshold, detail])
 
 
 def test_plan_orders_by_tier_then_latency_and_drops_uncalibrated(con, monkeypatch):
@@ -63,6 +67,9 @@ def test_plan_orders_by_tier_then_latency_and_drops_uncalibrated(con, monkeypatc
     assert [s["model"] for s in router.plan(con, "t")] == ["qwen2.5:3b", "phi4:latest"]
     monkeypatch.setenv("FB_LLM_ENABLED", "1")
     assert router.plan(con, "t")[-1]["model"] == "claude-haiku-4-5"
+    # A model measured under a different prompt is not a candidate at all.
+    _bench_row(con, "gemma2:latest", 0.9, 100, prompt="p_old")
+    assert "gemma2:latest" not in [s["model"] for s in router.plan(con, "t")]
 
 
 def test_router_escalates_and_marks_uncertain(con, monkeypatch):
@@ -116,6 +123,7 @@ def test_a_route_must_survive_a_set_it_was_not_tuned_on(con, monkeypatch):
                         [system1.Decision(label=a, probs={}, confidence=c, model=model,
                                           latency_ms=ms) for a, c, ms in items], 0.9)
         r["items"] = items
+        r["prompt_version"] = system1.prompt_version()
         con.execute("""INSERT INTO model_bench (run_at, task, model, n, threshold,
                        latency_ms, detail) VALUES (NOW(), ?, ?, ?, ?, ?, ?)""",
                     [task, model, len(items), r["threshold"],

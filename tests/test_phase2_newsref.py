@@ -97,6 +97,7 @@ def test_tone_spends_its_daily_budget_on_the_newest_filings(con, monkeypatch):
         d = system1.Decision(label="neutral", probs={}, confidence=0.99, model="m")
         return router.Routed(d, True, [])
 
+    monkeypatch.setattr(tone.router, "route_is_current", lambda c, t: (True, "current"))
     monkeypatch.setattr(tone.router, "plan", lambda c, t: [{"model": "m", "tier": 1}])
     monkeypatch.setattr(tone.router, "has_route", lambda c, t: False)
     monkeypatch.setattr(tone.router, "decide", fake_decide)

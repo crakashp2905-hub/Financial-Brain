@@ -29,9 +29,12 @@ def classify_day(con, d: date, *, materiality: tuple[str, ...] = ("high",),
     """Classify a day's material filings. ``refresh`` also re-does rows left by a
     superseded route - otherwise one day's tone can mix verdicts from several routes,
     each with its own calibration."""
-    steps = router.plan(con, TASK)
+    # The filing route must also be current: a route calibrated under an older prompt
+    # describes a system we are no longer running (ADR-0003).
+    current, why = router.route_is_current(con, TASK)
+    steps = router.plan(con, TASK) if current else []
     if not steps:
-        return {"skipped": "no benchmarked model for sentiment"}
+        return {"skipped": f"no usable route for {TASK}: {why if not current else 'none'}"}
     # A news headline states direction outright where a filing buries it, so thresholds
     # fitted on filings do not transfer: replayed on labelled headlines the filing route
     # was wrong 19.8% of the time it accepted, against 9.8% on filings. Headlines are

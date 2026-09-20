@@ -156,6 +156,8 @@ def test_model_tone_is_cited_only_when_the_model_cleared_its_bar(db, monkeypatch
             "SELECT news_id, headline FROM announcements").fetchall()}
         monkeypatch.setattr(tone.router, "decide", lambda c, task, row, steps: real_decide(
             c, task, {**row, "nid": rows.get(row["state"], "short")}, steps=steps))
+        monkeypatch.setattr(tone.router, "route_is_current",
+                            lambda c, t: (True, "current"))
         monkeypatch.setattr(tone.router, "plan", lambda c, task: [
             {"model": "stub", "threshold": 0.9, "tier": 1}])
         got = tone.classify_day(con, D1)

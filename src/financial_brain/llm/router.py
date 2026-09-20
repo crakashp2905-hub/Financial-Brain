@@ -64,10 +64,16 @@ def plan(con, task: str, *, optimised: bool = True) -> list[dict]:
             SELECT *, ROW_NUMBER() OVER (PARTITION BY model ORDER BY run_at DESC) rk
             FROM model_bench WHERE task = ?) WHERE rk = 1 AND threshold IS NOT NULL""",
                        [task]).fetchall()
+    # Only models measured under the prompt we actually send are candidates. Without
+    # this the optimiser happily picks a model whose numbers came from an older prompt,
+    # and the route is then rejected as stale the moment anything tries to use it.
+    want = system1.prompt_version()
     steps = [{"model": m, "threshold": t, "latency_ms": lat, "macro_f1": f1, "tier": tier(m),
               "thresholds": json.loads(det or "{}").get("thresholds"),
               "prompt_version": json.loads(det or "{}").get("prompt_version")}
-             for m, t, lat, f1, det in rows if tier(m) < 3 or cloud_ok]
+             for m, t, lat, f1, det in rows
+             if (tier(m) < 3 or cloud_ok)
+             and json.loads(det or "{}").get("prompt_version") == want]
     return sorted(steps, key=lambda s: (s["tier"], s["latency_ms"] or 0))
 
 
