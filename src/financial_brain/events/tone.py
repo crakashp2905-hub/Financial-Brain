@@ -36,26 +36,40 @@ def classify_day(con, d: date, *, materiality: tuple[str, ...] = ("high",),
     # different thresholds.
     chosen = con.execute("SELECT MAX(chosen_at) FROM model_routes WHERE task = ?",
                          [TASK]).fetchone()[0]
-    stale = "OR t.classified_at < ?" if (refresh and chosen) else ""
+    # Stale two ways: an older route's calibration, or a filing whose news headline we
+    # have since recovered (the text classified is no longer the best text available).
+    # COALESCE: rows written before text_source existed were classified on the filing.
+    changed = "OR (COALESCE(t.text_source, 'filing') = 'filing' AND n.headline IS NOT NULL)"
+    stale = (f"OR t.classified_at < ? {changed}" if (refresh and chosen)
+             else (changed if refresh else ""))
     rows = con.execute(f"""
-        SELECT a.news_id, a.headline, a.subject FROM announcements a
+        SELECT a.news_id, a.headline, a.subject, n.headline FROM announcements a
         LEFT JOIN announcement_tone t ON t.news_id = a.news_id
-        WHERE a.business_date = ? AND a.materiality IN ({marks})
+        LEFT JOIN announcement_news n ON n.news_id = a.news_id
+        WHERE a.business_date = ?
+          AND (a.materiality IN ({marks}) OR n.headline IS NOT NULL)
           AND (t.news_id IS NULL {stale})
         ORDER BY a.published_at""",
-                       [d, *materiality, *([chosen] if stale else [])]).fetchall()
+                       [d, *materiality, *([chosen] if (refresh and chosen) else [])]).fetchall()
     if limit:
         rows = rows[:limit]
-    counts = {"classified": 0, "accepted": 0, "refreshed": 0}
-    for nid, head, subj in rows:
-        text = head if head and len(head) >= 25 else (subj or head or "")
+    counts = {"classified": 0, "accepted": 0, "refreshed": 0, "on_news_headline": 0}
+    for nid, head, subj, news_head in rows:
+        # An exchange clarification reads as procedural boilerplate; the news it is about
+        # is what moved the price. When the filing itself carries that headline, classify
+        # that instead - same filing, better text.
+        if news_head:
+            text, src = news_head, "news_headline"
+            counts["on_news_headline"] += 1
+        else:
+            text, src = (head if head and len(head) >= 25 else (subj or head or "")), "filing"
         r = router.decide(con, TASK, {"state": text}, steps=steps)
         counts["refreshed"] += con.execute(
             "DELETE FROM announcement_tone WHERE news_id = ? RETURNING 1", [nid]).fetchone() is not None
         con.execute("""INSERT INTO announcement_tone (news_id, tone, confidence, model,
-                       accepted, route, classified_at) VALUES (?,?,?,?,?,?,?)""",
+                       accepted, route, text_source, classified_at) VALUES (?,?,?,?,?,?,?,?)""",
                     [nid, r.decision.label, r.decision.confidence, r.decision.model,
-                     r.accepted, str(r.route), datetime.now(timezone.utc)])
+                     r.accepted, str(r.route), src, datetime.now(timezone.utc)])
         counts["classified"] += 1
         counts["accepted"] += r.accepted
     return counts

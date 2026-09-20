@@ -42,6 +42,9 @@ class Database:
         "ALTER TABLE llm_calls ADD COLUMN IF NOT EXISTS tier INTEGER",
         "ALTER TABLE llm_calls ADD COLUMN IF NOT EXISTS latency_ms INTEGER",
         "ALTER TABLE llm_calls ADD COLUMN IF NOT EXISTS cost_usd DOUBLE",
+        # Which text the tone model actually read: the filing, or the news headline the
+        # filing quotes (events/newsref.py).
+        "ALTER TABLE announcement_tone ADD COLUMN IF NOT EXISTS text_source VARCHAR",
     ]
 
     def migrate(self) -> None:

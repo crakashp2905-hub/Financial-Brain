@@ -824,6 +824,19 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_newsref(args) -> int:
+    """News referenced by a day's filings - extracted from the filing text, not fetched."""
+    from .events import newsref
+    with Database(load()).connect() as con:
+        print(newsref.extract_day(con, _d(args.date), refresh=args.refresh))
+        for dom, head, how in con.execute("""SELECT n.domain, n.headline, n.how
+                FROM announcement_news n JOIN announcements a USING (news_id)
+                WHERE a.business_date = ? AND n.headline IS NOT NULL
+                ORDER BY a.published_at LIMIT 15""", [_d(args.date)]).fetchall():
+            print(f"  {(dom or '-'):<28} {how:<9} {head[:95]}")
+    return 0
+
+
 def cmd_tone(args) -> int:
     """Shareholder tone of a day's high-materiality announcements via the model router."""
     from .events import tone
@@ -951,6 +964,13 @@ def cmd_daily(args) -> int:
         step("derive corporate actions + triage gaps", derive)
     step("market regime", regime)
     step("features + promoter graph", features_graph)
+
+    def news_references():
+        from .events import newsref
+        with db.connect() as con:
+            d = con.execute("SELECT MAX(business_date) FROM universe_snapshots").fetchone()[0]
+            return newsref.extract_day(con, d)
+    step("news references in filings (rules)", news_references)
 
     def announcement_tone():
         from .events import tone
@@ -1097,6 +1117,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("newsref", help="news a filing refers to, from the filing's own text")
+    g.add_argument("--date", required=True)
+    g.add_argument("--refresh", action="store_true")
+    g.set_defaults(fn=cmd_newsref)
 
     g = sub.add_parser("tone", help="shareholder tone of announcements (model router)")
     g.add_argument("--refresh", action="store_true",

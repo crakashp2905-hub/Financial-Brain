@@ -198,26 +198,54 @@ def build(con, d: date, *, as_of: datetime | None = None) -> dict:
     #      the answering model's calibrated bar; the claim names the model -------------
     if events and con.execute("""SELECT 1 FROM information_schema.tables
                                  WHERE table_name = 'announcement_tone'""").fetchone():
-        tones = {nid: (tone, conf, model) for nid, tone, conf, model in con.execute(
-            f"""SELECT news_id, tone, confidence, model FROM announcement_tone
+        tones = {nid: row for nid, *row in con.execute(
+            f"""SELECT news_id, tone, confidence, model, COALESCE(text_source, 'filing')
+                FROM announcement_tone
                 WHERE accepted AND tone <> 'neutral' AND news_id IN
                 ({','.join('?' * len(events))})""", [e["news_id"] for e in events]
         ).fetchall()}
         for e in events:
             if e["news_id"] in tones:
-                tone, conf, model = tones[e["news_id"]]
+                tone, conf, model, src = tones[e["news_id"]]
+                what = "the news it quotes" if src == "news_headline" else "filing"
                 tid = ledger.mint(
                     con, kind="tone", subject=e["isin"] or e["company"],
                     as_of=e["published_at"],
-                    claim=f"{e['company']}: filing reads {tone} for shareholders "
+                    claim=f"{e['company']}: {what} reads {tone} for shareholders "
                           f"({model}, confidence {conf:.2f})",
                     value={"news_id": e["news_id"], "tone": tone, "model": model,
-                           "confidence": round(conf, 4)},
+                           "confidence": round(conf, 4), "text_source": src},
                     source="MODEL", source_tier=TIER["MODEL"],
-                    derivation=f"llm/router sentiment via {model}",
+                    derivation=f"llm/router sentiment via {model} on {src}",
                     inputs=[e["evidence"]])
                 cited.append(tid)
-                e["model_tone"] = {"tone": tone, "model": model, "evidence": tid}
+                e["model_tone"] = {"tone": tone, "model": model, "evidence": tid,
+                                   "text_source": src}
+
+    # ---- the news a filing refers to, recovered from the filing's own text ----------
+    #      Tier DERIVED: a deterministic rule over Tier-1 bytes, not a fetched article.
+    if events and con.execute("""SELECT 1 FROM information_schema.tables
+                                 WHERE table_name = 'announcement_news'""").fetchone():
+        refs = {nid: row for nid, *row in con.execute(
+            f"""SELECT news_id, headline, domain, url, how FROM announcement_news
+                WHERE headline IS NOT NULL AND news_id IN
+                ({','.join('?' * len(events))})""", [e["news_id"] for e in events]
+        ).fetchall()}
+        for e in events:
+            if e["news_id"] in refs:
+                headline, domain, url, how = refs[e["news_id"]]
+                nid_ = ledger.mint(
+                    con, kind="news_reference", subject=e["isin"] or e["company"],
+                    as_of=e["published_at"],
+                    claim=f"{e['company']}: the filing refers to a news item"
+                          + (f" on {domain}" if domain else "") + f': "{headline}"',
+                    value={"news_id": e["news_id"], "headline": headline,
+                           "domain": domain, "url": url, "how": how},
+                    source="DERIVED", source_tier=TIER["DERIVED"],
+                    derivation=f"events/newsref {how}", inputs=[e["evidence"]])
+                cited.append(nid_)
+                e["news_ref"] = {"headline": headline, "domain": domain,
+                                 "evidence": nid_}
 
     # ---- group contagion: a red flag in one company touches its promoter group ----
     red = {"INSOLVENCY", "AUDITOR_RESIGNATION", "PROMOTER_PLEDGE", "LEGAL_REGULATORY"}

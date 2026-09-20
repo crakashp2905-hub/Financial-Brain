@@ -173,6 +173,11 @@ def render(con, state: dict, *, watchlist_path=None) -> tuple[str, list[str]]:
                 tone += (f" _({'adverse' if mt['tone'] == 'negative' else 'positive'}"
                          f" per {mt['model']})_ {cite(mt['evidence'])}")
             out.append(f"- **{name}**{tone} — {e['text'][:180]} {cite(e['evidence'])}")
+            if e.get("news_ref"):
+                # A clarification filing says nothing; the news it quotes is the story.
+                nr = e["news_ref"]
+                out.append(f"  - news{' on ' + nr['domain'] if nr['domain'] else ''}: "
+                           f"\"{nr['headline'][:160]}\" {cite(nr['evidence'])}")
             if e.get("group"):
                 g = e["group"]
                 out.append(f"  - group: {g['anchor'] or 'promoter group'}, {g['size']} listed"

@@ -492,6 +492,7 @@ CREATE TABLE IF NOT EXISTS announcement_tone (
     model           VARCHAR NOT NULL,
     accepted        BOOLEAN NOT NULL,      -- cleared that model's calibrated bar
     route           VARCHAR,
+    text_source     VARCHAR,               -- filing | news_headline: what was classified
     classified_at   TIMESTAMPTZ NOT NULL
 );
 
@@ -512,4 +513,15 @@ CREATE TABLE IF NOT EXISTS model_routes (
     simulated       VARCHAR,               -- accuracy / uncertain / latency when chosen
     budget_ms       DOUBLE,
     chosen_at       TIMESTAMPTZ NOT NULL
+);
+
+-- News a filing refers to, recovered from the filing's own text (events/newsref.py).
+-- Deterministic: no request is made to the publisher.
+CREATE TABLE IF NOT EXISTS announcement_news (
+    news_id         VARCHAR PRIMARY KEY,
+    url             VARCHAR,
+    domain          VARCHAR,
+    headline        VARCHAR,               -- NULL when the filing carries only a link
+    how             VARCHAR NOT NULL,      -- quoted | url_slug | link_only
+    extracted_at    TIMESTAMPTZ NOT NULL
 );
