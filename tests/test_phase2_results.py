@@ -117,3 +117,34 @@ def test_a_statement_without_a_period_is_not_stored(tmp_path):
         assert ing._store(con, isin="INE000A01001", company="Acme", news_id="n1", st=st,
                           lake_key="k", filed_at=datetime(2026, 8, 1), url="u") is None
         assert con.execute("SELECT COUNT(*) FROM financial_results").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("Quarter ended 30.06.2026", date(2026, 6, 30)),
+    ("for the quarter ended 30-06-2026", date(2026, 6, 30)),
+    ("Quarter Ended 30/06/26", date(2026, 6, 30)),
+    ("quarter ended 06.30.2026", date(2026, 6, 30)),      # month first, detected by >12
+])
+def test_numeric_period_formats_are_read(text, expected):
+    """Nine statements in a 60-filing sample parsed cleanly and were dropped for want of
+    a period, because their filers wrote the date numerically."""
+    assert parse.period_of(text) == expected
+
+
+def test_a_statement_reporting_nothing_at_all_is_a_misread():
+    """0 + 0 = 0 satisfies the sum check trivially, so an all-zero reading would sail
+    through. A quarter in which nothing whatsoever was reported is a parse failure."""
+    st = parse.Statement(basis="standalone", period_end=date(2026, 6, 30), unit=10 ** 7,
+                         values={"revenue": 0.0, "other_income": 0.0, "total_income": 0.0})
+    st.checks = parse._check(st.values, st.unit)
+    assert st.checks["income adds up"] is True
+    assert not st.ok()
+
+
+def test_zero_revenue_with_real_other_income_is_believed():
+    """A holding company legitimately reports no revenue and only investment income;
+    refusing that would drop true statements to avoid a misread."""
+    st = parse.Statement(basis="standalone", period_end=date(2026, 6, 30), unit=10 ** 7,
+                         values={"revenue": 0.0, "other_income": 5.0, "total_income": 5.0})
+    st.checks = parse._check(st.values, st.unit)
+    assert st.ok()

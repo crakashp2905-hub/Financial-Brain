@@ -211,6 +211,10 @@ def render(con, state: dict, *, watchlist_path=None) -> tuple[str, list[str]]:
                 tone += (f" _({'adverse' if mt['tone'] == 'negative' else 'positive'}"
                          f" per {mt['model']})_ {cite(mt['evidence'])}")
             out.append(f"- **{name}**{tone} — {e['text'][:180]} {cite(e['evidence'])}")
+            if e.get("base_rate"):
+                br = e["base_rate"]
+                mark = "**pattern:** " if br["unusual"] else "context: "
+                out.append(f"  - {mark}{br['text']} {cite(br['evidence'])}")
             for df in e.get("document_facts") or []:
                 # The headline says "Receipt of order"; the document says how much.
                 out.append(f"  - {_doc_fact(df)} {cite(df['evidence'])}")

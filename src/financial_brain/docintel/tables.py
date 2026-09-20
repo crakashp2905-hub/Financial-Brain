@@ -72,16 +72,18 @@ def rows(page) -> list[Row]:
     out: list[Row] = []
     for y in sorted(buckets, reverse=True):          # PDF y grows upwards
         cells = [t for _, t in sorted(buckets[y], key=lambda c: c[0])]
-        label_parts, numbers, raw = [], [], []
-        for cell in cells:
-            value = _number(cell)
+        # Producers differ: some place the label and each figure as separate fragments,
+        # others emit the whole line at once ("Revenue from operations 2,355.32 1,926.04").
+        # Joining first and splitting on tokens handles both.
+        tokens = " ".join(cells).split()
+        numbers, raw = [], []
+        while tokens:
+            value = _number(tokens[-1])
             if value is None:
-                if not numbers:                      # label text precedes the figures
-                    label_parts.append(cell.strip())
-            else:
-                numbers.append(value)
-                raw.append(cell.strip())
-        label = " ".join(" ".join(label_parts).split())
+                break
+            numbers.insert(0, value)
+            raw.insert(0, tokens.pop())
+        label = " ".join(" ".join(tokens).split())
         if label or numbers:
             out.append(Row(label=label, numbers=numbers, raw_cells=raw, y=y))
     return out

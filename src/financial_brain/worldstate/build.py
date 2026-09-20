@@ -27,6 +27,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from ..config import TIER
 from ..events.classify import legal_tone
 from ..evidence import ledger
+from ..features import baserates
 
 BUILDER = "worldstate v4"                  # v4: + model-read tone (ADR-0002)
 KEY_INDICES = ["Nifty 50", "Nifty Bank", "Nifty 500", "NIFTY Midcap 100",
@@ -221,6 +222,33 @@ def build(con, d: date, *, as_of: datetime | None = None) -> dict:
                 cited.append(tid)
                 e["model_tone"] = {"tone": tone, "model": model, "evidence": tid,
                                    "text_source": src}
+
+    # ---- how unusual is this, here and against the market? --------------------------
+    #      A red flag reads the same whether it is the first in a decade or the third in
+    #      three years. The rate is computed as of this session, so nothing leaks from
+    #      later filings, and it is a DERIVED claim over Tier-1 counts.
+    RED = ("AUDITOR_CHANGE", "AUDITOR_RESIGNATION", "INSOLVENCY", "PROMOTER_PLEDGE",
+           "LEGAL_REGULATORY", "MANAGEMENT_CHANGE")
+    for e in events:
+        if e["event_type"] not in RED or not e["isin"]:
+            continue
+        r = baserates.rate(con, e["isin"], e["event_type"], d)
+        if r.company_36m < 2:
+            continue                      # a first occurrence has no pattern to report
+        bid = ledger.mint(
+            con, kind="base_rate", subject=e["isin"], as_of=close_ts,
+            claim=f"{e['company']}: {e['event_type'].replace('_', ' ').lower()} - "
+                  f"{r.describe()}",
+            value={"event_type": e["event_type"], "company_12m": r.company_12m,
+                   "company_36m": r.company_36m,
+                   "last_seen": r.last_seen.isoformat() if r.last_seen else None,
+                   "market_share_12m": round(r.market_share_12m, 4),
+                   "universe": r.universe, "peer_group": r.peer_group},
+            source="DERIVED", source_tier=TIER["DERIVED"],
+            derivation="features/baserates over BSE announcement history",
+            inputs=[e["evidence"]])
+        cited.append(bid)
+        e["base_rate"] = {"text": r.describe(), "unusual": r.unusual(), "evidence": bid}
 
     # ---- what the filing's own document says (C11) ----------------------------------
     #      The ingest already minted these as Tier-1 claims; the world state carries the

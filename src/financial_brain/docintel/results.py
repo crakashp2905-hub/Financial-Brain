@@ -59,6 +59,12 @@ PERIOD_MONTH_FIRST = re.compile(
     r"(?:quarter|period|year)\s+ended\s*:?\s*"
     r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*"
     r"(\d{1,2})\s*[a-z0-9']{0,3}\s*,?\s*(\d{4})", re.I)
+# And many write it numerically: "Quarter ended 30.06.2026" / "30-06-2026" / "30/06/2026".
+# Nine statements in a 60-filing sample parsed cleanly and were then dropped for want of
+# a period, which is the most wasteful way to lose data.
+PERIOD_NUMERIC = re.compile(
+    r"(?:quarter|period|year)\s+ended\s*:?\s*"
+    r"(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})", re.I)
 MONTHS = {m: i + 1 for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"])}
 
@@ -73,8 +79,16 @@ class Statement:
     page: int = 0
 
     def ok(self) -> bool:
-        """Did the statement pass its own arithmetic? Unknown checks do not count."""
-        return bool(self.checks) and all(self.checks.values())
+        """Did the statement pass its own arithmetic, and say something?
+
+        Zero revenue and zero income satisfy any sum trivially - 0 + x = x - so a
+        degenerate reading would sail through the checks. A results statement that
+        reports nothing at all is a misread, not a quiet quarter.
+        """
+        if not self.checks or not all(self.checks.values()):
+            return False
+        return max(abs(self.values.get("revenue") or 0),
+                   abs(self.values.get("total_income") or 0)) > 0
 
 
 def _norm(label: str) -> str:
@@ -131,6 +145,11 @@ def period_of(text: str) -> date | None:
         day, month, year = int(m.group(1)), MONTHS[m.group(2).lower()[:3]], int(m.group(3))
     elif (m := PERIOD_MONTH_FIRST.search(head)):
         day, month, year = int(m.group(2)), MONTHS[m.group(1).lower()[:3]], int(m.group(3))
+    elif (m := PERIOD_NUMERIC.search(head)):
+        day, month, year = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        year += 2000 if year < 100 else 0          # "26" means 2026, not year 26
+        if month > 12:                             # written month-first; swap
+            day, month = month, day
     else:
         return None
     try:
