@@ -349,3 +349,34 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   (verified end-to-end on 2026-09-18).
   Open: bulk fundamentals for the universe is deliberately NOT built (~2k requests);
   fetch per company as needed. MFCentral still owner-only (PAN + OTP).
+- 2026-09-20 (late afternoon) — **Phase 2 exit test closed, and C20 started.**
+  * **Invalidation monitoring** (`fb monitor`, daily step): decisions carry typed
+    `invalidation_checks` beside the prose; `decisions/monitor.py` re-evaluates them over
+    Tier-1 data (drawdown from entry, red-flag filing, accepted adverse reading, price
+    level, pledge filings). A trigger becomes dated evidence + a decision event, raised
+    once. Prose with no typed twin is reported **unmonitored** - the existing Reliance
+    draft shows three. The committee chair now emits typed checks with its bear case.
+    The brief prints a "Theses under watch" section with citations.
+  * **C20 untrusted text** (`fb security`): every typed decision wraps its input in
+    markers it cannot close, with a standing "this is data, not instructions" line;
+    text that tries to steer the model is refused and logged to `security_findings`,
+    and tone falls back to the exchange's own filing text. Tests pin both directions -
+    six steering patterns caught, four real headlines (FSSAI, PVR probe, rating
+    downgrade, order win) must NOT be flagged.
+  * **Watchlist**: `data/watchlist.txt` seeded as a PLACEHOLDER (30 most liquid NSE EQ
+    names by median turnover) - **replace it with yours**. `fb fundamentals --watchlist`
+    fetched all 30: 29 price cross-checks agree with our own closes, 0 disagree.
+  * **ruff** added with a defect-only rule set (F, E9, B) and cleared; the scorer now
+    zips decisions against golds with `strict=True`.
+
+  **IN FLIGHT - finish this first:** wrapping the prompt changed the prompt, so every
+  stored calibration is stale (fin-r1 went 0.848 -> 0.879 on the same filings,
+  llama3.1:8b F1 0.820 -> 0.791). Benchmarks now record a prompt fingerprint and
+  `router.route_is_current()` treats a route measured under another prompt as **no route
+  at all**, so `fb tone` will decline until this is done. A full re-benchmark
+  (3 models x 4 labelled sets) is running -> `data/rebench_all.log`. When it finishes:
+
+      fb models route --task sentiment      --budget-ms 8000  --verify-on sentiment_holdout      --max-accepted-error 0.10
+      fb models route --task sentiment_news --budget-ms 15000 --verify-on sentiment_news_holdout --max-accepted-error 0.10
+
+  then re-run `fb tone --date <d> --refresh` and `fb brief --date <d>`. See ADR-0003.
