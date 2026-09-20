@@ -824,6 +824,26 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_security(args) -> int:
+    """Attempts by untrusted text to steer a model, and where they were seen."""
+    cfg = load()
+    with Database(cfg).connect() as con:
+        rows = con.execute("""SELECT detected_at, where_seen, pattern, action, subject,
+                LEFT(matched, 60) FROM security_findings
+                ORDER BY detected_at DESC LIMIT ?""", [args.limit]).fetchall()
+        if not rows:
+            print("no findings recorded")
+            return 0
+        for when, where, pattern, action, subject, matched in rows:
+            print(f"{str(when)[:19]}  {where:<22} {pattern:<22} {action}")
+            print(f"    {subject}: {matched}")
+        by = con.execute("""SELECT pattern, COUNT(*) FROM security_findings
+                            GROUP BY 1 ORDER BY 2 DESC""").fetchall()
+        print()
+        print("totals: " + ", ".join(f"{p} {n}" for p, n in by))
+    return 0
+
+
 def cmd_monitor(args) -> int:
     """Re-check every live decision's invalidation conditions."""
     from datetime import date as _date
@@ -1234,6 +1254,10 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("security", help="untrusted-text findings at the model boundary")
+    g.add_argument("--limit", type=int, default=20)
+    g.set_defaults(fn=cmd_security)
 
     g = sub.add_parser("monitor", help="re-check live decisions' invalidation conditions")
     g.add_argument("--date")
