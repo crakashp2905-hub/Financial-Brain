@@ -119,6 +119,24 @@ def render(con, state: dict, *, watchlist_path=None) -> tuple[str, list[str]]:
                        f"{cite(e['evidence'])}")
         out.append("")
 
+    # ---- live theses and whether anything has broken them ---------------------------
+    theses = state.get("theses") or []
+    if theses:
+        out.append("## Theses under watch")
+        for t in theses:
+            name = tickers.get(t["isin"]) or t["isin"]
+            out.append(f"- **{t['action']} {name}** ({t['state'].replace('_', ' ').lower()}) "
+                       f"— {t['thesis']}")
+            for a in t["alerts"]:
+                out.append(f"  - **invalidated** ({a['check']}): {a['detail'][:150]} "
+                           f"{cite(a['evidence'])}")
+            if not t["alerts"]:
+                out.append("  - no invalidation condition has fired")
+            if t["unmonitored"]:
+                out.append(f"  - {t['unmonitored']} stated condition(s) have no automatic "
+                           f"check: still on you to watch")
+        out.append("")
+
     # ---- indices and sectors -------------------------------------------------------
     out.append("## Indices")
     out.append("| Index | Close | Day | 20 sessions |")

@@ -306,10 +306,36 @@ def build(con, d: date, *, as_of: datetime | None = None) -> dict:
         upcoming.append({"isin": isin, "type": kind, "ex_date": ex_date, "details": details,
                          "amount": amt, "evidence": eid})
 
+    # ---- live theses and any invalidation condition that has fired ------------------
+    #      The monitor mints the evidence; the world state only carries what it found, so
+    #      a reader sees "this thesis broke, here is the dated claim" rather than a flag.
+    theses = []
+    if con.execute("""SELECT 1 FROM information_schema.tables
+                      WHERE table_name = 'decision_alerts'""").fetchone():
+        from ..decisions import monitor as dmon
+        for did in dmon.live_decisions(con):
+            c = json.loads(con.execute("SELECT content FROM decisions WHERE decision_id = ?",
+                                       [did]).fetchone()[0])
+            state_now = con.execute("""SELECT to_state FROM decision_events
+                                       WHERE decision_id = ? ORDER BY seq DESC LIMIT 1""",
+                                    [did]).fetchone()[0]
+            alerts = [{"check": ck, "detail": det, "as_of": on, "evidence": eid}
+                      for ck, det, on, eid in con.execute("""
+                          SELECT check_name, detail, as_of, evidence_id FROM decision_alerts
+                          WHERE decision_id = ? AND as_of <= ? ORDER BY as_of DESC, check_name
+                          """, [did, d]).fetchall()]
+            cited.extend(a["evidence"] for a in alerts)
+            prose = c.get("invalidation_conditions") or []
+            checks = c.get("invalidation_checks") or []
+            theses.append({"decision_id": did, "isin": c["isin"], "action": c["action"],
+                           "thesis": c.get("thesis", "")[:160], "state": state_now,
+                           "alerts": alerts,
+                           "unmonitored": max(len(prose) - len(checks), 0)})
+
     content = {"business_date": d, "previous_session": prev, "as_of": as_of,
                "builder": BUILDER, "market": market, "indices": indices,
                "sectors": sectors, "gainers": gainers, "losers": losers, "events": events,
-               "upcoming": upcoming, "quality": quality}
+               "upcoming": upcoming, "quality": quality, "theses": theses}
     body = json.dumps(ledger._canon(content), sort_keys=True, separators=(",", ":"))
     version_id = "ws_" + hashlib.sha256(body.encode()).hexdigest()[:24]
     con.execute("""INSERT INTO world_states (version_id, business_date, built_at, content,
