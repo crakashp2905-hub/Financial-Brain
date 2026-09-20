@@ -161,7 +161,7 @@ def test_model_tone_is_cited_only_when_the_model_cleared_its_bar(db, monkeypatch
         got = tone.classify_day(con, D1)
         s = ws.build(con, D1)
         text, _ = render.render(con, s)
-    assert got == {"classified": 3, "accepted": 2}
+    assert got == {"classified": 3, "accepted": 2, "refreshed": 0}
     marked = {e["news_id"]: e.get("model_tone") for e in s["events"]}
     assert marked["in-window"]["tone"] == "negative" and marked["short"] is None
     assert re.search(r"_\(adverse per stub\)_ \[\d+\]", text)

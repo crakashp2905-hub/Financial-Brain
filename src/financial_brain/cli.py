@@ -828,7 +828,8 @@ def cmd_tone(args) -> int:
     """Shareholder tone of a day's high-materiality announcements via the model router."""
     from .events import tone
     with Database(load()).connect() as con:
-        print(tone.classify_day(con, _d(args.date), limit=args.limit))
+        print(tone.classify_day(con, _d(args.date), limit=args.limit,
+                                refresh=args.refresh))
         for r in con.execute("""SELECT t.tone, t.model, ROUND(t.confidence, 3), t.accepted,
                 a.company, LEFT(a.headline, 90) FROM announcement_tone t
                 JOIN announcements a USING (news_id) WHERE a.business_date = ?
@@ -1098,6 +1099,8 @@ def main(argv: list[str] | None = None) -> int:
     g.set_defaults(fn=cmd_models)
 
     g = sub.add_parser("tone", help="shareholder tone of announcements (model router)")
+    g.add_argument("--refresh", action="store_true",
+                   help="also re-classify filings left by a superseded route")
     g.add_argument("--date", required=True)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_tone)
