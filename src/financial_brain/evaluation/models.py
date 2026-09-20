@@ -148,7 +148,7 @@ def bench(con, task: str, model: str, *, target: float = 0.9, limit: int | None 
     decide = decider(task, model)
     decisions = [decide(r) for r in rows]
     out = score([r["gold"] for r in rows], decisions, target)
-    out.update(task=task, model=model,
+    out.update(task=task, model=model, prompt_version=system1.prompt_version(),
                latency_ms=sum(d.latency_ms for d in decisions) / len(decisions),
                # per item, so a router cascade can be simulated without re-running models
                items=[[d.label, round(d.confidence, 5), d.latency_ms] for d in decisions])
@@ -228,7 +228,8 @@ def rescore(con, task: str, *, target: float = 0.9) -> list[dict]:
         ds = [system1.Decision(label=a, probs={}, confidence=c, model=model, latency_ms=ms)
               for a, c, ms in items]
         r = score(golds, ds, target)
-        r.update(task=task, model=model, latency_ms=lat, items=items, rescored=True)
+        r.update(task=task, model=model, latency_ms=lat, items=items, rescored=True,
+                 prompt_version=json.loads(detail or "{}").get("prompt_version"))
         con.execute("""INSERT INTO model_bench (run_at, task, model, n, accuracy, macro_f1,
                        latency_ms, target, threshold, coverage, detail)
                        VALUES (?,?,?,?,?,?,?,?,?,?,?)""",

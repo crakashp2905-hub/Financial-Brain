@@ -581,3 +581,15 @@ CREATE TABLE IF NOT EXISTS decision_alerts (
     raised_at       TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (decision_id, evidence_id)
 );
+
+-- Attempts by untrusted text to steer a model (security/untrusted.py). Append-only:
+-- a pattern across companies is only visible if nothing is overwritten.
+CREATE TABLE IF NOT EXISTS security_findings (
+    subject         VARCHAR NOT NULL,      -- company, ISIN or news_id the text came with
+    where_seen      VARCHAR NOT NULL,      -- the boundary: tone_headline, dossier_fact...
+    pattern         VARCHAR NOT NULL,
+    matched         VARCHAR,
+    excerpt         VARCHAR,
+    action          VARCHAR NOT NULL,      -- rejected | fell back to trusted text
+    detected_at     TIMESTAMPTZ NOT NULL
+);

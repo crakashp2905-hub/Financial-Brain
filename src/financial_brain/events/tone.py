@@ -15,6 +15,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 
 from ..llm import router
+from ..security import untrusted
 
 TASK = "sentiment"
 NEWS_TASK = "sentiment_news"    # headlines are a different distribution; own calibration
@@ -60,17 +61,28 @@ def classify_day(con, d: date, *, materiality: tuple[str, ...] = ("high",),
                        [d, *materiality, *([chosen] if (refresh and chosen) else [])]).fetchall()
     if limit:
         rows = rows[:limit]
-    counts = {"classified": 0, "accepted": 0, "refreshed": 0, "on_news_headline": 0}
+    counts = {"classified": 0, "accepted": 0, "refreshed": 0, "on_news_headline": 0,
+              "rejected_as_injection": 0}
     for nid, head, subj, news_head in rows:
         # An exchange clarification reads as procedural boilerplate; the news it is about
         # is what moved the price. When the filing itself carries that headline, classify
         # that instead - same filing, better text.
+        filing_text = head if head and len(head) >= 25 else (subj or head or "")
         if news_head and news_steps:
-            text, src, task, use = news_head, "news_headline", NEWS_TASK, news_steps
-            counts["on_news_headline"] += 1
+            # A fetched headline is text a stranger wrote; if it tries to steer the
+            # model, fall back to the filing (Tier 1, the exchange's own bytes).
+            safe, found = untrusted.guard(con, news_head, subject=str(nid),
+                                          where="tone_news_headline",
+                                          fallback=filing_text)
+            if found:
+                counts["rejected_as_injection"] += 1
+            if safe is news_head:
+                text, src, task, use = news_head, "news_headline", NEWS_TASK, news_steps
+                counts["on_news_headline"] += 1
+            else:
+                text, src, task, use = safe, "filing", TASK, steps
         else:
-            text = head if head and len(head) >= 25 else (subj or head or "")
-            src, task, use = "filing", TASK, steps
+            text, src, task, use = filing_text, "filing", TASK, steps
         r = router.decide(con, task, {"state": text}, steps=use)
         counts["refreshed"] += con.execute(
             "DELETE FROM announcement_tone WHERE news_id = ? RETURNING 1", [nid]).fetchone() is not None

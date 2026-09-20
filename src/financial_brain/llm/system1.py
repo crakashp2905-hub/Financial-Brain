@@ -21,6 +21,7 @@ right often enough, and only that threshold is used to accept or escalate.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import string
@@ -29,9 +30,22 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 
+from ..security import untrusted
 from . import backends
 
 KEYS = string.ascii_uppercase + string.ascii_lowercase          # up to 52 choices
+
+
+def prompt_version() -> str:
+    """A fingerprint of the prompt template a typed decision is measured under.
+
+    Thresholds describe a model *and the prompt it was asked with*. Wrapping the input
+    as untrusted data (C20) moved fin-r1 from 0.848 to 0.879 on the same filings, so a
+    calibration measured under a different template does not describe what is deployed.
+    The router refuses stale routes rather than quietly using them.
+    """
+    template = _prompt("I", "S", ["a", "b"], None) + _word_prompt("I", "S", ["a", "b"])
+    return "p_" + hashlib.sha256(template.encode()).hexdigest()[:12]
 
 
 @dataclass
@@ -49,13 +63,15 @@ def _prompt(instruction: str, state: str, choices: list[str],
             notes: dict[str, str] | None) -> str:
     lines = [f"{KEYS[i]}. {c}" + (f" - {notes[c]}" if notes and notes.get(c) else "")
              for i, c in enumerate(choices)]
-    return (f"{instruction}\n\nOptions:\n" + "\n".join(lines) +
-            f"\n\nInput:\n{state}\n\nAnswer with the single option letter only.")
+    return (f"{instruction}\n\nOptions:\n" + "\n".join(lines) + "\n\n" +
+            untrusted.wrap(state, label="the filing or headline to classify") +
+            "\n\nAnswer with the single option letter only.")
 
 
 def _word_prompt(instruction: str, state: str, choices: list[str]) -> str:
-    return (f"{instruction}\n\nInput:\n{state}\n\nAnswer with exactly one word from: "
-            + ", ".join(choices) + ".")
+    return (f"{instruction}\n\n" +
+            untrusted.wrap(state, label="the filing or headline to classify") +
+            "\n\nAnswer with exactly one word from: " + ", ".join(choices) + ".")
 
 
 def _word_key(tok: str, choices: list[str]) -> str | None:

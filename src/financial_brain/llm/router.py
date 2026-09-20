@@ -65,16 +65,32 @@ def plan(con, task: str, *, optimised: bool = True) -> list[dict]:
             FROM model_bench WHERE task = ?) WHERE rk = 1 AND threshold IS NOT NULL""",
                        [task]).fetchall()
     steps = [{"model": m, "threshold": t, "latency_ms": lat, "macro_f1": f1, "tier": tier(m),
-              "thresholds": json.loads(det or "{}").get("thresholds")}
+              "thresholds": json.loads(det or "{}").get("thresholds"),
+              "prompt_version": json.loads(det or "{}").get("prompt_version")}
              for m, t, lat, f1, det in rows if tier(m) < 3 or cloud_ok]
     return sorted(steps, key=lambda s: (s["tier"], s["latency_ms"] or 0))
+
+
+def route_is_current(con, task: str) -> tuple[bool, str]:
+    """Was the stored route measured under the prompt we now send?"""
+    r = con.execute("""SELECT steps FROM model_routes WHERE task = ?
+                       ORDER BY chosen_at DESC LIMIT 1""", [task]).fetchone()
+    if not r:
+        return False, "no stored route"
+    want = system1.prompt_version()
+    for step in json.loads(r[0]):
+        got = step.get("prompt_version")
+        if got != want:
+            return False, (f"{step['model']} was calibrated under prompt {got or 'unknown'}, "
+                           f"the deployed prompt is {want}: re-run "
+                           f"`fb models bench --task {task}`")
+    return True, "current"
 
 
 def has_route(con, task: str) -> bool:
     """Is there a stored, verified route for this task? Callers use it to decide whether
     a task may be answered at all, rather than borrowing another task's calibration."""
-    return con.execute("""SELECT 1 FROM model_routes WHERE task = ?
-                          ORDER BY chosen_at DESC LIMIT 1""", [task]).fetchone() is not None
+    return route_is_current(con, task)[0]
 
 
 def choose(con, task: str, *, budget_ms: float = 4000, verify_on: str | None = None,
