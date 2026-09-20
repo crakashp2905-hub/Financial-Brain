@@ -222,6 +222,23 @@ def build(con, d: date, *, as_of: datetime | None = None) -> dict:
                 e["model_tone"] = {"tone": tone, "model": model, "evidence": tid,
                                    "text_source": src}
 
+    # ---- what the filing's own document says (C11) ----------------------------------
+    #      The ingest already minted these as Tier-1 claims; the world state carries the
+    #      number and cites that evidence rather than re-deriving anything.
+    if events and con.execute("""SELECT 1 FROM information_schema.tables
+                                 WHERE table_name = 'filing_facts'""").fetchone():
+        doc_facts = {}
+        for nid, kind, value, unit, raw, eid in con.execute(
+                f"""SELECT news_id, kind, value, unit, raw, evidence_id FROM filing_facts
+                    WHERE news_id IN ({','.join('?' * len(events))})""",
+                [e["news_id"] for e in events]).fetchall():
+            doc_facts.setdefault(nid, []).append(
+                {"kind": kind, "value": value, "unit": unit, "raw": raw, "evidence": eid})
+        for e in events:
+            if e["news_id"] in doc_facts:
+                e["document_facts"] = doc_facts[e["news_id"]]
+                cited.extend(f["evidence"] for f in doc_facts[e["news_id"]])
+
     # ---- the news a filing refers to, recovered from the filing's own text ----------
     #      Tier DERIVED: a deterministic rule over Tier-1 bytes, not a fetched article.
     if events and con.execute("""SELECT 1 FROM information_schema.tables

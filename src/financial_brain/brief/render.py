@@ -66,6 +66,26 @@ def _pct(x) -> str:
     return "—" if x is None else f"{x * 100:+.2f}%"
 
 
+DOC_LABEL = {"order_value": "order value", "tax_demand": "tax demand",
+             "penalty": "penalty", "default": "amount in default",
+             "acquisition": "deal value", "fund_raise": "raising",
+             "dividend_per_share": "dividend", "demand_set_aside": "demand set aside"}
+
+
+def _doc_fact(f: dict) -> str:
+    """A number read out of the filing's own document."""
+    label = DOC_LABEL.get(f["kind"], f["kind"].replace("_", " "))
+    if f["unit"] == "INR_per_share":
+        return f"**{label} ₹{f['value']:,.2f} per share**"
+    if f["unit"] == "INR":
+        v = f["value"]
+        amount = (f"₹{v / 10 ** 7:,.2f} crore" if v >= 10 ** 7 else
+                  f"₹{v / 10 ** 5:,.2f} lakh" if v >= 10 ** 5 else f"₹{v:,.0f}")
+    else:
+        amount = f"{f['unit']} {f['value']:,.0f}"
+    return f"**{label} {amount}** (document)"
+
+
 def _watchlist(path) -> set[str]:
     if not path or not path.exists():
         return set()
@@ -191,6 +211,9 @@ def render(con, state: dict, *, watchlist_path=None) -> tuple[str, list[str]]:
                 tone += (f" _({'adverse' if mt['tone'] == 'negative' else 'positive'}"
                          f" per {mt['model']})_ {cite(mt['evidence'])}")
             out.append(f"- **{name}**{tone} — {e['text'][:180]} {cite(e['evidence'])}")
+            for df in e.get("document_facts") or []:
+                # The headline says "Receipt of order"; the document says how much.
+                out.append(f"  - {_doc_fact(df)} {cite(df['evidence'])}")
             if e.get("news_ref"):
                 # A clarification filing says nothing; the news it quotes is the story.
                 nr = e["news_ref"]
