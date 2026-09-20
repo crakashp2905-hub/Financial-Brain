@@ -71,7 +71,23 @@ wrong at most 10% of the time. Result:
 | finbert -> qwen2.5:1.5b -> llama3.1:8b | - | 18.6% wrong when accepted - rejected |
 | **qwen2.5:7b alone** | 85.5%, 5.3 s | **86.5%, 7% wrong when accepted**, declines 34% - **stored** |
 
-With every model benchmarked on the held-out set too, the deployed route is
+**Fin-R1 (2026-09-20, once the model store moved to D:).** It had been marked
+`system_one = false` on the assumption that an R1-style distill must think before
+answering. Measurement says otherwise: forced to a single token it answers on-menu in
+~2.4-3.7 s, and it is the only local model that earns a threshold for **all three**
+labels, "positive" included. Leading the route it settles 82% of filings by itself:
+
+| route (error bar) | tuning | held out |
+|---|---|---|
+| **fin-r1 -> llama3.1:8b -> gemma2** (10%) | 90.9% | **89.4%, 9.8% wrong when accepted, declines 2%**; recall 94% neutral / 75% positive / 80% negative |
+| llama3.1:8b -> phi4 -> gemma2 (15%) | 91.5% | 85.6%, 14.6% wrong when accepted, declines 1%; negative recall 60% |
+
+The Fin-R1 chain is deployed: it passes the *strict* bar the previous route could not,
+is 1.2 s/item faster, and finds four adverse filings in five. Finance-specific training
+is worth something after all - but only the kind that survives our own labels. FinBERT
+(F1 0.45) and FinSenti (0.05) carry the same "financial" billing and failed.
+
+With every model benchmarked on the held-out set too, the earlier comparison was
 
 | route | tuning | held out |
 |---|---|---|

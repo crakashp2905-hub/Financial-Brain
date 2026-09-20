@@ -92,7 +92,9 @@ role = "reasoning; always thinks first (ignores think=false and /no_think)"
 name = "fin-r1"
 backend = "ollama"
 tier = 2
-system_one = false
+# Measured 2026-09-20: forced to one token it answers on-menu in ~2.4 s, so it *can*
+# serve System One despite being an R1-style distill. Benchmarked like any other.
+system_one = true
 role = "financial reasoning (Fin-R1 7B, SUFE; licence unverified - personal use)"
 
 [[model]]
