@@ -432,9 +432,39 @@ The layer that decides whether any of the above is usable. See
 | **Kite Connect** | 2 | Live quotes, WebSocket ticks, historical candles, portfolio, orders | Paid; static IP for orders; ~10 orders/sec; personal use only | **INTEGRATE** |
 | **NSE real-time / corporate data products** | 1 | Licensed L1/L2/L3, tick-by-tick, fundamentals, shareholding | Commercial agreement; corporate-data subscription quoted ~₹10.6 lakh/yr | **DEFER** |
 | **NSE MCP interface** | — | AI-facing market data | Stated educational/informational — **not** for trading or commercial deployment | **REFERENCE** |
-| **Screener.in** | 3 | Convenient fundamentals, ratios | Terms unclear; restated (non-PIT) data | **WRAP, with caution** |
-| **Moneycontrol** | 3 | News, fundamentals | Terms unclear; non-PIT | **WRAP, with caution** |
+| **Screener.in** | 3 | Convenient fundamentals, ratios | Terms unclear; restated (non-PIT) data | **WRAPPED 2026-09-20** (see §4a) |
+| **Moneycontrol** | 3 | News (fundamentals are robots-disallowed) | Terms unclear; non-PIT | **WRAPPED 2026-09-20** (see §4a) |
+| **AMFI NAV feed** | 1 | Daily NAV + ISIN for ~14k mutual-fund schemes | Free, public, no auth | **INTEGRATED 2026-09-20** |
+| **MFCentral** | 1 | A holder's own consolidated MF holdings | **Requires the owner's PAN + OTP** | **OWNER-ONLY** - export the CAS by hand; Claude does not authenticate |
 | **RBI** | 1 | Policy, rates, inflation, liquidity | Free | **INTEGRATE** |
+
+### 4a. How the Tier-3 web sources are actually used (2026-09-20)
+
+"Public" is not "licensed", so these wrappers are deliberately narrow and the limits are
+in code, not in good intentions:
+
+* **On demand, never crawling.** Moneycontrol fetches happen only for a URL a filing
+  already pointed at (`ingest/newsfetch.py`), one at a time, with a crawl delay. Screener
+  is fetched per company, on request.
+* **robots.txt is obeyed, including wildcards.** Python's `urllib.robotparser` matches
+  rule paths by plain prefix, so Moneycontrol's `Disallow: /stocks/company_info/*`
+  matched *nothing* and read as allowed. `providers/robots.py` implements `*`, `$` and
+  longest-match-wins instead. Consequence: Moneycontrol **fundamentals are off-limits**
+  (`/stocks/company_info/`, `/financials/results/` are disallowed) - it is a news source
+  here, nothing more. Screener's `/company/<SYMBOL>/` is allowed; `/company/source/
+  quarter/*`, `/user/*` and query-sorted listings are not.
+* **An allowlist of hosts the owner approved**, so extraction finding an Economic Times
+  or Livemint link does not silently become a request to those sites.
+* **We store facts about the article, not the article.** Title, publication time and the
+  publisher's own `og:description`; never the body.
+* **Most news needs no fetching at all.** `events/newsref.py` recovers the headline from
+  the filing's own text for 7,146 filings - the exchange quotes it. Fetching is the
+  fallback for the ~12.6k filings that carry only a bare link.
+* **Tier 3 never outranks Tier 1.** A Screener ratio is cross-checked against the close
+  we computed ourselves; disagreement beyond 2% is stored as `quality='disputed'`,
+  not averaged away.
+
+
 | **SEBI** | 1 | Regulation, algo framework, RA/RIA rules | Free; compliance-critical | **REFERENCE** |
 | **FII/DII daily flows** | 1 | Regime input | Free | **INTEGRATE** |
 | **India VIX** | 1 | Regime input | Free | **INTEGRATE** |

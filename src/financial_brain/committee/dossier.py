@@ -116,6 +116,16 @@ def build(con, isin: str, world_state_version: str, *, filings_days: int = 90,
                 f"other listed members: {', '.join(others[:8])}",
                 {"group_id": g["group_id"]}, "BSE", "graph: corroborated promoter links")
 
+    # -- valuation ratios compiled by Screener (Tier 3, cross-checked) ---------------
+    #    Stored snapshots only: a dossier reads what we already hold, it does not reach
+    #    out to a website while a committee is sitting. The claim keeps its tier, so a
+    #    debater can see this is a compiler's number, not the company's filing.
+    if _has(con, "company_fundamentals"):
+        val = valuation_as_of(con, isin, d)
+        if val:
+            add("valuation", val["text"], val["value"], "SCREENER",
+                "providers/screener top-ratios", lake_key=val["lake_key"])
+
     # -- what the constitution would say to a BUY now --------------------------------
     from ..config import load
     from ..constitution import rules
@@ -136,3 +146,36 @@ def build(con, isin: str, world_state_version: str, *, filings_days: int = 90,
 def _has(con, name: str) -> bool:
     return bool(con.execute("""SELECT 1 FROM information_schema.tables
                                WHERE table_name = ?""", [name]).fetchone())
+
+
+RATIOS_WANTED = ("Stock P/E", "Book Value", "ROCE", "ROE", "Dividend Yield", "Market Cap")
+
+
+def valuation_as_of(con, isin: str, d) -> dict | None:
+    """The most recent Screener snapshot for this ISIN that existed **on or before** ``d``.
+
+    Point-in-time matters as much for a Tier-3 ratio as for a price: a snapshot taken
+    today must not appear in a dossier reconstructing what was knowable last week, or a
+    replayed decision silently improves on the one that was actually made.
+    """
+    row = con.execute("""SELECT f.symbol, f.ratios, f.price_check, f.fetched_on, f.lake_key
+                         FROM company_fundamentals f
+                         JOIN (SELECT DISTINCT ticker, isin FROM eod_prices) p
+                           ON p.ticker = f.symbol
+                         WHERE p.isin = ? AND f.fetched_on <= ?
+                         ORDER BY f.fetched_on DESC LIMIT 1""", [isin, d]).fetchone()
+    if not row:
+        return None
+    symbol, ratios_json, check_json, on, key = row
+    ratios = json.loads(ratios_json)
+    check = json.loads(check_json) if check_json else None
+    wanted = [k for k in RATIOS_WANTED if k in ratios]
+    if not wanted:
+        return None
+    text = ", ".join(f"{k} {ratios[k]['raw']}" for k in wanted)
+    if check and not check["agrees"]:
+        text += (f" - disputed: Screener's price {check['screener_price']} is "
+                 f"{check['drift']:.1%} from our close {check['our_close']}")
+    return {"text": f"{text} (Screener, {on})", "lake_key": key,
+            "value": {"symbol": symbol, "ratios": {k: ratios[k] for k in wanted},
+                      "price_check": check}}

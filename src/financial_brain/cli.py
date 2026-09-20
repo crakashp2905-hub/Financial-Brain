@@ -1025,6 +1025,15 @@ def cmd_daily(args) -> int:
             return newsref.extract_day(con, d)
     step("news references in filings (rules)", news_references)
 
+    def fetch_linked_articles():
+        # Only filings whose headline the rules could not recover, and only a handful a
+        # day: this is the polite fallback, not a crawl.
+        from .ingest import newsfetch
+        with Database(cfg).connect() as con:
+            day = con.execute("SELECT MAX(business_date) FROM universe_snapshots").fetchone()[0]
+            return newsfetch.fetch_day(con, cfg, day, limit=10, only_missing_headline=True)
+    step("fetch linked articles (allowlist, robots-aware)", fetch_linked_articles)
+
     def announcement_tone():
         from .events import tone
         with Database(cfg).connect() as con:

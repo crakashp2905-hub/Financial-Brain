@@ -241,3 +241,43 @@ def test_a_price_that_disagrees_is_recorded_as_disputed(tmp_path):
         row = con.execute("""SELECT quality, confidence FROM evidence
                              WHERE kind = 'fundamentals'""").fetchone()
         assert row == ("disputed", "low"), "a disagreement is kept, not silently averaged"
+
+
+def test_a_screener_snapshot_is_point_in_time(tmp_path):
+    """A snapshot taken today must not appear in a dossier reconstructing last week."""
+    import json
+
+    from financial_brain.committee.dossier import valuation_as_of
+    cfg = Config(data_root=tmp_path).ensure()
+    db = Database(cfg)
+    db.migrate()
+    with db.connect() as con:
+        con.execute("""CREATE OR REPLACE VIEW eod_prices AS
+                       SELECT 'ACME' AS ticker, 'INE000A01001' AS isin""")
+        con.execute("""INSERT INTO company_fundamentals (symbol, fetched_on, company_name,
+                       ratios, price_check, lake_key, observed_at) VALUES
+                       ('ACME', DATE '2026-09-20', 'Acme Ltd', ?, NULL, 'k', NOW())""",
+                    [json.dumps({"Stock P/E": {"raw": "42.3", "value": 42.3, "unit": None}})])
+        assert valuation_as_of(con, "INE000A01001", date(2026, 9, 18)) is None
+        got = valuation_as_of(con, "INE000A01001", date(2026, 9, 20))
+        assert got and "Stock P/E 42.3" in got["text"]
+
+
+def test_a_disputed_price_is_stated_in_the_dossier_text(tmp_path):
+    import json
+
+    from financial_brain.committee.dossier import valuation_as_of
+    cfg = Config(data_root=tmp_path).ensure()
+    db = Database(cfg)
+    db.migrate()
+    with db.connect() as con:
+        con.execute("""CREATE OR REPLACE VIEW eod_prices AS
+                       SELECT 'ACME' AS ticker, 'INE000A01001' AS isin""")
+        con.execute("""INSERT INTO company_fundamentals (symbol, fetched_on, company_name,
+                       ratios, price_check, lake_key, observed_at) VALUES
+                       ('ACME', DATE '2026-09-20', 'Acme Ltd', ?, ?, 'k', NOW())""",
+                    [json.dumps({"ROCE": {"raw": "7.78 %", "value": 7.78, "unit": "PCT"}}),
+                     json.dumps({"our_close": 900.0, "screener_price": 1226.0,
+                                 "drift": 0.362, "agrees": False})])
+        got = valuation_as_of(con, "INE000A01001", date(2026, 9, 20))
+        assert "disputed" in got["text"], "a committee must see the disagreement"
