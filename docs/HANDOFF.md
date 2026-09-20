@@ -295,8 +295,19 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   more positives/negatives.
   **Also:** `num_ctx` capped (2k typed / 4k generation) - the default 16k context made
   Ollama allocate a 2 GB KV cache and fail to load 8B models on this laptop.
-  **Owner action pending:** Ollama app -> Settings -> Model location -> `D:\ollama\models`
-  (39.2 GB copy already verified there), then delete `C:\Users\CR Ramesh\.ollama\models`
-  to reclaim ~39 GB; C: is at ~3 GB free and this blocks registering Fin-R1
-  (`data/models/Modelfile.finr1`).
-
+  **Done 2026-09-20:** the model store moved to `D:\ollama\models` (C: back to 33 GB
+  free), which unblocked Fin-R1.
+- 2026-09-20 (morning) — **Fin-R1 registered, measured, and now leading the route.** It
+  had been marked `system_one = false` on the assumption an R1-style distill must think
+  first; forced to one token it answers on-menu in ~2.4-3.7 s and is the only local
+  model earning a threshold for **all three** labels (positive included - the gap that
+  previously left good news unflagged). Verified route is now
+  **fin-r1 -> llama3.1:8b -> gemma2** at the strict 10% error bar: 89.4% held out, 9.8%
+  wrong when accepted, 2% declined, recall 94/75/80% (neutral/positive/negative);
+  Fin-R1 settles 82% alone. `fb tone --refresh` re-does rows left by a superseded route
+  (staleness by time, not model name). 2026-09-18 re-run: 88 of 90 accepted, brief
+  flags eight filings, each naming its model.
+  Still open: cross-fit calibration (fit on A verify on B *and* the reverse), more
+  labelled positives/negatives, and a judgement call to review - Fin-R1 reads "Exchange
+  has sought clarification with reference to news" as adverse (0.998), which my own
+  labelling guide treats as procedural/neutral.
