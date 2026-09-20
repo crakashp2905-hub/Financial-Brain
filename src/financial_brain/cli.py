@@ -824,6 +824,25 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_fundamentals(args) -> int:
+    """Company ratios from Screener (Tier 3), cross-checked against our own close."""
+    from .ingest import fundamentals
+    cfg = load()
+    with Database(cfg).connect() as con:
+        for symbol in args.symbol:
+            r = fundamentals.fetch_company(con, cfg, symbol)
+            print(f"{r['symbol']}  {r['name'] or '-'}  ({r['ratios']} ratios)")
+            chk = r["price_check"]
+            if chk:
+                verdict = "agrees" if chk["agrees"] else "DISAGREES"
+                print(f"  price check: our close {chk['our_close']:.2f} "
+                      f"({chk['our_date']}) vs Screener {chk['screener_price']:.2f} "
+                      f"-> {verdict} ({chk['drift']:.2%})")
+            else:
+                print("  price check: no close of our own to compare")
+    return 0
+
+
 def cmd_newsfetch(args) -> int:
     """Fetch the article a filing links to, where the publisher's robots.txt allows it."""
     from .ingest import newsfetch
@@ -993,9 +1012,15 @@ def cmd_daily(args) -> int:
     step("market regime", regime)
     step("features + promoter graph", features_graph)
 
+    def mutual_fund_navs():
+        from .ingest import mfnav
+        with Database(cfg).connect() as con:
+            return mfnav.ingest(con, cfg)
+    step("mutual-fund NAVs (AMFI)", mutual_fund_navs)
+
     def news_references():
         from .events import newsref
-        with db.connect() as con:
+        with Database(cfg).connect() as con:
             d = con.execute("SELECT MAX(business_date) FROM universe_snapshots").fetchone()[0]
             return newsref.extract_day(con, d)
     step("news references in filings (rules)", news_references)
@@ -1146,6 +1171,10 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("fundamentals", help="company ratios from Screener (Tier 3)")
+    g.add_argument("symbol", nargs="+")
+    g.set_defaults(fn=cmd_fundamentals)
 
     g = sub.add_parser("newsfetch", help="fetch a filing's linked article (robots-aware)")
     g.add_argument("--date", required=True)

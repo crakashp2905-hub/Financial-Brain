@@ -5,6 +5,7 @@ The fetch tests are offline on purpose - what needs pinning is the *politeness* 
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import date
 
 import pytest
@@ -145,3 +146,98 @@ def test_fetch_is_refused_when_robots_cannot_be_read(url, monkeypatch):
     monkeypatch.setattr(p, "_rules", lambda u: None)
     ok, why = p.may_fetch(url)
     assert not ok and "robots" in why
+
+
+SCREENER_PAGE = ("""<html><body><h1>Acme Industries Ltd</h1>
+<ul id="top-ratios">
+  <li class="flex flex-space-between"><span class="name">Market Cap</span>
+      <span class="value">₹ 16,59,630 Cr.</span></li>
+  <li class="flex flex-space-between"><span class="name">Current Price</span>
+      <span class="value">₹ 1,226</span></li>
+  <li class="flex flex-space-between"><span class="name">High / Low</span>
+      <span class="value">₹ 1,612 / 1,226</span></li>
+  <li class="flex flex-space-between"><span class="name">Stock P/E</span>
+      <span class="value">42.3</span></li>
+  <li class="flex flex-space-between"><span class="name">ROCE</span>
+      <span class="value">7.78 %</span></li>
+</ul></body></html>""").encode()
+
+
+def test_screener_ratios_parse_with_units():
+    from financial_brain.providers.screener import parse_company
+    r = parse_company(SCREENER_PAGE)
+    assert r["name"] == "Acme Industries Ltd"
+    # Indian digit grouping: 16,59,630 crore, so commas are not thousands separators.
+    assert r["ratios"]["Market Cap"] == {"raw": "₹ 16,59,630 Cr.",
+                                         "value": 16_59_630 * 1e7, "unit": "INR"}
+    assert r["ratios"]["Stock P/E"]["value"] == 42.3 and r["ratios"]["Stock P/E"]["unit"] is None
+    assert r["ratios"]["ROCE"] == {"raw": "7.78 %", "value": 7.78, "unit": "PCT"}
+
+
+def test_a_paired_ratio_becomes_two_facts():
+    from financial_brain.providers.screener import parse_company
+    ratios = parse_company(SCREENER_PAGE)["ratios"]
+    assert ratios["High"]["value"] == 1612.0 and ratios["Low"]["value"] == 1226.0
+    assert "High / Low" not in ratios
+
+
+def test_screener_refuses_paths_its_robots_disallows(monkeypatch):
+    from financial_brain.providers.robots import Robots
+    from financial_brain.providers.screener import Screener
+    s = Screener()
+    monkeypatch.setattr(s, "_rules", lambda: Robots(
+        "User-agent: *\nDisallow: /user/*\nDisallow: /*?q=\n"
+        "Disallow: /company/source/quarter/*\n", "financial-brain/1.0"))
+    assert s.may_fetch("https://www.screener.in/company/RELIANCE/")[0]
+    assert not s.may_fetch("https://www.screener.in/company/source/quarter/1/")[0]
+    assert not s.may_fetch("https://www.screener.in/user/me")[0]
+    assert not s.may_fetch("https://www.moneycontrol.com/company/X/")[0]
+
+
+@contextmanager
+def _fundamentals_con(tmp_path, close: float):
+    cfg = Config(data_root=tmp_path).ensure()
+    db = Database(cfg)
+    db.migrate()
+    with db.connect() as con:
+        # migrate() defines eod_prices as a view over the curated parquet; for this test
+        # a view returning one row is enough and keeps the object's type unchanged.
+        con.execute(f"""CREATE OR REPLACE VIEW eod_prices AS SELECT
+                        DATE '2026-09-18' AS business_date, 'ACME' AS ticker,
+                        CAST({close} AS DOUBLE) AS close_price""")
+        yield cfg, con
+
+
+class FakeScreener:
+    source, dataset, tier = "SCREENER", "company", 3
+
+    def fetch_company(self, symbol, *, consolidated=False):
+        from datetime import datetime, timezone
+
+        from financial_brain.providers.base import FetchResult
+        return FetchResult(payload=SCREENER_PAGE, url=f"https://www.screener.in/company/{symbol}/",
+                           retrieved_at=datetime.now(timezone.utc), filename=f"{symbol}.html",
+                           content_type="text/html")
+
+
+def test_a_tier3_ratio_is_cross_checked_against_our_own_close(tmp_path):
+    """Screener compiles filings, it does not file them. Where we can compute the same
+    number from Tier-1 data we compare rather than trust."""
+    from financial_brain.ingest import fundamentals
+    with _fundamentals_con(tmp_path, close=1230.0) as (cfg, con):   # within 2% of 1226
+        r = fundamentals.fetch_company(con, cfg, "ACME", provider=FakeScreener(),
+                                       today=date(2026, 9, 20))
+        assert r["price_check"]["agrees"] is True
+        q = con.execute("SELECT quality FROM evidence WHERE kind='fundamentals'").fetchone()
+        assert q[0] == "ok"
+
+
+def test_a_price_that_disagrees_is_recorded_as_disputed(tmp_path):
+    from financial_brain.ingest import fundamentals
+    with _fundamentals_con(tmp_path, close=900.0) as (cfg, con):    # 36% off 1226
+        r = fundamentals.fetch_company(con, cfg, "ACME", provider=FakeScreener(),
+                                       today=date(2026, 9, 20))
+        assert r["price_check"]["agrees"] is False
+        row = con.execute("""SELECT quality, confidence FROM evidence
+                             WHERE kind = 'fundamentals'""").fetchone()
+        assert row == ("disputed", "low"), "a disagreement is kept, not silently averaged"

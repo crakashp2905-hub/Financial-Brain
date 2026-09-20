@@ -556,3 +556,16 @@ CREATE TABLE IF NOT EXISTS news_articles (
     lake_key        VARCHAR,
     fetched_at      TIMESTAMPTZ NOT NULL
 );
+
+-- Headline ratios compiled by Screener (Tier 3), with a cross-check against our own
+-- Tier-1 close where one exists (ingest/fundamentals.py).
+CREATE TABLE IF NOT EXISTS company_fundamentals (
+    symbol          VARCHAR NOT NULL,
+    fetched_on      DATE NOT NULL,
+    company_name    VARCHAR,
+    ratios          VARCHAR NOT NULL,      -- JSON {label: {raw, value, unit}}
+    price_check     VARCHAR,               -- JSON {our_close, screener_price, drift, agrees}
+    lake_key        VARCHAR,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (symbol, fetched_on)
+);
