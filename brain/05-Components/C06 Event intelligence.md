@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 1
-status: not-started
+status: done
 resources:
   - "[[NSE BSE announcements]]"
   - "[[Indian finance news RSS]]"
@@ -31,3 +31,9 @@ Market: FII/DII, rebalancing, rotation, volatility, breadth, derivatives positio
 
 ---
 [[MOC Build]]
+
+> [!success] Built (2026-09)
+> Deterministic rules classify 3.08M announcements at **macro-F1 0.99** on a held-out
+> labelled set - no model involved. Shareholder tone is a separate, calibrated question
+> handled by the [[Model router]], and [[News recovered from filings]] supplies the
+> headline the boilerplate hides.

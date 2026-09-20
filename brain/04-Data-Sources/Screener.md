@@ -1,23 +1,26 @@
 ---
-type: data-source
+type: resource
 tier: 3
-verdict: WRAP
-cost: "Terms unclear; restated non-PIT data"
+verdict: WRAPPED
 tags:
+  - resource
   - data-source
-  - tier/3
-  - verdict/wrap
 ---
 
 # Screener
 
-**Tier 3** · Convenient fundamentals and ratios
+**Tier 3** · a compiler of company filings, not the filer
 
-**Constraint:** Terms unclear; restated non-PIT data
+`fb fundamentals SYMBOL` reads the headline ratio block (market cap, P/E, book value,
+ROCE, ROE, dividend yield) from `/company/<SYMBOL>/`, which its robots.txt allows;
+`/company/source/quarter/*`, `/user/*` and query-sorted paths are refused.
 
-> [!warning] Restated data
-> Serves as-of-today figures. Every fundamental backtest built on it has silent
-> look-ahead bias. See [[Point-in-time fundamentals]].
+Because it is Tier 3, its numbers are **compared, not trusted**: Screener's current price
+against the Tier-1 close we computed ourselves. Agreement within 2% is recorded, and a
+disagreement is stored `quality='disputed'`, never averaged away. Live check across the
+watchlist: **29 agree, 0 disagree, 1 uncheckable**.
 
----
-[[MOC Data]] · [[Source hierarchy]]
+Its figures are also *restated*, which is why [[C03 PIT fundamentals store]] reads the
+filings directly instead.
+
+Related: [[Moneycontrol]] · [[Point-in-time fundamentals]]

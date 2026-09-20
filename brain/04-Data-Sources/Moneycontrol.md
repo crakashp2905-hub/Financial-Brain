@@ -1,21 +1,22 @@
 ---
-type: data-source
+type: resource
 tier: 3
-verdict: WRAP
-cost: "Terms unclear; non-PIT"
+verdict: WRAPPED - news only
 tags:
+  - resource
   - data-source
-  - tier/3
-  - verdict/wrap
 ---
 
 # Moneycontrol
 
-**Tier 3** · News and fundamentals
+**Tier 3, news only.** Its robots.txt disallows `/stocks/company_info/` and
+`/financials/results/`, so fundamentals are off-limits here; [[Screener]] covers those.
 
-**Constraint:** Terms unclear; non-PIT
+Used on demand for articles a filing already links to - one at a time, with a crawl
+delay, title and summary stored, never the body. Most of the value needed no fetching at
+all: see [[News recovered from filings]].
 
-Same caution as [[Screener]].
+`providers/robots.py` exists because Python's stdlib matcher ignores wildcards and read
+`Disallow: /stocks/company_info/*` as **allowed**.
 
----
-[[MOC Data]] · [[Source hierarchy]]
+Related: [[Untrusted text boundary]] · [[News recovered from filings]]

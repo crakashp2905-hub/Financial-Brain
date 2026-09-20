@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 2
-status: not-started
+status: done
 resources: []
 depends-on:
   - "[[C09 Evidence ledger]]"
@@ -29,3 +29,10 @@ Only the human-approval policy advances a live proposal. See [[Decision contract
 
 ---
 [[MOC Build]]
+
+> [!success] Built, and now monitored (2026-09-20)
+> Decisions carry **typed invalidation checks** beside the prose, re-evaluated nightly
+> over Tier-1 data (`fb monitor`): drawdown from entry, a red-flag filing, an accepted
+> adverse reading, price levels, pledges. A trigger becomes dated evidence and a decision
+> event; prose with no typed twin is reported **unmonitored** rather than assumed
+> satisfied. The brief carries a "Theses under watch" section.

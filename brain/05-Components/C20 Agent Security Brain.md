@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 2
-status: not-started
+status: in-progress
 resources:
   - "[[Anthropic Cybersecurity Skills]]"
   - "[[Browser Use]]"
@@ -31,3 +31,9 @@ Portfolio -> Broker.
 
 ---
 [[MOC Build]]
+
+> [!success] Partly built (2026-09-20)
+> The boundary that mattered first: [[Untrusted text boundary]], because the system now
+> reads fetched article titles and filing text into prompts. Tool allowlists, credential
+> vaulting and sandboxing remain unbuilt - they matter when something can *act* rather
+> than only read.

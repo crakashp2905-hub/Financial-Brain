@@ -37,3 +37,18 @@ quarter end. See [[Point-in-time fundamentals]], [[D2 Start the PIT store]].
 
 ---
 [[MOC Build]]
+
+> [!success] Now filled from the filings themselves (2026-09-20)
+> `docintel/results.py` + table `financial_results`: quarterly revenue/PAT/EPS parsed
+> from each company's results PDF, stored **append-only with `filed_at`**, so a
+> restatement is a new row and `as_known_on()` answers what was knowable on a date.
+>
+> The statement must pass **its own arithmetic** before storage (revenue + other income =
+> total income; total income - expenses = PBT), the table is rebuilt from coordinates,
+> and labels are matched through OCR damage. Verified: Reliance Q1 FY27 consolidated
+> revenue Rs 298,621 cr; Jindal Poly Films Rs 696 cr revenue, Rs 107 cr PAT.
+> **Measured recall ~14 statements per 60 results filings** - the remainder are cover
+> letters, scans without a text layer, or pages refused for failing their own sums.
+>
+> This is the answer to [[Point-in-time fundamentals]] that does not require CMIE: it
+> cannot recover 2015-2024 as-reported history, but from today it compounds.

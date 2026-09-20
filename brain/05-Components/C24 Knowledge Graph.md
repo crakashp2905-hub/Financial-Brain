@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 2
-status: not-started
+status: done
 resources:
   - "[[OntoBricks]]"
   - "[[Company filings]]"
@@ -30,3 +30,8 @@ Policy -> sector -> company -> supplier -> commodity propagation.
 
 ---
 [[MOC Build]]
+
+> [!success] Built (2026-09) - promoter groups
+> Corroborated promoter links across companies, used by the world state for group
+> contagion and by the committee dossier. [[Base rates]] now adds the temporal dimension:
+> how often this happens *here* versus at comparable filers.

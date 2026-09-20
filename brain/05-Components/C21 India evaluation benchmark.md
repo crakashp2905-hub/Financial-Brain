@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 2
-status: not-started
+status: done
 resources:
   - "[[PIXIU FLARE]]"
   - "[[RBI]]"
@@ -34,3 +34,10 @@ See [[India benchmark gap]].
 
 ---
 [[MOC Build]]
+
+> [!success] Built (2026-09-20) - 4 labelled sets, ~600 items
+> `tests/fixtures/`: announcement types (+ held-out), sentiment on filings (165 + 104
+> held out), sentiment on news headlines (110 + 95 held out). Every set labelled by hand
+> before any model saw it, and used only as described in
+> [[Calibration belongs to a prompt]]. This is the bottleneck on trusting any model
+> output, and no purchase fixes it.

@@ -1,7 +1,7 @@
 ---
 type: component
 phase: 2
-status: not-started
+status: done
 resources:
   - "[[TradingAgents]]"
 depends-on:
@@ -29,3 +29,9 @@ Per-agent track records drive dynamic weighting.
 
 ---
 [[MOC Build]]
+
+> [!success] Built (2026-09-19)
+> `src/financial_brain/committee/`. Analyst stances over a cited dossier, a bull/bear
+> debate in which **uncited points are dropped**, and a deterministic chair that cannot
+> draft a BUY against the [[C14 Investment Constitution]]. The chair now also emits typed
+> invalidation checks, so what it drafts can be monitored.
