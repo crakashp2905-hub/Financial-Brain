@@ -525,3 +525,34 @@ CREATE TABLE IF NOT EXISTS announcement_news (
     how             VARCHAR NOT NULL,      -- quoted | url_slug | link_only
     extracted_at    TIMESTAMPTZ NOT NULL
 );
+
+-- Daily mutual-fund NAVs from AMFI's public feed (providers/amfi.py). Keyed by the date
+-- the row carries, not the date we fetched.
+CREATE TABLE IF NOT EXISTS mf_nav (
+    scheme_code     VARCHAR NOT NULL,
+    isin_growth     VARCHAR,
+    isin_reinvest   VARCHAR,
+    scheme_name     VARCHAR NOT NULL,
+    fund_house      VARCHAR,
+    scheme_type     VARCHAR,
+    plan            VARCHAR,
+    option          VARCHAR,
+    nav             DOUBLE NOT NULL,
+    nav_date        DATE NOT NULL,
+    lake_key        VARCHAR,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (scheme_code, nav_date)
+);
+
+-- Articles fetched on demand from a filing's own link (providers/news_article.py).
+-- Title, time and the publisher's summary only - never the body.
+CREATE TABLE IF NOT EXISTS news_articles (
+    url             VARCHAR PRIMARY KEY,
+    domain          VARCHAR NOT NULL,
+    title           VARCHAR,
+    published_at    TIMESTAMP,
+    excerpt         VARCHAR,
+    http_status     INTEGER,
+    lake_key        VARCHAR,
+    fetched_at      TIMESTAMPTZ NOT NULL
+);

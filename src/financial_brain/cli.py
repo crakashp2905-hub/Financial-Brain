@@ -824,6 +824,34 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_newsfetch(args) -> int:
+    """Fetch the article a filing links to, where the publisher's robots.txt allows it."""
+    from .ingest import newsfetch
+    cfg = load()
+    with Database(cfg).connect() as con:
+        print(newsfetch.fetch_day(con, cfg, _d(args.date), limit=args.limit,
+                                  only_missing_headline=args.only_missing))
+        for dom, title, when in con.execute("""SELECT ar.domain, ar.title, ar.published_at
+                FROM news_articles ar JOIN announcement_news n ON n.url = ar.url
+                JOIN announcements a USING (news_id) WHERE a.business_date = ?
+                AND ar.title IS NOT NULL ORDER BY ar.fetched_at DESC LIMIT 10""",
+                                            [_d(args.date)]).fetchall():
+            print(f"  {dom:<20} {str(when)[:16]}  {title[:80]}")
+    return 0
+
+
+def cmd_mfnav(args) -> int:
+    """Mutual-fund NAVs from AMFI's public daily feed."""
+    from .ingest import mfnav
+    cfg = load()
+    with Database(cfg).connect() as con:
+        print(mfnav.ingest(con, cfg, _d(args.date) if args.date else None))
+        for r in con.execute("""SELECT fund_house, count(*), max(nav_date) FROM mf_nav
+                GROUP BY 1 ORDER BY 2 DESC LIMIT 8""").fetchall():
+            print(f"  {r[0][:38]:<38} {r[1]:6d} schemes, latest {r[2]}")
+    return 0
+
+
 def cmd_newsref(args) -> int:
     """News referenced by a day's filings - extracted from the filing text, not fetched."""
     from .events import newsref
@@ -1118,6 +1146,17 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("newsfetch", help="fetch a filing's linked article (robots-aware)")
+    g.add_argument("--date", required=True)
+    g.add_argument("--limit", type=int, default=20)
+    g.add_argument("--only-missing", action="store_true",
+                   help="only filings whose headline could not be extracted")
+    g.set_defaults(fn=cmd_newsfetch)
+
+    g = sub.add_parser("mfnav", help="mutual-fund NAVs from AMFI (public feed)")
+    g.add_argument("--date")
+    g.set_defaults(fn=cmd_mfnav)
 
     g = sub.add_parser("newsref", help="news a filing refers to, from the filing's own text")
     g.add_argument("--date", required=True)

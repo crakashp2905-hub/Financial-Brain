@@ -56,6 +56,7 @@ TIER = {
     "BSE": 1,
     "FILING": 1,
     "RBI": 1,
+    "AMFI": 1,       # the industry body that publishes mutual-fund NAVs
     "KITE": 2,
     "SCREENER": 3,
     "MONEYCONTROL": 3,
