@@ -593,3 +593,26 @@ CREATE TABLE IF NOT EXISTS security_findings (
     action          VARCHAR NOT NULL,      -- rejected | fell back to trusted text
     detected_at     TIMESTAMPTZ NOT NULL
 );
+
+-- The document a filing points at, and what it says (C11, docintel/). The bytes live in
+-- the lake; only the extracted facts and a locating snippet are stored here.
+CREATE TABLE IF NOT EXISTS filing_documents (
+    news_id         VARCHAR PRIMARY KEY,
+    url             VARCHAR NOT NULL,
+    pages           INTEGER,
+    chars           INTEGER,
+    status          VARCHAR NOT NULL,      -- ok | scanned (no text layer) | fetch failed...
+    lake_key        VARCHAR,
+    fetched_at      TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS filing_facts (
+    news_id         VARCHAR NOT NULL,
+    kind            VARCHAR NOT NULL,      -- order_value | penalty | tax_demand | ...
+    value           DOUBLE NOT NULL,
+    unit            VARCHAR NOT NULL,      -- INR | USD | INR_per_share
+    raw             VARCHAR,               -- the figure as the document writes it
+    context         VARCHAR,               -- the sentence it sits in
+    evidence_id     VARCHAR NOT NULL,
+    extracted_at    TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (news_id, kind)
+);

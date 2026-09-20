@@ -824,6 +824,21 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_filings(args) -> int:
+    """Read the documents a day's material filings point at, and mint what they say."""
+    from .ingest import filings
+    cfg = load()
+    with Database(cfg).connect() as con:
+        print(filings.read_day(con, cfg, _d(args.date), limit=args.limit))
+        for company, kind, raw, ctx in con.execute("""
+                SELECT a.company, f.kind, f.raw, LEFT(f.context, 90)
+                FROM filing_facts f JOIN announcements a USING (news_id)
+                WHERE a.business_date = ? ORDER BY f.extracted_at DESC LIMIT 15""",
+                                                   [_d(args.date)]).fetchall():
+            print(f"  {company[:28]:<28} {kind:<20} {raw[:24]:<24} {ctx}")
+    return 0
+
+
 def cmd_security(args) -> int:
     """Attempts by untrusted text to steer a model, and where they were seen."""
     cfg = load()
@@ -1102,6 +1117,13 @@ def cmd_daily(args) -> int:
             return newsfetch.fetch_day(con, cfg, day, limit=10, only_missing_headline=True)
     step("fetch linked articles (allowlist, robots-aware)", fetch_linked_articles)
 
+    def read_filing_documents():
+        from .ingest import filings
+        with Database(cfg).connect() as con:
+            day = con.execute("SELECT MAX(business_date) FROM universe_snapshots").fetchone()[0]
+            return filings.read_day(con, cfg, day, limit=25)
+    step("read filing documents (C11)", read_filing_documents)
+
     def announcement_tone():
         from .events import tone
         with Database(cfg).connect() as con:
@@ -1254,6 +1276,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
+    g.add_argument("--date", required=True)
+    g.add_argument("--limit", type=int, default=15)
+    g.set_defaults(fn=cmd_filings)
 
     g = sub.add_parser("security", help="untrusted-text findings at the model boundary")
     g.add_argument("--limit", type=int, default=20)
