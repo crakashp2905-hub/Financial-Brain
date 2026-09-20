@@ -569,3 +569,15 @@ CREATE TABLE IF NOT EXISTS company_fundamentals (
     observed_at     TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (symbol, fetched_on)
 );
+
+-- An invalidation condition that fired (decisions/monitor.py). Append-only: a thesis
+-- breaking is a dated, cited fact, not a flag to be flipped back.
+CREATE TABLE IF NOT EXISTS decision_alerts (
+    decision_id     VARCHAR NOT NULL,
+    as_of           DATE NOT NULL,
+    check_name      VARCHAR NOT NULL,
+    detail          VARCHAR,
+    evidence_id     VARCHAR NOT NULL,
+    raised_at       TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (decision_id, evidence_id)
+);

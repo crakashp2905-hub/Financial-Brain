@@ -120,6 +120,7 @@ def convene(con, isin: str, world_state_version: str, *, model: str = MODEL,
             world_state_version=world_state_version, supporting_evidence=sup,
             contrary_evidence=con_, primary_uncertainty=res.bear[0]["claim"],
             invalidation_conditions=[f"if: {p['claim']}" for p in res.bear],
+            invalidation_checks=_checks(con, isin, doss),
             sizing={"weight": 0.03} if res.action == "BUY" else {},
             author="agent:committee"))
     con.execute("""INSERT INTO committee_runs (isin, world_state_version, model, result,
@@ -127,3 +128,28 @@ def convene(con, isin: str, world_state_version: str, *, model: str = MODEL,
                 [isin, world_state_version, model, json.dumps(asdict(res)),
                  res.decision_id, datetime.now(timezone.utc)])
     return res
+
+
+STOP_LOSS = 0.15            # a thesis that has lost this much has to be re-argued
+RED_FLAGS = ["INSOLVENCY", "AUDITOR_RESIGNATION", "PROMOTER_PLEDGE", "LEGAL_REGULATORY"]
+
+
+def _checks(con, isin: str, doss) -> list[dict]:
+    """Typed invalidation conditions a monitor can actually evaluate.
+
+    The bear case is prose, and prose cannot be re-checked nightly. These three can be,
+    and they are the ones that matter for a long thesis: it fell far from where we
+    bought, a red-flag filing appeared, or a filing read adverse after the fact.
+    """
+    row = con.execute("""SELECT close_price FROM eod_prices WHERE isin = ?
+                         AND business_date <= ? AND close_price IS NOT NULL
+                         ORDER BY business_date DESC LIMIT 1""",
+                      [isin, doss.as_of.date() if hasattr(doss.as_of, "date") else doss.as_of]
+                      ).fetchone()
+    checks: list[dict] = [{"check": "event_of_type", "types": RED_FLAGS},
+                          {"check": "adverse_tone"}]
+    if row and row[0]:
+        ref = float(row[0])
+        checks.insert(0, {"check": "drawdown_from", "reference": round(ref, 2),
+                          "pct": STOP_LOSS})
+    return checks

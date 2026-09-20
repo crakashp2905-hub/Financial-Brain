@@ -58,6 +58,9 @@ class Decision:
     contrary_evidence: list[str]
     primary_uncertainty: str
     invalidation_conditions: list[str]
+    # Typed twins of the prose above, evaluated by decisions/monitor.py. A condition
+    # with no typed check is reported unmonitored, never assumed satisfied.
+    invalidation_checks: list[dict] = field(default_factory=list)
     universe: str = "NSE EQ"
     entry_logic: str = ""
     exit_logic: str = ""

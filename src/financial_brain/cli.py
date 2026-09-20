@@ -824,22 +824,70 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_monitor(args) -> int:
+    """Re-check every live decision's invalidation conditions."""
+    from datetime import date as _date
+
+    from .decisions import monitor
+    cfg = load()
+    with Database(cfg).connect() as con:
+        d = _d(args.date) if args.date else None
+        if args.dry_run:
+            for did in monitor.live_decisions(con):
+                ev = monitor.evaluate(con, did, d or _date.today())
+                print(f"{did}  {ev['isin']}")
+                for r in ev["results"]:
+                    print(f"   {r['state']:<13} {r['spec'].get('check','?'):<16} {r['detail']}")
+                for u in ev["unmonitored"]:
+                    print(f"   unmonitored   (prose only)     {u[:80]}")
+            return 0
+        out = monitor.run(con, d)
+        print(f"checked {out['checked']} live decisions; {out['triggered']} triggered; "
+              f"{out['unmonitored_conditions']} conditions have no typed check")
+        for a in out["alerts"]:
+            print(f"  ALERT {a['isin']} {a['check']}: {a['detail'][:90]}")
+    return 0
+
+
 def cmd_fundamentals(args) -> int:
     """Company ratios from Screener (Tier 3), cross-checked against our own close."""
     from .ingest import fundamentals
+    from .providers.screener import Screener
     cfg = load()
+    symbols = list(args.symbol)
+    if args.watchlist:
+        path = cfg.data_root / "watchlist.txt"
+        if not path.exists():
+            print(f"no watchlist at {path}")
+            return 1
+        symbols += [ln.strip().upper() for ln in path.read_text(encoding="utf-8").splitlines()
+                    if ln.strip() and not ln.startswith("#")]
+    provider = Screener()          # one instance: the crawl delay is per provider
+    agree = disagree = nocheck = failed = 0
     with Database(cfg).connect() as con:
-        for symbol in args.symbol:
-            r = fundamentals.fetch_company(con, cfg, symbol)
-            print(f"{r['symbol']}  {r['name'] or '-'}  ({r['ratios']} ratios)")
+        for symbol in dict.fromkeys(symbols):
+            try:
+                r = fundamentals.fetch_company(con, cfg, symbol, provider=provider)
+            except Exception as e:                  # noqa: BLE001 - one bad symbol
+                failed += 1
+                print(f"{symbol:<12} not fetched: {type(e).__name__}: {str(e)[:70]}")
+                continue
             chk = r["price_check"]
-            if chk:
-                verdict = "agrees" if chk["agrees"] else "DISAGREES"
-                print(f"  price check: our close {chk['our_close']:.2f} "
-                      f"({chk['our_date']}) vs Screener {chk['screener_price']:.2f} "
-                      f"-> {verdict} ({chk['drift']:.2%})")
+            if chk and chk["agrees"]:
+                agree += 1
+                note = f"price agrees ({chk['drift']:.2%})"
+            elif chk:
+                disagree += 1
+                note = (f"PRICE DISAGREES: ours {chk['our_close']:.2f} vs Screener "
+                        f"{chk['screener_price']:.2f} ({chk['drift']:.1%})")
             else:
-                print("  price check: no close of our own to compare")
+                nocheck += 1
+                note = "no close of our own to compare"
+            print(f"{r['symbol']:<12} {(r['name'] or '-')[:34]:<34} {r['ratios']:>2} ratios  {note}")
+    if len(symbols) > 1:
+        print()
+        print(f"price cross-check: {agree} agree, {disagree} disagree, "
+              f"{nocheck} uncheckable, {failed} not fetched")
     return 0
 
 
@@ -1040,6 +1088,12 @@ def cmd_daily(args) -> int:
             d = con.execute("SELECT MAX(business_date) FROM universe_snapshots").fetchone()[0]
             return tone.classify_day(con, d, limit=tone.DAILY_LIMIT)
     step("announcement tone (model router)", announcement_tone)
+    def invalidation_monitor():
+        from .decisions import monitor
+        with Database(cfg).connect() as con:
+            return monitor.run(con, d)
+    step("invalidation monitor (live decisions)", invalidation_monitor)
+
     step("paper trades (close those due)", paper_mark)
     if not args.no_brief:
         class _A:  # reuse `fb brief`
@@ -1181,8 +1235,15 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
 
+    g = sub.add_parser("monitor", help="re-check live decisions' invalidation conditions")
+    g.add_argument("--date")
+    g.add_argument("--dry-run", action="store_true", help="show every check, record nothing")
+    g.set_defaults(fn=cmd_monitor)
+
     g = sub.add_parser("fundamentals", help="company ratios from Screener (Tier 3)")
-    g.add_argument("symbol", nargs="+")
+    g.add_argument("symbol", nargs="*")
+    g.add_argument("--watchlist", action="store_true",
+                   help="every ticker in data/watchlist.txt")
     g.set_defaults(fn=cmd_fundamentals)
 
     g = sub.add_parser("newsfetch", help="fetch a filing's linked article (robots-aware)")
