@@ -1,0 +1,576 @@
+{
+ "about": "HELD-OUT news-headline set: 95 headlines recovered by events/newsref.py, disjoint from sentiment_labels_news.json (seed 'news-verify-2026'), labelled by Claude with the same rule before any model saw them. Used only to verify a route calibrated on the news set - never to fit it.",
+ "labelled": "2026-09-20",
+ "rows": [
+  {
+   "news_id": "9b3e621c-484c-44f7-b528-db4432b5d76f",
+   "domain": "alicongroup.co.in",
+   "headline": "Alicon Castalloy Q3FY23 Earnings Concall Audio",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "bda7c263-740c-4f7f-82a9-7ce8aacff3b0",
+   "domain": null,
+   "headline": "Tata Communications plans to sell data centre business.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "0367d0a9-4d50-4691-9569-5bad266d0fe3",
+   "domain": "xelpmoc.in",
+   "headline": "Sixth Annual General Meeting of Xelpmoc Design and Tech Limited",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c762f66b-cd3a-4592-9ab2-d82f5eac0c41",
+   "domain": "mahindra.com",
+   "headline": "Investor Presentation post Q2FY20 results",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "931b5633-ae7e-42d3-8b99-df67c3394de8",
+   "domain": "business-standard.com",
+   "headline": "Bharti Airtel Dips 5% As Moody",
+   "gold": "negative"
+  },
+  {
+   "news_id": "0c741ef6-68b0-474e-9b8c-48d3e4cfbb81",
+   "domain": "hindustantimes.com",
+   "headline": "EOW financial audit says 5 nationalised banks, besides BoM, flouted RBI norms",
+   "gold": "negative"
+  },
+  {
+   "news_id": "98379d59-d99a-4a4d-a63f-ade4c8d94c41",
+   "domain": null,
+   "headline": "Aussie co exits JV in jolt to rail FDI.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "2e82d5b4-213d-448b-9757-c0227b65eec9",
+   "domain": null,
+   "headline": "Ranbaxy accused of gaming FDA rules to thwart rivals",
+   "gold": "negative"
+  },
+  {
+   "news_id": "a9dfab55-115f-483c-b0ee-8c2450fa5775",
+   "domain": "financialexpress.com",
+   "headline": "InGovern raises governance issues at Finolex Cables",
+   "gold": "negative"
+  },
+  {
+   "news_id": "5a2f22f8-c293-41f5-942d-66cab3162764",
+   "domain": "bajajfinserv.in",
+   "headline": "Finance investor relation annual reports",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "75545e63-41bb-4a7b-ba8c-8f4cad477465",
+   "domain": "economictimes.indiatimes.com",
+   "headline": "Adani wins key coal tender as India acts to avoid energy crisis",
+   "gold": "positive"
+  },
+  {
+   "news_id": "a91b6404-7f33-4b0a-91cc-c048c82ea40e",
+   "domain": "mahindra.com",
+   "headline": "Investor presentation post Q2FY19 results",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c8fa9dcf-04d5-47b6-85f4-4aff46e27f9b",
+   "domain": null,
+   "headline": "Clarification regarding trading restriction period",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "5ee4d7f2-d864-4742-adf8-0d88065c0f92",
+   "domain": null,
+   "headline": "MCX-SX CCL transfers FTIL, MCX holding to escrow account.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d882a565-9678-4184-8e1f-51f6ca17cf99",
+   "domain": null,
+   "headline": "Three Indian companies get licence to manufacture NASA",
+   "gold": "positive"
+  },
+  {
+   "news_id": "e15b0305-ec2d-456b-b376-e5881a5704a5",
+   "domain": null,
+   "headline": "Infosys show interest in buying Sierra Cedar that operates in US, Canada & India. HCL & Tech Mahindra also looking for buyouts.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c89d2f8e-67ca-4aa4-bf59-5265b5794c3f",
+   "domain": null,
+   "headline": "Ansal API honchos arrested for trust breach in Lucknow",
+   "gold": "negative"
+  },
+  {
+   "news_id": "782b2b69-2535-491e-8dd8-784df7072332",
+   "domain": "business-standard.com",
+   "headline": "Canara HSBC Life Insurance and Equitas Small Finance Bank Announce Strategic Bancassurance Partnership to Drive Insurance Inclusion",
+   "gold": "positive"
+  },
+  {
+   "news_id": "1a652676-a4d0-449a-9cf3-1c9a76d7e339",
+   "domain": null,
+   "headline": "DLF may sell 25-30% stake in NCR Proj Capital Greens Phase II for Rs. 800 Cr to GIC.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "db99705d-0482-4462-9479-3503f6e879a1",
+   "domain": "economictimes.indiatimes.com",
+   "headline": "Bankruptcy court okays SKS Power Generations Acquisition by Sarda Energy & Minerals",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "6a3835d4-69e1-40ea-90cd-a86755052024",
+   "domain": null,
+   "headline": "DFCC signs Rs 5,080 crore contract with GMR consortium.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "037c473b-b46d-4837-aa86-c325a9ca7d55",
+   "domain": "thehindubusinessline.com",
+   "headline": "Apex court vacates TDSAT order against RCom on differential spectrum pricing",
+   "gold": "positive"
+  },
+  {
+   "news_id": "671f7a9a-c57e-4f58-a1b8-e18b59b65fa9",
+   "domain": null,
+   "headline": "Jet-lagged airline plans $400-million stake sale to PEs",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a4735e74-a86f-4420-a702-9756477405a6",
+   "domain": null,
+   "headline": "Court orders proceedings against Unitech, top bosses for cheating.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "ea23b899-1062-4fe8-b241-eba759660631",
+   "domain": null,
+   "headline": "Bhushan Steel promoter settles case with Sebi.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ea0cb32e-51f3-4171-8b47-1e0dea2e6801",
+   "domain": "economictimes.indiatimes.com",
+   "headline": "Edelweiss invests Rs 355 crore in Hubtownâ€™s two residential projects in Mumbai",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "99e20337-0897-49bc-9fb8-f96c7356ff81",
+   "domain": "dnaindia.com",
+   "headline": "Jaiprakash Associates to submit plan to protect home buyers",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2f7da580-35bf-4d93-b6ab-de2adc282694",
+   "domain": "electrosteel.com",
+   "headline": "Investor presentation and other documents",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "26f9be90-24ff-4688-8a41-1e29e017a1fd",
+   "domain": "dnaindia.com",
+   "headline": "PVR, NY Cinemas probed for not passing on GST perks",
+   "gold": "negative"
+  },
+  {
+   "news_id": "a8453d3c-3a7a-4407-89e5-c77aefd6f0aa",
+   "domain": null,
+   "headline": "No HC relief to attachment of FTIL bank accounts by EOW",
+   "gold": "negative"
+  },
+  {
+   "news_id": "10aa63a0-01dc-4230-82f5-1b61d37725a5",
+   "domain": "moneycontrol.com",
+   "headline": "IRDA Grants Nod To Videocon Ind To Sell 51 percent Stake In Liberty Videocon General. Videocon Ind To Sell 26 percent Stake To DP Jindal Grp, 25 percent To ENAM Holdings",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "de2ef708-6865-429d-b8b7-13b20358d68d",
+   "domain": null,
+   "headline": "Govt is said to have approved @TheOfficialSBI",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "cc5423fb-1bdc-458d-ac08-348990f8e8ae",
+   "domain": null,
+   "headline": "Supreme Court tells RCom to pay Ericsson dues by 15 December",
+   "gold": "negative"
+  },
+  {
+   "news_id": "13c824e5-c4a6-4150-bbb0-d049feabed45",
+   "domain": null,
+   "headline": "Ballarpur Industries : Fitch downgrades BILT from CCC to C.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "c018f38f-96b2-4e1a-8d3d-78669aa76312",
+   "domain": null,
+   "headline": "Three NHPC power stations shut in a blow to disinvestment plans.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "bddaaef8-b552-4e83-a578-07ce9c25df0d",
+   "domain": null,
+   "headline": "Atlas Jewellery owner, daughter detained in Dubai.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "7db19310-3e99-497a-85b1-6614bb817601",
+   "domain": "moneycontrol.com",
+   "headline": "JM Financial Private Equity invests Rs 40 crore in farm equipment maker Modish Tractoraurkisan.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "b61e6181-774d-4679-9386-3ffd91e083bd",
+   "domain": "dcb.bank.in",
+   "headline": "DCB Bank Q4FY26 Earnings Call Transcript April 24",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "82a69c69-e6d8-4f61-8356-6a74de960812",
+   "domain": null,
+   "headline": "Adani now has all approvals for $16bn mine in Australia",
+   "gold": "positive"
+  },
+  {
+   "news_id": "fee4200e-67b7-4644-a32b-a2f16c58a67a",
+   "domain": null,
+   "headline": "Bharat Electronics to set up Rs 500-crore weapon systems facility at Lepakshi",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "96637183-e73b-448b-9ef0-9257f6edcd8e",
+   "domain": null,
+   "headline": "DoT rejects RCom-Jio spectrum trading deal",
+   "gold": "negative"
+  },
+  {
+   "news_id": "40eb0761-31da-483c-ae02-134c2c9cb853",
+   "domain": "mahindra.com",
+   "headline": "Mahindra Group Investor Day Deck 14th June",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "3789d57d-a190-4c63-aca3-81b3ae6b4008",
+   "domain": "moneycontrol.com",
+   "headline": "Nykaa shares rise over 3% after beauty retailer partners with OpenAI for AI-enabled shopping",
+   "gold": "positive"
+  },
+  {
+   "news_id": "a88e8c41-454a-48c5-9bfa-45a490fc6b70",
+   "domain": null,
+   "headline": "Reliance Communications tower sale said to draw ATC",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "dc41d99b-ce88-4890-b7a7-6b0aecaa871c",
+   "domain": null,
+   "headline": "GE Steam Power inks USD 165 mn pact to supply 3 nuclear steam turbines to BHEL",
+   "gold": "positive"
+  },
+  {
+   "news_id": "4b2aebd4-ff03-47b9-8124-fc664110c803",
+   "domain": null,
+   "headline": "Aurobindo, MSN To Halt Phase 3 Trial In Moderate Covid Patients",
+   "gold": "negative"
+  },
+  {
+   "news_id": "26ccfad5-6b62-488d-9ab9-09e4c3e22897",
+   "domain": null,
+   "headline": "Byculla zoo expansion plan: High Court dismisses Mafatlal s plea seeking compensation for land",
+   "gold": "negative"
+  },
+  {
+   "news_id": "d92bd496-f512-44f3-94ff-329c4a2a5bb5",
+   "domain": "moneycontrol.com",
+   "headline": "Delta Corp tanks 7% on report of Rs 6,189-cr GST evasion; co denies allegations",
+   "gold": "negative"
+  },
+  {
+   "news_id": "8cd85654-826d-4333-a7f2-2c72b332727a",
+   "domain": "moneycontrol.com",
+   "headline": "BP to sell 65% stake in Castrol to Stonepeak for $6 bn, Castrol India shares rise 8%",
+   "gold": "positive"
+  },
+  {
+   "news_id": "39d9d626-c661-41e9-9e55-cef651e01f58",
+   "domain": null,
+   "headline": "Preliminary discussion on consumer electrical business",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d86bf8a0-5366-4f6c-b287-73c41fff9380",
+   "domain": null,
+   "headline": "Promoters of Vadodara based Sterling Biotech offered Rs.3000 crores as settlement to consortium of banks against Rs.5400 crores bank loan scam",
+   "gold": "negative"
+  },
+  {
+   "news_id": "a1e357f9-59ed-424d-b56f-0fd2f64d272a",
+   "domain": null,
+   "headline": "Bharti, Kishore Biyani Mulling a Joint Future on Retail Front.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9575fc1d-8124-4b8f-b309-d8b4d6dbaf4d",
+   "domain": "livemint.com",
+   "headline": "Vodafone Idea may get SBI loan after India offers relief.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "7b06bb2d-fc9c-4dcc-b287-60e94c7d1571",
+   "domain": "ushamartin.com",
+   "headline": "Earnings call recording q3 fy 23 24",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "534404c4-df60-4a39-bf16-56dd190be5e9",
+   "domain": null,
+   "headline": "Rs. 84580 cr in willful defaults, says bank union.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2c145cd7-ea36-4f5a-a366-1bcf24626b6d",
+   "domain": null,
+   "headline": "Reliance Power offers Rs 1,200-cr settlement to lenders of Vidarbha Industries Power",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "43a47f33-d695-4c3c-90f5-56e3ab8159d2",
+   "domain": null,
+   "headline": "Liquid assets: United Spirits hiving off distilleries to franchisees",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d08f5648-d2ba-4bd4-aaea-4758294b9e45",
+   "domain": null,
+   "headline": "Reliance Power Asks Govt to Lift Curbs on Sasan Mining.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2607457a-e0db-4533-831d-ec227f2082de",
+   "domain": "thehindubusinessline.com",
+   "headline": "MCX tech transition: SEBI raises concern over uncertainty of implementation deadline",
+   "gold": "negative"
+  },
+  {
+   "news_id": "03e12141-e653-454e-90ab-942136a39044",
+   "domain": "shyamcenturyferrous.com",
+   "headline": "Shyam Century Ferrous Limited Annual Report 2019 20",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "7e8bbfea-0053-4127-a7b6-5b10932f243c",
+   "domain": "businessinsider.in",
+   "headline": "Reliance Group reaches agreement with lenders to not sell management shares until September",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "3a946aa7-a8c5-4c67-a72f-9318fcc33a79",
+   "domain": null,
+   "headline": "Adani Power may be disqualified from Rs 3,662cr transmission projects",
+   "gold": "negative"
+  },
+  {
+   "news_id": "cc4b3374-e66a-4bf2-9262-a92f84e3c04c",
+   "domain": "jsw.in",
+   "headline": "Jsw energy investor information iepf",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "5a676095-e9fb-4871-9b34-4f5a8389248a",
+   "domain": null,
+   "headline": "Avantha Tweaks Rejig Plan, may Sell Crompton",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "7fd7f7e1-eb9e-448a-b20e-4f084a8eebba",
+   "domain": null,
+   "headline": "Pidilite in talks to sell Brazil business.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "080c9b68-7910-4f61-a6a2-59ddcabef3c1",
+   "domain": "bloombergquint.com",
+   "headline": "Rolta Moves Bombay High Court Against NCLT",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "62b164c5-2881-4262-a9fb-2c1aeb4ac0cd",
+   "domain": "thehindu.com",
+   "headline": "Undertook seismic studies of blocks acquired from earlier round to chart bidding strategy for OALP-X, Oil India Chief",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "07836a9a-8919-406b-a708-aa49ce02d58e",
+   "domain": "cnbctv18.com",
+   "headline": "Sona BLW shares surge over 7% on this exclusive newsbreak",
+   "gold": "positive"
+  },
+  {
+   "news_id": "36774f8b-d580-478b-8127-3197cde1059a",
+   "domain": null,
+   "headline": "3 cos linked to bank fraud, bad debts face SFIO probe",
+   "gold": "negative"
+  },
+  {
+   "news_id": "b76dda16-a126-4bc0-8d3d-bcb149b9077c",
+   "domain": "moneycontrol.com",
+   "headline": "Nestle plunges 6% intraday as UPFDA may file criminal case on Maggi row; Govt to review MSG content",
+   "gold": "negative"
+  },
+  {
+   "news_id": "524c3986-dcce-4308-b892-f20390273151",
+   "domain": null,
+   "headline": "Andhra Bank files bankruptcy petition against Provogue",
+   "gold": "negative"
+  },
+  {
+   "news_id": "34f682a5-b20b-4902-9733-45012831cb2a",
+   "domain": "financialexpress.com",
+   "headline": "Adani eyes Essel, IL&FS road projects; Aus govt won",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ac408189-e7c9-4ac4-a446-73668314da9b",
+   "domain": null,
+   "headline": "Piramal Pharma Share Price Spikes Over 10% - What Is Driving The Rally?",
+   "gold": "positive"
+  },
+  {
+   "news_id": "780daead-418f-49e8-8677-a4fb18033cdb",
+   "domain": null,
+   "headline": "Netoil in talks with Nagarjuna Oil",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "eb43017a-53be-4e75-9db3-acafc11c1a5f",
+   "domain": null,
+   "headline": "Court orders forensic audit of Goenkas cos",
+   "gold": "negative"
+  },
+  {
+   "news_id": "fc2d3675-b192-4ee6-826e-29c76f729255",
+   "domain": null,
+   "headline": "Trading in Gitanjali Shares Restrained by NCLT Order",
+   "gold": "negative"
+  },
+  {
+   "news_id": "037d796c-07cc-442e-b1b5-7a0479399437",
+   "domain": null,
+   "headline": "Aurobindo Pharma under USFDA scrutiny",
+   "gold": "negative"
+  },
+  {
+   "news_id": "c6ad6f71-fcae-4d90-b510-9a8d5c76a014",
+   "domain": "thehindubusinessline.com",
+   "headline": "Pfizer suspends Premarin vaginal cream in India, raising concerns over menopause care",
+   "gold": "negative"
+  },
+  {
+   "news_id": "6cf6b1c2-c0a9-4ccf-aafb-23bc57235e9e",
+   "domain": null,
+   "headline": "Bharti Airtel is reportedly in advanced negotiations with the Tata Group to acquire Tata Play, India",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "64802b6e-1e14-46a0-bc74-a18307436f64",
+   "domain": null,
+   "headline": "Max Financial jumps 11% as Axis Bank looks to buy 20% stake in Max Life",
+   "gold": "positive"
+  },
+  {
+   "news_id": "47ec0a93-d61d-4c7e-8137-cb7b1a202c27",
+   "domain": null,
+   "headline": "ICRA upgrades Hyderabad airport",
+   "gold": "positive"
+  },
+  {
+   "news_id": "337d7c4b-f4df-4fcd-b474-32c9d8c81386",
+   "domain": "moneycontrol.com",
+   "headline": "Sebi slaps Rs 1.02 crore fine on Aditya Birla Money for market norms violation",
+   "gold": "negative"
+  },
+  {
+   "news_id": "4e5b16d0-f517-4ada-a3ef-4482d5383ab6",
+   "domain": null,
+   "headline": "SAIL to raise 350m from market",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "51aa0e7f-f01d-4a5e-bed6-b30cfea0b36e",
+   "domain": null,
+   "headline": "Vijay Mallya faces CBI heat over loan fraud.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "adc667f6-7d3a-472e-8d23-fd4aef4991aa",
+   "domain": null,
+   "headline": "CBI registers FIR against PSU staff, others in coal import case",
+   "gold": "negative"
+  },
+  {
+   "news_id": "a6344513-ecbf-49c8-9b9f-b21d3d5df03d",
+   "domain": null,
+   "headline": "KG-D6 Block- RIL told to surrender two deep-sea finds",
+   "gold": "negative"
+  },
+  {
+   "news_id": "e282f844-71c9-4272-bad9-933e4d74f075",
+   "domain": "thehindubusinessline.com",
+   "headline": "Apex court vacates TDSAT order against RCom on differential spectrum pricing",
+   "gold": "positive"
+  },
+  {
+   "news_id": "89b6e1e6-89d4-440d-9cdb-52ffc52a5517",
+   "domain": "gokaldasexports.com",
+   "headline": "Investor Presentation 2QFY21 Gokaldas Exports",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a7f1e77f-2fb3-4554-83b2-80dc00337c12",
+   "domain": "vikaswspltd.in",
+   "headline": "Annual Report Vikas WSP Limited",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "4d03e382-48d7-4dbb-8b50-c336399a0159",
+   "domain": null,
+   "headline": "Panacea In Talks With Bharat Biotech To Make Covaxin",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d26ff99a-dde4-40a7-b30a-365c8131e960",
+   "domain": null,
+   "headline": "ONGC vying for oil & gas blocks in Mexico permit bid.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "bed32e26-fd25-4a94-97bd-63769368b2d7",
+   "domain": null,
+   "headline": "Hero Motocorp to be title sponsor of Federation Cup",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "6b136bb7-a717-4d61-a009-eb1a3f06516b",
+   "domain": "thehindubusinessline.com",
+   "headline": "ED attaches Anil Ambanis‚ 3,716 cr Pali Hill property Abode in bank fraud probe",
+   "gold": "negative"
+  },
+  {
+   "news_id": "f9b3139e-d153-4e7e-a6ae-a8cc428d9525",
+   "domain": "mahindra.com",
+   "headline": "Investor Presentation post Q1FY20 results",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "cd6ac816-3ffe-48c8-85c7-f0a4e3bf2c1c",
+   "domain": "thehindubusinessline.com",
+   "headline": "Strike at SJS Enterprises Bengaluru factory following alleged termination of 192 workers",
+   "gold": "negative"
+  }
+ ]
+}

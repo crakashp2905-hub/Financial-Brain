@@ -1,0 +1,666 @@
+{
+ "about": "NEWS-HEADLINE sentiment set: 110 headlines recovered from filings by events/newsref.py (quoted in the filing or from a URL slug), hash-ordered (seed 'news-sent-2026'). Labelled by Claude with the same rule as sentiment_labels.json: does the text state a favourable or adverse fact for shareholders? This is a DIFFERENT distribution from filing text - a headline states direction outright - so thresholds fitted on filings are not assumed to transfer; that is what this set tests.",
+ "labelled": "2026-09-20",
+ "rows": [
+  {
+   "news_id": "76feb816-a665-4a39-85e4-0ec333f627fb",
+   "domain": null,
+   "headline": "Yes bank to raise up to $600 m with Greenshoe Option of $150 m via QIP",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "67b541db-d7ca-450d-b1c6-203dba689dee",
+   "domain": null,
+   "headline": "NCLAT stays insolvency proceedings against HCL Tech",
+   "gold": "positive"
+  },
+  {
+   "news_id": "600b121f-7323-45a5-b8fd-06c83121c193",
+   "domain": null,
+   "headline": "Aurobindo, Actavis recall Gabapentin capsules",
+   "gold": "negative"
+  },
+  {
+   "news_id": "ed2c7ac5-4ed8-49d8-baa9-e38a44175171",
+   "domain": "news18.com",
+   "headline": "IndusInd Bank Under SFIO Scanner as MCA Orders Probe Citing Public Interest",
+   "gold": "negative"
+  },
+  {
+   "news_id": "74d5faf4-bb72-4178-a110-f9ce45d7c679",
+   "domain": "moneycontrol.com",
+   "headline": "SORIL infra (Indiabulls group) to enter LED lighting biz",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "54c4849f-fe46-4d19-b8e4-35c0acfb140e",
+   "domain": null,
+   "headline": "Piramal Enterprises in advance talks to raise funds from marquee investors",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d81320b1-7b57-4294-91cc-4ee13b33c655",
+   "domain": "adf-foods.com",
+   "headline": "ADF Foods Limited Q3 FY22 Earnings Concall",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "366c2a3c-8d1e-4634-84e2-9e494552c55b",
+   "domain": "moneycontrol.com",
+   "headline": "JK Lakshmi, Chettinad in race to acquire Deccan Cements amid Andhra infrastructure push: Report",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2f0fecb1-41c5-435e-abcb-6eabc8a3d5f8",
+   "domain": "financialexpress.com",
+   "headline": "Jaypee Infratech case: NBCC to submit revised plan to take over 27 incomplete projects",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "35a40221-2598-4ce1-b1be-0a22cbc8c128",
+   "domain": null,
+   "headline": "SC notice to govt, CCI on Mahyco Monsanto plea",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "bc4fd7d8-42cc-4a6d-adb2-3f35fda16ab9",
+   "domain": "ndtv.com",
+   "headline": "Another Insolvency Plea Against Reliance Communications For Rs 44 Lakh",
+   "gold": "negative"
+  },
+  {
+   "news_id": "68536139-be68-4064-9e4f-7adf3d89aa1e",
+   "domain": null,
+   "headline": "FTIL Up 17% on Talk Investors may Meet Babus.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "7aa9ba8f-94a3-4857-8c74-18ac9aa00974",
+   "domain": null,
+   "headline": "SBI declares accounts of Anil Ambani",
+   "gold": "negative"
+  },
+  {
+   "news_id": "a273fcb7-d539-4dba-a0ec-dfd7a73d3f84",
+   "domain": null,
+   "headline": "IHH Team In India To Discuss Fortis Deal; Srcs Say IHH May Buy Majority Stake That Would Trigger Open Offer; Deal May Value Fortis At $2 Bn",
+   "gold": "positive"
+  },
+  {
+   "news_id": "44aae050-c23e-47a0-861e-80f7df6a6cb2",
+   "domain": null,
+   "headline": "M&M to Acquire Pipavav Defence in Rs 3,000-cr Deal",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "546bce34-3ddf-4366-a40b-6bd1c4798edb",
+   "domain": null,
+   "headline": "ZEE Acquires UAE Radio Station.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "5af9cf08-45cf-48ed-9d55-1d5dd5cccc6c",
+   "domain": null,
+   "headline": "Anil Ambani said to have found a new buyer for Big FM",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a7ecc6a9-38b8-4d55-978c-1ae233b4ec1f",
+   "domain": null,
+   "headline": "Adani Group Suspends Work on Rs 34,900 Crore Petrochemical Project in Mundra",
+   "gold": "negative"
+  },
+  {
+   "news_id": "032183d5-1bc0-49b7-806a-d3a75fe9406f",
+   "domain": "economictimes.indiatimes.com",
+   "headline": "Tata Motors sweeps Rs 5,000 cr e-bus government tender",
+   "gold": "positive"
+  },
+  {
+   "news_id": "b1325b3b-d670-48e2-9899-5023eb3fa554",
+   "domain": null,
+   "headline": "CARE downgrades capital bonds rating of PNB and BOB.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "6ca93a6b-d169-46cc-b949-3340c01b7303",
+   "domain": null,
+   "headline": "Government signs OALP-1 contracts with Vedanta, ONGC",
+   "gold": "positive"
+  },
+  {
+   "news_id": "f5eafbac-01ae-4ee4-ac18-066ca89c89de",
+   "domain": null,
+   "headline": "Omaxe Ltd plan to sell its non-core land worth Rs. 150 cr.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "63600920-448e-403f-a068-4c311d1371ca",
+   "domain": "hindustantimes.com",
+   "headline": "Maharashtra FDA notice for Colgate brand, Sensodyne for",
+   "gold": "negative"
+  },
+  {
+   "news_id": "5c6e02f1-ebb9-4ad7-8e10-cbaf6c67ea85",
+   "domain": "mahindra.com",
+   "headline": "Investor Presentation post Q3FY18 results",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "fc19eead-82b3-41ca-8347-7ce6442a5afe",
+   "domain": null,
+   "headline": "CARE cuts rating for Hindalco debentures.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "67cc8658-3cd4-435d-95a9-c97627df5f59",
+   "domain": null,
+   "headline": "ITC looks to add spice maker Sunrise Foods to its menu",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c463ae8b-c05c-4366-9e6a-54dfcd813d2c",
+   "domain": null,
+   "headline": "Aurobindo pharma alleges fraud by owners of Natrol bought by the company from Plethico pharma, contracts worth $25mn. were fictitious.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "bac51deb-2836-4298-8a52-37100f85a9a6",
+   "domain": null,
+   "headline": "Competition Act 2002: CCI imposes Rs. 2 crore penalty on Monsanto.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "c51e2146-9570-4b14-ba7a-2255897572ef",
+   "domain": null,
+   "headline": "ED seizes assets of Pradip Kothari under FEMA.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "5e068e8d-88f6-466f-8559-7a9f6fcd4012",
+   "domain": null,
+   "headline": "Credit Suisse sues REI Agro in Singapore",
+   "gold": "negative"
+  },
+  {
+   "news_id": "5c80ae45-86ac-403e-9841-64bf7e28bf7b",
+   "domain": null,
+   "headline": "Vijay Mallya arrested in London.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "aee0b6e5-38b9-4c6e-af0c-b89a044da590",
+   "domain": "moneycontrol.com",
+   "headline": "Bank fraud: ED files charge sheet against Vadodara-based firm in Rs 2,600-cr fraud",
+   "gold": "negative"
+  },
+  {
+   "news_id": "1fc6f043-6d81-40c6-a66b-3569811bb8fd",
+   "domain": null,
+   "headline": "Jet Airways grounds 3 more planes on lease rental default",
+   "gold": "negative"
+  },
+  {
+   "news_id": "477e6baf-ba8e-4824-adda-bd76bb811311",
+   "domain": "datapatternsindia.com",
+   "headline": "Earnings Call Recording Q1 2026 27",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "007da4cf-2d21-4667-bf2a-9ccbc0501d2a",
+   "domain": "business-standrad.com",
+   "headline": "Google, Just Dial in deal talks",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "6a96744e-e393-409b-880c-d12fbe9fd8c0",
+   "domain": "economictimes.indiatimes.com",
+   "headline": "Indias growth champions return to the",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1f16779a-4dc1-4be1-858a-ec36e9545ee0",
+   "domain": "business-standard.com",
+   "headline": "ED files money laundering case against IL&FS former chairman, 19 others",
+   "gold": "negative"
+  },
+  {
+   "news_id": "693c2792-2fcc-4f86-931a-fd5b40a3e2f3",
+   "domain": "exhicongroup.com",
+   "headline": "Audio Recording of H2 FY24 Exhicon Events Media Soluitons Limited",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c7b7c687-68af-47dd-8609-fbe4f9ef9f9b",
+   "domain": null,
+   "headline": "IT department conducts search, survey at Claris group premises",
+   "gold": "negative"
+  },
+  {
+   "news_id": "bb318ad3-b0f0-43a8-85a4-897eba8bf93f",
+   "domain": "dcb.bank.in",
+   "headline": "DCB Bank Q2 FY 2025 26 Results Analyst Call Audio Link",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "5aa0e365-a21b-486b-8611-ef1b87e1d15a",
+   "domain": "business-standard.com",
+   "headline": "Tata Group in talks to buy majority stake in debt-laden Jet Airways: Report",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "220c1a12-3ba8-4112-b002-38432b36486d",
+   "domain": null,
+   "headline": "IOC to commission Paradip refinery",
+   "gold": "positive"
+  },
+  {
+   "news_id": "0fafda8c-6041-49ba-aa9f-b9bee89545bc",
+   "domain": null,
+   "headline": "Mahindra & Mahindra is in talks with British Aerospace for an alliance. Although the talks are on",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "272c9c44-f745-4f00-a6fe-695ac5105595",
+   "domain": null,
+   "headline": "Advent leads race for Crompton arm.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "2c7548c2-6f31-4cc7-8222-4da7a6a689ab",
+   "domain": "moneycontrol.com",
+   "headline": "Jet Airways share price locked in upper circuit after NCLT approves resolution plan",
+   "gold": "positive"
+  },
+  {
+   "news_id": "e39308c0-b9a8-4d18-9d9c-b653b7ff05c0",
+   "domain": "bluestarindia.com",
+   "headline": "Earnings call q3fy23 audio recording",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a9f4a7cd-24cc-46f0-879e-9def012b626e",
+   "domain": "centurytextind.com",
+   "headline": "Audio recording of the investor meet held on 02 february",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "1d694e9e-fe22-4a98-b46b-911712068fcf",
+   "domain": "tatamotors.com",
+   "headline": "Tata motors investor call july07",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "983daa12-df67-427f-afcf-ca716564009b",
+   "domain": "thehindu.com",
+   "headline": "DRT restraints Gensol from selling, transferring its secured assets",
+   "gold": "negative"
+  },
+  {
+   "news_id": "686b6acb-16aa-422b-82c3-ae1f0918b55a",
+   "domain": null,
+   "headline": "Rajesh Exports in talks to pick up stake in Swiss Gold Refinery",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "58e2961a-7f07-4864-9e61-22c8d2f704a1",
+   "domain": null,
+   "headline": "Hedge Funds Move UK Court Against Castex, Stanchart Over Share Dealings.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "3d8f9aaa-5bb4-4d8e-bfcc-0d4b8ec078aa",
+   "domain": "moneycontrol.com",
+   "headline": "ICICI Bank falls 2% after CBI registers FIR in Videocon case",
+   "gold": "negative"
+  },
+  {
+   "news_id": "a3cdcac0-5b5c-41db-b11a-55fafe0ce8f2",
+   "domain": "mahindra.com",
+   "headline": "Investor Presentation post Q3FY18 results",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "98580ffb-2df3-4003-a48e-a0433fe867f6",
+   "domain": null,
+   "headline": "Karnataka Bank Inks Pact With Pine Labs For Point-Of-Sale Service",
+   "gold": "positive"
+  },
+  {
+   "news_id": "61efa45c-3c3c-4e01-a9a1-8f9e84f09faa",
+   "domain": "energy.economictimes.indiatimes.com",
+   "headline": "SJVN to set up 10,000 MW clean energy projects in Rajasthan",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "5356183b-55ce-4448-9584-822642cc1503",
+   "domain": "moneycontrol.com",
+   "headline": "Coforge shares slip in early trade as $1-billion Encora deal talk, fundraising plans weigh",
+   "gold": "negative"
+  },
+  {
+   "news_id": "492d80ed-2fdb-417c-a0e8-608a665a30b7",
+   "domain": "business-standard.com",
+   "headline": "Amazon accuses Future Retail, Reliance of",
+   "gold": "negative"
+  },
+  {
+   "news_id": "a618592c-4cb3-40b0-a779-875cb80099f6",
+   "domain": null,
+   "headline": "Taxman wants to reopen MCX books for four years",
+   "gold": "negative"
+  },
+  {
+   "news_id": "f73b956d-1cca-4305-a8e1-6eb272295d01",
+   "domain": null,
+   "headline": "Company says in talks with banks to find a solution",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "ef3f717d-7e8b-478f-8d3d-5df88c035cd3",
+   "domain": "economictimes.indiatimes.com",
+   "headline": "NTPC wins 1.9 GW solar projects under CPSU scheme",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "60123e22-f30e-43b9-8cf2-02ef1579b0ab",
+   "domain": null,
+   "headline": "NCLT directs ICICI Bank to reverse Rs 48 crore in Ruchi Soya",
+   "gold": "negative"
+  },
+  {
+   "news_id": "de90c3e4-a870-4817-b5d9-a89a66e22a2e",
+   "domain": "livemint.com",
+   "headline": "Ousted CG Power chairman sends legal notice to firm",
+   "gold": "negative"
+  },
+  {
+   "news_id": "05fda936-1f52-482f-9597-997b4d483a1b",
+   "domain": null,
+   "headline": "LIC likely to exit mutual fund JV with Nomura.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9c6e316c-a6b5-4c58-8001-9dee5df711b0",
+   "domain": null,
+   "headline": "DHFL to sell its entire Rs 35,000 crore wholesale book to Oaktree Capital",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "01ba904b-8736-4b05-941b-cafca56e149c",
+   "domain": "aboutbajajfinserv.com",
+   "headline": "Finance investor relations quarterly earnings call",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "67fd8f94-e519-44c1-9062-bc1e36ef3647",
+   "domain": "economictimes.com",
+   "headline": "Income tax demand 4,000 crore looms over Shree Cement",
+   "gold": "negative"
+  },
+  {
+   "news_id": "fe4ff236-b599-4d79-abbc-d9d1d8208b3e",
+   "domain": null,
+   "headline": "Royal Enfield to invest Rs 500 crore on capex, tech centers",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a0ed7a77-a078-4dd6-973a-9c9a9f12944f",
+   "domain": null,
+   "headline": "Bank of India may Sell 27% in Star Union Dai-ichi Life",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "3a4ad8bb-e2dc-4ea0-ab2a-2fa243fcd6cb",
+   "domain": null,
+   "headline": "Europe Drought Negative for Agrochem Co UPL",
+   "gold": "negative"
+  },
+  {
+   "news_id": "69a7d766-bbfc-4a3f-9519-8f7e87eb8cfa",
+   "domain": "thehindubusinessline.com",
+   "headline": "SpiceJet defaults on daily payments to AAI",
+   "gold": "negative"
+  },
+  {
+   "news_id": "2682c1e4-463e-4cf2-af68-cb1040e939fc",
+   "domain": null,
+   "headline": "Strides plunges 8% as USFDA finds significant violation at facility",
+   "gold": "negative"
+  },
+  {
+   "news_id": "874fe7a2-9d25-4363-a640-5342cabaaee1",
+   "domain": null,
+   "headline": "UPL promoters likely to have put the company on the block for family separation.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "aca855bf-208e-4971-830b-69054d402a7b",
+   "domain": null,
+   "headline": "Indigo gives expression of interest for Air India",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "767c814f-f852-471b-a9f4-dc511aa458bb",
+   "domain": "economictimes.indiatimes.com",
+   "headline": "Jet auditor BSR may quit if issues are not resolved",
+   "gold": "negative"
+  },
+  {
+   "news_id": "b2aae581-f059-4af8-b98b-a1fed0fa35b0",
+   "domain": "business-standard.com",
+   "headline": "IOB, Central Bank of India surge up to 20% on privatisation buzz",
+   "gold": "positive"
+  },
+  {
+   "news_id": "b148947f-c67c-4b30-b97f-35f8867d06ae",
+   "domain": "cnbctv18.com",
+   "headline": "Mastek eyes PE capital of $400 mn, offers joint control with promoters",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "c029b2e0-b280-4879-bdd9-5a26d488963c",
+   "domain": "thehindu.com",
+   "headline": "HAL signs $716 mn deal with GE Aviation for 99 engines for LCA Tejas",
+   "gold": "positive"
+  },
+  {
+   "news_id": "663dd5bc-c07b-482c-bcca-5df9ad729180",
+   "domain": "business-standard.com",
+   "headline": "CPCB notice to BPCL for failing to install vapour recovery systems",
+   "gold": "negative"
+  },
+  {
+   "news_id": "d2a203f8-b3dd-473d-9901-301f83f6ae80",
+   "domain": "moneylife.in",
+   "headline": "DSK Defaults: Special MPID Court rejects bail plea of DS Kulkarni and his wife",
+   "gold": "negative"
+  },
+  {
+   "news_id": "a2bf268c-8373-4edd-a0e8-d24b91aef298",
+   "domain": null,
+   "headline": "HDIL to raise rs.750 cr by selling non-core assets.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "fdbeaef6-3abe-4188-b5b6-ec4f1d259c4b",
+   "domain": "economictimes.indiatimes.com",
+   "headline": "Axis Trustee alleges Yes Bank sold AT1 bonds as",
+   "gold": "negative"
+  },
+  {
+   "news_id": "e504f687-75c1-4250-9e39-64967e19ccc0",
+   "domain": "dwarikesh.com",
+   "headline": "Dwarikesh Sugar Q2FY22 Earnings Call Transcript October 26",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "b8dcf577-960e-4de7-8037-f1aeaada308f",
+   "domain": null,
+   "headline": "FTIL-NSEL merger: Stay on MCA final order extended till April 22.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "99797d8c-6e08-4d1f-987a-fa3fe0180689",
+   "domain": "economictimes.com",
+   "headline": "Cube Highways joins race to buy some IL&FS Road Projects; IL&FS has 28 build-operate-transfer (BOT) projects under the listed IL&FS Transportation Networks (ITNL).",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "16478d2e-a71e-43be-8704-bd961235de31",
+   "domain": null,
+   "headline": "Bliss GVS Pharma promoters under SEBI lens for insider-trading",
+   "gold": "negative"
+  },
+  {
+   "news_id": "cee777e8-512b-4f71-bebe-a765d66f4de7",
+   "domain": "cnbctv18.com",
+   "headline": "Eveready shares hit 5% lower circuit after reports of Duracell",
+   "gold": "negative"
+  },
+  {
+   "news_id": "643b7712-f0de-4937-a960-9275073a53bb",
+   "domain": null,
+   "headline": "Glenmark Life Sciences gains on parent Glenmark Pharma plan to pare stake",
+   "gold": "positive"
+  },
+  {
+   "news_id": "58e83954-d494-4fe7-86a6-a19fcf888168",
+   "domain": "financialexpress.com",
+   "headline": "Dr reddys laboratories eyes mega brand",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d5b9c9b9-1ccd-4943-86b5-0a5b032a8474",
+   "domain": "ndtvprofit.com",
+   "headline": "Syrma SGS Announces Rs 1,600 Crore Investment To Build PCB, Component Units In Andhra Pradesh",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "9760b0d0-4a5f-4d2e-ab7f-3b5a025058e7",
+   "domain": null,
+   "headline": "PVR ties up to bring 4DX to India.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "475b4ccf-8773-4d62-b854-70647e3c023e",
+   "domain": null,
+   "headline": "Abbott gets approval to launch 5-minute COVID-19 test for use almost anywhere",
+   "gold": "positive"
+  },
+  {
+   "news_id": "f9e643b1-cb7f-444b-b1a0-281d2972c627",
+   "domain": "livemint.com",
+   "headline": "Piramal-Bain stressed assets unit, AION Capital eye Alok Industries stake",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "fa52efb9-20a7-41ea-beb5-7cf16424e531",
+   "domain": "thehindubusinessline.com",
+   "headline": "Tata Motors signs MoU with VOC Port Authority to deploy 40 green hydrogen-powered trucks",
+   "gold": "positive"
+  },
+  {
+   "news_id": "b487a98b-616c-4471-afcd-dfb779b1926e",
+   "domain": null,
+   "headline": "UltraTech Wins Binani Cement bid.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "78957bc7-1165-4d93-a91f-32efea480ac1",
+   "domain": null,
+   "headline": "Alstom bags Contract from Delhi Metro.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "215b5113-3262-4e9e-9d8b-f75869f9258f",
+   "domain": null,
+   "headline": "India Ratings downgrades Ansal Housing to",
+   "gold": "negative"
+  },
+  {
+   "news_id": "5a8602e9-01e1-49ac-a530-f17978961969",
+   "domain": "moneycontrol.com",
+   "headline": "Adani Gas tanked 13% as gas regulator send notice to the company",
+   "gold": "negative"
+  },
+  {
+   "news_id": "84870a6d-81e1-4ea9-83f5-e4a9310187c1",
+   "domain": null,
+   "headline": "Jail for Ind Swift top bosses.",
+   "gold": "negative"
+  },
+  {
+   "news_id": "6bb94035-96ba-495f-a25b-9e9a49179608",
+   "domain": "energy.economictimes.indiatimes.com",
+   "headline": "HAL, Honeywell to jointly make high-power turbogeneratorst",
+   "gold": "positive"
+  },
+  {
+   "news_id": "6d43e141-f2f8-4f75-881d-ff66f6ae0eb1",
+   "domain": "moneycontrol.com",
+   "headline": "Cloudflare down: Outage hits trading platforms like Zerodha, Groww and others",
+   "gold": "negative"
+  },
+  {
+   "news_id": "9742619c-6c9b-484f-8cde-6d0aaf4c35b9",
+   "domain": null,
+   "headline": "Vedanta Limited In Talks With Lenders To Buy Bhushan Steel.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "d0ad9767-20f0-4f0e-b5bf-af96d7eec46a",
+   "domain": null,
+   "headline": "RBI slaps Rs 1 crore fine on Indian Bank for violating cyber security norms",
+   "gold": "negative"
+  },
+  {
+   "news_id": "e4bf9031-0f46-416f-9d29-154dc10e9e0e",
+   "domain": "business-standard.com",
+   "headline": "Tata Teleservices in talks with ATC to sell tower business for Rs 2,500 cr",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "a6117adf-90c7-48c5-83a2-c9f814ccd9ed",
+   "domain": null,
+   "headline": "JSW Energy to set up its first nuclear power plant by 2030",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "12c850f1-3a78-4849-a812-32a0b4696eeb",
+   "domain": null,
+   "headline": "Tata Steel averts major industrial action in UK.",
+   "gold": "positive"
+  },
+  {
+   "news_id": "1febb99c-3695-4f9a-899b-44c2d12f95c8",
+   "domain": "dcbbank.com",
+   "headline": "DCB Bank Business Responsibility and Sustainability Report 2022 23",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "3500ea0a-25a6-4cd5-9f5a-84156859eb5d",
+   "domain": "ceat.com",
+   "headline": "CEAT Earnings Call Transcript Q2 FY22",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "b3c5ccca-8201-4524-a348-b56c62b6a1c7",
+   "domain": null,
+   "headline": "HDFC, Kotak Bank eye controlling stake in PNB Housing Finance.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "216decc5-1549-45d3-9434-2bf4e9efe701",
+   "domain": "moneycontrol.com",
+   "headline": "Steel Authority of India eyes 5% FPO in FY27 to raise funds for capex push.",
+   "gold": "neutral"
+  },
+  {
+   "news_id": "8f7b977e-ec7b-4f17-bd6d-64e98fd5ad02",
+   "domain": null,
+   "headline": "Google, Amazon in fray to snag Company",
+   "gold": "neutral"
+  }
+ ]
+}

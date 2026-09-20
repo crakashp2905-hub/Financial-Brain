@@ -1112,7 +1112,8 @@ def main(argv: list[str] | None = None) -> int:
                    "(e.g. sentiment_holdout)")
     g.add_argument("--max-accepted-error", type=float, default=0.10)
     g.add_argument("--task", default="sentiment",
-                   choices=["sentiment", "event_type", "sentiment_holdout"])
+                   choices=["sentiment", "event_type", "sentiment_holdout",
+                            "sentiment_news", "sentiment_news_holdout"])
     g.add_argument("--model", action="append", default=[])
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)

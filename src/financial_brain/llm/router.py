@@ -70,6 +70,13 @@ def plan(con, task: str, *, optimised: bool = True) -> list[dict]:
     return sorted(steps, key=lambda s: (s["tier"], s["latency_ms"] or 0))
 
 
+def has_route(con, task: str) -> bool:
+    """Is there a stored, verified route for this task? Callers use it to decide whether
+    a task may be answered at all, rather than borrowing another task's calibration."""
+    return con.execute("""SELECT 1 FROM model_routes WHERE task = ?
+                          ORDER BY chosen_at DESC LIMIT 1""", [task]).fetchone() is not None
+
+
 def choose(con, task: str, *, budget_ms: float = 4000, verify_on: str | None = None,
            max_accepted_error: float = 0.10) -> dict:
     """Pick and store a route (replayed, no model calls). With ``verify_on`` the route

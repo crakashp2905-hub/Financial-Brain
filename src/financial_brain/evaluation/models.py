@@ -37,8 +37,12 @@ SENTIMENT_NOTES = {"positive": "states a favourable fact for shareholders (order
 
 
 def _rows(task: str) -> list[dict]:
-    if task in ("sentiment", "sentiment_holdout"):
-        f = "sentiment_labels.json" if task == "sentiment" else "sentiment_labels_holdout.json"
+    if task in ("sentiment", "sentiment_holdout", "sentiment_news",
+                "sentiment_news_holdout"):
+        f = {"sentiment": "sentiment_labels.json",
+             "sentiment_holdout": "sentiment_labels_holdout.json",
+             "sentiment_news": "sentiment_labels_news.json",
+             "sentiment_news_holdout": "sentiment_labels_news_holdout.json"}[task]
         return [{"state": r["headline"], "gold": r["gold"]} for r in
                 json.loads((FIXTURES / f).read_text("utf-8"))["rows"]]
     if task == "event_type":
@@ -54,7 +58,9 @@ def _rows(task: str) -> list[dict]:
 
 def base(task: str) -> str:
     """A held-out set is scored as its base task (same choices, prompt, thresholds)."""
-    return task.removesuffix("_holdout")
+    for suffix in ("_holdout", "_news"):
+        task = task.removesuffix(suffix)
+    return task
 
 
 def choices(task: str) -> list[str]:
@@ -74,7 +80,7 @@ INSTRUCTION = {
 def decider(task: str, model: str):
     """A function state -> Decision for this (task, model), or raise if unsupported."""
     ch = choices(task)
-    task = base(task) if task.endswith("_holdout") and model != "rules" else task
+    task = base(task) if task != base(task) and model != "rules" else task
     if model == "rules":
         if task != "event_type":
             raise ValueError("rules only exist for event_type")

@@ -17,6 +17,7 @@ from datetime import date, datetime, timezone
 from ..llm import router
 
 TASK = "sentiment"
+NEWS_TASK = "sentiment_news"    # headlines are a different distribution; own calibration
 
 
 DAILY_LIMIT = 150               # ~5.6 s per filing on this CPU: cap what a daily run costs
@@ -30,6 +31,12 @@ def classify_day(con, d: date, *, materiality: tuple[str, ...] = ("high",),
     steps = router.plan(con, TASK)
     if not steps:
         return {"skipped": "no benchmarked model for sentiment"}
+    # A news headline states direction outright where a filing buries it, so thresholds
+    # fitted on filings do not transfer: replayed on labelled headlines the filing route
+    # was wrong 19.8% of the time it accepted, against 9.8% on filings. Headlines are
+    # therefore classified only through a route verified for *them*; without one we read
+    # the filing text, which is what the calibration covers.
+    news_steps = router.plan(con, NEWS_TASK) if router.has_route(con, NEWS_TASK) else []
     marks = ",".join("?" * len(materiality))
     # Stale = classified before the current route was chosen. Testing which models are in
     # the route would keep rows a *previous* route produced with the same model under
@@ -58,12 +65,13 @@ def classify_day(con, d: date, *, materiality: tuple[str, ...] = ("high",),
         # An exchange clarification reads as procedural boilerplate; the news it is about
         # is what moved the price. When the filing itself carries that headline, classify
         # that instead - same filing, better text.
-        if news_head:
-            text, src = news_head, "news_headline"
+        if news_head and news_steps:
+            text, src, task, use = news_head, "news_headline", NEWS_TASK, news_steps
             counts["on_news_headline"] += 1
         else:
-            text, src = (head if head and len(head) >= 25 else (subj or head or "")), "filing"
-        r = router.decide(con, TASK, {"state": text}, steps=steps)
+            text = head if head and len(head) >= 25 else (subj or head or "")
+            src, task, use = "filing", TASK, steps
+        r = router.decide(con, task, {"state": text}, steps=use)
         counts["refreshed"] += con.execute(
             "DELETE FROM announcement_tone WHERE news_id = ? RETURNING 1", [nid]).fetchone() is not None
         con.execute("""INSERT INTO announcement_tone (news_id, tone, confidence, model,
