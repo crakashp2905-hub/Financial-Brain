@@ -824,6 +824,20 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_results(args) -> int:
+    """Parse the results PDFs filed on a day into as-reported financials."""
+    from .ingest import results as ing
+    cfg = load()
+    with Database(cfg).connect() as con:
+        print(ing.read_day(con, cfg, _d(args.date), limit=args.limit))
+        for r in con.execute("""SELECT company, basis, period_end, revenue, pat
+                FROM financial_results ORDER BY observed_at DESC LIMIT 12""").fetchall():
+            rev = f"{(r[3] or 0) / 10 ** 7:,.0f}" if r[3] else "-"
+            pat = f"{(r[4] or 0) / 10 ** 7:,.0f}" if r[4] else "-"
+            print(f"  {r[0][:30]:<30} {r[1]:<13} {r[2]}  revenue Rs {rev} cr, PAT Rs {pat} cr")
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -1276,6 +1290,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("results", help="as-reported financials from results PDFs (C03)")
+    g.add_argument("--date", required=True)
+    g.add_argument("--limit", type=int, default=10)
+    g.set_defaults(fn=cmd_results)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

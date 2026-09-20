@@ -616,3 +616,28 @@ CREATE TABLE IF NOT EXISTS filing_facts (
     extracted_at    TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (news_id, kind)
 );
+
+-- As-reported financials, point in time (ingest/results.py). APPEND ONLY: a restatement
+-- is a new row with a later filed_at, never an update, so "what did we know on date X"
+-- stays answerable. Only statements that passed their own arithmetic are stored.
+CREATE TABLE IF NOT EXISTS financial_results (
+    isin            VARCHAR NOT NULL,
+    company         VARCHAR,
+    period_end      DATE NOT NULL,
+    basis           VARCHAR NOT NULL,      -- consolidated | standalone
+    filed_at        TIMESTAMP NOT NULL,    -- when the company published it
+    news_id         VARCHAR,
+    revenue         DOUBLE,                -- rupees, already multiplied out
+    other_income    DOUBLE,
+    total_income    DOUBLE,
+    total_expenses  DOUBLE,
+    pbt             DOUBLE,
+    pat             DOUBLE,
+    eps_basic       DOUBLE,                -- per share, not multiplied
+    unit_multiplier BIGINT,                -- what the statement printed in
+    checks_passed   BOOLEAN NOT NULL,
+    lake_key        VARCHAR,
+    source_page     INTEGER,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (isin, period_end, basis, filed_at)
+);
