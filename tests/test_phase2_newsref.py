@@ -75,3 +75,30 @@ def test_extract_day_stores_one_row_per_filing_with_news(con):
     assert rows == [("n1", "Acme shares fall 9% on tax demand order", "quoted")]
     # Re-running is a no-op, not a duplicate.
     assert newsref.extract_day(con, "2026-09-18")["scanned"] == 1
+
+
+def test_tone_spends_its_daily_budget_on_the_newest_filings(con, monkeypatch):
+    """The cap is a budget. A heavy day must not spend it on filings that belong to
+    yesterday's brief: the window a brief covers ends at the next session's open, so the
+    latest filings are the ones a reader will see."""
+    from financial_brain.events import tone
+    from financial_brain.llm import router, system1
+    for i in range(4):
+        con.execute("""INSERT INTO announcements (news_id, source, business_date, event_type,
+                       materiality, evidence_key, observed_at, headline, published_at)
+                       VALUES (?, 'BSE', DATE '2026-09-18', 'GENERAL', 'high', ?, NOW(),
+                               ?, ?)""",
+                    [f"n{i}", f"k{i}", f"filing number {i} with enough text to classify",
+                     f"2026-09-18 {9 + i:02d}:00:00"])
+    seen = []
+
+    def fake_decide(con_, task, row, *, steps=None):
+        seen.append(row["state"])
+        d = system1.Decision(label="neutral", probs={}, confidence=0.99, model="m")
+        return router.Routed(d, True, [])
+
+    monkeypatch.setattr(tone.router, "plan", lambda c, t: [{"model": "m", "tier": 1}])
+    monkeypatch.setattr(tone.router, "has_route", lambda c, t: False)
+    monkeypatch.setattr(tone.router, "decide", fake_decide)
+    tone.classify_day(con, "2026-09-18", limit=2)
+    assert [s.split()[2] for s in seen] == ["3", "2"], "newest two, not oldest two"

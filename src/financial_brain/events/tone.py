@@ -57,7 +57,11 @@ def classify_day(con, d: date, *, materiality: tuple[str, ...] = ("high",),
         WHERE a.business_date = ?
           AND (a.materiality IN ({marks}) OR n.headline IS NOT NULL)
           AND (t.news_id IS NULL {stale})
-        ORDER BY a.published_at""",
+        -- Newest first. The cap below is a budget, not a filter, and the filings a
+        -- reader will see tomorrow are the ones published latest in the window that the
+        -- brief covers (D 09:00 -> next session 09:00). Oldest-first spent the budget on
+        -- filings that belong to the *previous* brief.
+        ORDER BY a.published_at DESC""",
                        [d, *materiality, *([chosen] if (refresh and chosen) else [])]).fetchall()
     if limit:
         rows = rows[:limit]
