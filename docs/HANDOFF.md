@@ -327,3 +327,25 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   disallows /stocks/company_info/ and /financials/results/; would be on-demand and
   rate-limited, not crawling). MFCentral needs your PAN+OTP - not something I will enter;
   export the CAS yourself or use AMFI's public NAV feed if you want fund data in.
+- 2026-09-20 (afternoon) — **Three public sources built.**
+  * **AMFI** (`fb mfnav`, in the daily cycle): the public NAV file, ~14.4k schemes with
+    ISINs, lake-first, keyed by the date each row carries - the file mixes today's NAVs
+    with stale ones, and a 2018 NAV is not today's.
+  * **Moneycontrol articles** (`fb newsfetch`): on-demand only, for URLs a filing already
+    pointed at, one at a time with a crawl delay, allowlisted hosts, robots.txt obeyed.
+    Title/time/summary stored, never the body. **Moneycontrol fundamentals are
+    robots-disallowed** - it is a news source here. Daily fetches at most 10, only where
+    the rules could not recover a headline.
+  * **Screener** (`fb fundamentals SYMBOL`): the top-ratios block, Tier 3, cross-checked
+    against our own Tier-1 close; >2% apart is stored `quality='disputed'`, not averaged.
+    Live: RELIANCE/TCS/INFY agreed within 0.1-0.6%. Feeds the committee dossier, which
+    reads only snapshots that existed on or before its as-of date.
+  **Watch out:** `providers/robots.py` exists because `urllib.robotparser` matches rule
+  paths by plain prefix - Moneycontrol's `Disallow: /stocks/company_info/*` matched
+  nothing and read as *allowed*. A test pins that gap. Any new fetcher must use this
+  matcher, not the stdlib.
+  **Fixed in passing:** three daily steps called `db.connect()` where no `db` is bound in
+  `cmd_daily` - every `fb daily` would have failed on the tone step. All steps now run
+  (verified end-to-end on 2026-09-18).
+  Open: bulk fundamentals for the universe is deliberately NOT built (~2k requests);
+  fetch per company as needed. MFCentral still owner-only (PAN + OTP).
