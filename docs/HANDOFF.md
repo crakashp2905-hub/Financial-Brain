@@ -369,14 +369,21 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   * **ruff** added with a defect-only rule set (F, E9, B) and cleared; the scorer now
     zips decisions against golds with `strict=True`.
 
-  **IN FLIGHT - finish this first:** wrapping the prompt changed the prompt, so every
-  stored calibration is stale (fin-r1 went 0.848 -> 0.879 on the same filings,
-  llama3.1:8b F1 0.820 -> 0.791). Benchmarks now record a prompt fingerprint and
-  `router.route_is_current()` treats a route measured under another prompt as **no route
-  at all**, so `fb tone` will decline until this is done. A full re-benchmark
-  (3 models x 4 labelled sets) is running -> `data/rebench_all.log`. When it finishes:
+  **DONE 2026-09-20 evening — re-benchmark and routes finished.** All 3 models were
+  re-measured on all 4 labelled sets under prompt `p_79fb298ec473`, and both routes were
+  re-chosen and verified out-of-sample at the strict 10% bar:
 
-      fb models route --task sentiment      --budget-ms 8000  --verify-on sentiment_holdout      --max-accepted-error 0.10
-      fb models route --task sentiment_news --budget-ms 15000 --verify-on sentiment_news_holdout --max-accepted-error 0.10
+  | task | route | held out |
+  |---|---|---|
+  | `sentiment` (filings) | fin-r1 -> phi4 | 88.5% acc, 10.0% wrong when accepted, declines 13.5% |
+  | `sentiment_news` | fin-r1 -> llama3.1:8b -> gemma2 | 87.4% acc, 9.9% wrong when accepted, declines 14.7%, **91% of adverse headlines** |
 
-  then re-run `fb tone --date <d> --refresh` and `fb brief --date <d>`. See ADR-0003.
+  `router.route_is_current()` reports True for both; `fb tone` runs again. Two guard bugs
+  were found by doing this for real: the optimiser proposed a route from models measured
+  under the *old* prompt (candidates are now filtered by prompt version), and tone
+  checked route freshness only for news, so a stale filing route would still have run.
+
+  **Watch out:** `fb migrate` silently did nothing because the DB was locked by the
+  benchmark and the output was suppressed, so `decision_alerts` was missing and the
+  brief's "Theses under watch" section rendered empty while everything looked fine.
+  Do not redirect migrate output.
