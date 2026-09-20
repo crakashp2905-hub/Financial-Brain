@@ -311,3 +311,19 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   labelled positives/negatives, and a judgement call to review - Fin-R1 reads "Exchange
   has sought clarification with reference to news" as adverse (0.998), which my own
   labelling guide treats as procedural/neutral.
+- 2026-09-20 (midday) — **News recovered from filings; calibration split by text type.**
+  `events/newsref.py` extracts the news a filing refers to from the filing's own text
+  (quoted headline, or the URL slug) - deterministic, no request to any publisher.
+  Backfilled: 19,732 filings carry a news reference, 7,146 with a headline. Tone reads
+  that headline instead of clarification boilerplate, and the brief shows it under the
+  filing, cited (Nestle 2026-09-18 -> "FSSAI initiates legal action against Nestle India
+  on baby formula, shares fall 2%").
+  **The trap this exposed:** filing-fitted thresholds were wrong 19.8% of the time on
+  headlines vs 9.8% on filings. Headlines now have their own verified route
+  (`sentiment_news`: fin-r1 -> llama3.1:8b -> gemma2; held out 87.4%, 6.6% wrong when
+  accepted, declines 36%, **97% recall on adverse**). A text type with no verified route
+  is not classified at all - see `router.has_route`.
+  Open: Moneycontrol article *fetching* is not built (robots.txt allows news paths,
+  disallows /stocks/company_info/ and /financials/results/; would be on-demand and
+  rate-limited, not crawling). MFCentral needs your PAN+OTP - not something I will enter;
+  export the CAS yourself or use AMFI's public NAV feed if you want fund data in.

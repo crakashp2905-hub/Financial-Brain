@@ -100,6 +100,37 @@ that produced it and is MODEL-tier evidence - never a fact. The cheap-first casc
 remain rejected; escalation here runs big-to-bigger, and 88% of items are settled by the
 first model. Cost: ~6.8 s per filing on this CPU, so the daily step is capped.
 
+## Calibration is per text type, not per task (2026-09-20)
+
+Recovering the news headline a filing quotes (events/newsref.py) gave tone a better text
+to read - and broke the calibration, quietly. Replayed on 110 labelled headlines the
+filing route was wrong **19.8%** of the time it accepted, against 9.8% on filings: a
+headline states direction outright ("shares fall 8% amid internal probe"), a filing
+buries it in boilerplate. Same task, same models, different distribution, different
+thresholds.
+
+So a headline is classified only through a route calibrated and verified for headlines
+(`router.has_route`); until one existed, tone read the filing text instead. Two more
+labelled sets were built for this, disjoint and labelled before any model saw them:
+`sentiment_news` (110) and `sentiment_news_holdout` (95). They are far richer in adverse
+events (40 and 33 negatives) than the filing sets (19 and 10), which also repairs the
+data starvation that made the filing thresholds fragile.
+
+The verified news route is `fin-r1 -> llama3.1:8b -> gemma2` at the strict 10% bar:
+
+| | tuning (110) | held out (95) |
+|---|---|---|
+| accuracy | 81.8% | **87.4%** |
+| wrong when accepted | 6.0% | **6.6%** |
+| declines | 39% | 36% |
+| recall: negative / neutral / positive | 95 / 40 / 22% | **97** / 50 / 7% |
+
+Nearly every adverse headline is caught; almost no "positive" is accepted, because the
+models read rumour and capex plans ("in talks to acquire", "to invest Rs 500 crore") as
+good news where our rule calls them neutral until an effect is stated. For a risk brief
+that asymmetry is the right one: find bad news, stay quiet otherwise, and decline the
+third it cannot judge rather than guess.
+
 ## Consequences
 
 * Adding a model is a registry line plus a benchmark run; nothing else changes.
