@@ -139,6 +139,15 @@ def render(con, state: dict, *, watchlist_path=None) -> tuple[str, list[str]]:
                        f"{cite(e['evidence'])}")
         out.append("")
 
+    # ---- the system's own record ----------------------------------------------------
+    #      Printed even when it proves nothing: a reader is entitled to know that the
+    #      calls below have never been scored.
+    from ..evaluation import scorecard as _sc
+    card = _sc.build(con, as_of=d)
+    out.append("## This system's record")
+    out.extend(_sc.lines(card))
+    out.append("")
+
     # ---- live theses and whether anything has broken them ---------------------------
     theses = state.get("theses") or []
     if theses:

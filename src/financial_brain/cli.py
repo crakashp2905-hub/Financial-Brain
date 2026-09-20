@@ -824,6 +824,16 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_scorecard(args) -> int:
+    """How the system's own calls have actually done."""
+    from .evaluation import scorecard
+    with Database(load()).connect() as con:
+        card = scorecard.build(con, since=_d(args.since) if args.since else None)
+        for line in scorecard.lines(card):
+            print(line)
+    return 0
+
+
 def cmd_results(args) -> int:
     """Parse the results PDFs filed on a day into as-reported financials."""
     from .ingest import results as ing
@@ -1297,6 +1307,10 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("scorecard", help="how this system's own calls have done")
+    g.add_argument("--since")
+    g.set_defaults(fn=cmd_scorecard)
 
     g = sub.add_parser("results", help="as-reported financials from results PDFs (C03)")
     g.add_argument("--date", required=True)
