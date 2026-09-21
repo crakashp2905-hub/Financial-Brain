@@ -41,7 +41,10 @@ paper marks -> brief. Each step reports separately, so one failure never costs t
 - Text that tries to steer a model ([[Untrusted text boundary]])
 - A BUY that breaches the [[C14 Investment Constitution]]
 
-## What it has not shown
-**Nothing about skill.** See [[The unanswered question]] and [[Own-record scorecard]].
+## What it has shown about itself
+Six closed paper trades from replayed sessions: **33% hit rate, -1.01% mean excess**
+against the Nifty ([[First measured record]]). Too few to mean anything, which the
+[[Own-record scorecard]] says out loud - but it is a measurement where there was none,
+and a baseline for everything that follows.
 
 Related: [[MOC Build]] · [[Home]]

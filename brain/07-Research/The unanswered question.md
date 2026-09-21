@@ -27,9 +27,11 @@ What would answer it, in order:
 4. **Real-world validation.** Broker fills through [[Kite Connect]], last, once paper
    results justify it.
 
-> [!warning] The honest state
-> The brief prints "No closed paper trades yet. The system has made no decision it can be
-> scored on." That sentence is the most important line in the product.
+> [!warning] The honest state (updated 2026-09-21)
+> No longer zero: [[First measured record]] - six closed trades, 33% hit rate, **-1.01%
+> mean excess** against the Nifty. The scorecard still refuses to call it anything, and
+> is right to: six trades cannot separate skill from luck. The question is now *being
+> measured* rather than unasked, which is the whole difference.
 
 Related: [[The closed loop]] · [[C23 Strategy registry and paper trading]] ·
 [[Alpha Validation Firewall]]
