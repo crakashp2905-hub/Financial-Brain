@@ -824,6 +824,25 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_replay(args) -> int:
+    """Replay the committee over past sessions so its calls can be scored."""
+    from .evaluation import replay, scorecard
+    cfg = load()
+    dates = [_d(x) for x in args.dates]
+    with Database(cfg).connect() as con:
+        out = replay.run(con, dates, per_day=args.per_day)
+        for s in out["sessions"]:
+            print(f"{s['date']}  drafted {s['drafted']}/{s['considered']}  "
+                  f"traded {s['traded']}")
+            for note in s["notes"]:
+                print(f"    {note[:140]}")
+        print(f"closed at horizon: {out['closed']}")
+        print()
+        for line in scorecard.lines(scorecard.build(con)):
+            print(line)
+    return 0
+
+
 def cmd_promote(args) -> int:
     """Walk drafts toward paper, and say where each one stops."""
     from .decisions import promote
@@ -1327,6 +1346,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("replay", help="replay the committee over past sessions (C23)")
+    g.add_argument("dates", nargs="+", help="past session dates, e.g. 2026-03-16")
+    g.add_argument("--per-day", type=int, default=2)
+    g.set_defaults(fn=cmd_replay)
 
     g = sub.add_parser("promote", help="walk drafts toward paper (never to approval)")
     g.set_defaults(fn=cmd_promote)

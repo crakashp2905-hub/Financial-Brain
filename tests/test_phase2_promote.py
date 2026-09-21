@@ -6,7 +6,7 @@ The refusals matter as much as the promotions, so they are reported with their r
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 import pytest
 
