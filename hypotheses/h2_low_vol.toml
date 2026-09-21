@@ -1,0 +1,14 @@
+name = "Low 60-day volatility"
+signal = "vol_60"
+direction = -1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+The low-volatility anomaly (Blitz & van Vliet 2007; Baker, Bradley & Wurgler 2011): low
+realised volatility earns at least as much as high, contradicting CAPM. Direction is -1
+because the hypothesis is that *low* is good. Prior: a small positive IC, and a quintile
+spread that survives costs because low-vol names turn over slowly. In India, leverage
+constraints and lottery-seeking retail flow are the usual explanations offered, which
+should make the effect stronger here, not weaker.
+"""

@@ -1,0 +1,16 @@
+# Pre-registered before testing. The rationale is the prior, not a description of a
+# result: if the test fails, this file stays as the record of what was expected.
+name = "12-1 momentum, monthly rebalance"
+signal = "mom_12_1"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+Cross-sectional momentum (Jegadeesh & Titman 1993) is the most replicated equity anomaly
+outside the US, and has been documented on Indian equities. The 12-1 construction skips
+the most recent month to avoid short-term reversal. Prior: a positive IC of 0.02-0.04 on
+a 20-session horizon, weaker than US large caps because Indian mid-caps carry more
+idiosyncratic news. If this fails, momentum in this universe is either absorbed by costs
+or concentrated in names below our liquidity floor.
+"""

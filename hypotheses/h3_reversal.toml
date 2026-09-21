@@ -1,0 +1,14 @@
+name = "Short-term reversal, 20-session"
+signal = "ret_20d"
+direction = -1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+Short-term reversal (Jegadeesh 1990): recent losers outperform recent winners over the
+following month, usually read as liquidity provision being paid for. Direction is -1: the
+hypothesis is that a *low* 20-day return predicts a higher forward return. Prior: an IC
+of similar size to momentum but with much higher turnover, so this is the hypothesis most
+likely to be killed by the cost gate rather than by the signal gate - which is itself
+worth measuring.
+"""
