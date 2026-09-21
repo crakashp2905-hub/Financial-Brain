@@ -27,11 +27,12 @@ What would answer it, in order:
 4. **Real-world validation.** Broker fills through [[Kite Connect]], last, once paper
    results justify it.
 
-> [!warning] The honest state (updated 2026-09-21)
-> No longer zero: [[First measured record]] - six closed trades, 33% hit rate, **-1.01%
-> mean excess** against the Nifty. The scorecard still refuses to call it anything, and
-> is right to: six trades cannot separate skill from luck. The question is now *being
-> measured* rather than unasked, which is the whole difference.
+> [!warning] The honest state (updated 2026-09-21, evening)
+> 25 closed trades now, and the answer so far is **no**:
+> [[Twenty-five trades and no edge]]. The committee returned +3.15% per trade; the same
+> universe bought blindly returned +5.00%. Three pre-registered factors were all rejected
+> by the firewall, two of them on costs alone. The question is being measured, which is
+> the whole difference - and the measurement is currently unflattering.
 
 Related: [[The closed loop]] · [[C23 Strategy registry and paper trading]] ·
 [[Alpha Validation Firewall]]

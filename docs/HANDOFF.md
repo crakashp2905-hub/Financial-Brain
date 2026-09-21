@@ -414,3 +414,24 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
     shareholding disclosures) is flagged forever.
   Next for depth, in order: cross-source corroboration (filing + price move + volume),
   more document extractors (counterparties, durations, sections), then Kite last.
+- 2026-09-21 — **25 trades, two measurements, no edge.** The replay harness ran 18 past
+  sessions; 25 paper trades closed at 90-day horizons.
+  * **Committee**: 52% hit, +3.15% mean excess (net, vs Nifty) - the scorecard calls that
+    indistinguishable from chance (33-70% at 95%).
+  * **Control** (`fb control`): the same universe bought blindly returned **+5.00%** over
+    46 candidates. **Committee contribution -1.85% per trade.** The positive number
+    belonged to the universe, not to the judgement. This is the single most important
+    result so far.
+  * **Firewall**: three pre-registered factors (12-1 momentum, low volatility, short-term
+    reversal) all REJECTED. Low-vol and reversal died on costs (-0.37% and -0.78% per
+    period net, at 25% and 81% turnover against a 0.71% round trip); all three failed
+    deflated Sharpe after ~20 counted trials.
+  * **Lessons** (`fb lessons`): two confirmed - CREDIT_RATING prompts (4 of 5 lost, -3.2%
+    vs +4.7%) and mid-liquidity names (-0.4% vs +5.5%). Both now gate new trades.
+  * Every trade sat in a RISK_OFF regime, so the regime feature has no variation to learn
+    from yet.
+  **Where the next edge could come from:** the universe itself returned +5% over 90 days.
+  That is an event-driven effect the firewall cannot currently test, because it only
+  evaluates columns in `features`. Adding a "filed high-materiality news in the last N
+  sessions" feature would let it be tested properly, with costs and multiple-testing
+  correction. That is the highest-value next build.

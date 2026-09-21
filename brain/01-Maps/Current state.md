@@ -42,9 +42,10 @@ paper marks -> brief. Each step reports separately, so one failure never costs t
 - A BUY that breaches the [[C14 Investment Constitution]]
 
 ## What it has shown about itself
-Six closed paper trades from replayed sessions: **33% hit rate, -1.01% mean excess**
-against the Nifty ([[First measured record]]). Too few to mean anything, which the
-[[Own-record scorecard]] says out loud - but it is a measurement where there was none,
-and a baseline for everything that follows.
+25 closed paper trades from 18 replayed sessions: **52% hit rate, +3.15% mean excess** -
+and the same universe bought blindly returned **+5.00%**, so the committee's contribution
+is **-1.85% per trade** ([[Twenty-five trades and no edge]]). Three pre-registered
+factors were rejected by the [[Alpha Validation Firewall]], two on costs alone. No edge
+has been demonstrated, by either route.
 
 Related: [[MOC Build]] · [[Home]]
