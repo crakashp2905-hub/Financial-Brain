@@ -5,7 +5,6 @@ than one that never scores itself at all, because it sounds like evidence.
 """
 from __future__ import annotations
 
-from datetime import date
 
 import pytest
 

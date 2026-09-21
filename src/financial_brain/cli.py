@@ -824,6 +824,20 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_promote(args) -> int:
+    """Walk drafts toward paper, and say where each one stops."""
+    from .decisions import promote
+    with Database(load()).connect() as con:
+        out = promote.run(con)
+        print(f"{out['considered']} live drafts: {out['reached_paper']} reached paper, "
+              f"{out['traded']} opened a paper trade, {out['awaiting_price']} awaiting "
+              f"the next session's price, {len(out['blocked'])} blocked, "
+              f"{out['not_tradeable']} not tradeable")
+        for b in out["blocked"]:
+            print(f"  {b['decision_id']} stopped at {b['state']}: {b['why'][:150]}")
+    return 0
+
+
 def cmd_scorecard(args) -> int:
     """How the system's own calls have actually done."""
     from .evaluation import scorecard
@@ -1105,6 +1119,12 @@ def cmd_daily(args) -> int:
             g = graph.build(con)
             return {"feature_rows": f["feature_rows"], "groups": g["groups"]}
 
+    def promote_drafts():
+        from .decisions import promote
+        with Database(cfg).connect() as con:
+            return promote.run(con)
+    step("promote drafts toward paper", promote_drafts)
+
     def paper_mark():
         from .paper import ledger as paper
         with Database(cfg).connect() as con:
@@ -1307,6 +1327,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("promote", help="walk drafts toward paper (never to approval)")
+    g.set_defaults(fn=cmd_promote)
 
     g = sub.add_parser("scorecard", help="how this system's own calls have done")
     g.add_argument("--since")

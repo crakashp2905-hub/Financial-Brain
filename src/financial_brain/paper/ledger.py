@@ -71,8 +71,12 @@ def open_trade(con, decision_id: str) -> dict:
     px = _price_on_or_after(con, c["isin"], start)
     if not px:
         raise ValueError(f"no price for {c['isin']} on or after {start} yet")
-    adv = con.execute("""SELECT adv20 FROM features WHERE lineage = ? AND business_date <= ?
-                         ORDER BY business_date DESC LIMIT 1""", [px[2], px[0]]).fetchone()
+    try:
+        adv = con.execute("""SELECT adv20 FROM features WHERE lineage = ?
+                             AND business_date <= ? ORDER BY business_date DESC LIMIT 1""",
+                          [px[2], px[0]]).fetchone()
+    except Exception:          # noqa: BLE001 - no feature history is not a reason to
+        adv = None             # refuse the trade; _bucket already handles the unknown
     bucket = _bucket(adv[0] if adv else None)
     cost = CostModel().round_trip(turnover=1_000_000, bucket=bucket)["bps"] / 10_000
     con.execute("""INSERT INTO paper_trades (decision_id, isin, lineage, action, direction,
