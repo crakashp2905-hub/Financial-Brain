@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import date
 
 from ..paper import ledger as paper
-from . import record
+from . import postmortem, record
 
 TO_PAPER = ("DRAFT", "EVIDENCE_VERIFIED", "RISK_REVIEWED")
 TARGET = "PAPER_CANDIDATE"
@@ -55,7 +55,7 @@ def run(con, *, actor: str = "agent:promoter", as_of: date | None = None) -> dic
         WHERE e.rk = 1 AND e.to_state IN ({','.join('?' * len(states))})
           AND p.decision_id IS NULL""", list(states)).fetchall()]
     out = {"considered": len(live), "reached_paper": 0, "traded": 0, "blocked": [],
-           "awaiting_price": 0, "not_tradeable": 0}
+           "awaiting_price": 0, "not_tradeable": 0, "blocked_by_lesson": 0}
     for did in live:
         action = record.content(con, did).get("action")
         if action not in TRADEABLE:
@@ -67,6 +67,15 @@ def run(con, *, actor: str = "agent:promoter", as_of: date | None = None) -> dic
                                    "why": result["stopped"]})
             continue
         out["reached_paper"] += 1
+        # A lesson the record actually supports may forbid this trade. With few closed
+        # trades nothing is confirmed and this is inert - which is the honest default.
+        blocked_by = postmortem.gate(con, **_context(con, did))
+        if blocked_by:
+            out["blocked_by_lesson"] += 1
+            out["blocked"].append({"decision_id": did, "state": TARGET,
+                                   "why": "lesson: " + "; ".join(
+                                       x.describe() for x in blocked_by)})
+            continue
         try:
             paper.open_trade(con, did)
             out["traded"] += 1
@@ -83,3 +92,15 @@ def run(con, *, actor: str = "agent:promoter", as_of: date | None = None) -> dic
             out["blocked"].append({"decision_id": did, "state": TARGET,
                                    "why": f"no paper trade: {type(e).__name__}: {e}"})
     return out
+
+
+def _context(con, did: str) -> dict:
+    """The features a learned lesson is keyed on, as of now."""
+    isin = record.content(con, did)["isin"]
+    regime = con.execute("""SELECT regime FROM market_regime
+                            ORDER BY business_date DESC LIMIT 1""").fetchone()
+    event = con.execute("""SELECT event_type FROM announcements WHERE isin = ?
+                           AND materiality = 'high' ORDER BY business_date DESC
+                           LIMIT 1""", [isin]).fetchone()
+    return {"regime": regime[0] if regime else None,
+            "prompted_by": event[0] if event else None}

@@ -641,3 +641,18 @@ CREATE TABLE IF NOT EXISTS financial_results (
     observed_at     TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (isin, period_end, basis, filed_at)
 );
+
+-- What was knowable when a closed trade was entered (decisions/postmortem.py). One row
+-- per closed trade, wins included: a rule learned from losses alone would also forbid
+-- the wins that share their features.
+CREATE TABLE IF NOT EXISTS decision_postmortems (
+    decision_id         VARCHAR PRIMARY KEY,
+    excess              DOUBLE,
+    regime              VARCHAR,
+    prompted_by         VARCHAR,           -- the event type that surfaced the company
+    bucket              VARCHAR,           -- liquidity bucket at entry
+    action              VARCHAR,
+    invalidation_fired  BOOLEAN,           -- did a stated condition fire before the exit?
+    features            VARCHAR,           -- JSON, everything knowable at entry
+    created_at          TIMESTAMPTZ NOT NULL
+);

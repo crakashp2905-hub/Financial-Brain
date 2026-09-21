@@ -824,6 +824,25 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_lessons(args) -> int:
+    """What the closed trades support, and what they do not yet support."""
+    from .decisions import postmortem
+    with Database(load()).connect() as con:
+        print(postmortem.record_all(con))
+        found = postmortem.lessons(con)
+        if not found:
+            print("no closed trades to learn from yet")
+            return 0
+        confirmed = [x for x in found if x.confirmed()]
+        print(f"{len(confirmed)} confirmed lesson(s) of {len(found)} candidates "
+              f"(needs {postmortem.MIN_SUPPORT}+ trades and a "
+              f"{postmortem.MATERIAL:.0%} gap):")
+        for x in found[:12]:
+            mark = "RULE " if x.confirmed() else "     "
+            print(f"  {mark}{x.describe()}")
+    return 0
+
+
 def cmd_replay(args) -> int:
     """Replay the committee over past sessions so its calls can be scored."""
     from .evaluation import replay, scorecard
@@ -1138,6 +1157,12 @@ def cmd_daily(args) -> int:
             g = graph.build(con)
             return {"feature_rows": f["feature_rows"], "groups": g["groups"]}
 
+    def postmortems():
+        from .decisions import postmortem
+        with Database(cfg).connect() as con:
+            return postmortem.record_all(con)
+    step("postmortem closed trades", postmortems)
+
     def promote_drafts():
         from .decisions import promote
         with Database(cfg).connect() as con:
@@ -1346,6 +1371,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("lessons", help="what the closed trades actually support (C25)")
+    g.set_defaults(fn=cmd_lessons)
 
     g = sub.add_parser("replay", help="replay the committee over past sessions (C23)")
     g.add_argument("dates", nargs="+", help="past session dates, e.g. 2026-03-16")
