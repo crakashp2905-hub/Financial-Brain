@@ -860,6 +860,15 @@ def cmd_vault(args) -> int:
     return 0
 
 
+def cmd_control(args) -> int:
+    """Committee-selected trades against the same universe bought blindly."""
+    from .evaluation import control
+    with Database(load()).connect() as con:
+        for line in control.lines(control.compare(con)):
+            print(line)
+    return 0
+
+
 def cmd_lessons(args) -> int:
     """What the closed trades support, and what they do not yet support."""
     from .decisions import postmortem
@@ -1418,6 +1427,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--root", default="brain")
     g.add_argument("--out")
     g.set_defaults(fn=cmd_vault)
+
+    g = sub.add_parser("control", help="does the committee beat its own universe?")
+    g.set_defaults(fn=cmd_control)
 
     g = sub.add_parser("lessons", help="what the closed trades actually support (C25)")
     g.set_defaults(fn=cmd_lessons)

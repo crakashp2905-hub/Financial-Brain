@@ -676,3 +676,14 @@ CREATE TABLE IF NOT EXISTS call_documents (
     lake_key         VARCHAR,
     fetched_at       TIMESTAMPTZ NOT NULL
 );
+
+-- What each replayed session showed the committee (evaluation/control.py), so the
+-- control - the same universe bought blindly - can be priced later.
+CREATE TABLE IF NOT EXISTS replay_candidates (
+    session_date  DATE NOT NULL,
+    isin          VARCHAR NOT NULL,
+    company       VARCHAR,
+    drafted       BOOLEAN NOT NULL,
+    recorded_at   TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (session_date, isin)
+);

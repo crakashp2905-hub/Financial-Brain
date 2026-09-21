@@ -27,6 +27,7 @@ from ..committee import run as committee
 from ..decisions import promote
 from ..paper import ledger as paper
 from ..worldstate import build as ws
+from . import control
 
 # A committee run costs a minute or two of local inference, so the universe per session
 # is deliberately small and chosen by what the session itself surfaced.
@@ -54,7 +55,9 @@ def session(con, d: date, *, per_day: int = 2, model: str | None = None,
     state = ws.build(con, d)
     out = {"date": d, "world_state": state["version_id"], "considered": 0,
            "drafted": 0, "traded": 0, "notes": []}
-    for isin, company in candidates(con, d, per_day):
+    shown = candidates(con, d, per_day)
+    drafted_isins: set[str] = set()
+    for isin, company in shown:
         out["considered"] += 1
         try:
             res = committee.convene(con, isin, state["version_id"],
@@ -66,6 +69,9 @@ def session(con, d: date, *, per_day: int = 2, model: str | None = None,
             out["notes"].append(f"{company}: no draft (debate produced no cited points)")
             continue
         out["drafted"] += 1
+        drafted_isins.add(isin)
+    # The control needs to know what was shown, not only what was chosen.
+    control.record_candidates(con, d, shown, drafted_isins)
     moved = promote.run(con, actor=actor)
     out["traded"] = moved["traded"]
     out["blocked"] = moved["blocked"]
