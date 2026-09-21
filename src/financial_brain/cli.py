@@ -824,6 +824,22 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_vault(args) -> int:
+    """Export the Obsidian vault as a link graph, and report broken links."""
+    from pathlib import Path
+
+    from . import vault
+    cfg = load()
+    out = vault.write(Path(args.root), Path(args.out or cfg.data_root / "brain_graph.json"))
+    print(f"{out['notes']} notes, {out['links']} links -> {out['out']}")
+    if out["broken_links"]:
+        print(f"broken links ({len(out['broken_links'])}): "
+              + ", ".join(out["broken_links"][:10]))
+    else:
+        print("no broken links")
+    return 0
+
+
 def cmd_lessons(args) -> int:
     """What the closed trades support, and what they do not yet support."""
     from .decisions import postmortem
@@ -1371,6 +1387,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("vault", help="export the Obsidian vault as a link graph")
+    g.add_argument("--root", default="brain")
+    g.add_argument("--out")
+    g.set_defaults(fn=cmd_vault)
 
     g = sub.add_parser("lessons", help="what the closed trades actually support (C25)")
     g.set_defaults(fn=cmd_lessons)
