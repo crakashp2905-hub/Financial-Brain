@@ -7,7 +7,6 @@ trades to every rule so it can be argued with.
 """
 from __future__ import annotations
 
-from datetime import date
 
 import pytest
 

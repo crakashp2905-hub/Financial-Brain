@@ -656,3 +656,23 @@ CREATE TABLE IF NOT EXISTS decision_postmortems (
     features            VARCHAR,           -- JSON, everything knowable at entry
     created_at          TIMESTAMPTZ NOT NULL
 );
+
+-- Earnings-call transcripts and investor presentations (docintel/calls.py). Structure and
+-- an embedding for retrieval; no reading of what was said, which would need its own
+-- labelled set (ADR-0003).
+CREATE TABLE IF NOT EXISTS call_documents (
+    news_id          VARCHAR PRIMARY KEY,
+    isin             VARCHAR,
+    company          VARCHAR,
+    called_on        DATE NOT NULL,
+    event_type       VARCHAR,
+    pages            INTEGER,
+    chars            INTEGER,
+    commentary_chars INTEGER,          -- prepared remarks: management chose every word
+    qa_chars         INTEGER,          -- the part analysts chose
+    has_qa           BOOLEAN,
+    speakers         VARCHAR,          -- JSON list, in order of first appearance
+    embedding        VARCHAR,          -- JSON vector from nomic-embed-text, or NULL
+    lake_key         VARCHAR,
+    fetched_at       TIMESTAMPTZ NOT NULL
+);

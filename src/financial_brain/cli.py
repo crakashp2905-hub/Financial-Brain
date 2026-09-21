@@ -824,6 +824,26 @@ def cmd_models(args) -> int:
     return 0
 
 
+def cmd_calls(args) -> int:
+    """Read earnings-call transcripts and investor presentations for a day."""
+    from .docintel import calls as parse
+    from .ingest import calls as ing
+    cfg = load()
+    with Database(cfg).connect() as con:
+        print(ing.read_day(con, cfg, _d(args.date), limit=args.limit,
+                           embed=not args.no_embed))
+        for nid, company, pages, qa in con.execute("""
+                SELECT news_id, company, pages, has_qa FROM call_documents
+                WHERE called_on = ? ORDER BY fetched_at DESC LIMIT 8""",
+                                                   [_d(args.date)]).fetchall():
+            print(f"  {company[:30]:<30} {pages:>3} pages  "
+                  f"{'Q&A' if qa else 'no Q&A':<7}")
+            for s in parse.most_similar(con, nid, k=2):
+                print(f"      resembles {s['company'][:26]:<26} {s['called_on']} "
+                      f"({s['similarity']:.2f})")
+    return 0
+
+
 def cmd_vault(args) -> int:
     """Export the Obsidian vault as a link graph, and report broken links."""
     from pathlib import Path
@@ -1387,6 +1407,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--target", type=float, default=0.9)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_models)
+
+    g = sub.add_parser("calls", help="earnings-call transcripts and presentations (C11)")
+    g.add_argument("--date", required=True)
+    g.add_argument("--limit", type=int, default=10)
+    g.add_argument("--no-embed", action="store_true")
+    g.set_defaults(fn=cmd_calls)
 
     g = sub.add_parser("vault", help="export the Obsidian vault as a link graph")
     g.add_argument("--root", default="brain")
