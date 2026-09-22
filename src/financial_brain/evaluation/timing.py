@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
 FEATURES = ("ret_20d", "ret_60d", "mom_12_1", "vol_60", "dist_52w_high",
-            "news_20d", "insider_60d", "adverse_60d")
+            "news_20d", "dealing_60d", "adverse_60d")
 HORIZON = 20                 # sessions
 MIN_SUPPORT = 200            # accepted cases needed before a threshold means anything
 TARGET = 0.55                # "act" must be right this often; a coin is 0.50

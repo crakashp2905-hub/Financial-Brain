@@ -1,0 +1,56 @@
+name = "Disclosed dealing only, compliance filings removed, 60 sessions"
+signal = "dealing_60d"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+h5 tested `insider_60d` and was rejected at t = -0.35. Its pre-registration named the
+expected failure mode - "this counts disclosures without reading their direction" - and
+that was true but understated. Counting what the feature actually held:
+
+     60.5%  SAST Reg. 29 disclosures (direction present, in the attachment, unread)
+     30.6%  PIT Reg. 7(3) quarterly compliance certificates (no dealing reported)
+      6.1%  PIT 1992 disclosures, 10,399 of 10,617 of them in 2015 alone
+      2.5%  codes of conduct (no dealing reported)
+      0.3%  trading plans
+
+So a third of the signal reported no trade at all, and a further 6% was a dead regulatory
+regime concentrated in one year. The rule matching `reg 7(` swallowed the compliance
+certificates that the PIT regulations happen to number 7(3). This is a measurement
+validity failure rather than a finding about insiders: the feature did not contain the
+thing the hypothesis was about.
+
+This hypothesis tests the same claim on the corrected population - filings that report an
+actual dealing - with direction still unread. It is a **separate trial** and is counted as
+one; it is not a re-run of h5 with better parameters, because the population changed
+rather than the threshold.
+
+Stated before testing, so that neither outcome can be explained after the fact:
+
+* If it now works, the earlier rejection was a data-quality artifact, and the lesson is
+  about auditing what a feature contains before believing what it measures.
+* If it still fails, the count is genuinely blunt and direction is the remaining
+  variable - at which point the SAST Reg. 29 attachments have to be parsed, which is a
+  real cost and should be paid only once the cheap version has been ruled out.
+* The prior here is weaker than h5's, not stronger. Removing noise from a feature raises
+  its signal-to-noise ratio but cannot manufacture a signal that was never present, and
+  the remaining 60.5% still counts an acquisition and a disposal identically.
+"""
+
+# 2026-09-22, result: REJECT.
+#
+#   dealing_60d  REJECT  trial 28  IC -0.002  t -0.45  DSR 0.00
+#                net/period -0.20%  turnover 35%  sign held in 50% of years
+#
+# Against h5's t = -0.35: essentially unchanged, marginally worse. The second branch
+# above fired, and the prior stated in advance was the right one.
+#
+# Why so little moved: the compliance certificates ran at ~8,500 a year across 2017-2024,
+# a near-constant term present for most names in most windows, and a constant contributes
+# nothing to a cross-sectional rank. Removing a third of the feature by volume moved the
+# statistic by 0.1 of a t. Noise that does not discriminate was not the noise hurting it.
+#
+# What it settles: SAST Reg. 29 is now 90% of the feature, and counting those filings
+# without reading direction carries no signal. Direction is the remaining variable, and
+# that is now earned rather than assumed - which is why the cheap test runs first.

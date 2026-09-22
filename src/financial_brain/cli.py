@@ -974,6 +974,27 @@ def cmd_analogues(args) -> int:
     return 0
 
 
+def cmd_reclassify(args) -> int:
+    """Re-apply the current event rules to the whole archive.
+
+    Classification happens once, at ingest, so a corrected rule reaches only future
+    filings until this is run - leaving the record split between filings typed under the
+    old rule and filings typed under the new one.
+    """
+    from .events.classify import reclassify
+    with Database(load()).connect() as con:
+        out = reclassify(con, dry_run=not args.apply)
+        verb = "changed" if out["applied"] else "would change"
+        print(f"scanned {out['scanned']:,}  {verb} {out['changed']:,}")
+        for transition, n in out["transitions"].items():
+            print(f"  {n:>8}  {transition}")
+        if out["changed"] and not out["applied"]:
+            print("\nnothing written; pass --apply to sweep the archive")
+        elif out["applied"]:
+            print("\nrebuild what derives from event types: fb features build")
+    return 0
+
+
 def cmd_safety(args) -> int:
     """Is now a sensible time to act, and is this name safe to act on?"""
     from .decisions import safety
@@ -1578,6 +1599,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--warm", action="store_true",
                    help="build the cache for every event type with enough filings")
     g.set_defaults(fn=cmd_analogues)
+
+    g = sub.add_parser("reclassify",
+                       help="re-apply event rules to the stored archive")
+    g.add_argument("--apply", action="store_true",
+                   help="write the changes (default is a dry run)")
+    g.set_defaults(fn=cmd_reclassify)
 
     g = sub.add_parser("safety", help="situational awareness: when not to act")
     g.add_argument("--isin")

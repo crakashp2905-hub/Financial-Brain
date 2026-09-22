@@ -21,7 +21,9 @@ running back to 2015 would be measuring the model's history rather than the mark
 
 Features (per lineage, per session):
     news_5d, news_20d      high-materiality filings in the last 5 / 20 sessions
-    insider_60d            insider and substantial-acquisition disclosures, 60 sessions
+    dealing_60d            disclosures of an actual dealing, 60 sessions. Named for
+                           what it holds: until 2026-09-22 this was `insider_60d`
+                           and 33.4% of it was compliance filings reporting no trade.
     adverse_60d            red-flag filings (insolvency, auditor, pledge, legal), 60
     days_since_news        sessions since the last high-materiality filing (NULL if none)
 """
@@ -77,7 +79,7 @@ WITH panel AS (
     SELECT *,
         SUM(high_n)    OVER (w ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)  AS news_5d,
         SUM(high_n)    OVER (w ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS news_20d,
-        SUM(insider_n) OVER (w ROWS BETWEEN 59 PRECEDING AND CURRENT ROW) AS insider_60d,
+        SUM(insider_n) OVER (w ROWS BETWEEN 59 PRECEDING AND CURRENT ROW) AS dealing_60d,
         SUM(adverse_n) OVER (w ROWS BETWEEN 59 PRECEDING AND CURRENT ROW) AS adverse_60d,
         MAX(CASE WHEN high_n > 0 THEN k END)
             OVER (w ROWS UNBOUNDED PRECEDING) AS last_news_k
@@ -89,7 +91,7 @@ SELECT * EXCLUDE (k, high_n, insider_n, adverse_n, last_news_k),
 FROM rolled;
 """
 
-COLUMNS = ("news_5d", "news_20d", "insider_60d", "adverse_60d", "days_since_news")
+COLUMNS = ("news_5d", "news_20d", "dealing_60d", "adverse_60d", "days_since_news")
 
 
 def build(con) -> dict:
@@ -97,7 +99,7 @@ def build(con) -> dict:
     for statement in EVENTS_SQL.strip().split(";\n"):
         if statement.strip():
             con.execute(statement)
-    row = con.execute("""SELECT COUNT(*), SUM(news_20d), AVG(insider_60d)
+    row = con.execute("""SELECT COUNT(*), SUM(news_20d), AVG(dealing_60d)
                          FROM features""").fetchone()
     return {"version": VERSION, "rows": row[0], "news_20d_total": int(row[1] or 0),
-            "insider_60d_mean": round(float(row[2] or 0), 3)}
+            "dealing_60d_mean": round(float(row[2] or 0), 3)}

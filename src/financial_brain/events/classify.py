@@ -43,6 +43,13 @@ _BY_SUBCATEGORY: list[tuple[str, str, str]] = [
     # 179 "high" events on 2026-09-18 were these. Promoter pledges (Reg. 31) stay high.
     (r"reg\.?\s*29|sast", "SUBSTANTIAL_ACQUISITION", MEDIUM),
     (r"closure of trading window", "TRADING_WINDOW", LOW),
+    # Checked before the insider rule below, which would otherwise swallow them: the
+    # PIT regulations number a quarterly compliance certificate 7(3) and a code of
+    # conduct alongside the disclosures of actual dealing. Counting them as insider
+    # activity put 33.4% of `insider_60d` on filings that report no trade at all - see
+    # [[The insider feature contained no insider trades]].
+    (r"reg\.?\s*7\s*\(3\)|compliance certificate|code of conduct",
+     "COMPLIANCE", LOW),
     (r"reg\.?\s*7\s*\(|insider trading|\(pit\)", "INSIDER_DISCLOSURE", MEDIUM),
     (r"credit rating", "CREDIT_RATING", HIGH),
     (r"acquisition|takeover", "ACQUISITION", HIGH),
@@ -183,3 +190,43 @@ def classify(category: str, subcategory: str, headline: str = "",
             and not _EXECUTIVE.search(text)):
         return "BOARD_CHANGE", MEDIUM, "headline non-executive director change"
     return kind, mat, rule
+
+
+def reclassify(con, *, dry_run: bool = True, batch: int = 200_000) -> dict:
+    """Re-apply the current rules to every stored announcement.
+
+    Classification happens once, at ingest, which means a corrected rule reaches only
+    future filings unless the archive is swept. The sweep is worth having as a command
+    rather than a one-off script: rules get corrected more than once, and each correction
+    silently splits the record into filings classified under the old rule and filings
+    classified under the new one until it is run.
+
+    Returns the transitions it found, so a dry run says exactly what would move and a
+    real run says what did.
+    """
+    from collections import Counter
+
+    rows = con.execute("""SELECT news_id, category, subcategory, headline, subject,
+                          event_type, materiality FROM announcements""").fetchall()
+    moved, changes = [], Counter()
+    for news_id, cat, sub, head, subj, was_kind, was_mat in rows:
+        kind, mat, rule = classify(cat or "", sub or "", head or "", subj or "")
+        if kind != was_kind or mat != was_mat:
+            moved.append((kind, mat, rule, news_id))
+            changes[f"{was_kind}/{was_mat} -> {kind}/{mat}"] += 1
+
+    out = {"scanned": len(rows), "changed": len(moved),
+           "transitions": dict(changes.most_common()), "applied": False}
+    if dry_run or not moved:
+        return out
+
+    con.execute("""CREATE OR REPLACE TEMP TABLE _reclass
+                   (event_type VARCHAR, materiality VARCHAR, rule VARCHAR,
+                    news_id VARCHAR)""")
+    for i in range(0, len(moved), batch):
+        con.executemany("INSERT INTO _reclass VALUES (?,?,?,?)", moved[i:i + batch])
+    con.execute("""UPDATE announcements a SET event_type = r.event_type,
+                   materiality = r.materiality, rule = r.rule
+                   FROM _reclass r WHERE r.news_id = a.news_id""")
+    out["applied"] = True
+    return out

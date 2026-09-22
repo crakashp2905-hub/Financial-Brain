@@ -19,11 +19,15 @@ is not a candidate.
 | [[Low volatility]] | REJECT | costs: -0.37%/period at 25% turnover |
 | [[Short-term reversal]] | REJECT | costs: -0.78%/period at 81% turnover |
 | [[Event-driven news flow]] | REJECT | IC **t = -2.00**, the opposite sign to the prior |
-| [[Following disclosed insiders]] | REJECT (as built) | no direction in the signal, t = -0.35 |
+| [[Following disclosed insiders]] | **VOID** | the feature held no dealing data |
+| [[h8]] - dealing only | REJECT | t = -0.45 on the corrected population |
 | [[Governance red flags]] | REJECT | costs at 80% turnover |
 | [[Timing model]] | REJECT | the benchmark was the median; see [[Beating the median is not an edge]] |
 
-Seven candidates, seven rejections. That is the honest state, and the list is the point:
+Eight trials, seven rejections and one **void**. The insider test measured a feature that
+did not contain insider trades; re-run on the corrected population it still failed, which
+narrows the open question to *direction* rather than leaving it open. That is the honest
+state, and the list is the point:
 each note records why, so the next attempt starts from the failure rather than repeating
 it.
 

@@ -16,3 +16,16 @@ direction. A pledge release, a sale and a purchase all count the same, so the si
 blunt by construction. If it fails, the next version parses the direction out of the
 filing rather than abandoning the idea.
 """
+
+# 2026-09-22, after the fact. This trial is VOID, not merely rejected.
+#
+# `insider_60d` no longer exists. Counting what it had contained showed 30.6% quarterly
+# compliance certificates reporting no dealing at all, plus 6.1% from a regulatory regime
+# that ended in 2015 with 10,399 of its 10,617 filings in that single year. The rule
+# matching `reg 7(` had swallowed the certificates that the PIT regulations happen to
+# number 7(3).
+#
+# So t = -0.35 measured a feature that did not contain insider trades. It is left here
+# unedited, because a pre-registration that gets rewritten after the result is not a
+# pre-registration. The corrected population is tested as h8 on `dealing_60d`, and that
+# is counted as a separate trial.
