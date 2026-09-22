@@ -29,6 +29,7 @@ shown to decide well - see [[Current state]] and [[The unanswered question]].
 | [[MOC Decisions]] | open decisions |
 | [[MOC India]] | the five blockers and the real edge |
 | [[MOC Research]] | findings, datasets, model strategy |
+| [[MOC Strategies]] | the playbook: what was tried, what it cost, why it failed |
 
 ## Built since the design was written
 - [[Model router]] - models chosen by measurement, and a task declined when none qualifies
@@ -37,6 +38,8 @@ shown to decide well - see [[Current state]] and [[The unanswered question]].
 - [[News recovered from filings]] - the story the boilerplate hides
 - [[Base rates]] - how unusual is this, here and against the market
 - [[Own-record scorecard]] - the system's calls, scored, or honestly unscored
+- [[Procedural memory]] - how the brain remembers *how*, without a model
+- [[Beating the median is not an edge]] - the day a benchmark flattered a model
 
 ---
 [[How to use this vault]]
