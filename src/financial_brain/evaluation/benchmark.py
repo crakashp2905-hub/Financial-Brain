@@ -24,7 +24,9 @@ FEATURES = {"ret_1d", "ret_5d", "ret_20d", "ret_60d", "ret_250d", "mom_12_1", "v
             "vol_60", "dist_52w_high",
             # event features (features/events.py): what the company disclosed, counted
             # from the session the news could first have been traded on
-            "news_5d", "news_20d", "insider_60d", "adverse_60d", "days_since_news"}
+            "news_5d", "news_20d", "insider_60d", "adverse_60d", "days_since_news",
+            # the System One timing model's own score, fitted point in time
+            "timing_score"}
 
 
 def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,

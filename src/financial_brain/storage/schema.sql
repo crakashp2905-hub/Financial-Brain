@@ -687,3 +687,18 @@ CREATE TABLE IF NOT EXISTS replay_candidates (
     recorded_at   TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (session_date, isin)
 );
+
+-- Timing models (evaluation/timing.py): a System One decision fitted on our own history.
+-- Append-only: each fit keeps its own weights, threshold and out-of-sample report.
+CREATE TABLE IF NOT EXISTS timing_models (
+    version      VARCHAR NOT NULL,
+    fitted_at    TIMESTAMPTZ NOT NULL,
+    weights      VARCHAR NOT NULL,
+    bias         DOUBLE NOT NULL,
+    features     VARCHAR NOT NULL,
+    threshold    DOUBLE,              -- NULL means the model declined to act at all
+    fitted_on    VARCHAR,
+    verified_on  VARCHAR,
+    report       VARCHAR,
+    PRIMARY KEY (version, fitted_at)
+);

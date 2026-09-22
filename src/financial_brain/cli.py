@@ -860,6 +860,35 @@ def cmd_vault(args) -> int:
     return 0
 
 
+def cmd_timing(args) -> int:
+    """Fit, calibrate and verify the System One timing model - or report its refusal."""
+    from .evaluation import timing
+    with Database(load()).connect() as con:
+        if args.action == "fit":
+            model = timing.build(con)
+            timing.save(con, model)
+            r = model.report
+            print(f"rows {r.get('rows')}  base rate {r.get('base_rate_test')}")
+            print(f"threshold {r.get('threshold_from_calibration')}  "
+                  f"coverage {r.get('coverage_test')}  "
+                  f"precision {r.get('precision_test')}  "
+                  f"lift {r.get('lift_over_base')}")
+            print(f"verdict: {r.get('verdict')}")
+        else:
+            model = timing.latest(con)
+            if not model:
+                print("no timing model fitted yet")
+                return 0
+            print(f"usable: {model.usable()}  threshold {model.threshold}")
+            print(f"verdict: {model.report.get('verdict')}")
+            if args.isin:
+                d = timing.decide(con, args.isin, _d(args.date) if args.date
+                                  else date.today(), model=model)
+                print(f"{args.isin}: {d.label} (confidence {d.confidence:.3f}) "
+                      f"{d.extra}")
+    return 0
+
+
 def cmd_safety(args) -> int:
     """Is now a sensible time to act, and is this name safe to act on?"""
     from .decisions import safety
@@ -1446,6 +1475,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--root", default="brain")
     g.add_argument("--out")
     g.set_defaults(fn=cmd_vault)
+
+    g = sub.add_parser("timing", help="System One timing model (fit / show)")
+    g.add_argument("action", choices=["fit", "show"])
+    g.add_argument("--isin")
+    g.add_argument("--date")
+    g.set_defaults(fn=cmd_timing)
 
     g = sub.add_parser("safety", help="situational awareness: when not to act")
     g.add_argument("--isin")

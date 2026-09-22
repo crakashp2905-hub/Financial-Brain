@@ -8,9 +8,12 @@ trades to every rule so it can be argued with.
 from __future__ import annotations
 
 
+from datetime import date
+
 import pytest
 
 from financial_brain.config import Config
+from financial_brain.decisions import postmortem
 from financial_brain.decisions import postmortem as pm
 from financial_brain.storage.db import Database
 
@@ -114,7 +117,7 @@ def test_features_at_entry_use_what_was_knowable_then(con):
 
 def test_a_confirmed_lesson_stops_the_next_such_trade(con, monkeypatch):
     """The whole point: a mistake the record supports is not repeated."""
-    from financial_brain.decisions import promote
+    from financial_brain.decisions import promote, safety
     for i in range(6):
         _pm(con, f"r{i}", -0.06, regime="RISK_OFF")
     for i in range(6):
@@ -129,8 +132,12 @@ def test_a_confirmed_lesson_stops_the_next_such_trade(con, monkeypatch):
                    world_state_version, content, author, created_at)
                    VALUES ('dnew','INE000A01001','BUY',90,'ws',
                    '{"action":"BUY","isin":"INE000A01001"}','agent:committee',NOW())""")
-    assert [x.feature for x in promote.postmortem.gate(
+    # the gate is reached through the safety assessment, which is the real path
+    assert [x.feature for x in postmortem.gate(
         con, **promote._context(con, "dnew"))] == ["regime=RISK_OFF"]
+    a = safety.assess(con, isin="INE000A01001", as_of=date(2026, 9, 18),
+                      **promote._context(con, "dnew"))
+    assert not a.safe and "regime=RISK_OFF" in a.describe()
 
 
 def test_nothing_learned_yet_forbids_nothing(con):
@@ -143,4 +150,4 @@ def test_nothing_learned_yet_forbids_nothing(con):
                    world_state_version, content, author, created_at)
                    VALUES ('dnew','INE000A01001','BUY',90,'ws',
                    '{"action":"BUY","isin":"INE000A01001"}','agent:committee',NOW())""")
-    assert promote.postmortem.gate(con, **promote._context(con, "dnew")) == []
+    assert postmortem.gate(con, **promote._context(con, "dnew")) == []

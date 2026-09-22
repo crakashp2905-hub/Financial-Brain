@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import date
 
 from ..paper import ledger as paper
-from . import postmortem, record, safety
+from . import record, safety
 
 TO_PAPER = ("DRAFT", "EVIDENCE_VERIFIED", "RISK_REVIEWED")
 TARGET = "PAPER_CANDIDATE"

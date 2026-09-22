@@ -1,0 +1,20 @@
+name = "System One timing score, point in time"
+signal = "timing_score"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+A logistic model over eight ranked features (three of them disclosure counts), fitted on
+an expanding window so every year is scored by weights that ended before it. Walk-forward
+across five folds produced a measurable result in four of them, every one positive net of
+costs, mean +0.78% per 20 sessions at 50.7-60.3% precision - and in the fifth the recipe
+could not calibrate and declined to trade.
+
+Prior: this passes the IC and walk-forward gates and is at risk on two others. Turnover,
+because a 20-session rebalance of a rank signal churns; and deflated Sharpe, because this
+is the seventh hypothesis tested and the feature set was chosen after six factor
+rejections - the trial counter should and will charge for that. A rejection on deflated
+Sharpe would not mean the effect is absent, only that it has not earned the bar given how
+much searching preceded it.
+"""
