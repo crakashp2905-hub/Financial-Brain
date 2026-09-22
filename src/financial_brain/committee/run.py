@@ -26,7 +26,9 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
+from ..decisions import expected_value as ev
 from ..decisions import record as dr
+from ..features import analogues as an
 from ..llm import backends, system1
 from . import dossier as dz
 
@@ -110,6 +112,8 @@ def convene(con, isin: str, world_state_version: str, *, model: str = MODEL,
     ok = bool(const_fact and const_fact.text.startswith("a BUY would pass"))
     res.action = chair(doss, res, ok)
     if res.bull and res.bear:
+        checks = _checks(con, isin, doss)
+        scenarios, sizing = _arithmetic(con, doss, checks) if res.action == "BUY" else ({}, {})
         sup = list(dict.fromkeys(i for p in res.bull for i in p["fact_ids"]))
         con_ = list(dict.fromkeys(i for p in res.bear for i in p["fact_ids"]))
         res.decision_id = dr.draft(con, dr.Decision(
@@ -120,8 +124,8 @@ def convene(con, isin: str, world_state_version: str, *, model: str = MODEL,
             world_state_version=world_state_version, supporting_evidence=sup,
             contrary_evidence=con_, primary_uncertainty=res.bear[0]["claim"],
             invalidation_conditions=[f"if: {p['claim']}" for p in res.bear],
-            invalidation_checks=_checks(con, isin, doss),
-            sizing={"weight": 0.03} if res.action == "BUY" else {},
+            invalidation_checks=checks,
+            scenarios=scenarios, sizing=sizing,
             author="agent:committee"))
     con.execute("""INSERT INTO committee_runs (isin, world_state_version, model, result,
                    decision_id, run_at) VALUES (?,?,?,?,?,?)""",
@@ -131,6 +135,7 @@ def convene(con, isin: str, world_state_version: str, *, model: str = MODEL,
 
 
 STOP_LOSS = 0.15            # a thesis that has lost this much has to be re-argued
+EVENT_WINDOW_DAYS = 90      # the dossier's filing window: an older event is not this thesis
 RED_FLAGS = ["INSOLVENCY", "AUDITOR_RESIGNATION", "PROMOTER_PLEDGE", "LEGAL_REGULATORY"]
 
 
@@ -153,3 +158,44 @@ def _checks(con, isin: str, doss) -> list[dict]:
         checks.insert(0, {"check": "drawdown_from", "reference": round(ref, 2),
                           "pct": STOP_LOSS})
     return checks
+
+
+def _arithmetic(con, doss, checks: list[dict]) -> tuple[dict, dict]:
+    """The two numbers the committee used to leave blank: a distribution, and a size.
+
+    Scoring its own record showed the committee at **0% on arithmetic and 30% on sizing**
+    across 25 closed trades - it argued both sides well, named what would prove it wrong,
+    and then bought a flat 3% of the book with nothing behind the figure. Both gaps are
+    closed from things already on the table rather than from a model's opinion:
+
+    * the **distribution** is what followed this event type historically, point in time
+      (``features/analogues``). No comparable history means no scenarios, which fails the
+      risk review's arithmetic and becomes a NO TRADE - the right default;
+    * the **size** is set by the distance to the drawdown check that is already the
+      thesis's invalidation, so the position loses the risk budget exactly when the
+      thesis is declared wrong.
+    """
+    as_of = doss.as_of.date() if hasattr(doss.as_of, "date") else doss.as_of
+    # The event has to be a *live* one. A high-materiality filing from three years ago
+    # says nothing about today's thesis, and borrowing its distribution would be the
+    # same mistake as borrowing a stale calibration.
+    row = con.execute("""SELECT event_type FROM announcements
+                         WHERE isin = ? AND event_type IS NOT NULL
+                           AND materiality = 'high'
+                           AND business_date <= ?
+                           AND business_date >= ? - INTERVAL (?) DAY
+                         ORDER BY business_date DESC LIMIT 1""",
+                      [doss.isin, as_of, as_of, EVENT_WINDOW_DAYS]).fetchone()
+    scenarios = (an.cached(con, row[0], as_of, build=False) if row else None) or {}
+
+    sizing: dict = {}
+    draw = next((c for c in checks if c.get("check") == "drawdown_from"), None)
+    if draw:
+        entry = float(draw["reference"])
+        sizing = {"entry": round(entry, 2),
+                  "invalidation": round(entry * (1 - float(draw["pct"])), 2),
+                  "risk_budget": ev.DEFAULT_RISK_BUDGET,
+                  "basis": "distance to the drawdown invalidation, not a flat weight"}
+    if scenarios:
+        sizing["analogue"] = {"event_type": row[0], "as_of": str(as_of)}
+    return scenarios, sizing

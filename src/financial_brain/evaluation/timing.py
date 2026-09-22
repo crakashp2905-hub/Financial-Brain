@@ -243,7 +243,6 @@ def decide(con, isin: str, as_of: date, *, model: Model | None = None):
     if model is None or not model.usable():
         return Decision(label="wait", probs={}, confidence=0.0, model=f"timing-{VERSION}",
                         extra={"declined": "no verified timing model"})
-    cols = ", ".join(f"f.{c}" for c in model.features)
     row = con.execute(f"""
         WITH ranked AS (
             SELECT l.isin, {", ".join(

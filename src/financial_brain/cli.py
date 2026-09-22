@@ -889,6 +889,91 @@ def cmd_timing(args) -> int:
     return 0
 
 
+def cmd_quality(args) -> int:
+    """Score decisions on process, apart from what they earned."""
+    from .decisions import quality
+    with Database(load()).connect() as con:
+        if args.decision:
+            s = quality.assess_decision(con, args.decision)
+            print(f"{args.decision}: {s.describe()}")
+            for part, value in sorted(s.parts.items(), key=lambda kv: kv[1]):
+                print(f"    {part:<16} {value:.0%}")
+            for note in s.notes:
+                print(f"    note: {note}")
+            return 0
+        out = quality.against_outcomes(con)
+        if not out.get("n"):
+            print("no closed trades to score yet")
+            return 0
+        print(f"{out['n']} closed decisions, mean process quality "
+              f"{out['mean_quality']:.0%}")
+        for label in ("well_made", "poorly_made"):
+            part = out[label]
+            got = (f"{part['mean_excess']:+.2%}" if part["mean_excess"] is not None
+                   else "-")
+            print(f"  {label.replace('_', ' '):<12} {part['n']:>3} trades, "
+                  f"mean excess {got}")
+        if "quality_premium" in out:
+            premium = out["quality_premium"]
+            print(f"  quality premium {premium:+.2%} - "
+                  + ("better process paid" if premium > 0 else
+                     "better process did not pay, which says the edge is missing "
+                     "rather than the process"))
+    return 0
+
+
+def cmd_analogues(args) -> int:
+    """What followed this kind of event before - the distribution, not an opinion."""
+    from .features import analogues
+    with Database(load()).connect() as con:
+        as_of = _d(args.date) if args.date else date.today()
+        if args.warm:
+            built = analogues.warm(con, as_of, horizon_days=args.horizon)
+            usable = sum(1 for b in built if b["usable"])
+            print(f"cached {len(built)} event types as of {as_of}; "
+                  f"{usable} have enough history to size a trade on")
+            return 0
+        if not args.event_type:
+            rows = con.execute("""SELECT event_type, cases, mean_excess FROM
+                                  analogue_distributions WHERE as_of_month <= ?
+                                  AND horizon_days = ? ORDER BY mean_excess DESC NULLS LAST""",
+                               [as_of.replace(day=1), args.horizon]).fetchall()
+            if not rows:
+                print("nothing cached yet - run: fb analogues --warm")
+                return 0
+            print(f"{'event type':<26} {'cases':>7}  mean excess over {args.horizon}d")
+            for name, cases, mean in rows:
+                mark = " " if cases >= analogues.MIN_CASES else "*"
+                print(f"{name:<26} {cases:>7}{mark} "
+                      + (f"{mean:+.2%}" if mean is not None else "-"))
+            print(f"\n* fewer than {analogues.MIN_CASES} cases: no scenarios are "
+                  "produced, so a decision resting on one becomes a NO TRADE")
+            return 0
+
+        s = analogues.summary(con, args.event_type, as_of, horizon_days=args.horizon)
+        if not s["cases"]:
+            print(f"no resolved history for {args.event_type} as of {as_of}")
+            return 0
+        print(f"{args.event_type} as of {as_of}: {s['cases']} resolved cases over "
+              f"{args.horizon} days")
+        print(f"  mean excess   {s['mean_excess']:+.2%}   "
+              f"median {s['median_excess']:+.2%}   win rate {s['win_rate']:.0%}")
+        print(f"  worst {s['worst']:+.1%}   best {s['best']:+.1%}")
+        if not s["scenarios"]:
+            print(f"  too thin: under {analogues.MIN_CASES} cases no distribution is "
+                  "offered, and a thesis resting on this cannot be sized")
+            return 0
+        from .decisions import expected_value as ev
+        for name, band in s["scenarios"].items():
+            print(f"  {name:<6} p={band['probability']:.0%}  "
+                  f"{band['return']:+.2%}  ({band['cases']} cases)")
+        a = ev.assess(s["scenarios"])
+        print(f"  {a.describe()}")
+        rr = a.reward_to_risk
+        print(f"  reward to risk {rr:.2f}" if rr else "  no losing band")
+    return 0
+
+
 def cmd_safety(args) -> int:
     """Is now a sensible time to act, and is this name safe to act on?"""
     from .decisions import safety
@@ -1481,6 +1566,18 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--isin")
     g.add_argument("--date")
     g.set_defaults(fn=cmd_timing)
+
+    g = sub.add_parser("quality", help="decision quality, scored apart from P&L")
+    g.add_argument("--decision")
+    g.set_defaults(fn=cmd_quality)
+
+    g = sub.add_parser("analogues", help="what followed this kind of event before")
+    g.add_argument("event_type", nargs="?")
+    g.add_argument("--date")
+    g.add_argument("--horizon", type=int, default=90)
+    g.add_argument("--warm", action="store_true",
+                   help="build the cache for every event type with enough filings")
+    g.set_defaults(fn=cmd_analogues)
 
     g = sub.add_parser("safety", help="situational awareness: when not to act")
     g.add_argument("--isin")

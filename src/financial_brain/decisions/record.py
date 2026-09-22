@@ -16,6 +16,9 @@ control:
 * **Current evidence.** A claim that has since been superseded cannot be cited.
 * **Both sides.** Verification needs supporting *and* contrary evidence, a named primary
   uncertainty, and explicit invalidation conditions.
+* **Arithmetic.** Where a decision states scenarios, risk review checks them: the
+  probabilities must sum to one, at least one must lose money, and the expected value
+  must be positive. A trade that cannot survive its own sum does not reach paper.
 * **The constitution binds.** Risk review checks every machine-checkable rule of the
   owner's Investment Constitution (``constitution/rules.py``) as of the decision's
   world state; any violation blocks, and names the rule and the facts.
@@ -151,6 +154,19 @@ def advance(con, did: str, *, actor: str, note: str = "",
     elif to == "RISK_REVIEWED":
         if not c.get("sizing"):
             raise DecisionError("risk review needs sizing / a risk budget")
+        # Arithmetic before opinion: a trade must state how it is wrong, how much that
+        # costs, and be worth taking on those numbers. "The model is confident" is not a
+        # reason to buy anything.
+        if c.get("scenarios"):
+            from . import expected_value as ev
+            try:
+                assessment = ev.assess(c["scenarios"])
+            except ev.EVError as e:
+                raise DecisionError(f"scenarios: {e}") from e
+            if not assessment.positive():
+                raise DecisionError(
+                    f"expected value is {assessment.expected_value:+.1%} - "
+                    f"{assessment.describe()}; no trade")
         from ..config import load
         from ..constitution import rules
         book = constitution if constitution is not None else rules.load(load().data_root)
