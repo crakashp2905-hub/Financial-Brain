@@ -33,15 +33,27 @@ discourages it. An encoder with no decoder has nowhere to obey **to**: there is 
 continuation to hijack, only a distribution over a label set fixed before the document was
 read. See [[Untrusted text boundary]].
 
-**Speed - but not on this machine.** Laya is quoted at 33-40ms on a T4 and 193-464ms on a
-CPU. Measured here (Intel Iris Xe, no CUDA, torch on 4 threads) it takes **~1.1-2.8s** per
-filing, about what `llama3.1:8b` takes for the same typed decision.
+**Speed, measured twice.** On this machine (Intel Iris Xe, no CUDA, torch on 4 threads),
+over twelve real filing headlines with a warm-up call discarded:
 
-The first version of this note repeated the vendor's CPU figure as a reason to adopt it.
-That was the same error the project keeps catching elsewhere - see
-[[Beating the median is not an edge]] - a number that flatters, taken without measuring.
-On a GPU the speed argument returns. On this laptop it does not, and the case for Laya
-rests entirely on the paragraph above.
+| checkpoint | median | min | max |
+|---|---|---|---|
+| `laya` (421M) | **561ms** | 477 | 858 |
+| `laya-multilingual` (322M) | **395ms** | 222 | 8074 |
+
+Against `llama3.1:8b`'s ~2.4s for the same typed decision, roughly **four to six times
+faster** - and the multilingual median falls inside the 193-464ms CPU band the README
+quotes.
+
+The number took two passes to get right, and that is the part worth keeping. The vendor's
+figure was first repeated here without measuring. It was then "corrected" to 1.1-2.8s -
+but those were the **first calls after load**, timing lazy initialisation rather than
+steady state. Quoting an unmeasured number and measuring the wrong thing are the same
+mistake in different clothes, and both are cheap to make in whichever direction suits the
+argument at hand. See [[Beating the median is not an edge]].
+
+The multilingual maximum of 8s is one outlier in twelve and is not explained; until it is,
+the English checkpoint is the one to benchmark on.
 
 ## What it is not exempt from
 

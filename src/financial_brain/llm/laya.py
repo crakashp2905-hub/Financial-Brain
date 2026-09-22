@@ -13,13 +13,29 @@ already has, and it maps onto ``Decision`` exactly.
 
 Two things make it worth wiring in, and one thing does not.
 
-**Speed, but not here.** Laya is quoted at 33-40 ms on a T4 and 193-464 ms on a CPU, and
-the first version of this module repeated that as a reason to adopt it. Measured on this
-machine (Intel Iris Xe, no CUDA, torch on 4 threads) it takes **~1.1-2.8 s** per filing -
-about what ``llama3.1:8b`` takes for the same typed decision. The quoted figure was
-someone else's hardware, and quoting it was the same error this project keeps catching
-elsewhere: a number that flatters, taken without measuring. On a GPU the speed argument
-returns; on this laptop it does not, and the case for Laya rests on the paragraph below.
+**Speed, measured twice.** On this machine (Intel Iris Xe, no CUDA, torch on 4 threads),
+over twelve real filing headlines with a warm-up call discarded:
+
+===========================  ========  =====  =====
+checkpoint                    median    min    max
+===========================  ========  =====  =====
+``laya`` (421M)                 561 ms  477    858
+``laya-multilingual`` (322M)    395 ms  222   8074
+===========================  ========  =====  =====
+
+Against ``llama3.1:8b``'s ~2.4 s for the same typed decision that is roughly **four to
+six times faster**, and the multilingual median falls inside the 193-464 ms CPU band the
+README quotes.
+
+The number took two passes to get right, which is the part worth keeping. The README's
+figure was first repeated here without measuring. It was then "corrected" to 1.1-2.8 s -
+but those were the *first calls after load*, so they were timing lazy initialisation, not
+steady state. Quoting an unmeasured number and measuring the wrong thing are the same
+mistake wearing different clothes, and both are cheap to make in the direction that
+suits the argument being made at the time.
+
+The multilingual maximum of 8 s is one outlier in twelve and is not explained; until it
+is, the English checkpoint is the one to benchmark on.
 
 **It cannot be instructed by its input.** This is the part that matters more than speed.
 Every filing, headline and PDF this system reads is untrusted text, and the standing rule
