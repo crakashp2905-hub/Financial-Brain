@@ -28,7 +28,7 @@ def _con(events, *, days=400, n_names=40):
     """
     con = duckdb.connect(":memory:")
     con.execute("""CREATE TABLE announcements (isin VARCHAR, business_date DATE,
-                   event_type VARCHAR)""")
+                   event_type VARCHAR, materiality VARCHAR)""")
     con.execute("""CREATE TABLE adjusted_prices AS
                    SELECT 'IN' || lpad(i::VARCHAR, 4, '0') AS isin,
                           (DATE '2020-01-01' + to_days(d::INTEGER))::DATE AS business_date,
@@ -36,13 +36,13 @@ def _con(events, *, days=400, n_names=40):
                           1e9                              AS turnover
                    FROM generate_series(0, ? - 1) t(i),
                         generate_series(0, ? - 1) u(d)""", [n_names, days])
-    con.executemany("INSERT INTO announcements VALUES (?,?,?)", events)
+    con.executemany("INSERT INTO announcements VALUES (?,?,?,?)", events)
     return con, date(2020, 1, 1)
 
 
 def test_a_thin_sample_yields_no_scenarios_at_all():
     """Below MIN_CASES the answer is None, not a distribution with wide error bars."""
-    events = [(f"IN{i:04d}", date(2020, 2, 1), "RARE") for i in range(5)]
+    events = [(f"IN{i:04d}", date(2020, 2, 1), "RARE", "high") for i in range(5)]
     con, _ = _con(events)
     assert A.scenarios(con, "RARE", date(2022, 1, 1)) is None
     assert A.summary(con, "RARE", date(2022, 1, 1))["usable"] is False
@@ -50,7 +50,7 @@ def test_a_thin_sample_yields_no_scenarios_at_all():
 
 def test_no_case_may_resolve_after_the_as_of_date():
     """PIT: an event whose 90-day horizon has not closed by as_of cannot be counted."""
-    events = [(f"IN{i:04d}", date(2020, 2, 1), "E") for i in range(40)]
+    events = [(f"IN{i:04d}", date(2020, 2, 1), "E", "high") for i in range(40)]
     con, _ = _con(events)
     # the horizon closes ~2020-05-01; as_of before that must see nothing
     assert A.outcomes(con, "E", date(2020, 4, 1)) == []
@@ -58,7 +58,7 @@ def test_no_case_may_resolve_after_the_as_of_date():
 
 
 def test_only_events_inside_the_lookback_window_are_counted():
-    events = [(f"IN{i:04d}", date(2020, 2, 1), "E") for i in range(40)]
+    events = [(f"IN{i:04d}", date(2020, 2, 1), "E", "high") for i in range(40)]
     con, _ = _con(events)
     # the event is 2020-02-01; a one-year window from 2020-12-01 reaches it, a
     # zero-year window starts at as_of and cannot
@@ -67,7 +67,7 @@ def test_only_events_inside_the_lookback_window_are_counted():
 
 
 def test_illiquid_names_are_excluded_by_the_turnover_floor():
-    events = [(f"IN{i:04d}", date(2020, 2, 1), "E") for i in range(40)]
+    events = [(f"IN{i:04d}", date(2020, 2, 1), "E", "high") for i in range(40)]
     con, _ = _con(events)
     con.execute("UPDATE adjusted_prices SET turnover = 1000")
     assert A.outcomes(con, "E", date(2020, 12, 1)) == []
@@ -192,3 +192,17 @@ def test_an_uncached_event_type_yields_no_scenarios_rather_than_a_slow_scan():
     con.execute("INSERT INTO announcements VALUES ('IN0', DATE '2026-05-20', 'RARE', 'high')")
     scenarios, _ = cr._arithmetic(con, _Doss("IN0", date(2026, 6, 1)), CHECKS)
     assert scenarios == {}
+
+
+def test_routine_filings_do_not_enter_a_high_materiality_distribution():
+    """The sample has to match the population the decision is drawn from.
+
+    The committee only ever looks up a distribution for a *high*-materiality filing. A
+    distribution built over every routine compliance notice of the same type would
+    describe a different population than the trade it is sizing - and would be dominated
+    by it, since routine filings outnumber material ones by orders of magnitude.
+    """
+    routine = [(f"IN{i:04d}", date(2020, 2, 1), "E", "low") for i in range(40)]
+    con, _ = _con(routine)
+    assert A.outcomes(con, "E", date(2020, 12, 1)) == []
+    assert A.outcomes(con, "E", date(2020, 12, 1), materiality="low") != []

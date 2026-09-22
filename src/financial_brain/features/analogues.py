@@ -29,12 +29,13 @@ MIN_CASES = 30              # below this the terciles are noise
 HORIZON_DAYS = 90
 LOOKBACK_YEARS = 8
 MIN_TURNOVER = 1e7          # Rs 1cr at entry, the same liquidity floor the firewall uses
+MATERIALITY = "high"        # the population a decision is drawn from; see `outcomes`
 
 _SQL = """
 WITH ev AS (
     SELECT DISTINCT a.isin, a.business_date AS d
     FROM announcements a
-    WHERE a.event_type = ? AND a.isin IS NOT NULL
+    WHERE a.event_type = ? AND a.materiality = ? AND a.isin IS NOT NULL
       AND a.business_date >= ? AND a.business_date <= ?
 ), entry AS (
     SELECT ev.isin,
@@ -66,11 +67,17 @@ WHERE a.close_adj > 0 AND COALESCE(a.turnover, 0) >= ?
 
 
 def outcomes(con, event_type: str, as_of: date, *, horizon_days: int = HORIZON_DAYS,
-             min_turnover: float = MIN_TURNOVER,
+             min_turnover: float = MIN_TURNOVER, materiality: str = MATERIALITY,
              lookback_years: int = LOOKBACK_YEARS) -> list[float]:
-    """Forward excess returns after every prior instance of this event type."""
+    """Forward excess returns after every prior instance of this event type.
+
+    ``materiality`` is not a tuning knob - it has to match the population the decision is
+    drawn from. The committee only ever looks up a distribution for a *high*-materiality
+    filing, so a distribution built over every routine compliance notice of the same type
+    would describe a different population than the trade it is sizing.
+    """
     start = as_of - timedelta(days=365 * lookback_years)
-    rows = con.execute(_SQL, [event_type, start, as_of, horizon_days, as_of,
+    rows = con.execute(_SQL, [event_type, materiality, start, as_of, horizon_days, as_of,
                               min_turnover]).fetchall()
     return [float(r[0]) for r in rows if r[0] is not None]
 

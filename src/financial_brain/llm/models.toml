@@ -97,6 +97,29 @@ tier = 2
 system_one = true
 role = "financial reasoning (Fin-R1 7B, SUFE; licence unverified - personal use)"
 
+# Laya (Convai Innovations, Apache-2.0) - non-autoregressive typed decisions. An
+# encoder, so there is no continuation for untrusted filing text to hijack, and one
+# forward pass instead of 2.4 s of generation. Its own README says both checkpoints
+# ship over-confident (mean ECE 0.466, and 0.081 after refitting temperature on held-out
+# data), which is the same lesson this project learned when an 89.1% in-sample threshold
+# became 65.4% held out. Candidates until `fb models bench` says otherwise.
+[[model]]
+name = "laya"
+backend = "laya"
+tier = 1
+system_one = true
+repo = "convaiinnovations/laya"
+role = "typed decisions in one forward pass (ModernBERT-large 421M, English)"
+
+[[model]]
+name = "laya-multilingual"
+backend = "laya"
+tier = 1
+system_one = true
+repo = "convaiinnovations/laya"
+subfolder = "multilingual"
+role = "typed decisions, 100+ languages (mmBERT-base 322M)"
+
 [[model]]
 name = "claude-haiku-4-5"
 backend = "anthropic"

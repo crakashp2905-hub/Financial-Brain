@@ -103,7 +103,13 @@ def decider(task: str, model: str):
         raise ValueError(f"{model} is reasoning-only (system_one = false); it cannot give "
                          "a one-token typed decision")
     notes = SENTIMENT_NOTES if base(task) == "sentiment" else None
-    style = router.registry().get(model, {}).get("answer_style", "letters")
+    spec = router.registry().get(model, {})
+    if spec.get("backend") == "laya":
+        from ..llm import laya
+        return lambda row: laya.laya_decide(
+            model, INSTRUCTION[task], row["state"], ch, notes=notes,
+            repo=spec.get("repo", laya.DEFAULT_REPO), subfolder=spec.get("subfolder"))
+    style = spec.get("answer_style", "letters")
     return lambda row: system1.ollama_decide(model, INSTRUCTION[task], row["state"], ch,
                                              notes=notes, style=style)
 
