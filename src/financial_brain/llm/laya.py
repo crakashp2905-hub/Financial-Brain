@@ -13,9 +13,13 @@ already has, and it maps onto ``Decision`` exactly.
 
 Two things make it worth wiring in, and one thing does not.
 
-**Speed.** ``llama3.1:8b`` takes about 2.4 s per typed decision on this machine. Laya is
-quoted at 33-40 ms on a GPU and 193-464 ms on a CPU, which is the difference between
-classifying a day's filings and classifying a decade's.
+**Speed, but not here.** Laya is quoted at 33-40 ms on a T4 and 193-464 ms on a CPU, and
+the first version of this module repeated that as a reason to adopt it. Measured on this
+machine (Intel Iris Xe, no CUDA, torch on 4 threads) it takes **~1.1-2.8 s** per filing -
+about what ``llama3.1:8b`` takes for the same typed decision. The quoted figure was
+someone else's hardware, and quoting it was the same error this project keeps catching
+elsewhere: a number that flatters, taken without measuring. On a GPU the speed argument
+returns; on this laptop it does not, and the case for Laya rests on the paragraph below.
 
 **It cannot be instructed by its input.** This is the part that matters more than speed.
 Every filing, headline and PDF this system reads is untrusted text, and the standing rule
@@ -51,6 +55,18 @@ LABEL = "the filing or headline to classify"
 QUESTION = "answer"
 
 
+#: Two environment facts this machine needs, learned the hard way rather than read.
+#:
+#: ``HF_HOME`` - the checkpoint is ~800 MB and the default cache is on C:, which has
+#: under 30 GB free. Same move as the Ollama store.
+#: ``HF_HUB_DISABLE_SYMLINKS`` - huggingface_hub links blobs into snapshots, and Windows
+#: refuses the link without Developer Mode or admin (WinError 1314). Copying instead
+#: costs disk and nothing else.
+ENV_HINT = ("set HF_HOME to a directory on a drive with room, and "
+            "HF_HUB_DISABLE_SYMLINKS=1 on Windows (the hub links blobs into snapshots, "
+            "which needs a privilege a normal account does not hold)")
+
+
 @lru_cache(maxsize=4)
 def agent(repo: str = DEFAULT_REPO, subfolder: str | None = None):
     """Load a checkpoint once per process. A cold build costs seconds."""
@@ -61,7 +77,12 @@ def agent(repo: str = DEFAULT_REPO, subfolder: str | None = None):
             "laya is not installed (pip install laya)") from e
     try:
         return laya.load(repo, subfolder=subfolder) if subfolder else laya.load(repo)
-    except Exception as e:                      # noqa: BLE001 - network, disk, weights
+    except OSError as e:                        # pragma: no cover - environment
+        # WinError 1314 is the symlink privilege, and its message says nothing about
+        # what to do. Answer the question the error raises.
+        raise backends.BackendUnavailable(
+            f"laya {repo}: {e}\n  {ENV_HINT}") from e
+    except Exception as e:                      # noqa: BLE001 - network, weights, shapes
         raise backends.BackendUnavailable(f"laya {repo}: {e}") from e
 
 

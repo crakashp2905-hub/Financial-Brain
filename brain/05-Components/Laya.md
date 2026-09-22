@@ -33,10 +33,15 @@ discourages it. An encoder with no decoder has nowhere to obey **to**: there is 
 continuation to hijack, only a distribution over a label set fixed before the document was
 read. See [[Untrusted text boundary]].
 
-**Speed.** `llama3.1:8b` takes ~2.4s per typed decision on this machine. Laya is quoted at
-33-40ms on a GPU and 193-464ms on a CPU. On this laptop (Intel Iris Xe, no CUDA) it is the
-CPU figure that applies - still five to twelve times faster, which is the difference
-between classifying a day of filings and classifying a decade.
+**Speed - but not on this machine.** Laya is quoted at 33-40ms on a T4 and 193-464ms on a
+CPU. Measured here (Intel Iris Xe, no CUDA, torch on 4 threads) it takes **~1.1-2.8s** per
+filing, about what `llama3.1:8b` takes for the same typed decision.
+
+The first version of this note repeated the vendor's CPU figure as a reason to adopt it.
+That was the same error the project keeps catching elsewhere - see
+[[Beating the median is not an edge]] - a number that flatters, taken without measuring.
+On a GPU the speed argument returns. On this laptop it does not, and the case for Laya
+rests entirely on the paragraph above.
 
 ## What it is not exempt from
 
