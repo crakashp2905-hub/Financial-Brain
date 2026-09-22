@@ -64,8 +64,14 @@ class Model:
 def panel(con, start: date | str, end: date | str, *, min_adv: float = 1e7):
     """Cross-sectionally ranked features and the forward outcome, every 20th session.
 
-    The label is "did this name beat the median of its own session over the next 20
-    sessions" - a rank question, which is what a cross-sectional model can answer.
+    The label is "did this name beat the **equal-weighted mean** of its own session over
+    the next 20 sessions" - the return of the universe you could actually hold.
+
+    It was the median at first, and that was wrong in a way worth recording: the Indian
+    cross-section is strongly right-skewed, so the mean sits about 1.2 percentage points
+    above the median over 20 sessions. Beating the median is easy and unbuyable. Scored
+    against it, this model showed +0.94% out of sample; scored against the mean, the same
+    accepted cases gave -0.29%. The entire apparent edge was the benchmark.
     """
     import numpy as np
     cols = ", ".join(f"f.{c}" for c in FEATURES)
@@ -93,7 +99,7 @@ def panel(con, start: date | str, end: date | str, *, min_adv: float = 1e7):
             SELECT *, px_fwd / px - 1 AS y FROM base WHERE px_fwd IS NOT NULL AND px > 0
         ), ranked AS (
             SELECT business_date, lineage, y, {ranks},
-                   MEDIAN(y) OVER (PARTITION BY business_date) AS y_med
+                   AVG(y) OVER (PARTITION BY business_date) AS y_med
             FROM fwd
         )
         SELECT business_date, {", ".join("r_" + c for c in FEATURES)},

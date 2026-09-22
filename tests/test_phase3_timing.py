@@ -95,3 +95,27 @@ def test_walk_forward_requires_most_folds_to_hold():
     assert good["folds_positive_net"] >= good["folds_tested"] - 1
     weak = {"folds_tested": 4, "folds_positive_net": 2}
     assert not (weak["folds_positive_net"] >= weak["folds_tested"] - 1)
+
+
+def test_the_benchmark_is_the_mean_not_the_median():
+    """The mistake this test exists to prevent, recorded because it happened.
+
+    The Indian cross-section is strongly right-skewed: over 20 sessions the equal-weighted
+    mean sits about 1.2 percentage points above the median. Scored against the median this
+    model showed +0.94% out of sample and looked like an edge; the same accepted cases
+    measured against the mean gave -0.29%. A benchmark you cannot buy is not a benchmark.
+    """
+    import inspect
+    sql = inspect.getsource(timing.panel)
+    assert "AVG(y) OVER (PARTITION BY business_date)" in sql
+    assert "MEDIAN(y) OVER" not in sql
+
+
+def test_a_right_skewed_cross_section_makes_the_median_easy_to_beat():
+    """Why it mattered: half the names beat the median by definition, but far fewer beat
+    the mean when a handful of winners carry the average."""
+    returns = np.array([-0.05] * 40 + [0.00] * 30 + [0.02] * 25 + [1.00] * 5)
+    beat_median = (returns > np.median(returns)).mean()   # median is 0.00
+    beat_mean = (returns > returns.mean()).mean()         # mean is +3.5%
+    assert beat_median == pytest.approx(0.30)
+    assert beat_mean == pytest.approx(0.05), "only the five winners clear the average"
