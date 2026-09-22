@@ -28,6 +28,14 @@ def con(tmp_path):
             t(lineage, business_date, close_adj)""")
         c.execute("""CREATE OR REPLACE VIEW security_lineage AS
                      SELECT 'INE000A01001' AS isin, 'L1' AS lineage""")
+        # The safety gate checks traded value before opening a trade; without this it
+        # refuses, which is the correct behaviour and not what these tests are about.
+        c.execute("""CREATE OR REPLACE TABLE features AS SELECT * FROM (VALUES
+            ('L1', DATE '2026-09-18', CAST(5.0e7 AS DOUBLE)))
+            t(lineage, business_date, adv20)""")
+        c.execute("""INSERT INTO market_regime (business_date, version, regime,
+                     raw_regime, computed_at)
+                     VALUES (DATE '2026-09-18','v1','NEUTRAL','NEUTRAL',NOW())""")
         yield c
 
 

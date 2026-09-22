@@ -1,0 +1,16 @@
+name = "High-materiality news flow, 20 sessions"
+signal = "news_20d"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+The control on the replayed record found the event universe - companies that filed
+something material - returning +5.0% excess over 90 days across 46 names, while the
+committee picking from it returned +3.15%. That is either a real post-event drift, a
+size/liquidity effect in disguise, or 46 names of noise. Prior: a weak positive IC,
+because attention and disclosure cluster around companies with something happening, and
+Indian post-announcement drift is documented. Expected to be fragile: news flow
+correlates with size and with volatility, so if the firewall passes it, the regime and
+cost gates are where it should be argued with.
+"""

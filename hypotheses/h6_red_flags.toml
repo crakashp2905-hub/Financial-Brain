@@ -1,0 +1,15 @@
+name = "Absence of red-flag filings, 60 sessions"
+signal = "adverse_60d"
+direction = -1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+Insolvency proceedings, auditor changes, promoter pledges and legal-regulatory filings are
+the events a long-term holder most wants to avoid. Direction is -1: the hypothesis is that
+*fewer* such filings predict higher forward returns. Prior: a small positive IC that is
+mostly a governance-risk premium rather than an anomaly, and one that may vanish after
+costs because these names are often illiquid. A failure here is informative too - it would
+say the market prices governance risk promptly, which is worth knowing before building
+anything that assumes otherwise.
+"""

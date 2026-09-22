@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import date
 
 from ..paper import ledger as paper
-from . import postmortem, record
+from . import postmortem, record, safety
 
 TO_PAPER = ("DRAFT", "EVIDENCE_VERIFIED", "RISK_REVIEWED")
 TARGET = "PAPER_CANDIDATE"
@@ -55,7 +55,7 @@ def run(con, *, actor: str = "agent:promoter", as_of: date | None = None) -> dic
         WHERE e.rk = 1 AND e.to_state IN ({','.join('?' * len(states))})
           AND p.decision_id IS NULL""", list(states)).fetchall()]
     out = {"considered": len(live), "reached_paper": 0, "traded": 0, "blocked": [],
-           "awaiting_price": 0, "not_tradeable": 0, "blocked_by_lesson": 0}
+           "awaiting_price": 0, "not_tradeable": 0, "unsafe": 0}
     for did in live:
         action = record.content(con, did).get("action")
         if action not in TRADEABLE:
@@ -67,14 +67,16 @@ def run(con, *, actor: str = "agent:promoter", as_of: date | None = None) -> dic
                                    "why": result["stopped"]})
             continue
         out["reached_paper"] += 1
-        # A lesson the record actually supports may forbid this trade. With few closed
-        # trades nothing is confirmed and this is inert - which is the honest default.
-        blocked_by = postmortem.gate(con, **_context(con, did))
-        if blocked_by:
-            out["blocked_by_lesson"] += 1
+        # Situational awareness: stale data, a crisis, a name too thin to exit, a group
+        # already held, a run of losses, or a lesson the closed record supports. Every
+        # breach is reported, because "thin and in a crisis" is not either one alone.
+        context = _context(con, did)
+        check = safety.assess(con, isin=record.content(con, did)["isin"],
+                              as_of=as_of, **context)
+        if not check.safe:
+            out["unsafe"] += 1
             out["blocked"].append({"decision_id": did, "state": TARGET,
-                                   "why": "lesson: " + "; ".join(
-                                       x.describe() for x in blocked_by)})
+                                   "why": "unsafe: " + check.describe()})
             continue
         try:
             paper.open_trade(con, did)

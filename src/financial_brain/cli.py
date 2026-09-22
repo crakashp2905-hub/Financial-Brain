@@ -860,6 +860,25 @@ def cmd_vault(args) -> int:
     return 0
 
 
+def cmd_safety(args) -> int:
+    """Is now a sensible time to act, and is this name safe to act on?"""
+    from .decisions import safety
+    with Database(load()).connect() as con:
+        d = _d(args.date) if args.date else None
+        w = safety.window(con, as_of=d)
+        print(f"market window {w['as_of']}: "
+              + ("clear" if w["clear"] else f"NOT clear - {w['why']}"))
+        if args.isin:
+            a = safety.assess(con, isin=args.isin, as_of=d,
+                              position_inr=args.position)
+            print(f"{args.isin}: " + ("safe to trade" if a.safe else "REFUSED"))
+            for b in a.breaches:
+                print(f"    {'blocks' if b.blocking else 'notes '} {b.check}: {b.detail}")
+        if not w["clear"]:
+            print(f"next review: {safety.next_review(con, as_of=d)}")
+    return 0
+
+
 def cmd_control(args) -> int:
     """Committee-selected trades against the same universe bought blindly."""
     from .evaluation import control
@@ -1427,6 +1446,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--root", default="brain")
     g.add_argument("--out")
     g.set_defaults(fn=cmd_vault)
+
+    g = sub.add_parser("safety", help="situational awareness: when not to act")
+    g.add_argument("--isin")
+    g.add_argument("--date")
+    g.add_argument("--position", type=float, default=300_000.0)
+    g.set_defaults(fn=cmd_safety)
 
     g = sub.add_parser("control", help="does the committee beat its own universe?")
     g.set_defaults(fn=cmd_control)

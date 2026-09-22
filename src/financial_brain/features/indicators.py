@@ -53,8 +53,9 @@ WINDOW w AS (PARTITION BY lineage ORDER BY business_date)
 
 
 def build(con) -> dict:
-    from . import prices
+    from . import events, prices
     out = prices.build(con)
     con.execute(FEATURES_SQL)
     out["feature_rows"] = con.execute("SELECT COUNT(*) FROM features").fetchone()[0]
+    out["events"] = events.build(con)      # adds the disclosure columns
     return out

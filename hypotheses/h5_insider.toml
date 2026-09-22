@@ -1,0 +1,18 @@
+name = "Disclosed insider and substantial-acquisition activity, 60 sessions"
+signal = "insider_60d"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+The defensible version of "follow what informed people do": SEBI requires insiders and
+substantial acquirers to disclose their dealings, and those filings are in the archive
+(68,802 insider disclosures, 105,257 substantial acquisitions). Insider purchases
+predicting returns is among the better-replicated results in the literature (Lakonishok &
+Lee 2001; Jeng, Metrick & Zeckhauser 2003), usually strongest in smaller names.
+
+Known weakness, stated before testing: this counts disclosures without reading their
+direction. A pledge release, a sale and a purchase all count the same, so the signal is
+blunt by construction. If it fails, the next version parses the direction out of the
+filing rather than abandoning the idea.
+"""
