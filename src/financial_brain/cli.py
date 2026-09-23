@@ -995,6 +995,30 @@ def cmd_reclassify(args) -> int:
     return 0
 
 
+def cmd_strategy(args) -> int:
+    """Stateful entry/exit strategies, through the same gates as any factor."""
+    from .evaluation import timeseries as ts
+    if args.list:
+        for name, spec in ts.STRATEGIES.items():
+            print(f"{name}\n    {spec['claim']}\n    source: {spec['source']}")
+        return 0
+    names = args.strategy or list(ts.STRATEGIES)
+    with Database(load()).connect() as con:
+        for name in names:
+            if name not in ts.STRATEGIES:
+                print(f"{name}: unknown strategy; --list shows them")
+                continue
+            r = ts.validate(con, name, start=args.start, end=args.end,
+                            record=not args.dry_run)
+            print(f"{name:<26} {r['verdict']:<7} trial {r['trials']:>3}  "
+                  f"t {r['excess_t']:+6.2f}  DSR {r['deflated_sharpe']:.2f}  "
+                  f"net/session {r['mean_excess']:+.4%}  turn {r['turnover']:.2%}  "
+                  f"held {r['avg_held']:.0f}  invested {r['invested_days']:.0%}")
+            for why in r["reasons"]:
+                print(f"      - {why}")
+    return 0
+
+
 def cmd_safety(args) -> int:
     """Is now a sensible time to act, and is this name safe to act on?"""
     from .decisions import safety
@@ -1605,6 +1629,15 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--apply", action="store_true",
                    help="write the changes (default is a dry run)")
     g.set_defaults(fn=cmd_reclassify)
+
+    g = sub.add_parser("strategy", help="stateful entry/exit strategies")
+    g.add_argument("strategy", nargs="*")
+    g.add_argument("--list", action="store_true", help="what each one claims, and its source")
+    g.add_argument("--start", default="2016-01-01")
+    g.add_argument("--end", default=None)
+    g.add_argument("--dry-run", action="store_true",
+                   help="do not record the run as a trial")
+    g.set_defaults(fn=cmd_strategy)
 
     g = sub.add_parser("safety", help="situational awareness: when not to act")
     g.add_argument("--isin")
