@@ -1,0 +1,41 @@
+name = "Candlestick patterns as entry signals"
+signal = "k_hammer, k_shooting_star, k_bullish_engulfing, k_bearish_engulfing, k_morning_star, k_marubozu_bull, k_doji"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+The brain held no candlestick logic at all: no doji, hammer, engulfing, star or marubozu
+detection anywhere. This implements seven patterns as explicit arithmetic over the body,
+the two shadows and the preceding bars, with thresholds fixed as module constants so a
+pattern is a rule rather than something tuned until it works.
+
+The prior is weak and negative, and the literature is the reason. Marshall, Young & Rose
+(2006) test candlestick timing on Dow stocks and find no value; Horton (2009) finds the
+same on a wider sample. Lo, Mamaysky & Wang (2000) find some *chart* patterns carry
+information but are explicitly cautious about it. Nothing here expects to pass.
+
+Testing it anyway is the point. "Candlesticks do not work" was an inherited belief in this
+project, not a measurement, and an inherited belief cannot be cited in a decision. After
+this it can be.
+
+Stated before measurement:
+
+* **doji is a control, not a candidate.** It signals indecision - a statement about one
+  session's disagreement with itself, carrying no direction. It therefore has no sign to
+  predict with, and if a directionless pattern shows a significant signal, the harness is
+  wrong rather than the pattern being right. This is the same role the blind-buy control
+  plays for the committee.
+* **marubozu_bull is expected to be contaminated, not predictive.** In India a session
+  that opens at its low and closes at its high is frequently a stock locked at an upper
+  circuit - a liquidity fact, not a sentiment one. A name at a circuit cannot be bought at
+  that price, so any apparent edge is unfillable. If it scores well, that is the first
+  thing to check.
+* **Context is in the definition.** A hammer is only a hammer after a decline; the same
+  shape after a rally is a hanging man and reads the opposite way. Patterns needing a
+  prior trend carry a 5-session return in the predicate rather than being detected
+  shape-only and inheriting whatever trend happened to be present.
+* **If any pattern passes, suspect the count before the claim.** These are rare events,
+  and the capacity gate exists precisely because a strategy holding eleven names has a
+  Sharpe that means very little.
+"""

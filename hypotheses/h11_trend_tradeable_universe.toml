@@ -1,0 +1,82 @@
+name = "The 200-day trend filter on a tradeable universe"
+signal = "above_ma200"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+min_adv_inr = 500_000_000
+rationale = """
+`above_ma200` is the only signal in 57 trials to clear the Bonferroni significance gate:
+t = +3.69 against a bar of 3.29, IC +0.0347, gross +0.24% per period. It was rejected on
+cost - 70% turnover at an assumed 71 bps round trip costs 0.50% a period, netting -0.26%.
+
+Measuring the cost assumption (2026-09-24) showed impact is bracketed, not known:
+
+    bucket   one tick   Amihud size   assumed   Corwin-Schultz
+    mega        0.95         0.02        5.0        36.1
+    large       1.19         0.10       10.0        42.6
+    mid         1.89         0.67       25.0        51.2
+
+Corwin-Schultz is unusable here - a 36 bps half-spread on names where NSE publishes 2-6
+bps impact and one tick is 0.95 bps. The estimator degrades when volatility dwarfs the
+spread, and Indian equities average a 4.2% daily range. What survives is a bracket: a hard
+tick floor below, the original table above.
+
+Under that bracket, the same gross excess would net **positive on mega-cap names under
+both bounds** (+0.080% optimistic, +0.024% pessimistic) and negative on mid and below.
+
+That is arithmetic, not a result. It swaps the cost bucket while keeping a gross excess
+measured across the whole liquid universe, and restricting the universe changes the gross
+too - fewer names, different names, a different benchmark. So it is tested rather than
+asserted, as one trial.
+
+**The test, stated before it runs.** `above_ma200`, 20-session horizon, restricted to
+names with 20-session average turnover of at least Rs 50 crore - roughly the most liquid
+15%, the mega and large buckets - and costed at the **pessimistic** bound for `large`
+(10 bps one-way, 40.9 bps round trip). The pessimistic bound is used deliberately: nothing
+should ever be promoted on a hopeful cost assumption.
+
+**What counts as success**, so it cannot be decided afterwards:
+
+* It must clear **every** firewall gate, not just cost. Significance is Bonferroni-adjusted
+  over all trials to date, so the bar is |t| > 3.3 and rising.
+* Net of costs must be positive under the **pessimistic** bound. If it is positive only
+  under the optimistic bound, that is a REJECT with a note, not a pass.
+* Capacity must hold: at least 100 names per rebalance. A quintile of a top-15% universe
+  is roughly 60-90 names, so **this may fail capacity by construction**, and that would be
+  an honest failure rather than a technicality to argue around.
+
+**Priors, stated in advance.** The gross excess is expected to *fall*. Trend effects in
+equities are consistently stronger in smaller names, and this restriction removes exactly
+those. The plausible outcomes, in order of my expectation:
+
+1. gross falls enough that the net is still negative - trend is real but unharvestable
+   here, and slow trend is closed;
+2. capacity fails - the restriction is too aggressive, and the honest next step is a
+   wider universe with a size-aware cost rather than a re-run of this;
+3. it passes - which would be the first strategy to clear the firewall, and would then
+   need out-of-sample confirmation before anything is built on it.
+
+Outcome 3 is the least likely and would be treated with the most suspicion.
+"""
+
+# 2026-09-24, result: REJECT. Outcome 1, the one stated as most likely.
+#
+#   above_ma200, min_adv Rs 50cr, 'large' pessimistic cost (40.9 bps round trip)
+#   REJECT  trial 58  IC +0.0236  t +1.80  DSR 0.00  net -0.102%/period  turnover 77%
+#   gates:  significance FAIL, costs FAIL, deflated_sharpe FAIL,
+#           walk_forward PASS, regime PASS, capacity PASS
+#
+# The signal roughly halved: t from +3.69 to +1.80, IC from +0.0347 to +0.0236. The
+# prior was right - trend is stronger in smaller names, and restricting to the most
+# liquid 15% removes exactly those. Cutting the round trip from 70.9 to 40.9 bps did
+# not compensate, because the gross fell further than the cost did.
+#
+# Capacity passed, so outcome 2 did not occur and this is not a technicality.
+#
+# What it settles: `above_ma200` as a cross-sectional quintile is closed. The effect is
+# real and concentrated where it cannot be harvested. The remaining open question is not
+# the universe and not the cost estimate - it is **turnover**, which at 70-77% per period
+# is what costs 0.31-0.50% a period in both versions of this test. The golden cross runs
+# the same claim at 0.78% per session and nets positive; that low-turnover construction
+# is the one thing about slow trend still untested under pre-registration.

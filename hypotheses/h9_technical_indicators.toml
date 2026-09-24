@@ -1,0 +1,40 @@
+name = "Classic technical indicators, cross-sectionally"
+signal = "rsi_14, macd_hist, stoch_k_14, williams_r_14, bb_pct_20, atr_14_pct, adx_14, cci_20, mfi_14, obv_slope_20"
+direction = 0
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+Audit finding, 2026-09-24: the brain held returns over five horizons, 12-1 momentum, two
+realised volatilities and distance from the 52-week high. No oscillator, no band, no true
+range, no directional index, no volume indicator. It could express trend and momentum
+crudely and nothing else, and "it does not understand indicators" was true and unmeasured.
+
+An untested belief is worse than a rejected one, so these are implemented to published
+definitions and tested. Ten indicators is ten trials, and the cost of that is known and
+accepted: at ~48 trials the Bonferroni bar is |t| > 3.3 rather than 3.2 at 38. Breadth is
+cheap; what is expensive is breadth reported selectively, which the shared ledger prevents.
+
+Priors, stated before measurement and deliberately not uniform:
+
+* **Oscillators (rsi_14, stoch_k_14, williams_r_14, cci_20)** are bounded mean-reversion
+  signals. Short-term reversal already failed here at -0.78% per period on 81% turnover,
+  and these are the same economic claim wearing different arithmetic. Expect failure at
+  the cost gate rather than the significance gate.
+* **adx_14** is the interesting one. It measures trend *strength* without direction, so
+  it is not a return forecast at all - it is a conditioner. Tested alone it should show
+  nothing, and showing nothing is the correct result. It is included so that a later
+  "use it as a filter" has a measured baseline rather than an assumption.
+* **atr_14_pct** is volatility by another name, and low-volatility already failed here.
+  Expect the same answer; a different answer would mean one of the two is mismeasured.
+* **obv_slope_20 and mfi_14** are the only two that use volume, which no existing feature
+  does. They carry genuinely new information, so the prior is weakest-but-nonzero here.
+* **macd_hist** is a trend signal, and the golden cross reached t = +2.74 before failing
+  its correction. Same family, so a small positive would be consistent rather than
+  surprising.
+
+Also registers above_ma50 and above_ma200, which have been computed into the features
+table since the first build and were never added to the tested set. They have sat there
+untested for the life of the project.
+"""
+

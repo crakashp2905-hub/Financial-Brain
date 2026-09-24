@@ -26,13 +26,23 @@ is not a candidate.
 | faber_taa_10m | REJECT | t = +1.38 |
 | bollinger_reversion_20_2 | REJECT | t = -6.75; catching knives at 8%/session turnover |
 | turtle_20_10 | REJECT | t = -5.20 |
+| **above_ma200** | REJECT | **t = +3.69 - clears significance**, dies at 70% turnover |
+| [[h11]] - above_ma200, liquid only | REJECT | t fell to +1.80; trend lives in illiquid names |
+| above_ma50 | REJECT | t = +1.44 |
+| rsi/stoch/williams/cci | REJECT | |t| < 0.7 on ~80% turnover |
+| macd_hist, mfi, obv_slope | REJECT | t -1.6 to -2.9, costs |
+| atr_14_pct | REJECT | t = -3.82; low volatility, a third time |
+| adx_14 | REJECT | t = +1.57; strength without direction, as predicted |
+| 7 candlestick patterns | REJECT | all negative; control fired - [[Charts, candles and indicators]] |
 | [[Governance red flags]] | REJECT | costs at 80% turnover |
 | [[Timing model]] | REJECT | the benchmark was the median; see [[Beating the median is not an edge]] |
 
-Thirteen trials, twelve rejections and one **void** - and since 2026-09-23 the list
+Fifty-eight trials, fifty-seven rejections and one **void** - and since 2026-09-23 the list
 includes stateful entry/exit systems, which [[Time-series strategies]] made evaluable for
-the first time. The closest any candidate has come is the golden cross at t = +2.74
-against a Bonferroni bar of 3.19: a raw p of 0.0061 that a naive write-up would publish. The insider test measured a feature that
+the first time. One signal has now cleared the significance gate - `above_ma200` at **t = +3.69** against
+a bar of 3.29 - and died on turnover instead. Its low-turnover twin, the golden cross,
+survives costs and misses significance at t = +2.74. Same claim, two measurements, each
+passing the gate the other fails: [[Trend is the only thing that has cleared significance]]. The insider test measured a feature that
 did not contain insider trades; re-run on the corrected population it still failed, which
 narrows the open question to *direction* rather than leaving it open. That is the honest
 state, and the list is the point:

@@ -26,7 +26,13 @@ FEATURES = {"ret_1d", "ret_5d", "ret_20d", "ret_60d", "ret_250d", "mom_12_1", "v
             # from the session the news could first have been traded on
             "news_5d", "news_20d", "dealing_60d", "adverse_60d", "days_since_news",
             # the System One timing model's own score, fitted point in time
-            "timing_score"}
+            "timing_score",
+            # computed since the first feature build and never once registered here,
+            # so never tested - found by auditing what the brain actually held
+            "above_ma50", "above_ma200",
+            # classic technical indicators (features/technical.py)
+            "rsi_14", "macd_hist", "stoch_k_14", "williams_r_14", "bb_pct_20",
+            "atr_14_pct", "adx_14", "cci_20", "mfi_14", "obv_slope_20"}
 
 
 def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
@@ -44,7 +50,13 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
         ), fwd AS (
             SELECT a.lineage, c.k, a.close_adj FROM adjusted_prices a JOIN cal c USING (business_date)
         ), panel AS (
-            SELECT c.business_date, f.lineage, f.{feature} * {direction} AS x,
+            SELECT c.business_date, f.lineage,
+                   -- CAST, because a boolean feature cannot be multiplied by
+                   -- the direction. above_ma50 and above_ma200 have been in
+                   -- the feature table since the first build and were never
+                   -- registered here; the first attempt to test them failed on
+                   -- exactly this, which is presumably why they never were.
+                   CAST(f.{feature} AS DOUBLE) * {direction} AS x,
                    COALESCE(b.close_adj,
                             (SELECT arg_max(l.close_adj, l.k) FROM fwd l
                              WHERE l.lineage = f.lineage AND l.k > c.k AND l.k < c.k + ?),

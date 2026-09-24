@@ -50,6 +50,7 @@ from datetime import datetime, timezone
 from statistics import NormalDist, mean, stdev
 
 from ..costs.india import CostModel
+from ..features import candles
 from .firewall import (ALPHA, MIN_DSR, MIN_YEAR_AGREEMENT, REGIME_T, deflated_sharpe)
 
 VERSION = "ts1"
@@ -154,6 +155,22 @@ def _needed(spec: dict) -> str:
     return ", ".join(f"{INDICATORS[k]} AS {k}" for k in spec["needs"])
 
 
+#: Candlestick flags ride along so a pattern can be an entry rule. Applied only when the
+#: table exists: a database with no candles built still runs every price-based strategy,
+#: rather than failing on a join it does not need.
+CANDLE_JOIN = """
+CREATE OR REPLACE TEMP TABLE _bars AS
+SELECT b.*, k.* EXCLUDE (lineage, business_date, tv)
+FROM _bars b
+LEFT JOIN candles k ON k.lineage = b.lineage AND k.business_date = b.d
+"""
+
+
+def _has_candles(con) -> bool:
+    return bool(con.execute("""SELECT COUNT(*) FROM duckdb_tables()
+                               WHERE table_name = 'candles'""").fetchone()[0])
+
+
 def series(con, name: str, *, start=None, end=None, min_turnover: float = MIN_TURNOVER,
            lag: int = EXECUTION_LAG, max_abs: float = MAX_ABS_RETURN) -> list[dict]:
     """One row per session: the strategy's return, the universe's, and the turnover.
@@ -163,6 +180,11 @@ def series(con, name: str, *, start=None, end=None, min_turnover: float = MIN_TU
     """
     spec = STRATEGIES[name]
     con.execute(PANEL, [start or "1900-01-01", end or "2999-12-31"])
+    if _has_candles(con):
+        con.execute(CANDLE_JOIN)
+    elif any(k.startswith("fired_20_") for k in spec["needs"]):
+        raise ValueError(f"{name} needs candlestick flags, and no `candles` table exists; "
+                         "run `fb features` to build them")
     rows = con.execute(f"""
         WITH ind AS (
             SELECT lineage, d, c, tv, {_needed(spec)}
@@ -320,3 +342,19 @@ def validate(con, name: str, *, record: bool = True, **kw) -> dict:
                      out["days"], out["mean_excess"], t, sr, dsr, verdict,
                      json.dumps(reasons)])
     return out
+
+
+# A candlestick pattern fires on one bar and says nothing about when to leave, so the
+# strategy is "hold for N sessions after it fires". That is stateless - the position is
+# simply whether the pattern occurred in the trailing window - which sidesteps the
+# question of an exit rule the pattern itself does not provide.
+for _k in ("hammer", "shooting_star", "bullish_engulfing", "bearish_engulfing",
+           "morning_star", "marubozu_bull", "doji"):
+    INDICATORS[f"fired_20_{_k}"] = (
+        f"COALESCE(SUM(k_{_k}) OVER (w ROWS BETWEEN 19 PRECEDING AND CURRENT ROW), 0) > 0")
+    STRATEGIES[f"candle_{_k}_hold20"] = {
+        "entry": f"fired_20_{_k}", "exit": f"NOT fired_20_{_k}",
+        "needs": [f"fired_20_{_k}"],
+        "claim": candles.PATTERNS[_k]["means"] + " Held 20 sessions after it fires.",
+        "source": f"features/candles.py; prior stated there: {candles.PATTERNS[_k]['prior']}",
+    }

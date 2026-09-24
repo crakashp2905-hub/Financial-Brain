@@ -144,11 +144,22 @@ def test_every_strategy_declares_its_claim_and_its_source():
         assert set(spec["needs"]) <= set(ts.INDICATORS), name
 
 
-@pytest.mark.parametrize("name", sorted(ts.STRATEGIES))
-def test_every_strategy_runs_without_error(name):
+@pytest.mark.parametrize("name", sorted(k for k in ts.STRATEGIES
+                                        if not k.startswith("candle_")))
+def test_every_price_strategy_runs_without_error(name):
     con = _db(_flat_then_jump(n_names=4, n_days=260))
     r = ts.run(con, name)
     assert r["days"] > 0
+
+
+def test_a_candle_strategy_refuses_clearly_when_no_patterns_are_built():
+    """A database with no candles still runs every price strategy; only the ones that
+    actually need the flags refuse, and they say what to run."""
+    con = _db(_flat_then_jump(n_names=4, n_days=260))
+    assert not ts._has_candles(con)
+    with pytest.raises(ValueError, match="fb features"):
+        ts.run(con, "candle_hammer_hold20")
+    assert ts.run(con, "ma_cross_200")["days"] > 0
 
 
 # --- the two bugs this harness shipped with, and what caught them ----------------
