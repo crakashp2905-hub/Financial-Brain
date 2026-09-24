@@ -28,6 +28,7 @@ is not a candidate.
 | turtle_20_10 | REJECT | t = -5.20 |
 | **above_ma200** | REJECT | **t = +3.69 - clears significance**, dies at 70% turnover |
 | [[h11]] - above_ma200, liquid only | REJECT | t fell to +1.80; trend lives in illiquid names |
+| [[h12]] - above_ma200 + 5% band | REJECT | t fell to **-0.45**; the turnover *is* the signal |
 | above_ma50 | REJECT | t = +1.44 |
 | rsi/stoch/williams/cci | REJECT | |t| < 0.7 on ~80% turnover |
 | macd_hist, mfi, obv_slope | REJECT | t -1.6 to -2.9, costs |
@@ -37,12 +38,13 @@ is not a candidate.
 | [[Governance red flags]] | REJECT | costs at 80% turnover |
 | [[Timing model]] | REJECT | the benchmark was the median; see [[Beating the median is not an edge]] |
 
-Fifty-eight trials, fifty-seven rejections and one **void** - and since 2026-09-23 the list
+Fifty-nine trials, fifty-eight rejections and one **void** - and since 2026-09-23 the list
 includes stateful entry/exit systems, which [[Time-series strategies]] made evaluable for
-the first time. One signal has now cleared the significance gate - `above_ma200` at **t = +3.69** against
-a bar of 3.29 - and died on turnover instead. Its low-turnover twin, the golden cross,
-survives costs and misses significance at t = +2.74. Same claim, two measurements, each
-passing the gate the other fails: [[Trend is the only thing that has cleared significance]]. The insider test measured a feature that
+the first time. One signal cleared the significance gate - `above_ma200` at **t = +3.69** against a bar of
+3.29 - and died on turnover. It was then chased to a definite end over four pre-registered
+tests: the universe was not the answer ([[h11]]), the cost estimate was too pessimistic and
+fixing it did not help, and reducing the turnover destroyed the signal ([[h12]]). **The
+turnover and the signal have one source.** [[Slow trend is closed]]. The insider test measured a feature that
 did not contain insider trades; re-run on the corrected population it still failed, which
 narrows the open question to *direction* rather than leaving it open. That is the honest
 state, and the list is the point:

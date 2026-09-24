@@ -1,0 +1,93 @@
+name = "Slow trend at low turnover: a rebalance band on the 200-day filter"
+signal = "above_ma200_band"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+Everything else about slow trend has now been eliminated, one pre-registered test at a
+time, and what remains is turnover.
+
+    above_ma200, full universe      t +3.69   turnover 70%/period   net -0.26%
+    above_ma200, liquid only (h11)  t +1.80   turnover 77%/period   net -0.10%
+    ma_double_cross_50_200          t +2.74   turnover 0.78%/session  net +0.0195%
+
+`above_ma200` clears the Bonferroni gate and dies on turnover. The golden cross survives
+costs and misses the gate. h11 showed the universe is not the answer: restricting to the
+most liquid 15% halved the signal, because trend lives in smaller names. Measuring the
+cost bracket showed the cost estimate was too pessimistic and that correcting it did not
+save the strategy.
+
+So the remaining variable is the one design choice never varied: **how often the position
+changes**. A raw `close > SMA200` rule flips every time price grazes the average, which is
+why it turns over 70% a period. Comparing two smoothed series instead (the golden cross)
+cut that roughly a hundredfold and flipped the cost outcome.
+
+**The test, stated before it runs.** `above_ma200_band`: hold while the close is above
+`SMA200 * (1 + b)`, exit only when it falls below `SMA200 * (1 - b)`, with **b = 0.05**.
+A single hysteresis band, which is the standard and least inventive way to suppress
+whipsaw. One parameter, chosen once, for the obvious reason that 5% is a round number
+comfortably outside daily noise on a 4.2% average true range - **not** selected by trying
+several.
+
+Run as a time-series strategy through `evaluation/timeseries.py`, on the full liquid
+universe, costed at the `mid` **pessimistic** bound (70.9 bps round trip).
+
+**What counts as success**, fixed now so it cannot be decided afterwards:
+
+* Every firewall gate, not just cost. Bonferroni over all trials to date puts the bar at
+  |t| > 3.3.
+* Net positive under the **pessimistic** bound. Positive only under the optimistic bound
+  is a REJECT with a note.
+* Turnover must actually fall. If the band does not reduce turnover materially below the
+  70-77% of the unbanded versions, the mechanism did not fire and the test says nothing
+  about the hypothesis.
+
+**Priors, in order of expectation:**
+
+1. **Turnover falls sharply and the net turns positive, but significance still fails.**
+   Most likely. The band cuts trades without adding information, so the t-statistic should
+   move little from the golden cross's +2.74 while the cost drag shrinks. That is a
+   REJECT, and an informative one: it would mean slow trend in Indian equities is real,
+   harvestable, and simply not strong enough to survive honest multiple-testing
+   correction - which is a complete answer, not a cliffhanger.
+2. **Turnover falls and the net is still negative.** Slow trend is closed entirely.
+3. **It passes every gate.** Least likely and most suspect. It would be the first strategy
+   to clear the firewall in 59 trials, and the required response is *not* to trade it: it
+   is an out-of-sample test on a period held back, plus a check that the result is not
+   carried by one regime.
+
+**This is the last pre-registered test of slow trend.** If it fails, the honest summary is
+that this universe, at these costs, with this much history, offers nothing this project can
+harvest - and the next move is better data (intraday, via Kite) or a different question,
+not more parameters on this one.
+"""
+
+# 2026-09-25, result: REJECT. Outcome 2 - and it closes slow trend entirely.
+#
+#   above_ma200_band (b = 0.05), mid pessimistic cost (70.9 bps round trip)
+#   REJECT  trial 59  t -0.45  DSR 0.00  net -0.0026%/session  turnover 1.154%/session
+#   gates:  significance FAIL, costs FAIL, deflated_sharpe FAIL,
+#           walk_forward FAIL (sign held in 36% of years), regime FAIL, capacity PASS
+#
+# The mechanism fired: turnover fell from ~70% a period to ~23% (1.154% a session over a
+# 20-session period), a threefold reduction, so the success criterion about turnover was
+# met and the test does say something about the hypothesis.
+#
+# The signal died with it. t collapsed from the golden cross's +2.74 to -0.45, and the
+# sign held in only 36% of years.
+#
+# That is a complete answer rather than a cliffhanger. **The slow-trend signal and the
+# turnover it generates are the same thing.** A raw close-vs-SMA200 rule earns its
+# t = +3.69 *at the crossing*; delaying entry and exit by 5% to avoid the churn removes
+# exactly the part that carried the information. The signal cannot be separated from its
+# cost because they have one source.
+#
+# Note for the record, and deliberately not acted on: the excess reversed significantly in
+# RISK_ON (t = +3.1), meaning the banded rule made money there and lost elsewhere. Chasing
+# that would be a regime-conditional re-run of a rejected strategy - which is exactly what
+# the trial counter exists to punish, and this pre-registration said this was the last test
+# of slow trend.
+#
+# Slow trend in Indian equities: real, concentrated in illiquid names (h11), inseparable
+# from its turnover (h12), and closed.

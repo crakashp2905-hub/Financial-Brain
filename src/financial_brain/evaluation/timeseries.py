@@ -127,6 +127,19 @@ STRATEGIES: dict[str, dict] = {
         "source": "bollinger_bands.py, long-only leg. Shorting cash equity is not "
                   "available in India, so the short leg is dropped rather than assumed.",
     },
+    "above_ma200_band": {
+        "entry": "c > sma_200 * 1.05", "exit": "c < sma_200 * 0.95",
+        "needs": ["sma_200"],
+        "claim": "The 200-day filter with a 5% hysteresis band: enter 5% above the "
+                 "average, leave only 5% below it.",
+        "source": "h12. Not from the QuantResearch list - it is `above_ma200`, the only "
+                  "signal to clear the Bonferroni gate, with the one variable that was "
+                  "never varied. A raw close-vs-average rule flips every time price "
+                  "grazes the line, which is why it turns over 70% a period; a band is "
+                  "the standard, least inventive way to suppress that. b = 0.05 chosen "
+                  "once as a round number outside daily noise on a 4.2% ATR, not "
+                  "selected by trying several.",
+    },
     "turtle_20_10": {
         "entry": "c > don_hi_20", "exit": "c < don_lo_10",
         "needs": ["don_hi_20", "don_lo_10"],
