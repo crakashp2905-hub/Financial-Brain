@@ -71,13 +71,22 @@ SELECT p.lineage, p.business_date AS d,
        e.high_price  * p.factor   AS h,
        e.low_price   * p.factor   AS l,
        e.open_price  * p.factor   AS o,
-       p.turnover                 AS tv
+       p.turnover                 AS tv,
+       -- Log returns at two horizons, so a variance ratio can be a window expression.
+       -- VAR_SAMP over a LAG would nest one window function inside another.
+       LN(p.close_adj / NULLIF(LAG(p.close_adj) OVER wl, 0))    AS r1,
+       LN(p.close_adj / NULLIF(LAG(p.close_adj, 5) OVER wl, 0)) AS r5,
+       -- True range, precomputed for the same reason: AVG over a LAG would nest.
+       GREATEST(e.high_price * p.factor - e.low_price * p.factor,
+                ABS(e.high_price * p.factor - LAG(p.close_adj) OVER wl),
+                ABS(e.low_price  * p.factor - LAG(p.close_adj) OVER wl)) AS tr
 FROM adjusted_prices p
 JOIN eod_prices e
   ON e.isin = p.isin AND e.business_date = p.business_date
  AND e.exchange = 'NSE' AND e.series = 'EQ'
 WHERE p.close_adj > 0 AND e.high_price > 0 AND e.low_price > 0
-  AND p.business_date BETWEEN ? AND ?;
+  AND p.business_date BETWEEN ? AND ?
+WINDOW wl AS (PARTITION BY p.lineage ORDER BY p.business_date);
 """
 
 
@@ -140,6 +149,40 @@ STRATEGIES: dict[str, dict] = {
                   "once as a round number outside daily noise on a 4.2% ATR, not "
                   "selected by trying several.",
     },
+    "above_ma200_atr_band": {
+        "entry": "c > sma_200 + 1.5 * atr_14", "exit": "c < sma_200 - 1.5 * atr_14",
+        "needs": ["sma_200", "atr_14"],
+        "claim": "The 200-day filter with a band scaled to each name's own volatility: "
+                 "enter 1.5 ATR above the average, leave 1.5 ATR below it.",
+        "source": "h13. h12 used a fixed 5% band on a universe whose 14-day ATR runs "
+                  "from 2.3% to 6.4% between the 10th and 90th percentiles - so 5% was "
+                  "a 2.2 ATR band on a quiet name and a 0.8 ATR band on a volatile one, "
+                  "which is not one rule. This is one rule: a single universe-wide "
+                  "coefficient of 1.5, with the band differing per stock because the "
+                  "ATR does. Nothing is fitted per name.",
+    },
+    "trend_only_when_trending": {
+        "entry": "c > sma_200 + 1.5 * atr_14 AND vr_60 > 1",
+        "exit": "c < sma_200 - 1.5 * atr_14 OR vr_60 <= 1",
+        "needs": ["sma_200", "atr_14", "vr_60"],
+        "claim": "The volatility-scaled trend rule, applied only while the name's own "
+                 "variance ratio says its moves persist rather than reverse.",
+        "source": "h13. A trend rule on a mean-reverting name is fighting that name's "
+                  "behaviour. The variance ratio measures which it is doing, from prices "
+                  "alone, on a trailing 60 sessions - see features/behaviour.py.",
+    },
+    "trend_calm_vix": {
+        "entry": "c > sma_200 + 1.5 * atr_14 AND vix_pct < 0.8",
+        "exit": "c < sma_200 - 1.5 * atr_14 OR vix_pct >= 0.8",
+        "needs": ["sma_200", "atr_14", "vix_pct"],
+        "claim": "The volatility-scaled trend rule, stood down when India VIX is in the "
+                 "top fifth of its trailing year.",
+        "source": "h14. The ATR-banded rule's excess reversed significantly in RISK_OFF "
+                  "(t = -2.3), and India VIX is the market's own forward-looking measure "
+                  "of exactly that - present in index_levels since 2015 and never used. "
+                  "The 0.8 threshold is the quintile boundary the firewall already uses "
+                  "everywhere else, not a number chosen by trying several.",
+    },
     "turtle_20_10": {
         "entry": "c > don_hi_20", "exit": "c < don_lo_10",
         "needs": ["don_hi_20", "don_lo_10"],
@@ -156,6 +199,17 @@ INDICATORS = {
     "sma_50": "AVG(c) OVER (w ROWS BETWEEN 49 PRECEDING AND CURRENT ROW)",
     "sma_200": "AVG(c) OVER (w ROWS BETWEEN 199 PRECEDING AND CURRENT ROW)",
     "sd_20": "STDDEV_SAMP(c) OVER (w ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)",
+    # Average true range in price units, so a band can be expressed in the name's own
+    # volatility rather than in percent of a price that means nothing across stocks.
+    "atr_14": "AVG(tr) OVER (w ROWS BETWEEN 13 PRECEDING AND CURRENT ROW)",
+    # Lo & MacKinlay (1988) variance ratio: Var(5-session) / (5 x Var(1-session)). Above
+    # one the name's moves persist, below one they reverse. Trailing 60 sessions.
+    "vr_60": "VAR_SAMP(r5) OVER (w ROWS BETWEEN 59 PRECEDING AND CURRENT ROW) "
+             "/ NULLIF(5 * VAR_SAMP(r1) OVER (w ROWS BETWEEN 59 PRECEDING "
+             "AND CURRENT ROW), 0)",
+    # Market-wide, identical for every name on a session: joined, not windowed.
+    "vix": "MAX(vix) OVER (w ROWS BETWEEN CURRENT ROW AND CURRENT ROW)",
+    "vix_pct": "MAX(vix_pct) OVER (w ROWS BETWEEN CURRENT ROW AND CURRENT ROW)",
     "don_hi_20": "MAX(h) OVER (w ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING)",
     "don_lo_10": "MIN(l) OVER (w ROWS BETWEEN 10 PRECEDING AND 1 PRECEDING)",
     "is_month_end": "d = LAST_VALUE(d) OVER (PARTITION BY lineage, "
@@ -166,6 +220,39 @@ INDICATORS = {
 
 def _needed(spec: dict) -> str:
     return ", ".join(f"{INDICATORS[k]} AS {k}" for k in spec["needs"])
+
+
+#: India VIX, joined by session so a rule can condition on market-wide fear rather than
+#: on the name alone. It sits in `index_levels` from 2015 and had never been used as a
+#: feature. Two forms, both strictly backward-looking:
+#:
+#:   vix          the level
+#:   vix_pct      its percentile over the trailing 250 sessions, so "high" means high
+#:                against the last year rather than against an absolute number that
+#:                drifts with the decade
+#:
+#: LEFT JOIN with a COALESCE, because a missing VIX session must not silently drop every
+#: stock from the panel that day.
+VIX_JOIN = """
+CREATE OR REPLACE TEMP TABLE _vix AS
+WITH v AS (
+    SELECT business_date AS d, close_level AS vix
+    FROM index_levels WHERE index_name = 'India VIX' AND close_level > 0
+)
+SELECT d, vix,
+       -- Rank against the trailing year only. A PERCENT_RANK over the whole history
+       -- would use future sessions to judge today, which is the leak this project has
+       -- already been bitten by twice.
+       (SELECT COUNT(*) FROM v v2 WHERE v2.d <= v.d AND v2.d > v.d - INTERVAL 250 DAY
+        AND v2.vix <= v.vix)::DOUBLE
+       / NULLIF((SELECT COUNT(*) FROM v v3 WHERE v3.d <= v.d
+                 AND v3.d > v.d - INTERVAL 250 DAY), 0) AS vix_pct
+FROM v;
+
+CREATE OR REPLACE TEMP TABLE _bars AS
+SELECT b.*, COALESCE(x.vix, 0) AS vix, COALESCE(x.vix_pct, 0.5) AS vix_pct
+FROM _bars b LEFT JOIN _vix x ON x.d = b.d
+"""
 
 
 #: Candlestick flags ride along so a pattern can be an entry rule. Applied only when the
@@ -179,9 +266,13 @@ LEFT JOIN candles k ON k.lineage = b.lineage AND k.business_date = b.d
 """
 
 
-def _has_candles(con) -> bool:
+def _has_table(con, name: str) -> bool:
     return bool(con.execute("""SELECT COUNT(*) FROM duckdb_tables()
-                               WHERE table_name = 'candles'""").fetchone()[0])
+                               WHERE table_name = ?""", [name]).fetchone()[0])
+
+
+def _has_candles(con) -> bool:
+    return _has_table(con, "candles")
 
 
 def series(con, name: str, *, start=None, end=None, min_turnover: float = MIN_TURNOVER,
@@ -193,6 +284,13 @@ def series(con, name: str, *, start=None, end=None, min_turnover: float = MIN_TU
     """
     spec = STRATEGIES[name]
     con.execute(PANEL, [start or "1900-01-01", end or "2999-12-31"])
+    needs_vix = any(k.startswith("vix") for k in spec["needs"])
+    if needs_vix and not _has_table(con, "index_levels"):
+        raise ValueError(f"{name} needs India VIX from index_levels, which is not present; "
+                         "run the index ingest first")
+    if needs_vix:
+        for st in [q for q in VIX_JOIN.strip().split(";\n") if q.strip()]:
+            con.execute(st)
     if _has_candles(con):
         con.execute(CANDLE_JOIN)
     elif any(k.startswith("fired_20_") for k in spec["needs"]):

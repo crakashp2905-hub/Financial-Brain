@@ -1,0 +1,52 @@
+name = "Stand down when India VIX is high"
+signal = "trend_calm_vix"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+India VIX has been in `index_levels` since 2015 - 2,894 sessions - and had never been used
+as a feature. It is the market's own forward-looking measure of expected volatility, which
+makes it the most direct situational-awareness input available in the archive.
+
+The specific motivation: h13's ATR-banded trend rule had its excess reverse significantly
+in RISK_OFF (t = -2.3). VIX measures exactly that condition, independently of the regime
+classifier that flagged it.
+
+**The test.** The h13 ATR-banded rule, stood down whenever India VIX sits in the top fifth
+of its own trailing 250 sessions. The 0.8 threshold is the quintile boundary the firewall
+already uses everywhere, not a number chosen by trying several. The percentile is against
+the trailing year, never the whole history - ranking today against future sessions is the
+leak this project has been bitten by twice.
+
+**Stated before running.** The prior is genuinely uncertain, which is unusual here and
+worth saying. Standing down in high-VIX periods avoids drawdowns, and also misses rebounds,
+and in a right-skewed universe the rebounds are where the returns are. Being flat counts
+against the equal-weighted benchmark by design. So this could plausibly go either way, and
+the mechanism that decides it is whether the avoided losses exceed the missed recoveries.
+
+Success is every gate, net positive under the pessimistic cost bound, as always.
+"""
+
+# 2026-09-25, result: REJECT, and clearly.
+#
+#   trend_calm_vix  REJECT  trial 62  t -2.85  net -0.1618%/session
+#                   turnover 3.708%  held 462  invested 81%
+#   gates: significance FAIL, costs FAIL, deflated_sharpe FAIL,
+#          walk_forward FAIL (55% of years), regime PASS, capacity PASS
+#
+# Far worse than the unconditioned ATR band (+0.0025%/session). Two mechanisms, both
+# visible in the numbers:
+#
+#   * **Invested only 81% of sessions.** The other 19% earn cash while the benchmark earns
+#     the market, and being flat costs real excess. The missed rebounds exceeded the
+#     avoided losses - which is the answer to the question the prior said was open.
+#   * **Turnover tripled**, 1.0% to 3.7% a session, because a market-wide gate flips the
+#     entire book at once rather than one name at a time.
+#
+# The regime gate passed, so the rule is at least consistently bad rather than
+# regime-dependent. That is the one thing it improved.
+#
+# Recorded plainly: using VIX as an on/off switch for a whole book is a bad design, and
+# the archive now says so rather than the idea remaining untested. Whether VIX has value
+# as a *sizing* input rather than a gate is a different and untested question.

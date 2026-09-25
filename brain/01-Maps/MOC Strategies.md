@@ -28,7 +28,10 @@ is not a candidate.
 | turtle_20_10 | REJECT | t = -5.20 |
 | **above_ma200** | REJECT | **t = +3.69 - clears significance**, dies at 70% turnover |
 | [[h11]] - above_ma200, liquid only | REJECT | t fell to +1.80; trend lives in illiquid names |
-| [[h12]] - above_ma200 + 5% band | REJECT | t fell to **-0.45**; the turnover *is* the signal |
+| [[h12]] - above_ma200 + 5% band | REJECT | t -0.45 - but the band was **static**, see [[h13]] |
+| [[h13]] - ATR-scaled band | REJECT | t +0.43, net **positive**, **cost gate PASS** |
+| [[h13]] - + variance-ratio gate | REJECT | highest gross of all, churns 6x |
+| [[h14]] - + India VIX stand-down | REJECT | t -2.85; missed rebounds beat avoided losses |
 | above_ma50 | REJECT | t = +1.44 |
 | rsi/stoch/williams/cci | REJECT | |t| < 0.7 on ~80% turnover |
 | macd_hist, mfi, obv_slope | REJECT | t -1.6 to -2.9, costs |
@@ -38,13 +41,15 @@ is not a candidate.
 | [[Governance red flags]] | REJECT | costs at 80% turnover |
 | [[Timing model]] | REJECT | the benchmark was the median; see [[Beating the median is not an edge]] |
 
-Fifty-nine trials, fifty-eight rejections and one **void** - and since 2026-09-23 the list
+Sixty-two trials, sixty-one rejections and one **void** - and since 2026-09-23 the list
 includes stateful entry/exit systems, which [[Time-series strategies]] made evaluable for
 the first time. One signal cleared the significance gate - `above_ma200` at **t = +3.69** against a bar of
 3.29 - and died on turnover. It was then chased to a definite end over four pre-registered
 tests: the universe was not the answer ([[h11]]), the cost estimate was too pessimistic and
-fixing it did not help, and reducing the turnover destroyed the signal ([[h12]]). **The
-turnover and the signal have one source.** [[Slow trend is closed]]. The insider test measured a feature that
+fixing it did not help, and reducing the turnover destroyed the signal ([[h12]]). Then a static-rule objection reopened it: scaling the band to each name's own volatility
+nearly doubled the gross and **passed the cost gate**, the first trend strategy to do so.
+What remains is about **+0.6% a year at t = +0.43** - not the loss h12 concluded, and not
+tradeable. [[Dynamic rules, and the correction to h12]]. The insider test measured a feature that
 did not contain insider trades; re-run on the corrected population it still failed, which
 narrows the open question to *direction* rather than leaving it open. That is the honest
 state, and the list is the point:

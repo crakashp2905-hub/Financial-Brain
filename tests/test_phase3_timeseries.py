@@ -144,12 +144,26 @@ def test_every_strategy_declares_its_claim_and_its_source():
         assert set(spec["needs"]) <= set(ts.INDICATORS), name
 
 
+#: Strategies needing a table the toy fixture does not build are covered by their own
+#: refusal tests below; this one asserts the price-only strategies all run.
+_NEEDS_EXTRA = ("candle_", "trend_calm_vix")
+
+
 @pytest.mark.parametrize("name", sorted(k for k in ts.STRATEGIES
-                                        if not k.startswith("candle_")))
+                                        if not k.startswith(_NEEDS_EXTRA)))
 def test_every_price_strategy_runs_without_error(name):
     con = _db(_flat_then_jump(n_names=4, n_days=260))
     r = ts.run(con, name)
     assert r["days"] > 0
+
+
+def test_a_vix_strategy_refuses_clearly_when_the_index_is_absent():
+    """India VIX lives in index_levels. A database without it still runs every price
+    strategy; only the rules that need the index refuse, and they say what to run."""
+    con = _db(_flat_then_jump(n_names=4, n_days=260))
+    with pytest.raises(ValueError, match="index_levels"):
+        ts.run(con, "trend_calm_vix")
+    assert ts.run(con, "ma_cross_200")["days"] > 0
 
 
 def test_a_candle_strategy_refuses_clearly_when_no_patterns_are_built():

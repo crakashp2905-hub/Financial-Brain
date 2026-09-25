@@ -1,0 +1,108 @@
+name = "Dynamic rules: a band in each name's own volatility, and trend only where trend exists"
+signal = "above_ma200_atr_band, trend_only_when_trending"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+Every rule this project has tested applied the same numbers to every stock. That is a real
+defect and it was pointed out rather than discovered: a fixed 5% hysteresis band (h12) sits
+on a universe whose 14-session ATR runs from 2.31% at the 10th percentile to 6.36% at the
+90th. So 5% was a **2.2 ATR** band on a quiet name and a **0.8 ATR** band on a volatile
+one. That is not one rule with one parameter; it is hundreds of different rules, and the
+parameter that actually mattered was never chosen.
+
+h12 concluded that the slow-trend signal and its turnover are inseparable. That conclusion
+may have been an artifact of exactly this defect: a band wide enough to suppress churn in a
+volatile name is absurdly wide for a quiet one, and would delete the signal there while
+barely reducing turnover here.
+
+## Two tests, both with one universe-wide coefficient
+
+**`above_ma200_atr_band`** - enter 1.5 ATR above the 200-session average, exit 1.5 ATR
+below it. One free parameter (1.5), shared by every stock. The band differs per name
+because the ATR does, not because anything was fitted per name.
+
+**`trend_only_when_trending`** - the same rule, active only while the name's own variance
+ratio exceeds 1. VR(5) = Var(5-session return) / (5 x Var(1-session return)); above one,
+moves persist and a trend rule has something to work with; below one, moves reverse and a
+trend rule is fighting the name's behaviour. Lo & MacKinlay (1988), trailing 60 sessions,
+strictly backward-looking.
+
+## What makes per-stock adaptation legitimate here
+
+The line is not whether a rule varies by stock - it is when the variation is computed.
+
+* **Illegitimate**: fit the best band per name over all history, then evaluate on that
+  history. With ~2,000 names and 2,600 sessions there is always a per-name parameter that
+  looks good, and it means nothing.
+* **Legitimate**: one fixed formula, identical for every name, whose inputs are that
+  name's trailing statistics.
+
+Both tests below are the second kind. Nothing is fitted per name. If either passes, that
+is still not a licence to start tuning 1.5.
+
+## What counts as success, fixed before running
+
+* Every firewall gate. Bonferroni over all trials puts the bar near |t| > 3.3.
+* Net positive under the **pessimistic** cost bound. Positive only under the optimistic
+  bound is a REJECT with a note.
+* For `trend_only_when_trending`, capacity must still hold: conditioning on VR > 1 removes
+  names, and if it removes too many the test says nothing.
+
+## Priors, in order of expectation
+
+1. **Both fail, and the ATR band lands between h12 and the golden cross.** Most likely.
+   Scaling the band should recover some of what the fixed band destroyed, without creating
+   information that was never there. A t somewhere between -0.45 and +2.74 with better
+   turnover than 70% would confirm the defect was real *and* that fixing it is not enough.
+2. **The VR conditioning helps materially.** Plausible and the more interesting outcome:
+   it would mean the earlier trend results were diluted by averaging over names the rule
+   should never have been applied to. Even so it must clear the same bar.
+3. **Either passes every gate.** Least likely, most suspect, and the required response is
+   an out-of-sample test on held-back data before anything is built on it - not trading.
+
+## Stated plainly
+
+This is a test of whether h12's conclusion was premature, not an attempt to overturn it.
+If both fail, h12 stands and the per-stock objection is answered: the rules were crude,
+making them adaptive was correct methodology, and it did not change the answer.
+"""
+
+# 2026-09-25, results. Prior 1 fired for the band; prior 2 was half right.
+#
+#   above_ma200_atr_band        REJECT  trial 60  t +0.43  net +0.0025%/session
+#                              turnover 1.018%   COSTS GATE **PASS**
+#   trend_only_when_trending    REJECT  trial 61  t -3.91  net -0.0319%/session
+#                              turnover 6.373%   SIGNIFICANCE **PASS** (negative)
+#
+# Decomposed against h12's fixed band, which is the comparison that matters:
+#
+#   fixed 5% band        gross +0.00557%   cost 0.00818%   net -0.00261%   turn 1.154%
+#   ATR-scaled band      gross +0.00975%   cost 0.00722%   net +0.00253%   turn 1.018%
+#   ATR band + VR gate   gross +0.01327%   cost 0.04516%   net -0.03189%   turn 6.373%
+#
+# **The gross excess rises monotonically with each adaptive refinement.** Scaling the band
+# to each name's own volatility nearly doubled the gross AND slightly reduced turnover -
+# the fixed band was destroying signal on quiet names, where 5% was a 2.2 ATR moat. The
+# net turned positive and the cost gate passed for the first time on any trend strategy.
+#
+# **This corrects h12.** h12 concluded "the signal and the turnover are the same thing" and
+# declared slow trend closed. That was too strong, and h13 shows it was an artifact of the
+# fixed band. Turnover can be cut without destroying the signal, provided the cut is scaled
+# to the name. The static-rule objection was correct.
+#
+# What is left after doing it properly is +0.0025% a session - about +0.63% a year - at
+# t = +0.43. Positive, and statistically indistinguishable from zero. Not a loss; not a
+# profit anything should be built on.
+#
+# The VR gate is the more interesting half. It produced the **highest gross excess of the
+# three**, which supports the dilution hypothesis: only 37.7% of liquid observations have
+# vr_60 > 1, so an unconditioned trend rule spends most of its time on names whose moves
+# reverse. But VR crosses 1 constantly, so gating on it flips positions six times as often
+# and the churn costs 0.045% a session against a 0.013% gross. t = -3.91 passes
+# significance on a *negative* net, which is significance about the cost, not the signal.
+#
+# A hysteresis band on VR itself would fix the churn. That is another parameter and another
+# trial, and it is NOT being run today: the gross numbers above are small enough that the
+# honest conclusion does not depend on it.
