@@ -1019,6 +1019,89 @@ def cmd_strategy(args) -> int:
     return 0
 
 
+def cmd_kite(args) -> int:
+    """Kite Connect: the daily login, and a read-only look at live data."""
+    import os
+    import webbrowser
+
+    from .providers import kite_data as kd
+    from .providers import kite_login as kl
+
+    if args.action == "login":
+        from .providers.kite_login_server import Receiver
+        url = kl.login_url()
+        # The port is claimed BEFORE the browser is opened. Opening first leaves a window
+        # where another process could hold the port and receive the request token.
+        with Receiver(port=args.port) as rx:
+            print("Opening Kite login in your browser.")
+            print("You authenticate with Zerodha directly - nothing here sees your "
+                  "password.")
+            print()
+            print(f"  {url}")
+            print()
+            print(f"Listening on {rx.url} (this machine only).")
+            try:
+                webbrowser.open(url)
+            except Exception:                  # noqa: BLE001 - headless is fine
+                print("(could not open a browser; paste the URL above yourself)")
+            request_token = rx.wait()
+        session = kl.exchange(request_token)
+        path = kl.save(session)
+        who = session.get("user_id") or "?"
+        print(f"Access token saved for today ({who}) -> {path}")
+        print("Kite rotates tokens each morning, so this is a daily step.")
+        return 0
+
+    if args.action == "status":
+        from . import env as fbenv
+        st = fbenv.status()
+        where = st["path"] or "(no .env found)"
+        print(f"env file     {where}")
+        if st["blank"]:
+            print("             still blank: " + ", ".join(st["blank"]))
+        token = kl.stored_token()
+        print(f"api key      {'set' if os.environ.get('KITE_API_KEY') else 'NOT SET'}")
+        print(f"api secret   {'set' if os.environ.get('KITE_API_SECRET') else 'NOT SET'}")
+        print(f"access token {'valid for today' if token else 'absent or stale'}")
+        print(f"token file   {kl.token_path()}")
+        print("\nread-only endpoints this build can reach:")
+        for e in kd.ENDPOINTS:
+            print(f"   GET {e}")
+        print("no order endpoint exists in this package (see tests/test_phase3_kite.py)")
+        return 0
+
+    if args.action == "quote":
+        if not args.symbol:
+            print("give at least one symbol, e.g. --symbol NSE:RELIANCE")
+            return 2
+        data = kd.quote(args.symbol, kind=args.kind)
+        for sym, q in data.items():
+            ohlc = q.get("ohlc") or {}
+            print(f"{sym:<22} last {q.get('last_price', '-'):>10}  "
+                  f"o {ohlc.get('open', '-')}  h {ohlc.get('high', '-')}  "
+                  f"l {ohlc.get('low', '-')}  c {ohlc.get('close', '-')}")
+        return 0
+
+    if args.action == "candles":
+        if not args.symbol:
+            print("give one symbol, e.g. --symbol NSE:RELIANCE")
+            return 2
+        sym = args.symbol[0].split(":")[-1]
+        token = kd.token_for(sym)
+        if token is None:
+            print(f"no instrument token for {sym}")
+            return 1
+        start = _d(args.start) if args.start else date.today()
+        as_of = _d(args.date) if args.date else date.today()
+        rows = kd.candles(token, start, as_of, interval=args.interval)
+        print(f"{sym}: {len(rows)} {args.interval} candles, {start} .. {as_of}")
+        for r in rows[:args.limit]:
+            print(f"  {r['ts']}  o {r['open']}  h {r['high']}  l {r['low']}  "
+                  f"c {r['close']}  v {r['volume']}")
+        return 0
+    return 2
+
+
 def cmd_safety(args) -> int:
     """Is now a sensible time to act, and is this name safe to act on?"""
     from .decisions import safety
@@ -1509,6 +1592,11 @@ def cmd_brief(args) -> int:
 
 # ------------------------------------------------------------------------ main
 def main(argv: list[str] | None = None) -> int:
+    # Load .env before anything reads a credential. Real environment variables win, so a
+    # one-off `KEY=... fb ...` still overrides the file.
+    from . import env as _env
+    _env.load()
+
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -1638,6 +1726,17 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--dry-run", action="store_true",
                    help="do not record the run as a trial")
     g.set_defaults(fn=cmd_strategy)
+
+    g = sub.add_parser("kite", help="Kite Connect: daily login and read-only market data")
+    g.add_argument("action", choices=["login", "status", "quote", "candles"])
+    g.add_argument("--symbol", action="append", help="e.g. NSE:RELIANCE (repeatable)")
+    g.add_argument("--kind", default="ohlc", choices=["ltp", "ohlc", "full"])
+    g.add_argument("--interval", default="minute")
+    g.add_argument("--start")
+    g.add_argument("--date")
+    g.add_argument("--limit", type=int, default=10)
+    g.add_argument("--port", type=int, default=8765)
+    g.set_defaults(fn=cmd_kite)
 
     g = sub.add_parser("safety", help="situational awareness: when not to act")
     g.add_argument("--isin")

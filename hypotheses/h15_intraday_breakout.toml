@@ -1,0 +1,77 @@
+name = "Opening-range breakout systems on minute bars"
+signal = "dual_thrust, r_breaker, dynamic_breakout_ii, opening_range"
+direction = 1
+horizon = 1
+positions = 100
+aum_inr = 10_000_000
+rationale = """
+These four were excluded from `evaluation/timeseries.py` on a data fact rather than an
+opinion: each keys off the session's opening range, and the archive was daily. Kite Connect
+now supplies minute bars - measured limits, 60 days per request and at least five years of
+history - so the exclusion ends here. This is the largest genuinely unexplored space left
+in the project, and the reason the connection was worth making.
+
+## What is being tested
+
+All four are opening-range breakout systems, differing in how the range is built:
+
+* **dual_thrust** - range = max(HH-LC, HC-LL) over 4 sessions; long above open + 0.5*range
+* **r_breaker** - pivot levels from the previous session's high, low and close
+* **dynamic_breakout_ii** - lookback that shortens as volatility rises, plus a Bollinger
+  confirmation
+* **opening_range** - the plainest member of the family, included as a **reference**: long
+  if the session trades above its own first fifteen minutes. If the three elaborate systems
+  cannot beat this, their elaboration is decoration.
+
+**ghost_trader** is tested as a modifier on each rather than as a system: take the trade
+only after the rule's previous signal would have lost.
+
+## Long only, squared off, and costed per trade
+
+Shorting is available intraday in India, but this project has never modelled margin,
+borrow or broker auto-square-off, and a backtest that shorts without them is fiction. Long
+leg only, which systematically understates a symmetric system - the direction of error
+this project prefers.
+
+Positions close at the session's last traded minute. Each trade pays a full round trip at
+the **pessimistic** `mid` bound, 70.9 bps.
+
+## The prior, and it is not close
+
+**I expect all four to fail, and by a wide margin.** The arithmetic is the reason, and it
+is worth writing down before the numbers arrive so the result cannot be rationalised:
+
+A system that fires most sessions pays roughly **0.71% per round trip**. To net anything it
+needs a gross edge above that *per trade*, on a horizon of hours. Daily equity moves in
+this universe average about 4.2% of true range, so the system must capture something like
+a sixth of a typical day's entire range, correctly, more often than not, purely from where
+price sat relative to a threshold at the open.
+
+Published intraday breakout systems were developed on **futures** - index and commodity -
+where round-trip cost is a fraction of a basis point and leverage is structural. Cash
+equity in India carries STT on both legs, and STT alone is 20 bps. The strategies are not
+being tested in the environment they were designed for, and that is the honest framing.
+
+## What counts as success, fixed now
+
+* Net of the pessimistic round trip, positive mean return per trade.
+* A t-statistic clearing the Bonferroni bar over all trials to date - now beyond |t| > 3.3.
+* The three elaborate systems must beat the `opening_range` reference. A system that fires
+  less often and nets more is interesting; one that merely fires less often is not.
+* **Capacity**: if a system fires on fewer than 5% of sessions, it is a handful of trades
+  dressed as a strategy, and its Sharpe means nothing.
+
+## The failure mode to watch for
+
+Minute bars make look-ahead *easier*, not harder, and this project has already shipped two
+look-aheads in static daily data - one hidden in a filter rather than a signal. The
+specific risks here:
+
+* using a session's own high to decide entry into that session;
+* filling at the trigger price when the bar gapped through it;
+* computing the opening range and then entering inside the minutes that formed it.
+
+The backtest fills at `max(trigger, bar_open)`, scans bars strictly forward, and forbids
+entry before minute 15 where an opening range is used. If a result looks good, these are
+the first three things to check, before any celebration.
+"""
