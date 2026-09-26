@@ -1,0 +1,116 @@
+name = "The PineScript canon: eight indicators traders actually use"
+signal = "supertrend, ichimoku_cloud, keltner_breakout, cmf_20, awesome_oscillator, pivot_breakout, vwap_reversion, donchian_55"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+TradingView's community library is tens of thousands of scripts, and testing it in bulk
+would be exactly the data mining the trial ledger exists to punish: those scripts are
+overwhelmingly undocumented, unsourced, and tuned on whatever chart the author had open.
+There is no pre-registration to appeal to and no way to count the trials already spent.
+
+What *is* legitimate is the subset with fixed, published definitions - the indicators that
+ship with the platform and appear in every technical-analysis text. Eight of those have
+not been tested here. They are tested as one batch, pre-registered, counted as eight
+trials.
+
+## The eight, and what each claims
+
+* **supertrend** - ATR-banded trend following; Olivier Seban. The most popular single
+  indicator on TradingView by a wide margin.
+* **ichimoku_cloud** - Goichi Hosoda (1960s). Price above the Senkou span cloud.
+* **keltner_breakout** - Chester Keltner (1960), modern ATR form. Close above the upper
+  band.
+* **cmf_20** - Marc Chaikin. Volume-weighted accumulation over 20 sessions.
+* **awesome_oscillator** - Bill Williams. SMA(5) minus SMA(34) of the median price.
+* **pivot_breakout** - floor-trader pivots; close above R1 computed from the prior session.
+* **vwap_reversion** - distance from the session VWAP, computed from the minute bars Kite
+  supplied. This one is genuinely new: VWAP needs intraday volume, which this project did
+  not hold until now.
+* **donchian_55** - the Turtles' slower channel. `turtle_20_10` was tested; the 55-day
+  entry is the other half of the original system and was never run.
+
+## Excluded, and why
+
+**Parabolic SAR** is recursive: each value depends on the previous SAR, the extreme point
+and an acceleration factor that changes with the trade. That is a state machine no window
+function can express, and computing it row by row over 4.9M bars in Python would take
+longer than the result is worth. It is excluded on a *computability* fact, stated rather
+than approximated - the same treatment the intraday systems got before Kite arrived.
+
+**Supertrend is simplified.** The classic version locks its band, so today's band depends
+on yesterday's band, which is the same recursion problem. The version here compares the
+close to an unlocked ATR band, which is Supertrend's entry condition without its trailing
+memory. That is a *different indicator*, slightly, and saying so is cheaper than implying
+a faithful implementation.
+
+## The prior, and it is strongly negative
+
+**I expect all eight to fail**, and the reasoning is specific rather than general.
+
+Six of the eight are trend or volatility-band signals, and that family has now been tested
+here repeatedly: `above_ma200` cleared significance and died on turnover; the golden cross
+survived costs and missed significance; `above_ma200_atr_band` scores **below its own
+noise null**. Supertrend and Keltner are ATR-banded trend - which *is* the construction of
+`above_ma200_atr_band`, in different clothes. Expecting a different answer from the same
+family measured a fourth way would be unreasonable.
+
+`cmf_20` and `awesome_oscillator` are volume and oscillator signals; the four oscillators
+tested came in at |t| < 0.7 and `obv_slope_20`, the one volume signal, at t = -2.31.
+
+**`vwap_reversion` is the one I hold open.** It is the only one using data this project did
+not have a week ago, intraday volume is genuinely new information rather than another
+transform of the close, and VWAP is what institutional execution is benchmarked against -
+so a deviation from it has a mechanism that the others lack. If anything here separates
+from its null, this is my guess, and I would still expect it to fail the cost gate.
+
+## What counts as success
+
+Every gate, net positive under the **pessimistic** cost bound, and - new since
+[[Running the strategies on noise]] - **separation from a turnover-matched synthetic
+null**. A strategy whose t is at or below what the same rule scores on Brownian motion has
+shown nothing, whatever its absolute statistic says. That check is now part of the bar
+rather than an afterthought, and two previously reported results failed it.
+"""
+
+# 2026-09-26, results: all eight REJECT. The prior held, including on the one held open.
+#
+#   strategy               verdict      t     net/session   turnover
+#   supertrend             REJECT    -1.59      -0.0084%      0.45%
+#   donchian_55_20         REJECT    -2.54      -0.0225%      2.23%
+#   keltner_breakout       REJECT    -4.01      -0.0254%      1.89%
+#   awesome_oscillator     REJECT    -5.30      -0.0417%      5.18%
+#   ichimoku_cloud         REJECT    -7.56      -0.0578%      5.65%
+#   cmf_positive           REJECT    -8.86      -0.0430%      4.82%
+#   pivot_breakout         REJECT   -24.22      -0.1448%     17.36%
+#
+# **The turnover signature again, and more starkly than anywhere else.** The t-statistic
+# tracks turnover almost monotonically: supertrend at 0.45% turnover reaches -1.59, and
+# pivot_breakout at 17.36% reaches -24.22. Floor-trader pivots recompute from every
+# session, so the book turns over six times a month; nothing about that is a market
+# finding, it is a toll.
+#
+# **vwap_reversion, tested separately because it needs the minute bars rather than the
+# daily panel.** Session VWAP from 18.45M minute bars, forward returns by how far the
+# close sat from it:
+#
+#   close vs session VWAP          n        fwd 1d      fwd 5d
+#   above VWAP by >0.5%        8,671      +0.1979%    +0.5257%
+#   below VWAP by >0.5%       11,212      +0.0387%    +0.5608%
+#   within 0.5%               29,134      +0.0368%    +0.1713%
+#
+#   reversion edge over 5 sessions: +0.0351%   round trip: 0.7090%   cost is 20x the edge
+#
+# The pre-registration said this was the one to hold open, that intraday volume is
+# genuinely new information, and that it would still fail the cost gate. Both halves were
+# right: the reversion **exists** - names closing below their VWAP do outperform those
+# closing above, consistently - and it is twenty times too small to harvest.
+#
+# That is the more useful form of a negative: not "VWAP tells you nothing" but "VWAP tells
+# you about three basis points, and a round trip costs seventy-one".
+#
+# Parabolic SAR was excluded on computability, as stated in advance: it is recursive in
+# its own previous value, the extreme point and an acceleration factor, which no window
+# function expresses. Supertrend was implemented without its trailing lock for the same
+# reason and flagged in its source line as a slightly different indicator.

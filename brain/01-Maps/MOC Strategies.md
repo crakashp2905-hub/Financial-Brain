@@ -41,6 +41,10 @@ is not a candidate.
 | [[h16]] - ACQUISITION | REJECT | +0.0141%, passes cost and capacity, t = +2.09 |
 | [[h16]] - nine other event types | REJECT | see [[The archive screens out, it does not pick]] |
 | intraday candles | REJECT | apparent reversal was **bid-ask bounce** |
+| [[h17]] - supertrend | REJECT | t -1.59 at 0.45% turnover |
+| [[h17]] - ichimoku, keltner, CMF, AO, donchian_55 | REJECT | t -2.5 to -8.9 |
+| [[h17]] - pivot_breakout | REJECT | **t -24.22 at 17.36% turnover** |
+| [[h17]] - vwap_reversion | REJECT | reversion is real, **20x too small** |
 
 **Read against the null, not against zero.** [[Running the strategies on noise]] shows a
 strategy's own t conflates signal with cost drag. Turtle is third-worst by absolute t and
@@ -55,7 +59,7 @@ has the *largest* separation from its turnover-matched null; the two band varian
 | [[Governance red flags]] | REJECT | costs at 80% turnover |
 | [[Timing model]] | REJECT | the benchmark was the median; see [[Beating the median is not an edge]] |
 
-Seventy-eight trials, seventy-seven rejections and one **void** - and since 2026-09-23 the list
+Eighty-six trials, eighty-five rejections and one **void** - and since 2026-09-23 the list
 includes stateful entry/exit systems, which [[Time-series strategies]] made evaluable for
 the first time. One signal cleared the significance gate - `above_ma200` at **t = +3.69** against a bar of
 3.29 - and died on turnover. It was then chased to a definite end over four pre-registered

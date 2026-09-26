@@ -23,8 +23,11 @@ from financial_brain.evaluation import timeseries as ts
 def _db(bars, regime="RISK_ON"):
     """bars: list of (lineage, date, open, high, low, close, turnover)."""
     con = duckdb.connect(":memory:")
+    # traded_volume is share count, not traded value: Chaikin money flow weights by
+    # shares, so the panel needs both.
     con.execute("""CREATE TABLE adjusted_prices (business_date DATE, lineage VARCHAR,
-                   isin VARCHAR, close_adj DOUBLE, factor DOUBLE, turnover DOUBLE)""")
+                   isin VARCHAR, close_adj DOUBLE, factor DOUBLE, turnover DOUBLE,
+                   traded_volume BIGINT)""")
     con.execute("""CREATE TABLE eod_prices (business_date DATE, isin VARCHAR,
                    exchange VARCHAR, series VARCHAR, open_price DOUBLE,
                    high_price DOUBLE, low_price DOUBLE)""")
@@ -37,8 +40,8 @@ def _db(bars, regime="RISK_ON"):
     con.executemany("INSERT INTO market_regime VALUES (?,?)", [(d, regime) for d in days])
     for lin, d, o, h, low, c, tv in bars:
         isin = f"ISIN{lin}"
-        con.execute("INSERT INTO adjusted_prices VALUES (?,?,?,?,?,?)",
-                    [d, lin, isin, c, 1.0, tv])
+        con.execute("INSERT INTO adjusted_prices VALUES (?,?,?,?,?,?,?)",
+                    [d, lin, isin, c, 1.0, tv, 100_000])
         con.execute("INSERT INTO eod_prices VALUES (?,?,?,?,?,?,?)",
                     [d, isin, "NSE", "EQ", o, h, low])
     return con

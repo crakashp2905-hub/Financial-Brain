@@ -79,7 +79,15 @@ SELECT p.lineage, p.business_date AS d,
        -- True range, precomputed for the same reason: AVG over a LAG would nest.
        GREATEST(e.high_price * p.factor - e.low_price * p.factor,
                 ABS(e.high_price * p.factor - LAG(p.close_adj) OVER wl),
-                ABS(e.low_price  * p.factor - LAG(p.close_adj) OVER wl)) AS tr
+                ABS(e.low_price  * p.factor - LAG(p.close_adj) OVER wl)) AS tr,
+       COALESCE(p.traded_volume, 0)                             AS vol,
+       -- Chaikin money-flow volume: volume signed by where the close sat in its bar.
+       CASE WHEN e.high_price > e.low_price
+            THEN COALESCE(p.traded_volume, 0)
+                 * ((p.close_adj - e.low_price * p.factor)
+                    - (e.high_price * p.factor - p.close_adj))
+                 / NULLIF(e.high_price * p.factor - e.low_price * p.factor, 0)
+            ELSE 0 END                                          AS mfv
 FROM adjusted_prices p
 JOIN eod_prices e
   ON e.isin = p.isin AND e.business_date = p.business_date
@@ -183,6 +191,58 @@ STRATEGIES: dict[str, dict] = {
                   "The 0.8 threshold is the quintile boundary the firewall already uses "
                   "everywhere else, not a number chosen by trying several.",
     },
+    "supertrend": {
+        "entry": "c > st_upper", "exit": "c < st_lower",
+        "needs": ["st_upper", "st_lower"],
+        "claim": "Hold while the close is above a 3-ATR band around the 10-session "
+                 "median price.",
+        "source": "h17. Olivier Seban; the most-used single indicator on TradingView. "
+                  "SIMPLIFIED: the classic form locks its band to the previous bar, which "
+                  "is recursive and inexpressible as a window function. This is the entry "
+                  "condition without the trailing memory - a slightly different indicator.",
+    },
+    "ichimoku_cloud": {
+        "entry": "c > GREATEST((tenkan + kijun) / 2, senkou_b)",
+        "exit": "c < LEAST((tenkan + kijun) / 2, senkou_b)",
+        "needs": ["tenkan", "kijun", "senkou_b"],
+        "claim": "Hold while the close is above the Ichimoku cloud.",
+        "source": "h17. Goichi Hosoda, 1960s. The cloud is normally displaced 26 sessions "
+                  "forward; here it is compared at the current bar, because displacing it "
+                  "forward would compare today's price to a line drawn from data it has "
+                  "not seen - the displacement is a drawing convention, not a signal one.",
+    },
+    "keltner_breakout": {
+        "entry": "c > kelt_upper", "exit": "c < kelt_lower",
+        "needs": ["kelt_upper", "kelt_lower"],
+        "claim": "Close above a 2-ATR Keltner band on the 20-session average.",
+        "source": "h17. Chester Keltner (1960), modern ATR form.",
+    },
+    "cmf_positive": {
+        "entry": "cmf_20 > 0.05", "exit": "cmf_20 < -0.05",
+        "needs": ["cmf_20"],
+        "claim": "Hold while Chaikin money flow shows accumulation.",
+        "source": "h17. Marc Chaikin. The +/-0.05 band is the conventional threshold, "
+                  "not one chosen by trying values.",
+    },
+    "awesome_oscillator": {
+        "entry": "ao > 0", "exit": "ao <= 0",
+        "needs": ["ao"],
+        "claim": "Hold while SMA(5) of the median price exceeds SMA(34).",
+        "source": "h17. Bill Williams. Zero is the indicator own neutral point.",
+    },
+    "pivot_breakout": {
+        "entry": "c > pivot_r1", "exit": "c < pivot_s1",
+        "needs": ["pivot_r1", "pivot_s1"],
+        "claim": "Close above the first resistance pivot of the previous session.",
+        "source": "h17. Floor-trader pivots. Computed strictly from the prior session.",
+    },
+    "donchian_55_20": {
+        "entry": "c > don_hi_55", "exit": "c < don_lo_20",
+        "needs": ["don_hi_55", "don_lo_20"],
+        "claim": "The Turtles slower channel: 55-session entry, 20-session exit.",
+        "source": "h17. turtle_20_10 tested the fast channel; this is the other half of "
+                  "the original system and was never run.",
+    },
     "turtle_20_10": {
         "entry": "c > don_hi_20", "exit": "c < don_lo_10",
         "needs": ["don_hi_20", "don_lo_10"],
@@ -204,6 +264,39 @@ INDICATORS = {
     "atr_14": "AVG(tr) OVER (w ROWS BETWEEN 13 PRECEDING AND CURRENT ROW)",
     # Lo & MacKinlay (1988) variance ratio: Var(5-session) / (5 x Var(1-session)). Above
     # one the name's moves persist, below one they reverse. Trailing 60 sessions.
+    # --- the PineScript canon (h17). Every one a published, fixed definition.
+    # Supertrend / Keltner: an ATR band around a centre line. Note this is Supertrend's
+    # entry condition WITHOUT its trailing lock - the classic form is recursive and no
+    # window function can express it. A different indicator, slightly, and said so.
+    "st_upper": "(AVG((h + l) / 2) OVER (w ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)) "
+                "+ 3 * AVG(tr) OVER (w ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)",
+    "st_lower": "(AVG((h + l) / 2) OVER (w ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)) "
+                "- 3 * AVG(tr) OVER (w ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)",
+    "kelt_upper": "AVG(c) OVER (w ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) "
+                  "+ 2 * AVG(tr) OVER (w ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)",
+    "kelt_lower": "AVG(c) OVER (w ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) "
+                  "- 2 * AVG(tr) OVER (w ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)",
+    # Ichimoku: Tenkan (9) and Kijun (26) are midpoints of their high-low range; the
+    # cloud is the span between their average and the 52-period midpoint.
+    "tenkan": "(MAX(h) OVER (w ROWS BETWEEN 8 PRECEDING AND CURRENT ROW) "
+              "+ MIN(l) OVER (w ROWS BETWEEN 8 PRECEDING AND CURRENT ROW)) / 2",
+    "kijun": "(MAX(h) OVER (w ROWS BETWEEN 25 PRECEDING AND CURRENT ROW) "
+             "+ MIN(l) OVER (w ROWS BETWEEN 25 PRECEDING AND CURRENT ROW)) / 2",
+    "senkou_b": "(MAX(h) OVER (w ROWS BETWEEN 51 PRECEDING AND CURRENT ROW) "
+                "+ MIN(l) OVER (w ROWS BETWEEN 51 PRECEDING AND CURRENT ROW)) / 2",
+    # Chaikin money flow: volume weighted by where the close sat in its own bar.
+    "cmf_20": "SUM(mfv) OVER (w ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) "
+              "/ NULLIF(SUM(vol) OVER (w ROWS BETWEEN 19 PRECEDING AND CURRENT ROW), 0)",
+    # Awesome oscillator: SMA(5) - SMA(34) of the median price.
+    "ao": "AVG((h + l) / 2) OVER (w ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) "
+          "- AVG((h + l) / 2) OVER (w ROWS BETWEEN 33 PRECEDING AND CURRENT ROW)",
+    # Floor-trader pivots from the PREVIOUS session - never this one.
+    "pivot_r1": "2 * ((LAG(h) OVER w + LAG(l) OVER w + LAG(c) OVER w) / 3) "
+                "- LAG(l) OVER w",
+    "pivot_s1": "2 * ((LAG(h) OVER w + LAG(l) OVER w + LAG(c) OVER w) / 3) "
+                "- LAG(h) OVER w",
+    "don_hi_55": "MAX(h) OVER (w ROWS BETWEEN 55 PRECEDING AND 1 PRECEDING)",
+    "don_lo_20": "MIN(l) OVER (w ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING)",
     "vr_60": "VAR_SAMP(r5) OVER (w ROWS BETWEEN 59 PRECEDING AND CURRENT ROW) "
              "/ NULLIF(5 * VAR_SAMP(r1) OVER (w ROWS BETWEEN 59 PRECEDING "
              "AND CURRENT ROW), 0)",
