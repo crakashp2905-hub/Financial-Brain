@@ -79,6 +79,7 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
                AVG(y) FILTER (WHERE q = 5) - AVG(y) FILTER (WHERE q = 1) AS spread,
                COUNT(*) FILTER (WHERE filled) AS filled,
                AVG(y) FILTER (WHERE q = 5) - AVG(y) AS top_excess,
+               AVG(y) AS universe,
                LIST(lineage) FILTER (WHERE q = 5) AS top
         FROM ranked r GROUP BY business_date HAVING COUNT(*) >= 20 ORDER BY 1
     """, [horizon, horizon, horizon, min_adv, start, start, end, end, horizon]).fetchall()
@@ -97,6 +98,9 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
         "first": rows[0][0] if rows else None, "last": rows[-1][0] if rows else None,
         # Per rebalance date, for the validation firewall: rank IC, Q5-Q1 spread, the
         # long-only top quintile's excess over the universe, and its members.
+        # ``universe`` is the equal-weighted return of every eligible name that period. It
+        # is the benchmark's own level, which the excess subtracts away - and which a CAPM
+        # regression needs back (``evaluation/riskadjusted.py``).
         "series": [{"date": r[0], "n": r[1], "ic": r[2], "spread": r[3],
-                    "top_excess": r[5], "top": r[6]} for r in rows],
+                    "top_excess": r[5], "universe": r[6], "top": r[7]} for r in rows],
     }
