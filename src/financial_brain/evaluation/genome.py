@@ -60,7 +60,20 @@ REBALANCE = 20
 #: Trailing window a strategy is judged on, per name. Roughly one year.
 LOOKBACK = 250
 #: Entries a strategy must have made in the window to be selectable on that name.
-MIN_TRADES = 3
+#:
+#: **One, and the first version's three was the bug that decided the whole result.** The
+#: filter was meant to stop a strategy with no record being selected on noise. But `score`
+#: already averages over every session in the window including the flat ones, so a rule that
+#: never fired scores about zero - cash minus the universe - which is a legitimate score and
+#: not a missing one.
+#:
+#: Requiring three entries in 250 sessions instead disqualified exactly the strategies that
+#: survive costs, because surviving costs *means* trading rarely. `ma_double_cross_50_200` at
+#: 0.78% turnover makes roughly two entries per 250 sessions per name, so the selector could
+#: not choose the one pooled strategy that beats the universe (+0.0193% a session, t = +2.72)
+#: and instead chose among the rules that trade often enough to qualify, every one of which
+#: loses. Adverse selection by *eligibility* rather than by objective.
+MIN_TRADES = 1
 #: Names held at most, ranked by trailing turnover - capacity, and it bounds the work.
 MAX_NAMES = 200
 
@@ -140,7 +153,8 @@ def positions(con, names: list[str], *, start=None, end=None,
 
 def run(con, names: list[str] | None = None, *, rebalance: int = REBALANCE,
         lookback: int = LOOKBACK, min_trades: int = MIN_TRADES,
-        max_names: int = MAX_NAMES, cheat: bool = False, **kw) -> dict:
+        max_names: int = MAX_NAMES, cheat: bool = False, net: bool = True,
+        **kw) -> dict:
     """Walk-forward per-name strategy selection.
 
     ``cheat=True`` selects on the **whole** sample instead of a trailing window. It exists
@@ -169,8 +183,24 @@ def run(con, names: list[str] | None = None, *, rebalance: int = REBALANCE,
         universe.setdefault(d, []).append(ret)
     uni = {d: mean(v) for d, v in universe.items()}
 
-    # Trailing score of a strategy on a name: its mean excess over the window, gross.
+    rt = book.round_trips()
+
     def score(strat, lin, lo, hi):
+        """Trailing mean excess of a strategy on one name, over the window.
+
+        ``net=False`` scores it **gross**, and that turns out to decide the whole result. A
+        selector ranking on gross performance systematically prefers the rules that trade
+        most: a high-turnover rule has more trades in the window, so its trailing mean is
+        estimated with less noise *and* it captures more of any recent move - and then the
+        book pays for every one of those trades out of sample. Walk-forward selection on
+        gross chose `pivot_breakout` 3,517 times, the single worst strategy in the library
+        (t = -24.22 at 17.36% turnover), and lost at t = -3.57.
+
+        That is adverse selection, not overfitting, and it is exactly backwards in a market
+        where cost is the binding constraint. ``net=True`` charges each strategy its own
+        entries at that name's own bucket inside the selection window, so a rule has to be
+        worth what it costs before it can be chosen.
+        """
         h = per.get((strat, lin))
         if not h:
             return None, 0
@@ -179,14 +209,17 @@ def run(con, names: list[str] | None = None, *, rebalance: int = REBALANCE,
             v = h.get(d)
             if v is None:
                 continue
-            pos, prev, ret, _ = v
-            ex.append((ret if pos else 0.0) - uni.get(d, 0.0))
-            entries += 1 if (pos and not prev) else 0
+            pos, prev, ret, bucket = v
+            e = (ret if pos else 0.0) - uni.get(d, 0.0)
+            if pos and not prev:
+                entries += 1
+                if net:
+                    e -= rt[bucket]
+            ex.append(e)
         return (mean(ex) if ex else None), entries
 
     # `positions` already cut the panel to the capacity set, so everything here is in it.
     lineages = sorted({lin for _, lin in per})
-    rt = book.round_trips()
     excess: list[float] = []
     picks: dict = {}
     chosen_log: dict = {}
@@ -231,7 +264,8 @@ def run(con, names: list[str] | None = None, *, rebalance: int = REBALANCE,
             excess.append(mean(held) - uni.get(d, 0.0) - turn * cost)
 
     return {"dates": len(excess), "excess": excess, "names": names,
-            "selection": "in_sample" if cheat else "walk_forward",
+            "selection": ("in_sample" if cheat else "walk_forward")
+                         + ("_net" if net else "_gross"),
             "rebalance": rebalance, "lookback": lookback,
             "mean_excess": mean(excess) if excess else float("nan"),
             "turnover": mean(turns) if turns else float("nan"),

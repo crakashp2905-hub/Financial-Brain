@@ -191,6 +191,11 @@ def materialise(con, path) -> str:
         # real one, and a null computing a slightly different signal is worse than no null:
         # it produces a plausible separation out of the difference between two definitions.
         from ..features.indicators import FEATURES_SQL
+        # FEATURES_SQL writes an unqualified `features`, so the null catalog has to be the
+        # current one while it runs. The catalog to come back to is whatever the caller was
+        # in - named after the database file, not "memory", which only holds for an
+        # in-memory connection.
+        home = con.execute("SELECT current_database()").fetchone()[0]
         con.execute("USE nulldb")
         try:
             con.execute(FEATURES_SQL)
@@ -213,7 +218,7 @@ def materialise(con, path) -> str:
                           FROM adjusted_prices)
                       WHERE ret IS NOT NULL GROUP BY business_date)""")
         finally:
-            con.execute("USE memory")
+            con.execute(f"USE {home}")
     finally:
         con.execute("DETACH nulldb")
     return str(path)
