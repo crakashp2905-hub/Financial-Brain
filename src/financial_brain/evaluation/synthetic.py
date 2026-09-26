@@ -154,6 +154,10 @@ def materialise(con, path) -> str:
     builds a *separate database file* with the same table names and shapes, so the
     strategies run unmodified against a schema they recognise while the real one is only
     ever read.
+
+    Carries the cross-sectional tables too - ``features`` built by the production
+    ``FEATURES_SQL``, plus the turnover ranking the cost model needs and an equal-weighted
+    index standing in for Nifty 500 - so a quintile test has a null as well as a timing rule.
     """
     con.execute(f"ATTACH '{path}' AS nulldb")
     try:
@@ -177,6 +181,39 @@ def materialise(con, path) -> str:
             horizon INTEGER, params VARCHAR, dates INTEGER, mean_ic DOUBLE,
             ic_t DOUBLE, sharpe DOUBLE, deflated_sharpe DOUBLE, verdict VARCHAR,
             reasons VARCHAR)""")
+
+        # The cross-sectional path needs `features`, and until this was added the null only
+        # covered the time-series harness - so "read every result against its own null" did
+        # not apply to the quintile tests, which is where the leading candidates live.
+        #
+        # The **production** SQL is executed here rather than reimplemented. A hand-written
+        # copy of `mom_12_1` or `dist_52w_high` for the null would be free to drift from the
+        # real one, and a null computing a slightly different signal is worse than no null:
+        # it produces a plausible separation out of the difference between two definitions.
+        from ..features.indicators import FEATURES_SQL
+        con.execute("USE nulldb")
+        try:
+            con.execute(FEATURES_SQL)
+            # Buckets come from an absolute national turnover rank, so the null needs the
+            # same two tables the real one ranks over (``costs/book.py``).
+            con.execute("""CREATE OR REPLACE TABLE security_lineage AS
+                SELECT DISTINCT isin, lineage FROM adjusted_prices""")
+            con.execute("""CREATE OR REPLACE TABLE universe_snapshots AS
+                SELECT business_date, isin, 'NSE' AS exchange, 'STK' AS instrument_type,
+                       turnover
+                FROM adjusted_prices WHERE turnover > 0""")
+            con.execute("""CREATE OR REPLACE TABLE index_levels AS
+                SELECT business_date, 'Nifty 500' AS index_name,
+                       EXP(SUM(LN(1 + r)) OVER (ORDER BY business_date)) * 1000
+                           AS close_level
+                FROM (SELECT business_date, AVG(ret) AS r FROM (
+                          SELECT business_date, lineage,
+                                 close_adj / LAG(close_adj) OVER (PARTITION BY lineage
+                                     ORDER BY business_date) - 1 AS ret
+                          FROM adjusted_prices)
+                      WHERE ret IS NOT NULL GROUP BY business_date)""")
+        finally:
+            con.execute("USE memory")
     finally:
         con.execute("DETACH nulldb")
     return str(path)

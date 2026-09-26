@@ -68,14 +68,28 @@ MAX_NAMES = 200
 def positions(con, names: list[str], *, start=None, end=None,
               min_turnover: float = ts.MIN_TURNOVER,
               lag: int = ts.EXECUTION_LAG,
-              max_abs: float = ts.MAX_ABS_RETURN) -> str:
+              max_abs: float = ts.MAX_ABS_RETURN,
+              max_names: int = MAX_NAMES) -> str:
     """Build ``_genome_pos(strategy, lineage, d, pos, prev_pos, ret, bucket)``.
 
     One row per strategy, name and session - the per-name detail ``timeseries.series``
-    aggregates away. Materialised once because the selection query passes over it many
-    times.
+    aggregates away. Materialised once because the selection passes over it many times.
+
+    **The capacity cut happens here, not after.** Sixteen strategies over the whole panel is
+    forty-odd million rows, and the first version of this built all of them and then loaded
+    them into Python to select from - which does not finish. Restricting ``_bars`` to the
+    ``max_names`` most liquid lineages first is both the capacity constraint the hypothesis
+    states and the only way the computation is tractable; doing it afterwards would have been
+    the same answer at a hundred times the cost.
     """
     con.execute(ts.PANEL, [start or "1900-01-01", end or "2999-12-31"])
+    # MEDIAN, not AVG: a name with one enormous session is not liquid, and averaging says
+    # it is - the same error that once put a two-session IPO above HDFC Bank.
+    con.execute(f"""CREATE OR REPLACE TEMP TABLE _bars AS
+        SELECT * FROM _bars WHERE lineage IN (
+            SELECT lineage FROM _bars GROUP BY lineage
+            HAVING MEDIAN(tv) >= {min_turnover}
+            ORDER BY MEDIAN(tv) DESC NULLS LAST LIMIT {max_names})""")
     if ts._has_candles(con):
         con.execute(ts.CANDLE_JOIN)
     if ts._has_table(con, "event_flags"):
@@ -135,7 +149,7 @@ def run(con, names: list[str] | None = None, *, rebalance: int = REBALANCE,
     the walk-forward result interpretable.
     """
     names = names or [n for n in ts.STRATEGIES if not n.startswith("event_")]
-    positions(con, names, **kw)
+    positions(con, names, max_names=max_names, **kw)
 
     cal = [r[0] for r in con.execute(
         "SELECT DISTINCT d FROM _genome_pos ORDER BY d").fetchall()]
@@ -170,14 +184,8 @@ def run(con, names: list[str] | None = None, *, rebalance: int = REBALANCE,
             entries += 1 if (pos and not prev) else 0
         return (mean(ex) if ex else None), entries
 
-    # Capacity, stated as a constraint rather than discovered: the book is the most liquid
-    # `max_names` lineages by median observed turnover. MEDIAN, not AVG - a name with one
-    # enormous session is not liquid, and averaging says it is.
-    liquid = [r[0] for r in con.execute(f"""
-        SELECT lineage FROM _bars GROUP BY lineage
-        ORDER BY MEDIAN(tv) DESC NULLS LAST LIMIT {max_names}
-    """).fetchall()]
-    lineages = sorted({lin for _, lin in per} & set(liquid))
+    # `positions` already cut the panel to the capacity set, so everything here is in it.
+    lineages = sorted({lin for _, lin in per})
     rt = book.round_trips()
     excess: list[float] = []
     picks: dict = {}
