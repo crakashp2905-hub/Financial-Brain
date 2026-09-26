@@ -70,9 +70,23 @@ def evaluate(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
               AND (? IS NULL OR c.business_date <= CAST(? AS DATE))
               AND c.k + ? <= (SELECT MAX(k) FROM cal)
         ), ranked AS (
+            -- The tiebreak on lineage is not cosmetic. `above_ma200` and `above_ma50` are
+            -- BOOLEAN, so x is 0 or 1 and half the universe ties; NTILE then split those
+            -- ties by whatever order DuckDB's parallel scan happened to produce, and the
+            -- same call returned top_excess of 0.002587, 0.002594 and 0.002669 on three
+            -- consecutive runs. Every quintile number ever reported for those two features
+            -- was one draw from a distribution rather than a measurement.
+            --
+            -- Ordering by lineage as well makes the split arbitrary-but-fixed instead of
+            -- arbitrary-and-varying. It does not make quintiles of a binary signal
+            -- meaningful - the top quintile of a 50/50 split is a random fifth of the same
+            -- group - and a boolean feature deserves a two-group comparison instead. What
+            -- it buys is that the number is reproducible, which is the precondition for
+            -- anything else being worth saying about it.
             SELECT *, RANK() OVER (PARTITION BY business_date ORDER BY x) AS rx,
                       RANK() OVER (PARTITION BY business_date ORDER BY y) AS ry,
-                      NTILE(5) OVER (PARTITION BY business_date ORDER BY x) AS q
+                      NTILE(5) OVER (PARTITION BY business_date
+                                     ORDER BY x, lineage) AS q
             FROM panel WHERE y IS NOT NULL
         )
         SELECT business_date, COUNT(*) AS n, CORR(rx, ry) AS ic,

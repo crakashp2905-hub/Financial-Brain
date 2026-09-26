@@ -78,3 +78,42 @@ def test_a_name_that_stops_trading_is_scored_not_dropped(con):
     after = benchmark.evaluate(con, "ret_60d", horizon=20)
     assert before["filled_no_outcome"] == 0 and after["filled_no_outcome"] >= 1
     assert after["dates"] == before["dates"], "no rebalance date lost its outcome"
+
+
+def test_the_quintile_split_is_reproducible_for_a_boolean_feature():
+    """`above_ma200` and `above_ma50` are BOOLEAN, so x is 0 or 1 and half the universe
+    ties. NTILE split those ties by whatever order the parallel scan produced, and the same
+    call returned top_excess of 0.002587, 0.002594 and 0.002669 on three consecutive runs -
+    so every quintile number ever reported for them was one draw, not a measurement.
+
+    A tiebreak on lineage does not make quintiles of a binary signal meaningful; the top
+    quintile of a 50/50 split is a random fifth of the same group. It makes the number
+    reproducible, which is the precondition for anything else being worth saying.
+    """
+    import duckdb
+
+    from financial_brain.evaluation import benchmark
+
+    con = duckdb.connect(":memory:")
+    con.execute("""CREATE TABLE adjusted_prices (business_date DATE, lineage VARCHAR,
+                   close_adj DOUBLE)""")
+    con.execute("""CREATE TABLE features (business_date DATE, lineage VARCHAR,
+                   adv20 DOUBLE, flag BOOLEAN)""")
+    d0 = date(2024, 1, 1)
+    days = [d0 + timedelta(days=i) for i in range(60)]
+    # 200 names, exactly half flagged, so every rebalance ties 100 against 100.
+    for k, d in enumerate(days):
+        for i in range(200):
+            lin = f"L{i:03d}"
+            con.execute("INSERT INTO adjusted_prices VALUES (?,?,?)",
+                        [d, lin, 100.0 + (i * 7 + k * 13) % 31])
+            con.execute("INSERT INTO features VALUES (?,?,?,?)",
+                        [d, lin, 1e9, i % 2 == 0])
+    benchmark.FEATURES.add("flag")
+    try:
+        got = {round(sum(x["top_excess"] for x in r["series"]
+                         if x["top_excess"] is not None), 12)
+               for r in (benchmark.evaluate(con, "flag", 5, min_adv=0) for _ in range(4))}
+        assert len(got) == 1, f"quintile split is not reproducible: {got}"
+    finally:
+        benchmark.FEATURES.discard("flag")

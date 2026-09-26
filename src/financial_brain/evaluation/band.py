@@ -100,7 +100,9 @@ def panel(con, feature: str, horizon: int = 20, *, min_adv: float = 1e7,
         )
         SELECT s.d, s.lineage, s.z, s.y, s.rx, s.ry, COALESCE(b.bucket, 'micro')
         FROM scored s LEFT JOIN _liquidity_buckets b USING (d, lineage)
-        WHERE s.z IS NOT NULL ORDER BY s.d, s.z DESC
+        -- lineage breaks z ties deterministically; a boolean signal ties
+        -- half the universe and the ordering decided the book.
+        WHERE s.z IS NOT NULL ORDER BY s.d, s.z DESC, s.lineage
     """, [horizon, horizon, horizon, min_adv, start, start, end, end, horizon]).fetchall()
     return [{"date": r[0], "lineage": r[1], "z": r[2], "y": r[3],
              "rx": r[4], "ry": r[5], "bucket": r[6]} for r in rows]
@@ -167,7 +169,7 @@ def run(con, feature: str, horizon: int = 20, *, positions: int = 40,
         for lin in forced:
             del holdings[lin]
 
-        ranked = sorted(here, key=lambda lin: -alpha[lin])
+        ranked = sorted(here, key=lambda lin: (-alpha[lin], lin))
         if banded:
             held = [lin for lin in ranked if lin in holdings]
             free = [lin for lin in ranked if lin not in holdings]
