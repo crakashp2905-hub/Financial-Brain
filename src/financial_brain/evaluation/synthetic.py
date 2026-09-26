@@ -76,13 +76,34 @@ def moments(con, min_sessions: int = 500, limit: int = 200) -> list[dict]:
 
 
 def build(con, *, seed: int = DEFAULT_SEED, min_sessions: int = 500,
-          limit: int = 200, bootstrap: bool = False) -> dict:
+          limit: int = 200, bootstrap: bool = False,
+          drift: str = "per_name") -> dict:
     """Write a synthetic panel with the same shape as the real one and no structure.
 
     The calendar is the *real* trading calendar, so anything the harness does with dates -
     the next-session mapping, month ends, the regime join - behaves identically. Only the
     returns are noise.
+
+    ## ``drift`` decides whether this is a null at all, and it depends on the signal
+
+    ``"per_name"`` gives each synthetic name the drift of the real name it was matched to.
+    That is right for a **timing** rule, which trades one name over time and wants a
+    realistic spread of volatilities to work against.
+
+    It is **wrong for any cross-sectional test**, and badly so. Persistent per-name drift
+    *is* cross-sectional return persistence, which is precisely what 12-1 momentum measures
+    - so the panel contains the alternative hypothesis and a momentum ranking correctly
+    identifies the high-drift names, which then keep drifting. Measured: `mom_12_1` scored a
+    net t of **+2.67** on this "null" at h=20 against +2.63 on real data, a separation of
+    -0.05, and reading that as "momentum is nothing" would have been wrong. The null was not
+    a null.
+
+    ``"common"`` gives every name the same drift - the pooled mean - and keeps its own
+    volatility. Cross-sectional return differences are then pure noise, which is the null a
+    ranking signal has to be read against.
     """
+    if drift not in ("per_name", "common"):
+        raise ValueError("drift must be 'per_name' or 'common'")
     rng = random.Random(seed)
     names = moments(con, min_sessions=min_sessions, limit=limit)
     if not names:
@@ -90,6 +111,8 @@ def build(con, *, seed: int = DEFAULT_SEED, min_sessions: int = 500,
 
     calendar = [r[0] for r in con.execute(
         "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
+    common_mu = (sum(n["mu"] or 0.0 for n in names) / len(names)
+                 if drift == "common" else None)
 
     pool: list[float] = []
     if bootstrap:
@@ -120,7 +143,8 @@ def build(con, *, seed: int = DEFAULT_SEED, min_sessions: int = 500,
         for i, nm in enumerate(names):
             lineage = f"SYN{i:04d}"
             price = 100.0
-            mu, sigma = nm["mu"] or 0.0, nm["sigma"] or 0.01
+            mu = common_mu if common_mu is not None else (nm["mu"] or 0.0)
+            sigma = nm["sigma"] or 0.01
             span = calendar[-nm["n"]:] if nm["n"] <= len(calendar) else calendar
             for d in span:
                 step = rng.choice(pool) if pool else rng.gauss(mu, sigma)
@@ -138,7 +162,7 @@ def build(con, *, seed: int = DEFAULT_SEED, min_sessions: int = 500,
         staging.unlink(missing_ok=True)
     rows = range(n_rows)
     return {"version": VERSION, "names": len(names), "rows": len(rows),
-            "seed": seed, "bootstrap": bootstrap,
+            "seed": seed, "bootstrap": bootstrap, "drift": drift,
             "mean_sigma": sum(n["sigma"] or 0 for n in names) / len(names)}
 
 
