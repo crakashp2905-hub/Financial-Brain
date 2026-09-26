@@ -20,8 +20,14 @@ import pytest
 from financial_brain.evaluation import timeseries as ts
 
 
-def _db(bars, regime="RISK_ON"):
-    """bars: list of (lineage, date, open, high, low, close, turnover)."""
+def _db(bars, regime="RISK_ON", ranks=None):
+    """bars: list of (lineage, date, open, high, low, close, turnover).
+
+    ``ranks`` gives each lineage its national turnover rank, which is what prices impact
+    (``costs/book.py``). Absent, every name is the most liquid in the country - the
+    cheapest possible book, so a cost bug shows up as a strategy looking too good rather
+    than hiding behind a pessimistic default.
+    """
     con = duckdb.connect(":memory:")
     # traded_volume is share count, not traded value: Chaikin money flow weights by
     # shares, so the panel needs both.
@@ -32,12 +38,32 @@ def _db(bars, regime="RISK_ON"):
                    exchange VARCHAR, series VARCHAR, open_price DOUBLE,
                    high_price DOUBLE, low_price DOUBLE)""")
     con.execute("""CREATE TABLE market_regime (business_date DATE, regime VARCHAR)""")
+    # The impact bucket comes from an absolute national turnover rank, so the ranking
+    # population is the exchange's whole list and not the backtest's own universe.
+    con.execute("""CREATE TABLE universe_snapshots (business_date DATE, isin VARCHAR,
+                   exchange VARCHAR, instrument_type VARCHAR, turnover DOUBLE)""")
+    con.execute("""CREATE TABLE security_lineage (isin VARCHAR, lineage VARCHAR)""")
     con.execute("""CREATE TABLE evaluation_runs (run_at TIMESTAMP WITH TIME ZONE,
                    version VARCHAR, feature VARCHAR, horizon INTEGER, params VARCHAR,
                    dates INTEGER, mean_ic DOUBLE, ic_t DOUBLE, sharpe DOUBLE,
                    deflated_sharpe DOUBLE, verdict VARCHAR, reasons VARCHAR)""")
     days = sorted({b[1] for b in bars})
     con.executemany("INSERT INTO market_regime VALUES (?,?)", [(d, regime) for d in days])
+    # The bucket is an absolute *national* rank, so a toy universe of three names cannot
+    # produce a rank of 900 - the exchange list has to be there too. Filler names occupy
+    # turnover 1e15-i, and a lineage asking for rank r takes 1e15-r+0.5 so exactly r-1
+    # fillers sit above it.
+    ranks = ranks or {}
+    market = max([*ranks.values(), 1]) + 1
+    con.execute("""INSERT INTO universe_snapshots
+                   SELECT d, 'FILL' || i, 'NSE', 'STK', 1e15 - i
+                   FROM generate_series(1, ?) t(i), (SELECT UNNEST(?::DATE[]) AS d)""",
+                [market, days])
+    for lin in sorted({b[0] for b in bars}):
+        con.execute("INSERT INTO security_lineage VALUES (?,?)", [f"ISIN{lin}", lin])
+        tv = 1e15 - ranks.get(lin, 1) + 0.5
+        con.executemany("INSERT INTO universe_snapshots VALUES (?,?,?,?,?)",
+                        [(d, f"ISIN{lin}", "NSE", "STK", tv) for d in days])
     for lin, d, o, h, low, c, tv in bars:
         isin = f"ISIN{lin}"
         con.execute("INSERT INTO adjusted_prices VALUES (?,?,?,?,?,?,?)",
@@ -266,3 +292,39 @@ def test_the_null_panel_has_matched_volatility_and_no_structure():
     src = inspect.getsource(syn.build)
     assert "rng.gauss(mu, sigma)" in src, "drift and volatility are matched per name"
     assert "calendar" in src, "the real trading calendar is reused"
+
+
+def test_the_book_is_charged_its_own_liquidity_not_a_flat_bucket():
+    """One bucket for a whole book is wrong in both directions and the direction depends on
+    what the signal holds. A micro-cap book must cost more than the flat ``mid`` charge."""
+    bars = _flat_then_jump(n_names=3)
+    ts.STRATEGIES["_probe_cost"] = {"entry": "c > 100", "exit": "c <= 100",
+                                    "needs": ["sma_20"], "claim": "probe",
+                                    "source": "test"}
+    try:
+        mega = ts.run(_db(bars, ranks={"L0": 1, "L1": 2, "L2": 3}), "_probe_cost")
+        micro = ts.run(_db(bars, ranks={"L0": 3000, "L1": 3100, "L2": 3200}),
+                       "_probe_cost")
+        assert mega["bucket_mix"]["mega"] == pytest.approx(1.0)
+        assert micro["bucket_mix"]["micro"] == pytest.approx(1.0)
+        flat = mega["cost_round_trip_flat"]
+        assert mega["cost_round_trip"] < flat < micro["cost_round_trip"]
+        # And the charge reaches the returns, not just the report.
+        assert sum(micro["excess"]) < sum(mega["excess"])
+    finally:
+        del ts.STRATEGIES["_probe_cost"]
+
+
+def test_buckets_are_national_ranks_not_ranks_within_the_backtest_universe():
+    """The trap this replaced: ranking inside a filtered universe made 62% of its names
+    rank 750 or better and charged them ``mid`` impact, when nationally they are ``small``.
+    Three names must not become three megas just because there are only three."""
+    bars = _flat_then_jump(n_names=3)
+    ts.STRATEGIES["_probe_nat"] = {"entry": "c > 100", "exit": "c <= 100",
+                                   "needs": ["sma_20"], "claim": "probe", "source": "test"}
+    try:
+        r = ts.run(_db(bars, ranks={"L0": 900, "L1": 1000, "L2": 1100}), "_probe_nat")
+        assert r["bucket_mix"]["small"] == pytest.approx(1.0)
+        assert r["bucket_mix"]["mega"] == 0.0
+    finally:
+        del ts.STRATEGIES["_probe_nat"]

@@ -32,10 +32,24 @@ this project prefers to make.
 rule says so. The close used is the last traded minute, not the official settlement price.
 
 **Round trips.** These systems trade every session they fire, so turnover is one to two
-round trips *a day* rather than a quarter. At the pessimistic `mid` bound of 70.9 bps that
-is roughly 1.4% a session of friction to overcome - which is why the cost bracket built in
+round trips *a day* rather than a quarter, which is why the cost bracket built in
 ``costs/measured`` matters more here than anywhere else, and why a gross edge that would
 be comfortable on a monthly rebalance is nothing at all on this horizon.
+
+## The segment, which the first version of this module got wrong
+
+Every system here squares off inside the session. In India that is the **intraday (MIS)**
+segment, where STT is 2.5 bps on the sell leg only - not **delivery**, where it is 10 bps
+on *both*. The first run charged delivery anyway, and it charged the ``mid`` impact bucket
+(25 bps a leg, names ranked 301-750 by turnover) to a set of names that is entirely mega
+and large. Together that over-stated the round trip fourfold, and h15's reported "cost is
+7x to 25x the edge" was pricing the wrong instrument.
+
+Fixed here: the segment defaults to ``Segment.INTRADAY``, because it is a fact about what
+these rules do rather than a parameter, and passing ``as_of`` prices each name in its own
+bucket instead of charging one blended number to all of them. Correcting a cost model is
+not a new trial - the signals are unchanged and nothing was searched - and the corrected
+verdicts are still four rejections.
 """
 from __future__ import annotations
 
@@ -239,31 +253,78 @@ def backtest(con, tradingsymbol: str, system: str, *, start=None, end=None,
             "trades": trades, "hypothetical": hypothetical}
 
 
+def buckets(con, symbols, as_of) -> dict[str, str]:
+    """Each name's liquidity bucket on ``as_of``, by the turnover ranking that prices
+    impact in ``costs.india``.
+
+    ``as_of`` is required rather than defaulted to the latest snapshot: a cost charged from
+    a ranking the strategy could not have seen is look-ahead in the cost model, which is
+    the same error as look-ahead in the signal and harder to notice.
+    """
+    rows = con.execute("""
+        WITH ranked AS (
+            SELECT ticker, ROW_NUMBER() OVER (ORDER BY turnover DESC NULLS LAST) AS rnk
+            FROM universe_snapshots
+            WHERE business_date = (SELECT MAX(business_date) FROM universe_snapshots
+                                   WHERE business_date <= ? AND exchange = 'NSE'
+                                     AND instrument_type = 'STK')
+              AND exchange = 'NSE' AND instrument_type = 'STK'
+              AND turnover IS NOT NULL AND turnover > 0
+        )
+        SELECT ticker, CASE WHEN rnk <= 100 THEN 'mega' WHEN rnk <= 300 THEN 'large'
+                            WHEN rnk <= 750 THEN 'mid'  WHEN rnk <= 1500 THEN 'small'
+                            ELSE 'micro' END
+        FROM ranked WHERE ticker IN (SELECT UNNEST(?))
+    """, [as_of, list(symbols)]).fetchall()
+    return dict(rows)
+
+
 def evaluate(con, symbols: list[str], system: str, *, bucket: str = "mid",
-             ghost: bool = False, **kw) -> dict:
+             as_of=None, segment=None, ghost: bool = False, **kw) -> dict:
     """Aggregate a system across names, net of a round trip per trade.
 
     The benchmark is **cash**, not the market: an intraday system holds nothing overnight,
     so the alternative to trading is being flat, and beating flat is the whole claim.
     That is a *lower* bar than the daily strategies faced, which is worth stating plainly
     rather than letting a favourable comparison pass unnoticed.
-    """
-    from ..costs.india import CostModel
-    cost = CostModel().round_trip(turnover=1_000_000, bucket=bucket)["bps"] / 10_000
 
-    gross, net, per_symbol = [], [], {}
+    ``segment`` defaults to ``Segment.INTRADAY`` because every system in this module closes
+    inside the session; charging delivery STT to a position that never settles is not
+    conservatism, it is the wrong instrument. Pass ``as_of`` to price each name in its own
+    liquidity bucket - a blended bucket charges the megas for the smalls' impact and the
+    other way round, and the per-name numbers are what a real book would face.
+    """
+    from ..costs.india import CostModel, Segment
+    seg = segment or Segment.INTRADAY
+    model = CostModel()
+
+    def rt(b: str) -> float:
+        return model.round_trip(turnover=1_000_000, segment=seg, bucket=b)["bps"] / 10_000
+
+    by_name = buckets(con, symbols, as_of) if as_of is not None else {}
+    flat = rt(bucket)
+
+    gross, net, per_symbol, charged = [], [], {}, []
     for sym in symbols:
+        cost = rt(by_name[sym]) if sym in by_name else flat
         r = backtest(con, sym, system, **kw)
         taken = [t for t in r["trades"] if (not ghost) or t["ghost_skip"]]
         g = [t["ret"] for t in taken]
         n = [x - cost for x in g]
         gross += g
         net += n
+        charged += [cost] * len(g)
         per_symbol[sym] = {"sessions": r["sessions"], "trades": len(taken),
                            "fire_rate": len(taken) / max(r["sessions"], 1),
+                           "bucket": by_name.get(sym, bucket), "cost": cost,
+                           "mean_gross": mean(g) if g else None,
                            "mean_net": mean(n) if n else None}
     return {"system": system, "ghost": ghost, "symbols": len(symbols),
-            "trades": len(net), "cost_per_trade": cost,
+            "segment": seg.value,
+            "trades": len(net),
+            # Trade-weighted, so it is the cost the aggregate actually paid rather than
+            # the cost of the average name.
+            "cost_per_trade": mean(charged) if charged else flat,
             "mean_gross": mean(gross) if gross else float("nan"),
             "mean_net": mean(net) if net else float("nan"),
             "t_net": _t(net), "win_rate": (sum(1 for x in net if x > 0) / len(net))

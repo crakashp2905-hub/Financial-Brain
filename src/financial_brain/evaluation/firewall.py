@@ -14,7 +14,8 @@ reasons. Gates, on non-overlapping rebalances from ``benchmark.evaluate``:
 ``regime``           no market regime where the IC is significantly the other way
 ``costs``            the long-only top quintile (India: shorting cash equity is not an
                      option) still beats the universe after round-trip costs on its
-                     measured turnover
+                     measured turnover, each rebalance charged its *own* holdings' costs
+                     (``costs/book.py``) rather than one bucket for the whole book
 ``capacity``         enough names per rebalance to form a quintile worth holding
 
 Thresholds are module constants, versioned with the code; changing them is a code change
@@ -28,6 +29,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from statistics import NormalDist, mean, stdev
 
+from ..costs import book
 from ..costs.india import CostModel
 from . import benchmark
 
@@ -102,13 +104,24 @@ def validate(con, feature: str, horizon: int = 20, *, bucket: str = "mid",
         reasons.append(f"IC t={ic_t:+.2f}, p={p:.3g} x {trials} trials is not < {ALPHA}")
 
     # Costs on the long-only top quintile's measured turnover.
+    #
+    # Each rebalance is charged what *its own holdings* cost, not one bucket for the whole
+    # book (``costs/book.py``). Every signal's top quintile here is 45-52% small or micro,
+    # so the flat ``mid`` charge of 70.87 bps was optimistic by a third to a half - the
+    # error ran in favour of the strategies, which is the direction that matters. The flat
+    # number is kept alongside so the size of the correction stays visible.
     turn = _turnover(series)
-    cost = CostModel().round_trip(turnover=1_000_000, bucket=bucket)["bps"] / 10_000
-    net = [s["top_excess"] - turn * cost for s in series if s["top_excess"] is not None]
+    flat = CostModel().round_trip(turnover=1_000_000, bucket=bucket)["bps"] / 10_000
+    held = book.per_rebalance(con, series)
+    pairs = [(s["top_excess"], c if c is not None else flat)
+             for s, c in zip(series, held) if s["top_excess"] is not None]
+    net = [x - turn * c for x, c in pairs]
+    cost = mean([c for _, c in pairs]) if pairs else flat
     gates["costs"] = bool(net) and mean(net) > 0
     if not gates["costs"]:
         reasons.append(f"top quintile net of costs {mean(net) if net else float('nan'):+.2%}"
-                       f" per period (turnover {turn:.0%}, round trip {cost:.2%})")
+                       f" per period (turnover {turn:.0%}, round trip {cost:.2%} on the"
+                       f" book's own liquidity mix, {flat:.2%} flat)")
 
     sr_var = prior[1] if prior[1] is not None else (1 / max(len(net), 1))
     sr, dsr = deflated_sharpe(net, trials, sr_var)
@@ -148,7 +161,8 @@ def validate(con, feature: str, horizon: int = 20, *, bucket: str = "mid",
            "gates": gates, "reasons": reasons, "trials": trials, "dates": len(series),
            "mean_ic": mean(ics) if ics else float("nan"), "ic_t": ic_t, "sharpe": sr,
            "deflated_sharpe": dsr, "turnover": turn, "net_per_period": mean(net) if net else
-           float("nan"), "ic_by_year": years,
+           float("nan"), "round_trip": cost, "round_trip_flat": flat,
+           "bucket_mix": book.mix(con, series), "ic_by_year": years,
            "ic_by_regime": {g: mean(v) for g, v in by_reg.items()}}
     if record:
         con.execute("""INSERT INTO evaluation_runs (run_at, version, feature, horizon, params,

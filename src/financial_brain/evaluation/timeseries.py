@@ -49,6 +49,8 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from statistics import NormalDist, mean, stdev
 
+from ..costs import book
+from ..costs.book import BUCKETS
 from ..costs.india import CostModel
 from ..features import candles
 from .firewall import (ALPHA, MIN_DSR, MIN_YEAR_AGREEMENT, REGIME_T, deflated_sharpe)
@@ -404,6 +406,7 @@ def series(con, name: str, *, start=None, end=None, min_turnover: float = MIN_TU
     elif any(k.startswith("fired_20_") for k in spec["needs"]):
         raise ValueError(f"{name} needs candlestick flags, and no `candles` table exists; "
                          "run `fb features` to build them")
+    book.ensure_view(con)
     rows = con.execute(f"""
         WITH ind AS (
             SELECT lineage, d, c, tv, {_needed(spec)}
@@ -429,24 +432,40 @@ def series(con, name: str, *, start=None, end=None, min_turnover: float = MIN_TU
                    LAG(tv, {lag} + 1) OVER (PARTITION BY lineage ORDER BY d) AS tv_known,
                    c / NULLIF(LAG(c) OVER (PARTITION BY lineage ORDER BY d), 0) - 1 AS ret
             FROM held
+        ), eligible AS (
+            SELECT * FROM lagged
+            WHERE ret IS NOT NULL AND pos IS NOT NULL AND prev_pos IS NOT NULL
+              AND tv_known >= {min_turnover}
+              -- Indian equities trade under circuit limits of 5-20% a session, so a move
+              -- beyond 50% is a split or bonus this archive failed to adjust, not a market
+              -- move. One of them corrupts an equal-weighted average; the raw panel holds
+              -- a +3750% bar and 146 sessions above +100%.
+              AND ABS(ret) <= {max_abs}
+        ), bucketed AS (
+            -- Impact is priced off an **absolute national** turnover rank (top 100 is
+            -- mega, and so on), so the ranking population has to be the exchange's whole
+            -- equity list. Ranking inside this filtered universe instead put 62% of its
+            -- names inside rank 750 and charged them mid impact or better, when nationally
+            -- most of them are small - an error entirely in the strategy's favour.
+            SELECT e.*, COALESCE(b.bucket, 'micro') AS bucket
+            FROM eligible e LEFT JOIN _liquidity_buckets b USING (d, lineage)
         )
         SELECT d,
                AVG(ret) FILTER (WHERE pos = 1)                  AS strat_gross,
                AVG(ret)                                          AS universe,
                COUNT(*) FILTER (WHERE pos = 1)                   AS held,
                COUNT(*)                                          AS eligible,
-               COUNT(*) FILTER (WHERE pos = 1 AND prev_pos = 0)   AS entries
-        FROM lagged
-        WHERE ret IS NOT NULL AND pos IS NOT NULL AND prev_pos IS NOT NULL
-          AND tv_known >= {min_turnover}
-          -- Indian equities trade under circuit limits of 5-20% a session, so a move
-          -- beyond 50% is a split or bonus this archive failed to adjust, not a market
-          -- move. One of them corrupts an equal-weighted average; the raw panel holds a
-          -- +3750% bar and 146 sessions above +100%.
-          AND ABS(ret) <= {max_abs}
+               COUNT(*) FILTER (WHERE pos = 1 AND prev_pos = 0)   AS entries,
+               COUNT(*) FILTER (WHERE pos = 1 AND bucket = 'mega')  AS h_mega,
+               COUNT(*) FILTER (WHERE pos = 1 AND bucket = 'large') AS h_large,
+               COUNT(*) FILTER (WHERE pos = 1 AND bucket = 'mid')   AS h_mid,
+               COUNT(*) FILTER (WHERE pos = 1 AND bucket = 'small') AS h_small,
+               COUNT(*) FILTER (WHERE pos = 1 AND bucket = 'micro') AS h_micro
+        FROM bucketed
         GROUP BY d ORDER BY d""").fetchall()
     return [{"date": r[0], "gross": r[1], "universe": r[2], "held": r[3],
-             "eligible": r[4], "entries": r[5]} for r in rows]
+             "eligible": r[4], "entries": r[5],
+             "mix": dict(zip(BUCKETS, r[6:11]))} for r in rows]
 
 
 def run(con, name: str, *, bucket: str = "mid", **kw) -> dict:
@@ -460,10 +479,21 @@ def run(con, name: str, *, bucket: str = "mid", **kw) -> dict:
     if not rows:
         return {"strategy": name, "days": 0, "excess": []}
 
-    cost = CostModel().round_trip(turnover=1_000_000, bucket=bucket)["bps"] / 10_000
-    excess, turns = [], []
+    model = CostModel()
+    rt = {b: model.round_trip(turnover=1_000_000, bucket=b)["bps"] / 10_000
+          for b in BUCKETS}
+    flat = rt[bucket]
+    excess, turns, costs, mix = [], [], [], dict.fromkeys(BUCKETS, 0)
     for r in rows:
         gross = r["gross"] if r["held"] else 0.0        # flat means cash, not absent
+        # The book pays what it holds, not what the median listed company would pay. A
+        # trend rule's holdings run to the illiquid end of the universe - so the flat
+        # ``mid`` charge understated its round trip, in the strategy's favour.
+        n = sum(r["mix"].values())
+        cost = (sum(rt[b] * k for b, k in r["mix"].items()) / n) if n else flat
+        for b, k in r["mix"].items():
+            mix[b] += k
+        costs.append(cost)
         # The firewall's convention, matched deliberately: turnover is the fraction of
         # the book *replaced*, and each replacement costs one round trip. Counting
         # entries and exits both would charge two round trips for one change of hands.
@@ -471,8 +501,11 @@ def run(con, name: str, *, bucket: str = "mid", **kw) -> dict:
         turn = r["entries"] / denom
         turns.append(min(turn, 2.0))
         excess.append(gross - (r["universe"] or 0.0) - min(turn, 2.0) * cost)
+    total = sum(mix.values()) or 1
     return {"strategy": name, "days": len(rows), "rows": rows, "excess": excess,
-            "turnover": mean(turns), "cost_round_trip": cost,
+            "turnover": mean(turns), "cost_round_trip": mean(costs),
+            "cost_round_trip_flat": flat,
+            "bucket_mix": {b: k / total for b, k in mix.items()},
             "avg_held": mean(r["held"] for r in rows),
             "invested_days": sum(1 for r in rows if r["held"]) / len(rows)}
 
