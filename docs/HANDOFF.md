@@ -435,3 +435,56 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   evaluates columns in `features`. Adding a "filed high-materiality news in the last N
   sessions" feature would let it be tested properly, with costs and multiple-testing
   correction. That is the highest-value next build.
+- 2026-09-27 — **Two things measured wrongly for eighty-six trials, and the horizon nobody
+  swept.** Three separate errors were found, all in the *measurement* rather than in any
+  signal, and the corrections moved the research programme more than the preceding week of
+  new strategies did.
+  * **The cost model charged one bucket and one segment to every book ever tested**
+    (`costs/book.py`). The intraday systems square off inside the session - the **MIS**
+    segment, STT on the sell leg only - and were charged **delivery** at the `mid` impact
+    bucket, on a name set that is 62% mega and 38% large. Corrected to 0.175%, they move
+    from 7-25x their edge to **1.8-6.3x**. Per name, **28 of 98 are net positive** on
+    dual_thrust and mega-only is *worse* than the average: the winners are volatile
+    mid-caps, not the most liquid names. The daily books ran the other way, under-charged
+    by 2-23%, which moves every verdict further from passing and none toward it.
+  * **The horizon was never swept, and it was the binding constraint.** An 80 bps round
+    trip over a hold of *h* sessions is a hurdle of 80/h bps a session - **4.0 at h = 20**,
+    2.0 at h = 40, 0.3 at h = 250 - and the measured alphas run 1-10 bps a session. Every
+    cross-sectional test had run at h = 20, just inside the losing side of that line.
+    `mom_12_1` is **net positive at every horizon** and peaks at h = 40 (+1.202% per
+    rebalance, t = +2.85, turnover 36%); `above_ma200` crosses zero near h = 50 with an IC
+    that never decays; `ret_20d` is negative everywhere and worsening.
+  * **The firewall was asking low volatility the wrong question.** `vol_60` has the
+    strongest rank IC of anything measured here (**t = +12.30**) and negative raw excess at
+    every horizon, because the anomaly claims a positive *intercept*, not a higher return.
+    `evaluation/riskadjusted.py` measures Jensen's alpha with Newey-West errors. The answer
+    is still no and now for the right reason: alpha is negative and **beta against Nifty
+    500 is 0.91-0.97**, so low residual volatility in Indian equities does not buy low
+    market beta. NSE's own `Nifty500 Low Volatility 50` returned +281% against Nifty 500's
+    +243% over a decade at **beta 1.08-1.15**.
+  * **The leading candidate is `dist_52w_high`** (George & Hwang 2004), net of per-name
+    costs, against the cap-weighted market: **beta 0.964, alpha +0.705% per 20 sessions,
+    t = +3.12** - roughly **+9% a year at market beta**. Its alpha barely moved between
+    benchmarks (+0.642 -> +0.705) where low-vol's beta jumped from 0.62 to 0.91, and that
+    asymmetry is the difference between an effect and a benchmark artifact.
+  **It does not pass.** The 45-combination horizon sweep and the 24 risk-adjusted trials
+  are now recorded - the ledger went **81 -> 126 -> 150 trials** and the Bonferroni bar to
+  **|t| > 3.59** - so the honest position is that the closest result in the project's
+  history is half a t-statistic short of its own bar, on a search that has not been
+  confirmed out of sample.
+  **Three bugs of mine are recorded with the findings**, because two of them produced
+  *passing* results: a single-day liquidity snapshot applied to eleven years of holdings
+  (reported costs double the truth); ranking names inside each backtest's own filtered
+  universe rather than nationally (the impact tiers are absolute ranks); and demeaning *x*
+  before an alpha regression, which makes the intercept `mean(y)` and reported low
+  volatility at **t = +4.99, clearing the bar**, plus momentum at +21% a year. The
+  estimator is now pinned against planted values - a check that belonged before the
+  measurement, not after it.
+  **Where the next edge could come from:** the two survivors are both momentum-family
+  (12-1 momentum and 52-week-high proximity), both slow, both net positive, both short of
+  the bar. [[h20]] pre-registers the out-of-sample confirmation and it needs calendar time
+  at h = 40. Meanwhile the cross-sectional null now exists (`synthetic.materialise` builds
+  `features` from the production SQL), so the separation check that was only ever available
+  to timing rules is available to the quintile tests - and `evaluation/genome.py` tests
+  one-strategy-per-stock walk-forward, with a `cheat=True` mode that measures how much
+  in-sample selection inflates itself.
