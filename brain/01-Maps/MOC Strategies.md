@@ -41,6 +41,11 @@ is not a candidate.
 | [[h16]] - ACQUISITION | REJECT | +0.0141%, passes cost and capacity, t = +2.09 |
 | [[h16]] - nine other event types | REJECT | see [[The archive screens out, it does not pick]] |
 | intraday candles | REJECT | apparent reversal was **bid-ask bounce** |
+
+**Read against the null, not against zero.** [[Running the strategies on noise]] shows a
+strategy's own t conflates signal with cost drag. Turtle is third-worst by absolute t and
+has the *largest* separation from its turnover-matched null; the two band variants score
+*below* theirs.
 | above_ma50 | REJECT | t = +1.44 |
 | rsi/stoch/williams/cci | REJECT | |t| < 0.7 on ~80% turnover |
 | macd_hist, mfi, obv_slope | REJECT | t -1.6 to -2.9, costs |

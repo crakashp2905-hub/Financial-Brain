@@ -236,3 +236,30 @@ def test_every_tracked_event_type_has_a_strategy():
     from financial_brain.features import event_flags as ef
     for event_type in ef.TRACKED:
         assert f"event_{event_type.lower()}" in ts.STRATEGIES
+
+
+# --- the synthetic null -------------------------------------------------------
+
+def test_the_null_builder_never_touches_the_real_tables():
+    """The first version renamed production tables and put views in their place. It
+    failed on eod_prices being a view, aborting with adjusted_prices already renamed and
+    nothing to serve it - the real schema broken by a test of the harness.
+
+    Nothing that tests the measuring instrument may damage the thing measured.
+    """
+    import inspect
+
+    from financial_brain.evaluation import synthetic as syn
+    src = inspect.getsource(syn)
+    assert "RENAME TO" not in src, "the null must not rename production tables"
+    assert "ATTACH" in inspect.getsource(syn.materialise)
+    assert "nulldb." in inspect.getsource(syn.materialise)
+
+
+def test_the_null_panel_has_matched_volatility_and_no_structure():
+    import inspect
+
+    from financial_brain.evaluation import synthetic as syn
+    src = inspect.getsource(syn.build)
+    assert "rng.gauss(mu, sigma)" in src, "drift and volatility are matched per name"
+    assert "calendar" in src, "the real trading calendar is reused"

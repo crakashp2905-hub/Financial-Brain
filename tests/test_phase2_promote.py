@@ -6,7 +6,7 @@ The refusals matter as much as the promotions, so they are reported with their r
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -14,6 +14,14 @@ from financial_brain.config import Config
 from financial_brain.decisions import promote
 from financial_brain.decisions import record as dr
 from financial_brain.storage.db import Database
+
+
+#: The tests stub a price at 2026-09-18 and the safety gate refuses stale data, so
+#: "now" has to be pinned. Leaving it as the wall clock made these tests pass for eight
+#: days and then fail - the price stopped being recent enough, with nothing in the code
+#: having changed. A test that depends on the calendar is a test that fails on a date
+#: nobody chose.
+AS_OF = date(2026, 9, 18)
 
 
 @pytest.fixture
@@ -69,7 +77,7 @@ def test_a_complete_draft_walks_to_paper_and_opens_a_trade(con, monkeypatch):
     _evidence(con, "ev_b")
     did = _draft(con)
     monkeypatch.setattr("financial_brain.constitution.rules.check", lambda *a, **k: [])
-    out = promote.run(con)
+    out = promote.run(con, as_of=AS_OF)
     assert out["reached_paper"] == 1
     assert dr._state(con, did) == "PAPER_CANDIDATE"
 
@@ -79,7 +87,7 @@ def test_a_draft_missing_contrary_evidence_stops_with_the_reason(con, monkeypatc
     _evidence(con, "ev_a")
     did = _draft(con, contrary_evidence=[], supporting_evidence=["ev_a"])
     monkeypatch.setattr("financial_brain.constitution.rules.check", lambda *a, **k: [])
-    out = promote.run(con)
+    out = promote.run(con, as_of=AS_OF)
     assert out["reached_paper"] == 0
     assert "supporting and contrary evidence" in out["blocked"][0]["why"]
     assert dr._state(con, did) == "DRAFT"
@@ -94,7 +102,7 @@ def test_the_constitution_blocking_a_buy_is_reported_not_swallowed(con, monkeypa
     _draft(con)
     monkeypatch.setattr("financial_brain.constitution.rules.check",
                         lambda *a, **k: [{"rule": "max position 2%", "fact": "weight 3%"}])
-    out = promote.run(con)
+    out = promote.run(con, as_of=AS_OF)
     assert out["reached_paper"] == 0
     assert "constitution: max position 2%" in out["blocked"][0]["why"]
 
@@ -105,8 +113,8 @@ def test_promotion_never_reaches_human_approval(con, monkeypatch):
     _evidence(con, "ev_b")
     did = _draft(con)
     monkeypatch.setattr("financial_brain.constitution.rules.check", lambda *a, **k: [])
-    promote.run(con)
-    promote.run(con)                       # again, in case it would keep walking
+    promote.run(con, as_of=AS_OF)
+    promote.run(con, as_of=AS_OF)                       # again, in case it would keep walking
     assert dr._state(con, did) == "PAPER_CANDIDATE", "only a human approves"
 
 
@@ -116,7 +124,7 @@ def test_a_watch_call_is_not_paper_traded(con, monkeypatch):
     _evidence(con, "ev_b")
     _draft(con, action="WATCH", sizing={})
     monkeypatch.setattr("financial_brain.constitution.rules.check", lambda *a, **k: [])
-    out = promote.run(con)
+    out = promote.run(con, as_of=AS_OF)
     assert out["not_tradeable"] == 1 and out["reached_paper"] == 0
 
 
@@ -130,14 +138,14 @@ def test_a_decision_waiting_for_tomorrows_price_is_retried_not_abandoned(con, mo
     con.execute("UPDATE decisions SET created_at = ? WHERE decision_id = ?",
                 [datetime(2026, 9, 30, tzinfo=timezone.utc), did])
     monkeypatch.setattr("financial_brain.constitution.rules.check", lambda *a, **k: [])
-    first = promote.run(con)
+    first = promote.run(con, as_of=AS_OF)
     assert first["awaiting_price"] == 1 and first["blocked"] == []
-    again = promote.run(con)
+    again = promote.run(con, as_of=AS_OF)
     assert again["considered"] == 1, "still picked up, because it has no trade yet"
     con.execute("""CREATE OR REPLACE VIEW adjusted_prices AS SELECT * FROM (VALUES
         ('L1', DATE '2026-10-01', CAST(101.0 AS DOUBLE)))
         t(lineage, business_date, close_adj)""")
-    assert promote.run(con)["traded"] == 1, "the trade opens by itself once a price exists"
+    assert promote.run(con, as_of=AS_OF)["traded"] == 1, "the trade opens by itself once a price exists"
 
 
 def test_a_traded_decision_is_not_considered_again(con, monkeypatch):
@@ -146,7 +154,7 @@ def test_a_traded_decision_is_not_considered_again(con, monkeypatch):
     _evidence(con, "ev_b")
     _draft(con)
     monkeypatch.setattr("financial_brain.constitution.rules.check", lambda *a, **k: [])
-    first = promote.run(con)
+    first = promote.run(con, as_of=AS_OF)
     assert first["traded"] == 1
-    assert promote.run(con)["considered"] == 0, "a decision with a trade is done here"
+    assert promote.run(con, as_of=AS_OF)["considered"] == 0, "a decision with a trade is done here"
     assert con.execute("SELECT COUNT(*) FROM paper_trades").fetchone()[0] == 1
