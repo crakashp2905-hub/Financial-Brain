@@ -1102,6 +1102,36 @@ def cmd_kite(args) -> int:
     return 2
 
 
+def cmd_research(args) -> int:
+    """The published-anomaly catalogue, and what of it this project can reach."""
+    from . import research as R
+    if args.blocked:
+        print("missing inputs, ranked by how many strategies they block:")
+        for need, names in R.blocked_by_data().items():
+            print(f"  {need:<22} {len(names):>2}  {', '.join(names[:4])}"
+                  + (" ..." if len(names) > 4 else ""))
+        return 0
+    if args.family:
+        rows = R.by_family(args.family)
+    elif args.ready:
+        rows = R.by_status(R.READY)
+    else:
+        rows = R.ALL
+    for f in rows:
+        mark = {"ready": " ", "needs-fundamentals": "F",
+                "needs-external": "X"}[f["status"]]
+        print(f"{mark} {f['name']:<26} {f['family']:<17} {f['source']}")
+        if args.verbose:
+            print(f"    {f['claim']}")
+            if f["prior"]:
+                print(f"    -> {f['prior']}")
+    s = R.summary()
+    print(f"\n{s['total']} strategies, {s['sources']} papers.  "
+          f"{s['ready']} ready, {s['needs_fundamentals']} need fundamentals (F), "
+          f"{s['needs_external']} need external data (X)")
+    return 0
+
+
 def cmd_safety(args) -> int:
     """Is now a sensible time to act, and is this name safe to act on?"""
     from .decisions import safety
@@ -1737,6 +1767,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--limit", type=int, default=10)
     g.add_argument("--port", type=int, default=8765)
     g.set_defaults(fn=cmd_kite)
+
+    g = sub.add_parser("research", help="the published-anomaly catalogue")
+    g.add_argument("--family")
+    g.add_argument("--ready", action="store_true", help="only what is computable now")
+    g.add_argument("--blocked", action="store_true", help="what missing data costs us")
+    g.add_argument("--verbose", "-v", action="store_true")
+    g.set_defaults(fn=cmd_research)
 
     g = sub.add_parser("safety", help="situational awareness: when not to act")
     g.add_argument("--isin")

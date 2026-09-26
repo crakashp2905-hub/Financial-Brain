@@ -266,6 +266,16 @@ LEFT JOIN candles k ON k.lineage = b.lineage AND k.business_date = b.d
 """
 
 
+#: Event flags ride along the same way candles do: LEFT JOIN, because a session with no
+#: filing is a zero rather than a missing row.
+EVENT_JOIN = """
+CREATE OR REPLACE TEMP TABLE _bars AS
+SELECT b.*, e.* EXCLUDE (business_date, lineage)
+FROM _bars b
+LEFT JOIN event_flags e ON e.lineage = b.lineage AND e.business_date = b.d
+"""
+
+
 def _has_table(con, name: str) -> bool:
     return bool(con.execute("""SELECT COUNT(*) FROM duckdb_tables()
                                WHERE table_name = ?""", [name]).fetchone()[0])
@@ -291,6 +301,11 @@ def series(con, name: str, *, start=None, end=None, min_turnover: float = MIN_TU
     if needs_vix:
         for st in [q for q in VIX_JOIN.strip().split(";\n") if q.strip()]:
             con.execute(st)
+    needs_events = any(k.startswith("held_") for k in spec["needs"])
+    if needs_events and not _has_table(con, "event_flags"):
+        raise ValueError(f"{name} needs event flags; run `fb features` to build them")
+    if needs_events:
+        con.execute(EVENT_JOIN)
     if _has_candles(con):
         con.execute(CANDLE_JOIN)
     elif any(k.startswith("fired_20_") for k in spec["needs"]):
@@ -469,3 +484,38 @@ for _k in ("hammer", "shooting_star", "bullish_engulfing", "bearish_engulfing",
         "claim": candles.PATTERNS[_k]["means"] + " Held 20 sessions after it fires.",
         "source": f"features/candles.py; prior stated there: {candles.PATTERNS[_k]['prior']}",
     }
+
+
+# An event is a moment, so the strategy is "hold for N sessions after it fires" - the same
+# stateless construction the candlestick patterns use, which sidesteps inventing an exit
+# rule the event itself does not provide. Horizons match the analogue measurement window.
+from ..features import event_flags as _event_flags  # noqa: E402
+
+_EVENT_HOLD = 90
+
+
+def _register_event_strategies() -> None:
+    """Add one hold-N strategy per tracked event type.
+
+    Wrapped in a function rather than run at module scope on purpose: a bare loop here
+    leaked its variables into the module namespace, and one of them was named ``_t`` -
+    which silently replaced the module's t-statistic function with the string 'BUYBACK'.
+    Every strategy validation would have reported a broken t. Two unrelated tests caught
+    it, which is the only reason it was not committed.
+    """
+    for event_type, measured in _event_flags.TRACKED.items():
+        col = "e_" + event_type.lower()
+        key = f"held_{_EVENT_HOLD}_{event_type.lower()}"
+        INDICATORS[key] = (
+            f"COALESCE(SUM({col}) OVER (w ROWS BETWEEN {_EVENT_HOLD - 1} PRECEDING "
+            f"AND CURRENT ROW), 0) > 0")
+        STRATEGIES[f"event_{event_type.lower()}"] = {
+            "entry": key, "exit": f"NOT {key}",
+            "needs": [key],
+            "claim": f"Hold for {_EVENT_HOLD} sessions after a high-materiality "
+                     f"{event_type} filing.",
+            "source": f"h16. Measured base rate: {measured}",
+        }
+
+
+_register_event_strategies()

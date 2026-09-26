@@ -75,3 +75,42 @@ The backtest fills at `max(trigger, bar_open)`, scans bars strictly forward, and
 entry before minute 15 where an opening range is used. If a result looks good, these are
 the first three things to check, before any celebration.
 """
+
+# 2026-09-26, result: all four REJECT, exactly as the prior stated.
+#
+#   system                trades  fires    gross       net        t   win
+#   opening_range         29,785    60%  +0.043%   -0.666%   -91.69   21%
+#   dual_thrust            8,530    17%  +0.096%   -0.613%   -40.03   22%
+#   r_breaker              4,439     9%  +0.060%   -0.649%   -30.44   21%
+#   dynamic_breakout_ii    3,699     7%  +0.028%   -0.681%   -26.19   22%
+#
+# On 100 names, 2 years, 18.45M minute bars, long leg only, squared off at the session
+# close, each trade paying a full round trip at the pessimistic mid bound (70.9 bps).
+#
+# **The gross edge is real and far too small.** Every system earns something before costs
+# - the opening-range effect exists - but the round trip is 7x to 25x the edge:
+#
+#   dual_thrust            7x        r_breaker            12x
+#   opening_range         16x        dynamic_breakout_ii  25x
+#
+# No parameter tuning closes a sevenfold gap, which is why none was attempted.
+#
+# **The elaboration works, and does not help enough.** dual_thrust fires on 17% of
+# sessions against the plain reference's 60%, and earns +0.096% against +0.043% - so the
+# extra machinery is doing exactly what it claims, selecting better trades and fewer of
+# them. It is simply not selective by the order of magnitude required. That is a more
+# useful result than "the systems do not work": they work, and the market they were
+# designed for is not this one.
+#
+# **Win rates of 21-22%** across all four confirm the shape: many small losses at the 1%
+# stop, occasional large winners. That is what an opening-range breakout is supposed to
+# look like, which is corroboration that the implementation is faithful rather than broken.
+#
+# These systems come from the futures literature, where a round trip is a fraction of a
+# basis point. Indian cash equity pays 20 bps of STT alone, before any spread or impact.
+# The strategies were never tested in the environment they were designed for, and the
+# measured gap is the size of that mismatch.
+#
+# ghost_trader was not run separately: as a modifier it can only reduce trade count, and
+# with a gross edge an order of magnitude below cost, trading less often cannot turn a
+# negative into a positive - it can only approach zero from below.

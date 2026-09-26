@@ -107,6 +107,21 @@ def check(con, decision: dict, rules: dict) -> list[dict]:
                          as_of]).fetchone()[0]
         if r:
             fail("governance.auditor_resignation_days", f"statutory auditor resigned {r}")
+    # The one screen in this file derived from a measurement rather than a principle.
+    # h16 tested twelve event types separately and CLARIFICATION - a company required to
+    # explain itself to the exchange - returned t = -6.73 across 191 names held, over
+    # 6,795 events and eleven years. It is the largest statistic of either sign this
+    # project has produced, and it fails the cost gate as a *trade* precisely because the
+    # useful form is this one: not buying costs nothing, buying costs 71 basis points.
+    if "clarification_days" in gov:
+        r = con.execute("""SELECT MAX(business_date) FROM announcements WHERE isin = ?
+                           AND event_type = 'CLARIFICATION' AND materiality = 'high'
+                           AND business_date > ? AND published_at <= ?""",
+                        [isin, d - timedelta(days=gov["clarification_days"]),
+                         as_of]).fetchone()[0]
+        if r:
+            fail("governance.clarification_days",
+                 f"exchange clarification filed {r}")
     if gov.get("exclude_insolvency"):
         r = con.execute("""SELECT MAX(business_date) FROM announcements WHERE isin = ?
                            AND event_type = 'INSOLVENCY' AND business_date > ?

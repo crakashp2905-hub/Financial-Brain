@@ -21,6 +21,9 @@ max_pledge_filings = 3            # promoter pledge (Reg. 31) filings tolerated.
 pledge_lookback_days = 365        # ...in this window
 auditor_resignation_days = 365    # no new buy within a year of an auditor resigning
 exclude_insolvency = true         # no new buy in a company in CIRP
+# Measured, not assumed: h16 found CLARIFICATION at t = -6.73 across 191 names held.
+# 126 calendar days is the 90 trading sessions the effect was measured over.
+clarification_days = 126          # no new buy after the exchange demanded an explanation
 
 [regime]
 no_new_buys_in = ["CRISIS"]       # regime brain v2 labels

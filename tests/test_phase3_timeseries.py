@@ -146,7 +146,7 @@ def test_every_strategy_declares_its_claim_and_its_source():
 
 #: Strategies needing a table the toy fixture does not build are covered by their own
 #: refusal tests below; this one asserts the price-only strategies all run.
-_NEEDS_EXTRA = ("candle_", "trend_calm_vix")
+_NEEDS_EXTRA = ("candle_", "trend_calm_vix", "event_")
 
 
 @pytest.mark.parametrize("name", sorted(k for k in ts.STRATEGIES
@@ -155,6 +155,16 @@ def test_every_price_strategy_runs_without_error(name):
     con = _db(_flat_then_jump(n_names=4, n_days=260))
     r = ts.run(con, name)
     assert r["days"] > 0
+
+
+def test_an_event_strategy_refuses_clearly_when_the_flags_are_absent():
+    """Event strategies need the event_flags table. A database without it still runs
+    every price strategy; only the rules that need the flags refuse."""
+    con = _db(_flat_then_jump(n_names=4, n_days=260))
+    assert not ts._has_table(con, "event_flags")
+    with pytest.raises(ValueError, match="event flags"):
+        ts.run(con, "event_insolvency")
+    assert ts.run(con, "ma_cross_200")["days"] > 0
 
 
 def test_a_vix_strategy_refuses_clearly_when_the_index_is_absent():
@@ -210,3 +220,19 @@ def test_impossible_returns_are_excluded_as_unadjusted_corporate_actions():
                    if r["universe"] is not None)
     finally:
         del ts.STRATEGIES["_always"]
+
+
+def test_registering_event_strategies_leaks_nothing_into_the_module():
+    """A bare loop at module scope once overwrote `_t`, the t-statistic function, with
+    the string 'BUYBACK' - so every validation would have reported a broken statistic.
+    Two unrelated tests caught it. This one names the failure directly."""
+    assert callable(ts._t)
+    assert ts._t([1.0, 2.0, 3.0, 4.0]) > 0
+    for leaked in ("_col", "_key", "_why", "col", "key", "event_type", "measured"):
+        assert not hasattr(ts, leaked), f"{leaked} leaked into the module namespace"
+
+
+def test_every_tracked_event_type_has_a_strategy():
+    from financial_brain.features import event_flags as ef
+    for event_type in ef.TRACKED:
+        assert f"event_{event_type.lower()}" in ts.STRATEGIES

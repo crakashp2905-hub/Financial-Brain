@@ -32,6 +32,15 @@ is not a candidate.
 | [[h13]] - ATR-scaled band | REJECT | t +0.43, net **positive**, **cost gate PASS** |
 | [[h13]] - + variance-ratio gate | REJECT | highest gross of all, churns 6x |
 | [[h14]] - + India VIX stand-down | REJECT | t -2.85; missed rebounds beat avoided losses |
+| [[h15]] - opening_range (intraday) | REJECT | gross **+0.043%**, cost 16x the edge |
+| [[h15]] - dual_thrust | REJECT | gross **+0.096%**, cost 7x the edge |
+| [[h15]] - r_breaker | REJECT | gross +0.060%, cost 12x |
+| [[h15]] - dynamic_breakout_ii | REJECT | gross +0.028%, cost 25x |
+| [[h16]] - **CLARIFICATION** | REJECT as a trade | **t = -6.73** on 191 names - usable as a *screen* |
+| [[h16]] - JOINT_VENTURE | REJECT | best net +0.0417%, passes cost, **capacity 10 names** |
+| [[h16]] - ACQUISITION | REJECT | +0.0141%, passes cost and capacity, t = +2.09 |
+| [[h16]] - nine other event types | REJECT | see [[The archive screens out, it does not pick]] |
+| intraday candles | REJECT | apparent reversal was **bid-ask bounce** |
 | above_ma50 | REJECT | t = +1.44 |
 | rsi/stoch/williams/cci | REJECT | |t| < 0.7 on ~80% turnover |
 | macd_hist, mfi, obv_slope | REJECT | t -1.6 to -2.9, costs |
@@ -41,7 +50,7 @@ is not a candidate.
 | [[Governance red flags]] | REJECT | costs at 80% turnover |
 | [[Timing model]] | REJECT | the benchmark was the median; see [[Beating the median is not an edge]] |
 
-Sixty-two trials, sixty-one rejections and one **void** - and since 2026-09-23 the list
+Seventy-eight trials, seventy-seven rejections and one **void** - and since 2026-09-23 the list
 includes stateful entry/exit systems, which [[Time-series strategies]] made evaluable for
 the first time. One signal cleared the significance gate - `above_ma200` at **t = +3.69** against a bar of
 3.29 - and died on turnover. It was then chased to a definite end over four pre-registered

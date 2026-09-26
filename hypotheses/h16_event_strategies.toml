@@ -1,0 +1,112 @@
+name = "Event-driven strategies, one type at a time"
+signal = "event_auditor_resignation, event_insolvency, event_clarification, event_scheme, event_joint_venture, event_order_win, event_fund_raising, event_acquisition, event_promoter_pledge, event_credit_rating, event_management_change, event_buyback"
+direction = 1
+horizon = 90
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+The event archive is the strongest data this project holds - 3.08M classified
+announcements - and it has only ever been used in aggregate. `news_20d` counted *any*
+high-materiality filing; `adverse_60d` counted a fixed bundle of bad ones. Both were
+rejected, and both had the defect the insider feature turned out to have: averaging event
+types that mean opposite things.
+
+The analogue base rates show how large that defect is:
+
+    AUDITOR_RESIGNATION   -3.58%        JOINT_VENTURE   +1.67%
+    INSOLVENCY            -3.29%        ORDER_WIN       +1.49%
+    CLARIFICATION         -2.54%        FUND_RAISING    +0.62%
+
+A single count averages +1.67% against -3.58% and gets approximately nothing, which is
+exactly what was measured. Twelve types are now tested separately, each held 90 sessions
+after a high-materiality filing - the same window the base rates were measured over, and
+the shape the literature uses for event studies.
+
+## Two entries that disagree with their own papers
+
+**FUND_RAISING measured +0.62%**, where Loughran & Ritter (1995) document equity issuers
+*underperforming* for years. **SCHEME measured -1.85%**, where Cusatis, Miles & Woolridge
+(1993) find spun-off units outperform. Either the Indian market differs, or the event
+classifier is grouping something the papers would not, or the base rate is noise. All
+three are worth knowing and only a proper test separates them.
+
+## What these tests are, and are not
+
+The base rates are **not** results. They are unconditional means over the full history:
+in-sample, uncounted by the trial ledger, and untested against costs, regimes or
+walk-forward stability. This is the first time they face any of that. A type whose base
+rate is +1.67% may still fail every gate, and the most likely reason is capacity - 277
+JOINT_VENTURE filings across eleven years is a handful of names at any moment.
+
+## Priors, in order of expectation
+
+1. **The negative types survive as filters, not as strategies.** AUDITOR_RESIGNATION and
+   INSOLVENCY are avoidance signals; going long after them should fail, and *that failing*
+   is the confirmation. The useful version of a negative signal is a constitution rule,
+   not a trade, and avoidance is free where a trade is not.
+2. **The positive types fail on capacity or cost.** ORDER_WIN has 5,557 cases and a +1.49%
+   mean on a **-2.29% median** - a right-skewed payoff where the mean is a few large
+   winners. Holding 90 sessions at that hit rate will not clear a Bonferroni bar now past
+   |t| > 3.4.
+3. **PROMOTER_PLEDGE is the one I would least confidently predict.** It is India-specific,
+   has 27,688 filings, a clear mechanism (promoters borrowing against their own stock
+   signals stress), and no US literature to have arbitraged it away. If anything here
+   passes, this is my guess.
+
+## What counts as success
+
+Every gate, net positive under the **pessimistic** cost bound, and capacity above 30 names
+held on an average session. A type that fires too rarely to hold thirty names is a finding
+about the archive, not about the market.
+"""
+
+# 2026-09-26, results: all twelve REJECT, and the priors mostly held.
+#
+#   event                 verdict       t   net/sess  held  gates failed
+#   AUDITOR_RESIGNATION   REJECT    -2.77   -0.0866%     6  sig,costs,dsr,capacity
+#   INSOLVENCY            REJECT    -0.83   -0.0382%     1  sig,costs,dsr,wf,capacity
+#   CLARIFICATION         REJECT    -6.73   -0.0367%   191  costs,dsr
+#   SCHEME                REJECT    -2.08   -0.0163%    59  sig,costs,dsr
+#   JOINT_VENTURE         REJECT    +2.24   +0.0417%    10  sig,dsr,capacity
+#   ORDER_WIN             REJECT    +0.91   +0.0079%    81  sig,dsr,wf
+#   FUND_RAISING          REJECT    -0.73   -0.0098%    30  sig,costs,dsr,wf,capacity
+#   ACQUISITION           REJECT    +2.09   +0.0141%   129  sig,dsr,wf
+#   PROMOTER_PLEDGE       REJECT    -2.89   -0.0173%    99  sig,costs,dsr,wf,regime
+#   CREDIT_RATING         REJECT    -0.69   -0.0034%   230  sig,costs,dsr,wf
+#   MANAGEMENT_CHANGE     REJECT    -2.35   -0.0255%   206  sig,costs,dsr
+#   BUYBACK               REJECT    -1.87   -0.0454%     0  everything
+#
+# **Prior 1 held: the negative types are avoidance signals, not trades.** CLARIFICATION
+# reaches t = -6.73 holding 191 names and PASSING capacity - the strongest signal of
+# either sign this project has measured. Going long after a company is forced to explain
+# itself loses consistently. It fails the cost gate because you cannot profit by buying,
+# which is exactly the point: the useful form is a constitution rule, and *avoidance is
+# free where a trade is not*.
+#
+# **Prior 2 held: the positives die on capacity.** JOINT_VENTURE has the best net at
+# +0.0417% and PASSES the cost gate, on 10 names held - precisely the "277 filings across
+# eleven years is a handful of names at any moment" the pre-registration named. ACQUISITION
+# passes both cost and capacity at +0.0141%, t = +2.09 against a bar of 3.4.
+#
+# **Prior 3 was wrong in its bet and right in its reasoning.** PROMOTER_PLEDGE was named
+# as the most likely to pass; it came in at t = -2.89, significantly negative. But the
+# mechanism the prior gave - promoters borrowing against their own stock signals stress -
+# predicts a negative sign. The reasoning pointed one way and the bet the other, which is
+# worth recording as a distinct kind of error from simply guessing wrong.
+#
+# **Both sign disagreements resolved, and the papers win one each.**
+#   FUND_RAISING  base rate +0.62% -> tested -0.0098%, t = -0.73.
+#                 Loughran & Ritter (1995) predicted underperformance and are supported;
+#                 the positive base rate did not survive costs, regimes or walk-forward.
+#   SCHEME        base rate -1.85% -> tested -0.0163%, t = -2.08, consistently negative.
+#                 Cusatis, Miles & Woolridge (1993) find spinoffs outperform; that does
+#                 not hold in this market.
+#
+# BUYBACK held 0 names because every BUYBACK filing is classified `medium` materiality, so
+# the high-materiality filter excludes all 5,803. That is a classifier question, not a
+# market result, and the entry is void rather than rejected.
+#
+# What this changes: the event archive's value is **negative screening**, not entry
+# timing. Four types reach |t| > 2 as longs-that-lose, and two of those hold enough names
+# to matter. That is a filter worth wiring into the constitution, and it is the first
+# thing this project has found that is both statistically strong and free to act on.

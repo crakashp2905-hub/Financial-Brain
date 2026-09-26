@@ -16,7 +16,8 @@ ISIN = "INE092A01019"
 BOOK = {"position": {"max_weight": 0.05}, "liquidity": {"min_adv20_inr": 5e7},
         "exclusions": {"isins": []},
         "governance": {"max_pledge_filings": 1, "pledge_lookback_days": 365,
-                       "auditor_resignation_days": 365, "exclude_insolvency": True},
+                       "auditor_resignation_days": 365, "exclude_insolvency": True,
+                       "clarification_days": 126},
         "regime": {"no_new_buys_in": ["CRISIS"]}, "process": {"min_horizon_days": 20}}
 
 
@@ -115,3 +116,46 @@ def test_example_constitution_loads_and_says_it_is_an_example(tmp_path):
     assert book["_is_example"] and book["position"]["max_weight"] == 0.05
     (tmp_path / "constitution.toml").write_text("[position]\nmax_weight = 0.1\n")
     assert rules.load(tmp_path)["position"]["max_weight"] == 0.1
+
+
+def _ann_mat(con, n, day, event_type, materiality):
+    """Like _ann, but the materiality is the thing under test."""
+    con.execute("""INSERT INTO announcements (news_id, source, business_date, isin,
+        event_type, materiality, published_at, evidence_key, observed_at)
+        VALUES (?, 'BSE', ?, ?, ?, ?, ?, 'k', NOW())""",
+                [n, day, ISIN, event_type, materiality,
+                 datetime.combine(day, datetime.min.time())])
+
+
+def test_a_recent_exchange_clarification_blocks_a_new_buy(con):
+    """The one screen here derived from a measurement rather than a principle.
+
+    h16 tested twelve event types separately; CLARIFICATION returned **t = -6.73** across
+    191 names held over 6,795 events and eleven years. It fails the cost gate as a trade -
+    you cannot profit by buying it - which is exactly why the usable form is a screen. Not
+    buying is free; buying costs 71 basis points.
+    """
+    _world(con)
+    _liquid(con, 5e8)
+    _ann_mat(con, "c1", date(2026, 9, 1), "CLARIFICATION", "high")
+    bad = rules.check(con, _decision(), {"governance": {"clarification_days": 126}})
+    assert [f["rule"] for f in bad] == ["governance.clarification_days"]
+
+
+def test_a_clarification_outside_the_measured_window_does_not_block(con):
+    """126 calendar days is the 90 trading sessions the effect was measured over. Past
+    that the measurement says nothing, so neither does the rule."""
+    _world(con)
+    _liquid(con, 5e8)
+    _ann_mat(con, "c2", date(2024, 1, 1), "CLARIFICATION", "high")
+    assert rules.check(con, _decision(), {"governance": {"clarification_days": 126}}) == []
+
+
+def test_a_routine_clarification_does_not_block(con):
+    """Only high-materiality filings were in the measured population, so only those
+    screen. The insider feature is why this matters: 30.6% of it turned out to be routine
+    compliance certificates."""
+    _world(con)
+    _liquid(con, 5e8)
+    _ann_mat(con, "c3", date(2026, 9, 1), "CLARIFICATION", "low")
+    assert rules.check(con, _decision(), {"governance": {"clarification_days": 126}}) == []
