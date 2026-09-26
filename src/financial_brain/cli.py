@@ -1019,6 +1019,44 @@ def cmd_strategy(args) -> int:
     return 0
 
 
+def cmd_band(args) -> int:
+    """h18: a portfolio no-trade band whose width is the name's own transaction cost.
+
+    Always runs the no-band control alongside, because the band's whole claim is a
+    *difference* and a banded number on its own says nothing about what the band did.
+    """
+    from .costs.india import Segment
+    from .evaluation import band
+    seg = Segment(args.segment)
+    with Database(load()).connect() as con:
+        for feature in args.feature:
+            row = {}
+            for banded in (False, True):
+                r = band.run(con, feature, args.horizon, positions=args.positions,
+                             banded=banded, direction=args.direction, segment=seg,
+                             start=args.start, end=args.end)
+                row[banded] = r
+                if not r["dates"]:
+                    print(f"{feature}: no rebalances with outcomes")
+                    continue
+                print(f"{feature:<18} {'band' if banded else 'plain':<6} "
+                      f"n {r['dates']:>4}  gross {r['mean_excess_gross']:+.4%}  "
+                      f"net {r['mean_excess']:+.4%}  turn {r['turnover']:.2%}  "
+                      f"cost {r['cost_per_period']:.4%}  t {r['t']:+.2f}")
+            a, b = row.get(False), row.get(True)
+            if a and b and a["dates"] and b["dates"]:
+                print(f"{'':18} {'delta':<6} "
+                      f"{'':7}gross {b['mean_excess_gross'] - a['mean_excess_gross']:+.4%}  "
+                      f"net {b['mean_excess'] - a['mean_excess']:+.4%}  "
+                      f"turn {b['turnover'] - a['turnover']:+.2%}  "
+                      f"cost {b['cost_per_period'] - a['cost_per_period']:+.4%}  "
+                      f"t {b['t'] - a['t']:+.2f}")
+                mix = ", ".join(f"{k} {v:.0%}" for k, v in b["bucket_mix"].items()
+                                if v > 0.005)
+                print(f"{'':18} holdings: {mix}")
+    return 0
+
+
 def cmd_kite(args) -> int:
     """Kite Connect: the daily login, and a read-only look at live data."""
     import os
@@ -1756,6 +1794,18 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--dry-run", action="store_true",
                    help="do not record the run as a trial")
     g.set_defaults(fn=cmd_strategy)
+
+    g = sub.add_parser("band", help="h18: a no-trade band as wide as the name's own cost")
+    g.add_argument("feature", nargs="+")
+    g.add_argument("--horizon", type=int, default=20)
+    g.add_argument("--positions", type=int, default=40)
+    g.add_argument("--direction", type=int, choices=[1, -1], default=1,
+                   help="-1 states the hypothesis 'low is good', e.g. low volatility")
+    g.add_argument("--segment", default="delivery",
+                   choices=["delivery", "intraday", "futures", "options"])
+    g.add_argument("--start", default=None)
+    g.add_argument("--end", default=None)
+    g.set_defaults(fn=cmd_band)
 
     g = sub.add_parser("kite", help="Kite Connect: daily login and read-only market data")
     g.add_argument("action", choices=["login", "status", "quote", "candles"])

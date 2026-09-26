@@ -1,0 +1,102 @@
+name = "Momentum held for a quarter, out of sample, against its own null"
+signal = "mom_12_1"
+direction = 1
+horizon = 40
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+This is the confirmatory test for the one result in this project that has ever been net
+positive with a mechanism behind it, and the pre-registration exists because the result came
+out of a **search**.
+
+## What was found, and how it was found
+
+An exploratory sweep of nine holding periods across five features - forty-five combinations,
+not pre-registered, examined *after* seeing the h = 20 results - found `mom_12_1` net positive
+at every horizon and peaking at h = 40:
+
+    h    IC t    gross/period   turnover   net/period   net t
+    5    +6.15      +0.215%        12%       +0.114%    +2.51
+    20   +3.78      +0.758%        27%       +0.541%    +2.63
+    40   +3.95      +1.501%        36%       +1.202%    +2.85
+    60   +3.44      +1.886%        45%       +1.521%    +2.53
+    250  +2.03      +6.650%        82%       +5.987%    +1.86
+
+All forty-five are now in `evaluation_runs`, which took the ledger from 81 trials to 126 and puts the Bonferroni bar at
+**|t| > 3.54**.
+**+2.85 does not clear it**, and that is the honest status: this is a search result requiring
+confirmation, not a finding.
+
+## Why it is worth a confirmatory trial rather than dismissal
+
+Three things separate it from the eighty-five rejections.
+
+**The shape is right.** The IC decays with horizon and the cost amortises with horizon; net is
+their product and peaks in the middle. That is what a real effect against a real cost looks
+like. Fitting produces a spike at one parameter with noise either side; this is a smooth
+unimodal curve over nine points, and every point is positive.
+
+**The turnover is structurally low.** 7% at h = 2 rising to 36% at h = 40, because a
+twelve-month lookback with a one-month skip barely reorders month to month. That is not a
+tuning artifact, it is a property of the signal's construction, and it is the single
+characteristic every rejected strategy lacked -
+[[Turnover explains 97% of it]] found |t| correlating with turnover at +0.985 across the
+PineScript batch, and this sits at the far end of that relationship.
+
+**It is the most replicated anomaly in the literature.** Jegadeesh & Titman (1993), confirmed
+out of sample by Jegadeesh & Titman (2001), internationally by Rouwenhorst (1998) and
+Griffin, Ji & Martin (2003), and it is Carhart's (1997) fourth factor. Finding momentum is
+not finding something new; failing to find it would have been the anomalous outcome.
+
+## The test, fixed before it runs
+
+**Out of sample.** The sweep used the whole history. This test uses only rebalances after the
+sweep's data cutoff, through `registry.test(mode="out_of_sample")`, which refuses to run until
+`MIN_OOS_DATES` rebalances exist. At h = 40 that is a real wait and the wait is the point.
+
+**Against a turnover-matched synthetic null.** Per [[Running the strategies on noise]], a
+36%-turnover rule scoring +2.85 has to be read against what 36% turnover scores on Brownian
+motion. The number that counts is **real minus null**, and if the separation is not positive
+the result is nothing whatever its absolute t.
+
+**Costed per name.** `costs/book.py`, the book's own liquidity mix - 9.9% mega, 20.5% large,
+40.0% mid, 26.5% small, 3.0% micro, which comes to 0.816% a round trip against the 0.709%
+flat charge every earlier test used. The correction runs *against* this hypothesis and is
+already in the numbers above.
+
+**Every firewall gate**, with walk_forward and regime carrying particular weight here for a
+specific reason stated below.
+
+## The prior
+
+**I expect this to fail the Bonferroni bar and to remain net positive.** Those are compatible
+and the combination is the most likely outcome: a true edge of roughly +0.030% a session -
+about **7.6% a year gross of the benchmark, before any borrowing or slippage beyond the
+modelled impact** - measured over 65 non-overlapping rebalances cannot reach |t| > 3.54 unless
+the effect is much larger than momentum has ever been reported to be. The arithmetic of the
+bar, not the quality of the signal, is what will reject it.
+
+If it passes, the required response is **not** to trade it. It is a second out-of-sample
+window and a capacity study at real size, because a 36%-turnover book of 40 names with 26.5%
+in small caps is exactly where the square-root impact law bites and the bucket table stops
+being adequate.
+
+## What would make a pass untrustworthy, stated now
+
+**The benchmark.** Excess is measured against the equal-weighted universe, which removes the
+market's level but not its composition. A momentum book held 40 sessions concentrates in
+whatever led the last year, and over a sample in which Indian equities rose substantially, a
+persistent tilt toward recent winners can earn a drift the equal-weighted benchmark does not
+charge back. If the result survives only in the trending regimes, it is the drift.
+
+**The 26.5% in small caps.** Momentum's strength in smaller names is well documented and so is
+the difficulty of trading it. The impact estimate for `small` is 60 bps a leg from a bucket
+table, not a measured spread - and [[The cost number that decided everything]] records that
+the one attempt to measure spreads directly (Corwin-Schultz) was unusable on this data. So the
+cost of the cheapest quarter of this book is the least certain number in the test.
+
+**Survivorship in the lookback.** `mom_12_1` needs twelve months of history, which silently
+excludes recent listings and anything with a gap. The benchmark scores names that delist at
+their last traded price rather than dropping them, so the *outcome* side is handled; the
+*eligibility* side means this is a test on names that had already survived a year.
+"""

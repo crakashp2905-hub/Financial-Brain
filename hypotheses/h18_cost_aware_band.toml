@@ -1,0 +1,117 @@
+name = "Grinold alpha against its own cost: the no-trade band nobody chose"
+signal = "above_ma200"
+direction = 1
+horizon = 20
+positions = 40
+aum_inr = 10_000_000
+rationale = """
+Eighty-six trials have now established one thing very firmly: the gross edges in this
+market at these horizons are real and are measured in **single basis points**, against a
+round trip that is measured in **tens**. Every attempt so far has answered that by looking
+for a bigger edge. This one answers it by not paying the toll.
+
+## What the correction to the cost model changed, and what it did not
+
+Two cost bugs were found before this hypothesis was written, both from the same line of
+code - one bucket charged to a whole book - and they ran in **opposite directions**:
+
+* the four intraday systems square off inside the session, which is the **MIS** segment
+  (STT 2.5 bps, sell leg only), and were charged **delivery** (10 bps, both legs) at the
+  ``mid`` impact bucket, on a name set that is 62% mega and 38% large. Over-stated ~4x.
+* every daily cross-sectional signal's top quintile is **45-52% small or micro**. The flat
+  ``mid`` charge of 70.87 bps *under*-stated those books by a third to a half.
+
+Both are now charged per name, point in time. **No verdict moved.** The daily error ran in
+the strategies' favour, so correcting it makes rejections more emphatic, and the intraday
+error ran against them without rescuing any. What it changes is the size of the problem:
+a long-only quintile book in Indian cash equity pays nearer **130 bps** a round trip, not
+71, and the honest gap between edge and toll is roughly twice what was reported.
+
+That is the setting for this test, and it makes the case for it stronger rather than weaker.
+
+## The idea, and why it is not h12 or h13 again
+
+h12 put a 5% hysteresis band on a single name's entry rule. h13 put a 1.5-ATR band on the
+same rule. Both were **time-series** bands on **one signal**, with a width **chosen** -
+5%, 1.5 - for a defensible reason but chosen nonetheless, which is the parameter the
+reader is entitled to be suspicious of.
+
+This is a **portfolio** band, at the rebalance, and its width is **not chosen**: it is the
+name's own measured transaction cost. The theory is old and specific. Under *proportional*
+costs the optimal policy is not to trade partially toward a target - that is the answer for
+*quadratic* costs (Garleanu & Pedersen 2013) - it is to **do nothing inside a band** and
+trade only to the band's edge outside it (Constantinides 1986; Davis & Norman 1990; Dumas &
+Luciano 1991). Indian cash-equity cost is dominated by STT and stamp duty, which are
+strictly proportional, so the band is the right object and the trade-rate is the wrong one.
+
+## Turning a rank into a rupee, which is the part that was missing
+
+A band compares an alpha to a cost, so the alpha has to be in the same units as the cost.
+Every test here has ranked names and never priced the rank. Grinold's refinement (1994),
+the form of the law of active management that is about a *signal* rather than a *portfolio*:
+
+    alpha_i  =  IC  x  sigma_cs  x  z_i
+
+the measured rank IC, times the cross-sectional dispersion of h-period returns, times the
+name's cross-sectional z-score of the signal. Each of the three is already measured here -
+the IC by ``benchmark.evaluate``, the dispersion from the same panel, the z-score from the
+signal itself. Nothing is fitted and nothing is new data.
+
+Then the rule, which has no free parameter at all:
+
+    replace incumbent j with candidate i only if  alpha_i - alpha_j  >  (c_i + c_j) / 2
+
+with c the per-name **round trip** from ``costs/book.py``. The halving is not a fudge: a
+swap sells one name and buys another, which is one round trip's worth of legs split
+across two names, and charging each its full round trip would double-count exactly the
+way the firewall's turnover convention already warns about. Both sides are h-period
+quantities - the alpha because ``sigma_cs`` is the dispersion of h-period returns, the
+cost because the position is held for h - so they are directly comparable with no
+annualisation anywhere.
+
+An incumbent is kept when the candidate's advantage does not cover the cost of the swap.
+The band's width is the cost; the cost is measured; there is nothing to tune.
+
+## What counts as success, fixed now
+
+* Every firewall gate. Bonferroni over all trials to date puts the bar near **|t| > 3.5**.
+* Net positive under the **per-name** cost charge, which is now the only charge there is.
+* **Separation from a turnover-matched synthetic null**, per
+  [[Running the strategies on noise]]. A band that reduces turnover will mechanically
+  improve the statistic; the null is what says whether anything else happened.
+* Turnover must actually fall. If it does not, the mechanism did not fire and the test
+  says nothing about the hypothesis.
+
+## The prior
+
+**I expect it to fail, and to fail informatively.** The band cannot create alpha. It can
+only stop paying for alpha differences too small to be worth harvesting, so the ceiling on
+what it can recover is exactly the cost drag - and the cost drag is already known per
+strategy. For a rule whose gross excess is negative before costs, nothing here helps.
+
+**Two candidates have a real chance and they are named in advance**, so that picking the
+winner afterwards is not available:
+
+1. **``ma_double_cross_50_200``** - t = +2.74, already net positive at 0.78% daily
+   turnover, and its only failure was significance. If the band lifts +2.74 past 3.5 that
+   is a pass, and the required response is an out-of-sample test, not a trade.
+2. **``turtle_20_10``** - reported at t = -5.20 and holder of the **largest separation from
+   its own null** at +2.49, meaning it contains information worth less than its 5.73%
+   turnover. It is the clearest case of a strategy whose problem is arithmetic rather than
+   emptiness, and a cost band is precisely the instrument for that.
+
+**The most likely single outcome** is that turnover falls sharply, net returns improve by
+roughly the cost saved, t-statistics rise by one to two points, and nothing clears 3.5.
+That would be a complete answer rather than a cliffhanger: it would mean the edges here are
+not merely too small to pay 130 bps, they are too small to pay *anything*, and the search
+has to move to signals with a different order of magnitude - which, per
+[[A hundred strategies and the data that blocks half of them]], means fundamentals.
+
+## What would make this result untrustworthy, stated before it runs
+
+The band makes the book **stale**, and stale books look good in a rising market for reasons
+that have nothing to do with the signal: they hold winners longer. The excess is measured
+against the equal-weighted universe, which controls the level but not this. So a pass must
+also survive the walk-forward and regime gates, and if it passes only in the trending
+regimes it is the drift and not the band.
+"""

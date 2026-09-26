@@ -3,7 +3,7 @@ type: map
 tags:
   - map
   - strategy
-updated: 2026-09-22
+updated: 2026-09-27
 ---
 
 # MOC Strategies
@@ -45,6 +45,53 @@ is not a candidate.
 | [[h17]] - ichimoku, keltner, CMF, AO, donchian_55 | REJECT | t -2.5 to -8.9 |
 | [[h17]] - pivot_breakout | REJECT | **t -24.22 at 17.36% turnover** |
 | [[h17]] - vwap_reversion | REJECT | reversion is real, **20x too small** |
+| **[[h20]] - mom_12_1 at h=40** | **NOT YET TESTED** | net **+1.20%/period, t = +2.85**, bar is 3.54 |
+
+## The horizon was never swept, and it was the binding constraint
+
+Every verdict above was reached at one holding period - h = 20 for the cross-sectional
+tests, same-session for the intraday ones. An 80 bps round trip over a hold of *h* sessions
+is a hurdle of 80/h bps a session: **4.0 at h = 20, 2.0 at h = 40, 0.3 at h = 250**. The
+measured alphas run 1-10 bps a session, so h = 20 sat just inside the losing side of a line
+nobody had drawn. [[The horizon was the binding constraint]]
+
+Swept across nine horizons, **net of the book's own per-name costs**:
+
+| Signal | crosses zero at | peak net t | peak turnover |
+|---|---|---:|---:|
+| `mom_12_1` | **positive at every h** | **+2.85 at h=40** | 36% |
+| `dist_52w_high` | h = 5 | +1.64 at h=40 | 55% |
+| `above_ma200` | h ~ 50 | +2.69 at h=250 | 86% |
+| `vol_60` | never on raw excess | - | - |
+| `ret_20d` | never, worsening | - | - |
+
+`mom_12_1` survives because its turnover is **7-36%**, a property of a 12-month lookback
+rather than a tuning choice - the far end of the +0.985 turnover/|t| relationship in
+[[Turnover explains 97% of it]]. The sweep was **not pre-registered**: forty-five
+combinations were examined and are now recorded, taking the ledger from 81 trials to **126**
+and the bar to **|t| > 3.54**. [[h20]] is the confirmatory out-of-sample test.
+
+## Two cost bugs, and the first gap found in the firewall itself
+
+[[The toll was measured with one number and it needed thousands]]. One bucket and one
+segment were charged to every book ever tested. The intraday systems were charged a
+**delivery** settlement that never happens - they square off inside the session, which is
+MIS - at the `mid` impact bucket, on a name set that is 62% mega and 38% large. Corrected
+to 0.175%, the four systems move from 7-25x their edge to **1.8-6.3x**, and dual_thrust to
+1.8x is the closest anything has come. Per name, **28 of 98 names are net positive** and
+mega-only is *worse* than the average: the winners are volatile mid-caps, not the most
+liquid names.
+
+The daily books ran the other way, under-charged by 2-23%, which moved every verdict
+further from passing and none toward it.
+
+**`vol_60` has the strongest IC of anything measured here - t = +12.30 - and negative raw
+excess at every horizon.** Both are correct. The low-volatility anomaly claims a positive
+intercept against the market, not a higher raw return, and this harness only ever measured
+raw excess over an equal-weighted benchmark. It has rejected low volatility three times on
+a criterion the anomaly does not claim to meet. `evaluation/riskadjusted.py` now computes
+Jensen's alpha and beta with Newey-West standard errors, which is the criterion the
+literature states.
 
 **Read against the null, not against zero.** [[Running the strategies on noise]] shows a
 strategy's own t conflates signal with cost drag. Turtle is third-worst by absolute t and
