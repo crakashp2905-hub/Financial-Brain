@@ -2017,6 +2017,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--limit", type=int, default=25)
     g.set_defaults(fn=cmd_benchmark)
 
+    # Subcommands that are pure formatters over ``services`` register themselves from
+    # ``commands/``. The operational commands above - ingest, prefetch, daily, dq, gaps - stay
+    # here: they move bytes and report what moved, so there is no domain question to route
+    # through a service and inventing one would be churn with no reader served.
+    from . import commands as _commands
+    _commands.register_all(sub)
+
     args = p.parse_args(argv)
     return args.fn(args)
 
