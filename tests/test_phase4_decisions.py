@@ -34,7 +34,8 @@ def _safe_db():
     con.execute("""CREATE TABLE announcements (business_date DATE, isin VARCHAR,
                    event_type VARCHAR, materiality VARCHAR, headline VARCHAR,
                    published_at TIMESTAMP)""")
-    con.execute("""CREATE TABLE market_regime (business_date DATE, regime VARCHAR)""")
+    con.execute("""CREATE TABLE market_regime (business_date DATE, version VARCHAR,
+                   regime VARCHAR)""")
     con.execute("""CREATE TABLE paper_trades (decision_id VARCHAR, isin VARCHAR,
                    status VARCHAR, excess DOUBLE, entry_date DATE, due_date DATE,
                    weight DOUBLE, bucket VARCHAR, exit_date DATE)""")
@@ -55,7 +56,7 @@ def _safe_db():
         d = AS_OF - timedelta(days=i)
         con.execute("INSERT INTO adjusted_prices VALUES (?,?,?,?,?,?)",
                     [d, "INE000TEST01", "L1", 100.0, 5e8, 100000])
-        con.execute("INSERT INTO market_regime VALUES (?,?)", [d, "RISK_ON"])
+        con.execute("INSERT INTO market_regime VALUES (?,?,?)", [d, "v2", "RISK_ON"])
         con.execute("INSERT INTO features VALUES (?,?,?)", [d, "L1", 5e8])
     con.execute("""INSERT INTO announcements VALUES (?,?,?,?,?,?)""",
                 [AS_OF, "INE000TEST01", "RESULTS", "high", "Q1 results", None])

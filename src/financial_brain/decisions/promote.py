@@ -100,7 +100,8 @@ def _context(con, did: str) -> dict:
     """The features a learned lesson is keyed on, as of now."""
     isin = record.content(con, did)["isin"]
     regime = con.execute("""SELECT regime FROM market_regime
-                            ORDER BY business_date DESC LIMIT 1""").fetchone()
+                            ORDER BY business_date DESC, version DESC
+                            LIMIT 1""").fetchone()
     event = con.execute("""SELECT event_type FROM announcements WHERE isin = ?
                            AND materiality = 'high' ORDER BY business_date DESC
                            LIMIT 1""", [isin]).fetchone()

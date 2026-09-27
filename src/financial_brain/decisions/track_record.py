@@ -203,7 +203,8 @@ def from_paper_trades(con) -> list[Outcome]:
     """
     rows = con.execute("""
         SELECT p.decision_id, d.author, p.excess, p.entry_date, p.due_date,
-               (SELECT r.regime FROM market_regime r WHERE r.business_date = p.entry_date)
+               (SELECT r.regime FROM market_regime r WHERE r.business_date = p.entry_date
+                ORDER BY r.version DESC LIMIT 1)
         FROM paper_trades p LEFT JOIN decisions d USING (decision_id)
         WHERE p.status = 'closed' AND p.excess IS NOT NULL
     """).fetchall()

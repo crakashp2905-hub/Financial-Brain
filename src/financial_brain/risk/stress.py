@@ -215,8 +215,8 @@ def conditional_vol(con, series: dict, *, end: date, sessions: int = 2000) -> di
         WHERE index_name = 'India VIX' AND close_level > 0 AND business_date <= ?
         ORDER BY business_date DESC LIMIT ?
     """, [end, sessions]).fetchall())
-    regimes = dict(con.execute(
-        "SELECT business_date, regime FROM market_regime").fetchall())
+    from ..regime import brain as _regime
+    regimes = _regime.series(con)
 
     out: dict = {"overall_vol_annual": stdev(rets) * math.sqrt(250)}
 

@@ -560,7 +560,8 @@ def validate(con, name: str, *, record: bool = True, **kw) -> dict:
         reasons.append(f"excess sign held in {agree:.0%} of years "
                        f"(< {MIN_YEAR_AGREEMENT:.0%})")
 
-    regimes = dict(con.execute("SELECT business_date, regime FROM market_regime").fetchall())
+    from ..regime import brain as _regime
+    regimes = _regime.series(con)
     by_reg = defaultdict(list)
     for row, x in zip(r.get("rows", []), excess, strict=True):
         by_reg[regimes.get(row["date"], "UNKNOWN")].append(x)

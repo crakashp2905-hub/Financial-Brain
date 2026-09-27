@@ -89,8 +89,11 @@ def check_freshness(con, as_of: date) -> list[Breach]:
 
 
 def check_regime(con, as_of: date) -> list[Breach]:
+    # The version matters here more than anywhere: this gate blocks new longs in CRISIS, and
+    # v1/v2 disagree on 425 sessions. Ordering by date alone made the refusal a coin flip.
     row = con.execute("""SELECT regime, business_date FROM market_regime
-                         WHERE business_date <= ? ORDER BY business_date DESC LIMIT 1""",
+                         WHERE business_date <= ?
+                         ORDER BY business_date DESC, version DESC LIMIT 1""",
                       [as_of]).fetchone()
     if not row:
         return [Breach("crisis", "no regime has been computed", blocking=False)]

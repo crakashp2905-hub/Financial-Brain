@@ -128,7 +128,8 @@ def validate(con, feature: str, *, top_n: int = 25, horizon: int = 20,
         reasons.append(f"excess sign held in {agree:.0%} of years "
                        f"(< {firewall.MIN_YEAR_AGREEMENT:.0%})")
 
-    regimes = dict(con.execute("SELECT business_date, regime FROM market_regime").fetchall())
+    from ..regime import brain as _regime
+    regimes = _regime.series(con)
     by_regime = defaultdict(list)
     for s in series:
         by_regime[regimes.get(s["date"], "UNKNOWN")].append(s["excess"])

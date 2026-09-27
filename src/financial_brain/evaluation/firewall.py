@@ -139,7 +139,8 @@ def validate(con, feature: str, horizon: int = 20, *, bucket: str = "mid",
     if not gates["walk_forward"]:
         reasons.append(f"IC sign held in {agree:.0%} of years (< {MIN_YEAR_AGREEMENT:.0%})")
 
-    regimes = dict(con.execute("SELECT business_date, regime FROM market_regime").fetchall())
+    from ..regime import brain as _regime
+    regimes = _regime.series(con)
     by_reg = defaultdict(list)
     for s in series:
         by_reg[regimes.get(s["date"], "UNKNOWN")].append(s["ic"])

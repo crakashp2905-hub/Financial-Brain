@@ -37,7 +37,10 @@ def _db(bars, regime="RISK_ON", ranks=None):
     con.execute("""CREATE TABLE eod_prices (business_date DATE, isin VARCHAR,
                    exchange VARCHAR, series VARCHAR, open_price DOUBLE,
                    high_price DOUBLE, low_price DOUBLE)""")
-    con.execute("""CREATE TABLE market_regime (business_date DATE, regime VARCHAR)""")
+    # Versioned, as the real table is: a rule change adds a version rather than rewriting
+    # history, so the table holds every version at once and readers must pin one.
+    con.execute("""CREATE TABLE market_regime (business_date DATE, version VARCHAR,
+                   regime VARCHAR)""")
     # The impact bucket comes from an absolute national turnover rank, so the ranking
     # population is the exchange's whole list and not the backtest's own universe.
     con.execute("""CREATE TABLE universe_snapshots (business_date DATE, isin VARCHAR,
@@ -48,7 +51,8 @@ def _db(bars, regime="RISK_ON", ranks=None):
                    dates INTEGER, mean_ic DOUBLE, ic_t DOUBLE, sharpe DOUBLE,
                    deflated_sharpe DOUBLE, verdict VARCHAR, reasons VARCHAR)""")
     days = sorted({b[1] for b in bars})
-    con.executemany("INSERT INTO market_regime VALUES (?,?)", [(d, regime) for d in days])
+    con.executemany("INSERT INTO market_regime VALUES (?,?,?)",
+                    [(d, "v2", regime) for d in days])
     # The bucket is an absolute *national* rank, so a toy universe of three names cannot
     # produce a rank of 900 - the exchange list has to be there too. Filler names occupy
     # turnover 1e15-i, and a lineage asking for rank r takes 1e15-r+0.5 so exactly r-1

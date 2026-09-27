@@ -61,8 +61,11 @@ def features_at_entry(con, decision_id: str) -> dict:
     out = {"decision_id": decision_id, "isin": isin, "entry_date": entry,
            "excess": excess, "action": c.get("action"), "bucket": bucket or "unknown"}
 
+    # ORDER BY version too: the table holds every version at once and v1/v2 disagree on
+    # 425 sessions, so ordering by date alone picks one at random.
     regime = con.execute("""SELECT regime FROM market_regime WHERE business_date <= ?
-                            ORDER BY business_date DESC LIMIT 1""", [entry]).fetchone()
+                            ORDER BY business_date DESC, version DESC
+                            LIMIT 1""", [entry]).fetchone()
     out["regime"] = regime[0] if regime else "unknown"
 
     event = con.execute("""SELECT event_type FROM announcements

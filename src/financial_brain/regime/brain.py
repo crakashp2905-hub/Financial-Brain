@@ -39,6 +39,43 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 VERSION = "v2"
+
+
+#: The version every reader must pin to. ``market_regime`` is deliberately append-only - a rule
+#: change adds a version rather than rewriting history - so the table holds **every** version at
+#: once, and an unversioned read returns two rows per session.
+#:
+#: That is not a harmless duplicate. `v1` and `v2` disagree on the regime for **425 of 2,894
+#: sessions (14.7%)**, mostly RISK_OFF against NARROW, and eleven modules were reading the table
+#: with no version filter. The common pattern
+#:
+#:     dict(con.execute("SELECT business_date, regime FROM market_regime").fetchall())
+#:
+#: silently keeps whichever row the scan happened to yield last, so the firewall's regime gate,
+#: the time-series harness and the stress engine were each reading a non-deterministic label on a
+#: seventh of the archive. Same class of defect as an unordered NTILE tie-break: an unspecified
+#: choice resolved by scan order.
+#:
+#: ``latest`` reads the newest version present rather than hard-coding ``VERSION``, so a database
+#: built by an older release still answers, and ``pinned`` is the SQL fragment to use.
+def latest(con) -> str:
+    row = con.execute("SELECT MAX(version) FROM market_regime").fetchone()
+    return (row[0] if row and row[0] else VERSION)
+
+
+def pinned(con) -> tuple[str, str]:
+    """``(sql_fragment, version)`` - append the fragment to a WHERE clause on market_regime."""
+    v = latest(con)
+    return f"version = '{v}'", v
+
+
+def series(con, *, version: str | None = None) -> dict:
+    """``business_date -> regime`` for exactly one version. The accessor readers should use."""
+    v = version or latest(con)
+    return dict(con.execute(
+        "SELECT business_date, regime FROM market_regime WHERE version = ?", [v]).fetchall())
+
+
 CONFIRM = 3
 
 T = {  # thresholds - changing any of these means a new VERSION

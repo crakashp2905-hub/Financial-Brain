@@ -9,6 +9,9 @@ dependencies = ["duckdb>=1.0", "pytz>=2024.1"]  # pytz: DuckDB needs it for TIME
 dev = ["pytest>=8.0"]
 # Local tier-1 encoders (FinBERT via ONNX; no PyTorch). Ollama serves the GGUF models.
 models = ["onnxruntime>=1.18", "tokenizers>=0.19", "numpy>=1.26"]
+# The HTTP surface in api/. Optional on purpose: a research system should not need a web
+# framework to run a backtest, and the core install stays duckdb + pytz.
+api = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2.6"]
 
 [project.scripts]
 fb = "financial_brain.cli:main"

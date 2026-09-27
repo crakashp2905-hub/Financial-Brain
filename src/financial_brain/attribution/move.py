@@ -51,6 +51,14 @@ FIT_SESSIONS = 250
 MIN_FIT = 60
 #: How many empirical peers to use.
 PEERS = 12
+#: ISIN prefix for Indian **equity shares**. ``INF`` is the prefix for mutual-fund and ETF units,
+#: and excluding those is not a heuristic - it is part of the ISIN allocation for India.
+#:
+#: It matters because a large-cap's highest trailing correlations are with index funds that hold
+#: it. Asked for Reliance's peers the first version returned OILIETF, INFRAIETF, INFRABEES,
+#: NIFTYETF and HDFCNIFTY: correct as co-movement and useless as a peer group, since an ETF is
+#: not a comparable company, it is the market wearing the name.
+EQUITY_ISIN_PREFIX = "INE"
 #: A residual this many trailing standard deviations from zero is worth hunting news for.
 NEWS_HUNT_SIGMA = 2.0
 #: Beyond this many sigmas a residual is not a market event. Indian equities trade under circuit
@@ -111,12 +119,17 @@ def _index_returns(con, name: str, end: date, sessions: int) -> dict:
 
 
 def peers(con, isin: str, *, end: date, k: int = PEERS,
-          sessions: int = FIT_SESSIONS, min_adv: float = 1e7) -> list[dict]:
+          sessions: int = FIT_SESSIONS, min_adv: float = 1e7,
+          equities_only: bool = True) -> list[dict]:
     """The names this one actually moves with, over the trailing window.
 
     An empirical peer group, because no sector classification exists here. Restricted to names
     that trade - a correlation with something untradeable is not a peer relationship - and
     computed on the window ending at ``end``.
+
+    ``equities_only`` keeps ISINs beginning ``INE``, which is the allocation for equity shares,
+    and drops ``INF``, which is mutual-fund and ETF units. Without it a large-cap's peer group is
+    the index funds holding it.
     """
     own = _returns(con, isin, end, sessions)
     if len(own) < MIN_FIT:
@@ -136,7 +149,9 @@ def peers(con, isin: str, *, end: date, k: int = PEERS,
         WHERE a.isin IN (SELECT isin FROM liquid) AND a.isin <> ?
           AND a.close_adj > 0 AND a.business_date <= ?
           AND a.business_date > CAST(? AS DATE) - INTERVAL 400 DAY
-    """, [end, end, min_adv, MIN_FIT, isin, end, end]).fetchall()
+          AND (NOT ? OR a.isin LIKE ?)
+    """, [end, end, min_adv, MIN_FIT, isin, end, end,
+          equities_only, EQUITY_ISIN_PREFIX + "%"]).fetchall()
     by: dict = {}
     for i, d, r in rows:
         if r is not None and abs(r) < 0.9 and d in dates:
