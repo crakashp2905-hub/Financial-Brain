@@ -425,7 +425,18 @@ CREATE TABLE IF NOT EXISTS evaluation_runs (
     sharpe          DOUBLE,
     deflated_sharpe DOUBLE,
     verdict         VARCHAR NOT NULL,
-    reasons         VARCHAR[]
+    reasons         VARCHAR[],
+    -- The per-rebalance IC series, and the dates it was measured on.
+    --
+    -- Stored because the Bonferroni bar over every trial assumes the trials are INDEPENDENT, and
+    -- seventy-six of the first hundred and fifty sat on five features testing three ideas. The
+    -- effective number of independent tests is estimable from the CORRELATION between trials' IC
+    -- series - the same eigenvalue statistic risk/decompose.effective_bets uses for a portfolio -
+    -- and without the series that correlation cannot be computed, so the effective count could
+    -- only be bounded to [families, trials] = [7, 150]. An interval that wide cannot decide
+    -- anything. See evaluation/families.py.
+    ic_series       DOUBLE[],
+    ic_dates        DATE[]
 );
 
 -- Pre-registered hypotheses and every test of them (evaluation/registry.py).

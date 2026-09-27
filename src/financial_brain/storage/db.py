@@ -32,6 +32,10 @@ class Database:
     #: Idempotent column additions for databases created by an earlier version.
     MIGRATIONS = [
         "ALTER TABLE ingest_runs ADD COLUMN IF NOT EXISTS rows_rejected BIGINT DEFAULT 0",
+        # The IC series per trial, so the effective number of independent tests can be measured
+        # rather than bounded to [families, trials]. See evaluation/families.py.
+        "ALTER TABLE evaluation_runs ADD COLUMN IF NOT EXISTS ic_series DOUBLE[]",
+        "ALTER TABLE evaluation_runs ADD COLUMN IF NOT EXISTS ic_dates DATE[]",
         "ALTER TABLE dq_results  ADD COLUMN IF NOT EXISTS scope VARCHAR DEFAULT 'file'",
         "ALTER TABLE corporate_actions ADD COLUMN IF NOT EXISTS confidence VARCHAR",
         "ALTER TABLE corporate_actions ADD COLUMN IF NOT EXISTS derived_factor DOUBLE",

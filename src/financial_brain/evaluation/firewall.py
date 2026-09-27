@@ -166,10 +166,16 @@ def validate(con, feature: str, horizon: int = 20, *, bucket: str = "mid",
            "bucket_mix": book.mix(con, series), "ic_by_year": years,
            "ic_by_regime": {g: mean(v) for g, v in by_reg.items()}}
     if record:
+        # The IC series is persisted, not just its summary. Two trials on the same idea have
+        # highly correlated IC series, and that correlation is the only way to tell how many
+        # independent tests 150 trials really are (evaluation/families.py). Storing the t-statistic
+        # alone made that unmeasurable and the effective count could only be bounded to [7, 150].
         con.execute("""INSERT INTO evaluation_runs (run_at, version, feature, horizon, params,
-                       dates, mean_ic, ic_t, sharpe, deflated_sharpe, verdict, reasons)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       dates, mean_ic, ic_t, sharpe, deflated_sharpe, verdict, reasons,
+                       ic_series, ic_dates)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     [datetime.now(timezone.utc), VERSION, feature, horizon,
                      json.dumps({"bucket": bucket, **{k: str(v) for k, v in kw.items()}}),
-                     len(series), out["mean_ic"], ic_t, sr, dsr, verdict, reasons])
+                     len(series), out["mean_ic"], ic_t, sr, dsr, verdict, reasons,
+                     ics, [s["date"] for s in series]])
     return out
