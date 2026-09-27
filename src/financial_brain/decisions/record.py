@@ -43,7 +43,15 @@ STATES = ["DRAFT", "EVIDENCE_VERIFIED", "RISK_REVIEWED", "PAPER_CANDIDATE",
           "POSTMORTEM_COMPLETE"]
 TERMINAL = {"POSTMORTEM_COMPLETE", "REJECTED", "WITHDRAWN"}
 NEXT = {s: STATES[i + 1] for i, s in enumerate(STATES[:-1])}
-ACTIONS = {"BUY", "ADD", "HOLD", "REDUCE", "EXIT", "AVOID", "WATCH"}
+#: ABSTAIN is not a weaker AVOID and the difference is the point. AVOID means the arithmetic
+#: was done and came out against; ABSTAIN means it could not be done - a missing input, an
+#: unverifiable exposure, a covariance too thin to estimate. Collapsing them destroys the only
+#: signal that says *which data to go and get*, and it lets a system with a hole in it look
+#: merely cautious. ``decisions/compile.py`` resolves to one of these and names the rule.
+ACTIONS = {"BUY", "ADD", "HOLD", "REDUCE", "EXIT", "AVOID", "WATCH", "ABSTAIN"}
+#: Actions that commit no capital. A decision with one of these never needs sizing, and the
+#: risk-review step says so instead of demanding a weight for a position nobody is taking.
+NO_TRADE = {"AVOID", "WATCH", "ABSTAIN", "HOLD"}
 
 
 class DecisionError(ValueError):
@@ -152,12 +160,14 @@ def advance(con, did: str, *, actor: str, note: str = "",
     if to == "EVIDENCE_VERIFIED":
         _verify_evidence(con, c)
     elif to == "RISK_REVIEWED":
-        if not c.get("sizing"):
+        # A no-trade decision has nothing to size. Demanding a weight for a position nobody is
+        # taking is how ABSTAIN gets quietly turned into a small BUY.
+        if c["action"] not in NO_TRADE and not c.get("sizing"):
             raise DecisionError("risk review needs sizing / a risk budget")
         # Arithmetic before opinion: a trade must state how it is wrong, how much that
         # costs, and be worth taking on those numbers. "The model is confident" is not a
         # reason to buy anything.
-        if c.get("scenarios"):
+        if c.get("scenarios") and c["action"] not in NO_TRADE:
             from . import expected_value as ev
             try:
                 assessment = ev.assess(c["scenarios"])
