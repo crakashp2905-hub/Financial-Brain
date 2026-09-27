@@ -263,3 +263,200 @@ def test_max_drawdown_is_never_positive():
     r = engine.run(con, feature="dist_52w_high", start=START,
                    end=START + timedelta(days=119), rebalance=20, max_positions=4)
     assert r.summary()["max_drawdown"] <= 0.0
+
+
+# --------------------------------------------------------- the universe is the experiment
+def test_an_explicit_universe_restricts_the_ranking_not_just_the_result():
+    """The distinction that cost this engine its first credible number. Ranking globally and
+    *then* filtering leaves a book of whatever survives the filter - two to four names out of an
+    intended twenty. A universe means rank within it."""
+    con = _db(names=8, drift=0.004)
+    keep = {f"INE{i:09d}" for i in range(4)}
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=119), rebalance=20, max_positions=3,
+                   simulate_fills=False, eligible_isins=keep)
+    assert r.trades, "the book should not be empty"
+    assert {t.isin for t in r.trades} <= keep
+    # Three of the four eligible names, not three of the global eight intersected down to one.
+    assert len({t.isin for t in r.trades}) == 3
+
+
+def test_an_explicit_universe_overrides_the_minute_bar_shortcut():
+    """The shortcut picks names by turnover as measured when the ingest ran, which is after the
+    window - so it is partly a list of what went up. An explicit universe has to win."""
+    con = _db(names=8, drift=0.004, minute_bars=True)
+    keep = {f"INE{i:09d}" for i in range(3)}
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=119), rebalance=20, max_positions=2,
+                   simulate_fills=False, eligible_isins=keep,
+                   restrict_to_minute_bars=True)
+    assert {t.isin for t in r.trades} <= keep
+
+
+def test_the_same_strategy_on_two_universes_is_two_experiments():
+    """+9.00% excess on a universe selected with hindsight and +1.90% on one selected without it
+    are different results, and an id that collapsed them would let the first be reported as the
+    second."""
+    con = _db(names=8, drift=0.004)
+    kw = dict(feature="dist_52w_high", start=START, end=START + timedelta(days=119),
+              rebalance=20, max_positions=3, simulate_fills=False)
+    a = engine.run(con, **kw, eligible_isins={f"INE{i:09d}" for i in range(4)})
+    b = engine.run(con, **kw, eligible_isins={f"INE{i:09d}" for i in range(4, 8)})
+    c = engine.run(con, **kw, eligible_isins={f"INE{i:09d}" for i in range(4)})
+    assert a.experiment_id != b.experiment_id
+    assert a.experiment_id == c.experiment_id, "the same universe must reproduce"
+
+
+def test_the_control_is_computed_on_the_universe_that_was_traded():
+    """An excess is only readable against the universe the strategy actually chose from. Measuring
+    a restricted book against the whole market is how universe selection becomes alpha."""
+    con = _db(names=8, drift=0.004)
+    keep = {f"INE{i:09d}" for i in range(4)}
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=119), rebalance=20, max_positions=3,
+                   simulate_fills=False, eligible_isins=keep)
+    assert r.control["universe_names"] <= len(keep)
+    s = r.summary()
+    assert s["excess_over_universe"] == pytest.approx(
+        s["total_return"] - s["universe_return"])
+
+
+def test_a_name_that_delists_does_not_flatter_the_control():
+    """The bug that made the eleven-year run unreadable.
+
+    Pricing the universe at both ends of the window keeps only the names that still had a price at
+    the end, so every delisting is silently removed from the control - and the control becomes an
+    index of survivors, which no strategy can beat. Here one of four names stops trading halfway
+    after falling; a point-to-point control would drop it and report the remaining three, while a
+    chained daily mean has to carry its decline.
+    """
+    con = _db(names=4, sessions=120, drift=0.004)
+    dead = "INE000000000"
+    days = [r[0] for r in con.execute(
+        "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
+    con.execute("UPDATE adjusted_prices SET close_adj = close_adj * 0.4 "
+                "WHERE isin = ? AND business_date >= ?", [dead, days[59]])
+    con.execute("DELETE FROM adjusted_prices WHERE isin = ? AND business_date > ?",
+                [dead, days[60]])
+
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=119), rebalance=20, max_positions=2,
+                   simulate_fills=False)
+    with_dead = r.control["universe_return"]
+
+    con.execute("DELETE FROM adjusted_prices WHERE isin = ?", [dead])
+    clean = engine.run(con, feature="dist_52w_high", start=START,
+                       end=START + timedelta(days=119), rebalance=20, max_positions=2,
+                       simulate_fills=False).control["universe_return"]
+
+    assert with_dead < clean, (
+        f"the universe containing a name that collapsed and delisted returned {with_dead:.4f}, "
+        f"which must be worse than the same universe without it ({clean:.4f})")
+
+
+def test_the_control_counts_every_name_that_was_eligible_not_only_the_ones_that_lasted():
+    con = _db(names=5, sessions=120, drift=0.004)
+    days = [r[0] for r in con.execute(
+        "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
+    con.execute("DELETE FROM adjusted_prices WHERE isin = ? AND business_date > ?",
+                ["INE000000000", days[60]])
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=119), rebalance=20, max_positions=2,
+                   simulate_fills=False)
+    assert r.control["universe_names"] == 5
+
+
+# ----------------------------------------------------- the engine must not have its own edge
+def test_a_book_holding_its_whole_universe_reproduces_the_control():
+    """The test that found the missing trim leg, and the strongest guard in this file.
+
+    If the book holds every eligible name at equal weight, it *is* the control by construction, so
+    its excess must be approximately zero. Any gap is the engine's own drift, and it biases every
+    excess the engine reports. Before the trim leg existed this came back at -140.27% over eleven
+    years of real data, because a book that can buy up to its target weight but never sell down to
+    it is not equal-weight - it is buy-and-hold with additions.
+    """
+    con = _db(names=10, sessions=200, drift=0.01)
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=199), rebalance=20, max_positions=10,
+                   simulate_fills=False, min_adv=0.0)
+    s = r.summary()
+    assert s["universe_return"] is not None
+    # Costs and the cash buffer are real and are allowed to cost the book something; drift is not.
+    assert s["excess_over_universe"] == pytest.approx(0.0, abs=0.05), (
+        f"a book holding its whole universe returned {s['total_return']:+.2%} against a control "
+        f"of {s['universe_return']:+.2%}; the {s['excess_over_universe']:+.2%} gap is engine drift")
+
+
+def test_a_winner_is_trimmed_back_toward_its_target_weight():
+    """One name runs away from the rest. An equal-weight book sells some of it at the rebalance;
+    a book that only ever buys lets it become the portfolio."""
+    con = _db(names=4, sessions=140, drift=0.0)
+    days = [r[0] for r in con.execute(
+        "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
+    con.execute("UPDATE adjusted_prices SET close_adj = close_adj * 4 "
+                "WHERE isin = ? AND business_date >= ?", ["INE000000000", days[40]])
+
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=139), rebalance=20, max_positions=4,
+                   simulate_fills=False, min_adv=0.0)
+    sells = [t for t in r.trades if t.side == "SELL" and t.isin == "INE000000000"]
+    assert sells, "the name that quadrupled was never trimmed"
+
+    # And the book it ends with is not dominated by that one name.
+    final = r.equity[-1]
+    assert final["positions"] == 4
+
+
+def test_a_drift_inside_the_band_is_left_alone():
+    """The band has to be wide enough to ignore the cost drag and narrow enough to catch a real
+    divergence. A name up 10% against a 20% band is not traded; the same name up 60% is."""
+    con = _db(names=4, sessions=140, drift=0.0)
+    days = [r[0] for r in con.execute(
+        "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
+
+    def trims(multiple):
+        c = _db(names=4, sessions=140, drift=0.0)
+        c.execute("UPDATE adjusted_prices SET close_adj = close_adj * ? "
+                  "WHERE isin = ? AND business_date >= ?",
+                  [multiple, "INE000000000", days[40]])
+        r = engine.run(c, feature="dist_52w_high", start=START,
+                       end=START + timedelta(days=139), rebalance=20, max_positions=4,
+                       simulate_fills=False, min_adv=0.0)
+        return [t for t in r.trades
+                if t.side == "SELL" and t.isin == "INE000000000"]
+
+    assert engine.REBALANCE_BAND == 0.20
+    assert not trims(1.10), "a 10% drift is inside the band and must not be traded"
+    assert trims(1.60), "a 60% drift is outside the band and must be trimmed"
+
+
+def test_the_calibration_reports_a_floor_and_the_cash_it_leaves_behind():
+    """The floor is not a pass/fail - it is the resolution of the instrument, and it has to be
+    reported rather than assumed small. On eleven years of real data it is -52.52% gross, which is
+    larger than every excess this engine has reported."""
+    con = _db(names=8, sessions=200, drift=0.01)
+    c = engine.calibrate(con, start=START, end=START + timedelta(days=199),
+                         min_adv=0.0, capital_inr=1e8)
+    assert c["floor"] is not None
+    assert 0.0 <= c["uninvested"] < 0.5
+    assert c["periods"] and c["names"] == 8
+    # Gross, so the floor cannot be explained away as brokerage.
+    assert abs(c["floor"]) == pytest.approx(
+        abs(c["book_return"] - c["universe_return"]), abs=1e-9)
+
+
+def test_costs_can_be_switched_off_only_explicitly_and_are_recorded_in_the_run():
+    """A gross run must be impossible to mistake for a result, so the flag is part of the config
+    the experiment id hashes and appears in the summary."""
+    con = _db(names=6, drift=0.004)
+    kw = dict(feature="dist_52w_high", start=START, end=START + timedelta(days=119),
+              rebalance=20, max_positions=4, simulate_fills=False)
+    net = engine.run(con, **kw)
+    gross = engine.run(con, **kw, charge_costs=False)
+    assert net.summary()["charge_costs"] is True
+    assert gross.summary()["charge_costs"] is False
+    assert gross.summary()["costs_inr"] == 0.0
+    assert net.summary()["costs_inr"] > 0.0
+    assert net.experiment_id != gross.experiment_id
+    assert gross.summary()["total_return"] > net.summary()["total_return"]
