@@ -298,12 +298,20 @@ def test_a_skill_score_against_a_null_scored_on_a_different_sample_is_refused():
 def test_skill_is_zero_against_itself_and_positive_for_a_better_forecast():
     rng = random.Random(19)
     truths = [rng.gauss(100.0, 5.0) for _ in range(300)]
-    sharp = [(_fan([rng.gauss(y, 1.0) for _ in range(100)], anchor=100.0), y) for y in truths]
-    vague = [(_fan([rng.gauss(100.0, 15.0) for _ in range(100)], anchor=100.0), y)
+    sharp = [(_fan([rng.gauss(y, 1.0) for _ in range(100)], anchor=100.0, model="sharp"), y)
+             for y in truths]
+    vague = [(_fan([rng.gauss(100.0, 15.0) for _ in range(100)], anchor=100.0, model="vague"), y)
              for y in truths]
     s, v = C.score(sharp), C.score(vague)
-    assert C.skill(s, s)["skill"] == pytest.approx(0.0)
+    self_comparison = C.skill(s, s)
+    assert self_comparison["skill"] == pytest.approx(0.0)
+    assert self_comparison["identical"] is True
+    assert self_comparison["beats_null"] is None, (
+        "a model does not beat or lose to itself, and reporting False printed "
+        "'climatology loses to climatology'")
+
     r = C.skill(s, v)
+    assert r["identical"] is False
     assert r["skill"] > 0 and r["beats_null"] is True
     assert r["sharper_than_null"] is True
 

@@ -201,13 +201,21 @@ def skill(candidate: dict, reference: dict) -> dict:
     if ref <= 0:
         raise ForecastError("reference CRPS is not positive")
     s = 1 - candidate["crps"] / ref
+    # A model compared with itself has skill exactly 0, which is neither beating nor losing to the
+    # reference. Folding that into `beats_null=False` printed "climatology loses to climatology".
+    #
+    # Keyed on the score rather than on the model name: names are optional, so two differently-named
+    # models would compare as distinct while two unnamed ones collided - and the thing that actually
+    # makes a comparison vacuous is the two sides having produced the same numbers.
+    identical = candidate is reference or candidate == reference
     return {
         "candidate": candidate["models"],
         "reference": reference["models"],
         "crps_candidate": candidate["crps"],
         "crps_reference": ref,
         "skill": s,
-        "beats_null": s > 0,
+        "beats_null": None if identical else s > 0,
+        "identical": identical,
         "n": candidate["n"],
         # Sharpness is carried alongside because a positive skill score achieved by being wider is
         # a different thing from one achieved by being right, and only the second is useful.
