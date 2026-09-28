@@ -26,3 +26,7 @@ data/
 *.egg-info/
 build/
 dist/
+
+# Third-party model code, cloned rather than vendored: MIT, but not ours to carry, and its
+# weights are a separate download. See pyproject `forecasting` extra.
+vendor/
