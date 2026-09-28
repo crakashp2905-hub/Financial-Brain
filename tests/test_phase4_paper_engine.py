@@ -14,6 +14,8 @@ from datetime import date, timedelta
 import duckdb
 import pytest
 
+from financial_brain.costs import book as costbook
+from financial_brain.costs.india import CostModel, Segment
 from financial_brain.paper import engine
 
 START = date(2024, 1, 1)
@@ -211,7 +213,7 @@ def test_restricting_to_minute_bars_gives_complete_coverage():
                    end=START + timedelta(days=119), rebalance=20, max_positions=6,
                    restrict_to_minute_bars=True)
     assert r.summary()["simulated_fill_share"] == pytest.approx(1.0)
-    assert all(t.isin != "INE000000005" for t in r.trades)
+    assert all(t.lineage != "L5" for t in r.trades)
 
 
 # ------------------------------------------------------------------ reproducibility
@@ -249,7 +251,7 @@ def test_a_suspended_holding_is_marked_at_its_last_value_not_dropped():
     equity curve rise when a position went dark."""
     con = _db(names=3, sessions=120)
     cutoff = START + timedelta(days=80)
-    con.execute("DELETE FROM adjusted_prices WHERE isin = 'INE000000002' "
+    con.execute("DELETE FROM adjusted_prices WHERE lineage = 'L2' "
                 "AND business_date > ?", [cutoff])
     r = engine.run(con, feature="dist_52w_high", start=START,
                    end=START + timedelta(days=119), rebalance=20, max_positions=3)
@@ -271,26 +273,26 @@ def test_an_explicit_universe_restricts_the_ranking_not_just_the_result():
     *then* filtering leaves a book of whatever survives the filter - two to four names out of an
     intended twenty. A universe means rank within it."""
     con = _db(names=8, drift=0.004)
-    keep = {f"INE{i:09d}" for i in range(4)}
+    keep = {f"L{i}" for i in range(4)}
     r = engine.run(con, feature="dist_52w_high", start=START,
                    end=START + timedelta(days=119), rebalance=20, max_positions=3,
-                   simulate_fills=False, eligible_isins=keep)
+                   simulate_fills=False, eligible_lineages=keep)
     assert r.trades, "the book should not be empty"
-    assert {t.isin for t in r.trades} <= keep
+    assert {t.lineage for t in r.trades} <= keep
     # Three of the four eligible names, not three of the global eight intersected down to one.
-    assert len({t.isin for t in r.trades}) == 3
+    assert len({t.lineage for t in r.trades}) == 3
 
 
 def test_an_explicit_universe_overrides_the_minute_bar_shortcut():
     """The shortcut picks names by turnover as measured when the ingest ran, which is after the
     window - so it is partly a list of what went up. An explicit universe has to win."""
     con = _db(names=8, drift=0.004, minute_bars=True)
-    keep = {f"INE{i:09d}" for i in range(3)}
+    keep = {f"L{i}" for i in range(3)}
     r = engine.run(con, feature="dist_52w_high", start=START,
                    end=START + timedelta(days=119), rebalance=20, max_positions=2,
-                   simulate_fills=False, eligible_isins=keep,
+                   simulate_fills=False, eligible_lineages=keep,
                    restrict_to_minute_bars=True)
-    assert {t.isin for t in r.trades} <= keep
+    assert {t.lineage for t in r.trades} <= keep
 
 
 def test_the_same_strategy_on_two_universes_is_two_experiments():
@@ -300,9 +302,9 @@ def test_the_same_strategy_on_two_universes_is_two_experiments():
     con = _db(names=8, drift=0.004)
     kw = dict(feature="dist_52w_high", start=START, end=START + timedelta(days=119),
               rebalance=20, max_positions=3, simulate_fills=False)
-    a = engine.run(con, **kw, eligible_isins={f"INE{i:09d}" for i in range(4)})
-    b = engine.run(con, **kw, eligible_isins={f"INE{i:09d}" for i in range(4, 8)})
-    c = engine.run(con, **kw, eligible_isins={f"INE{i:09d}" for i in range(4)})
+    a = engine.run(con, **kw, eligible_lineages={f"L{i}" for i in range(4)})
+    b = engine.run(con, **kw, eligible_lineages={f"L{i}" for i in range(4, 8)})
+    c = engine.run(con, **kw, eligible_lineages={f"L{i}" for i in range(4)})
     assert a.experiment_id != b.experiment_id
     assert a.experiment_id == c.experiment_id, "the same universe must reproduce"
 
@@ -311,10 +313,10 @@ def test_the_control_is_computed_on_the_universe_that_was_traded():
     """An excess is only readable against the universe the strategy actually chose from. Measuring
     a restricted book against the whole market is how universe selection becomes alpha."""
     con = _db(names=8, drift=0.004)
-    keep = {f"INE{i:09d}" for i in range(4)}
+    keep = {f"L{i}" for i in range(4)}
     r = engine.run(con, feature="dist_52w_high", start=START,
                    end=START + timedelta(days=119), rebalance=20, max_positions=3,
-                   simulate_fills=False, eligible_isins=keep)
+                   simulate_fills=False, eligible_lineages=keep)
     assert r.control["universe_names"] <= len(keep)
     s = r.summary()
     assert s["excess_over_universe"] == pytest.approx(
@@ -331,12 +333,12 @@ def test_a_name_that_delists_does_not_flatter_the_control():
     chained daily mean has to carry its decline.
     """
     con = _db(names=4, sessions=120, drift=0.004)
-    dead = "INE000000000"
+    dead = "L0"
     days = [r[0] for r in con.execute(
         "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
     con.execute("UPDATE adjusted_prices SET close_adj = close_adj * 0.4 "
-                "WHERE isin = ? AND business_date >= ?", [dead, days[59]])
-    con.execute("DELETE FROM adjusted_prices WHERE isin = ? AND business_date > ?",
+                "WHERE lineage = ? AND business_date >= ?", [dead, days[59]])
+    con.execute("DELETE FROM adjusted_prices WHERE lineage = ? AND business_date > ?",
                 [dead, days[60]])
 
     r = engine.run(con, feature="dist_52w_high", start=START,
@@ -344,7 +346,7 @@ def test_a_name_that_delists_does_not_flatter_the_control():
                    simulate_fills=False)
     with_dead = r.control["universe_return"]
 
-    con.execute("DELETE FROM adjusted_prices WHERE isin = ?", [dead])
+    con.execute("DELETE FROM adjusted_prices WHERE lineage = ?", [dead])
     clean = engine.run(con, feature="dist_52w_high", start=START,
                        end=START + timedelta(days=119), rebalance=20, max_positions=2,
                        simulate_fills=False).control["universe_return"]
@@ -358,8 +360,8 @@ def test_the_control_counts_every_name_that_was_eligible_not_only_the_ones_that_
     con = _db(names=5, sessions=120, drift=0.004)
     days = [r[0] for r in con.execute(
         "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
-    con.execute("DELETE FROM adjusted_prices WHERE isin = ? AND business_date > ?",
-                ["INE000000000", days[60]])
+    con.execute("DELETE FROM adjusted_prices WHERE lineage = ? AND business_date > ?",
+                ["L0", days[60]])
     r = engine.run(con, feature="dist_52w_high", start=START,
                    end=START + timedelta(days=119), rebalance=20, max_positions=2,
                    simulate_fills=False)
@@ -395,12 +397,12 @@ def test_a_winner_is_trimmed_back_toward_its_target_weight():
     days = [r[0] for r in con.execute(
         "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
     con.execute("UPDATE adjusted_prices SET close_adj = close_adj * 4 "
-                "WHERE isin = ? AND business_date >= ?", ["INE000000000", days[40]])
+                "WHERE lineage = ? AND business_date >= ?", ["L0", days[40]])
 
     r = engine.run(con, feature="dist_52w_high", start=START,
                    end=START + timedelta(days=139), rebalance=20, max_positions=4,
                    simulate_fills=False, min_adv=0.0)
-    sells = [t for t in r.trades if t.side == "SELL" and t.isin == "INE000000000"]
+    sells = [t for t in r.trades if t.side == "SELL" and t.lineage == "L0"]
     assert sells, "the name that quadrupled was never trimmed"
 
     # And the book it ends with is not dominated by that one name.
@@ -418,13 +420,13 @@ def test_a_drift_inside_the_band_is_left_alone():
     def trims(multiple):
         c = _db(names=4, sessions=140, drift=0.0)
         c.execute("UPDATE adjusted_prices SET close_adj = close_adj * ? "
-                  "WHERE isin = ? AND business_date >= ?",
-                  [multiple, "INE000000000", days[40]])
+                  "WHERE lineage = ? AND business_date >= ?",
+                  [multiple, "L0", days[40]])
         r = engine.run(c, feature="dist_52w_high", start=START,
                        end=START + timedelta(days=139), rebalance=20, max_positions=4,
                        simulate_fills=False, min_adv=0.0)
         return [t for t in r.trades
-                if t.side == "SELL" and t.isin == "INE000000000"]
+                if t.side == "SELL" and t.lineage == "L0"]
 
     assert engine.REBALANCE_BAND == 0.20
     assert not trims(1.10), "a 10% drift is inside the band and must not be traded"
@@ -460,3 +462,86 @@ def test_costs_can_be_switched_off_only_explicitly_and_are_recorded_in_the_run()
     assert net.summary()["costs_inr"] > 0.0
     assert net.experiment_id != gross.experiment_id
     assert gross.summary()["total_return"] > net.summary()["total_return"]
+
+
+# ------------------------------------------------------- an ISIN is not a company
+def test_a_position_survives_an_isin_succession_instead_of_going_dark():
+    """The bug that silently marked one name in eight as suspended.
+
+    843 of this database's 17,060 ISINs are superseded, and 429 of 3,340 lineages (12.84%) change
+    ISIN inside 2015-2026. Keyed on ISIN, a held name's price lookup returns None the day the new
+    code starts, so the position is carried at ``avg_price`` and counted in ``stale_marks`` - frozen
+    at cost for the rest of the run while the company kept trading.
+
+    Here one name changes ISIN halfway through and its price doubles afterwards. Keyed on lineage
+    the book has to see that; keyed on ISIN it would show a flat line and no stale mark to explain
+    it, because the new ISIN looks like a name the book never bought.
+    """
+    con = _db(names=4, sessions=120, drift=0.004)
+    days = [r[0] for r in con.execute(
+        "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
+    cut = days[60]
+    for table in ("adjusted_prices", "universe_snapshots"):
+        con.execute(f"""UPDATE {table} SET isin = 'INE999999999'
+                        WHERE isin = 'INE000000003' AND business_date >= ?""", [cut])
+    con.execute("INSERT INTO security_lineage VALUES ('INE999999999', 'L3')")
+    con.execute("""UPDATE adjusted_prices SET close_adj = close_adj * 2
+                   WHERE lineage = 'L3' AND business_date >= ?""", [cut])
+
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=119), rebalance=20, max_positions=2,
+                   simulate_fills=False)
+
+    assert any(t.lineage == "L3" for t in r.trades), "L3 ranks top and must be bought"
+    assert sum(e["stale_marks"] for e in r.equity) == 0, (
+        "a name that changed ISIN but kept trading must not be marked stale")
+    # The doubling has to reach the equity curve rather than being frozen at cost.
+    after = [e for e in r.equity if e["session"] >= cut]
+    assert max(e["equity"] for e in after) > r.equity[0]["equity"] * 1.2
+
+
+def test_the_target_book_holds_a_company_once_however_many_isins_it_has_had():
+    """The join that produced it: ``features`` is keyed on lineage, and joining security_lineage to
+    recover an ISIN turned one feature row into one row per ISIN the company ever had. A lineage
+    with three ISINs could therefore fill three of the top twenty slots with itself."""
+    con = _db(names=6, sessions=120, drift=0.004)
+    for extra in ("INE900000001", "INE900000002"):
+        con.execute("INSERT INTO security_lineage VALUES (?, 'L5')", [extra])
+
+    book = engine._target_book(con, "dist_52w_high", START + timedelta(days=60),
+                              direction=1, min_adv=0.0, max_positions=3)
+    assert len(book) == len(set(book)), f"the book holds a duplicate: {book}"
+    assert book.count("L5") == 1
+
+
+def test_a_superseded_name_is_charged_its_own_liquidity_bucket_not_the_worst_one():
+    """``costbook.buckets`` is keyed on (date, lineage) and always was. Passing ISINs into it meant
+    every superseded name missed its bucket and fell back to ``micro``, the most expensive tier - so
+    those names paid small-cap impact on top of losing their prices."""
+    con = _db(names=4, sessions=120, drift=0.004)
+    days = [r[0] for r in con.execute(
+        "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
+    con.execute("""UPDATE adjusted_prices SET isin = 'INE999999999'
+                   WHERE isin = 'INE000000003' AND business_date >= ?""", [days[60]])
+    con.execute("INSERT INTO security_lineage VALUES ('INE999999999', 'L3')")
+
+    # The lookup hits on the lineage and misses on either of its ISINs, which is the whole bug:
+    # the engine was passing the right kind of string into the wrong keyspace.
+    by_lineage = costbook.buckets(con, [days[79]], {"L3"})
+    by_isin = costbook.buckets(con, [days[79]], {"INE000000003", "INE999999999"})
+    assert by_lineage, "the lineage has a bucket on a date it traded"
+    assert not by_isin, "neither ISIN is a key in a lineage-keyed table"
+    assert by_lineage[(days[79], "L3")] != "micro", (
+        "this fixture's names are the most liquid in their universe; falling back to micro would "
+        "charge them small-cap impact")
+
+    # And the engine charges from that bucket rather than the default.
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=119), rebalance=20, max_positions=2,
+                   simulate_fills=False)
+    rt = CostModel().round_trip(turnover=1_000_000, segment=Segment.DELIVERY,
+                                bucket="micro")["bps"] / 1e4
+    for t in r.trades:
+        assert t.cost_inr < t.notional * rt / 2, (
+            f"{t.lineage} was charged {t.cost_inr / t.notional * 1e4:.1f} bps, which is the micro "
+            f"tier's half-spread - the bucket lookup missed")

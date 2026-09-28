@@ -77,7 +77,10 @@ class PaperError(ValueError):
 
 @dataclass
 class Position:
-    isin: str
+    #: The **lineage**, not an ISIN. An ISIN is a security code, not a company: 843 of this
+    #: database's 17,060 ISINs are superseded ones, and a position keyed on the old code loses its
+    #: own price the day the new one starts. See the module note on successions.
+    lineage: str
     shares: int = 0
     cost_basis: float = 0.0        # total rupees paid, for realised-P&L accounting
 
@@ -89,7 +92,7 @@ class Position:
 @dataclass
 class Trade:
     session: date
-    isin: str
+    lineage: str
     side: str
     shares: int
     price: float
@@ -206,16 +209,20 @@ def _target_book(con, feature: str, as_of: date, *, direction: int,
     two to four names instead of twenty - a concentrated bet whose 33.7% volatility and -46%
     drawdown said nothing about the signal. Ranking within the eligible set is what
     "this strategy on this universe" means.
+
+    Returns lineages. The first version joined ``security_lineage`` to return ISINs, which also made
+    a lineage holding three ISINs produce three rows from one feature row - so the top twenty could
+    contain the same company three times. ``features`` is keyed on lineage already and the join was
+    never needed.
     """
     rows = con.execute(f"""
-        SELECT l.isin
+        SELECT f.lineage
         FROM features f
-        JOIN security_lineage l ON l.lineage = f.lineage
         WHERE f.business_date = (SELECT MAX(business_date) FROM features
                                  WHERE business_date <= ?)
           AND f.{feature} IS NOT NULL AND f.adv20 >= ?
-          AND (? IS FALSE OR l.isin IN (SELECT UNNEST(?)))
-        ORDER BY CAST(f.{feature} AS DOUBLE) * {direction} DESC, l.isin
+          AND (? IS FALSE OR f.lineage IN (SELECT UNNEST(?)))
+        ORDER BY CAST(f.{feature} AS DOUBLE) * {direction} DESC, f.lineage
         LIMIT ?
     """, [as_of, min_adv, eligible is not None,
           sorted(eligible) if eligible else [], max_positions]).fetchall()
@@ -243,7 +250,7 @@ class _PriceBook:
         got = self._by_session.get(session)
         if got is None:
             got = {r[0]: r[1] for r in self._con.execute(
-                """SELECT isin, close_adj FROM adjusted_prices
+                """SELECT lineage, close_adj FROM adjusted_prices
                    WHERE business_date = ? AND close_adj > 0""", [session]).fetchall()}
             self._by_session[session] = got
             self._order.append(session)
@@ -251,23 +258,30 @@ class _PriceBook:
                 self._by_session.pop(self._order.pop(0), None)
         return got
 
-    def close(self, isin: str, session: date) -> float | None:
-        return self._load(session).get(isin)
+    def close(self, lineage: str, session: date) -> float | None:
+        return self._load(session).get(lineage)
 
 
-def _close(con, isin: str, session: date) -> float | None:
+def _close(con, lineage: str, session: date) -> float | None:
     """Kept for callers holding a bare connection; a run goes through _PriceBook."""
     if isinstance(con, _PriceBook):
-        return con.close(isin, session)
+        return con.close(lineage, session)
     r = con.execute("""SELECT close_adj FROM adjusted_prices
-                       WHERE isin = ? AND business_date = ? AND close_adj > 0""",
-                    [isin, session]).fetchone()
+                       WHERE lineage = ? AND business_date = ? AND close_adj > 0""",
+                    [lineage, session]).fetchone()
     return r[0] if r else None
 
 
-def _symbol(con, isin: str) -> str | None:
-    r = con.execute("""SELECT MAX(tradingsymbol) FROM minute_bars WHERE isin = ?""",
-                    [isin]).fetchone()
+def _symbol(con, lineage: str) -> str | None:
+    """A tradingsymbol for the minute-bar simulator, resolved through the lineage's ISINs.
+
+    ``minute_bars`` is keyed on ISIN because that is what the broker feed carries, so a lineage has
+    to be expanded before it can be looked up. Taking the newest symbol on purpose: a superseded
+    ISIN's symbol may no longer be quotable.
+    """
+    r = con.execute("""SELECT MAX(m.tradingsymbol) FROM minute_bars m
+                       JOIN security_lineage l ON l.isin = m.isin
+                       WHERE l.lineage = ?""", [lineage]).fetchone()
     return r[0] if r and r[0] else None
 
 
@@ -278,7 +292,7 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
         segment: Segment = Segment.DELIVERY,
         simulate_fills: bool = True,
         restrict_to_minute_bars: bool = False,
-        eligible_isins: set | None = None,
+        eligible_lineages: set | None = None,
         universe_label: str = "",
         charge_costs: bool = True, band: float = REBALANCE_BAND) -> Run:
     """Walk the sessions, holding a real book with real cash.
@@ -307,10 +321,13 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
     # as measured when the Kite ingest ran, which is *after* the window - so it is partly a list of
     # what went up, and any excess measured against it inherits that. Passing the universe in is
     # how a run can be given one chosen from information available at the start.
-    eligible = eligible_isins
+    eligible = eligible_lineages
     if eligible is None and restrict_to_minute_bars:
+        # minute_bars is keyed on ISIN, so the shortcut has to be mapped onto lineages before it can
+        # restrict a universe that is now keyed on them.
         eligible = {r[0] for r in con.execute(
-            "SELECT DISTINCT isin FROM minute_bars").fetchall()}
+            """SELECT DISTINCT l.lineage FROM minute_bars m
+               JOIN security_lineage l ON l.isin = m.isin""").fetchall()}
 
     config = {"feature": feature, "start": start, "end": end,
               "capital_inr": capital_inr, "direction": direction,
@@ -345,9 +362,14 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
             if not target:
                 out.warnings.append(f"{session}: no eligible names in the target book")
             else:
+                # costbook.buckets is keyed on (date, LINEAGE) and always was. Passing ISINs
+                # into it meant every superseded name missed its bucket and silently fell back to
+                # "micro", the most expensive tier - so the succession names were charged small-cap
+                # impact on top of losing their prices.
                 bmap = costbook.buckets(con, [prev], set(target) | set(positions))
-                for isin in set(target) | set(positions):
-                    buckets[isin] = bmap.get((prev, isin), buckets.get(isin, "micro"))
+                for lineage in set(target) | set(positions):
+                    buckets[lineage] = bmap.get(
+                        (prev, lineage), buckets.get(lineage, "micro"))
                 cash, trades = _rebalance(
                     con, session=session, signal_session=prev, target=target,
                     positions=positions, cash=cash,
@@ -363,8 +385,8 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
 
         # ------------------------------------------------------------- mark to market
         held_value, priced, stale = 0.0, 0, 0
-        for isin, p in positions.items():
-            px = prices.close(isin, session)
+        for lineage, p in positions.items():
+            px = prices.close(lineage, session)
             if px is None:
                 # A name that did not trade is held at its last known value rather than dropped,
                 # which is the conservative treatment: a suspended holding is not free.
@@ -385,7 +407,7 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
     return out
 
 
-def calibrate(con, *, start: date, end: date, eligible_isins: set | None = None,
+def calibrate(con, *, start: date, end: date, eligible_lineages: set | None = None,
               min_adv: float = 1e7, rebalance: int = REBALANCE,
               capital_inr: float = 1e9) -> dict:
     """Measure the engine's own drift, so an excess can be read against it.
@@ -405,7 +427,7 @@ def calibrate(con, *, start: date, end: date, eligible_isins: set | None = None,
     """
     r = run(con, feature="dist_52w_high", start=start, end=end, capital_inr=capital_inr,
             rebalance=rebalance, max_positions=10_000, min_adv=min_adv,
-            simulate_fills=False, charge_costs=False, eligible_isins=eligible_isins,
+            simulate_fills=False, charge_costs=False, eligible_lineages=eligible_lineages,
             universe_label="calibration: the book IS the universe")
     s = r.summary()
     invested = sum(e["invested"] for e in r.equity) / len(r.equity)
@@ -453,24 +475,24 @@ def _control(con, start: date, end: date, *, eligible: set | None, min_adv: floa
     for d0, d1 in zip(bounds, bounds[1:]):
         row = con.execute("""
             WITH universe AS (
-                SELECT DISTINCT l.isin FROM features f
-                JOIN security_lineage l ON l.lineage = f.lineage
+                SELECT DISTINCT f.lineage FROM features f
                 WHERE f.business_date = (SELECT MAX(business_date) FROM features
                                          WHERE business_date <= ?)
-                  AND f.adv20 >= ? AND (? IS FALSE OR l.isin IN (SELECT UNNEST(?)))
+                  AND f.adv20 >= ? AND (? IS FALSE OR f.lineage IN (SELECT UNNEST(?)))
             ), opened AS (
-                SELECT p.isin, p.close_adj AS px FROM adjusted_prices p JOIN universe USING (isin)
+                SELECT p.lineage, p.close_adj AS px
+                FROM adjusted_prices p JOIN universe USING (lineage)
                 WHERE p.business_date = ? AND p.close_adj > 0
             ), closed AS (
                 -- The last price inside the period, so a name that stops trading is carried at
                 -- where it stopped rather than dropped from the control.
-                SELECT p.isin, LAST(p.close_adj ORDER BY p.business_date) AS px
-                FROM adjusted_prices p JOIN universe USING (isin)
+                SELECT p.lineage, LAST(p.close_adj ORDER BY p.business_date) AS px
+                FROM adjusted_prices p JOIN universe USING (lineage)
                 WHERE p.business_date > ? AND p.business_date <= ? AND p.close_adj > 0
-                GROUP BY p.isin
+                GROUP BY p.lineage
             )
             SELECT AVG(c.px / o.px - 1), COUNT(*)
-            FROM opened o JOIN closed c USING (isin)
+            FROM opened o JOIN closed c USING (lineage)
         """, [d0, min_adv, eligible is not None,
               sorted(eligible) if eligible else [], d0, d0, d1]).fetchone()
         if row and row[0] is not None:
@@ -522,26 +544,26 @@ def _rebalance(con, *, session: date, signal_session: date, target: list[str],
     trades: list[Trade] = []
     want = set(target)
 
-    for isin in [k for k in list(positions) if k not in want]:
-        p = positions[isin]
-        t = _fill(con, session=session, isin=isin, side=sim.SELL, shares=p.shares,
+    for lineage in [k for k in list(positions) if k not in want]:
+        p = positions[lineage]
+        t = _fill(con, session=session, lineage=lineage, side=sim.SELL, shares=p.shares,
                   rt=rt, buckets=buckets, participation=participation,
                   simulate_fills=simulate_fills, prices=prices,
-                  decision_price=prices.close(isin, signal_session))
+                  decision_price=prices.close(lineage, signal_session))
         if t is None:
             continue
         cash += t.notional - t.cost_inr
         p.shares -= t.shares
         p.cost_basis = p.avg_price * p.shares
         if p.shares <= 0:
-            del positions[isin]
+            del positions[lineage]
         trades.append(t)
 
     # Equal weight over the target, sized on equity **after** the exits so the book cannot spend
     # money it is still waiting for.
     held_value = 0.0
-    for isin, p in positions.items():
-        px = prices.close(isin, session) or p.avg_price
+    for lineage, p in positions.items():
+        px = prices.close(lineage, session) or p.avg_price
         held_value += p.shares * px
     investable = (cash + held_value) * (1 - CASH_BUFFER)
     per_name = investable / len(target) if target else 0.0
@@ -549,9 +571,9 @@ def _rebalance(con, *, session: date, signal_session: date, target: list[str],
     # Trim the overweights before buying, for two reasons: it is what equal weight means, and the
     # proceeds are what pays for the underweights. Without this leg the buys are funded only by
     # exits and the book cannot converge on its own target.
-    for isin in [k for k in list(positions) if k in want]:
-        p = positions[isin]
-        px = prices.close(isin, session)
+    for lineage in [k for k in list(positions) if k in want]:
+        p = positions[lineage]
+        px = prices.close(lineage, session)
         if not px:
             continue
         excess = p.shares * px - per_name
@@ -560,24 +582,24 @@ def _rebalance(con, *, session: date, signal_session: date, target: list[str],
         shares = min(p.shares, int(excess // px))
         if shares <= 0:
             continue
-        t = _fill(con, session=session, isin=isin, side=sim.SELL, shares=shares,
+        t = _fill(con, session=session, lineage=lineage, side=sim.SELL, shares=shares,
                   rt=rt, buckets=buckets, participation=participation,
                   simulate_fills=simulate_fills, prices=prices,
-                  decision_price=prices.close(isin, signal_session))
+                  decision_price=prices.close(lineage, signal_session))
         if t is None:
             continue
         cash += t.notional - t.cost_inr
         p.shares -= t.shares
         p.cost_basis = p.avg_price * p.shares
         if p.shares <= 0:
-            del positions[isin]
+            del positions[lineage]
         trades.append(t)
 
-    for isin in target:
-        px = prices.close(isin, session)
+    for lineage in target:
+        px = prices.close(lineage, session)
         if not px:
             continue
-        have = positions.get(isin)
+        have = positions.get(lineage)
         current = (have.shares * px) if have else 0.0
         gap = per_name - current
         # The same band on the buy side, so the book has one no-trade region rather than a tight
@@ -589,21 +611,21 @@ def _rebalance(con, *, session: date, signal_session: date, target: list[str],
         shares = int(min(gap, cash) // px)
         if shares <= 0:
             continue
-        t = _fill(con, session=session, isin=isin, side=sim.BUY, shares=shares,
+        t = _fill(con, session=session, lineage=lineage, side=sim.BUY, shares=shares,
                   rt=rt, buckets=buckets, participation=participation,
                   simulate_fills=simulate_fills, prices=prices,
-                  decision_price=prices.close(isin, signal_session))
+                  decision_price=prices.close(lineage, signal_session))
         if t is None:
             continue
         cash -= t.notional + t.cost_inr
-        p = positions.setdefault(isin, Position(isin=isin))
+        p = positions.setdefault(lineage, Position(lineage=lineage))
         p.shares += t.shares
         p.cost_basis += t.notional
         trades.append(t)
     return cash, trades
 
 
-def _fill(con, *, session: date, isin: str, side: str, shares: int, rt: dict,
+def _fill(con, *, session: date, lineage: str, side: str, shares: int, rt: dict,
           buckets: dict, participation: float, simulate_fills: bool,
           decision_price: float | None = None,
           prices: _PriceBook | None = None) -> Trade | None:
@@ -617,10 +639,11 @@ def _fill(con, *, session: date, isin: str, side: str, shares: int, rt: dict,
     """
     if shares <= 0:
         return None
-    close = prices.close(isin, session) if prices is not None else _close(con, isin, session)
+    close = (prices.close(lineage, session) if prices is not None
+             else _close(con, lineage, session))
     decision = decision_price if decision_price is not None else close
-    symbol = _symbol(con, isin) if simulate_fills else None
-    bucket = buckets.get(isin, "micro")
+    symbol = _symbol(con, lineage) if simulate_fills else None
+    bucket = buckets.get(lineage, "micro")
     half = rt.get(bucket, rt["micro"]) / 2      # one leg
 
     if symbol:
@@ -630,7 +653,7 @@ def _fill(con, *, session: date, isin: str, side: str, shares: int, rt: dict,
                         participation=participation)
         if f.filled_shares > 0 and f.achieved:
             notional = f.filled_shares * f.achieved
-            return Trade(session=session, isin=isin, side=side,
+            return Trade(session=session, lineage=lineage, side=side,
                          shares=f.filled_shares, price=f.achieved, notional=notional,
                          cost_inr=notional * half, fill_kind=SIMULATED_FILL,
                          shortfall_bps=f.shortfall_bps, minutes=f.minutes,
@@ -640,6 +663,6 @@ def _fill(con, *, session: date, isin: str, side: str, shares: int, rt: dict,
     if not close:
         return None
     notional = shares * close
-    return Trade(session=session, isin=isin, side=side, shares=shares, price=close,
+    return Trade(session=session, lineage=lineage, side=side, shares=shares, price=close,
                  notional=notional, cost_inr=notional * half,
                  fill_kind=CLOSE_FILL, intended_shares=shares)
