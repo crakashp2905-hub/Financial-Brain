@@ -12,6 +12,13 @@ models = ["onnxruntime>=1.18", "tokenizers>=0.19", "numpy>=1.26"]
 # The HTTP surface in api/. Optional on purpose: a research system should not need a web
 # framework to run a backtest, and the core install stays duckdb + pytz.
 api = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2.6"]
+# Foundation-model forecasting. Optional for the same reason as `api`: the nulls, the scores and the
+# walk-forward harness in forecasting/ are pure Python and run on the core install, so a bootstrap
+# baseline can be established without torch. Kronos itself is a repository rather than a
+# distribution - clone https://github.com/shiyu-coder/Kronos onto sys.path - and its weights are a
+# separate download from Hugging Face.
+forecasting = ["torch>=2.2", "pandas>=2.0", "einops>=0.7", "huggingface-hub>=0.23",
+               "safetensors>=0.4"]
 
 [project.scripts]
 fb = "financial_brain.cli:main"

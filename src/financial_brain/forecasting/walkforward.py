@@ -31,6 +31,7 @@ import math
 from dataclasses import dataclass, field
 from datetime import date
 
+from . import bars as barmod
 from . import calibration as C
 from .distribution import ForecastDistribution, ForecastError
 from .null import nulls
@@ -250,6 +251,12 @@ def walk(con, forecaster, *, start: date, end: date, horizon: int,
     skips a name for want of history and the null does not, the two are no longer scored on the same
     sample and a skill score between them is arithmetic on different data - so pairs are only kept
     when every forecaster in the comparison succeeded on them.
+
+    A forecaster declaring ``needs_bars`` is handed adjusted OHLCV from :mod:`.bars` instead of a
+    close series, and the nulls are then run on the closes *of those same bars* rather than on a
+    separately-queried close history. The two can differ - a bar dropped for failing its own high/low
+    arithmetic leaves a gap - and letting the candidate and the null see different histories is the
+    same comparability failure in a quieter form.
     """
     stride = stride or horizon
     grid = sample_grid(con, start=start, end=end, horizon=horizon, stride=stride,
@@ -263,8 +270,15 @@ def walk(con, forecaster, *, start: date, end: date, horizon: int,
     for name in refs:
         study.null_records[name] = []
 
+    wants_bars = bool(getattr(forecaster, "needs_bars", False))
+    study.params["context"] = "bars" if wants_bars else "closes"
+
     for session, isin in grid:
-        prices = history_for(con, isin, session)
+        if wants_bars:
+            window = barmod.history(con, isin, session, HISTORY)
+            prices = barmod.closes(window)
+        else:
+            window, prices = None, history_for(con, isin, session)
         observed = realised(con, isin, session, horizon)
         if observed is None:
             study.skipped["no_realised_price"] = study.skipped.get("no_realised_price", 0) + 1
@@ -275,9 +289,12 @@ def walk(con, forecaster, *, start: date, end: date, horizon: int,
 
         made: dict[str, ForecastDistribution] = {}
         try:
-            made[model_name] = forecaster.forecast(
-                instrument=isin, as_of=session, prices=prices, horizon=horizon,
-                n_paths=n_paths)
+            made[model_name] = (
+                forecaster.forecast(instrument=isin, as_of=session, bars=window,
+                                    horizon=horizon, n_paths=n_paths)
+                if wants_bars else
+                forecaster.forecast(instrument=isin, as_of=session, prices=prices,
+                                    horizon=horizon, n_paths=n_paths))
             for name, f in refs.items():
                 made[name] = f.forecast(instrument=isin, as_of=session, prices=prices,
                                         horizon=horizon, n_paths=n_paths)
