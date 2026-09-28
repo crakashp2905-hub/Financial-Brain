@@ -29,11 +29,15 @@ The pieces, in the order they matter:
 * ``store`` - persistence, and resolving a forecast once its horizon closes.
 * ``ensemble`` - mixing distributions (never averaging point forecasts), and a regime router that
   refuses to route until a regime has enough observations of its own.
+* ``dataset`` - exporting bars for fine-tuning, with purged chronological splits and a holdout that
+  is refused by default.
 * ``kronos`` - one model, behind the same interface as a bootstrap. Imports torch; nothing else here
   does.
 """
-from . import bars, calibration, distribution, ensemble, null, store, walkforward
+from . import (
+    bars, calibration, dataset, distribution, ensemble, null, store, walkforward,
+)
 from .distribution import ForecastDistribution, ForecastError
 
-__all__ = ["ForecastDistribution", "ForecastError", "bars", "calibration", "distribution",
-           "ensemble", "null", "store", "walkforward"]
+__all__ = ["ForecastDistribution", "ForecastError", "bars", "calibration", "dataset",
+           "distribution", "ensemble", "null", "store", "walkforward"]
