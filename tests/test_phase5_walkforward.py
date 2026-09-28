@@ -74,15 +74,15 @@ def test_the_history_handed_to_a_forecaster_ends_at_the_forecast_date():
     sessions = [r[0] for r in con.execute(
         "SELECT DISTINCT business_date FROM adjusted_prices ORDER BY 1").fetchall()]
     as_of = sessions[500]
-    prices = W.history_for(con, "INE000000000", as_of)
+    prices = W.history_for(con, "L0", as_of)
     expected = [r[0] for r in con.execute(
-        """SELECT close_adj FROM adjusted_prices WHERE isin = ? AND business_date <= ?
+        """SELECT close_adj FROM adjusted_prices WHERE lineage = ? AND business_date <= ?
            ORDER BY business_date DESC LIMIT ?""",
-        ["INE000000000", as_of, W.HISTORY]).fetchall()]
+        ["L0", as_of, W.HISTORY]).fetchall()]
     assert prices == list(reversed(expected))
     assert prices[-1] == con.execute(
-        "SELECT close_adj FROM adjusted_prices WHERE isin = ? AND business_date = ?",
-        ["INE000000000", as_of]).fetchone()[0]
+        "SELECT close_adj FROM adjusted_prices WHERE lineage = ? AND business_date = ?",
+        ["L0", as_of]).fetchone()[0]
 
 
 def test_the_walk_never_shows_a_forecaster_a_price_from_on_or_after_its_horizon():
@@ -118,10 +118,10 @@ def test_the_realised_price_is_counted_in_sessions_not_in_days():
         con.execute("INSERT INTO adjusted_prices VALUES (?,?,?,?,?,?)",
                     [d, "INE0", "L0", 100.0 + k, 1e9, 100])
     # Three sessions after the first is the fourth row, whatever the dates say.
-    assert W.realised(con, "INE0", days[0], 3) == 103.0
-    assert W.realised(con, "INE0", days[0], 4) == 104.0
+    assert W.realised(con, "L0", days[0], 3) == 103.0
+    assert W.realised(con, "L0", days[0], 4) == 104.0
     # And a horizon that runs off the end is None, not the last available price.
-    assert W.realised(con, "INE0", days[0], 5) is None
+    assert W.realised(con, "L0", days[0], 5) is None
 
 
 def test_a_horizon_running_past_the_data_is_dropped_rather_than_truncated():
@@ -147,8 +147,8 @@ def test_the_grid_universe_is_read_as_it_stood_on_each_session():
                          min_adv=1e7)
     before = {i for d, i in grid if d < cut}
     after = {i for d, i in grid if d >= cut}
-    assert "INE000000000" in before
-    assert "INE000000000" not in after
+    assert "L0" in before
+    assert "L0" not in after
 
 
 # --------------------------------------------------------------------------- comparability

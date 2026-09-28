@@ -36,6 +36,8 @@ class Database:
         # rather than bounded to [families, trials]. See evaluation/families.py.
         "ALTER TABLE evaluation_runs ADD COLUMN IF NOT EXISTS ic_series DOUBLE[]",
         "ALTER TABLE evaluation_runs ADD COLUMN IF NOT EXISTS ic_dates DATE[]",
+        "ALTER TABLE forecast_distributions ADD COLUMN IF NOT EXISTS crps DOUBLE",
+        "ALTER TABLE forecast_distributions ADD COLUMN IF NOT EXISTS pit DOUBLE",
         "ALTER TABLE dq_results  ADD COLUMN IF NOT EXISTS scope VARCHAR DEFAULT 'file'",
         "ALTER TABLE corporate_actions ADD COLUMN IF NOT EXISTS confidence VARCHAR",
         "ALTER TABLE corporate_actions ADD COLUMN IF NOT EXISTS derived_factor DOUBLE",

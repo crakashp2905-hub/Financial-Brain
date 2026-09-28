@@ -194,47 +194,54 @@ def calendar(con, start: date, end: date) -> list[date]:
            WHERE business_date BETWEEN ? AND ? ORDER BY 1""", [start, end]).fetchall()]
 
 
-def history_for(con, isin: str, as_of: date, length: int = HISTORY) -> list[float]:
-    """Closes up to and including ``as_of``, oldest first. Nothing after it, ever."""
+def history_for(con, lineage: str, as_of: date, length: int = HISTORY) -> list[float]:
+    """Closes for a lineage up to and including ``as_of``, oldest first. Nothing after, ever.
+
+    Keyed on lineage, not ISIN. See :func:`.bars.history` for the case where the difference was
+    1,166 sessions ending in 2019 against 2,903 ending in 2026.
+    """
     rows = con.execute(
         """SELECT close_adj FROM adjusted_prices
-           WHERE isin = ? AND business_date <= ? AND close_adj > 0
-           ORDER BY business_date DESC LIMIT ?""", [isin, as_of, length]).fetchall()
+           WHERE lineage = ? AND business_date <= ? AND close_adj > 0
+           ORDER BY business_date DESC LIMIT ?""", [lineage, as_of, length]).fetchall()
     return [r[0] for r in reversed(rows)]
 
 
-def realised(con, isin: str, as_of: date, horizon: int) -> float | None:
+def realised(con, lineage: str, as_of: date, horizon: int) -> float | None:
     """The close exactly ``horizon`` trading sessions after ``as_of``, on the exchange calendar.
 
     Counted in sessions rather than days on purpose. A forecast scored 20 calendar days out is
     scored over a window whose length depends on where the holidays fell, and on the Indian calendar
     that ranges from 12 to 15 sessions.
+
+    Keyed on lineage, so a name that changes ISIN inside the horizon is scored rather than silently
+    dropped for having no realised price.
     """
     rows = con.execute(
         """SELECT close_adj FROM adjusted_prices
-           WHERE isin = ? AND business_date > ? AND close_adj > 0
-           ORDER BY business_date LIMIT ?""", [isin, as_of, horizon]).fetchall()
+           WHERE lineage = ? AND business_date > ? AND close_adj > 0
+           ORDER BY business_date LIMIT ?""", [lineage, as_of, horizon]).fetchall()
     return rows[horizon - 1][0] if len(rows) == horizon else None
 
 
 def sample_grid(con, *, start: date, end: date, horizon: int, stride: int | None = None,
                 names: int = 50, min_adv: float = 1e7) -> list[tuple[date, str]]:
-    """A strided grid of (session, instrument) pairs, chosen point-in-time on each session.
+    """A strided grid of (session, lineage) pairs, chosen point-in-time on each session.
 
     The universe is re-read on every sample date from ``features.adv20`` as it stood then, so the
-    grid is not a list of names that were liquid later.
+    grid is not a list of names that were liquid later. Identified by lineage, the key that survives
+    an ISIN succession.
     """
     stride = stride or horizon
     cal = calendar(con, start, end)
     out: list[tuple[date, str]] = []
     for session in cal[::stride]:
         rows = con.execute("""
-            SELECT l.isin FROM features f
-            JOIN security_lineage l ON l.lineage = f.lineage
+            SELECT f.lineage FROM features f
             WHERE f.business_date = (SELECT MAX(business_date) FROM features
                                      WHERE business_date <= ?)
               AND f.adv20 >= ?
-            ORDER BY f.adv20 DESC, l.isin
+            ORDER BY f.adv20 DESC, f.lineage
             LIMIT ?""", [session, min_adv, names]).fetchall()
         out.extend((session, r[0]) for r in rows)
     return out
@@ -273,13 +280,13 @@ def walk(con, forecaster, *, start: date, end: date, horizon: int,
     wants_bars = bool(getattr(forecaster, "needs_bars", False))
     study.params["context"] = "bars" if wants_bars else "closes"
 
-    for session, isin in grid:
+    for session, lineage in grid:
         if wants_bars:
-            window = barmod.history(con, isin, session, HISTORY)
+            window = barmod.history(con, lineage, session, HISTORY)
             prices = barmod.closes(window)
         else:
-            window, prices = None, history_for(con, isin, session)
-        observed = realised(con, isin, session, horizon)
+            window, prices = None, history_for(con, lineage, session)
+        observed = realised(con, lineage, session, horizon)
         if observed is None:
             study.skipped["no_realised_price"] = study.skipped.get("no_realised_price", 0) + 1
             continue
@@ -290,13 +297,13 @@ def walk(con, forecaster, *, start: date, end: date, horizon: int,
         made: dict[str, ForecastDistribution] = {}
         try:
             made[model_name] = (
-                forecaster.forecast(instrument=isin, as_of=session, bars=window,
+                forecaster.forecast(instrument=lineage, as_of=session, bars=window,
                                     horizon=horizon, n_paths=n_paths)
                 if wants_bars else
-                forecaster.forecast(instrument=isin, as_of=session, prices=prices,
+                forecaster.forecast(instrument=lineage, as_of=session, prices=prices,
                                     horizon=horizon, n_paths=n_paths))
             for name, f in refs.items():
-                made[name] = f.forecast(instrument=isin, as_of=session, prices=prices,
+                made[name] = f.forecast(instrument=lineage, as_of=session, prices=prices,
                                         horizon=horizon, n_paths=n_paths)
         except ForecastError:
             # Every forecaster or none: a pair kept for the candidate and dropped for a null makes
@@ -309,7 +316,7 @@ def walk(con, forecaster, *, start: date, end: date, horizon: int,
         for name in refs:
             study.null_records[name].append((made[name], observed))
         study.sessions.append(session)
-        study.instruments.add(isin)
+        study.instruments.add(lineage)
 
     return study
 

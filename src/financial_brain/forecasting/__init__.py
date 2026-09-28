@@ -18,8 +18,22 @@ tell them apart. What the harness insists on is the thing that usually goes miss
 
 The core install stays duckdb + pytz: everything here is pure Python. The model adapters need torch,
 which lives behind the ``forecasting`` extra, and importing this package never imports torch.
+
+The pieces, in the order they matter:
+
+* ``distribution`` - the object, and the path-dependent questions only paths can answer.
+* ``null`` - the forecasters a candidate has to beat. Not strawmen.
+* ``calibration`` - calibration, sharpness and CRPS skill, measured separately.
+* ``bars`` - point-in-time adjusted OHLCV, for models that need candles.
+* ``walkforward`` - the walk, and entry into ``evaluation_runs`` as a trial.
+* ``store`` - persistence, and resolving a forecast once its horizon closes.
+* ``ensemble`` - mixing distributions (never averaging point forecasts), and a regime router that
+  refuses to route until a regime has enough observations of its own.
+* ``kronos`` - one model, behind the same interface as a bootstrap. Imports torch; nothing else here
+  does.
 """
-from . import calibration, distribution, null
+from . import bars, calibration, distribution, ensemble, null, store, walkforward
 from .distribution import ForecastDistribution, ForecastError
 
-__all__ = ["ForecastDistribution", "ForecastError", "calibration", "distribution", "null"]
+__all__ = ["ForecastDistribution", "ForecastError", "bars", "calibration", "distribution",
+           "ensemble", "null", "store", "walkforward"]

@@ -49,8 +49,16 @@ class Bar:
                 and self.low > 0 and self.volume >= 0)
 
 
-def history(con, isin: str, as_of: date, length: int = 750) -> list[Bar]:
-    """Adjusted NSE EQ bars up to and including ``as_of``, oldest first.
+def history(con, lineage: str, as_of: date, length: int = 750) -> list[Bar]:
+    """Adjusted NSE EQ bars for a **lineage**, up to and including ``as_of``, oldest first.
+
+    Keyed on lineage rather than ISIN, because an ISIN is not a company. 785 of this database's
+    16,217 lineages span more than one ISIN, and keying on the ISIN silently truncates the history at
+    every succession: lineage INE040A01034 has 2,903 sessions from 2015 to 2026, while its older ISIN
+    INE040A01026 stops after 1,166, ending 2019-09-19. A foundation model asking for 512 bars would
+    have been handed a series ending seven years before the forecast date, and nothing would have
+    raised. Those 785 are also not a random 5% of names - they are precisely the ones that had
+    corporate events.
 
     Bars failing :meth:`Bar.is_sane` are dropped rather than repaired: the repair would be a guess
     about which field the adjustment missed, and a guessed candle is worse than a gap.
@@ -66,12 +74,12 @@ def history(con, isin: str, as_of: date, length: int = 750) -> list[Bar]:
         FROM eod_prices e
         JOIN adjusted_prices a
           ON a.isin = e.isin AND a.business_date = e.business_date
-        WHERE e.isin = ? AND e.business_date <= ?
+        WHERE a.lineage = ? AND e.business_date <= ?
           AND e.exchange = ? AND e.series = ?
           AND a.close_adj > 0 AND e.low_price > 0
         ORDER BY e.business_date DESC
         LIMIT ?
-    """, [isin, as_of, EXCHANGE, SERIES, length]).fetchall()
+    """, [lineage, as_of, EXCHANGE, SERIES, length]).fetchall()
     out = []
     for r in reversed(rows):
         bar = Bar(session=r[0], open=r[1], high=r[2], low=r[3], close=r[4],

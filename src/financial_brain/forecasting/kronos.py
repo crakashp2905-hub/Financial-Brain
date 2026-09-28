@@ -183,11 +183,20 @@ class KronosForecaster:
 
     def _sample(self, predictor, window: list[Bar], horizon: int,
                 n_paths: int) -> list[list[float]]:
-        """Draw paths from the predictor, as closes.
+        """Draw ``n_paths`` independent futures, as closes.
 
-        Kept separate so a test can exercise everything around inference - the context window, the
-        horizon cap, the point-in-time boundary, the path normalisation - against a stub predictor,
-        without torch or 100MB of weights.
+        **``predict(sample_count=n)`` does not return n paths.** It averages them:
+        ``auto_regressive_inference`` runs the n samples in parallel and finishes with
+        ``np.mean(preds, axis=1)``, so ``predict`` hands back a single mean path however large
+        ``sample_count`` is. Passing that one path off as a distribution of n would give an ensemble
+        of zero spread, zero-width prediction intervals, and a CRPS that reads as a flawless
+        forecast - which is why :func:`_paths_from` refuses to inflate a single frame.
+
+        The way to a real distribution through the public API is ``predict_batch``, which averages
+        *within* each series and keeps series separate. Passing the same window ``n_paths`` times with
+        ``sample_count=1`` therefore yields ``n_paths`` independent draws, and in one batched forward
+        pass rather than n sequential ones. The mean over a single sample is the identity, so nothing
+        is averaged away.
         """
         cols = {
             "open": [b.open for b in window],
@@ -199,10 +208,16 @@ class KronosForecaster:
         }
         sessions = [b.session for b in window]
         df, stamps, future = _context(cols, sessions, horizon)
-        out = predictor.predict(
-            df=df, x_timestamp=stamps, y_timestamp=future, pred_len=horizon,
-            T=self.temperature, top_p=self.top_p, sample_count=n_paths,
-            verbose=False)
+
+        if n_paths > 1 and hasattr(predictor, "predict_batch"):
+            out = predictor.predict_batch(
+                df_list=[df] * n_paths, x_timestamp_list=[stamps] * n_paths,
+                y_timestamp_list=[future] * n_paths, pred_len=horizon,
+                T=self.temperature, top_p=self.top_p, sample_count=1, verbose=False)
+        else:
+            out = predictor.predict(
+                df=df, x_timestamp=stamps, y_timestamp=future, pred_len=horizon,
+                T=self.temperature, top_p=self.top_p, sample_count=1, verbose=False)
         return _paths_from(out, horizon, n_paths)
 
 
@@ -235,12 +250,12 @@ def _context(cols: dict, sessions: list[date], horizon: int):
 def _paths_from(out, horizon: int, n_paths: int) -> list[list[float]]:
     """Normalise whatever the predictor returned into a list of close paths.
 
-    Kronos returns either one averaged frame or a per-sample structure depending on version and
-    ``sample_count``. A frame of ``horizon`` rows is *one* path: accepting it as ``n_paths`` paths
-    would report a point forecast as a distribution, and every interval derived from it would be
-    zero-width - which scores as a perfectly sharp forecast and is the most dangerous possible
-    failure here. So a single frame is returned as a single path and the caller's sample count is
-    not assumed to have been honoured.
+    ``predict`` returns one frame and ``predict_batch`` returns a list of them. A frame of ``horizon``
+    rows is *one* path, whatever ``sample_count`` was asked for, because Kronos averages its samples
+    internally. Accepting one frame as ``n_paths`` paths would report a point forecast as a
+    distribution: zero spread, zero-width intervals, and a CRPS that scores as a perfectly sharp and
+    perfectly calibrated forecast. That is the most dangerous failure available here, so a single
+    frame stays a single path and the caller's sample count is never assumed to have been honoured.
     """
     def closes_of(frame) -> list[float]:
         if hasattr(frame, "columns"):
@@ -252,7 +267,13 @@ def _paths_from(out, horizon: int, n_paths: int) -> list[list[float]]:
 
     paths: list[list[float]]
     if isinstance(out, (list, tuple)):
-        paths = [closes_of(f) for f in out]
+        # A list of numbers is one path; a list of frames is several. Guessing wrong in the second
+        # direction is the dangerous one - it would turn a single path into `horizon` one-step
+        # "paths", every one of them a point mass.
+        if out and isinstance(out[0], (int, float)):
+            paths = [closes_of(out)]
+        else:
+            paths = [closes_of(f) for f in out]
     else:
         paths = [closes_of(out)]
     paths = [p for p in paths if len(p) == horizon]

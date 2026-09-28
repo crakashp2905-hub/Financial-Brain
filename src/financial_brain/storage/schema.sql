@@ -713,3 +713,38 @@ CREATE TABLE IF NOT EXISTS timing_models (
     report       VARCHAR,
     PRIMARY KEY (version, fitted_at)
 );
+
+-- Forecast distributions (forecasting/store.py): what a model said, and what happened.
+--
+-- The paths are stored, not just the quantiles. First-passage questions - "is the target reached
+-- before the stop" - are not answerable from a marginal distribution: two forecasts with identical
+-- terminal quantiles can have opposite stop probabilities, because the answer depends on the ORDER
+-- prices arrive in. Keeping p05..p95 and discarding the paths would silently throw away the only
+-- questions a position with a stop actually asks.
+--
+-- Keyed on lineage rather than ISIN. 785 of this database's 16,217 lineages span more than one ISIN,
+-- and an ISIN-keyed forecast loses its own history at a succession.
+CREATE TABLE IF NOT EXISTS forecast_distributions (
+    forecast_id   VARCHAR NOT NULL,     -- hash of (model, version, lineage, as_of, horizon, config)
+    lineage       VARCHAR NOT NULL,
+    as_of         DATE NOT NULL,        -- the last session the model was allowed to see
+    horizon       INTEGER NOT NULL,     -- in exchange SESSIONS, never calendar days
+    model         VARCHAR NOT NULL,
+    model_version VARCHAR,
+    made_at       TIMESTAMPTZ NOT NULL,
+    anchor        DOUBLE NOT NULL,      -- the close at as_of, which every path starts from
+    n_paths       INTEGER NOT NULL,
+    paths         DOUBLE[][],
+    config        VARCHAR,              -- temperature, top_p, context, seed: searched parameters
+    data_version  VARCHAR,
+    -- Filled in once the horizon has elapsed. NULL means not yet resolvable, which is different
+    -- from a forecast that had no realised price, and the distinction has to survive in the table:
+    -- treating "too recent to score" as "unscoreable" is how a study quietly drops its most recent
+    -- and least favourable observations.
+    realised      DOUBLE,
+    realised_at   DATE,
+    scored_at     TIMESTAMPTZ,
+    crps          DOUBLE,
+    pit           DOUBLE,
+    PRIMARY KEY (forecast_id)
+);
