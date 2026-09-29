@@ -65,6 +65,11 @@ CASH_BUFFER = 0.02
 #: name at two consecutive rebalances, because paying costs lowers equity, which lowers the target
 #: weight, which makes every position overweight by a rupee.
 REBALANCE_BAND = 0.20
+#: How long an event flag keeps a name out of the book, in sessions. Set to the longest horizon the
+#: event study measured an effect over: a scheme of arrangement was worth -3.01% at h60 on a
+#: momentum-and-recent-return-matched basis, so a 20-session exclusion would release the name while
+#: the measured effect was still running.
+EXCLUSION_SESSIONS = 60
 #: Equity-identity tolerance, as a fraction. Anything above this is an accounting bug, not rounding.
 IDENTITY_TOLERANCE = 1e-6
 
@@ -200,7 +205,9 @@ def _calendar(con, start: date, end: date) -> list[date]:
 
 def _target_book(con, feature: str, as_of: date, *, direction: int,
                  min_adv: float, max_positions: int,
-                 eligible: set | None = None) -> list[str]:
+                 eligible: set | None = None,
+                 exclude_events: tuple[str, ...] = (),
+                 exclusion_sessions: int = EXCLUSION_SESSIONS) -> list[str]:
     """The strategy's intended holdings, from information available at ``as_of`` and no later.
 
     ``eligible`` restricts the **ranking universe**, not the result. Taking the global top N and
@@ -214,18 +221,44 @@ def _target_book(con, feature: str, as_of: date, *, direction: int,
     a lineage holding three ISINs produce three rows from one feature row - so the top twenty could
     contain the same company three times. ``features`` is keyed on lineage already and the join was
     never needed.
+
+    ``exclude_events`` drops names carrying one of those ``event_flags`` columns within the last
+    ``exclusion_sessions`` **calendar days** of ``as_of``. It exists because the effects
+    :mod:`..evaluation.events` found are all negative: a scheme of arrangement is worth -2.06% over 20
+    sessions and -3.01% over 60, matched on both twelve-month momentum and the last month's return, at
+    t of -6.4 and -5.3 against a Bonferroni bar of 3.63. A long-only book cannot short that, but it can
+    decline to hold it, which is the only tradeable form the finding has.
+
+    The window is in calendar days rather than sessions, deliberately and imprecisely: ``event_flags``
+    is keyed by date and counting sessions back would need a calendar join per name per rebalance. The
+    error is at most a fortnight of holidays on a 60-session window and it makes the exclusion slightly
+    *shorter* than intended, which understates the effect rather than flattering it.
     """
+    flagged = ""
+    if exclude_events:
+        any_flag = " OR ".join(f"v.{c}" for c in exclude_events)
+        flagged = f"""
+          AND f.lineage NOT IN (
+              SELECT v.lineage FROM event_flags v
+              WHERE v.business_date <= ?
+                AND v.business_date > CAST(? AS DATE) - INTERVAL {int(exclusion_sessions)} DAY
+                AND ({any_flag}))"""
+
+    args = [as_of, min_adv, eligible is not None,
+            sorted(eligible) if eligible else []]
+    if exclude_events:
+        args += [as_of, as_of]
+    args.append(max_positions)
     rows = con.execute(f"""
         SELECT f.lineage
         FROM features f
         WHERE f.business_date = (SELECT MAX(business_date) FROM features
                                  WHERE business_date <= ?)
           AND f.{feature} IS NOT NULL AND f.adv20 >= ?
-          AND (? IS FALSE OR f.lineage IN (SELECT UNNEST(?)))
+          AND (? IS FALSE OR f.lineage IN (SELECT UNNEST(?))){flagged}
         ORDER BY CAST(f.{feature} AS DOUBLE) * {direction} DESC, f.lineage
         LIMIT ?
-    """, [as_of, min_adv, eligible is not None,
-          sorted(eligible) if eligible else [], max_positions]).fetchall()
+    """, args).fetchall()
     return [r[0] for r in rows]
 
 
@@ -294,7 +327,9 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
         restrict_to_minute_bars: bool = False,
         eligible_lineages: set | None = None,
         universe_label: str = "",
-        charge_costs: bool = True, band: float = REBALANCE_BAND) -> Run:
+        charge_costs: bool = True, band: float = REBALANCE_BAND,
+        exclude_events: tuple[str, ...] = (),
+        exclusion_sessions: int = EXCLUSION_SESSIONS) -> Run:
     """Walk the sessions, holding a real book with real cash.
 
     ``restrict_to_minute_bars`` trades only names whose minute bars exist, which gives a run with
@@ -336,6 +371,10 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
               "segment": segment.value, "simulate_fills": simulate_fills,
               "restrict_to_minute_bars": restrict_to_minute_bars,
               "charge_costs": charge_costs, "band": band,
+              # Part of the experiment's identity: excluding a set of events is a different strategy,
+              # and it is a searched choice that the ledger has to know was spent.
+              "exclude_events": sorted(exclude_events),
+              "exclusion_sessions": exclusion_sessions if exclude_events else None,
               "universe_label": universe_label,
               # The universe is part of the experiment's identity: the same strategy on a
               # different universe is a different experiment, and hashing only the strategy
@@ -358,7 +397,9 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
             prev = cal[i - 1]
             target = _target_book(con, feature, prev, direction=direction,
                                   min_adv=min_adv, max_positions=max_positions,
-                                  eligible=eligible)
+                                  eligible=eligible,
+                                  exclude_events=exclude_events,
+                                  exclusion_sessions=exclusion_sessions)
             if not target:
                 out.warnings.append(f"{session}: no eligible names in the target book")
             else:
