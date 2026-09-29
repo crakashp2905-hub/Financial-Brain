@@ -97,7 +97,11 @@ story: the minute-bar list was substantially a list of what went up.
 
 ## The finding that got much stronger: gross is huge, net depends entirely on the horizon
 
-Eleven years, top 100, against a floor of **+34.26%**:
+Eleven years, top 100. **Each row must be read against the floor at its own rebalance**, and the floor
+grows sharply with the horizon: fewer rebalances means less trimming, so weights drift further inside
+the band and the whole-universe book picks up more of a momentum tilt the cost-free control never
+gets. Measured: **+34.26% at h20**, **+130.79% at h60**. The h120 and h250 floors are not yet
+measured and are presumably larger again.
 
     rebal  band       net    universe      EXCESS       gross    costs   Sharpe   maxDD
        20  0.20  +361.97%   +329.93%     +32.04%    +705.59%   150.1%    +0.96  -42.0%
@@ -115,8 +119,15 @@ equity to 15.0%. **h60 is where the two curves cross**, and it is an interior op
 edge of the grid, which is the one thing that makes a swept parameter believable.
 
 Every net excess is now positive - unfreezing one name in eight was worth more than every other fix
-combined - and h60's **+246.55%** sits 212 points clear of the floor, at Sharpe +1.18 over eleven
-years. Before the lineage fix the same cell read **+21.31%**, inside the floor and therefore nothing.
+combined. But h60's **+246.55%** clears its own floor by about **116 points**, not the 212 an earlier
+version of this note claimed: that comparison used the h20 floor against an h60 result, which is
+comparing two different instruments and flattered the margin by roughly a hundred points.
+
+And the result does not survive being chosen honestly.
+[[Naive momentum beats it, and the horizon was a fit]] walks the horizon selection forward: h60 is
+picked on every training window and returns a mean of **-7.49%** out of sample, while h120 - which
+trains worst in every fold - is the only horizon with a positive out-of-sample mean. The table below is
+in-sample.
 
 The band still barely matters: 20% and 50% differ by four points out of 250. Turnover comes from names
 entering and leaving the top 100, not from weights drifting, so widening the band is not a lever and
@@ -134,7 +145,9 @@ means nothing.
 after 150 trials. [[A hundred and fifty trials are not a hundred and fifty discoveries]] applies in
 full.
 
-**No out-of-sample window.** h60 was selected on 2015-2026 and tested on 2015-2026.
+**The out-of-sample test has since been run and it fails.** See
+[[Naive momentum beats it, and the horizon was a fit]]. Everything in the sweep table is in-sample and
+should be read as such.
 
 **Costs at h60 are still 81.2% of opening equity** over eleven years, about 5.6% a year. The strategy
 is not cheap; it is merely no longer paying more than it earns.
@@ -142,4 +155,5 @@ is not cheap; it is merely no longer paying more than it earns.
 Related: [[The first end-to-end run, and the control that makes it readable]] ·
 [[The cost number that decided everything]] · [[Asking the question the factor actually claims]] ·
 [[A hundred and fifty trials are not a hundred and fifty discoveries]] · [[h20]] · [[MONEY GATE]] ·
-[[Kronos is confidently wrong]]
+[[Kronos is confidently wrong]] ·
+[[Naive momentum beats it, and the horizon was a fit]]
