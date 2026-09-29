@@ -748,3 +748,33 @@ CREATE TABLE IF NOT EXISTS forecast_distributions (
     pit           DOUBLE,
     PRIMARY KEY (forecast_id)
 );
+
+-- Opportunity memory (opportunity/memory.py): what the system considered, not only what it traded.
+--
+-- A system that records only its trades learns from a sample it selected itself. It can measure how
+-- its positions did and can never measure what it declined - so a rule that systematically rejects
+-- good opportunities is invisible to it, because the evidence that would expose the rule is exactly
+-- what the rule threw away.
+--
+-- One row per candidate per rebalance: everything the ranking saw, what happened to it, and why. The
+-- rejected rows are the point. They are also the majority - a top-100 book over a 1,700-name universe
+-- rejects sixteen names for every one it takes - so this table grows fast and is written in bulk.
+CREATE TABLE IF NOT EXISTS opportunity_memory (
+    run_id        VARCHAR NOT NULL,   -- the paper run's experiment id
+    session       DATE NOT NULL,      -- the rebalance session
+    signal_from   DATE NOT NULL,      -- the session the ranking was computed on
+    lineage       VARCHAR NOT NULL,
+    rank          INTEGER,            -- position in the ranking; NULL when not ranked at all
+    score         DOUBLE,             -- the feature value the ranking used
+    -- TAKEN, HELD, REJECTED_RANK (ranked below the cut), REJECTED_FILTER (an exclusion fired),
+    -- REJECTED_CASH (the book ran out of money before reaching it), EXITED.
+    disposition   VARCHAR NOT NULL,
+    reason        VARCHAR,
+    -- Filled by resolve() once the horizon closes. The counterfactual: what the name did whether or
+    -- not it was held. NULL means unresolved, which is different from a name that stopped trading.
+    fwd_return    DOUBLE,
+    fwd_excess    DOUBLE,             -- against the eligible universe over the same window
+    resolved_at   TIMESTAMPTZ,
+    unresolvable  BOOLEAN,
+    PRIMARY KEY (run_id, session, lineage)
+);

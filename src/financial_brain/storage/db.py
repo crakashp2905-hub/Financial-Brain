@@ -38,6 +38,7 @@ class Database:
         "ALTER TABLE evaluation_runs ADD COLUMN IF NOT EXISTS ic_dates DATE[]",
         "ALTER TABLE forecast_distributions ADD COLUMN IF NOT EXISTS crps DOUBLE",
         "ALTER TABLE forecast_distributions ADD COLUMN IF NOT EXISTS pit DOUBLE",
+        "ALTER TABLE opportunity_memory ADD COLUMN IF NOT EXISTS unresolvable BOOLEAN",
         "ALTER TABLE dq_results  ADD COLUMN IF NOT EXISTS scope VARCHAR DEFAULT 'file'",
         "ALTER TABLE corporate_actions ADD COLUMN IF NOT EXISTS confidence VARCHAR",
         "ALTER TABLE corporate_actions ADD COLUMN IF NOT EXISTS derived_factor DOUBLE",

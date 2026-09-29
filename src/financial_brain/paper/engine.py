@@ -121,6 +121,8 @@ class Run:
     trades: list[Trade] = field(default_factory=list)
     rebalances: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    #: Rows written to opportunity_memory, when ``remember`` is on.
+    remembered: int = 0
     #: What the traded universe did on its own, and what the market did. Computed by the engine
     #: rather than left to whoever remembers to ask: the first run here returned +41.75% on a
     #: universe that itself returned +22.65% against a market that fell 5.89%, and reporting the
@@ -203,6 +205,50 @@ def _calendar(con, start: date, end: date) -> list[date]:
         [start, end]).fetchall()]
 
 
+def _remember(con, run_id: str, session: date, signal_from: date, *,
+              considered: list[dict], target: list[str], positions: dict,
+              before: set) -> int:
+    """Turn one rebalance into opportunity_memory rows.
+
+    The dispositions separate three different rejections, because they are three different things: a
+    name ranked below the cut is the strategy working as designed, a name dropped by the event filter
+    is a rule acting, and a name in the target that never got bought is a cash constraint biting. Only
+    the last two can be reconsidered without changing the strategy.
+    """
+    from ..opportunity import memory as mem
+
+    want, rows = set(target), []
+    for c in considered:
+        lin, held = c["lineage"], c["lineage"] in before
+        if lin in want:
+            if lin not in positions:
+                d, why = mem.REJECTED_CASH, "in the target but not bought"
+            elif held:
+                d, why = mem.HELD, "already held"
+            else:
+                d, why = mem.TAKEN, "ranked into the book"
+        elif held:
+            # A held name that is no longer wanted is a SELL, not a name the book passed over. The
+            # first version labelled it REJECTED_RANK, which pooled every exit with the thousands of
+            # names never owned and left EXITED meaning only "vanished from the universe" - so the
+            # one disposition that measures selling decisions measured delistings instead.
+            d, why = mem.EXITED, ("event exclusion" if c["filtered"]
+                                  else f"ranked out at {c['rank']}")
+        elif c["filtered"]:
+            d, why = mem.REJECTED_FILTER, "event exclusion"
+        else:
+            d, why = mem.REJECTED_RANK, f"ranked {c['rank']}"
+        rows.append({"lineage": lin, "rank": c["rank"], "score": c["score"],
+                     "disposition": d, "reason": why})
+
+    seen = {c["lineage"] for c in considered}
+    for lin in before - want - seen:
+        rows.append({"lineage": lin, "rank": None, "score": None,
+                     "disposition": mem.EXITED, "reason": "left the universe"})
+    return mem.record(con, run_id=run_id, session=session, signal_from=signal_from,
+                      rows=rows)
+
+
 def _target_book(con, feature: str, as_of: date, *, direction: int,
                  min_adv: float, max_positions: int,
                  eligible: set | None = None,
@@ -260,6 +306,45 @@ def _target_book(con, feature: str, as_of: date, *, direction: int,
         LIMIT ?
     """, args).fetchall()
     return [r[0] for r in rows]
+
+
+def _considered(con, feature: str, as_of: date, *, direction: int, min_adv: float,
+                eligible: set | None, exclude_events: tuple[str, ...],
+                exclusion_sessions: int) -> list[dict]:
+    """Every name the ranking saw at ``as_of``, in rank order, with whether a filter dropped it.
+
+    The same query as :func:`_target_book` without the LIMIT, plus a column saying whether the event
+    exclusion fired. It exists so :mod:`..opportunity.memory` can record the rejections: a book that
+    logs only its holdings is learning from a sample it selected itself, and the rule that rejects
+    good names is invisible precisely because it threw away the evidence.
+    """
+    # Placeholders bind in the order they appear in the SQL TEXT, and the filter's two sit in the
+    # SELECT list - ahead of every other one. Appending them last bound the event dates to the
+    # WHERE clause and DuckDB refused to compare a DATE with a BOOLEAN, which is the lucky version
+    # of this mistake; with compatible types it would have silently filtered on the wrong column.
+    flag_expr, head = "FALSE", []
+    if exclude_events:
+        any_flag = " OR ".join(f"v.{c}" for c in exclude_events)
+        flag_expr = f"""EXISTS (
+            SELECT 1 FROM event_flags v
+            WHERE v.lineage = f.lineage AND v.business_date <= ?
+              AND v.business_date > CAST(? AS DATE) - INTERVAL {int(exclusion_sessions)} DAY
+              AND ({any_flag}))"""
+        head = [as_of, as_of]
+    args = head + [as_of, min_adv, eligible is not None,
+                   sorted(eligible) if eligible else []]
+
+    rows = con.execute(f"""
+        SELECT f.lineage, CAST(f.{feature} AS DOUBLE) AS score, {flag_expr} AS filtered
+        FROM features f
+        WHERE f.business_date = (SELECT MAX(business_date) FROM features
+                                 WHERE business_date <= ?)
+          AND f.{feature} IS NOT NULL AND f.adv20 >= ?
+          AND (? IS FALSE OR f.lineage IN (SELECT UNNEST(?)))
+        ORDER BY CAST(f.{feature} AS DOUBLE) * {direction} DESC, f.lineage
+    """, args).fetchall()
+    return [{"lineage": r[0], "score": r[1], "filtered": bool(r[2]), "rank": i + 1}
+            for i, r in enumerate(rows)]
 
 
 class _PriceBook:
@@ -329,12 +414,17 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
         universe_label: str = "",
         charge_costs: bool = True, band: float = REBALANCE_BAND,
         exclude_events: tuple[str, ...] = (),
-        exclusion_sessions: int = EXCLUSION_SESSIONS) -> Run:
+        exclusion_sessions: int = EXCLUSION_SESSIONS,
+        remember: bool = False) -> Run:
     """Walk the sessions, holding a real book with real cash.
 
     ``restrict_to_minute_bars`` trades only names whose minute bars exist, which gives a run with
     100% measured fills on a smaller universe. Both are worth having: the restricted run is the
     complete chain, and the unrestricted one shows what fill coverage a real universe would have.
+
+    ``remember`` records every candidate at every rebalance into ``opportunity_memory``, including the
+    ones rejected and why. Off by default: it needs a writable connection and writes roughly the
+    universe size times the number of rebalances.
     """
     cal = _calendar(con, start, end)
     if len(cal) < rebalance * 2:
@@ -395,6 +485,7 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
         # gap is the difference between a trading system and a backtest with hindsight.
         if i > 0 and (i - 1) % rebalance == 0:
             prev = cal[i - 1]
+            held_before = set(positions)
             target = _target_book(con, feature, prev, direction=direction,
                                   min_adv=min_adv, max_positions=max_positions,
                                   eligible=eligible,
@@ -423,6 +514,14 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
                     "target": len(target), "held_after": len(positions),
                     "trades": len(trades),
                     "notional": sum(t.notional for t in trades)})
+                if remember:
+                    out.remembered += _remember(
+                        con, out.experiment_id, session, prev,
+                        considered=_considered(
+                            con, feature, prev, direction=direction, min_adv=min_adv,
+                            eligible=eligible, exclude_events=exclude_events,
+                            exclusion_sessions=exclusion_sessions),
+                        target=target, positions=positions, before=held_before)
 
         # ------------------------------------------------------------- mark to market
         held_value, priced, stale = 0.0, 0, 0
