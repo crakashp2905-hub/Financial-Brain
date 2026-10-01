@@ -119,9 +119,9 @@ def test_the_bucket_count_shrinks_when_matching_on_more_features():
 
 def test_an_unknown_event_is_refused_rather_than_interpolated_into_sql():
     con = _db()
-    with pytest.raises(EV.EventError, match="unknown event"):
+    with pytest.raises(EV.EventError, match="unknown flag"):
         EV.event_study(con, event="e_not_a_real_flag")
-    with pytest.raises(EV.EventError, match="unknown event"):
+    with pytest.raises(EV.EventError, match="unknown flag"):
         EV._effect_sql("'; DROP TABLE features; --")
 
 
@@ -256,3 +256,25 @@ def test_the_exclusion_is_part_of_the_experiment_id():
     a = engine.experiment_id({"feature": "mom_12_1", "exclude_events": []})
     b = engine.experiment_id({"feature": "mom_12_1", "exclude_events": ["e_scheme"]})
     assert a != b
+
+
+def test_a_candle_pattern_is_studied_against_the_candles_table():
+    """Candle patterns fire on 0.22% to 12% of rows, so a fifty-name tier holds zero or one hit on a
+    typical session and a cross-sectional rank correlation has nothing to correlate. A matched event
+    study is the right instrument, and it is the same one the filing events use."""
+    assert EV.table_for("e_scheme") == "event_flags"
+    assert EV.table_for("k_hammer") == "candles"
+    sql = EV._effect_sql("k_hammer", EV.MATCH_2D)
+    assert "LEFT JOIN candles v" in sql
+    assert "event_flags" not in sql
+    assert "v.k_hammer" in sql
+
+
+def test_every_declared_flag_resolves_to_exactly_one_table():
+    seen = {}
+    for table, cols in EV.FLAG_TABLES.items():
+        for c in cols:
+            assert c not in seen, f"{c} is declared in both {seen.get(c)} and {table}"
+            seen[c] = table
+    for c in EV.EVENTS + EV.CANDLES:
+        assert EV.table_for(c) == seen[c]

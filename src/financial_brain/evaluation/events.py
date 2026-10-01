@@ -55,6 +55,24 @@ EVENTS = (
     "e_auditor_resignation", "e_joint_venture",
 )
 
+#: Candle patterns in ``candles``, which are sparse per-name flags rather than cross-sectional
+#: signals. They fire on 0.22% to 12% of rows: a fifty-name tier holds zero or one hit on a typical
+#: session, so a within-session rank correlation has nothing to correlate and
+#: :mod:`.replication` could not measure six of the seven at all. A matched event study is the right
+#: instrument for a flag this rare, and it is the same instrument the filing events already use.
+CANDLES = ("k_doji", "k_hammer", "k_shooting_star", "k_bullish_engulfing",
+           "k_bearish_engulfing", "k_morning_star", "k_marubozu_bull")
+
+#: Which table a flag lives in, so one study serves both. Both are keyed (lineage, business_date).
+FLAG_TABLES = {"event_flags": EVENTS, "candles": CANDLES}
+
+
+def table_for(flag: str) -> str:
+    for table, cols in FLAG_TABLES.items():
+        if flag in cols:
+            return table
+    raise EventError(f"unknown flag {flag!r}; have {sorted(EVENTS + CANDLES)}")
+
 #: Horizons in trading rows.
 HORIZONS = (20, 60)
 
@@ -92,8 +110,7 @@ def _effect_sql(event: str, match=MATCH_1D) -> str:
     Written out rather than assembled because the joins are the experiment: a mistake in the matching
     condition produces a number that looks exactly like an answer.
     """
-    if event not in EVENTS:
-        raise EventError(f"unknown event {event!r}; have {list(EVENTS)}")
+    table = table_for(event)
     if not match:
         raise EventError("an unmatched event study measures momentum, not the event")
     q = DECILES if len(match) == 1 else DECILES_2D
@@ -122,7 +139,7 @@ def _effect_sql(event: str, match=MATCH_1D) -> str:
                    COALESCE(v.{event}, FALSE) AS hit
             FROM elig e
             JOIN fwd f USING (lineage, business_date)
-            LEFT JOIN event_flags v USING (lineage, business_date)
+            LEFT JOIN {table} v USING (lineage, business_date)
             WHERE f.ret IS NOT NULL
         ), universe AS (
             -- The bar every return is measured against: the eligible universe's mean over the same
