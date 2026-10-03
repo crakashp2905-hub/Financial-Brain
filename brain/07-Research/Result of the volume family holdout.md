@@ -93,3 +93,56 @@ what is real rather than what is tradeable.
 Related: [[PRE-REGISTERED holdout for the volume family]] ·
 [[Result of the ninety-indicator sweep]] ·
 [[Result of the pre-registered out-of-sample test]]
+
+---
+
+## Follow-up: the registered holdout of the differenced versions
+
+Run after the registration above was committed at `2954c63`.
+
+    candidate      pred        deep IC/t        micro IC/t   verdict
+    ADL_D20          +1  +0.0015/  +0.81   -0.0196/ -10.51   FAIL
+    WOBV_D20         -1  -0.0323/ -21.75   -0.0567/ -32.81   PASS
+
+I predicted both would fail. **`ADL_D20` failed as predicted** - sign flips between the held-out
+tiers, the same way its level did. **`WOBV_D20` passed, and strongly**: the predicted sign in both
+tiers, |t| of 21.75 and 32.81, and ICs *larger* out of sample than in (-0.032 and -0.057 against an
+in-sample range of -0.008 to -0.031). It also shows the clean size gradient that every surviving
+effect here has shown.
+
+So I was wrong about it, in the direction I said would be worth knowing.
+
+### But it is not a third family
+
+    WOBV_D20 rank correlation with every known family
+      ret_20d          +0.605
+      adv20            +0.335
+      dist_52w_high    +0.281
+      ret_5d           +0.239
+      vol_60           +0.096
+      mom_12_1         +0.062
+      atr_pctile_250   -0.038
+
+**+0.605 with the 20-session return.** `WOBV_D20` is the 20-session change in volume-weighted
+on-balance volume, and that is substantially the 20-session return with volume weighting attached.
+Negative direction means names whose volume-weighted flow rose most over the last month subsequently
+underperform - which is short-horizon reversal.
+
+The genuinely interesting part is that **raw `ret_20d` failed replication** in the original census
+(-0.0183, -0.0024, +0.0011, -0.0087 - signs scattered) while the volume-weighted version passes a
+holdout at |t| > 20. Weighting reversal by volume turns a signal that does not replicate into one that
+does. That is a refinement of a known idea rather than a new one, and it is the most useful thing to
+come out of the sweep.
+
+### Final accounting of the sweep
+
+    113 candidates
+      7 replicated in sample
+      1 disqualified for lookahead (ICHIMOKU_CHIKOU, finta shifts it forward)
+      2 were volatility re-expressions (VBM, BBWIDTH)
+      1 was partly momentum (EFI)
+      3 claimed as a new family, and all three FAILED the holdout
+      1 differenced survivor (WOBV_D20), which is reversal with volume weighting
+
+No new family. One refinement. Everything else died, most of it by flipping sign - which is what the
+conjunction is for.
