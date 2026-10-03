@@ -63,15 +63,28 @@ EVENTS = (
 CANDLES = ("k_doji", "k_hammer", "k_shooting_star", "k_bullish_engulfing",
            "k_bearish_engulfing", "k_morning_star", "k_marubozu_bull")
 
-#: Which table a flag lives in, so one study serves both. Both are keyed (lineage, business_date).
-FLAG_TABLES = {"event_flags": EVENTS, "candles": CANDLES}
+#: Holder-filing kinds, from ``holder_filings`` reduced to one row per (lineage, session). These are
+#: the genuinely India-specific flags: promoter pledging above all, which is the canonical distress
+#: signal here. The table records THAT a filing of a kind occurred and carries no direction and no
+#: quantity, so an insider or substantial-holding flag pools purchases with disposals and the two
+#: should largely cancel - a large effect either way means the mix is lopsided, not that the filers
+#: predict.
+HOLDER = ("h_pledge", "h_insider", "h_substantial", "h_exempt", "h_open_offer")
+
+#: Which table a flag lives in, so one study serves all of them. Every table is keyed
+#: (lineage, business_date). A caller may add its own by passing ``table`` to the study.
+FLAG_TABLES = {"event_flags": EVENTS, "candles": CANDLES, "holder_flags": HOLDER}
 
 
-def table_for(flag: str) -> str:
-    for table, cols in FLAG_TABLES.items():
+def table_for(flag: str, *, table: str | None = None) -> str:
+    """Where a flag lives. ``table`` names an attached one, for a panel the caller built."""
+    if table:
+        return table
+    for t, cols in FLAG_TABLES.items():
         if flag in cols:
-            return table
-    raise EventError(f"unknown flag {flag!r}; have {sorted(EVENTS + CANDLES)}")
+            return t
+    raise EventError(
+        f"unknown flag {flag!r}; have {sorted(EVENTS + CANDLES + HOLDER)}")
 
 #: Horizons in trading rows.
 HORIZONS = (20, 60)
@@ -104,13 +117,13 @@ class EventError(ValueError):
     pass
 
 
-def _effect_sql(event: str, match=MATCH_1D) -> str:
+def _effect_sql(event: str, match=MATCH_1D, table: str | None = None) -> str:
     """The matched event study, as one query returning a per-session effect series.
 
     Written out rather than assembled because the joins are the experiment: a mistake in the matching
     condition produces a number that looks exactly like an answer.
     """
-    table = table_for(event)
+    table = table_for(event, table=table)
     if not match:
         raise EventError("an unmatched event study measures momentum, not the event")
     q = DECILES if len(match) == 1 else DECILES_2D
@@ -172,7 +185,8 @@ def _effect_sql(event: str, match=MATCH_1D) -> str:
 
 def event_study(con, *, event: str, horizon: int = 20, start: date | None = None,
                 end: date | None = None, min_adv: float = 1e7,
-                min_cases: int = MIN_CASES_PER_SESSION, match=MATCH_1D) -> dict:
+                min_cases: int = MIN_CASES_PER_SESSION, match=MATCH_1D,
+                table: str | None = None) -> dict:
     """The momentum-matched effect of one event at one horizon.
 
     Returns the per-session effect series, its mean, and a t-statistic computed **over sessions**. The
@@ -180,7 +194,7 @@ def event_study(con, *, event: str, horizon: int = 20, start: date | None = None
     """
     start = start or date(2015, 1, 1)
     end = end or date(2026, 12, 31)
-    rows = con.execute(_effect_sql(event, match),
+    rows = con.execute(_effect_sql(event, match, table),
                        [min_adv, start, end, horizon, min_cases]).fetchall()
     if len(rows) < MIN_SESSIONS:
         return {"event": event, "horizon": horizon, "sessions": len(rows),
