@@ -225,3 +225,28 @@ def test_multiplicity_is_charged_by_features_tried_not_by_tiers():
     name, adj = c["survive_multiplicity"][0]
     joint = next(r["verdict"]["joint_p"] for r in c["results"] if r["feature"] == name)
     assert adj == pytest.approx(joint * c["features_tried"])
+
+
+def test_a_candidate_can_come_from_an_attached_panel():
+    """A third-party indicator library gets tested through this harness rather than a parallel one
+    with its own quiet differences: same tiering, same within-tier ranking, same conjunction."""
+    assert "FROM features f" in R.source_for("features", "mom_12_1")
+    assert "FROM candles c" in R.source_for("candles", "k_doji")
+    assert "FROM indicators p" in R.source_for("indicators", "HMA")
+    sql = R.tier_sql("HMA", candle=False, table="indicators")
+    assert "FROM indicators p" in sql
+    assert "FROM features f\n" in sql, "the tiering still comes from features"
+    assert "p.HMA" in sql
+
+
+def test_an_attached_panel_produces_the_same_verdict_machinery():
+    con = _db(edge_in=[t[0] for t in R.TIERS], edge=0.01)
+    # Re-expose the fixture's signal under a different table name.
+    con.execute("CREATE TABLE panel AS SELECT business_date, lineage, sig AS ind FROM features")
+    native = R.by_tier(con, feature="sig", horizon=20, **_w())
+    attached = R.by_tier(con, feature="ind", horizon=20, table="panel", **_w())
+    assert attached["verdict"]["replicated"] == native["verdict"]["replicated"]
+    for a, b in zip(native["tiers"], attached["tiers"]):
+        assert a.tier == b.tier
+        if a.ok() and b.ok():
+            assert a.mean_ic == pytest.approx(b.mean_ic, abs=1e-12)

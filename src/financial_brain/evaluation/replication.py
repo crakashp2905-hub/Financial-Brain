@@ -104,7 +104,16 @@ class TierResult:
         return self.t is not None
 
 
-def tier_sql(feature: str, *, candle: bool) -> str:
+#: Where a candidate column lives. ``features`` and ``candles`` are this database's own; anything else
+#: is a panel attached by the caller, which is how a third-party indicator library gets tested through
+#: the same harness rather than through a parallel one with its own quiet differences.
+def source_for(table: str, feature: str) -> str:
+    alias = {"features": "f", "candles": "c"}.get(table, "p")
+    return (f"SELECT {alias}.business_date, {alias}.lineage, "
+            f"CAST({alias}.{feature} AS DOUBLE) AS x FROM {table} {alias}")
+
+
+def tier_sql(feature: str, *, candle: bool, table: str | None = None) -> str:
     """One query returning (tier, session, IC) for every tier and session.
 
     The ranking, the tiering, the forward return and the rank correlation are all done in SQL in one
@@ -112,10 +121,7 @@ def tier_sql(feature: str, *, candle: bool) -> str:
     point: ranks computed over the full universe would carry the size effect straight into every
     tier's IC.
     """
-    src = ("SELECT c.business_date, c.lineage, CAST(c.{f} AS DOUBLE) AS x "
-           "FROM candles c").format(f=feature) if candle else (
-        "SELECT f.business_date, f.lineage, CAST(f.{f} AS DOUBLE) AS x "
-        "FROM features f").format(f=feature)
+    src = source_for(table or ("candles" if candle else "features"), feature)
     cases = "\n".join(
         f"                WHEN rk BETWEEN {lo} AND {hi} THEN '{name}'"
         for name, lo, hi, _ in TIERS)
@@ -165,9 +171,16 @@ def tier_sql(feature: str, *, candle: bool) -> str:
 
 
 def by_tier(con, *, feature: str, horizon: int = 20, start: date, end: date,
-            candle: bool = False, min_names: int = MIN_NAMES) -> dict:
-    """Cross-sectional IC of one feature, measured separately inside each tier."""
-    rows = con.execute(tier_sql(feature, candle=candle),
+            candle: bool = False, min_names: int = MIN_NAMES,
+            table: str | None = None) -> dict:
+    """Cross-sectional IC of one feature, measured separately inside each tier.
+
+    ``table`` points the candidate column at a panel other than ``features`` or ``candles`` - an
+    attached indicator library, say. Everything else is identical, which is the point: a third-party
+    indicator has to face the same tiering, the same within-tier ranking and the same conjunction as
+    anything computed here.
+    """
+    rows = con.execute(tier_sql(feature, candle=candle, table=table),
                        [start, end, horizon, start, end, min_names]).fetchall()
     series: dict[str, list[float]] = {}
     counts: dict[str, list[int]] = {}
@@ -228,7 +241,7 @@ def verdict(tiers: list[TierResult], *, tier_t: float = TIER_T) -> dict:
 
 
 def census(con, *, features=CHART_FEATURES, candles=CANDLE_FEATURES, horizon: int = 20,
-           start: date, end: date, progress=None) -> dict:
+           start: date, end: date, table: str | None = None, progress=None) -> dict:
     """Every feature, tier by tier, with the multiple-testing cost of having asked.
 
     The bar reported is the single-test Bonferroni bar over the whole ledger including this census.
