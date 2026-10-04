@@ -18,13 +18,13 @@ def _cs(n=200):
         "dist_52w_high": -rng.uniform(0, .5, n), "ret_20d": rng.normal(0, .08, n)})
 
 
-def test_daily_loop_records_decisions_and_reports_an_empty_book(monkeypatch):
+def test_daily_loop_records_decisions_and_reports_an_empty_book(monkeypatch, tmp_path):
     seen = {}
     monkeypatch.setattr(E, "scan", lambda con, d, cfg: E.decide(_cs(), cfg=cfg))
     monkeypatch.setattr(daily.M, "record", lambda con, **kw: seen.update(kw) or len(kw["rows"]))
     monkeypatch.setattr(daily.M, "resolve", lambda con, **kw: {"resolved": 0})
     monkeypatch.setattr(daily.M, "report", lambda con, **kw: {})
-    r = daily.run_daily(None, as_of=date(2026, 9, 18))
+    r = daily.run_daily(None, as_of=date(2026, 9, 18), today=date(2026, 9, 21), ks_path=tmp_path / 'ks.json')
     assert seen["run_id"] == daily.LIVE_RUN and len(seen["rows"]) == 200
     assert r["nothing_clears"] and r["paper_book"] == []
 
@@ -36,7 +36,7 @@ def test_daily_module_cannot_place_an_order():
         assert word not in code
 
 
-def test_first_live_run_has_an_empty_scorecard_not_a_crash(monkeypatch):
+def test_first_live_run_has_an_empty_scorecard_not_a_crash(monkeypatch, tmp_path):
     monkeypatch.setattr(E, "scan", lambda con, d, cfg: E.decide(_cs(), cfg=cfg))
     monkeypatch.setattr(daily.M, "record", lambda con, **kw: len(kw["rows"]))
     monkeypatch.setattr(daily.M, "resolve", lambda con, **kw: {"resolved": 0})
@@ -44,5 +44,26 @@ def test_first_live_run_has_an_empty_scorecard_not_a_crash(monkeypatch):
     def refuse(con, **kw):
         raise daily.M.MemoryError_("no resolved rows")
     monkeypatch.setattr(daily.M, "report", refuse)
-    r = daily.run_daily(None, as_of=date(2026, 9, 18))
+    r = daily.run_daily(None, as_of=date(2026, 9, 18), today=date(2026, 9, 21), ks_path=tmp_path / 'ks.json')
     assert r["scorecard"]["resolved_decisions"] == 0
+
+
+def test_stale_data_halts_the_loop_and_the_halt_persists_until_a_human_resets_it(monkeypatch, tmp_path):
+    ks = tmp_path / "ks.json"
+    monkeypatch.setattr(E, "scan", lambda con, d, cfg: E.decide(_cs(), cfg=E.Config(ic=0.1)))
+    monkeypatch.setattr(daily.M, "record", lambda con, **kw: len(kw["rows"]))
+    monkeypatch.setattr(daily.M, "resolve", lambda con, **kw: {"resolved": 0})
+    monkeypatch.setattr(daily.M, "report", lambda con, **kw: {})
+    ok = daily.run_daily(None, as_of=date(2026, 9, 18), today=date(2026, 9, 21), ks_path=ks,
+                         cfg=E.Config(ic=0.1))
+    assert ok["paper_book"], "a strong-IC config should propose names when healthy"
+    stale = daily.run_daily(None, as_of=date(2026, 9, 18), today=date(2026, 10, 20), ks_path=ks,
+                            cfg=E.Config(ic=0.1))
+    assert stale["paper_book"] == [] and stale["kill_switch"]["level"] == "HALT"
+    again = daily.run_daily(None, as_of=date(2026, 9, 18), today=date(2026, 9, 21), ks_path=ks,
+                            cfg=E.Config(ic=0.1))
+    assert again["paper_book"] == [], "fresh data must not un-trip a halt"
+    from financial_brain.risk import killswitch as K
+    K.reset("owner", "feed repaired and checked by hand", ks)
+    assert daily.run_daily(None, as_of=date(2026, 9, 18), today=date(2026, 9, 21), ks_path=ks,
+                           cfg=E.Config(ic=0.1))["paper_book"]

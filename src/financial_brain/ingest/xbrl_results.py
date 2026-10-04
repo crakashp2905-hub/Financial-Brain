@@ -83,9 +83,18 @@ def _record(con, row: dict, status: str, lake_key: str | None = None) -> None:
 
 def _store_facts(con, seq: str, inst: X.Instance) -> int:
     rows = [(seq, name, ctx, v) for ctx, facts in inst.facts.items() for name, v in facts.items()]
-    if rows:
-        con.executemany("""INSERT INTO xbrl_facts (seq_number, concept, ctx, value) VALUES (?,?,?,?)
-                           ON CONFLICT DO NOTHING""", rows)
+    if not rows:
+        return 0
+    # One statement per filing. executemany with a conflict clause runs the statement row by row and
+    # took minutes on a bank's few hundred concepts; a registered frame inserts in a single pass.
+    import pandas as pd
+    con.register("_xbrl_facts_in", pd.DataFrame(rows, columns=["seq_number", "concept", "ctx", "value"]))
+    try:
+        con.execute("""INSERT INTO xbrl_facts (seq_number, concept, ctx, value)
+                       SELECT seq_number, concept, ctx, value FROM _xbrl_facts_in
+                       ON CONFLICT DO NOTHING""")
+    finally:
+        con.unregister("_xbrl_facts_in")
     return len(rows)
 
 

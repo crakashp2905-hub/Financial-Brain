@@ -30,6 +30,7 @@ HOME = "https://www.nseindia.com/companies-listing/corporate-filings-financial-r
 API = "https://www.nseindia.com/api/corporates-financial-results"
 HOSTS = ("www.nseindia.com", "nsearchives.nseindia.com", "archives.nseindia.com")
 MIN_INTERVAL = 0.5
+TIMEOUT = 30
 SESSION_TTL = 600.0
 
 
@@ -53,9 +54,12 @@ class NSEResults(Provider):
         host = urlparse(url).netloc.lower()
         if host not in HOSTS:
             raise FetchError(f"not an NSE host: {host}", retryable=False, status=400)
+        # The static archive host serves files without a session; only the JSON API needs the cookies the
+        # site's own page sets. Using no cookie jar for downloads means a stale session cannot stall them.
+        needs_session = host == "www.nseindia.com"
         last: Exception | None = None
         for attempt in range(3):
-            if time.monotonic() - self._warmed > SESSION_TTL:
+            if needs_session and time.monotonic() - self._warmed > SESSION_TTL:
                 self._warm()
             gap = time.monotonic() - self._last
             if gap < self.min_interval:
@@ -65,16 +69,19 @@ class NSEResults(Provider):
                 "User-Agent": USER_AGENT, "Accept": "*/*", "Accept-Language": "en-US,en;q=0.9",
                 "Referer": HOME})
             try:
-                with self._opener.open(req, timeout=60) as r:
+                opener = self._opener if needs_session else urllib.request.build_opener()
+                with opener.open(req, timeout=TIMEOUT) as r:
                     return r.read(), r.status, r.headers.get("Content-Type", "")
             except urllib.error.HTTPError as e:
                 if e.code == 404:
                     raise FetchError(f"HTTP 404 for {url}", retryable=False, status=404) from e
                 last = e
-                self._warmed = 0.0                     # likely a stale session: warm again
-            except OSError as e:
+            except OSError as e:                      # includes timeouts and resets
                 last = e
-            time.sleep(2.0 * (attempt + 1))
+            if needs_session:
+                self._jar.clear()                     # a failed session is rebuilt, not reused
+                self._warmed = 0.0
+            time.sleep(1.5 * (attempt + 1))
         raise FetchError(f"failed after 3 attempts: {last}", retryable=True)
 
     def _warm(self) -> None:
