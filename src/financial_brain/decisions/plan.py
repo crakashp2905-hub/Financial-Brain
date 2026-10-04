@@ -42,9 +42,10 @@ EDGE = {
         "source": "Result of swing setups"},
     "intraday": {
         "status": NONE_DEMONSTRATED,
-        "evidence": "Pending the pre-registered opening-range study; first-hour features earlier showed no "
-                    "tradeable edge (0.5 bp against 14-54 bp of cost).",
-        "source": "Result of the intraday study and the slippage calibration"},
+        "evidence": "Opening-range breakout with a stop and 2R target: gross -0.2 to +6 bp a trade, net -15 to "
+                    "-21 bp (t -8 to -17) over 251,000 simulated trades; first-hour features earned 0.5 bp "
+                    "against 14-54 bp of cost.",
+        "source": "Result of the opening-range breakout with stops"},
 }
 
 STYLES = {
