@@ -125,6 +125,13 @@ Validation modules, used from Python rather than the CLI:
 | `evaluation/event_response.py` | 606k filings with their price response, and "have we seen this before?" analogues using only closed outcome windows |
 | `features/intraday.py` | First-hour features from minute bars (300 names, 55M bars). Only `range_1h` has a directional IC, and its tails earn 0.5 bp against 14-54 bp of cost |
 | `ingest/ticks.py` | Live ticks into the same minute bars (cumulative-volume differencing, late ticks dropped); the streaming connection is the owner's to open |
+| `ingest/xbrl_results.py` / `providers/nse_results.py` | Point-in-time fundamentals from the exchange's own XBRL: every results filing since the quarter ended Dec 2018, `filed_at` = the exchange's dissemination time, restatements as new rows, several hundred facts a filing, arithmetic checked (every promoted statement passed). NSE moved results after Dec 2024 to "Integrated Filing", which is not covered yet |
+| `evaluation/half_life.py` | How long a signal's information lasts: reversal halves in 16 sessions; momentum, 52-week-high and low-vol are still accruing at 120 |
+| `evaluation/spillover.py` | Does a results reaction pass through promoter siblings? No: a clean null at 1, 5 and 20 sessions |
+| `risk/killswitch.py` / `risk/degradation.py` | Drawdown, daily-loss, stale-data, degraded-edge and cost-overrun trips that halt the paper loop; only a human resets it. CUSUM + rolling-t detector on the IC |
+| `portfolio/optimizer.py` / `attribution/pipeline.py` | Ledoit-Wolf, turnover-aware long-only weights; market / signal / sizing / cost / execution layers that sum exactly, plus the forecast error |
+| `ingest/kite_fno.py` / `ingest/kite_live.py` | Open interest, PCR, max pain, implied vol and skew; live quote snapshots checked against the archive. Read-only |
+| `research/retrieval.py` / `regime/breadth.py` / `execution/ticket.py` | Cited point-in-time retrieval; breadth and empirical sectors; a whole-share small-account sizer and a ticket marked "NOT SENT ANYWHERE" |
 | `evaluation/news_model.py` | Headline classifier on filings: text lowered strength AUC and direction missed the bar |
 
 ## Documentation
