@@ -50,7 +50,7 @@ EDGE = {
 
 STYLES = {
     # horizon in sessions; stop_k = stop distance in volatility units over the stop window; stop_window sessions
-    "position": {"horizon": 90, "review": 20, "stop_k": 3.0, "stop_window": 20, "segment": Segment.DELIVERY,
+    "position": {"horizon": 90, "review": 20, "stop_k": 2.5, "stop_window": 20, "segment": Segment.DELIVERY,
                  "signal_exit": "exit at a monthly review if the composite has fallen into the bottom 20%"},
     "swing": {"horizon": 7, "review": 1, "stop_k": 2.0, "stop_window": 7, "segment": Segment.DELIVERY,
               "signal_exit": "exit if the setup that triggered the entry no longer holds at the close"},
@@ -60,7 +60,10 @@ STYLES = {
 MAX_WEIGHT = 0.10
 PARTICIPATION = 0.10
 MIN_ORDER_INR = 5_000.0
-DEFAULT_RISK = 0.005          #: 0.5% of the account lost if the stop is hit
+#: Fraction of the account lost if the stop is hit, by style: a position held for months is sized to a wider
+#: stop and a larger budget; an intraday trade that repeats daily gets a small one.
+DEFAULT_RISK = {"position": 0.01, "swing": 0.005, "intraday": 0.0025}
+MAX_STOP = 0.25
 
 
 class PlanError(ValueError):
@@ -72,13 +75,15 @@ def _add_sessions(d: date, n: int) -> date:
 
 
 def plan(*, ticker: str, price: float, vol_annual: float, adv_inr: float, capital_inr: float,
-         style: str = "position", risk_per_trade: float = DEFAULT_RISK, atr_pct: float | None = None,
+         style: str = "position", risk_per_trade: float | None = None, atr_pct: float | None = None,
          max_weight: float = MAX_WEIGHT, as_of: date | None = None, side: str = "long",
          bucket: str = "large") -> dict:
     if style not in STYLES:
         raise PlanError(f"style must be one of {sorted(STYLES)}")
     if min(price, vol_annual, adv_inr, capital_inr) <= 0:
         raise PlanError("price, volatility, turnover and capital must be positive")
+    if risk_per_trade is None:
+        risk_per_trade = DEFAULT_RISK[style]
     if not 0 < risk_per_trade <= 0.02:
         raise PlanError("risk per trade must be between 0 and 2% of the account")
     if side not in ("long", "short"):
@@ -89,9 +94,11 @@ def plan(*, ticker: str, price: float, vol_annual: float, adv_inr: float, capita
     daily = vol_annual / np.sqrt(252.0)
     # stop distance: k units of the volatility over the stop window; ATR when it is given and larger
     stop_pct = s["stop_k"] * daily * np.sqrt(s["stop_window"])
-    if atr_pct:
+    # ATR is a one-day range; scaling it by the window and multiplying it again by k double-counts for a
+    # months-long position (a 30-40% "stop" when this was first run), so ATR only informs the short styles.
+    if atr_pct and style != "position":
         stop_pct = max(stop_pct, s["stop_k"] * atr_pct * (np.sqrt(s["stop_window"]) if s["stop_window"] > 1 else 1.0))
-    stop_pct = float(min(stop_pct, 0.40))
+    stop_pct = float(min(stop_pct, MAX_STOP))
     risk_inr = risk_per_trade * capital_inr
     by_risk = risk_inr / (stop_pct * price)
     by_weight = max_weight * capital_inr / price

@@ -15,10 +15,10 @@ def base(**kw):
 
 def test_size_is_the_risk_budget_over_the_stop_distance():
     p = base()
-    stop_pct = 3.0 * 0.25 / (252 ** 0.5) * (20 ** 0.5)
-    expected = int(0.005 * 1_000_000 / (stop_pct * 1000.0))
+    stop_pct = 2.5 * 0.25 / (252 ** 0.5) * (20 ** 0.5)
+    expected = int(0.01 * 1_000_000 / (stop_pct * 1000.0))        # the position style's default budget is 1%
     assert p["shares"] == expected and p["sized_by"] == "risk budget"
-    assert p["risk_if_stopped_pct_of_account"] <= 0.005 + 1e-9
+    assert p["risk_if_stopped_pct_of_account"] <= 0.01 + 1e-9
 
 
 def test_a_wider_stop_means_a_smaller_position_for_the_same_risk():
@@ -75,3 +75,15 @@ def test_the_text_says_it_is_information_and_the_module_cannot_send_anything():
     src = inspect.getsource(P).lower()
     for w in ("urllib", "requests", "socket", "kiteconnect", "place_order", "/orders"):
         assert w not in src
+
+
+def test_the_stop_is_bounded_and_atr_does_not_inflate_a_long_hold():
+    p = base(vol_annual=0.9)
+    assert p["stop_distance"] <= P.MAX_STOP
+    a = base(atr_pct=0.05)                                    # a huge ATR must not widen a position-style stop
+    assert a["stop_distance"] == pytest.approx(base()["stop_distance"])
+    assert base(style="swing", atr_pct=0.05)["stop_distance"] > base(style="swing")["stop_distance"]
+
+
+def test_each_style_has_its_own_default_risk_budget():
+    assert P.DEFAULT_RISK["position"] > P.DEFAULT_RISK["swing"] > P.DEFAULT_RISK["intraday"]

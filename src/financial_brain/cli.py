@@ -1308,6 +1308,30 @@ def cmd_paper_daily(args) -> int:
     return 0
 
 
+def cmd_plan(args) -> int:
+    """Size, horizon and exits for one name and one style, with the evidence for the style stated first."""
+    from .decisions import plan as P
+    from .opportunity import engine as E
+    with Database(load()).connect() as con:
+        asof = con.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
+        row = con.execute("""
+            SELECT p.ticker, p.close_adj, f.vol_60, f.adv20, f.atr_14_pct FROM features f
+            JOIN adjusted_prices p ON p.lineage = f.lineage AND p.business_date = f.business_date
+            WHERE f.business_date = ? AND UPPER(p.ticker) = ?""", [asof, args.ticker.upper()]).fetchone()
+        if not row:
+            print(f"{args.ticker}: no liquid-universe row on {asof}")
+            return 1
+        ticker, price, vol, adv, atr = row
+        rt = E.decide  # noqa: F841 - the cost bucket below mirrors the engine's liquidity buckets
+        bucket = "mega" if adv >= 5e9 else "large" if adv >= 1e9 else "mid" if adv >= 2e8 else "small"
+        p = P.plan(ticker=ticker, price=float(price), vol_annual=float(vol), adv_inr=float(adv),
+                   capital_inr=args.capital, style=args.style, risk_per_trade=args.risk,
+                   atr_pct=float(atr) if atr else None, as_of=asof, bucket=bucket,
+                   side=args.side)
+    print(P.render(p))
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -1898,6 +1922,14 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("paper-daily", help="the daily paper loop (decide, remember, resolve; no orders)")
     g.add_argument("--date")
     g.set_defaults(fn=cmd_paper_daily)
+
+    g = sub.add_parser("plan", help="position size, horizon and exits for one name (information, not advice)")
+    g.add_argument("ticker")
+    g.add_argument("--capital", type=float, default=500_000.0)
+    g.add_argument("--style", choices=("position", "swing", "intraday"), default="position")
+    g.add_argument("--risk", type=float, default=None, help="fraction of the account lost if the stop is hit (default by style)")
+    g.add_argument("--side", choices=("long", "short"), default="long")
+    g.set_defaults(fn=cmd_plan)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

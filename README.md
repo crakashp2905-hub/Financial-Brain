@@ -132,6 +132,9 @@ Validation modules, used from Python rather than the CLI:
 | `portfolio/optimizer.py` / `attribution/pipeline.py` | Ledoit-Wolf, turnover-aware long-only weights; market / signal / sizing / cost / execution layers that sum exactly, plus the forecast error |
 | `ingest/kite_fno.py` / `ingest/kite_live.py` | Open interest, PCR, max pain, implied vol and skew; live quote snapshots checked against the archive. Read-only |
 | `research/retrieval.py` / `regime/breadth.py` / `execution/ticket.py` | Cited point-in-time retrieval; breadth and empirical sectors; a whole-share small-account sizer and a ticket marked "NOT SENT ANYWHERE" |
+| `decisions/plan.py` / `fb plan TICKER --style position\|swing\|intraday` | Position size (risk budget over stop distance, capped by weight and liquidity), time horizon and exits for a name, with the *evidence for the style* stated first: position WEAK_IN_SAMPLE, swing and intraday NONE_DEMONSTRATED. Information, not advice; nothing is sent to a broker |
+| `evaluation/swing.py` / `evaluation/orb.py` | Swing setups and an opening-range breakout with stops, after costs. Swing: vs a random liquid name the gross edge is -0.15% to +0.21% (not significant) and every setup loses 0.2-0.6% a trade net. ORB: gross ~0, net -15 to -21 bp over 251k trades. A registered *median* benchmark manufactured a swing edge until the mean was used |
+| `evaluation/market_timing.py` / `evaluation/exit_rules.py` | Index timing rules (none beat buy-and-hold; trend/breadth/vol roughly halve the drawdown at a CAGR cost) and stop rules (nearly free, nearly useless) |
 | `evaluation/news_model.py` | Headline classifier on filings: text lowered strength AUC and direction missed the bar |
 
 ## Documentation
