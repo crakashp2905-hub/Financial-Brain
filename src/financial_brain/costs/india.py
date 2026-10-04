@@ -62,6 +62,11 @@ class CostModel:
     stamp_buy_intraday: float = 0.00003      # 0.003% of an intraday buy
     gst_rate: float = 0.18                # on brokerage + exchange + SEBI charges
 
+    # Depository charge: a flat fee per stock per day on the SELL of a delivery position (CDSL fee + the
+    # participant's fee + GST, about Rs 15.34 at a discount broker). It is per scrip, not per rupee, so it
+    # is invisible on a large order and 15 bp on a Rs 10,000 one.
+    dp_charge_flat: float = 15.34
+
     # Broker
     brokerage_rate: float = 0.0003        # discount brokers: 0 on delivery, 0.03% intraday
     brokerage_cap_flat: float = 20.0
@@ -116,13 +121,14 @@ class CostModel:
             brokerage = min(turnover * self.brokerage_rate, self.brokerage_cap_flat)
 
         gst = (brokerage + exch + sebi) * self.gst_rate
+        dp = self.dp_charge_flat if (sell and segment == Segment.DELIVERY) else 0.0
         impact = turnover * self.impact.get(bucket, self.impact["mid"]) if include_impact else 0.0
 
-        total = stt + exch + sebi + stamp + brokerage + gst + impact
+        total = stt + exch + sebi + stamp + brokerage + gst + dp + impact
         return {
             "turnover": turnover, "side": side.value, "segment": segment.value,
             "bucket": bucket, "stt": stt, "exchange": exch, "sebi": sebi, "stamp": stamp,
-            "brokerage": brokerage, "gst": gst, "impact": impact,
+            "brokerage": brokerage, "gst": gst, "dp": dp, "impact": impact,
             "total": total, "bps": (total / turnover * 10_000) if turnover else 0.0,
         }
 
