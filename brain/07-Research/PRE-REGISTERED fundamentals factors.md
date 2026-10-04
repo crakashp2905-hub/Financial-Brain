@@ -47,3 +47,19 @@ Outcome: market-adjusted forward return over h = 20 and 60 sessions from monthly
 * **F6 none of the four clears the Bonferroni bar** in the pooled sample except possibly `sue`.
 
 Pass criteria as written. No factor, horizon, tier edge or definition is changed after seeing a result.
+
+## Amendment, made before any factor was computed
+
+**The universe is now defined by point-in-time liquidity, not today's.** The first pull took the 300 most
+liquid names *as of October 2026*. Selecting a 2019-2025 sample by 2026 liquidity is hindsight: a name that
+grew from rank 400 to rank 100 is in, one that faded from 100 to 400 is out, so growth and value factors
+would be scored on a sample selected for having done well. The fix, before any scoring: the universe is the
+**700 most liquid names by median turnover over 2019-01-01..2019-06-30** (>= 100 traded days), held fixed
+for the whole test, with XBRL pulled for exactly those names (looked up by their current symbol through
+`security_lineage`). The `large/next/mid/small` tiers are still the point-in-time liquidity ranks used by
+`evaluation/replication`, so a name can only be scored in a tier it held on that date.
+
+What this still does not remove: delisted names whose results NSE no longer lists are absent
+(survivorship in the other direction), and the universe has no entrants after 2019. Both are stated, not
+fixed. The holdout is therefore **ranks 301-700 of this same 2019 universe**: the factors are scored on
+ranks 1-300 first, the verdict recorded, and ranks 301-700 scored once afterwards.
