@@ -223,3 +223,24 @@ def test_provider_source_file_has_no_write_verbs():
     from financial_brain.providers import nse_results
     src = inspect.getsource(nse_results)
     assert 'method="POST"' not in src and 'method="DELETE"' not in src and "/orders" not in src
+
+
+def test_results_filed_under_an_older_isin_are_found_through_the_lineage(env):
+    con, lake = env
+    con.execute("CREATE TABLE security_lineage(isin VARCHAR, lineage VARCHAR)")
+    con.execute("INSERT INTO security_lineage VALUES ('INE000000001', 'L'), ('INE999999999', 'L')")
+    p = Fake([listing("1")], {url("1"): instance(NONBANK)})           # filed under INE000000001
+    I.ingest_symbol(con, lake, p, "X")
+    got = I.as_known_on(con, "INE999999999", date(2025, 3, 1))        # asked by the successor ISIN
+    assert got and got[0]["pat"] == 190.0
+
+
+def test_results_under_an_isin_the_lineage_never_saw_are_found_through_the_symbol(env):
+    con, lake = env
+    con.execute("CREATE TABLE security_lineage(isin VARCHAR, lineage VARCHAR)")
+    con.execute("INSERT INTO security_lineage VALUES ('INE777777777', 'M')")      # successor only
+    con.execute("CREATE TABLE security_listings(isin VARCHAR, ticker VARCHAR)")
+    con.execute("INSERT INTO security_listings VALUES ('INE777777777', 'X')")
+    p = Fake([listing("1")], {url("1"): instance(NONBANK)})                      # filed under INE000000001, symbol X
+    I.ingest_symbol(con, lake, p, "X")
+    assert I.as_known_on(con, "INE777777777", date(2025, 3, 1))[0]["pat"] == 190.0

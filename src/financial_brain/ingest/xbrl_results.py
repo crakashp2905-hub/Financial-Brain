@@ -193,12 +193,44 @@ def run(con, cfg, symbols: list[str], *, since: date = SINCE, provider=None, on_
     return total
 
 
+def _lineage_isins(con, isin: str) -> list[str]:
+    """Every ISIN this security's results may have been filed under.
+
+    Two routes, because neither is complete. The lineage table joins ISIN successions it knows about;
+    but HDFC Bank's older filings carry an ISIN (INE040A01018) that the lineage table has never seen, so
+    the exchange symbol is the second route: security -> its tickers -> the ISINs filed under that symbol.
+    """
+    found = {isin}
+    try:
+        found |= {r[0] for r in con.execute("""SELECT l2.isin FROM security_lineage l1
+                                               JOIN security_lineage l2 USING (lineage)
+                                               WHERE l1.isin = ?""", [isin]).fetchall()}
+    except Exception:                                  # no lineage table (a bare test database)
+        pass
+    try:
+        marks = ", ".join("?" for _ in found)
+        tickers = [r[0] for r in con.execute(
+            f"SELECT DISTINCT ticker FROM security_listings WHERE isin IN ({marks}) AND ticker IS NOT NULL",
+            list(found)).fetchall()]
+        if tickers:
+            m2 = ", ".join("?" for _ in tickers)
+            found |= {r[0] for r in con.execute(
+                f"SELECT DISTINCT isin FROM xbrl_filings WHERE symbol IN ({m2}) AND isin IS NOT NULL",
+                tickers).fetchall()}
+    except Exception:
+        pass
+    return sorted(found)
+
+
 def as_known_on(con, isin: str, on: date, *, basis: str = "consolidated") -> list[dict]:
-    """Every period's headline figures as they were public on ``on`` (latest filing per period)."""
-    rows = con.execute("""
+    """Every period's headline figures as they were public on ``on`` (latest filing per period), across
+    every ISIN the security has had."""
+    isins = _lineage_isins(con, isin)
+    marks = ", ".join("?" for _ in isins)
+    rows = con.execute(f"""
         SELECT period_end, revenue, pat, eps_basic, filed_at FROM (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY period_end ORDER BY filed_at DESC) rk
-            FROM financial_results WHERE isin = ? AND basis = ? AND filed_at <= ?) WHERE rk = 1
-        ORDER BY period_end DESC""", [isin, basis, datetime.combine(on, datetime.max.time())]).fetchall()
+            FROM financial_results WHERE isin IN ({marks}) AND basis = ? AND filed_at <= ?) WHERE rk = 1
+        ORDER BY period_end DESC""", [*isins, basis, datetime.combine(on, datetime.max.time())]).fetchall()
     return [{"period_end": r[0], "revenue": r[1], "pat": r[2], "eps_basic": r[3], "filed_at": r[4]}
             for r in rows]
