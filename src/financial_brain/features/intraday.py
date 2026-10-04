@@ -6,9 +6,13 @@ starts at that minute, so a feature never sees the return it is scored against.
 
     gap               open / previous session's last close - 1
     or_breakout       at 10:30: +1 above the 09:15-09:30 high, -1 below its low, else 0
-    vwap_dev          at 11:00: close / VWAP(09:15-11:00) - 1
+    vwap_dev          at 10:30: close / VWAP(09:15-10:30) - 1
     rvol_30           first-30-minute volume / its mean over the previous 20 sessions
     range_1h          (high - low) / open over 09:15-10:15, a realised-volatility proxy
+
+**Every feature is measured at or before 10:30, the minute the outcomes start.** A first version took
+``vwap_dev`` at 11:00: its last thirty minutes sat inside the outcome window, and the feature then
+"predicted" the outcome at IC +0.24, t = +50 - a leak, not a finding.
 
 Outcomes, both **from the 10:30 close**: ``r_to_close`` (to the 15:15 close) and ``r_to_next_close``.
 
@@ -45,11 +49,10 @@ def build(con) -> int:
                    MAX(high) FILTER (WHERE m < {M_OR_END}) AS or_hi,
                    MIN(low)  FILTER (WHERE m < {M_OR_END}) AS or_lo,
                    ARG_MAX(close, m) FILTER (WHERE m <= {M_1030}) AS c1030,
-                   ARG_MAX(close, m) FILTER (WHERE m <= {M_1100}) AS c1100,
                    ARG_MAX(close, m) FILTER (WHERE m <= {M_1515}) AS c1515,
                    ARG_MAX(close, m) AS clast,
-                   SUM(volume * (high + low + close) / 3.0) FILTER (WHERE m <= {M_1100})
-                     / NULLIF(SUM(volume) FILTER (WHERE m <= {M_1100}), 0) AS vwap_1100,
+                   SUM(volume * (high + low + close) / 3.0) FILTER (WHERE m <= {M_1030})
+                     / NULLIF(SUM(volume) FILTER (WHERE m <= {M_1030}), 0) AS vwap_1030,
                    SUM(volume) FILTER (WHERE m < {M_FIRST30}) AS vol30,
                    (MAX(high) FILTER (WHERE m <= {M_1015}) - MIN(low) FILTER (WHERE m <= {M_1015}))
                      / NULLIF(ARG_MIN(open, m), 0) AS range_1h
@@ -64,7 +67,7 @@ def build(con) -> int:
         SELECT tok, isin, sym, d AS session,
                open0 / prev_close - 1 AS gap,
                CASE WHEN c1030 > or_hi THEN 1 WHEN c1030 < or_lo THEN -1 ELSE 0 END AS or_breakout,
-               c1100 / vwap_1100 - 1 AS vwap_dev,
+               c1030 / vwap_1030 - 1 AS vwap_dev,
                vol30 / NULLIF(vol30_avg, 0) AS rvol_30,
                range_1h,
                c1515 / c1030 - 1 AS r_to_close,

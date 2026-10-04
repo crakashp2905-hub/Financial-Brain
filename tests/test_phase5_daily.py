@@ -34,3 +34,15 @@ def test_daily_module_cannot_place_an_order():
     code = re.sub(r'""".*?"""', "", src, flags=re.S)
     for word in ("place_order", "/orders", "kiteconnect", "requests", "urlopen", "execution_enabled"):
         assert word not in code
+
+
+def test_first_live_run_has_an_empty_scorecard_not_a_crash(monkeypatch):
+    monkeypatch.setattr(E, "scan", lambda con, d, cfg: E.decide(_cs(), cfg=cfg))
+    monkeypatch.setattr(daily.M, "record", lambda con, **kw: len(kw["rows"]))
+    monkeypatch.setattr(daily.M, "resolve", lambda con, **kw: {"resolved": 0})
+
+    def refuse(con, **kw):
+        raise daily.M.MemoryError_("no resolved rows")
+    monkeypatch.setattr(daily.M, "report", refuse)
+    r = daily.run_daily(None, as_of=date(2026, 9, 18))
+    assert r["scorecard"]["resolved_decisions"] == 0

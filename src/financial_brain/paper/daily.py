@@ -29,6 +29,12 @@ def run_daily(con, *, as_of: date | None = None, cfg: E.Config = E.Config(),
     M.record(con, run_id=run_id, session=d, signal_from=d, rows=E.to_memory_rows(decisions))
     resolved = M.resolve(con, run_id=run_id, horizon=cfg.horizon)
     book = decisions[decisions["disposition"] == E.TRADE]
+    try:
+        scorecard = M.report(con, run_id=run_id)
+    except M.MemoryError_:
+        # Nothing has matured yet: the first 20 sessions of a live run have no outcome to score.
+        scorecard = {"resolved_decisions": 0,
+                     "why": "no live decision has reached its 20-session horizon yet"}
     return {
         "as_of": d, "names_considered": int(len(decisions)),
         "by_disposition": {k: int(v) for k, v in decisions["disposition"].value_counts().items()},
@@ -39,6 +45,6 @@ def run_daily(con, *, as_of: date | None = None, cfg: E.Config = E.Config(),
                        for r in book.itertuples()],
         "nothing_clears": bool(book.empty),
         "resolved": resolved,
-        "scorecard": M.report(con, run_id=run_id),
+        "scorecard": scorecard,
         "note": "paper only: no orders exist in this system's reach",
     }

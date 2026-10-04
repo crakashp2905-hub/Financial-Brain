@@ -118,6 +118,14 @@ Validation modules, used from Python rather than the CLI:
 | `opportunity/memory.py` | Every candidate considered, why it was rejected, and what it then did |
 | `forecasting/` | Distributional forecasts, a stationary block-bootstrap null, calibration, and Kronos behind the same interface as a bootstrap |
 | `risk/sizing.py` | Cornish-Fisher quantiles, EVT tail fit, regime-mixture Kelly, conditional drawdown at risk |
+| `opportunity/engine.py` | The whole liquid market ranked by net expected alpha after sized costs: TRADE / WATCH / REJECT with a reason, every decision written to memory. At the assumed IC it trades almost never, which is the honest answer |
+| `opportunity/replay.py` | Walks the engine through history and checks what it claimed: calibration slope 0.71, composite IC +0.083 (t 5.5), top-20 book net negative — the edge is in *avoiding the bottom two deciles*, not picking the top |
+| `paper/daily.py` / `fb paper-daily` | The daily loop: scan, record, resolve what matured. No order code exists in its reach; live decisions are the only evidence made before their outcomes |
+| `risk/allocator.py` | Capital to strategy sleeves by decayed, shrunk edge (PAPER / ACTIVE / REDUCE / STOP); nothing gets real capital unless its money-gate flag is set |
+| `evaluation/event_response.py` | 606k filings with their price response, and "have we seen this before?" analogues using only closed outcome windows |
+| `features/intraday.py` | First-hour features from minute bars (300 names, 55M bars). Only `range_1h` has a directional IC, and its tails earn 0.5 bp against 14-54 bp of cost |
+| `ingest/ticks.py` | Live ticks into the same minute bars (cumulative-volume differencing, late ticks dropped); the streaming connection is the owner's to open |
+| `evaluation/news_model.py` | Headline classifier on filings: text lowered strength AUC and direction missed the bar |
 
 ## Documentation
 

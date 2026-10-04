@@ -57,3 +57,23 @@ def test_short_session_is_a_data_gap(con):
     minute_bars(con, 2, date(2026, 1, 6), 50.0, n=100)
     I.build(con)
     assert con.execute("SELECT COUNT(*) FROM intraday_features WHERE tok = 2").fetchone()[0] == 0
+
+
+def test_no_feature_sees_a_bar_after_the_outcome_starts(con):
+    """Wildly different prices after 10:30 must not move any feature (the vwap_dev leak)."""
+    from datetime import date
+    I.build(con)
+    base = con.execute("SELECT gap, or_breakout, vwap_dev, rvol_30, range_1h FROM intraday_features "
+                       "WHERE session = DATE '2026-01-06'").fetchone()
+    con.execute("DELETE FROM minute_bars")
+    minute_bars(con, 1, date(2026, 1, 5), 100.0)
+    minute_bars(con, 1, date(2026, 1, 6), 102.0, drift=0.0002)
+    minute_bars(con, 1, date(2026, 1, 7), 103.0)
+    con.execute("UPDATE minute_bars SET open = open * 1.5, high = high * 1.5, low = low * 1.5, "
+                "close = close * 1.5, volume = volume * 9 "
+                "WHERE CAST(ts AT TIME ZONE 'Asia/Kolkata' AS DATE) = DATE '2026-01-06' "
+                "AND hour(ts AT TIME ZONE 'Asia/Kolkata') * 60 + minute(ts AT TIME ZONE 'Asia/Kolkata') > 630")
+    I.build(con)
+    after = con.execute("SELECT gap, or_breakout, vwap_dev, rvol_30, range_1h FROM intraday_features "
+                        "WHERE session = DATE '2026-01-06'").fetchone()
+    assert after == pytest.approx(base)
