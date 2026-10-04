@@ -14,6 +14,8 @@ import pandas as pd
 
 CLOSE = time(15, 30)
 HORIZON = 3
+#: Forward horizons stored per event. ar3 is the registered target; the others are for analogues.
+HORIZONS = (1, 3, 5, 20)
 TRAIN_END, VALID_END = date(2021, 12, 31), date(2022, 12, 31)
 
 
@@ -68,9 +70,16 @@ def load(con, *, names: int = 1000, start=date(2016, 4, 1), end=date(2026, 6, 30
     ann["entry"] = [dates[p] for p in pos]
     ann["ar_react"] = (Lv[pos, j] - Lv[pos - 1, j]) - (M[pos] - M[pos - 1])
     ann["ar3"] = (Lv[pos + HORIZON, j] - Lv[pos, j]) - (M[pos + HORIZON] - M[pos])
+    n_sess = len(dates)
+    for h in HORIZONS:
+        if h == HORIZON:
+            continue
+        reach = np.minimum(pos + h, n_sess - 1)        # events too close to the end stay NaN
+        v = (Lv[reach, j] - Lv[pos, j]) - (M[reach] - M[pos])
+        ann[f"ar{h}"] = np.where(pos + h < n_sess, v, np.nan)
     ann["vol60"] = vol[pos - 1, j]
     ann["adv"] = np.log(ann["isin"].map(adv).astype(float))
-    ann = ann.dropna(subset=["ar3", "ar_react", "vol60", "adv"])
+    ann = ann.dropna(subset=["ar3", "ar_react", "vol60", "adv"])  # extra horizons may stay NaN
     ann["text"] = [clean(h, c) for h, c in zip(ann["headline"], ann["company"])]
     return ann.reset_index(drop=True)
 
