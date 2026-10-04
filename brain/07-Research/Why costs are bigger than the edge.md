@@ -11,22 +11,23 @@ status: result
 # Why costs are bigger than the edge
 
 Round-trip cost of a delivery trade in basis points of the amount traded (1 bp = 0.01%), from
-`costs/india.py`, identical for Rs 1 lakh, Rs 5 lakh and Rs 25 lakh orders:
+`costs/india.py`, for a Rs 1 lakh order (the percentages barely move with size; the depository fee is a flat Rs 15.34):
 
     STT (securities transaction tax)   20.0 bp   0.1% on the buy AND 0.1% on the sell, delivery
     exchange transaction charge         0.6 bp
     SEBI turnover fee                   0.0 bp
-    stamp duty (buy side)               0.1 bp
+    stamp duty (buy side)               1.5 bp   0.015% of the buy (corrected 2026-10-04; the model had it 10x too low)
     brokerage                           0.0 bp   (zero on delivery at a discount broker)
     GST (on brokerage + exchange)       0.1 bp
+    depository fee (delivery sell)      1.5 bp   a flat Rs 15.34 per stock, so 15 bp on a Rs 10,000 order
     ------------------------------------------
-    statutory + broker                 20.9 bp   of which STT is 96%
+    statutory + broker                 23.7 bp   of which STT is 84%
 
     market impact + half-spread (the model's assumption, per bucket, round trip)
       mega (top 100)     10 bp      large (101-300)  20 bp
       mid (301-750)      50 bp      small (751-1500) 120 bp
 
-    total round trip   mega ~31 bp    large ~41 bp    mid ~71 bp    small ~141 bp
+    total round trip   mega ~34 bp    large ~44 bp    mid ~74 bp    small ~144 bp   (for a Rs 1 lakh order)
 
 ## The three kinds of cost
 
@@ -78,3 +79,9 @@ Reversal decays in 16 sessions and has to be traded monthly, so costs take more 
 5. **Do not shop for a cheaper broker.** Brokerage on delivery is already zero; the cost is tax and the market.
 
 Related: [[Result of the opportunity engine replay]] · [[Trader layers built, and what they showed]]
+
+
+**Update 2026-10-04.** The stamp-duty rate was 10x too low and the flat depository fee was missing; both are fixed in
+`costs/india.py`, which moves a Rs 1 lakh delivery round trip from 20.9 bp to about 23.7 bp of fixed charges. Tax on
+profit is now modelled separately (`costs/tax.py`); see [[Result of tax-aware returns]]. `fb costs-calc` itemises any
+trade.

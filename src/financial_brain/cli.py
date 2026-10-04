@@ -1332,6 +1332,37 @@ def cmd_plan(args) -> int:
     return 0
 
 
+def cmd_costs_calc(args) -> int:
+    """Itemised cost of a trade, with the impact range and the tax on a hypothetical gain."""
+    from .costs import calculator as CC
+    from .costs.india import Segment
+    from .costs.tax import TaxRules
+    adv = vol = None
+    if args.ticker:
+        with Database(load()).connect() as con:
+            asof = con.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
+            row = con.execute("""SELECT f.adv20, f.vol_60 FROM features f JOIN adjusted_prices p
+                                 ON p.lineage = f.lineage AND p.business_date = f.business_date
+                                 WHERE f.business_date = ? AND UPPER(p.ticker) = ?""",
+                              [asof, args.ticker.upper()]).fetchone()
+        if not row:
+            print(f"{args.ticker}: not in the liquid universe on {asof}")
+            return 1
+        adv, vol = float(row[0]), float(row[1])
+        print(f"{args.ticker.upper()}: turnover Rs {adv / 1e7:,.0f} cr/day, volatility {vol:.0%} (as of {asof})")
+    q = CC.quote(order_inr=args.order, segment=Segment(args.segment), adv_inr=adv, vol_annual=vol,
+                 hold_sessions=args.hold, expected_gross_return=args.gain,
+                 rules=TaxRules(slab=args.slab))
+    print(CC.render(q))
+    if args.table:
+        print()
+        print("COST OF ONE ROUND TRIP BY ORDER SIZE (a liquid large-cap)")
+        for r in CC.account_table(segment=Segment(args.segment)):
+            print(f"  Rs {r['order']:>11,.0f}: charges {r['fees_bp']:5.1f} bp + impact {r['impact_bp_low']:4.1f}+ bp = "
+                  f"{r['total_bp_low']:5.1f}-{r['total_bp_high']:5.1f} bp  (Rs {r['total_inr_low']:,.0f}+)")
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -1930,6 +1961,16 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--risk", type=float, default=None, help="fraction of the account lost if the stop is hit (default by style)")
     g.add_argument("--side", choices=("long", "short"), default="long")
     g.set_defaults(fn=cmd_plan)
+
+    g = sub.add_parser("costs-calc", help="itemised cost of a trade, impact range, break-even and tax on a gain")
+    g.add_argument("--order", type=float, required=True, help="order value in rupees")
+    g.add_argument("--segment", choices=("delivery", "intraday"), default="delivery")
+    g.add_argument("--ticker", help="look up turnover and volatility for the impact estimate")
+    g.add_argument("--hold", type=int, default=20, help="sessions held (delivery)")
+    g.add_argument("--gain", type=float, help="hypothetical gross return, e.g. 0.05 for +5%")
+    g.add_argument("--slab", type=float, default=0.30, help="your marginal slab rate, for intraday profit")
+    g.add_argument("--table", action="store_true", help="also show cost by order size")
+    g.set_defaults(fn=cmd_costs_calc)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

@@ -135,6 +135,8 @@ Validation modules, used from Python rather than the CLI:
 | `decisions/plan.py` / `fb plan TICKER --style position\|swing\|intraday` | Position size (risk budget over stop distance, capped by weight and liquidity), time horizon and exits for a name, with the *evidence for the style* stated first: position WEAK_IN_SAMPLE, swing and intraday NONE_DEMONSTRATED. Information, not advice; nothing is sent to a broker |
 | `evaluation/swing.py` / `evaluation/orb.py` | Swing setups and an opening-range breakout with stops, after costs. Swing: vs a random liquid name the gross edge is -0.15% to +0.21% (not significant) and every setup loses 0.2-0.6% a trade net. ORB: gross ~0, net -15 to -21 bp over 251k trades. A registered *median* benchmark manufactured a swing edge until the mean was used |
 | `evaluation/market_timing.py` / `evaluation/exit_rules.py` | Index timing rules (none beat buy-and-hold; trend/breadth/vol roughly halve the drawdown at a CAGR cost) and stop rules (nearly free, nearly useless) |
+| `costs/tax.py` / `costs/calculator.py` / `fb costs-calc --order N [--ticker T] [--gain 0.03] [--table]` | Itemised rupee cost of a trade (exact charges, impact as a range), break-even, cost per session held, and the tax on a hypothetical gain (STCG 20.8%, LTCG 13% over Rs 1.25 lakh, intraday at slab) with loss set-off. Rates are parameters; information, not tax advice |
+| `evaluation/after_tax.py` | The same return series taxed as an active book (all gains realised yearly) and as buy-and-hold (deferred): tax takes about 20% of an active sleeve's CAGR, deferral is worth 2-3 points a year |
 | `evaluation/news_model.py` | Headline classifier on filings: text lowered strength AUC and direction missed the bar |
 
 ## Documentation
