@@ -1293,6 +1293,21 @@ def cmd_results_bulk(args) -> int:
     return 0
 
 
+def cmd_daily(args) -> int:
+    """The daily paper loop: scan the market, remember every decision, resolve what has matured."""
+    from .paper import daily
+    with Database(load()).connect() as con:
+        r = daily.run_daily(con, as_of=_d(args.date) if args.date else None)
+    print(f"{r['as_of']}: {r['names_considered']} names -> {r['by_disposition']}")
+    print(f"best net alpha {r['best_net_alpha']:+.2%} against a {r['hurdle']:.2%} hurdle")
+    for p in r["paper_book"]:
+        print(f"  PAPER {p['ticker']:<14} weight {p['weight']:.1%}  net 20d {p['net_alpha_20d']:+.2%}")
+    if r["nothing_clears"]:
+        print("  nothing clears costs today - the paper book is empty, which is an answer")
+    print(f"resolved: {r['resolved']}")
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -1879,6 +1894,10 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--names", type=int, default=500)
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_results_bulk)
+
+    g = sub.add_parser("daily", help="the daily paper loop (decide, remember, resolve; no orders)")
+    g.add_argument("--date")
+    g.set_defaults(fn=cmd_daily)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)
