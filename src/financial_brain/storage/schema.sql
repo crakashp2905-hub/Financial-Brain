@@ -787,3 +787,35 @@ CREATE TABLE IF NOT EXISTS results_attempts (
     status       VARCHAR NOT NULL,     -- stored | no_statement | fetch_failed | parse_failed
     attempted_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
+
+
+-- Exchange XBRL results (ingest/xbrl_results.py). One row per listed filing, whatever became of it, so
+-- coverage is a query. filed_at is the exchange's dissemination time: the point-in-time key.
+CREATE TABLE IF NOT EXISTS xbrl_filings (
+    seq_number   VARCHAR PRIMARY KEY,
+    symbol       VARCHAR,
+    isin         VARCHAR,
+    company      VARCHAR,
+    period_start DATE,
+    period_end   DATE,
+    basis        VARCHAR,              -- consolidated | standalone
+    relating_to  VARCHAR,
+    audited      VARCHAR,
+    cumulative   BOOLEAN,
+    is_bank      BOOLEAN,
+    filed_at     TIMESTAMP,
+    xbrl_url     VARCHAR,
+    lake_key     VARCHAR,
+    status       VARCHAR NOT NULL,     -- stored | no_xbrl | fetch_failed | parse_failed | period_mismatch
+    attempted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Every company-level numeric fact, long form. ctx: Q current period, YTD year to date, I balance-sheet
+-- instant, I_PRIOR the comparative instant. Values are rupees already multiplied out; EPS per share.
+CREATE TABLE IF NOT EXISTS xbrl_facts (
+    seq_number VARCHAR NOT NULL,
+    concept    VARCHAR NOT NULL,
+    ctx        VARCHAR NOT NULL,
+    value      DOUBLE,
+    PRIMARY KEY (seq_number, concept, ctx)
+);
