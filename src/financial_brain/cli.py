@@ -1293,7 +1293,7 @@ def cmd_results_bulk(args) -> int:
     return 0
 
 
-def cmd_daily(args) -> int:
+def cmd_paper_daily(args) -> int:
     """The daily paper loop: scan the market, remember every decision, resolve what has matured."""
     from .paper import daily
     with Database(load()).connect() as con:
@@ -1895,9 +1895,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--limit", type=int)
     g.set_defaults(fn=cmd_results_bulk)
 
-    g = sub.add_parser("daily", help="the daily paper loop (decide, remember, resolve; no orders)")
+    g = sub.add_parser("paper-daily", help="the daily paper loop (decide, remember, resolve; no orders)")
     g.add_argument("--date")
-    g.set_defaults(fn=cmd_daily)
+    g.set_defaults(fn=cmd_paper_daily)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)
