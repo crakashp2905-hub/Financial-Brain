@@ -45,3 +45,11 @@ def test_unknown_event_type_and_horizon(con):
 def test_matching_falls_back_and_says_so(con):
     r = ER.analogues(con, event_type="ORDER", as_of=date(2021, 6, 1), vol60=0.02, adv=20.0)
     assert r["n"] >= ER.MIN_ANALOGUES and r["se_mean"] > 0
+
+
+def test_edge_is_measured_against_the_all_event_baseline(con):
+    con.execute("INSERT INTO event_responses SELECT 'o'||i, 'X', 'OTHER', DATE '2020-02-01', 0.0, 0.0, 0.0, "
+                "0.05, 0.0, 0.02, 20.0 FROM range(200) t(i)")
+    r = ER.analogues(con, event_type="ORDER", as_of=date(2021, 6, 1), horizon=5)
+    assert r["baseline_mean"] > r["mean"]                    # the baseline includes the +5% OTHER events
+    assert r["edge_over_baseline"] == pytest.approx(r["mean"] - r["baseline_mean"])

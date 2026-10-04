@@ -74,6 +74,11 @@ def analogues(con, *, event_type: str, as_of: date, vol60: float | None = None,
         if len(m) >= min_n:
             matched, basis = m, "event type + volatility tercile + turnover tercile"
     y = matched["y"].to_numpy()
+    # The baseline: every event of any type before the cutoff. Returns are measured against the market
+    # *median*, whose mean is above it for a right-skewed cross-section, so a raw analogue mean of
+    # +0.9% is the typical filing, not a signal. Only the margin over this baseline is event-specific.
+    baseline = con.execute(f"SELECT AVG({col}), STDDEV_SAMP({col}), COUNT({col}) FROM {TABLE} "
+                           f"WHERE entry <= ? AND {col} IS NOT NULL", [cutoff]).fetchone()
     if len(y) < min_n:
         raise ResponseError(f"only {len(y)} analogues; below the {min_n} needed to say anything")
     return {"event_type": event_type, "as_of": as_of, "horizon": horizon, "matched_on": basis,
@@ -81,4 +86,7 @@ def analogues(con, *, event_type: str, as_of: date, vol60: float | None = None,
             "hit_rate": float((y > 0).mean()),
             "p10": float(np.quantile(y, .1)), "p90": float(np.quantile(y, .9)),
             "typical_reaction": float(np.median(np.abs(matched["ar_react"]))),
+            "baseline_mean": float(baseline[0]),
+            "edge_over_baseline": float(y.mean() - baseline[0]),
+            "edge_t": float((y.mean() - baseline[0]) / (y.std(ddof=1) / np.sqrt(len(y)))),
             "se_mean": float(y.std(ddof=1) / np.sqrt(len(y)))}
