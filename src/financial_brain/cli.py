@@ -1274,6 +1274,25 @@ def cmd_results(args) -> int:
     return 0
 
 
+def cmd_results_bulk(args) -> int:
+    """Parse results PDFs for the most liquid names across a date range (resumable)."""
+    from .ingest import results as ing
+    cfg = load()
+    with Database(cfg).connect() as con:
+        universe = {r[0] for r in con.execute("""
+            SELECT l.isin FROM (SELECT lineage, AVG(adv20) a FROM features
+                                WHERE business_date >= DATE '2025-01-01' GROUP BY 1
+                                ORDER BY a DESC LIMIT ?) t
+            JOIN security_lineage l USING (lineage)""", [args.names]).fetchall()}
+        print(f"{len(universe)} ISINs in the top {args.names} by recent turnover", flush=True)
+        stats = ing.read_bulk(con, cfg, universe=universe, start=_d(args.start), end=_d(args.end),
+                              limit=args.limit,
+                              on_progress=lambda i, n, st: print(f"  {i}/{n} {st}", flush=True))
+        print(stats)
+        print(con.execute("SELECT COUNT(*), COUNT(DISTINCT isin) FROM financial_results").fetchone())
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -1853,6 +1872,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--date", required=True)
     g.add_argument("--limit", type=int, default=10)
     g.set_defaults(fn=cmd_results)
+
+    g = sub.add_parser("results-bulk", help="parse results PDFs for the top-N names, resumably")
+    g.add_argument("--start", default="2016-01-01")
+    g.add_argument("--end", default="2026-09-30")
+    g.add_argument("--names", type=int, default=500)
+    g.add_argument("--limit", type=int)
+    g.set_defaults(fn=cmd_results_bulk)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

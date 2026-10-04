@@ -778,3 +778,12 @@ CREATE TABLE IF NOT EXISTS opportunity_memory (
     unresolvable  BOOLEAN,
     PRIMARY KEY (run_id, session, lineage)
 );
+
+
+-- Every results PDF the bulk loader has tried, so a resumed run skips what already failed or had no
+-- statement instead of re-downloading it.
+CREATE TABLE IF NOT EXISTS results_attempts (
+    news_id      VARCHAR PRIMARY KEY,
+    status       VARCHAR NOT NULL,     -- stored | no_statement | fetch_failed | parse_failed
+    attempted_at TIMESTAMP WITH TIME ZONE NOT NULL
+);

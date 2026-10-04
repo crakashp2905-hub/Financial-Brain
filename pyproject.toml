@@ -6,6 +6,8 @@ requires-python = ">=3.11"
 dependencies = ["duckdb>=1.0", "pytz>=2024.1"]  # pytz: DuckDB needs it for TIMESTAMPTZ <-> Python conversion
 
 [project.optional-dependencies]
+# Reading results/filing PDFs (docintel/). Needed for the as-reported financials store.
+docs = ["pypdf>=4.0"]
 dev = ["pytest>=8.0"]
 # Local tier-1 encoders (FinBERT via ONNX; no PyTorch). Ollama serves the GGUF models.
 models = ["onnxruntime>=1.18", "tokenizers>=0.19", "numpy>=1.26"]

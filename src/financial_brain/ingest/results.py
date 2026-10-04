@@ -100,6 +100,74 @@ def read_day(con, cfg, d: date, *, limit: int = 10, provider=None) -> dict:
     return stats
 
 
+def read_bulk(con, cfg, *, universe: set[str], start: date, end: date, limit: int | None = None,
+              provider=None, on_progress=None) -> dict:
+    """Parse results filings for a set of ISINs across a date range, resumably.
+
+    Every attempt is recorded in ``results_attempts`` so a rerun skips failures and scans that held no
+    statement. Rows are processed newest-first so an interrupted run leaves the recent, most useful
+    periods stored.
+    """
+    provider = provider or BSEFiling()
+    lake = RawLake(cfg.lake)
+    isins = sorted(universe)
+    rows = con.execute(f"""
+        SELECT a.news_id, a.attachment, a.company, a.isin, a.published_at, a.business_date,
+               a.headline
+        FROM announcements a
+        LEFT JOIN financial_results r ON r.news_id = a.news_id
+        LEFT JOIN results_attempts t ON t.news_id = a.news_id
+        WHERE a.event_type = 'RESULTS' AND a.attachment IS NOT NULL AND a.attachment <> ''
+          AND a.business_date BETWEEN ? AND ?
+          AND a.isin IN ({', '.join('?' for _ in isins)})
+          AND r.news_id IS NULL AND t.news_id IS NULL
+        ORDER BY a.published_at DESC""", [start, end, *isins]).fetchall()
+    if limit:
+        rows = rows[:limit]
+    stats = {"candidates": len(rows), "stored": 0, "no_statement": 0, "fetch_failed": 0,
+             "parse_failed": 0}
+
+    def note(news_id, status):
+        con.execute("""INSERT INTO results_attempts VALUES (?,?,?)
+                       ON CONFLICT (news_id) DO UPDATE SET status = excluded.status,
+                       attempted_at = excluded.attempted_at""",
+                    [news_id, status, datetime.now(timezone.utc)])
+        stats[status] += 1
+
+    for i, (news_id, url, company, isin, published, bdate, headline) in enumerate(rows, 1):
+        try:
+            res = provider.fetch_url(url)
+        except FetchError:
+            note(news_id, "fetch_failed")
+            continue
+        obj = lake.put(source="FILING", dataset="attachment", business_date=bdate,
+                       filename=res.filename, payload=res.payload, url=res.url,
+                       content_type=res.content_type, http_status=res.http_status,
+                       retrieved_at=res.retrieved_at)
+        _register(con, obj)
+        try:
+            statements = parse.read(res.payload)
+        except Exception:                 # noqa: BLE001 - a broken PDF is not a crash
+            note(news_id, "parse_failed")
+            continue
+        seen, stored = set(), 0
+        for st in statements:
+            if st.basis in seen:
+                continue
+            seen.add(st.basis)
+            if st.period_end is None:
+                # The statement's own header did not parse; the announcement's headline usually
+                # names the period ("... for the quarter ended June 30, 2026").
+                st.period_end = parse.period_of(headline or "")
+            if _store(con, isin=isin, company=company, news_id=news_id, st=st,
+                      lake_key=obj.key, filed_at=published, url=url):
+                stored += 1
+        note(news_id, "stored" if stored else "no_statement")
+        if on_progress and i % 50 == 0:
+            on_progress(i, len(rows), stats)
+    return stats
+
+
 def as_known_on(con, isin: str, on: date, *, basis: str = "consolidated") -> list[dict]:
     """Every period's figures **as they were known on** ``on`` - the latest filing for
     each period that had been published by then. This is the query a backtest must use."""
