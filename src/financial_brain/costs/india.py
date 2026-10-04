@@ -58,8 +58,8 @@ class CostModel:
 
     # Statutory
     sebi_turnover: float = 0.000001
-    stamp_buy_delivery: float = 0.000015
-    stamp_buy_intraday: float = 0.000003
+    stamp_buy_delivery: float = 0.00015      # 0.015% of a delivery buy (Indian Stamp Act, uniform since July 2020)
+    stamp_buy_intraday: float = 0.00003      # 0.003% of an intraday buy
     gst_rate: float = 0.18                # on brokerage + exchange + SEBI charges
 
     # Broker

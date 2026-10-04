@@ -30,7 +30,9 @@ def test_intraday_segment_is_far_cheaper_than_delivery():
     m = CostModel()
     d = m.round_trip(turnover=1e6, segment=Segment.DELIVERY, bucket="mid")["bps"]
     i = m.round_trip(turnover=1e6, segment=Segment.INTRADAY, bucket="mid")["bps"]
-    assert d - i == pytest.approx(17.1, abs=0.2)     # 20 bps STT less 2.5, plus stamp
+    # 20 bps delivery STT less 2.5 intraday, plus the stamp gap (1.5 bp vs 0.3 bp on the buy), less intraday
+    # brokerage and its GST: 18.2 bp. The stamp rates were 10x too low until 2026-10 (0.0015% / 0.0003%).
+    assert d - i == pytest.approx(18.2, abs=0.2)
 
 
 def test_bucket_dominates_the_intraday_round_trip():
