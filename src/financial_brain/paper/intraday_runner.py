@@ -24,6 +24,7 @@ from pathlib import Path
 import duckdb
 import numpy as np
 
+from . import board as BD
 from . import intraday as I
 from ..costs.calculator import bucket_for
 
@@ -72,6 +73,43 @@ def record_run(con, day: str, mode: str, **kw) -> None:
                  kw.get("symbols", 0), kw.get("polls", 0), kw.get("note")])
 
 
+def daily_view():
+    """The opportunity engine's cross-section at the latest feature date, and older boards resolved - read from the
+    research database briefly and released. None if it cannot be read: the board is then skipped, not faked."""
+    from ..opportunity import engine as E
+    try:
+        rcon = duckdb.connect("data/financial_brain.duckdb", read_only=True)
+    except Exception as e:                              # noqa: BLE001 - a locked research DB skips the board
+        log.warning("daily view unavailable: %s", str(e)[:120])
+        return None, None, None
+    try:
+        asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
+        return E.scan(rcon, asof), asof, rcon
+    except Exception as e:                              # noqa: BLE001
+        log.warning("daily view failed: %s", str(e)[:120])
+        rcon.close()
+        return None, None, None
+
+
+def _has_board(con) -> bool:
+    return bool(con.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'board'").fetchone()[0])
+
+
+def post_board(con, day: str, mode: str, quotes: dict, daily, asof) -> str | None:
+    if daily is None:
+        return None
+    try:
+        b = BD.build(quotes, daily, features_as_of=asof)
+    except BD.BoardError as e:
+        log.warning("no board: %s", e)
+        return None
+    BD.save(con, b, day, mode)
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    text = BD.render(b, day)
+    (REPORTS / f"{day}-board-{mode}.md").write_text(text, encoding="utf-8")
+    return text
+
+
 def universe(n: int = UNIVERSE_SIZE) -> list[dict]:
     """The n most liquid NSE names by recent turnover, from the research database, read-only and briefly."""
     from ..ingest import kite_minute as KM
@@ -103,7 +141,7 @@ def opening_from_candles(symbols, day: date, *, candles_fn, token_fn) -> dict[st
 
 def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None, now_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
-             token_fn=None) -> dict:
+             token_fn=None, daily_fn=None) -> dict:
     from ..providers import kite_data as kd
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
@@ -117,6 +155,12 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
     eng = I.DayEngine(day)
     started = now.isoformat()
+    daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
+    if rcon is not None:
+        try:
+            BD.resolve_horizons(con, rcon)
+        finally:
+            rcon.close()
     record_run(con, day, "live", started=started, status="running", symbols=len(syms))
     polls = failures = 0
     seen_today = False
@@ -185,6 +229,15 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                         except I.EngineError:
                             pass
             opened = True
+            bq = {}
+            for key, v in q.items():
+                sym = key.split(":", 1)[-1]
+                o = v.get("ohlc") or {}
+                s_ = eng.symbols.get(sym)
+                if v.get("last_price") and s_ is not None and s_.open is not None:
+                    bq[sym] = {"price": float(v["last_price"]), "open": s_.open, "high": s_.or_hi, "low": s_.or_lo,
+                               "prev_close": s_.prev_close}
+            post_board(con, day, "live", bq, daily, asof)
             continue                                    # first fill no earlier than the next poll
         if opened:
             for sym, px in last.items():
@@ -199,6 +252,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             save(con, t, "live")
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status="complete",
                symbols=len(syms), polls=polls, note=json.dumps({"skipped": len(eng.skipped)}))
+    if _has_board(con):
+        BD.resolve_close(con, day, "live", last)
     out = {"day": day, "status": "complete", "summary": eng.summary(), "polls": polls}
     write_report(con, day, "live", eng)
     return out
@@ -210,7 +265,8 @@ def path_of_bar(o, h, l, c):
     return (o, l, h, c) if c >= o else (o, h, l, c)
 
 
-def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=None, path: Path = LEDGER) -> dict:
+def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=None, path: Path = LEDGER,
+               daily_fn=None) -> dict:
     from ..providers import kite_data as kd
     candles_fn = candles_fn or kd.candles
     inst = kd.instruments("NSE") if token_fn is None else None
@@ -244,6 +300,18 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
             for k, px in enumerate(path_of_bar(b["open"], b["high"], b["low"], b["close"])):
                 stream.append((t0 + timedelta(seconds=15 * k), sym, float(px)))
     stream.sort(key=lambda x: (x[0], x[1]))
+    daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
+    if rcon is not None:
+        rcon.close()
+    bq = {sym: {"price": None, "open": s_.open, "high": s_.or_hi, "low": s_.or_lo, "prev_close": s_.prev_close}
+          for sym, s_ in eng.symbols.items() if s_.open is not None}
+    first = {}
+    for ts, sym, px in stream:
+        if sym not in first:
+            first[sym] = px                             # the first price at or after 09:30
+    for sym in bq:
+        bq[sym]["price"] = first.get(sym)
+    post_board(con, day.isoformat(), "replay", {k: v for k, v in bq.items() if v["price"]}, daily, asof)
     last = {}
     for ts, sym, px in stream:
         last[sym] = px
@@ -251,6 +319,8 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
             save(con, t, "replay")
     for t in eng.end_of_day(datetime.combine(day, time(15, 20)), last):
         save(con, t, "replay")
+    if _has_board(con):
+        BD.resolve_close(con, day.isoformat(), "replay", last)
     record_run(con, day.isoformat(), "replay", started=datetime.now(IST).isoformat(),
                finished=datetime.now(IST).isoformat(), status="complete", symbols=used, polls=len(stream))
     write_report(con, day.isoformat(), "replay", eng)
@@ -310,5 +380,12 @@ def write_report(con, day: str, mode: str, eng: I.DayEngine) -> Path:
         lines.append(f"- {e['strategy']} ({e['mode']}): {e['trades']} trades over {e['days']} day(s), net "
                      f"{e['net_bp_per_trade']:+.1f} bp a trade (se {e['se_bp']:.1f}), win {e['win_rate']:.0%}, "
                      f"backtest said {e['backtest_bp']} bp -> **{e['status']}**")
+    lines += ["", "## Did the 09:30 board's top five beat the names it passed over?"]
+    for r in BD.scorecard(con):
+        if not r.get("days"):
+            lines.append(f"- {r['horizon']}: not resolved yet")
+        else:
+            lines.append(f"- {r['horizon']}: top five {r['top']:+.2%}, the rest {r['rest']:+.2%}, spread "
+                         f"{r['spread']:+.2%} (t {r['t']:+.2f}, {r['days']} days)")
     p.write_text("\n".join(lines), encoding="utf-8")
     return p

@@ -7,8 +7,9 @@ rather than the interface.
 > the investor's own philosophy = source of truth.
 > `Data → Evidence → Context → Thesis → Risk → Decision → Outcome → Learning`
 
-**Status:** Phases 0–2 complete; Phase 3 (empirical validation) is where the work now is
-(2026-10-03). 978 tests.
+**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,189 tests.
+Every trading day the system now scans the market, posts a 09:30 board, paper-trades its intraday rules
+through the session and scores itself against everything it passed over. See [The daily loop](#the-daily-loop).
 
 The system can research, decide, size, trade on paper and attribute its own P&L. What it
 **cannot yet do is demonstrate a tradeable edge**, and the most useful thing in this
@@ -36,6 +37,12 @@ repository is now the record of how that was established rather than assumed. Se
 Next: see [docs/HANDOFF.md](docs/HANDOFF.md) and [docs/BUILD-FLOW.md](docs/BUILD-FLOW.md).
 
 ## What has actually been validated
+
+**Added since 2026-10-03, each pre-registered:** costs beat the edge for everything except slow momentum (a delivery
+round trip is ~0.24-0.45%, 84% of the fixed part is STT); tax takes ~20% of an active strategy's CAGR; index timing
+rules halve drawdowns but none beats buy-and-hold; stops neither help nor hurt; swing and opening-range setups lose
+after costs; a registered *median* benchmark manufactured a swing edge until the mean was used (recorded against
+myself); first point-in-time fundamentals test is mostly null; second-order promoter spillover is null.
 
 Written down because an impressive architecture is not evidence, and this repository's own
 measurements are the only thing that is.
@@ -154,17 +161,42 @@ Validation modules, used from Python rather than the CLI:
 | [docs/adr/](docs/adr/) | Architecture decision records |
 | [brain/](brain/) | Obsidian vault — the same material as a linked graph. Open `brain/` as a vault; start at `00-Meta/Home.md` |
 
-## The short version
+## Four modes, one brain
 
-**First user:** a self-directed, long-term Indian-equity investor.
-**First job:** understand what changed in my portfolio and watchlist, why it matters, and
-whether any recorded thesis has strengthened or weakened.
-**First product:** an Indian Equity Research & Portfolio Copilot — not a stock-tip engine.
+The same data, evidence, risk and memory layers serve four different jobs. What changes between them is the
+universe, the latency, the holding period, the costs that matter and - above all - **how a result is judged**,
+so a five-minute signal is never evaluated with a twenty-day framework or the other way round.
 
-**The edge is not the agent architecture** (replicable) **or the model** (rented). It is
-the point-in-time dataset accumulated from day one, the Indian promoter/group/pledging
-knowledge graph, the decision-outcome-experience memory, and multilingual Indian document
-understanding.
+| Mode | Holding period | Universe and data | Judged by | Evidence today |
+|---|---|---|---|---|
+| **Investor** | months to years | point-in-time prices, XBRL fundamentals, filings, promoter graph | after-tax return against holding the index, with deferral | Fundamentals mostly null in the primary sample (earnings yield the one faint hint, holdout pending). Buy-and-hold's tax deferral is worth 2-3 points a year to beat |
+| **Position / quant** | 1-6 months | full liquid universe (~1,500 names), daily features | net alpha over the *same* universe after costs and tax, replicated across size tiers | Momentum and 52-week-high: about +3 points a year over the same universe after cost and tax, **in-sample**. Information still accruing at 120 sessions |
+| **Swing** | 5-10 sessions | daily setups on liquid names | net return over a *random* liquid name (the mean, not the median) | **None.** Pullback, oversold, breakout and strength setups lose 0.2-0.6% a trade net |
+| **Intraday** | minutes to the close | Kite minute bars and live quotes, 200-300 names | net bp a trade after the intraday schedule | **None.** Opening-range breakout: gross ~0, net -15 to -21 bp over 251,000 trades. Now being measured live |
+
+`fb plan TICKER --style position|swing|intraday` gives size, horizon and exits for any name and states the mode's
+evidence first. `fb costs-calc` shows what a trade costs and what tax takes. Neither is advice.
+
+**The edge is not the agent architecture** (replicable) **or the model** (rented). It is the point-in-time
+dataset, the Indian promoter/group/pledging graph, the decision-outcome memory - and now the live record of
+decisions made before their outcomes, which nothing else can supply.
+
+## The daily loop
+
+| Time (IST, weekdays) | What runs | Where it writes |
+|---|---|---|
+| 08:52 | Reminder if today's Kite token is missing: run `scripts\kite_login.cmd` (the owner logs in; nothing automates credentials) | notification |
+| 09:05 | Windows task *FinanceBrain Paper Intraday* starts `fb paper-intraday` (exits itself on holidays) | `data/paper_live.duckdb` |
+| 09:30 | **The board**: every liquid name ranked by expected net alpha, the five best with invalidation level and plan size, and the morning setups; "nothing clears costs" when that is true | `data/paper_reports/DATE-board-live.md` |
+| 09:30-15:15 | Paper trading of the intraday rules (version live-v1, pre-registered), every trade written as it opens and closes | ledger |
+| 15:15 | Flat; same-day outcome for every board name, so the top five are scored against the rest | `DATE-live.md` |
+| ~15:50 | Review task: code errors only; rules never change with the day's P&L | notification |
+| 18:45 | Windows task *FinanceBrain Daily Refresh*: prices, indices, actions, announcements, features | research DB |
+
+`fb paper-intraday --report` prints the accumulated evidence per strategy (COLLECTING until 100 trades, then
+LOSING / WINNING / NO_EDGE_DETECTED / DIFFERS_FROM_BACKTEST). `fb paper-intraday --replay DATE` replays a past day
+with the same rules, labelled `replay` and kept apart from live evidence. There is no order code anywhere: Kite is
+read-only, and human approval remains the only path to a real trade.
 
 ## Decisions still open
 

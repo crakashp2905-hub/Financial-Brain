@@ -41,6 +41,7 @@ def fake_quotes(clock, day="2026-10-06", traded=True):
 def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
     monkeypatch.setattr(R, "REPORTS", tmp_path / "reports")
+    monkeypatch.setattr(R, "daily_view", lambda: (None, None, None))      # never touch the research database
     return tmp_path
 
 
@@ -120,3 +121,32 @@ def test_started_after_the_close_or_on_a_weekend_it_records_nothing(setup):
         out = R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
         assert out["status"] == "not_a_session"
     assert not (setup / "l.duckdb").exists()
+
+
+def board_daily():
+    import pandas as pd
+    return (pd.DataFrame({"ticker": ["X"], "z": [1.5], "alpha": [0.004], "cost": [0.003], "net": [0.001],
+                          "vol_60": [0.25], "adv20": [5e9]}), date(2026, 10, 5), None)
+
+
+def test_the_live_day_posts_a_0930_board_and_resolves_it_at_the_close(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb", daily_fn=board_daily)
+    con = R.ledger(setup / "l.duckdb")
+    row = con.execute("SELECT symbol, top, clears, ret_close FROM board WHERE mode = 'live'").fetchone()
+    assert row[0] == "X" and row[1] is True and row[2] is False and row[3] is not None
+    text = (setup / "reports" / "2026-10-06-board-live.md").read_text(encoding="utf-8")
+    assert "Nothing clears costs today" in text
+    assert "top five beat" in (setup / "reports" / "2026-10-06-live.md").read_text(encoding="utf-8")
+
+
+def test_the_replay_posts_a_board_from_the_candles(setup):
+    def candles(tok, start, end, interval):
+        if interval == "day":
+            return [{"ts": "2026-10-01T00:00:00+0530", "close": 100.0}]
+        return [{"ts": (datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)).strftime("%Y-%m-%dT%H:%M:%S+0530"),
+                 "open": 100.0, "high": 100.5, "low": 99.5, "close": 100.0, "volume": 10} for k in range(360)]
+    R.run_replay(date(2026, 10, 5), candles_fn=candles, token_fn=lambda s: 1, path=setup / "l.duckdb",
+                 daily_fn=board_daily)
+    con = R.ledger(setup / "l.duckdb")
+    assert con.execute("SELECT COUNT(*) FROM board WHERE mode = 'replay' AND ret_close IS NOT NULL").fetchone()[0] == 1
