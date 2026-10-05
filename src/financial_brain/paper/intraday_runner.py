@@ -23,6 +23,7 @@ from pathlib import Path
 
 import duckdb
 import numpy as np
+import pandas as pd
 
 from . import board as BD
 from . import intraday as I
@@ -83,9 +84,10 @@ def record_run(con, day: str, mode: str, **kw) -> None:
 
 
 def daily_view():
-    """The opportunity engine's cross-section at the latest feature date, and older boards resolved - read from the
-    research database briefly and released. None if it cannot be read: the board is then skipped, not faked."""
-    from ..opportunity import engine as E
+    """Every scanner's opportunities at the latest feature date, reduced to each name's best, from the research
+    database read briefly. Returns (board frame, as_of, research connection, opportunities); Nones if it cannot
+    be read - the board is then skipped, not faked."""
+    from ..opportunity import scanners as S
     try:
         rcon = duckdb.connect("data/financial_brain.duckdb", read_only=True)
     except Exception as e:                              # noqa: BLE001 - a locked research DB skips the board
@@ -93,9 +95,21 @@ def daily_view():
         return None, None, None
     try:
         asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
-        return E.scan(rcon, asof), asof, rcon
+        cs = S.cross_section(rcon, asof)
+        events = {r[0] for r in rcon.execute("""
+            SELECT DISTINCT l.lineage FROM announcements a JOIN security_lineage l ON l.isin = a.isin
+            WHERE a.business_date BETWEEN ?::DATE - INTERVAL 1 DAY AND ? AND a.materiality <> 'LOW'""",
+                                             [asof, asof]).fetchall()}
+        opps = S.scan(cs, asof, events=events)
+        best = S.best_per_name(opps)
+        frame = pd.DataFrame({"ticker": best["ticker"], "z": best["features"].map(lambda f: f.get("z", 0.0)),
+                              "alpha": best["expected_return"], "cost": best["cost"], "net": best["expected_net"],
+                              "vol_60": best["features"].map(lambda f: f.get("vol_60")), "adv20": best["liquidity"],
+                              "type": best["type"], "horizon": best["horizon"], "evidence": best["evidence"]})
+        frame.attrs["opportunities"] = opps
+        return frame, asof, rcon
     except Exception as e:                              # noqa: BLE001
-        log.warning("daily view failed: %s", str(e)[:120])
+        log.warning("daily view failed: %s", str(e)[:160])
         rcon.close()
         return None, None, None
 
@@ -166,10 +180,15 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     started = now.isoformat()
     daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
     if rcon is not None:
+        from ..opportunity import scanners as S
         try:
             BD.resolve_horizons(con, rcon)
+            S.resolve(con, rcon)
         finally:
             rcon.close()
+    if daily is not None and daily.attrs.get("opportunities"):
+        from ..opportunity import scanners as S
+        S.save(con, daily.attrs["opportunities"], day)
     record_run(con, day, "live", started=started, status="running", symbols=len(syms))
     polls = failures = 0
     seen_today = False

@@ -72,7 +72,10 @@ def build(quotes: dict, daily: pd.DataFrame, *, capital: float = 1_000_000.0, to
                    capital_inr=capital, style="position", bucket="large")
         rows.append({"symbol": sym, "price": price, "gap": gap, "z": float(r["z"]), "alpha_20d": float(r["alpha"]),
                      "cost": float(r["cost"]), "net_20d": float(r["net"]), "setups": ",".join(setups),
-                     "stop": p["stop_price"], "shares": p["shares"], "plan_status": p["status"]})
+                     "stop": p["stop_price"], "shares": p["shares"], "plan_status": p["status"],
+                     "type": str(r["type"]) if "type" in r and pd.notna(r["type"]) else "composite",
+                     "horizon": int(r["horizon"]) if "horizon" in r and pd.notna(r["horizon"]) else 20,
+                     "evidence": str(r["evidence"]) if "evidence" in r and pd.notna(r["evidence"]) else "IN_SAMPLE"})
     if not rows:
         raise BoardError("no quoted name is in the daily cross-section")
     b = pd.DataFrame(rows).sort_values("net_20d", ascending=False).reset_index(drop=True)
@@ -92,12 +95,12 @@ def render(b: pd.DataFrame, day: str) -> str:
     if n_clear == 0:
         lines.append("**Nothing clears costs today.** The five best by expected net alpha are listed as WATCH so their "
                      "outcomes are recorded; none is a trade.")
-    lines += ["", "| # | Stock | Price | Exp. 20d alpha | Cost | Net | Verdict | Invalidation (stop) | Position size | Setups at 09:30 |",
-              "|---|---|---|---|---|---|---|---|---|---|"]
+    lines += ["", "| # | Stock | Price | Opportunity (horizon) | Evidence | Exp. alpha | Cost | Net | Verdict | Invalidation (stop) | Position size | Setups at 09:30 |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in top.itertuples():
-        verdict = "TRADE (position, weak in-sample evidence)" if r.clears else "WATCH"
-        lines.append(f"| {r.rank} | {r.symbol} | {r.price:,.1f} | {r.alpha_20d:+.2%} | {r.cost:.2%} | {r.net_20d:+.2%} | "
-                     f"{verdict} | {r.stop:,.1f} | {r.shares} sh | {r.setups or '-'} |")
+        verdict = "TRADE (weak, in-sample evidence)" if r.clears else "WATCH"
+        lines.append(f"| {r.rank} | {r.symbol} | {r.price:,.1f} | {r.type} ({r.horizon}d) | {r.evidence} | {r.alpha_20d:+.2%} | "
+                     f"{r.cost:.2%} | {r.net_20d:+.2%} | {verdict} | {r.stop:,.1f} | {r.shares} sh | {r.setups or '-'} |")
     gaps = b[b["setups"].str.contains("GAP", na=False)]
     lines += ["", f"Intraday setups live at 09:30: {len(gaps)} gaps of 1.5%+ and "
               f"{int(b['setups'].str.contains('ORB_PENDING', na=False).sum())} pending opening-range breakouts. "
@@ -109,11 +112,17 @@ def render(b: pd.DataFrame, day: str) -> str:
 
 def save(con, b: pd.DataFrame, day: str, mode: str) -> int:
     con.execute(SCHEMA)
+    for name, typ in (("type", "VARCHAR"), ("horizon", "INTEGER"), ("evidence", "VARCHAR")):
+        con.execute(f"ALTER TABLE board ADD COLUMN IF NOT EXISTS {name} {typ}")
     for r in b.itertuples():
-        con.execute("""INSERT OR REPLACE INTO board VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL,NULL)""",
+        con.execute("""INSERT OR REPLACE INTO board (day, mode, symbol, rank, top, clears, price, gap, z, alpha_20d, cost,
+                       net_20d, setups, stop, shares, features_as_of) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     [day, mode, r.symbol, int(r.rank), bool(r.top), bool(r.clears), float(r.price),
                      None if not np.isfinite(r.gap) else float(r.gap), float(r.z), float(r.alpha_20d), float(r.cost),
                      float(r.net_20d), r.setups, float(r.stop), int(r.shares), r.features_as_of])
+        con.execute("UPDATE board SET type = ?, horizon = ?, evidence = ? WHERE day = ? AND mode = ? AND symbol = ?",
+                    [getattr(r, "type", "composite"), int(getattr(r, "horizon", 20)), getattr(r, "evidence", None),
+                     day, mode, r.symbol])
     return len(b)
 
 
