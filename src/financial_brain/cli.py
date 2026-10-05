@@ -1363,6 +1363,26 @@ def cmd_costs_calc(args) -> int:
     return 0
 
 
+def cmd_paper_intraday(args) -> int:
+    """Intraday paper trading: live from Kite quotes, a replay of a past day, or the evidence so far."""
+    import logging
+    from .paper import intraday_runner as IR
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+    if args.report:
+        con = IR.ledger()
+        for e in IR.evidence(con):
+            print(f"{e['strategy']:4s} {e['mode']:6s} {e['trades']:5d} trades / {e['days']:3d} days  net "
+                  f"{e['net_bp_per_trade']:+6.1f} bp/trade (se {e['se_bp']:4.1f})  win {e['win_rate']:.0%}  "
+                  f"net Rs {e['net_inr']:>10,.0f}  backtest {e['backtest_bp']}  -> {e['status']}")
+        return 0
+    if args.replay:
+        out = IR.run_replay(_d(args.replay), n=args.names)
+    else:
+        out = IR.run_live(n=args.names)
+    print(out)
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -1971,6 +1991,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--slab", type=float, default=0.30, help="your marginal slab rate, for intraday profit")
     g.add_argument("--table", action="store_true", help="also show cost by order size")
     g.set_defaults(fn=cmd_costs_calc)
+
+    g = sub.add_parser("paper-intraday", help="intraday paper trading: live, --replay DATE, or --report (no orders)")
+    g.add_argument("--replay")
+    g.add_argument("--report", action="store_true")
+    g.add_argument("--names", type=int, default=200)
+    g.set_defaults(fn=cmd_paper_intraday)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

@@ -1,0 +1,95 @@
+from datetime import date, datetime, timedelta
+
+import pytest
+
+from financial_brain.paper import intraday_runner as R
+
+
+class Clock:
+    def __init__(self, start):
+        self.t = start
+
+    def now(self):
+        return self.t
+
+    def sleep(self, s):
+        self.t += timedelta(seconds=s)
+
+
+def price_at(t):
+    m = t.hour * 60 + t.minute
+    if m < 570:
+        return 100.0
+    if m < 580:
+        return 100.5
+    if m < 600:
+        return 101.6          # breaks above the 101 range high -> ORB long
+    return 106.9              # beyond the 2R target
+
+
+def fake_quotes(clock, day="2026-10-06", traded=True):
+    def q(symbols, kind):
+        px = price_at(clock.t)
+        hi = max(101.0, px) if clock.t.hour * 60 + clock.t.minute >= 570 else 101.0
+        return {s: {"last_price": px, "last_trade_time": f"{day} 09:20:00" if traded else "2026-10-01 15:29:59",
+                    "ohlc": {"open": 100.0, "high": hi if clock.t.hour * 60 + clock.t.minute > 570 else 101.0,
+                             "low": 99.0, "close": 100.0}} for s in symbols}
+    return q
+
+
+@pytest.fixture
+def setup(monkeypatch, tmp_path):
+    monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
+    monkeypatch.setattr(R, "REPORTS", tmp_path / "reports")
+    return tmp_path
+
+
+def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    out = R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
+    assert out["status"] == "complete"
+    con = R.ledger(setup / "l.duckdb")
+    rows = con.execute("SELECT strategy, side, exit_reason, mode FROM trades").fetchall()
+    assert ("ORB", "long", "target", "live") in rows
+    assert (setup / "reports" / "2026-10-06-live.md").exists()
+
+
+def test_a_holiday_is_detected_and_the_run_ends_quietly(setup):
+    c = Clock(datetime(2026, 10, 2, 9, 10, tzinfo=R.IST))
+    out = R.run_live(quote_fn=fake_quotes(c, day="2026-10-02", traded=False), now_fn=c.now, sleep_fn=c.sleep,
+                     path=setup / "l.duckdb")
+    assert out["status"] == "closed"
+    assert R.ledger(setup / "l.duckdb").execute("SELECT COUNT(*) FROM trades").fetchone()[0] == 0
+
+
+def test_a_failing_feed_aborts_after_the_limit_rather_than_spinning_all_day(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 20, tzinfo=R.IST))
+
+    def broken(symbols, kind):
+        raise RuntimeError("token expired")
+    out = R.run_live(quote_fn=broken, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb", max_failures=5)
+    assert out["status"] == "aborted" and "token expired" in out["why"]
+
+
+def test_bar_path_puts_the_low_first_on_an_up_bar():
+    assert R.path_of_bar(10, 12, 9, 11) == (10, 9, 12, 11)
+    assert R.path_of_bar(10, 12, 9, 9.5) == (10, 12, 9, 9.5)
+
+
+def test_replay_runs_the_same_engine_on_minute_candles_and_labels_it(setup):
+    day = date(2026, 10, 5)
+
+    def candles(tok, start, end, interval):
+        if interval == "day":
+            return [{"ts": "2026-10-01T00:00:00+0530", "close": 100.0}, {"ts": "2026-10-05T00:00:00+0530", "close": 105.0}]
+        bars = []
+        for k in range(360):
+            t = datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)
+            px = price_at(t)
+            bars.append({"ts": t.strftime("%Y-%m-%dT%H:%M:%S+0530"), "open": px, "high": px + 0.05, "low": px - 0.05,
+                         "close": px, "volume": 1000})
+        return bars
+    out = R.run_replay(day, candles_fn=candles, token_fn=lambda s: 1, path=setup / "l.duckdb")
+    assert out["symbols"] == 1 and out["summary"]["ORB"]["trades"] == 1
+    ev = R.evidence(R.ledger(setup / "l.duckdb"))
+    assert ev[0]["mode"] == "replay" and ev[0]["status"] == "COLLECTING"
