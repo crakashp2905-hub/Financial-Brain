@@ -6,3 +6,4 @@ set PYTHONPATH=src
 if not exist data\paper_reports mkdir data\paper_reports
 for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd"') do set D=%%i
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['daily']))" >> data\paper_reports\refresh-%D%.log 2>&1
+python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['champion', '--record']))" >> data\paper_reportsefresh-%D%.log 2>&1

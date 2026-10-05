@@ -1383,6 +1383,29 @@ def cmd_paper_intraday(args) -> int:
     return 0
 
 
+def cmd_champion(args) -> int:
+    """Record each strategy's picks after the lock, resolve matured cohorts, and print the standings."""
+    import duckdb
+    from .evaluation import champion as C
+    from .paper import intraday_runner as IR
+    led = IR.ledger()
+    rcon = duckdb.connect(str(load().db_path), read_only=True)
+    try:
+        day = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
+        if args.record:
+            if day < C.LOCK_DATE:
+                print(f"latest features {day} are before the lock {C.LOCK_DATE}: nothing recorded")
+            else:
+                print("recorded", day, C.record(rcon, led, day))
+        print("resolved cohorts:", C.resolve(led, rcon))
+    finally:
+        rcon.close()
+    for s in C.standings(led):
+        print(f"  {s['strategy']:20s} {s['status']:22s} cohorts {s.get('cohorts', 0):3d}"
+              + (f"  net vs champion {s['mean_net_vs_champion']:+.2%} (t {s['t']:+.2f})" if s.get("cohorts") else ""))
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -1997,6 +2020,10 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--report", action="store_true")
     g.add_argument("--names", type=int, default=200)
     g.set_defaults(fn=cmd_paper_intraday)
+
+    g = sub.add_parser("champion", help="champion/challenger on locked out-of-sample data")
+    g.add_argument("--record", action="store_true")
+    g.set_defaults(fn=cmd_champion)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)
