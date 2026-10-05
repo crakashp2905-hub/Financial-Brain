@@ -83,10 +83,11 @@ def record_run(con, day: str, mode: str, **kw) -> None:
                  kw.get("symbols", 0), kw.get("polls", 0), kw.get("note")])
 
 
-def daily_view():
-    """Every scanner's opportunities at the latest feature date, reduced to each name's best, from the research
-    database read briefly. Returns (board frame, as_of, research connection, opportunities); Nones if it cannot
-    be read - the board is then skipped, not faked."""
+def daily_view(before: date | None = None):
+    """Every scanner's opportunities at the latest feature date (strictly before ``before`` when given, so a
+    replayed day's board sees only what was known that morning), reduced to each name's best, from the research
+    database read briefly. Returns (board frame, as_of, research connection); Nones if it cannot be read - the
+    board is then skipped, not faked."""
     from ..opportunity import scanners as S
     try:
         rcon = duckdb.connect("data/financial_brain.duckdb", read_only=True)
@@ -94,7 +95,8 @@ def daily_view():
         log.warning("daily view unavailable: %s", str(e)[:120])
         return None, None, None
     try:
-        asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
+        asof = (rcon.execute("SELECT MAX(business_date) FROM features WHERE business_date < ?", [before]).fetchone()[0]
+                if before else rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0])
         cs = S.cross_section(rcon, asof)
         events = {r[0] for r in rcon.execute("""
             SELECT DISTINCT l.lineage FROM announcements a JOIN security_lineage l ON l.isin = a.isin
@@ -335,7 +337,7 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
             for k, px in enumerate(path_of_bar(b["open"], b["high"], b["low"], b["close"])):
                 stream.append((t0 + timedelta(seconds=15 * k), sym, float(px)))
     stream.sort(key=lambda x: (x[0], x[1]))
-    daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
+    daily, asof, rcon = daily_view(before=day) if daily_fn is None else daily_fn()
     if rcon is not None:
         rcon.close()
     bq = {sym: {"price": None, "open": s_.open, "high": s_.or_hi, "low": s_.or_lo, "prev_close": s_.prev_close}

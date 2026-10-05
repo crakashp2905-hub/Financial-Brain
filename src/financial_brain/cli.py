@@ -1451,10 +1451,40 @@ def cmd_terminal(args) -> int:
             print("building the analogue pool once (a few minutes)...")
             pool = SA.build_pool(rcon, start=_dt.date(2016, 6, 1), end=_dt.date.today(), step=5)
             pool.to_parquet(cache)
-        path = T.write(T.build(rcon, IR.ledger(), analogue_pool=pool))
+        from .paper import book as BK
+        bcon = duckdb.connect(str(BK.PATH), read_only=True) if BK.PATH.exists() else None
+        try:
+            path = T.write(T.build(rcon, IR.ledger(), analogue_pool=pool, book=bcon))
+        finally:
+            if bcon is not None:
+                bcon.close()
     finally:
         rcon.close()
     print(f"terminal written: {path.resolve()}")
+    return 0
+
+
+def cmd_book(args) -> int:
+    """Suggestion paper books: the terminal's names bought and sold on paper by their pre-registered rules."""
+    import datetime as _dt
+    import duckdb
+    from .paper import book as BK
+    specs = list(BK.BOOKS.values()) if args.book == "all" else [BK.BOOKS[args.book]]
+    rcon = duckdb.connect(str(load().db_path), read_only=True)
+    book = BK.connect()
+    try:
+        for spec in specs:
+            if args.replay:
+                end = _dt.date.fromisoformat(args.end) if args.end else None
+                n = BK.replay(rcon, book, _dt.date.fromisoformat(args.replay), end, spec=spec, mode=args.label)
+                print(f"{spec.version} {args.label} from {args.replay}: {n} positions taken")
+            elif not args.report:
+                r = BK.live(rcon, book, spec=spec)
+                print(f"{spec.version} live for {r['day']}: {r['added']} new position(s) to buy at the next close")
+            print(BK.render(book, spec) + "\n")
+    finally:
+        book.close()
+        rcon.close()
     return 0
 
 
@@ -2083,6 +2113,14 @@ def main(argv: list[str] | None = None) -> int:
 
     g = sub.add_parser("terminal", help="write the trader's terminal page (HTML)")
     g.set_defaults(fn=cmd_terminal)
+
+    g = sub.add_parser("book", help="the suggestion paper book: top picks bought and sold on paper (no orders)")
+    g.add_argument("--book", default="all", choices=["all", "book-v1", "swing-v1"], help="which book (default all)")
+    g.add_argument("--replay", metavar="START", help="replay the same rules from START (in-sample; never live)")
+    g.add_argument("--end", metavar="END", help="last signal day of a replay (default: latest session)")
+    g.add_argument("--label", default="replay", help="mode label for a replay, e.g. replay-week")
+    g.add_argument("--report", action="store_true", help="print the record only")
+    g.set_defaults(fn=cmd_book)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

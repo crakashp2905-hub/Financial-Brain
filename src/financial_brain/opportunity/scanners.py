@@ -48,8 +48,11 @@ SHRINK = 0.71           #: realised/stated alpha slope measured in the engine re
 #: Mean 20-session excess return by composite decile (1 = worst), the 2016-2026 engine replay, in-sample.
 DECILE_20D = {1: -0.01126, 2: -0.00620, 3: -0.00107, 4: 0.00105, 5: 0.00203, 6: 0.00328, 7: 0.00175,
               8: 0.00415, 9: 0.00389, 10: 0.00252}
-#: The composite's IC at h relative to h = 20, from the half-life study: how a 20-session expectation scales.
-HORIZON_SCALE = {5: 0.060 / 0.082, 10: 0.067 / 0.082, 20: 1.0, 60: 0.108 / 0.082}
+#: How a 20-session expectation scales to h: the composite's IC at h relative to h = 20 (the half-life study)
+#: times sqrt(h / 20), because an expected return is IC x the volatility over the horizon. The first version
+#: carried the IC ratio alone, which overstated 5- and 10-session expectations about twofold.
+_IC = {5: 0.060, 7: 0.0628, 10: 0.067, 20: 0.082, 60: 0.108}
+HORIZON_SCALE = {h: _IC[h] / _IC[20] * np.sqrt(h / 20) for h in _IC}
 MODEL = "composite decile, 2016-26 engine replay (in-sample)"
 
 #: Measured IC by scanner at its horizon (positive = the condition predicts outperformance), the t of that

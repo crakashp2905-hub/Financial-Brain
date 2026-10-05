@@ -77,7 +77,98 @@ def market_panel(rcon) -> str:
     return '<div class="grid">' + "".join(tiles) + "</div>"
 
 
-def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None) -> str:
+def _spark(df: pd.DataFrame) -> str:
+    """Cumulative net rupees of the sold trades by exit day, against the universe on the same money."""
+    d = df.sort_values("exit_day")
+    if len(d) < 2:
+        return ""
+    a, b = d["net_rs"].cumsum().to_numpy(), (d["notional"] * d["bench"]).cumsum().to_numpy()
+    lo, hi = float(min(a.min(), b.min(), 0)), float(max(a.max(), b.max(), 0))
+    W, H, P = 640, 150, 34
+    x = lambda i: P + (W - 2 * P) * i / (len(d) - 1)                       # noqa: E731
+    y = lambda v: H - 18 - (H - 36) * (v - lo) / ((hi - lo) or 1)          # noqa: E731
+    line = lambda s: " ".join(f"{x(i):.1f},{y(v):.1f}" for i, v in enumerate(s))   # noqa: E731
+    return (f"<div class='wrap' style='padding:8px;margin-top:10px'><svg viewBox='0 0 {W} {H}' width='100%' role='img' "
+            f"aria-label='cumulative net P&amp;L of the book against the universe'>"
+            f"<line x1='{P}' x2='{W - P}' y1='{y(0):.1f}' y2='{y(0):.1f}' stroke='var(--line)'/>"
+            f"<polyline fill='none' stroke='var(--muted)' stroke-dasharray='4 3' stroke-width='1.5' points='{line(b)}'/>"
+            f"<polyline fill='none' stroke='var(--accent)' stroke-width='2' points='{line(a)}'/>"
+            f"<text x='{P}' y='12' font-size='11' fill='var(--muted)'>Rs {hi:,.0f}</text>"
+            f"<text x='{P}' y='{H - 4}' font-size='11' fill='var(--muted)'>Rs {lo:,.0f} · sold {d['exit_day'].min()} to {d['exit_day'].max()}</text>"
+            f"<text x='{W - P}' y='12' font-size='11' text-anchor='end' fill='var(--accent)'>book Rs {a[-1]:,.0f}</text>"
+            f"<text x='{W - P}' y='26' font-size='11' text-anchor='end' fill='var(--muted)'>universe Rs {b[-1]:,.0f} (dashed)</text>"
+            "</svg></div>")
+
+
+def _d(x) -> str:
+    return "-" if x is None or pd.isna(x) else str(pd.Timestamp(x).date())
+
+
+def _sold_table(t: pd.DataFrame, title: str) -> str:
+    return (f"<div><div class='sub' style='margin:10px 0 4px'>{title}</div><div class='wrap'><table><tr><th>Stock</th><th>Bought</th><th>Sold</th>"
+            "<th class='r'>Net</th><th class='r'>vs universe</th><th>Why sold</th><th class='r'>Rs</th></tr>"
+            + "".join(f"<tr><td>{_e(r.ticker)}</td><td>{_d(r.entry_day)} @ {r.entry_px:,.2f}</td><td>{_d(r.exit_day)} @ {r.exit_px:,.2f}</td>"
+                      f"<td class='r'>{_pct(r.net)}</td><td class='r'>{_pct(r.excess)}</td><td>{_e(r.exit_reason)}</td>"
+                      f"<td class='r {'pos' if r.net_rs > 0 else 'neg'}'>{r.net_rs:,.0f}</td></tr>" for r in t.itertuples())
+            + "</table></div></div>")
+
+
+MODE_LABEL = {"live": "Live (the evidence)",
+              "replay": "Replay since 2023 (in-sample model: a demonstration)",
+              "replay-week": "Last week, replayed (one week decides nothing: a demonstration of the mechanics)"}
+
+
+def book_panel(book, spec=None) -> str:
+    """Every suggestion the book bought, and how it was sold - losers included, best next to worst."""
+    from ..decisions import plan as P
+    from . import book as BK
+    spec = spec or BK.POSITION
+    out = [f"<h2>Paper book: {_e(spec.label)} ({spec.version})</h2>",
+           f"<div class='sub'>The top {spec.top_n} each evening are bought on paper at the next close (at most "
+           f"{spec.max_open} open, Rs {BK.CAPITAL / 1e5:.0f} lakh), sold at the stop or after {spec.horizon or 'their'} sessions, and charged the sized "
+           "round trip. Every trade is kept: a record of only the winners would be a sales pitch, not evidence.</div>"]
+    for mode in BK.modes(book, spec):
+        label = MODE_LABEL.get(mode, mode)
+        df = BK.frame(book, mode, spec)
+        s = BK.summary(book, mode, spec)
+        out.append(f"<h3 style='margin-top:14px'>{label}</h3>")
+        tiles = [("Verdict", _chip(s["verdict"].split(" (")[0]), _e(s["verdict"][len(s["verdict"].split(" (")[0]):].strip(" ()")) or "&nbsp;")]
+        if s["closed"]:
+            tiles += [("Sold / open", f"{s['closed']} / {s['open']}", f"held {s['mean_held']:.0f} sessions on average, {s['stopped']:.0%} stopped"),
+                      ("Made money", f"{s['win_rate']:.0%}", f"beat the universe {s['beat_universe']:.0%} of the time"),
+                      ("Per trade, net", _pct(s["mean_net"]), f"vs universe {_pct(s['mean_excess'])} (t {s['t_excess']:+.1f}, {s['entry_days']} entry days)"),
+                      ("Net P&L", f"Rs {s['net_rs']:,.0f}", f"universe on the same money Rs {s['bench_rs']:,.0f}")]
+        else:
+            tiles.append(("Sold / open", f"0 / {s['open']}", "nothing sold yet"))
+        if "open_net_rs" in s:
+            tiles.append(("Open P&L, net", f"Rs {s['open_net_rs']:,.0f}", f"universe on the same money Rs {s['open_bench_rs']:,.0f}"))
+        out.append("<div class='grid'>" + "".join(f"<div class='tile'><div class='k'>{k}</div><div class='v'>{v}</div><div class='sub'>{n}</div></div>"
+                                                   for k, v, n in tiles) + "</div>")
+        if df.empty:
+            continue
+        held = df[df["status"] != "SOLD"].sort_values("net", ascending=False)
+        if len(held):
+            rows = []
+            for r in held.itertuples():
+                sell_by = P._add_sessions(pd.Timestamp(r.entry_day).date(), int(r.horizon)) if pd.notna(r.entry_day) else f"{r.horizon} sessions after entry"
+                rows.append(f"<tr><td>{_e(r.ticker)}</td><td>{_e(r.status)}</td><td>{_d(r.signal_day)}</td>"
+                            f"<td class='r'>{'-' if pd.isna(r.entry_px) else f'{r.entry_px:,.2f}'}</td>"
+                            f"<td class='r'>{'-' if pd.isna(r.last_px) else f'{r.last_px:,.2f}'}</td>"
+                            f"<td class='r'>{'-' if pd.isna(r.net) else _pct(r.net)}</td><td class='r'>{r.stop:,.2f}</td>"
+                            f"<td>{sell_by}</td><td class='r'>{r.shares}</td></tr>")
+            out.append("<div class='sub' style='margin-top:10px'>Holding now (net of the round trip; each sells at its stop or on the date shown)</div>"
+                       "<div class='wrap'><table><tr><th>Stock</th><th>Status</th><th>Signal</th><th class='r'>Bought</th><th class='r'>Last</th>"
+                       "<th class='r'>Net so far</th><th class='r'>Stop</th><th>Sell by</th><th class='r'>Shares</th></tr>" + "".join(rows) + "</table></div>")
+        sold = df[df["status"] == "SOLD"]
+        if len(sold):
+            out.append(_spark(sold))
+            out.append("<div class='grid' style='grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr))'>"
+                       + _sold_table(sold.nlargest(5, "net"), "Best five sold") + _sold_table(sold.nsmallest(5, "net"), "Worst five sold") + "</div>")
+            out.append(_sold_table(sold.sort_values("exit_day", ascending=False).head(10), "Most recently sold (all outcomes)"))
+    return "\n".join(out)
+
+
+def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None) -> str:
     from ..decisions import forecast_ev as FE
     from ..decisions import plan as P
     from ..evaluation import champion as C
@@ -106,7 +197,28 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     opps = S.scan(cs, asof, capital=capital)
     best = S.best_per_name(opps).sort_values("expected_net", ascending=False)
     clears = int((best["expected_net"] >= 0.005).sum())
-    parts.append("<h2>Top opportunities</h2>")
+    # ---------------------------------------------------------------- swing candidates (top 50)
+    from ..decisions import plan as _P
+    from . import book as BK
+    sw = BK.swing_ranking(rcon, asof, BK.SWING, capital).head(BK.SWING.top_n)
+    parts.append(f"<h2>Swing candidates: top {BK.SWING.top_n} for the next {BK.SWING.horizon} sessions</h2>")
+    if len(sw):
+        n_clear = int((sw["expected_net"] > 0).sum())
+        parts.append("<div class='note'><b>Evidence for swing trading: NONE_DEMONSTRATED.</b> Every 5-10 session setup tested lost "
+                     f"0.2-0.6% a trade after costs. {n_clear} of these {len(sw)} clear their own round trip on the model's expectation "
+                     f"(mean {sw['expected_net'].mean() * 100:+.2f}% net). They are paper-traded below so the record, not this table, says whether that is too pessimistic.</div>")
+        sell_by = _P._add_sessions(_P._add_sessions(asof, 1), BK.SWING.horizon)
+        rows = "".join(
+            f"<tr><td class='r'>{i}</td><td>{_e(r.ticker)}</td><td class='r'>{r.price:,.2f}</td><td class='r'>{r.invalidation:,.2f}</td>"
+            f"<td>{sell_by}</td><td class='r'>{r.shares}</td><td class='r'>{r.shares * r.price:,.0f}</td><td class='r'>{_pct(r.expected_return)}</td>"
+            f"<td class='r'>{r.cost * 100:.2f}%</td><td class='r'>{_pct(r.expected_net)}</td><td class='r'>{r.vol_60 * 100:.0f}%</td></tr>"
+            for i, r in enumerate(sw.itertuples(), 1))
+        parts.append("<details open><summary>All " + str(len(sw)) + " names: buy at the next close, sell at the stop or by the date shown</summary><div class='wrap' style='margin-top:8px'><table>"
+                     "<tr><th class='r'>#</th><th>Stock</th><th class='r'>Price</th><th class='r'>Stop</th><th>Sell by</th><th class='r'>Shares</th>"
+                     "<th class='r'>Rs</th><th class='r'>Exp. 7d</th><th class='r'>Cost</th><th class='r'>Net</th><th class='r'>Vol</th></tr>" + rows + "</table></div></details>")
+    if book is not None:
+        parts.append(book_panel(book, BK.SWING))
+    parts.append("<h2>Position names (top 5, months)</h2>")
     if clears == 0:
         parts.append("<div class='note'><b>Nothing clears costs today.</b> The best five by expected net alpha are shown as WATCH: "
                      "expected returns come from one model: what names in the same composite decile earned in the 2016-26 replay (in-sample), scaled to the horizon.</div>")
@@ -117,8 +229,21 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
                     f"<td class='r'>{r.price:,.1f}</td><td class='r'>{r.invalidation:,.1f}</td><td>{_e(r.flagged_by)}</td></tr>")
     parts.append("<div class='wrap'><table><tr><th>Stock</th><th>Opportunity</th><th>Evidence</th><th class='r'>Exp. alpha</th><th class='r'>Cost</th>"
                  "<th class='r'>Net</th><th class='r'>Price</th><th class='r'>Invalidation</th><th>Flagged by</th></tr>" + "".join(rows) + "</table></div>")
-    # ---------------------------------------------------------------- active paper trades
-    parts.append("<h2>Paper trades (latest session)</h2>")
+    if book is not None:
+        parts.append(book_panel(book, BK.POSITION))
+    # ---------------------------------------------------------------- intraday paper trades
+    parts.append("<h2>Intraday paper trades (live-v1: ORB and GAP, flat by 15:15)</h2>")
+    week = ledger.execute("""SELECT day, mode, strategy, COUNT(*), SUM(CASE WHEN net_pnl > 0 THEN 1 ELSE 0 END), SUM(gross_pnl), SUM(costs), SUM(net_pnl)
+                             FROM trades WHERE exit_ts IS NOT NULL GROUP BY 1, 2, 3 ORDER BY 1 DESC, 3 LIMIT 20""").fetchall()
+    if week:
+        tot = sum(w[7] or 0 for w in week)
+        parts.append(f"<div class='sub'>By day: {sum(w[3] for w in week)} trades, gross Rs {sum(w[5] or 0 for w in week):,.0f}, "
+                     f"costs Rs {sum(w[6] or 0 for w in week):,.0f}, net <span class='{'pos' if tot > 0 else 'neg'}'>Rs {tot:,.0f}</span>. "
+                     "Replayed days use Kite minute bars and the same rules; live days are the evidence.</div><div class='wrap'><table>"
+                     "<tr><th>Day</th><th>Mode</th><th>Strategy</th><th class='r'>Trades</th><th class='r'>Won</th><th class='r'>Gross Rs</th><th class='r'>Costs Rs</th><th class='r'>Net Rs</th></tr>"
+                     + "".join(f"<tr><td>{w[0]}</td><td>{_e(w[1])}</td><td>{_e(w[2])}</td><td class='r'>{w[3]}</td><td class='r'>{w[4]}</td>"
+                               f"<td class='r'>{(w[5] or 0):,.0f}</td><td class='r'>{(w[6] or 0):,.0f}</td><td class='r {'pos' if (w[7] or 0) > 0 else 'neg'}'>{(w[7] or 0):,.0f}</td></tr>"
+                               for w in week) + "</table></div>")
     led_day = ledger.execute("SELECT MAX(day) FROM trades").fetchone()[0]
     if led_day:
         t = ledger.execute("""SELECT strategy, symbol, side, qty, entry_px, exit_px, exit_reason, net_pnl, mode FROM trades
