@@ -83,3 +83,27 @@ def test_a_rejected_group_that_keeps_winning_is_flagged_and_noise_is_not():
     f = out["flagged"]
     assert len(f) >= 1 and (f["dimension"] == "size").all() and (f["quintile"] == 5).all()
     assert out["groups_examined"] == 15 and "by chance" in out["chance_note"]
+
+
+# ------------------------------------------------------------------ exposure graph
+def test_exposures_find_the_home_sector_and_a_shock_propagates_through_it():
+    from financial_brain.graph import exposure as X
+    rng = np.random.default_rng(0)
+    n = 300
+    mkt = rng.normal(0, .01, n)
+    metal = 0.9 * mkt + rng.normal(0, .012, n)
+    it = 0.8 * mkt + rng.normal(0, .010, n)
+    f = pd.DataFrame({X.MARKET: mkt, "Nifty Metal": metal, "Nifty IT": it})
+    metal_res = metal - 0.9 * mkt
+    s = pd.DataFrame({"STEEL": 1.2 * mkt + 1.0 * metal_res + rng.normal(0, .004, n),
+                      "SOFT": 0.9 * mkt + rng.normal(0, .004, n) + 0.9 * (it - 0.8 * mkt)})
+    ex, resid = X.build_from_returns(s, f)
+    e = ex.set_index("ticker")
+    assert e.loc["STEEL", "home_sector"] == "Nifty Metal" and e.loc["SOFT", "home_sector"] == "Nifty IT"
+    assert e.loc["STEEL", "beta_market"] == pytest.approx(1.2 + 0.0, abs=0.25)
+    p = X.propagate(ex, {X.MARKET: -0.01, "Nifty Metal": -0.03}).set_index("ticker")
+    assert p.loc["STEEL", "implied"] < p.loc["SOFT", "implied"] < 0     # metal takes the extra hit
+    peers = X.propagate_stock(resid, "STEEL", 0.08, k=1)
+    assert len(peers) == 1
+    with pytest.raises(X.ExposureError):
+        X.propagate_stock(resid, "NOPE", 0.1)
