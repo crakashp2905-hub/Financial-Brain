@@ -63,3 +63,23 @@ def test_one_day_of_trades_is_never_enough_for_a_verdict():
     h = H.assess(trades=300, mean=-0.005, se=0.0005, days=1)
     assert h["state"] != H.DISABLED and any("day(s) of record" in r for r in h["reasons"])
     assert H.assess(trades=300, mean=-0.005, se=0.0005, days=40)["state"] == H.DISABLED
+
+
+# ------------------------------------------------------------------ counterfactual learning
+def test_a_rejected_group_that_keeps_winning_is_flagged_and_noise_is_not():
+    from financial_brain.opportunity import learning as L
+    rng = np.random.default_rng(0)
+    rows = []
+    for s in range(60):
+        for i in range(100):
+            adv = rng.uniform(1, 100)
+            win = 0.02 if adv > 80 else 0.0                     # the largest-turnover quintile wins
+            rows.append({"session": s, "lineage": f"L{i}", "disposition": "REJECTED_FILTER", "reason": "REJECT_COST",
+                         "fwd_excess": win + rng.normal(0, 0.01), "adv20": adv, "vol_60": rng.uniform(.1, .5),
+                         "mom_12_1": rng.normal(0, .3)})
+    df = pd.DataFrame(rows)
+    df["fwd_excess"] -= df.groupby("session")["fwd_excess"].transform("mean")   # excess over the universe, as stored
+    out = L.systematic_misses(df)
+    f = out["flagged"]
+    assert len(f) >= 1 and (f["dimension"] == "size").all() and (f["quintile"] == 5).all()
+    assert out["groups_examined"] == 15 and "by chance" in out["chance_note"]
