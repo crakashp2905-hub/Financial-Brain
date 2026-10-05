@@ -150,3 +150,21 @@ def test_the_replay_posts_a_board_from_the_candles(setup):
                  daily_fn=board_daily)
     con = R.ledger(setup / "l.duckdb")
     assert con.execute("SELECT COUNT(*) FROM board WHERE mode = 'replay' AND ret_close IS NOT NULL").fetchone()[0] == 1
+
+
+def test_live_fills_use_the_order_book_from_full_quotes(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    base = fake_quotes(c)
+    kinds = []
+
+    def q(symbols, kind):
+        kinds.append(kind)
+        out = base(symbols, kind)
+        for v in out.values():
+            v["depth"] = {"buy": [{"price": v["last_price"] - 0.05}], "sell": [{"price": v["last_price"] + 0.05}]}
+        return out
+    R.run_live(quote_fn=q, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
+    assert set(kinds) == {"full"}
+    row = R.ledger(setup / "l.duckdb").execute(
+        "SELECT entry_px, entry_decision_px, spread_bp, shortfall_bp FROM trades").fetchone()
+    assert row[0] == pytest.approx(row[1] + 0.05) and row[2] > 0 and row[3] > 0

@@ -53,18 +53,27 @@ CREATE TABLE IF NOT EXISTS runs (day VARCHAR, mode VARCHAR, version VARCHAR, sta
 """
 
 
+EXTRA_COLUMNS = (("entry_decision_px", "DOUBLE"), ("exit_decision_px", "DOUBLE"), ("spread_bp", "DOUBLE"),
+                 ("shortfall_bp", "DOUBLE"))
+
+
 def ledger(path: Path = LEDGER):
     path.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(path))
     con.execute(SCHEMA)
+    for name, typ in EXTRA_COLUMNS:                     # added after the first live day; old rows read NULL
+        con.execute(f"ALTER TABLE trades ADD COLUMN IF NOT EXISTS {name} {typ}")
     return con
 
 
 def save(con, t: I.Trade, mode: str) -> None:
-    con.execute("""INSERT OR REPLACE INTO trades VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+    con.execute("""INSERT OR REPLACE INTO trades (trade_id, mode, version, day, strategy, symbol, side, qty, entry_ts,
+                   entry_px, stop, target, exit_ts, exit_px, exit_reason, gross_pnl, costs, net_pnl, r_multiple, bucket,
+                   entry_decision_px, exit_decision_px, spread_bp, shortfall_bp)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 [t.trade_id, mode, t.version, t.day, t.strategy, t.symbol, t.side, t.qty, t.entry_ts, t.entry_px,
                  t.stop, t.target, t.exit_ts, t.exit_px, t.exit_reason, t.gross_pnl, t.costs, t.net_pnl,
-                 t.r_multiple, t.bucket])
+                 t.r_multiple, t.bucket, t.entry_decision_px, t.exit_decision_px, t.spread_bp, t.shortfall_bp])
 
 
 def record_run(con, day: str, mode: str, **kw) -> None:
@@ -177,7 +186,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         try:
             q = {}
             for i in range(0, len(syms), 450):
-                q.update(quote_fn([f"NSE:{s}" for s in syms[i:i + 450]], "ohlc"))
+                q.update(quote_fn([f"NSE:{s}" for s in syms[i:i + 450]], "full"))   # full: includes the order book
             failures = 0
         except Exception as e:                          # noqa: BLE001 - a bad poll is not the end of the day
             failures += 1
@@ -240,8 +249,15 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             post_board(con, day, "live", bq, daily, asof)
             continue                                    # first fill no earlier than the next poll
         if opened:
+            book = {}
+            for key, v in q.items():
+                dep = v.get("depth") or {}
+                b, a = (dep.get("buy") or [{}])[0].get("price"), (dep.get("sell") or [{}])[0].get("price")
+                if b and a:
+                    book[key.split(":", 1)[-1]] = (float(b), float(a))
             for sym, px in last.items():
-                for t in eng.on_price(sym, now.replace(tzinfo=None), px):
+                bid, ask = book.get(sym, (None, None))
+                for t in eng.on_price(sym, now.replace(tzinfo=None), px, bid=bid, ask=ask):
                     save(con, t, "live")
             if clock >= I.TIME_EXIT and not eng.closed_for_day:
                 for t in eng.end_of_day(now.replace(tzinfo=None), last):
@@ -333,7 +349,8 @@ def evidence(con, mode: str | None = None) -> list[dict]:
     what the backtest said it would earn. This is the learning loop - evidence accumulates, the rules do not
     drift with it; a rule changes only by a new pre-registered version."""
     where = "WHERE exit_ts IS NOT NULL" + (f" AND mode = '{mode}'" if mode else "")
-    rows = con.execute(f"""SELECT strategy, mode, day, net_pnl, gross_pnl, costs, r_multiple, entry_px * qty AS notional
+    rows = con.execute(f"""SELECT strategy, mode, day, net_pnl, gross_pnl, costs, r_multiple, entry_px * qty AS notional,
+                                  shortfall_bp, spread_bp
                            FROM trades {where}""").fetchall()
     out = []
     for strat in sorted({r[0] for r in rows}):
@@ -357,7 +374,9 @@ def evidence(con, mode: str | None = None) -> list[dict]:
                         "net_inr": float(sum(r[3] for r in rs)), "gross_inr": float(sum(r[4] for r in rs)),
                         "costs_inr": float(sum(r[5] for r in rs)), "net_bp_per_trade": float(bp.mean()) if len(bp) else float("nan"),
                         "se_bp": float(se), "mean_r": float(np.mean([r[6] for r in rs])),
-                        "win_rate": float(np.mean([r[3] > 0 for r in rs])), "backtest_bp": exp, "status": status})
+                        "win_rate": float(np.mean([r[3] > 0 for r in rs])), "backtest_bp": exp, "status": status,
+                        "shortfall_bp": float(np.nanmean([r[8] for r in rs if r[8] is not None])) if any(r[8] is not None for r in rs) else None,
+                        "spread_bp": float(np.nanmean([r[9] for r in rs if r[9] is not None])) if any(r[9] is not None for r in rs) else None})
     return out
 
 
@@ -379,7 +398,9 @@ def write_report(con, day: str, mode: str, eng: I.DayEngine) -> Path:
     for e in evidence(con):
         lines.append(f"- {e['strategy']} ({e['mode']}): {e['trades']} trades over {e['days']} day(s), net "
                      f"{e['net_bp_per_trade']:+.1f} bp a trade (se {e['se_bp']:.1f}), win {e['win_rate']:.0%}, "
-                     f"backtest said {e['backtest_bp']} bp -> **{e['status']}**")
+                     f"backtest said {e['backtest_bp']} bp -> **{e['status']}**"
+                     + (f"; execution cost {e['shortfall_bp']:.1f} bp a trade (spread {e['spread_bp']:.1f} bp)"
+                        if e.get("shortfall_bp") is not None else ""))
     lines += ["", "## Did the 09:30 board's top five beat the names it passed over?"]
     for r in BD.scorecard(con):
         if not r.get("days"):

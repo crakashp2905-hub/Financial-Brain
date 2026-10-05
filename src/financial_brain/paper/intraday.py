@@ -82,6 +82,10 @@ class Trade:
     net_pnl: float = 0.0
     r_multiple: float = 0.0
     bucket: str = "large"
+    entry_decision_px: float | None = None      #: the last price that triggered the entry
+    exit_decision_px: float | None = None       #: the last price that triggered the exit
+    spread_bp: float | None = None              #: quoted bid-ask spread at entry, bp of the mid
+    shortfall_bp: float = 0.0                   #: implementation shortfall, both legs, bp of notional (positive hurts)
 
     @property
     def is_open(self) -> bool:
@@ -94,7 +98,7 @@ class Trade:
 
 class DayEngine:
     def __init__(self, day: str, *, account: float = ACCOUNT_INR, risk: float = RISK_PER_TRADE,
-                 costs: CostModel | None = None, strategies=STRATEGIES):
+                 costs: CostModel | None = None, strategies=STRATEGIES, half_spread: dict | None = None):
         self.day = day
         self.account = account
         self.risk = risk
@@ -104,6 +108,9 @@ class DayEngine:
         self.trades: list[Trade] = []
         self.skipped: list[dict] = []
         self.closed_for_day = False
+        #: When no live bid/ask is available (a replay), fills pay this assumed half-spread by bucket, in bp.
+        self.half_spread = half_spread or {"mega": 2.0, "large": 4.0, "mid": 8.0, "small": 20.0}
+        self.quotes: dict[str, tuple] = {}          # symbol -> (bid, ask), the latest live top of book
 
     # ----------------------------------------------------------------- setup
     def add_symbol(self, symbol: str, prev_close: float, bucket: str = "large") -> None:
@@ -121,10 +128,15 @@ class DayEngine:
     def open_exposure(self) -> float:
         return sum(t.entry_px * t.qty for t in self.trades if t.is_open)
 
-    def on_price(self, symbol: str, ts: datetime, price: float) -> list[Trade]:
-        """Feed one price. Returns the trades opened or closed by it."""
+    def on_price(self, symbol: str, ts: datetime, price: float, *, bid: float | None = None,
+                 ask: float | None = None) -> list[Trade]:
+        """Feed one price, and the top of book when it is known. Signals fire on the last price; fills happen at
+        the side of the book a real order would take - the ask to buy, the bid to sell. Returns the trades opened
+        or closed by it."""
         if self.closed_for_day or symbol not in self.symbols or price <= 0:
             return []
+        if bid and ask and 0 < bid <= ask:
+            self.quotes[symbol] = (float(bid), float(ask))
         s = self.symbols[symbol]
         if s.open is None:
             return []
@@ -176,8 +188,21 @@ class DayEngine:
             return None
         raise EngineError(f"unknown strategy {strat!r}")
 
+    def fill(self, symbol: str, price: float, *, buying: bool) -> tuple[float, float | None]:
+        """The price a market order would get, and the quoted spread in bp: the live bid/ask when there is one,
+        otherwise the last price moved by the bucket's assumed half-spread."""
+        q = self.quotes.get(symbol)
+        if q:
+            bid, ask = q
+            mid = (bid + ask) / 2
+            return (ask if buying else bid), ((ask - bid) / mid * 1e4 if mid > 0 else None)
+        hs = self.half_spread.get(self.symbols[symbol].bucket, 8.0) / 1e4
+        return (price * (1 + hs) if buying else price * (1 - hs)), 2 * hs * 1e4
+
     def _open(self, strat: str, s: SymbolDay, sig, ts: datetime, price: float):
         side, stop = sig
+        decision = price
+        price, spread = self.fill(s.symbol, decision, buying=(side == "long"))
         per_share = (price - stop) if side == "long" else (stop - price)
         if per_share <= 0:
             s.done.add(strat)
@@ -197,7 +222,7 @@ class DayEngine:
             target = price + TARGET_R * per_share if side == "long" else price - TARGET_R * per_share
         t = Trade(trade_id=f"{self.day}-{strat}-{s.symbol}", day=self.day, strategy=strat, symbol=s.symbol,
                   side=side, qty=qty, entry_ts=ts.isoformat(), entry_px=price, stop=stop, target=target,
-                  bucket=s.bucket)
+                  bucket=s.bucket, entry_decision_px=decision, spread_bp=spread)
         self.trades.append(t)
         s.done.add(strat)
         return t
@@ -219,11 +244,19 @@ class DayEngine:
         return None
 
     def _close(self, t: Trade, ts: datetime, price: float, why: str) -> None:
+        decision = price
+        price, _ = self.fill(t.symbol, decision, buying=(t.side == "short"))
+        t.exit_decision_px = decision
         t.exit_ts, t.exit_px, t.exit_reason = ts.isoformat(), price, why
         sign = 1 if t.side == "long" else -1
         t.gross_pnl = sign * (price - t.entry_px) * t.qty
-        rt = self.costs.round_trip(turnover=t.entry_px * t.qty, segment=Segment.INTRADAY, bucket=t.bucket)
+        # The spread is now paid inside the fills, so the bucket's impact allowance is not charged on top of it.
+        rt = self.costs.round_trip(turnover=t.entry_px * t.qty, segment=Segment.INTRADAY, bucket=t.bucket,
+                                   include_impact=False)
         t.costs = rt["total"]
+        sign = 1 if t.side == "long" else -1
+        slip = sign * ((t.entry_px - t.entry_decision_px) + (t.exit_decision_px - t.exit_px)) if t.entry_decision_px else 0.0
+        t.shortfall_bp = slip / t.entry_px * 1e4 if t.entry_px else 0.0
         t.net_pnl = t.gross_pnl - t.costs
         t.r_multiple = t.gross_pnl / t.risk_inr if t.risk_inr else 0.0
 

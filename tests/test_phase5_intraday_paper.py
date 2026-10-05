@@ -25,20 +25,27 @@ def test_nothing_happens_before_the_range_is_set_or_inside_it():
     assert e.on_price("X", at(9, 35), 100.5) == []          # inside the range
 
 
+FILL = 101.5 * (1 + 4 / 1e4)                                # no live book: the 'large' bucket's half-spread
+
+
 def test_orb_long_opens_once_and_hits_its_target():
     e = engine()
     t = e.on_price("X", at(9, 40), 101.5)[0]
-    assert (t.side, t.stop, t.target) == ("long", 99.0, pytest.approx(101.5 + 2 * 2.5))
+    risk = FILL - 99.0
+    assert (t.side, t.stop, t.entry_px) == ("long", 99.0, pytest.approx(FILL))
+    assert t.target == pytest.approx(FILL + 2 * risk) and t.entry_decision_px == 101.5
     assert e.on_price("X", at(9, 41), 102.0) == []         # one trade per strategy per day
-    out = e.on_price("X", at(10, 30), 106.6)
-    assert out[0].exit_reason == "target" and out[0].r_multiple == pytest.approx((106.6 - 101.5) / 2.5)
-    assert out[0].net_pnl < out[0].gross_pnl                 # costs charged
+    out = e.on_price("X", at(10, 30), 106.7)
+    exit_fill = 106.7 * (1 - 4 / 1e4)
+    assert out[0].exit_reason == "target" and out[0].r_multiple == pytest.approx((exit_fill - FILL) / risk)
+    assert out[0].net_pnl < out[0].gross_pnl and out[0].shortfall_bp == pytest.approx(
+        ((FILL - 101.5) + (106.7 - exit_fill)) / FILL * 1e4)
 
 
 def test_size_is_the_risk_budget_over_the_stop_and_capped_by_weight():
     e = engine()
     t = e.on_price("X", at(9, 40), 101.5)[0]
-    assert t.qty == int(min(0.0025 * 1_000_000 / 2.5, 0.10 * 1_000_000 / 101.5))
+    assert t.qty == int(min(0.0025 * 1_000_000 / (FILL - 99.0), 0.10 * 1_000_000 / FILL))
     assert t.risk_inr <= 0.0025 * 1_000_000 + 1e-6
 
 
@@ -101,3 +108,22 @@ def test_summary_counts_and_the_module_cannot_place_an_order():
     src = inspect.getsource(I).lower()
     for w in ("urllib", "requests", "kiteconnect", "place_order", "/orders", "socket"):
         assert w not in src
+
+
+def test_live_fills_take_the_ask_to_buy_and_the_bid_to_sell_and_record_the_spread():
+    e = engine()
+    t = e.on_price("X", at(9, 40), 101.5, bid=101.45, ask=101.60)[0]
+    assert t.entry_px == 101.60 and t.spread_bp == pytest.approx(0.15 / 101.525 * 1e4)
+    out = e.on_price("X", at(10, 0), 98.9, bid=98.85, ask=98.95)
+    assert out[0].exit_reason == "stop" and out[0].exit_px == 98.85
+    assert out[0].shortfall_bp > 0                        # crossing the spread both ways is a cost
+
+
+def test_with_live_quotes_the_bucket_impact_is_not_charged_on_top_of_the_spread():
+    from financial_brain.costs.india import CostModel, Segment
+    e = engine()
+    e.on_price("X", at(9, 40), 101.5, bid=101.45, ask=101.60)
+    e.end_of_day(at(15, 20), {"X": 101.5})
+    t = e.trades[0]
+    no_impact = CostModel().round_trip(turnover=t.entry_px * t.qty, segment=Segment.INTRADAY, include_impact=False)
+    assert t.costs == pytest.approx(no_impact["total"])
