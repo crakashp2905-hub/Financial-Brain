@@ -104,7 +104,10 @@ def cross_section(con, as_of: date, min_adv: float = 1e7) -> pd.DataFrame:
                f.dist_52w_high, f.ret_20d, f.ret_1d, f.adx_14, f.atr_pctile_250, f.atr_14_pct
         FROM features f JOIN adjusted_prices p ON p.lineage = f.lineage AND p.business_date = f.business_date
         WHERE f.business_date = ? AND p.close_adj > 0 AND f.adv20 >= ?""", [as_of, min_adv]).df()
-    return cs.dropna(subset=["vol_60", "mom_12_1", "dist_52w_high", "ret_20d"]).reset_index(drop=True)
+    cs = cs.dropna(subset=["vol_60", "mom_12_1", "dist_52w_high", "ret_20d"])
+    # A name with zero measured volatility (a suspended stock, a liquid fund) has no risk to size against and
+    # no return to forecast; it is excluded here rather than crashing a scanner further down.
+    return cs[(cs["vol_60"] > 0) & (cs["adv20"] > 0)].reset_index(drop=True)
 
 
 def conditions(cs: pd.DataFrame, events: set | None = None, ep: dict | None = None) -> dict[str, pd.Series]:
@@ -138,6 +141,7 @@ def scan(cs: pd.DataFrame, as_of: date, *, events: set | None = None, ep: dict |
          capital: float = 1_000_000.0, costs: CostModel | None = None) -> list[Opportunity]:
     costs = costs or CostModel()
     out = []
+    cs = cs[(cs["vol_60"] > 0) & (cs["adv20"] > 0) & (cs["price"] > 0)].reset_index(drop=True)
     for name, (mask, score) in conditions(cs, events, ep).items():
         ic, t, status, source = EVIDENCE[name]
         h = HORIZON[name]

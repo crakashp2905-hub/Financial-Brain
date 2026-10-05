@@ -72,3 +72,10 @@ def test_record_resolve_and_score_by_type():
     assert S.resolve(ledger, research) == 1
     sc = S.scorecard_by_type(ledger)[0]
     assert sc["type"] == "momentum" and sc["realised_gross"] == pytest.approx(0.05 / 2, rel=1e-6)
+
+
+def test_a_zero_volatility_row_is_excluded_not_a_crash():
+    c = cs()
+    c.loc[0, "vol_60"] = 0.0
+    opps = S.scan(c, date(2026, 10, 5))
+    assert opps and all(o.ticker != "T0" for o in opps)
