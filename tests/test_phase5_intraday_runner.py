@@ -93,3 +93,30 @@ def test_replay_runs_the_same_engine_on_minute_candles_and_labels_it(setup):
     assert out["symbols"] == 1 and out["summary"]["ORB"]["trades"] == 1
     ev = R.evidence(R.ledger(setup / "l.duckdb"))
     assert ev[0]["mode"] == "replay" and ev[0]["status"] == "COLLECTING"
+
+
+def test_a_late_start_takes_the_opening_range_from_candles_not_from_the_days_high_and_low(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 50, tzinfo=R.IST))         # logged in late
+    asked = []
+
+    def candles(tok, start, end, interval):
+        asked.append((start, end))
+        return [{"ts": f"2026-10-06T09:{15 + k:02d}:00+0530", "open": 100.0, "high": 101.0, "low": 99.0,
+                 "close": 100.0} for k in range(15)]
+
+    def quotes(symbols, kind):                          # by now the day's high is 107: the wrong range
+        return {s: {"last_price": 101.6 if c.t.minute < 55 else 106.9, "last_trade_time": "2026-10-06 09:49:00",
+                    "ohlc": {"open": 100.0, "high": 107.0, "low": 99.0, "close": 100.0}} for s in symbols}
+    R.run_live(quote_fn=quotes, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb",
+               candles_fn=candles, token_fn=lambda s: 1)
+    assert asked, "the exact range must be fetched for a late start"
+    rows = R.ledger(setup / "l.duckdb").execute("SELECT stop FROM trades WHERE strategy = 'ORB'").fetchall()
+    assert rows and rows[0][0] == 99.0                  # the stop is the true 09:15-09:29 low
+
+
+def test_started_after_the_close_or_on_a_weekend_it_records_nothing(setup):
+    for start in (datetime(2026, 10, 6, 19, 30, tzinfo=R.IST), datetime(2026, 10, 10, 10, 0, tzinfo=R.IST)):
+        c = Clock(start)
+        out = R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
+        assert out["status"] == "not_a_session"
+    assert not (setup / "l.duckdb").exists()

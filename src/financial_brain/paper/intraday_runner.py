@@ -83,13 +83,34 @@ def universe(n: int = UNIVERSE_SIZE) -> list[dict]:
 
 
 # --------------------------------------------------------------------------- live
+LATE_START = time(9, 32)
+
+
+def opening_from_candles(symbols, day: date, *, candles_fn, token_fn) -> dict[str, tuple]:
+    """The exact 09:15-09:29 open, high and low from minute candles - for a run that starts after 09:30, when the
+    quote's day high and low already include later trading and would be the wrong range."""
+    out = {}
+    for sym in symbols:
+        tok = token_fn(sym)
+        if tok is None:
+            continue
+        bars = candles_fn(tok, datetime.combine(day, time(9, 15)), datetime.combine(day, time(9, 29)), interval="minute")
+        rng = [b for b in bars if b["ts"][11:16] < "09:30"]
+        if len(rng) >= 10:
+            out[sym] = (float(rng[0]["open"]), max(float(b["high"]) for b in rng), min(float(b["low"]) for b in rng))
+    return out
+
+
 def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None, now_fn=None,
-             sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 30) -> dict:
+             sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
+             token_fn=None) -> dict:
     from ..providers import kite_data as kd
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
     now = now_fn()
     day = now.date().isoformat()
+    if now.time() > CLOSE or now.weekday() >= 5:
+        return {"day": day, "status": "not_a_session", "why": "after the close or a weekend: nothing recorded"}
     con = ledger(path)
     uni = universe(n)
     syms = [u["tradingsymbol"] for u in uni]
@@ -140,14 +161,29 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                        symbols=len(syms), polls=polls, note="no trade printed today: holiday or no session")
             return {"day": day, "status": "closed"}
         if not opened and clock >= I.OR_END:
-            for key, v in q.items():
-                sym = key.split(":", 1)[-1]
-                o = v.get("ohlc") or {}
-                if sym in eng.symbols and o.get("open") and o.get("high") and o.get("low"):
+            if clock > LATE_START:
+                # Started late (the Kite login came after 09:30): take the range from the exact candles.
+                if candles_fn is None:
+                    candles_fn = kd.candles
+                if token_fn is None:
+                    inst = kd.instruments("NSE")
+                    token_fn = lambda s: kd.token_for(s, inst)          # noqa: E731
+                exact = opening_from_candles(list(eng.symbols), now.date(), candles_fn=candles_fn, token_fn=token_fn)
+                for sym, (op, hi, lo) in exact.items():
                     try:
-                        eng.set_opening(sym, open_px=float(o["open"]), or_hi=float(o["high"]), or_lo=float(o["low"]))
+                        eng.set_opening(sym, open_px=op, or_hi=hi, or_lo=lo)
                     except I.EngineError:
                         pass
+                log.info("late start at %s: opening range from candles for %d names", clock, len(exact))
+            else:
+                for key, v in q.items():
+                    sym = key.split(":", 1)[-1]
+                    o = v.get("ohlc") or {}
+                    if sym in eng.symbols and o.get("open") and o.get("high") and o.get("low"):
+                        try:
+                            eng.set_opening(sym, open_px=float(o["open"]), or_hi=float(o["high"]), or_lo=float(o["low"]))
+                        except I.EngineError:
+                            pass
             opened = True
             continue                                    # first fill no earlier than the next poll
         if opened:
