@@ -60,7 +60,12 @@ class NSEResults(Provider):
         last: Exception | None = None
         for attempt in range(3):
             if needs_session and time.monotonic() - self._warmed > SESSION_TTL:
-                self._warm()
+                try:
+                    self._warm()
+                except OSError as e:               # DNS failure, no route, timeout: a failed attempt, not a crash
+                    last = e
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
             gap = time.monotonic() - self._last
             if gap < self.min_interval:
                 time.sleep(self.min_interval - gap)

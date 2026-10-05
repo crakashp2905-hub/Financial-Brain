@@ -244,3 +244,14 @@ def test_results_under_an_isin_the_lineage_never_saw_are_found_through_the_symbo
     p = Fake([listing("1")], {url("1"): instance(NONBANK)})                      # filed under INE000000001, symbol X
     I.ingest_symbol(con, lake, p, "X")
     assert I.as_known_on(con, "INE777777777", date(2025, 3, 1))[0]["pat"] == 190.0
+
+
+def test_a_network_failure_while_warming_the_session_is_a_fetch_error_not_a_crash(monkeypatch):
+    p = NSEResults(min_interval=0)
+
+    def down():
+        raise OSError("getaddrinfo failed")
+    monkeypatch.setattr(p, "_warm", down)
+    monkeypatch.setattr("financial_brain.providers.nse_results.time.sleep", lambda s: None)
+    with pytest.raises(FetchError):
+        p.filings("TCS")
