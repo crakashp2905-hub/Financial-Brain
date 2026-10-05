@@ -7,7 +7,7 @@ rather than the interface.
 > the investor's own philosophy = source of truth.
 > `Data → Evidence → Context → Thesis → Risk → Decision → Outcome → Learning`
 
-**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,189 tests.
+**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,223 tests.
 Every trading day the system now scans the market, posts a 09:30 board, paper-trades its intraday rules
 through the session and scores itself against everything it passed over. See [The daily loop](#the-daily-loop).
 
@@ -145,6 +145,16 @@ Validation modules, used from Python rather than the CLI:
 | `costs/tax.py` / `costs/calculator.py` / `fb costs-calc --order N [--ticker T] [--gain 0.03] [--table]` | Itemised rupee cost of a trade (exact charges, impact as a range), break-even, cost per session held, and the tax on a hypothetical gain (STCG 20.8%, LTCG 13% over Rs 1.25 lakh, intraday at slab) with loss set-off. Rates are parameters; information, not tax advice |
 | `evaluation/after_tax.py` | The same return series taxed as an active book (all gains realised yearly) and as buy-and-hold (deferred): tax takes about 20% of an active sleeve's CAGR, deferral is worth 2-3 points a year |
 | `evaluation/news_model.py` | Headline classifier on filings: text lowered strength AUC and direction missed the bar |
+| `opportunity/scanners.py` | Ten named scanners (momentum, relative strength, low volatility, composite, mean reversion, breakout, volume anomaly, volatility expansion, event, fundamental value), each with its evidence status and horizon. Expected return comes from **one** model - what the name's composite decile earned in the replay, scaled by the half-life curve - so scanners say *why* a name is interesting but cannot each invent a return |
+| `paper/terminal.py` / `fb terminal` | One HTML page: market and breadth, kill switch, top opportunities, paper trades, what changed (filings, escaped), strategy health and champion standings, and a drill-down per name (why now, evidence, analogues, range, net alpha, size, stop, time exit, execution). Written to `data/terminal/index.html` |
+| `evaluation/setup_analogues.py` | The 200 most similar past situations by eight ranked features, shown beside the whole pool. Out of sample its 5-day IC is +0.053 against momentum's +0.009 (t 3.1, under the bar), probably short-term reversal; descriptive only |
+| `evaluation/earnings_reaction.py` | Results reaction by surprise: day 0 top-minus-bottom quintile +1.5% (t 6.4), nothing after - no post-earnings drift to trade |
+| `evaluation/intraday_half_life.py` | Daily signals inside the next day: the composite's IC from 09:30 to 15:15 is +0.046 (t 6.9), carried by low volatility and the 52-week high. Not a strategy (costs); a reason not to wait for a dip on entry |
+| `evaluation/champion.py` / `fb champion --record` | Champion (naive momentum) against challengers, picks locked from 2026-10-05 and resolved only after their horizon; promotion needs 12 non-overlapping cohorts, t >= 2, after costs |
+| `risk/health.py` / `portfolio/marginal.py` | HEALTHY / WARNING / REDUCE_CAPITAL / PAPER_ONLY / DISABLED from a strategy's own record, with day-clustered errors and 20 days before any verdict; the added risk of each candidate given the book |
+| `opportunity/learning.py` | Which rejected groups later won: cost-rejected small high-momentum names beat the universe gross (+0.5-0.7%/mo), event blocks avoided losers (-1.5%/mo). Hypotheses for a new rule version, with the chance count beside them |
+| `graph/exposure.py` | Measured exposure per name (market beta, home sector, rates, VIX, residual peers) and what-if propagation of a shock. Simultaneous co-movement, not a forecast |
+| `ingest/kite_fno.py` / `fb fno-snapshot` | Futures basis and OI build-up (long build-up, short covering...), option-chain statistics and IV percentile, snapshot nightly so positioning changes day over day |
 
 ## Documentation
 
@@ -191,8 +201,9 @@ decisions made before their outcomes, which nothing else can supply.
 | 09:30-15:15 | Paper trading of the intraday rules (version live-v1, pre-registered), every trade written as it opens and closes | ledger |
 | 15:15 | Flat; same-day outcome for every board name, so the top five are scored against the rest | `DATE-live.md` |
 | ~15:50 | Review task: code errors only; rules never change with the day's P&L | notification |
-| 18:45 | Windows task *FinanceBrain Daily Refresh*: prices, indices, actions, announcements, features | research DB |
+| 18:45 | Windows task *FinanceBrain Daily Refresh*: prices, indices, actions, announcements, features; champion picks recorded and matured cohorts resolved; F&O snapshot; the terminal rebuilt | research DB, `data/terminal/index.html` |
 
+`fb terminal` rebuilds the one-page view at any time; open `data/terminal/index.html` in a browser.
 `fb paper-intraday --report` prints the accumulated evidence per strategy (COLLECTING until 100 trades, then
 LOSING / WINNING / NO_EDGE_DETECTED / DIFFERS_FROM_BACKTEST). `fb paper-intraday --replay DATE` replays a past day
 with the same rules, labelled `replay` and kept apart from live evidence. There is no order code anywhere: Kite is

@@ -27,6 +27,8 @@ def research(days=60, n=200, seed=0, edge=None):
     con.execute("""CREATE TABLE features(lineage VARCHAR, business_date DATE, adv20 DOUBLE, vol_60 DOUBLE, mom_12_1 DOUBLE,
                    dist_52w_high DOUBLE, ret_20d DOUBLE, ret_1d DOUBLE, adx_14 DOUBLE, atr_pctile_250 DOUBLE, atr_14_pct DOUBLE)""")
     con.executemany("INSERT INTO features VALUES (?,?,?,?,?,?,?,?,?,?,?)", rows_f)
+    con.execute("ALTER TABLE features ADD COLUMN ret_5d DOUBLE")
+    con.execute("ALTER TABLE features ADD COLUMN rsi_14 DOUBLE")
     con.execute("ALTER TABLE adjusted_prices ADD COLUMN isin VARCHAR")
     return con, cal
 

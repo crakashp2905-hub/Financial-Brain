@@ -5,11 +5,14 @@ Every scanner asks one question of every liquid name and, where the answer is ye
     instrument, ticker, as_of, horizon, type, features, evidence, expected_return, expected_risk, liquidity,
     cost, expected_net, evidence_t, expiry, invalidation
 
-**Expected return is never invented.** It comes from the scanner's *measured* information coefficient at its
-measured horizon (Grinold: IC x sigma_h x z), shrunk by 0.71, the calibration slope the engine replay found
-between stated and realised alpha. A scanner whose edge has not been demonstrated - or was tested and failed -
-still emits its opportunities, with an expected return of **zero** and its evidence status, so the record of what
-it flagged accumulates and can later be scored. Nothing gets a number it has not earned.
+**Expected return is never invented, and there is one model for it, not one per scanner.** A name's expected excess
+return is what names in **its composite decile actually earned** over 20 sessions in the 2016-2026 engine replay,
+scaled to the scanner's horizon by the measured half-life curve. Scanners decide *which* names are interesting and
+*why*; they do not each invent a return. Two earlier designs were rejected after they produced nonsense on the live
+cross-section: taking each name's best scanner (it kept the momentum flag and dropped the volatility flag on the
+same name) and Grinold's IC x sigma x z (it promised +6% to 130%-volatility micro-caps, extrapolating linearly to
+extremes where the replay found the top decile earned *less* than deciles 8-9). The decile model is in-sample, and
+it says so in the record.
 
     expected_net = expected_return - sized round-trip cost
 
@@ -40,7 +43,14 @@ import pandas as pd
 from ..costs.india import CostModel
 from ..decisions import plan as P
 
-SHRINK = 0.71           #: realised/stated alpha slope measured in the engine replay
+SHRINK = 0.71           #: realised/stated alpha slope measured in the engine replay (kept for reference)
+
+#: Mean 20-session excess return by composite decile (1 = worst), the 2016-2026 engine replay, in-sample.
+DECILE_20D = {1: -0.01126, 2: -0.00620, 3: -0.00107, 4: 0.00105, 5: 0.00203, 6: 0.00328, 7: 0.00175,
+              8: 0.00415, 9: 0.00389, 10: 0.00252}
+#: The composite's IC at h relative to h = 20, from the half-life study: how a 20-session expectation scales.
+HORIZON_SCALE = {5: 0.060 / 0.082, 10: 0.067 / 0.082, 20: 1.0, 60: 0.108 / 0.082}
+MODEL = "composite decile, 2016-26 engine replay (in-sample)"
 
 #: Measured IC by scanner at its horizon (positive = the condition predicts outperformance), the t of that
 #: measurement, the evidence status and the source note. None means no demonstrated edge: expected return 0.
@@ -101,7 +111,7 @@ def _expiry(d: date, sessions: int) -> date:
 def cross_section(con, as_of: date, min_adv: float = 1e7) -> pd.DataFrame:
     cs = con.execute("""
         SELECT f.lineage, p.isin, p.ticker, p.close_adj AS price, p.turnover, f.adv20, f.vol_60, f.mom_12_1,
-               f.dist_52w_high, f.ret_20d, f.ret_1d, f.adx_14, f.atr_pctile_250, f.atr_14_pct
+               f.dist_52w_high, f.ret_20d, f.ret_1d, f.ret_5d, f.rsi_14, f.adx_14, f.atr_pctile_250, f.atr_14_pct
         FROM features f JOIN adjusted_prices p ON p.lineage = f.lineage AND p.business_date = f.business_date
         WHERE f.business_date = ? AND p.close_adj > 0 AND f.adv20 >= ?""", [as_of, min_adv]).df()
     cs = cs.dropna(subset=["vol_60", "mom_12_1", "dist_52w_high", "ret_20d"])
@@ -137,11 +147,20 @@ def conditions(cs: pd.DataFrame, events: set | None = None, ep: dict | None = No
     return out
 
 
+def decile_expectation(cs: pd.DataFrame) -> pd.Series:
+    """Each name's expected 20-session excess return: its composite decile's measured mean."""
+    from ..opportunity import engine as E
+    z = E.composite(cs)
+    dec = pd.qcut(z.rank(method="first"), 10, labels=False) + 1
+    return dec.map(DECILE_20D)
+
+
 def scan(cs: pd.DataFrame, as_of: date, *, events: set | None = None, ep: dict | None = None,
          capital: float = 1_000_000.0, costs: CostModel | None = None) -> list[Opportunity]:
     costs = costs or CostModel()
     out = []
     cs = cs[(cs["vol_60"] > 0) & (cs["adv20"] > 0) & (cs["price"] > 0)].reset_index(drop=True)
+    exp20 = decile_expectation(cs)
     for name, (mask, score) in conditions(cs, events, ep).items():
         ic, t, status, source = EVIDENCE[name]
         h = HORIZON[name]
@@ -149,7 +168,7 @@ def scan(cs: pd.DataFrame, as_of: date, *, events: set | None = None, ep: dict |
             r = cs.iloc[i]
             sigma_h = float(r["vol_60"]) * np.sqrt(h / 252.0)
             z = float(score.iloc[i]) if np.isfinite(score.iloc[i]) else 0.0
-            exp_ret = SHRINK * ic * sigma_h * z if ic is not None else 0.0
+            exp_ret = float(exp20.iloc[i]) * HORIZON_SCALE[h]
             order = min(0.05 * capital, 0.10 * float(r["adv20"]))
             c = costs.round_trip_sized(order_value=order, adv_value=float(r["adv20"]),
                                        daily_vol=float(r["vol_60"]) / np.sqrt(252.0))["total"]
@@ -167,7 +186,8 @@ def scan(cs: pd.DataFrame, as_of: date, *, events: set | None = None, ep: dict |
 
 
 def best_per_name(opps: list[Opportunity]) -> pd.DataFrame:
-    """One row per ticker: the opportunity with the highest expected net, and every type that flagged it."""
+    """One row per ticker: every type that flagged it, and the opportunity with the highest expected net. Expected
+    returns come from the single decile model, so the choice between a name's scanners only picks the horizon."""
     if not opps:
         return pd.DataFrame()
     df = pd.DataFrame([o.as_dict() for o in opps])

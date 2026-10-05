@@ -25,23 +25,20 @@ def test_every_opportunity_has_the_standard_fields_and_net_is_return_minus_cost(
     assert all(o.invalidation < o.price for o in opps) and all(o.expiry > date(2026, 10, 5) for o in opps)
 
 
-def test_only_measured_scanners_get_an_expected_return():
+def test_one_model_per_name_a_names_scanners_agree_on_its_20_session_expectation():
     opps = S.scan(cs(), date(2026, 10, 5))
+    by = {}
     for o in opps:
-        if S.EVIDENCE[o.type][0] is None:
-            assert o.expected_return == 0.0 and o.expected_net < 0          # pays cost, earns nothing claimed
-    assert any(o.expected_return > 0 for o in opps if o.type == "momentum")
+        by.setdefault(o.ticker, set()).add(round(o.expected_return / S.HORIZON_SCALE[o.horizon], 10))
+    assert all(len(v) == 1 for v in by.values())           # no cherry-picking between a name's scanners
 
 
-def test_the_volatility_expansion_scanner_expects_underperformance():
-    v = [o for o in S.scan(cs(), date(2026, 10, 5)) if o.type == "volatility_expansion"]
-    assert v and all(o.expected_return < 0 for o in v)
-
-
-def test_expected_return_uses_the_calibration_shrink():
-    o = next(o for o in S.scan(cs(), date(2026, 10, 5)) if o.type == "momentum")
-    ic = S.EVIDENCE["momentum"][0]
-    assert o.expected_return == pytest.approx(S.SHRINK * ic * o.expected_risk * o.features["z"])
+def test_expectations_come_from_the_measured_deciles_and_never_exceed_them():
+    opps = S.scan(cs(), date(2026, 10, 5))
+    lo, hi = min(S.DECILE_20D.values()), max(S.DECILE_20D.values())
+    assert all(lo * max(S.HORIZON_SCALE.values()) - 1e-12 <= o.expected_return <= hi * max(S.HORIZON_SCALE.values()) + 1e-12
+               for o in opps)
+    assert max(o.expected_return for o in opps) < 0.01      # never the +6% the Grinold extrapolation promised
 
 
 def test_best_per_name_keeps_the_highest_net_and_lists_every_scanner_that_flagged_it():

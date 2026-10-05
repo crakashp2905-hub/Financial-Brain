@@ -1433,6 +1433,31 @@ def cmd_fno_snapshot(args) -> int:
     return 0
 
 
+def cmd_terminal(args) -> int:
+    """Write the trader's terminal page for the latest session (data/terminal/index.html)."""
+    import datetime as _dt
+    from pathlib import Path as _P
+    import duckdb
+    import pandas as pd
+    from .evaluation import setup_analogues as SA
+    from .paper import intraday_runner as IR
+    from .paper import terminal as T
+    rcon = duckdb.connect(str(load().db_path), read_only=True)
+    try:
+        cache = _P("data") / "analogue_pool.parquet"
+        if cache.exists():
+            pool = pd.read_parquet(cache)
+        else:
+            print("building the analogue pool once (a few minutes)...")
+            pool = SA.build_pool(rcon, start=_dt.date(2016, 6, 1), end=_dt.date.today(), step=5)
+            pool.to_parquet(cache)
+        path = T.write(T.build(rcon, IR.ledger(), analogue_pool=pool))
+    finally:
+        rcon.close()
+    print(f"terminal written: {path.resolve()}")
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -2055,6 +2080,9 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("fno-snapshot", help="evening F&O snapshot: basis, OI, IV, positioning (read-only)")
     g.add_argument("--chains", type=int, default=100)
     g.set_defaults(fn=cmd_fno_snapshot)
+
+    g = sub.add_parser("terminal", help="write the trader's terminal page (HTML)")
+    g.set_defaults(fn=cmd_terminal)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)
