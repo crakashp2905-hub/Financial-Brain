@@ -1406,6 +1406,33 @@ def cmd_champion(args) -> int:
     return 0
 
 
+def cmd_fno_snapshot(args) -> int:
+    """Evening F&O snapshot: futures basis and open interest for every F&O stock, option-chain statistics for the
+    most liquid ones, and day-over-day positioning. Read-only Kite calls; stored in the paper ledger file."""
+    from datetime import date as _date
+    from .ingest import kite_fno as F
+    from .paper import intraday_runner as IR
+    from .providers import kite_data as kd
+    inst = kd.instruments("NFO")
+    names = sorted({(r.get("name") or "").upper() for r in inst if r.get("instrument_type") == "FUT"
+                    and r.get("segment") == "NFO-FUT" and (r.get("name") or "").isalpha()} - {"NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT"})
+    rows = F.futures_snapshot(set(names), instrument_list=inst, quote_fn=kd.quote)
+    ranked = sorted(rows, key=lambda s: -rows[s]["fut_oi"] * rows[s]["fut"])[:args.chains]
+    for s in ranked:
+        try:
+            sm = F.summarise(F.chain(s, spot=rows[s]["spot"], instrument_list=inst))
+            rows[s].update({k: sm.get(k) for k in ("atm_iv", "skew_5pct", "pcr_oi", "max_pain")})
+        except Exception as e:                       # noqa: BLE001 - one bad chain is not the snapshot
+            print(f"  {s}: no chain ({str(e)[:60]})")
+    day = _date.today().isoformat()
+    con = IR.ledger()
+    print(f"snapshot {day}: {F.save_snapshot(con, day, rows)} futures, {len(ranked)} option chains")
+    pos = [p for p in F.positioning(con, day) if p["buildup"]]
+    from collections import Counter
+    print("positioning vs the previous snapshot:", dict(Counter(p["buildup"] for p in pos)) or "no previous snapshot yet")
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -2024,6 +2051,10 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("champion", help="champion/challenger on locked out-of-sample data")
     g.add_argument("--record", action="store_true")
     g.set_defaults(fn=cmd_champion)
+
+    g = sub.add_parser("fno-snapshot", help="evening F&O snapshot: basis, OI, IV, positioning (read-only)")
+    g.add_argument("--chains", type=int, default=100)
+    g.set_defaults(fn=cmd_fno_snapshot)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)
