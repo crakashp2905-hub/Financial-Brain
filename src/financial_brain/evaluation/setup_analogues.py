@@ -49,11 +49,13 @@ def build_pool(con, *, start: date, end: date, step: int = STEP, min_adv: float 
                f.vol_60, f.rsi_14, p.turnover / NULLIF(f.adv20, 0) AS volume_surge
         FROM features f JOIN adjusted_prices p ON p.lineage = f.lineage AND p.business_date = f.business_date
         WHERE f.business_date BETWEEN ? AND ? AND f.adv20 >= ?""", [start, end, min_adv]).df()
+    f["business_date"] = pd.to_datetime(f["business_date"]).dt.date      # plain dates, comparable with a query date
+    keep = {pd.Timestamp(d).date() for d in keep}
     f = f[f["business_date"].isin(keep)].dropna(subset=list(FEATURES))
     px = con.execute("SELECT lineage, business_date, close_adj FROM adjusted_prices WHERE close_adj > 0 AND business_date >= ?",
                      [start]).df()
     wide = px.pivot_table(index="business_date", columns="lineage", values="close_adj")
-    pos = {d: i for i, d in enumerate(wide.index)}
+    pos = {pd.Timestamp(d).date(): i for i, d in enumerate(wide.index)}
     W = wide.to_numpy()
     cols = {c: j for j, c in enumerate(wide.columns)}
     i = f["business_date"].map(pos).to_numpy()

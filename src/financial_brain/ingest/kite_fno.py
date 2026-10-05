@@ -141,3 +141,86 @@ def summarise(ch: dict, *, today: date | None = None, r: float = RATE) -> dict:
         "total_call_oi": tot_c, "total_put_oi": tot_p,
         "strikes_without_volume": sum(1 for l in legs if l["volume"] <= 0),
         "caveat": "positioning, not prediction; illiquid strikes print stale prices"}
+
+
+# ============================================================================ positioning, day over day
+LONG_BUILDUP, SHORT_BUILDUP, SHORT_COVERING, LONG_UNWINDING, NEUTRAL = (
+    "LONG_BUILDUP", "SHORT_BUILDUP", "SHORT_COVERING", "LONG_UNWINDING", "NEUTRAL")
+SNAPSHOT_SCHEMA = """
+CREATE TABLE IF NOT EXISTS fno_snapshots (
+    day VARCHAR, symbol VARCHAR, spot DOUBLE, fut DOUBLE, fut_expiry VARCHAR, fut_oi DOUBLE, basis DOUBLE,
+    basis_annualised DOUBLE, atm_iv DOUBLE, skew_5pct DOUBLE, pcr_oi DOUBLE, max_pain DOUBLE,
+    PRIMARY KEY (day, symbol));
+"""
+
+
+def classify_buildup(price_change: float, oi_change: float, *, min_price: float = 0.002, min_oi: float = 0.01) -> str:
+    """The standard reading of price and open interest together. A move below the thresholds is NEUTRAL: a 0.1%
+    price change with a 0.3% OI change is noise, not positioning."""
+    if abs(price_change) < min_price or abs(oi_change) < min_oi:
+        return NEUTRAL
+    if price_change > 0:
+        return LONG_BUILDUP if oi_change > 0 else SHORT_COVERING
+    return SHORT_BUILDUP if oi_change > 0 else LONG_UNWINDING
+
+
+def futures_snapshot(symbols, *, instrument_list, quote_fn, today: date | None = None) -> dict:
+    """Near-month future and spot for each symbol: price, open interest, and the basis (annualised)."""
+    today = today or date.today()
+    futs = {}
+    for r in instrument_list:
+        if r.get("instrument_type") == "FUT" and (r.get("name") or "").upper() in symbols and r.get("expiry", "") >= today.isoformat():
+            cur = futs.get(r["name"].upper())
+            if cur is None or r["expiry"] < cur["expiry"]:
+                futs[r["name"].upper()] = r
+    if not futs:
+        return {}
+    fq, sq = {}, {}
+    names = list(futs)
+    for i in range(0, len(names), MAX_BATCH):
+        part = names[i:i + MAX_BATCH]
+        fq.update(quote_fn([f"NFO:{futs[s]['tradingsymbol']}" for s in part], "full"))
+        sq.update(quote_fn([f"NSE:{s}" for s in part], "ltp"))
+    out = {}
+    for s in names:
+        f, sp = fq.get(f"NFO:{futs[s]['tradingsymbol']}") or {}, (sq.get(f"NSE:{s}") or {}).get("last_price")
+        if not f.get("last_price") or not sp:
+            continue
+        days = max((datetime.strptime(futs[s]["expiry"], "%Y-%m-%d").date() - today).days, 1)
+        basis = f["last_price"] / sp - 1.0
+        out[s] = {"spot": float(sp), "fut": float(f["last_price"]), "fut_expiry": futs[s]["expiry"],
+                  "fut_oi": float(f.get("oi") or 0), "basis": basis, "basis_annualised": basis * 365 / days}
+    return out
+
+
+def save_snapshot(con, day: str, rows: dict[str, dict]) -> int:
+    con.execute(SNAPSHOT_SCHEMA)
+    for s, r in rows.items():
+        con.execute("INSERT OR REPLACE INTO fno_snapshots VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    [day, s, r.get("spot"), r.get("fut"), r.get("fut_expiry"), r.get("fut_oi"), r.get("basis"),
+                     r.get("basis_annualised"), r.get("atm_iv"), r.get("skew_5pct"), r.get("pcr_oi"), r.get("max_pain")])
+    return len(rows)
+
+
+def positioning(con, day: str, *, min_history: int = 20) -> list[dict]:
+    """Each symbol's build-up against its previous snapshot, and its implied-vol percentile once there is history."""
+    con.execute(SNAPSHOT_SCHEMA)
+    rows = con.execute("""
+        WITH t AS (SELECT * FROM fno_snapshots WHERE day = ?),
+             p AS (SELECT symbol, ARG_MAX(fut, day) AS fut, ARG_MAX(fut_oi, day) AS fut_oi, ARG_MAX(fut_expiry, day) AS exp
+                   FROM fno_snapshots WHERE day < ? GROUP BY symbol)
+        SELECT t.symbol, t.fut, p.fut, t.fut_oi, p.fut_oi, t.fut_expiry, p.exp, t.basis_annualised, t.atm_iv
+        FROM t LEFT JOIN p USING (symbol)""", [day, day]).fetchall()
+    out = []
+    for sym, fut, pfut, oi, poi, exp, pexp, basis, iv in rows:
+        rolled = pexp is not None and exp != pexp            # a new contract: OI is not comparable across a roll
+        pc = (fut / pfut - 1.0) if pfut else None
+        oc = (oi / poi - 1.0) if poi and not rolled else None
+        hist = [r[0] for r in con.execute("SELECT atm_iv FROM fno_snapshots WHERE symbol = ? AND atm_iv IS NOT NULL AND day <= ?",
+                                          [sym, day]).fetchall()]
+        ivp = (sum(1 for h in hist if h <= iv) / len(hist)) if iv is not None and len(hist) >= min_history else None
+        out.append({"symbol": sym, "price_change": pc, "oi_change": oc,
+                    "buildup": classify_buildup(pc, oc) if pc is not None and oc is not None else ("ROLLED" if rolled else None),
+                    "basis_annualised": basis, "atm_iv": iv, "iv_percentile": ivp,
+                    "iv_history_days": len(hist)})
+    return out

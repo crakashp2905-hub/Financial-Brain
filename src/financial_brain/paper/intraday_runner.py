@@ -396,6 +396,18 @@ def evidence(con, mode: str | None = None) -> list[dict]:
                         "win_rate": float(np.mean([r[3] > 0 for r in rs])), "backtest_bp": exp, "status": status,
                         "shortfall_bp": float(np.nanmean([r[8] for r in rs if r[8] is not None])) if any(r[8] is not None for r in rs) else None,
                         "spread_bp": float(np.nanmean([r[9] for r in rs if r[9] is not None])) if any(r[9] is not None for r in rs) else None})
+            from ..risk import health as HL
+            pnl = np.cumsum([r[3] for r in sorted(rs, key=lambda r: r[2])])
+            eq = I.ACCOUNT_INR + pnl
+            dd = float(np.max(1 - eq / np.maximum.accumulate(np.r_[I.ACCOUNT_INR, eq])[1:])) if len(eq) else 0.0
+            # Confidence comes from days: trades on one day share one market, so the standard error is taken over
+            # daily mean results, not over trades.
+            per_day = pd.Series([r[3] / r[7] * 1e4 for r in rs if r[7]], index=[r[2] for r in rs if r[7]]).groupby(level=0).mean()
+            se_day = float(per_day.std(ddof=1) / np.sqrt(len(per_day))) if len(per_day) > 1 else float("nan")
+            out[-1]["se_bp_by_day"] = se_day
+            h = HL.assess(trades=len(rs), mean=float(bp.mean()) if len(bp) else 0.0, se=se_day, days=days,
+                          drawdown=max(dd, 0.0), expected=exp)
+            out[-1]["health"], out[-1]["health_reasons"] = h["state"], h["reasons"]
     return out
 
 
@@ -419,7 +431,8 @@ def write_report(con, day: str, mode: str, eng: I.DayEngine) -> Path:
                      f"{e['net_bp_per_trade']:+.1f} bp a trade (se {e['se_bp']:.1f}), win {e['win_rate']:.0%}, "
                      f"backtest said {e['backtest_bp']} bp -> **{e['status']}**"
                      + (f"; execution cost {e['shortfall_bp']:.1f} bp a trade (spread {e['spread_bp']:.1f} bp)"
-                        if e.get("shortfall_bp") is not None else ""))
+                        if e.get("shortfall_bp") is not None else "")
+                     + f"; health **{e.get('health')}** ({'; '.join(e.get('health_reasons', []))})")
     lines += ["", "## Did the 09:30 board's top five beat the names it passed over?"]
     for r in BD.scorecard(con):
         if not r.get("days"):

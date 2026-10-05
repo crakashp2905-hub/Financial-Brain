@@ -211,3 +211,31 @@ def test_no_new_module_can_reach_an_order_endpoint():
         src = inspect.getsource(mod)
         for w in ('method="POST"', 'method="DELETE"', "/orders", "place_order"):
             assert w not in src
+
+
+# ------------------------------------------------------------------ F&O positioning
+def test_buildup_classification_and_its_noise_floor():
+    assert FNO.classify_buildup(0.02, 0.05) == FNO.LONG_BUILDUP
+    assert FNO.classify_buildup(-0.02, 0.05) == FNO.SHORT_BUILDUP
+    assert FNO.classify_buildup(0.02, -0.05) == FNO.SHORT_COVERING
+    assert FNO.classify_buildup(-0.02, -0.05) == FNO.LONG_UNWINDING
+    assert FNO.classify_buildup(0.001, 0.05) == FNO.NEUTRAL
+
+
+def test_futures_snapshot_picks_the_near_month_and_annualises_the_basis():
+    inst = [{"name": "X", "instrument_type": "FUT", "expiry": e, "tradingsymbol": f"X{e}"} for e in ("2026-10-27", "2026-11-24")]
+    q = lambda syms, kind: {s: ({"last_price": 101.0, "oi": 5000} if s.startswith("NFO") else {"last_price": 100.0}) for s in syms}   # noqa: E731
+    out = FNO.futures_snapshot({"X"}, instrument_list=inst, quote_fn=q, today=date(2026, 10, 6))
+    assert out["X"]["fut_expiry"] == "2026-10-27"
+    assert out["X"]["basis_annualised"] == pytest.approx(0.01 * 365 / 21)
+
+
+def test_positioning_against_the_previous_snapshot_and_not_across_a_roll():
+    c = duckdb.connect()
+    FNO.save_snapshot(c, "2026-10-05", {"X": {"fut": 100.0, "fut_oi": 1000.0, "fut_expiry": "2026-10-27", "atm_iv": 0.2},
+                                        "Y": {"fut": 100.0, "fut_oi": 1000.0, "fut_expiry": "2026-10-27"}})
+    FNO.save_snapshot(c, "2026-10-06", {"X": {"fut": 102.0, "fut_oi": 1100.0, "fut_expiry": "2026-10-27", "atm_iv": 0.25},
+                                        "Y": {"fut": 99.0, "fut_oi": 900.0, "fut_expiry": "2026-11-24"}})
+    p = {r["symbol"]: r for r in FNO.positioning(c, "2026-10-06", min_history=2)}
+    assert p["X"]["buildup"] == FNO.LONG_BUILDUP and p["X"]["iv_percentile"] == 1.0
+    assert p["Y"]["buildup"] == "ROLLED" and p["Y"]["oi_change"] is None
