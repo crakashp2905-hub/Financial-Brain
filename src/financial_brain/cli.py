@@ -1488,6 +1488,26 @@ def cmd_book(args) -> int:
     return 0
 
 
+def cmd_loss_review(args) -> int:
+    """Which situations keep losing in the intraday paper record; losing ones become PROPOSED hypotheses."""
+    import duckdb
+    from .paper import intraday_runner as IR
+    from .paper import loss_review as L
+    try:
+        con = IR.ledger()
+    except duckdb.IOException:
+        print("the paper ledger is open in the live run; try again after 15:20")
+        return 1
+    try:
+        r = L.review(L.frame(con, args.mode))
+        print(L.render(r))
+        if args.propose:
+            print(f"\n{L.propose(con, r)} hypothesis(es) written as PROPOSED - nothing changes until one is pre-registered and tested")
+    finally:
+        con.close()
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -2121,6 +2141,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--label", default="replay", help="mode label for a replay, e.g. replay-week")
     g.add_argument("--report", action="store_true", help="print the record only")
     g.set_defaults(fn=cmd_book)
+
+    g = sub.add_parser("loss-review", help="which situations keep losing in the intraday paper record")
+    g.add_argument("--mode", choices=["live", "replay"], help="only live or only replayed trades")
+    g.add_argument("--propose", action="store_true", help="write losing patterns as PROPOSED hypotheses")
+    g.set_defaults(fn=cmd_loss_review)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

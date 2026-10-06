@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS runs (day VARCHAR, mode VARCHAR, version VARCHAR, sta
 
 
 EXTRA_COLUMNS = (("entry_decision_px", "DOUBLE"), ("exit_decision_px", "DOUBLE"), ("spread_bp", "DOUBLE"),
-                 ("shortfall_bp", "DOUBLE"))
+                 ("shortfall_bp", "DOUBLE"), ("mkt_ret", "DOUBLE"), ("daily_up", "BOOLEAN"), ("gap", "DOUBLE"),
+                 ("or_width", "DOUBLE"), ("entry_minute", "INTEGER"))
 
 
 def ledger(path: Path = LEDGER):
@@ -67,14 +68,33 @@ def ledger(path: Path = LEDGER):
     return con
 
 
+def daily_up(before: date) -> bool | None:
+    """Nifty 500 above its 20-session average at the last close before ``before`` - context only."""
+    try:
+        con = duckdb.connect("data/financial_brain.duckdb", read_only=True)
+    except Exception:                                   # noqa: BLE001 - a locked research DB leaves it unknown
+        return None
+    try:
+        rows = con.execute("""SELECT close_level FROM index_levels_canonical
+                              WHERE index_name = 'Nifty 500' AND variant = 'PRICE' AND business_date < ?
+                              ORDER BY business_date DESC LIMIT 20""", [before]).fetchall()
+    finally:
+        con.close()
+    if len(rows) < 20:
+        return None
+    return bool(rows[0][0] > sum(r[0] for r in rows) / 20)
+
+
 def save(con, t: I.Trade, mode: str) -> None:
     con.execute("""INSERT OR REPLACE INTO trades (trade_id, mode, version, day, strategy, symbol, side, qty, entry_ts,
                    entry_px, stop, target, exit_ts, exit_px, exit_reason, gross_pnl, costs, net_pnl, r_multiple, bucket,
-                   entry_decision_px, exit_decision_px, spread_bp, shortfall_bp)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   entry_decision_px, exit_decision_px, spread_bp, shortfall_bp, mkt_ret, daily_up, gap, or_width,
+                   entry_minute)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 [t.trade_id, mode, t.version, t.day, t.strategy, t.symbol, t.side, t.qty, t.entry_ts, t.entry_px,
                  t.stop, t.target, t.exit_ts, t.exit_px, t.exit_reason, t.gross_pnl, t.costs, t.net_pnl,
-                 t.r_multiple, t.bucket, t.entry_decision_px, t.exit_decision_px, t.spread_bp, t.shortfall_bp])
+                 t.r_multiple, t.bucket, t.entry_decision_px, t.exit_decision_px, t.spread_bp, t.shortfall_bp,
+                 t.mkt_ret, t.daily_up, t.gap, t.or_width, t.entry_minute])
 
 
 def record_run(con, day: str, mode: str, **kw) -> None:
@@ -179,6 +199,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     syms = [u["tradingsymbol"] for u in uni]
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
     eng = I.DayEngine(day)
+    eng.daily_up = daily_up(date.fromisoformat(day))
     started = now.isoformat()
     daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
     if rcon is not None:
@@ -311,6 +332,7 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
     con = ledger(path)
     uni = universe(n)
     eng = I.DayEngine(day.isoformat())
+    eng.daily_up = daily_up(day)
     stream = []
     used = 0
     for u in uni:

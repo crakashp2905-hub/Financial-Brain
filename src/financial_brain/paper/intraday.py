@@ -86,6 +86,12 @@ class Trade:
     exit_decision_px: float | None = None       #: the last price that triggered the exit
     spread_bp: float | None = None              #: quoted bid-ask spread at entry, bp of the mid
     shortfall_bp: float = 0.0                   #: implementation shortfall, both legs, bp of notional (positive hurts)
+    # decision-time context, recorded for the loss review; none of it changes a live-v1 decision
+    mkt_ret: float | None = None                #: equal-weighted return of the day's names, open to entry
+    daily_up: bool | None = None                #: market above its 20-session average at the previous close
+    gap: float | None = None                    #: this name's open against its previous close
+    or_width: float | None = None               #: opening range, high minus low, over the open
+    entry_minute: int | None = None             #: minutes after midnight IST
 
     @property
     def is_open(self) -> bool:
@@ -111,6 +117,8 @@ class DayEngine:
         #: When no live bid/ask is available (a replay), fills pay this assumed half-spread by bucket, in bp.
         self.half_spread = half_spread or {"mega": 2.0, "large": 4.0, "mid": 8.0, "small": 20.0}
         self.quotes: dict[str, tuple] = {}          # symbol -> (bid, ask), the latest live top of book
+        self.last: dict[str, float] = {}            # symbol -> latest price, for the market's move since the open
+        self.daily_up: bool | None = None           # set by the runner from the previous close; context only
 
     # ----------------------------------------------------------------- setup
     def add_symbol(self, symbol: str, prev_close: float, bucket: str = "large") -> None:
@@ -141,6 +149,7 @@ class DayEngine:
         if s.open is None:
             return []
         s.day_hi, s.day_lo = max(s.day_hi, price), min(s.day_lo, price)
+        self.last[symbol] = price
         changed = []
         for t in [t for t in self.trades if t.is_open and t.symbol == symbol]:
             why = self._exit_reason(t, price, ts)
@@ -222,10 +231,22 @@ class DayEngine:
             target = price + TARGET_R * per_share if side == "long" else price - TARGET_R * per_share
         t = Trade(trade_id=f"{self.day}-{strat}-{s.symbol}", day=self.day, strategy=strat, symbol=s.symbol,
                   side=side, qty=qty, entry_ts=ts.isoformat(), entry_px=price, stop=stop, target=target,
-                  bucket=s.bucket, entry_decision_px=decision, spread_bp=spread)
+                  bucket=s.bucket, entry_decision_px=decision, spread_bp=spread, **self.context(s, ts))
         self.trades.append(t)
         s.done.add(strat)
         return t
+
+    def market_since_open(self) -> float | None:
+        """Equal-weighted return of every name with an open, from its open to its latest price - only prices
+        already seen, so it is known at the moment of a decision."""
+        r = [self.last[k] / v.open - 1.0 for k, v in self.symbols.items() if v.open and k in self.last]
+        return float(sum(r) / len(r)) if r else None
+
+    def context(self, s: SymbolDay, ts: datetime) -> dict:
+        return {"mkt_ret": self.market_since_open(), "daily_up": self.daily_up,
+                "gap": s.open / s.prev_close - 1.0 if s.open and s.prev_close else None,
+                "or_width": (s.or_hi - s.or_lo) / s.open if s.open else None,
+                "entry_minute": ts.hour * 60 + ts.minute}
 
     @staticmethod
     def _exit_reason(t: Trade, price: float, ts: datetime) -> str | None:

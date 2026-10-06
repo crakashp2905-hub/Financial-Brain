@@ -41,7 +41,8 @@ def fake_quotes(clock, day="2026-10-06", traded=True):
 def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
     monkeypatch.setattr(R, "REPORTS", tmp_path / "reports")
-    monkeypatch.setattr(R, "daily_view", lambda: (None, None, None))      # never touch the research database
+    monkeypatch.setattr(R, "daily_view", lambda **kw: (None, None, None))      # never touch the research database
+    monkeypatch.setattr(R, "daily_up", lambda d: None)                     # nor for the daily trend
     return tmp_path
 
 
