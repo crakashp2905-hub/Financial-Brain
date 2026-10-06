@@ -92,6 +92,10 @@ class Trade:
     gap: float | None = None                    #: this name's open against its previous close
     or_width: float | None = None               #: opening range, high minus low, over the open
     entry_minute: int | None = None             #: minutes after midnight IST
+    # execution intelligence, recorded beside the fills; none of it changes a fill
+    entry_vwap: float | None = None             #: the day's VWAP when the entry filled
+    exit_vwap: float | None = None              #: the day's VWAP when the exit filled
+    entry_walk_bp: float | None = None          #: extra cost had the order walked the visible book, bp of the touch
 
     @property
     def is_open(self) -> bool:
@@ -119,6 +123,7 @@ class DayEngine:
         self.quotes: dict[str, tuple] = {}          # symbol -> (bid, ask), the latest live top of book
         self.last: dict[str, float] = {}            # symbol -> latest price, for the market's move since the open
         self.daily_up: bool | None = None           # set by the runner from the previous close; context only
+        self.market: dict[str, dict] = {}           # symbol -> {"vwap", "depth_buy", "depth_sell"}: execution context
 
     # ----------------------------------------------------------------- setup
     def add_symbol(self, symbol: str, prev_close: float, bucket: str = "large") -> None:
@@ -232,9 +237,33 @@ class DayEngine:
         t = Trade(trade_id=f"{self.day}-{strat}-{s.symbol}", day=self.day, strategy=strat, symbol=s.symbol,
                   side=side, qty=qty, entry_ts=ts.isoformat(), entry_px=price, stop=stop, target=target,
                   bucket=s.bucket, entry_decision_px=decision, spread_bp=spread, **self.context(s, ts))
+        mk = self.market.get(s.symbol) or {}
+        t.entry_vwap = mk.get("vwap")
+        t.entry_walk_bp = self.walk_cost_bp(mk.get("depth_sell" if side == "long" else "depth_buy"), qty)
         self.trades.append(t)
         s.done.add(strat)
         return t
+
+    def set_market(self, symbol: str, *, vwap: float | None = None, depth_buy=None, depth_sell=None) -> None:
+        """The day's VWAP and the visible order book for a symbol: recorded on trades, never used to fill them."""
+        self.market[symbol] = {"vwap": vwap, "depth_buy": depth_buy or [], "depth_sell": depth_sell or []}
+
+    @staticmethod
+    def walk_cost_bp(levels, qty: int) -> float | None:
+        """Average price of filling ``qty`` through the visible levels, against the best level, in bp. None if the
+        visible book is empty or too thin to fill the order (the rest would be beyond what can be seen)."""
+        if not levels or qty <= 0:
+            return None
+        left, cost, touch = qty, 0.0, levels[0][0]
+        for px, q in levels:
+            take = min(left, q)
+            cost += take * px
+            left -= take
+            if left <= 0:
+                break
+        if left > 0 or not touch:
+            return None
+        return abs(cost / qty / touch - 1) * 1e4
 
     def market_since_open(self) -> float | None:
         """Equal-weighted return of every name with an open, from its open to its latest price - only prices
@@ -268,6 +297,7 @@ class DayEngine:
         decision = price
         price, _ = self.fill(t.symbol, decision, buying=(t.side == "short"))
         t.exit_decision_px = decision
+        t.exit_vwap = (self.market.get(t.symbol) or {}).get("vwap")
         t.exit_ts, t.exit_px, t.exit_reason = ts.isoformat(), price, why
         sign = 1 if t.side == "long" else -1
         t.gross_pnl = sign * (price - t.entry_px) * t.qty

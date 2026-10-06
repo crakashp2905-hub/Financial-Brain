@@ -56,7 +56,8 @@ CREATE TABLE IF NOT EXISTS runs (day VARCHAR, mode VARCHAR, version VARCHAR, sta
 
 EXTRA_COLUMNS = (("entry_decision_px", "DOUBLE"), ("exit_decision_px", "DOUBLE"), ("spread_bp", "DOUBLE"),
                  ("shortfall_bp", "DOUBLE"), ("mkt_ret", "DOUBLE"), ("daily_up", "BOOLEAN"), ("gap", "DOUBLE"),
-                 ("or_width", "DOUBLE"), ("entry_minute", "INTEGER"))
+                 ("or_width", "DOUBLE"), ("entry_minute", "INTEGER"), ("entry_vwap", "DOUBLE"), ("exit_vwap", "DOUBLE"),
+                 ("entry_walk_bp", "DOUBLE"))
 
 
 def ledger(path: Path = LEDGER):
@@ -89,12 +90,12 @@ def save(con, t: I.Trade, mode: str) -> None:
     con.execute("""INSERT OR REPLACE INTO trades (trade_id, mode, version, day, strategy, symbol, side, qty, entry_ts,
                    entry_px, stop, target, exit_ts, exit_px, exit_reason, gross_pnl, costs, net_pnl, r_multiple, bucket,
                    entry_decision_px, exit_decision_px, spread_bp, shortfall_bp, mkt_ret, daily_up, gap, or_width,
-                   entry_minute)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   entry_minute, entry_vwap, exit_vwap, entry_walk_bp)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 [t.trade_id, mode, t.version, t.day, t.strategy, t.symbol, t.side, t.qty, t.entry_ts, t.entry_px,
                  t.stop, t.target, t.exit_ts, t.exit_px, t.exit_reason, t.gross_pnl, t.costs, t.net_pnl,
                  t.r_multiple, t.bucket, t.entry_decision_px, t.exit_decision_px, t.spread_bp, t.shortfall_bp,
-                 t.mkt_ret, t.daily_up, t.gap, t.or_width, t.entry_minute])
+                 t.mkt_ret, t.daily_up, t.gap, t.or_width, t.entry_minute, t.entry_vwap, t.exit_vwap, t.entry_walk_bp])
 
 
 def record_run(con, day: str, mode: str, **kw) -> None:
@@ -213,6 +214,12 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         from ..opportunity import scanners as S
         S.save(con, daily.attrs["opportunities"], day)
     record_run(con, day, "live", started=started, status="running", symbols=len(syms))
+    try:
+        from ..ingest import quote_archive as QA
+        qcon = QA.connect()
+    except Exception as e:                              # noqa: BLE001 - the archive must never stop a trading day
+        log.warning("quote archive unavailable: %s", str(e)[:120])
+        qcon = None
     polls = failures = 0
     seen_today = False
     last: dict[str, float] = {}
@@ -240,6 +247,11 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             sleep_fn(poll)
             continue
         polls += 1
+        if qcon is not None:
+            try:
+                QA.store(qcon, now.replace(tzinfo=None), q)
+            except Exception as e:                      # noqa: BLE001
+                log.warning("quote archive write failed: %s", str(e)[:120])
         for key, v in q.items():
             sym = key.split(":", 1)[-1]
             ltt = str(v.get("last_trade_time") or "")
@@ -297,6 +309,12 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                 b, a = (dep.get("buy") or [{}])[0].get("price"), (dep.get("sell") or [{}])[0].get("price")
                 if b and a:
                     book[key.split(":", 1)[-1]] = (float(b), float(a))
+                try:
+                    eng.set_market(key.split(":", 1)[-1], vwap=v.get("average_price"),
+                                   depth_buy=[(float(x["price"]), int(x["quantity"])) for x in dep.get("buy") or [] if x.get("price")],
+                                   depth_sell=[(float(x["price"]), int(x["quantity"])) for x in dep.get("sell") or [] if x.get("price")])
+                except (TypeError, ValueError, KeyError):
+                    pass
             for sym, px in last.items():
                 bid, ask = book.get(sym, (None, None))
                 for t in eng.on_price(sym, now.replace(tzinfo=None), px, bid=bid, ask=ask):
@@ -310,6 +328,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             save(con, t, "live")
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status="complete",
                symbols=len(syms), polls=polls, note=json.dumps({"skipped": len(eng.skipped)}))
+    if qcon is not None:
+        qcon.close()
     if _has_board(con):
         BD.resolve_close(con, day, "live", last)
     out = {"day": day, "status": "complete", "summary": eng.summary(), "polls": polls}
@@ -334,6 +354,7 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
     eng = I.DayEngine(day.isoformat())
     eng.daily_up = daily_up(day)
     stream = []
+    vwap_at: dict = {}
     used = 0
     for u in uni:
         sym = u["tradingsymbol"]
@@ -352,10 +373,14 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
         eng.set_opening(sym, open_px=float(rng[0]["open"]), or_hi=max(float(b["high"]) for b in rng),
                         or_lo=min(float(b["low"]) for b in rng))
         used += 1
+        pv = vv = 0.0
         for b in bars:
+            pv += (float(b["high"]) + float(b["low"]) + float(b["close"])) / 3 * float(b.get("volume") or 0)
+            vv += float(b.get("volume") or 0)
             if b["ts"][11:16] < "09:30":
                 continue
             t0 = datetime.fromisoformat(b["ts"][:19])
+            vwap_at[(sym, t0)] = pv / vv if vv else None
             for k, px in enumerate(path_of_bar(b["open"], b["high"], b["low"], b["close"])):
                 stream.append((t0 + timedelta(seconds=15 * k), sym, float(px)))
     stream.sort(key=lambda x: (x[0], x[1]))
@@ -374,6 +399,9 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
     last = {}
     for ts, sym, px in stream:
         last[sym] = px
+        vw = vwap_at.get((sym, ts.replace(second=0, microsecond=0)))
+        if vw:
+            eng.set_market(sym, vwap=vw)
         for t in eng.on_price(sym, ts, px):
             save(con, t, "replay")
     for t in eng.end_of_day(datetime.combine(day, time(15, 20)), last):

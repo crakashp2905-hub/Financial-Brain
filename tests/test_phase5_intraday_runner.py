@@ -43,6 +43,8 @@ def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(R, "REPORTS", tmp_path / "reports")
     monkeypatch.setattr(R, "daily_view", lambda **kw: (None, None, None))      # never touch the research database
     monkeypatch.setattr(R, "daily_up", lambda d: None)                     # nor for the daily trend
+    from financial_brain.ingest import quote_archive as QA
+    monkeypatch.setattr(QA, "PATH", tmp_path / "quotes.duckdb")          # nor the real quote archive
     return tmp_path
 
 

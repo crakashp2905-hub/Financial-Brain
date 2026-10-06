@@ -103,5 +103,9 @@ def query(pool: pd.DataFrame, x: np.ndarray, as_of: date, *, k: int = K) -> dict
                         "pool_mean": float(p.mean()), "pool_win_rate": float((p > 0).mean()),
                         "edge": float(a.mean() - p.mean()), "edge_t": float((a.mean() - p.mean()) / se) if se > 0 else 0.0}
     out["mfe5_median"], out["mae5_median"] = float(nn["mfe5"].median()), float(nn["mae5"].median())
+    best, worst = nn.loc[nn["x5"].idxmax()], nn.loc[nn["x5"].idxmin()]
+    out["best"] = {"ticker": str(best["ticker"]), "date": str(best["business_date"]), "x5": float(best["x5"])}
+    out["worst"] = {"ticker": str(worst["ticker"]), "date": str(worst["business_date"]), "x5": float(worst["x5"])}
+    out["positive"], out["negative"] = int((nn["x5"] > 0).sum()), int((nn["x5"] <= 0).sum())
     out["pool_mfe5_median"], out["pool_mae5_median"] = float(eligible["mfe5"].median()), float(eligible["mae5"].median())
     return out

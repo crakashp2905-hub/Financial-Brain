@@ -40,3 +40,25 @@ def render(rows: list[dict]) -> str:
                      f"{r['charges_inr']:10,.0f} {r['net_inr']:10,.0f}")
         lines.append(f"{'':25s} {r['signal_bp']:+9.1f} {r['execution_bp']:+10.1f} {r['charges_bp']:+10.1f} {r['net_bp']:+10.1f}")
     return "\n".join(lines)
+
+
+def shortfall(con, *, mode: str | None = None) -> list[dict]:
+    """Implementation shortfall per strategy, in bp of notional (positive = cost): the fill against the decision
+    price (spread and delay), the fill against the day's VWAP at that moment (was it a good time to trade), and what
+    walking the visible book would have added for orders larger than the best level (live days only)."""
+    where = "WHERE exit_ts IS NOT NULL AND entry_decision_px IS NOT NULL"
+    params = []
+    if mode:
+        where += " AND mode = ?"
+        params.append(mode)
+    rows = con.execute(f"""
+        SELECT strategy, mode, COUNT(*),
+               AVG(CASE WHEN side = 'long' THEN entry_px / entry_decision_px - 1 ELSE 1 - entry_px / entry_decision_px END) * 1e4,
+               AVG(CASE WHEN entry_vwap IS NULL THEN NULL WHEN side = 'long' THEN entry_px / entry_vwap - 1
+                        ELSE 1 - entry_px / entry_vwap END) * 1e4,
+               AVG(CASE WHEN exit_vwap IS NULL THEN NULL WHEN side = 'long' THEN 1 - exit_px / exit_vwap
+                        ELSE exit_px / exit_vwap - 1 END) * 1e4,
+               AVG(entry_walk_bp), COUNT(entry_walk_bp)
+        FROM trades {where} GROUP BY 1, 2 ORDER BY 1, 2""", params).fetchall()
+    return [{"strategy": s, "mode": m, "trades": n, "entry_vs_decision_bp": a, "entry_vs_vwap_bp": b,
+             "exit_vs_vwap_bp": c, "book_walk_bp": w, "with_depth": k} for s, m, n, a, b, c, w, k in rows]

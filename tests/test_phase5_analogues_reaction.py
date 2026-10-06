@@ -28,6 +28,8 @@ def test_analogues_of_a_high_first_feature_beat_the_pool_and_the_pool_is_reporte
     out = SA.query(p, x, date(2019, 1, 1))
     assert out["k"] == SA.K and out["h5"]["edge"] > 0.005 and out["h5"]["edge_t"] > 3
     assert 0.4 < out["h1"]["pool_win_rate"] < 0.6 and out["mfe5_median"] > 0 > out["mae5_median"]
+    assert out["positive"] + out["negative"] == SA.K and out["best"]["x5"] >= out["worst"]["x5"]
+    assert out["best"]["ticker"].startswith("T") and out["best"]["date"] < "2019-01-01"
 
 
 def test_only_closed_windows_before_the_date_are_eligible():
