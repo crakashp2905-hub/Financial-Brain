@@ -105,7 +105,7 @@ def fvg_study(events: pd.DataFrame, daily_excess: pd.DataFrame) -> dict:
 
 
 def walk_forward(panel: pd.DataFrame, features: list[str], *, years=range(2019, 2027), embargo_days: int = 30,
-                 model_factory=None) -> pd.DataFrame:
+                 model_factory=None, fill_nan: bool = False) -> pd.DataFrame:
     """Rank-transform features per date, train on everything ending ``embargo_days`` before each test year, predict
     that year. Returns the panel's test rows with a ``pred`` column."""
     if model_factory is None:
@@ -113,6 +113,8 @@ def walk_forward(panel: pd.DataFrame, features: list[str], *, years=range(2019, 
         model_factory = lambda: lgb.LGBMRegressor(**GBM_PARAMS)        # noqa: E731
     p = panel.copy()
     X = p.groupby("d")[features].rank(pct=True)
+    if fill_nan:                                        # learners that cannot take a gap get the middle rank
+        X = X.fillna(0.5)
     y = p.groupby("d")["fwd20"].rank(pct=True)
     p["_y"] = y
     preds = []
