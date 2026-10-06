@@ -132,6 +132,24 @@ loses steadily, because India VIX has usually been above the volatility the Nift
 are synthetic upper bounds (no skew, a 30-day volatility index used for weekly options), and none is used by the brain
 until a real options history exists.
 
-## Group 4 - more learners
+## Group 4 - more learners (same panel, embargo, books and costs as the LightGBM challenger)
 
-*Pending at the time of writing; appended below when the run finishes.*
+Net monthly excess over the 500 most liquid names, **2022-2026** (t), and the difference from plain momentum:
+
+| learner | top 20 | vs momentum | top 50 | vs momentum |
+|---|---|---|---|---|
+| LightGBM (the qualified challenger) | **+0.77% (2.3)** | +0.29% (0.5) | **+0.59% (2.3)** | +0.06% (0.1) |
+| plain momentum (champion) | +0.48% (0.9) | - | +0.53% (1.4) | - |
+| LSTM (#72) | +0.40% (1.1) | -0.08% | +0.27% (1.0) | -0.26% |
+| neural network (#68) | +0.20% (0.6) | -0.29% | +0.17% (0.6) | -0.36% |
+| random forest (#69) | +0.13% (0.4) | -0.35% | +0.27% (1.1) | -0.26% |
+| linear SVM (#71) | +0.07% (0.2) | -0.41% | +0.01% (0.1) | -0.52% |
+| genetic feature weights (#70) | **-0.80% (-2.4)** | -1.29% | -0.58% (-1.9) | -1.11% |
+
+Regime switching (#69 as a strategy selector), choosing each month between the momentum and the reversal book from
+market features: 2022-26 **+0.41% a month against +0.46% for always holding momentum**; it chose momentum in 86% of
+months. It learned "mostly momentum", which is what doing nothing already does.
+
+**M1** (none beats LightGBM by more than 0.10% a month in 2022-26; none beats momentum with t >= 2): **PASS** - every
+other learner is behind LightGBM, and the genetic search, which optimised the training years' IC directly, is the worst
+of all: the clearest case of a fit to the past that does not carry forward.
