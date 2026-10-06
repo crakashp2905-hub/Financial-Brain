@@ -80,7 +80,7 @@ def strength(value: float | None, strong: float, moderate: float) -> str:
 
 
 def edge_panel(row: pd.Series, *, decile_mean: float | None, analogue: dict | None, breadth_state: str | None,
-               fno: dict | None, bucket: str, ep_pct: float | None) -> list[tuple[str, str, str]]:
+               fno: dict | None, bucket: str, ep_pct: float | None, fund: dict | None = None) -> list[tuple[str, str, str]]:
     """(input, strength word, the measured number behind it)."""
     out = [("Signal (composite decile)", strength(decile_mean, 0.004, 0.002),
             f"{decile_mean * 100:+.2f}% a 20-session excess for its decile, 2016-26 (in-sample) - strong relative to other deciles, small in absolute terms" if decile_mean is not None else "-")]
@@ -91,8 +91,16 @@ def edge_panel(row: pd.Series, *, decile_mean: float | None, analogue: dict | No
                     f"win {h5['win_rate']:.0%}, edge t {h5['edge_t']:+.1f}"))
     else:
         out.append(("Historical analogues", "n.a.", "pool unavailable"))
-    out.append(("Fundamental (earnings yield)", "Weak" if ep_pct is not None else "n.a.",
-                f"{ep_pct:.0%} percentile; earnings yield was faint in both samples" if ep_pct is not None else "no current filing data (results after Dec 2024 not ingested)"))
+    if fund and fund.get("latest_period"):
+        def fmt(key, spec, scale=1.0):
+            v = fund.get(key)
+            return "-" if v is None else format(v * scale, spec)
+        out.append(("Fundamental", "Weak",
+                    f"P/E {fmt('pe', '.1f')}, P/B {fmt('pb', '.1f')}, EV/EBITDA {fmt('ev_ebitda', '.1f')}, "
+                    f"ROE {fmt('roe', '.0f', 100)}%, debt/equity {fmt('debt_equity', '.2f')} - at today's price on results "
+                    f"to {fund['latest_period']} (stale: later results not ingested); fundamentals were faint in both test samples"))
+    else:
+        out.append(("Fundamental", "n.a.", "no filing data for this name"))
     out.append(("Market regime", {"broad": "Strong", "normal": "Moderate"}.get((breadth_state or "").lower(), "Weak"),
                 f"breadth {breadth_state}" if breadth_state else "-"))
     if fno:
@@ -200,7 +208,7 @@ def calculator(rows: list[dict]) -> str:
 
 
 def card(r, row: pd.Series, comp: pd.Series, *, rank: int, universe: int, decile_mean, analogue, breadth_state, fno,
-         returns, plan: dict, sid: str) -> str:
+         returns, plan: dict, sid: str, fund: dict | None = None) -> str:
     """One opportunity, answered the way a trader asks: why this, why now, edge, if wrong, how much, how, bear case."""
     from ..decisions import net_alpha as NA
     a = r.alpha if isinstance(r.alpha, dict) else {}
@@ -210,7 +218,7 @@ def card(r, row: pd.Series, comp: pd.Series, *, rank: int, universe: int, decile
     checks = "".join(f"<div>{'&#10003;' if ok else '&#9888;'} {_e(t)}</div>" for ok, t in why_now(row))
     panel = "".join(f"<tr><td>{_e(k)}</td><td>{_e(v)}</td><td style='white-space:normal'>{_e(d)}</td></tr>"
                     for k, v, d in edge_panel(row, decile_mean=decile_mean, analogue=analogue, breadth_state=breadth_state,
-                                              fno=fno, bucket=bucket, ep_pct=None))
+                                              fno=fno, bucket=bucket, ep_pct=None, fund=fund))
     items = [("Expected return", a.get("expected_return")), ("Benchmark", -a.get("benchmark", 0)), ("Fees and taxes", -a.get("fees", 0)),
              ("Spread", -a.get("spread", 0)), ("Market impact", -a.get("impact", 0)), ("Risk penalty", -a.get("risk_penalty", 0))]
     ledger_rows = "".join(f"<tr><td>{k}</td><td class='r'>{(v or 0) * 100:+.2f}%</td></tr>" for k, v in items)

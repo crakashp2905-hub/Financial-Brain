@@ -261,13 +261,21 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
         if len(px) > 300:
             rets = Climatology().forecast(instrument=r.ticker, as_of=asof, prices=px[-750:], horizon=int(r.horizon), n_paths=1500).terminal_returns()
         o = TV.outcome(rets, plan["stop_distance"]) if rets is not None else {}
+        try:
+            from ..features import fundamentals_pit as FP
+            snap = FP.snapshot(FP.as_known_on(rcon, r.ticker, asof))
+            raw = rcon.execute("SELECT close_raw FROM adjusted_prices WHERE ticker = ? AND business_date <= ? ORDER BY business_date DESC LIMIT 1",
+                               [r.ticker, asof]).fetchone()
+            fund = {**FP.ratios(snap, float(raw[0])), "latest_period": snap.get("latest_period")} if snap and raw else None
+        except Exception:                               # noqa: BLE001 - no observation table yet
+            fund = None
         sid = f"r{k}"
         sizing.append({"id": sid, "price": float(r.price), "stop": float(plan["stop_price"]), "adv": float(row["adv20"])})
         rows.append(f"<tr><td class='r'>{k}</td><td><a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a></td><td>LONG</td><td class='r'>{_pct(r.expected_net)}</td>"
                     f"<td>{r.horizon} sessions</td><td class='r'>{o.get('p_up', float('nan')):.0%}</td><td class='r'>{o.get('reward_risk', float('nan')):.2f}</td>"
                     f"<td class='r'>{plan['stop_distance']:.1%}</td><td>{_e(r.evidence)}</td></tr>")
         cards.append(TV.card(r, row, comp.loc[i], rank=k, universe=len(cs), decile_mean=float(dec.loc[i]), analogue=ana,
-                             breadth_state=breadth_state, fno=fno.get(r.ticker), returns=rets, plan=plan, sid=sid))
+                             breadth_state=breadth_state, fno=fno.get(r.ticker), returns=rets, plan=plan, sid=sid, fund=fund))
     out.append("<div class='wrap'><table><tr><th class='r'>#</th><th>Stock</th><th>Direction</th><th class='r'>Net alpha</th><th>Horizon</th>"
                "<th class='r'>P(up)</th><th class='r'>Reward/risk</th><th class='r'>Stop</th><th>Evidence</th></tr>" + "".join(rows) + "</table></div>")
     out.append(TV.calculator(sizing))

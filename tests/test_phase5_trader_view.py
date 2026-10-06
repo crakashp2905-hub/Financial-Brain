@@ -64,3 +64,11 @@ def test_the_edge_panel_says_weak_in_words_when_the_evidence_is_weak():
 def test_the_sizing_data_cannot_break_out_of_its_script_tag():
     html = TV.calculator([{"id": "r1", "price": 1.0, "stop": 0.9, "adv": 1e6, "x": "</script><b>"}])
     assert "</script><b>" not in html
+
+
+def test_fundamentals_show_their_age():
+    p = dict((k, d) for k, _, d in TV.edge_panel(pd.Series({}), decile_mean=None, analogue=None, breadth_state=None, fno=None,
+                                                 bucket="mega", ep_pct=None,
+                                                 fund={"pe": 13.75, "pb": 1.7, "ev_ebitda": 11.5, "roe": 0.08,
+                                                       "debt_equity": 0.35, "latest_period": "2024-12-31"}))
+    assert "P/E 13.8" in p["Fundamental"] and "ROE 8%" in p["Fundamental"] and "stale" in p["Fundamental"]
