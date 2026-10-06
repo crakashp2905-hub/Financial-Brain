@@ -4,7 +4,7 @@ rem 1. prices, indices, actions, announcements, regime, features - so the next 0
 rem 2. champion/challenger: record today's locked out-of-sample picks, resolve matured cohorts
 rem 3. F&O snapshot: futures basis and OI, option-chain statistics, day-over-day positioning (needs the Kite token)
 rem 4. loss review: situations that keep losing become PROPOSED hypotheses (never applied automatically)
-rem 5. the suggestion paper book: sell what hit its stop or horizon, buy today's top five at the next close
+rem 5. both suggestion books (top-5 position, top-50 swing): sell what hit its stop or horizon, buy today's names at the next close
 rem 6. the terminal page, data\terminal\index.html
 cd /d "%~dp0.."
 set PYTHONPATH=src
