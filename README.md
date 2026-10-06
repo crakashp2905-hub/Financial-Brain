@@ -16,7 +16,7 @@ evidence, its point-in-time validity, a historical base rate from comparable sit
 its net alpha after costs, its place in the portfolio, a realistic execution and a counterfactual outcome - and
 every test is written down before it is run (`fb preregs` audits that against git).
 
-**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,250 tests.
+**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,277 tests.
 Every trading day the system now scans the market, posts a 09:30 board, paper-trades its intraday rules
 through the session and scores itself against everything it passed over. See [The daily loop](#the-daily-loop).
 
@@ -155,6 +155,13 @@ Validation modules, used from Python rather than the CLI:
 | `evaluation/after_tax.py` | The same return series taxed as an active book (all gains realised yearly) and as buy-and-hold (deferred): tax takes about 20% of an active sleeve's CAGR, deferral is worth 2-3 points a year |
 | `evaluation/news_model.py` | Headline classifier on filings: text lowered strength AUC and direction missed the bar |
 | `opportunity/scanners.py` | Ten named scanners (momentum, relative strength, low volatility, composite, mean reversion, breakout, volume anomaly, volatility expansion, event, fundamental value), each with its evidence status and horizon. Expected return comes from **one** model - what the name's composite decile earned in the replay, scaled by the half-life curve - so scanners say *why* a name is interesting but cannot each invent a return |
+| `paper/trader_view.py` (on the terminal) | **What should I trade today?** The top 10 by expected net alpha, each answering: why this (rank of ~1,500 and what lifted it), why now (a checklist with cautions), the edge (signal, analogues, fundamentals, regime, F&O, liquidity - each in words), the itemised net alpha, if I'm wrong (P(up), gain if right, loss if wrong, reward/risk), invalidation, **how much** (an in-page calculator on your capital and risk), how to enter (band, don't-chase level, slippage), the case against, and what was watched but not listed |
+| `providers/kite_account.py` / `portfolio/my_book.py` / `fb my-portfolio --sync` | **Your own Kite account, read only** (holdings, positions, trade book; three exact paths, GET only, stored in `data/`): since cost, thesis health by rules (EXIT BY RULE only on the plan's tested exits), book volatility, beta, share at risk to the stops, sector concentration, and which of today's names add the least risk for their alpha |
+| `portfolio/journal.py` / `fb journal` | Your round trips (FIFO) with an autopsy each - market, sector, selection, entry and exit against the day's close, costs - and a report on strengths and weaknesses once 30 trips exist |
+| `alerts.py` / `fb alerts` | Windows desktop alerts, sent once each: a holding exiting by rule, a name clearing +1% net, a halted loop, a live run that did not complete |
+| `features/fundamentals_pit.py` | 295k point-in-time observations from exchange XBRL (revisions numbered, never overwritten; `as_known_on` a date): EBITDA, EBIT, debt, cash, book value, cash flow, and P/E, P/B, EV/EBITDA, ROE, ROCE, debt/equity, interest cover at a price - labelled stale where the results are |
+| `evaluation/half_life_table.py` | Every signal at every horizon as a trader reads it: excess, hit rate, Sharpe, MFE/MAE, turnover, cost drag, net. Momentum is the only signal that pays long-only at every horizon (+1.50% net over 60 sessions); low volatility ranks well but its top quintile under-earns |
+| `opportunity/lifecycle.py` / `fb lifecycle TICKER --day D` | One opportunity end to end: found, taken or rejected (and why), sold, resolved. Every opportunity is typed: direction, evidence ids, an experiment id (pre-registration + a hash of the pricing model), an outcome distribution |
 | `decisions/net_alpha.py` | **Expected net alpha, itemised** - expected return, benchmark, fees and taxes, spread, impact, risk penalty - the one quantity every scanner, book and terminal row is ranked on |
 | `evaluation/neutral.py` | Signals with market beta, home sector, size (turnover proxy) and volatility removed: momentum keeps 94%, 52-week high 91%, the composite 102% (t 4.3) - stock selection, not disguised factor bets |
 | `research/preregistry.py` / `fb preregs` | Audits every pre-registration against git: committed before its result, never edited after it (19 audited, 0 violations; one amendment, made before any result) |
@@ -217,7 +224,7 @@ decisions made before their outcomes, which nothing else can supply.
 | 09:30-15:15 | Paper trading of the intraday rules (version live-v1, pre-registered), every trade written as it opens and closes | ledger |
 | 15:15 | Flat; same-day outcome for every board name, so the top five are scored against the rest | `DATE-live.md` |
 | ~15:50 | Review task: code errors only; rules never change with the day's P&L | notification |
-| 18:45 | Windows task *FinanceBrain Daily Refresh*: prices, indices, actions, announcements, features; champion picks recorded and matured cohorts resolved; F&O snapshot; losing situations proposed as hypotheses; both suggestion books sell and buy on paper; the terminal rebuilt | research DB, `data/terminal/index.html` |
+| 18:45 | Windows task *FinanceBrain Daily Refresh*: prices, indices, actions, announcements, features; champion picks recorded and matured cohorts resolved; F&O snapshot; losing situations proposed as hypotheses; both suggestion books sell and buy on paper; your Kite holdings synced (read only); the terminal rebuilt; desktop alerts | research DB, `data/terminal/index.html` |
 
 `fb terminal` rebuilds the one-page view at any time; open `data/terminal/index.html` in a browser.
 `fb paper-intraday --report` prints the accumulated evidence per strategy (COLLECTING until 100 trades, then
