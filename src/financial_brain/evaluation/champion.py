@@ -75,6 +75,9 @@ def picks(cs: pd.DataFrame, *, events: set | None = None, swing: pd.DataFrame | 
         "relative_strength": c[c["dist_52w_high"] >= q("dist_52w_high", 1 - TOP_FRACTION)],
         "all_but_worst_20": c[c["z"] > q("z", 0.2)],
     }
+    from ..opportunity import ranking_v2 as R2
+    c["v2"] = R2.score(c).to_numpy()
+    out["ranking_v2_top"] = c[c["v2"] >= q("v2", 1 - TOP_FRACTION)]    # joined 2026-10-07 (PRE-REGISTERED ranking v2)
     if events:
         out["event_names"] = c[c["lineage"].isin(events)]
     if swing is not None and len(swing):

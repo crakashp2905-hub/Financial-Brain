@@ -246,7 +246,8 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
         out.append(f"<div class='note'><b>Read with care:</b> {tied.iloc[0]} of these {top} were flagged by the {_e(tied.index[0])} scanner. "
                    "Every name in a composite decile gets the same expected return and the ties are ordered by cost and risk, which "
                    "favour large, calm names; the half-life table found the low-volatility end of the ranking does not pay long-only "
-                   "(top quintile -0.30% over 60 sessions, momentum +1.65%). A fix is a new pre-registered ranking version, not an edit.</div>")
+                   "(top quintile -0.30% over 60 sessions, momentum +1.65%). The pre-registered fix, ranking v2, is shown below as a challenger: it beat this list "
+                   "in every test split, but not significantly, so it has not replaced it.</div>")
     comp = TV.components(cs)
     dec = S.decile_expectation(cs)
     fno = {}
@@ -295,6 +296,21 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
                "<th class='r'>P(up)</th><th class='r'>Reward/risk</th><th class='r'>Stop</th><th>Evidence</th></tr>" + "".join(rows) + "</table></div>")
     out.append(TV.calculator(sizing))
     out += cards
+    try:
+        from ..opportunity import ranking_v2 as R2
+        v2 = R2.rank(cs, horizon=60, capital=capital).head(top)
+        out.append("<h3 style='margin-top:14px'>Challenger view: ranking v2 (momentum + 52-week high, no tie-breaking by cost)</h3>"
+                   "<div class='sub'>Not qualified: in its 2022-26 test it beat this list by 0.35-0.40% a month and plain momentum by 0.3%, "
+                   "but not significantly (t 0.5-0.8), and its own net was +0.01% / +0.19% a month. It competes live from 2026-10-07. "
+                   "<b>Its expected returns are a straight-line slope frozen on 2016-21: in 2022-26 its top 20 earned about a third of what "
+                   "that slope implies at these scores</b>, so read +5% as roughly +1.5%.</div>"
+                   "<div class='wrap'><table><tr><th class='r'>#</th><th>Stock</th><th class='r'>Score</th><th class='r'>Expected 60d</th>"
+                   "<th class='r'>Costs</th><th class='r'>Net</th><th class='r'>12-1 mom.</th><th class='r'>vs 52w high</th></tr>"
+                   + "".join(f"<tr><td class='r'>{k}</td><td>{_e(r.ticker)}</td><td class='r'>{r.score:+.2f}</td><td class='r'>{_pct(r.expected_return)}</td>"
+                             f"<td class='r'>{r.cost * 100:.2f}%</td><td class='r'>{_pct(r.expected_net)}</td><td class='r'>{r.mom_12_1 * 100:+.0f}%</td>"
+                             f"<td class='r'>{r.dist_52w_high * 100:+.0f}%</td></tr>" for k, r in enumerate(v2.itertuples(), 1)) + "</table></div>")
+    except Exception as e:                              # noqa: BLE001 - the page renders without it
+        out.append(f"<div class='sub'>ranking v2 unavailable: {_e(str(e)[:80])}</div>")
     wn = TV.watched_not_traded(best, set(shown["ticker"]))
     if wn:
         out.append("<h3 style='margin-top:14px'>Watched, not on the list</h3><div class='wrap'><table><tr><th>Stock</th><th>Type</th>"
