@@ -41,6 +41,7 @@ import numpy as np
 import pandas as pd
 
 from ..costs.india import CostModel
+from ..decisions import net_alpha as NA
 from ..decisions import plan as P
 
 SHRINK = 0.71           #: realised/stated alpha slope measured in the engine replay (kept for reference)
@@ -67,7 +68,7 @@ EVIDENCE = {
     "volume_anomaly": (None, None, "UNTESTED", "-"),
     "volatility_expansion": (-0.086, 5.6, "REPLICATED_HELD_OUT_INVERSE", "the low-volatility result read from the other end"),
     "event": (None, None, "ANALOGUE_ONLY", "Analogues report edge over the all-filings baseline"),
-    "fundamental_value": (None, 1.5, "FAINT_PRIMARY_ONLY", "Result of fundamentals factors (primary sample)"),
+    "fundamental_value": (None, 1.8, "FAINT_BOTH_SAMPLES", "Result of fundamentals factors (primary sample; holdout)"),
 }
 HORIZON = {"momentum": 60, "relative_strength": 60, "low_volatility": 60, "composite": 20, "mean_reversion": 5,
            "breakout": 10, "volume_anomaly": 5, "volatility_expansion": 20, "event": 5, "fundamental_value": 60}
@@ -92,6 +93,7 @@ class Opportunity:
     invalidation: float
     price: float
     features: dict = field(default_factory=dict)
+    alpha: dict = field(default_factory=dict)     #: the itemised expected net alpha (decisions/net_alpha)
 
     def as_dict(self) -> dict:
         d = asdict(self)
@@ -173,15 +175,16 @@ def scan(cs: pd.DataFrame, as_of: date, *, events: set | None = None, ep: dict |
             z = float(score.iloc[i]) if np.isfinite(score.iloc[i]) else 0.0
             exp_ret = float(exp20.iloc[i]) * HORIZON_SCALE[h]
             order = min(0.05 * capital, 0.10 * float(r["adv20"]))
-            c = costs.round_trip_sized(order_value=order, adv_value=float(r["adv20"]),
-                                       daily_vol=float(r["vol_60"]) / np.sqrt(252.0))["total"]
+            na = NA.compute(excess=float(exp_ret), horizon=h, order_value=order, adv_inr=float(r["adv20"]),
+                            vol_annual=float(r["vol_60"]), weight=order / capital, costs=costs, source=MODEL)
+            c = na.costs
             pl = P.plan(ticker=str(r["ticker"]), price=float(r["price"]), vol_annual=float(r["vol_60"]),
                         adv_inr=float(r["adv20"]), capital_inr=capital,
                         style="position" if h >= 20 else "swing", atr_pct=float(r["atr_14_pct"]) if pd.notna(r["atr_14_pct"]) else None)
             out.append(Opportunity(
                 instrument=str(r["lineage"]), ticker=str(r["ticker"]), as_of=as_of, horizon=h, type=name,
                 expected_return=float(exp_ret), expected_risk=sigma_h, liquidity=float(r["adv20"]), cost=float(c),
-                expected_net=float(exp_ret - c), evidence=status, evidence_t=t, source=source,
+                expected_net=float(na.net), alpha=na.as_dict(), evidence=status, evidence_t=t, source=source,
                 expiry=_expiry(as_of, h), invalidation=float(pl["stop_price"]), price=float(r["price"]),
                 features={"z": z, "mom_12_1": float(r["mom_12_1"]), "dist_52w_high": float(r["dist_52w_high"]),
                           "vol_60": float(r["vol_60"]), "ret_20d": float(r["ret_20d"])}))

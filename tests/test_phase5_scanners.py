@@ -16,9 +16,9 @@ def cs(n=300, seed=0):
                          "atr_pctile_250": rng.uniform(0, 1, n), "atr_14_pct": 0.02})
 
 
-def test_every_opportunity_has_the_standard_fields_and_net_is_return_minus_cost():
+def test_every_opportunity_has_the_standard_fields_and_net_is_return_minus_cost_and_risk():
     opps = S.scan(cs(), date(2026, 10, 5))
-    assert opps and all(o.expected_net == pytest.approx(o.expected_return - o.cost) for o in opps)
+    assert opps and all(o.expected_net == pytest.approx(o.expected_return - o.cost - o.alpha["risk_penalty"]) for o in opps)
     o = opps[0]
     for f in ("instrument", "horizon", "type", "evidence", "expected_risk", "liquidity", "expiry", "invalidation"):
         assert getattr(o, f) is not None
@@ -76,3 +76,22 @@ def test_a_zero_volatility_row_is_excluded_not_a_crash():
     c.loc[0, "vol_60"] = 0.0
     opps = S.scan(c, date(2026, 10, 5))
     assert opps and all(o.ticker != "T0" for o in opps)
+
+
+def test_every_opportunity_carries_its_itemised_net_alpha_and_the_items_add_up():
+    from financial_brain.decisions import net_alpha as NA
+    for o in S.scan(cs(), date(2026, 10, 5)):
+        a = o.alpha
+        assert a["net"] == pytest.approx(a["expected_return"] - a["benchmark"] - a["fees"] - a["spread"]
+                                         - a["impact"] - a["risk_penalty"])
+        assert o.expected_net == pytest.approx(a["net"]) and o.cost == pytest.approx(a["fees"] + a["spread"] + a["impact"])
+        assert a["expected_return"] - a["benchmark"] == pytest.approx(o.expected_return)
+        assert min(a["fees"], a["spread"], a["impact"], a["risk_penalty"]) >= 0
+
+
+def test_net_alpha_renders_like_a_ledger():
+    from financial_brain.decisions import net_alpha as NA
+    na = NA.compute(excess=0.02, horizon=60, order_value=1e5, adv_inr=5e8, vol_annual=0.3, weight=0.1)
+    text = na.render()
+    assert "Expected net alpha" in text and "Spread" in text and "Risk penalty" in text
+    assert na.spread == pytest.approx(2 * NA.HALF_SPREAD_BP["mid"] / 1e4)

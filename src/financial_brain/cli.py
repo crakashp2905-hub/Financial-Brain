@@ -1508,6 +1508,14 @@ def cmd_loss_review(args) -> int:
     return 0
 
 
+def cmd_preregs(args) -> int:
+    """Audit every pre-registration against git: written before its result, never changed after it."""
+    from .research import preregistry as PR
+    rows = PR.audit()
+    print(PR.render(rows))
+    return 1 if any(r["status"] in PR.VIOLATIONS for r in rows) else 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -2146,6 +2154,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--mode", choices=["live", "replay"], help="only live or only replayed trades")
     g.add_argument("--propose", action="store_true", help="write losing patterns as PROPOSED hypotheses")
     g.set_defaults(fn=cmd_loss_review)
+
+    g = sub.add_parser("preregs", help="audit pre-registrations against git (before the result, unchanged after)")
+    g.set_defaults(fn=cmd_preregs)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

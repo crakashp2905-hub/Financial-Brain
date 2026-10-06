@@ -130,6 +130,7 @@ def swing_ranking(rcon, day: date, spec: Spec = SWING, capital: float = CAPITAL,
                   costs: CostModel | None = None) -> pd.DataFrame:
     """swing-v1: names by the decile model's 7-session expectation, ties (a whole decile shares one number)
     broken by the composite score itself - not by cost, which turned book-v1 into a large-cap bet."""
+    from ..decisions import net_alpha as NA
     from ..decisions import plan as P
     from ..opportunity import engine as E
     from ..opportunity import scanners as S
@@ -151,13 +152,14 @@ def swing_ranking(rcon, day: date, spec: Spec = SWING, capital: float = CAPITAL,
         if pl["shares"] <= 0:
             continue
         notional = pl["shares"] * float(r["price"])
-        c = costs.round_trip_sized(order_value=notional, adv_value=float(r["adv20"]),
-                                   daily_vol=float(r["vol_60"]) / np.sqrt(252.0))["total"]
+        na = NA.compute(excess=float(r["expected_return"]), horizon=spec.horizon, order_value=notional,
+                        adv_inr=float(r["adv20"]), vol_annual=float(r["vol_60"]), weight=notional / capital, costs=costs)
+        c = na.costs
         rows.append({"ticker": r["ticker"], "lineage": r["lineage"], "type": "swing", "horizon": spec.horizon,
                      "price": float(r["price"]), "invalidation": float(pl["stop_price"]), "shares": int(pl["shares"]),
                      "adv20": float(r["adv20"]), "vol_60": float(r["vol_60"]), "z": float(r["z"]),
                      "expected_return": float(r["expected_return"]), "cost": float(c),
-                     "expected_net": float(r["expected_return"] - c)})
+                     "expected_net": float(na.net), "alpha": na.as_dict()})
     return pd.DataFrame(rows)
 
 

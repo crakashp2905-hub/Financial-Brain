@@ -49,6 +49,16 @@ def _pct(v, signed=True, digits=2):
     return f'<span class="{cls}">{v * 100:{"+" if signed else ""}.{digits}f}%</span>'
 
 
+def _alpha(a: dict) -> str:
+    """The itemised expected net alpha, as the review asked: every term visible, the net last."""
+    if not a:
+        return "-"
+    items = [("expected return", a["expected_return"]), ("benchmark", -a["benchmark"]), ("fees and taxes", -a["fees"]),
+             ("spread", -a["spread"]), ("impact", -a["impact"]), ("risk penalty", -a["risk_penalty"])]
+    return (" ".join(f"{k} {v * 100:+.2f}% ·" for k, v in items)
+            + f" <b>net {a['net'] * 100:+.2f}%</b> over {a['horizon']} sessions")
+
+
 def _e(x) -> str:
     return html.escape("" if x is None else str(x))
 
@@ -306,7 +316,7 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
             f"<div>Evidence</div><div>{_e(r.evidence)} (t {r.evidence_t if r.evidence_t is not None else '-'}); {_e(r.source)}</div>"
             f"<div>Historical analogues</div><div>{ana}</div>"
             f"<div>Range over {r.horizon} sessions</div><div>{rng_txt}</div>"
-            f"<div>Expected net alpha</div><div>{r.expected_return * 100:+.2f}% gross - {r.cost * 100:.2f}% cost = {r.expected_net * 100:+.2f}%</div>"
+            f"<div>Expected net alpha</div><div>{_alpha(r.alpha)}</div>"
             f"<div>Position size</div><div>{pl['shares']} shares = Rs {pl['notional']:,.0f} ({pl['weight']:.1%} of Rs {capital / 1e5:,.0f} lakh), sized by the {_e(pl['sized_by'])}</div>"
             f"<div>Entry / stop</div><div>reference {r.price:,.2f}; stop {pl['stop_price']:,.2f} ({pl['stop_distance']:.0%} below)</div>"
             f"<div>Target</div><div>none: the exit study found targets add no return; time exit by {pl['time_exit_on']}</div>"
