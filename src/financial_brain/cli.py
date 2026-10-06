@@ -1516,6 +1516,114 @@ def cmd_preregs(args) -> int:
     return 1 if any(r["status"] in PR.VIOLATIONS for r in rows) else 0
 
 
+def cmd_my_portfolio(args) -> int:
+    """Your Kite holdings (read only): thesis health, book risk, better alternatives. Information, not advice."""
+    import datetime as _dt
+    import duckdb
+    from .portfolio import my_book as MB
+    con = MB.connect()
+    try:
+        if args.sync:
+            from .providers import kite_account as KA
+            n = MB.sync(con, _dt.date.today(), holdings_fn=KA.holdings, positions_fn=KA.positions, trades_fn=KA.trades)
+            print(f"synced from Kite (read only): {n}")
+        bk = MB.latest(con)
+        if bk.empty:
+            print("no holdings stored - run with --sync after logging in to Kite")
+            return 0
+        rcon = duckdb.connect(str(load().db_path), read_only=True)
+        try:
+            from .opportunity import scanners as S
+            asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
+            best = S.best_per_name(S.scan(S.cross_section(rcon, asof), asof)).sort_values("expected_net", ascending=False).head(10)
+            a = MB.analyse(rcon, bk, asof, candidates=best)
+        finally:
+            rcon.close()
+        rk = a["risk"]
+        print(f"book Rs {rk['value']:,.0f}, P&L Rs {rk['pnl']:,.0f}; volatility {rk['vol']:.0%} a year, beta {rk['beta']:.2f}; "
+              f"{rk['at_stops']:.1%} of the book at risk to the stops; largest sector {rk['top_sector']}")
+        for h in a["holdings"]:
+            print(f"  {h['symbol']:12s} {h['since_cost'] * 100:+6.1f}% since cost  health {h['score']:3.0f}  {h['recommendation']:13s} {h['reason']}")
+        if a["alternatives"] is not None:
+            print("\nwhere the next unit of risk goes furthest (alpha per unit of risk added to this book):")
+            for r in a["alternatives"].head(5).itertuples():
+                print(f"  {r.ticker:12s} net {r.alpha * 100:+.2f}%  correlation with your book {r.corr_to_book:+.2f}")
+    finally:
+        con.close()
+    return 0
+
+
+def cmd_journal(args) -> int:
+    """Your round trips from the Kite trade book, each with an autopsy; a report once there are enough."""
+    import duckdb
+    from .portfolio import journal as J
+    from .portfolio import my_book as MB
+    con = MB.connect()
+    try:
+        t = con.execute("SELECT trade_id, ts, day, tradingsymbol, product, side, quantity, price FROM my_trades").df()
+    finally:
+        con.close()
+    trips = J.round_trips(t) if len(t) else t
+    print(f"{len(t)} trade(s) in the journal, {len(trips)} closed round trip(s). Kite returns only the current day's "
+          "trade book, so the journal grows from each evening's refresh.")
+    if len(trips):
+        rcon = duckdb.connect(str(load().db_path), read_only=True)
+        try:
+            at = J.attribute(rcon, trips)
+        finally:
+            rcon.close()
+        for r in at.itertuples():
+            if getattr(r, "attributed", False):
+                print(f"  {r.symbol:12s} {r.side:5s} {r.entry_day}->{r.exit_day} net {r.net * 100:+.2f}%  market {r.market * 100:+.2f}  "
+                      f"sector {r.sector * 100:+.2f}  selection {r.selection * 100:+.2f}  entry {r.entry * 100:+.2f}  exit {r.exit * 100:+.2f}  costs {r.costs * 100:+.2f}")
+        rep = J.report(at[at["attributed"]] if "attributed" in at else at)
+        print(f"report: {rep}")
+    return 0
+
+
+def cmd_alerts(args) -> int:
+    """Raise desktop alerts for anything worth acting on (sent once each; nothing leaves this machine)."""
+    import datetime as _dt
+    import duckdb
+    from . import alerts as AL
+    from .opportunity import scanners as S
+    from .paper import intraday_runner as IR
+    from .portfolio import my_book as MB
+    from .risk import killswitch as KS
+    day = _dt.date.today().isoformat()
+    out = []
+    rcon = duckdb.connect(str(load().db_path), read_only=True)
+    try:
+        asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
+        best = S.best_per_name(S.scan(S.cross_section(rcon, asof), asof))
+        out += AL.opportunities(best, str(asof))
+        if MB.PATH.exists():
+            con = MB.connect()
+            try:
+                bk = MB.latest(con)
+            finally:
+                con.close()
+            if not bk.empty:
+                out += AL.holdings(MB.analyse(rcon, bk, asof)["holdings"], day)
+    finally:
+        rcon.close()
+    try:
+        led = IR.ledger()
+        row = led.execute("SELECT status FROM runs WHERE day = ? AND mode = 'live'", [day]).fetchone()
+        led.close()
+    except Exception:                                   # noqa: BLE001
+        row = None
+    is_weekday = _dt.date.today().weekday() < 5
+    out += AL.system(day=day, killswitch_level=KS.load().get("level", "OK"),
+                     run_status=(row[0] if row else ("missing" if is_weekday else None)))
+    sent = AL.send(out) if not args.dry_run else []
+    for a in out:
+        print(f"{'SENT ' if a in sent else 'held '} {a['title']} - {a['body']}")
+    if not out:
+        print("nothing to alert")
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -2157,6 +2265,17 @@ def main(argv: list[str] | None = None) -> int:
 
     g = sub.add_parser("preregs", help="audit pre-registrations against git (before the result, unchanged after)")
     g.set_defaults(fn=cmd_preregs)
+
+    g = sub.add_parser("my-portfolio", help="your Kite holdings (read only): thesis health, risk, alternatives")
+    g.add_argument("--sync", action="store_true", help="read holdings, positions and today's trades from Kite first")
+    g.set_defaults(fn=cmd_my_portfolio)
+
+    g = sub.add_parser("journal", help="your round trips from the Kite trade book, with an autopsy each")
+    g.set_defaults(fn=cmd_journal)
+
+    g = sub.add_parser("alerts", help="desktop alerts: opportunities, holdings exiting by rule, a failed run")
+    g.add_argument("--dry-run", action="store_true", help="show what would be sent, send nothing")
+    g.set_defaults(fn=cmd_alerts)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

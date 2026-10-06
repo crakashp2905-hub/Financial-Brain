@@ -178,6 +178,47 @@ def book_panel(book, spec=None) -> str:
     return "\n".join(out)
 
 
+def my_portfolio_panel(rcon, asof, candidates) -> str:
+    """The owner's Kite holdings (read only, stored locally): since cost, thesis health, book risk, alternatives."""
+    from ..portfolio import my_book as MB
+    if not MB.PATH.exists():
+        return "<h2>My portfolio</h2><div class='sub'>Not synced yet: <code>fb my-portfolio --sync</code> after the Kite login.</div>"
+    try:
+        con = MB.connect(read_only=True)
+        try:
+            bk = MB.latest(con)
+            day = con.execute("SELECT MAX(day) FROM holdings_snap").fetchone()[0]
+        finally:
+            con.close()
+        if bk.empty:
+            return "<h2>My portfolio</h2><div class='sub'>No holdings in the last sync.</div>"
+        a = MB.analyse(rcon, bk, asof, candidates=candidates)
+    except Exception as e:                              # noqa: BLE001 - the page still renders without it
+        return f"<h2>My portfolio</h2><div class='sub'>unavailable: {_e(str(e)[:120])}</div>"
+    rk = a["risk"]
+    out = [f"<h2>My portfolio (Kite, read only, synced {day})</h2><div class='grid'>"
+           f"<div class='tile'><div class='k'>Value</div><div class='v'>Rs {rk['value']:,.0f}</div><div class='sub'>P&L Rs {rk['pnl']:,.0f} since cost</div></div>"
+           f"<div class='tile'><div class='k'>Risk</div><div class='v'>{rk['vol']:.0%} a year</div><div class='sub'>beta {rk['beta']:.2f} to the Nifty 500</div></div>"
+           f"<div class='tile'><div class='k'>At risk to the stops</div><div class='v'>{rk['at_stops']:.1%}</div><div class='sub'>of the book, if every plan stop is hit</div></div>"
+           f"<div class='tile'><div class='k'>Largest sector</div><div class='v'>{rk['top_sector'][1]:.0%}</div><div class='sub'>{_e(rk['top_sector'][0])}</div></div></div>"]
+    rows = "".join(
+        f"<tr><td>{_e(h['symbol'])}</td><td class='r'>{h['qty']:,.0f}</td><td class='r'>{h['avg']:,.2f}</td><td class='r'>{h['last']:,.2f}</td>"
+        f"<td class='r'>{_pct(h['since_cost'])}</td><td class='r'>{h['stop']:,.2f}</td>"
+        f"<td><div style='background:var(--line);width:90px;height:8px;border-radius:4px;display:inline-block;vertical-align:middle'>"
+        f"<div style='background:{'var(--pos)' if h['score'] >= 60 else 'var(--warn)' if h['recommendation'] != 'EXIT BY RULE' else 'var(--neg)'};width:{h['score'] * 0.9:.0f}px;height:8px;border-radius:4px'></div></div> {h['score']:.0f}</td>"
+        f"<td>{_chip(h['recommendation'])}</td><td style='white-space:normal'>{_e(h['reason'])}</td></tr>" for h in a["holdings"])
+    out.append("<div class='wrap' style='margin-top:10px'><table><tr><th>Holding</th><th class='r'>Qty</th><th class='r'>Avg cost</th><th class='r'>Last</th>"
+               "<th class='r'>Since cost</th><th class='r'>Plan stop</th><th>Thesis health</th><th>Rule state</th><th>What is failing</th></tr>" + rows + "</table></div>")
+    if a["alternatives"] is not None and len(a["alternatives"]):
+        out.append("<div class='sub' style='margin-top:8px'>Where the next unit of risk goes furthest, given what you hold (today's top names, by alpha per unit of risk added):</div>"
+                   "<div class='wrap'><table><tr><th>Stock</th><th class='r'>Net alpha</th><th class='r'>Correlation with your book</th><th class='r'>Risk added</th></tr>"
+                   + "".join(f"<tr><td><a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a></td><td class='r'>{_pct(r.alpha)}</td><td class='r'>{r.corr_to_book:+.2f}</td>"
+                             f"<td class='r'>{r.added_risk * 100:.2f}%</td></tr>" for r in a["alternatives"].head(5).itertuples()) + "</table></div>")
+    out.append("<div class='sub'>EXIT BY RULE appears only for the plan's tested exits (below the stop from your cost, or the composite in "
+               "the bottom 20%); the health score's bands are descriptive. About your own positions, not advice.</div>")
+    return "\n".join(out)
+
+
 def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, breadth_state, clears, top: int = 10) -> str:
     """What should I trade today: the top names by expected net alpha, each answered the way a trader asks."""
     from ..decisions import plan as P
@@ -273,6 +314,7 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     clears = int((best["expected_net"] >= 0.005).sum())
     parts.append(trader_section(rcon, ledger, cs, best, asof, capital=capital, analogue_pool=analogue_pool,
                                 breadth_state=b.get("state"), clears=clears))
+    parts.append(my_portfolio_panel(rcon, asof, best.head(10)))
     # ---------------------------------------------------------------- swing candidates (top 50)
     from ..decisions import plan as _P
     from . import book as BK
