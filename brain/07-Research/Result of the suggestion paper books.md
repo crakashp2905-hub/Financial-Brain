@@ -55,3 +55,24 @@ almost exactly its round trip. The positive absolute return in 2023-24 was the m
 more of. This is the same finding as the swing-setup study and the intraday ORB backtest: where gross is ~0, net is
 minus the cost, every time. The books keep running live because the live record is the only out-of-sample check,
 but nothing here suggests a swing or position book built on this ranking beats simply holding the universe.
+
+## Re-run, 2026-10-07: corrected costs and ranking, and the alternatives recorded
+
+Both replays were re-run with the code as it now stands - the bid-ask spread added to the itemised costs, the horizon
+scaling corrected (square root of time) - and with every top-list name that was *not* taken recorded with its reason
+(already held / no free slot), so selection can be judged against the alternatives.
+
+| book | trades sold | mean net | vs universe (t) | net Rs vs universe Rs |
+|---|---|---|---|---|
+| book-v1 (top 5) | 147 | +1.70% | -2.09% (-1.4) | 1,60,793 vs 4,03,720 |
+| swing-v1 (top 50) | 5,610 | -0.00% | **-0.63% (-5.6)** | -5,541 vs 6,82,772 |
+
+Selection against the names passed over on the same days (`evaluation/regret.py`):
+
+* book-v1: the names taken beat the ones skipped by +0.18% (t 0.2), on 52% of 124 days - no selection skill either way.
+* **swing-v1: the names taken did *worse* than the ones skipped by 0.30% (t -2.2), on 43% of 690 days.** The book
+  fills free slots from the top of the list on the day a slot frees up; the names it could not take because it already
+  held them, or had no slot, did better. The ranking is not separating the swing candidates.
+
+The conclusions stand and are, if anything, firmer: with the full cost model the swing book loses its whole gross
+return to costs, and its choices are no better than the alternatives.
