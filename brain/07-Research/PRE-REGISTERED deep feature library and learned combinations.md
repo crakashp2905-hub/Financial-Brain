@@ -74,3 +74,25 @@ t >= 2 and it beats the champion by more than 0.10% a month. Hyperparameters are
   most levels), and a fill-and-hold retest earns under 0.2% over the universe in 5 sessions.
 * **L3** The learned model beats v1 in 2022-2026 but does **not** beat the champion by 0.10% a month with t >= 2:
   combinations of mostly-null features recover momentum and add turnover.
+
+## Amendment, made before any result was computed
+
+The first run was stopped while it was still building the panel - no feature had been scored - because the owner
+asked for Fibonacci and the other named indicator families. The library now also has (`features/library.extra`):
+Fibonacci retracement position, distance to the nearest of 23.6/38.2/50/61.8/78.6%, the golden pocket (61.8-65%) and
+the 1.618 extension, each on the 60- and 250-session swing, and Fibonacci-period moving averages (21/55/89/144);
+classic, Camarilla and weekly pivots; Ichimoku (tenkan, kijun, the cloud as published 26 sessions earlier, chikou);
+Parabolic SAR; Supertrend (10, 3); Heikin-Ashi colour and streak; Elder ray, TRIX, KST, Ultimate oscillator, Chande
+momentum, Vortex, Mass index, ease of movement, force index, Connors RSI, Coppock, DPO, Schaff trend cycle;
+linear-regression slope and R-squared, z-score, Kaufman efficiency, choppiness, variance ratio; volume-profile point
+of control, VWAP anchored at the 52-week low and high, round-number and Gann square-of-nine distances; a Wyckoff-style
+compression; and harmonic Gartley patterns on confirmed swings. About 160 features in all.
+
+Elliott waves are **not** included: there is no single mechanical definition, so any coded version would be this
+project's invention rather than the theory - testing it would test the coder.
+
+Everything else stands, including the false-discovery control across the *whole* library: more features raise the
+bar each one must clear. Added prediction:
+
+* **L4** No Fibonacci, Gann, harmonic, pivot or round-number feature counts. These levels are drawn from ratios with
+  no economic reason to bind prices, so any edge should be indistinguishable from the distance to an arbitrary level.

@@ -47,3 +47,24 @@ def test_a_swing_is_used_only_once_confirmed():
     s = LB._structure(c, h, l, c, np.ones(9))
     assert s["bos_up"][7] == 1.0                       # close 6 breaks the swing high 5 (pivot at 2, confirmed at 4)
     assert s["bos_up"][2] == 0.0
+
+
+def test_fibonacci_golden_pocket_on_a_built_swing():
+    # 50 sessions rising from 100 to 200, then 10 falling to 137.5 - the whole swing inside the 60-session window:
+    # a 62.5% retracement of the up-swing
+    c = np.concatenate([np.linspace(100, 200, 50), np.linspace(198, 137.5, 10)])
+    b = pd.DataFrame({"d": pd.bdate_range("2024-01-01", periods=len(c)).date, "o": c, "h": c * 1.001, "l": c * 0.999,
+                      "c": c, "v": 1e5})
+    f = LB.compute(b)
+    last = f.iloc[-1]
+    assert last["fib_retrace_60"] == pytest.approx(0.625, abs=0.01)
+    assert last["fib_golden_pocket_60"] == 1.0                  # inside 0.618-0.65 after an up-swing
+    assert last["fib_near_60"] < 1.0
+
+
+def test_the_library_is_deep():
+    f = LB.compute(bars(400))
+    names = LB.feature_names(f)
+    assert len(names) >= 155                                    # plus rel_20 / rel_60 when a market series is given
+    for fam in ("fvg_", "fib_", "ichi_", "psar_", "supertrend", "ha_", "pivot", "gartley", "gann", "poc_", "avwap", "c_"):
+        assert any(n.startswith(fam) for n in names), fam
