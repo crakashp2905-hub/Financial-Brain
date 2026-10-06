@@ -178,6 +178,70 @@ def book_panel(book, spec=None) -> str:
     return "\n".join(out)
 
 
+def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, breadth_state, clears, top: int = 10) -> str:
+    """What should I trade today: the top names by expected net alpha, each answered the way a trader asks."""
+    from ..decisions import plan as P
+    from ..evaluation import setup_analogues as SA
+    from ..forecasting.null import Climatology
+    from ..ingest import kite_fno as KF
+    from ..opportunity import scanners as S
+    from . import trader_view as TV
+    out = [f"<h2>What should I trade today? Top {top} by expected net alpha</h2>"]
+    if clears == 0:
+        out.append("<div class='note'><b>Nothing clears costs by a margin today.</b> These are the best available, shown so you can see "
+                   "why - not because they are good trades. Expected returns come from one measured model (what names in the same "
+                   "composite decile earned, 2016-26, in-sample).</div>")
+    comp = TV.components(cs)
+    dec = S.decile_expectation(cs)
+    fno = {}
+    try:
+        day = ledger.execute("SELECT MAX(day) FROM fno_snapshots").fetchone()[0]
+        if day:
+            fno = {x["symbol"]: x for x in KF.positioning(ledger, day)}
+    except Exception:                                   # noqa: BLE001 - no snapshots yet
+        fno = {}
+    shown = best.head(top)
+    rows, cards, sizing = [], [], []
+    for k, r in enumerate(shown.itertuples(), 1):
+        i = cs.index[cs["ticker"] == r.ticker][0]
+        row = cs.loc[i]
+        plan = P.plan(ticker=r.ticker, price=float(r.price), vol_annual=float(row["vol_60"]), adv_inr=float(row["adv20"]),
+                      capital_inr=capital, style="position" if r.horizon >= 20 else "swing", as_of=asof)
+        plan["time_exit_on"] = P._add_sessions(asof, int(r.horizon))    # the opportunity's horizon, not the style default
+        ana = None
+        if analogue_pool is not None:
+            try:
+                ana = SA.query(analogue_pool, SA.target_vector(_with_surge(cs), r.ticker), asof)
+            except Exception:                           # noqa: BLE001
+                ana = None
+        px = [x[0] for x in rcon.execute("SELECT close_adj FROM adjusted_prices WHERE ticker = ? AND close_adj > 0 AND business_date <= ? ORDER BY business_date",
+                                         [r.ticker, asof]).fetchall()]
+        rets = None
+        if len(px) > 300:
+            rets = Climatology().forecast(instrument=r.ticker, as_of=asof, prices=px[-750:], horizon=int(r.horizon), n_paths=1500).terminal_returns()
+        o = TV.outcome(rets, plan["stop_distance"]) if rets is not None else {}
+        sid = f"r{k}"
+        sizing.append({"id": sid, "price": float(r.price), "stop": float(plan["stop_price"]), "adv": float(row["adv20"])})
+        rows.append(f"<tr><td class='r'>{k}</td><td><a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a></td><td>LONG</td><td class='r'>{_pct(r.expected_net)}</td>"
+                    f"<td>{r.horizon} sessions</td><td class='r'>{o.get('p_up', float('nan')):.0%}</td><td class='r'>{o.get('reward_risk', float('nan')):.2f}</td>"
+                    f"<td class='r'>{plan['stop_distance']:.1%}</td><td>{_e(r.evidence)}</td></tr>")
+        cards.append(TV.card(r, row, comp.loc[i], rank=k, universe=len(cs), decile_mean=float(dec.loc[i]), analogue=ana,
+                             breadth_state=breadth_state, fno=fno.get(r.ticker), returns=rets, plan=plan, sid=sid))
+    out.append("<div class='wrap'><table><tr><th class='r'>#</th><th>Stock</th><th>Direction</th><th class='r'>Net alpha</th><th>Horizon</th>"
+               "<th class='r'>P(up)</th><th class='r'>Reward/risk</th><th class='r'>Stop</th><th>Evidence</th></tr>" + "".join(rows) + "</table></div>")
+    out.append(TV.calculator(sizing))
+    out += cards
+    wn = TV.watched_not_traded(best, set(shown["ticker"]))
+    if wn:
+        out.append("<h3 style='margin-top:14px'>Watched, not on the list</h3><div class='wrap'><table><tr><th>Stock</th><th>Type</th>"
+                   "<th class='r'>Expected before costs</th><th class='r'>Net</th><th>Why not</th></tr>"
+                   + "".join(f"<tr><td>{_e(w['ticker'])}</td><td>{_e(w['type'])}</td><td class='r'>{_pct(w['expected_return'])}</td>"
+                             f"<td class='r'>{_pct(w['net'])}</td><td>{_e(w['why'])}</td></tr>" for w in wn) + "</table></div>")
+    out.append("<div class='sub'>Long only: short positions are intraday-only in the cash market. P(up), reward/risk and the range come from "
+               "each name's own price history, not conditioned on the signal. Information, not advice.</div>")
+    return "\n".join(out)
+
+
 def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None) -> str:
     from ..decisions import forecast_ev as FE
     from ..decisions import plan as P
@@ -207,6 +271,8 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     opps = S.scan(cs, asof, capital=capital)
     best = S.best_per_name(opps).sort_values("expected_net", ascending=False)
     clears = int((best["expected_net"] >= 0.005).sum())
+    parts.append(trader_section(rcon, ledger, cs, best, asof, capital=capital, analogue_pool=analogue_pool,
+                                breadth_state=b.get("state"), clears=clears))
     # ---------------------------------------------------------------- swing candidates (top 50)
     from ..decisions import plan as _P
     from . import book as BK
@@ -228,17 +294,6 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
                      "<th class='r'>Rs</th><th class='r'>Exp. 7d</th><th class='r'>Cost</th><th class='r'>Net</th><th class='r'>Vol</th></tr>" + rows + "</table></div></details>")
     if book is not None:
         parts.append(book_panel(book, BK.SWING))
-    parts.append("<h2>Position names (top 5, months)</h2>")
-    if clears == 0:
-        parts.append("<div class='note'><b>Nothing clears costs today.</b> The best five by expected net alpha are shown as WATCH: "
-                     "expected returns come from one model: what names in the same composite decile earned in the 2016-26 replay (in-sample), scaled to the horizon.</div>")
-    rows = []
-    for r in best.head(5).itertuples():
-        rows.append(f"<tr><td><a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a></td><td>{_e(r.type)} ({r.horizon}d)</td><td>{_e(r.evidence)}</td>"
-                    f"<td class='r'>{_pct(r.expected_return)}</td><td class='r'>{r.cost * 100:.2f}%</td><td class='r'>{_pct(r.expected_net)}</td>"
-                    f"<td class='r'>{r.price:,.1f}</td><td class='r'>{r.invalidation:,.1f}</td><td>{_e(r.flagged_by)}</td></tr>")
-    parts.append("<div class='wrap'><table><tr><th>Stock</th><th>Opportunity</th><th>Evidence</th><th class='r'>Exp. alpha</th><th class='r'>Cost</th>"
-                 "<th class='r'>Net</th><th class='r'>Price</th><th class='r'>Invalidation</th><th>Flagged by</th></tr>" + "".join(rows) + "</table></div>")
     if book is not None:
         parts.append(book_panel(book, BK.POSITION))
     # ---------------------------------------------------------------- intraday paper trades
@@ -307,47 +362,6 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
         parts.append(f"<tr><td>{_e(s['strategy'])} vs {C.CHAMPION}</td><td>locked OOS</td><td class='r'>{s.get('cohorts', 0)} cohorts</td><td class='r'>-</td>"
                      f"<td>{_chip(s['status'])}</td><td>promotion needs {C.MIN_COHORTS} cohorts at t >= {C.T_PROMOTE}</td></tr>")
     parts.append("</table></div>")
-    # ---------------------------------------------------------------- drill-down
-    parts.append("<h2>Why these names</h2>")
-    for r in best.head(5).itertuples():
-        row = cs[cs["ticker"] == r.ticker].iloc[0]
-        px = [x[0] for x in rcon.execute("SELECT close_adj FROM adjusted_prices WHERE ticker = ? AND close_adj > 0 AND business_date <= ? ORDER BY business_date",
-                                         [r.ticker, asof]).fetchall()]
-        rng_txt = "-"
-        if len(px) > 300:
-            fc = Climatology().forecast(instrument=r.ticker, as_of=asof, prices=px[-750:], horizon=int(r.horizon), n_paths=1500)
-            tr = np.sort(fc.terminal_returns())
-            rng_txt = f"{tr[len(tr) // 10] * 100:+.1f}% / {tr[len(tr) // 2] * 100:+.1f}% / {tr[9 * len(tr) // 10] * 100:+.1f}% (10th / median / 90th, bootstrap of its own history)"
-        pl = P.plan(ticker=r.ticker, price=float(r.price), vol_annual=float(row["vol_60"]), adv_inr=float(row["adv20"]),
-                    capital_inr=capital, style="position" if r.horizon >= 20 else "swing", as_of=asof)
-        ana = "-"
-        if analogue_pool is not None:
-            try:
-                q = SA.query(analogue_pool, SA.target_vector(_with_surge(cs), r.ticker), asof)
-                h5 = q["h5"]
-                ana = (f"{q['k']} analogues: 5-day excess {h5['mean'] * 100:+.2f}% (pool {h5['pool_mean'] * 100:+.2f}%), "
-                       f"win {h5['win_rate']:.0%} (pool {h5['pool_win_rate']:.0%}), edge t {h5['edge_t']:+.1f}; "
-                       f"MFE/MAE 5d {q['mfe5_median'] * 100:+.1f}% / {q['mae5_median'] * 100:+.1f}%")
-            except Exception as e:                    # noqa: BLE001
-                ana = f"unavailable ({_e(str(e)[:60])})"
-        spread = ledger.execute("SELECT AVG(spread_bp) FROM trades WHERE symbol = ? AND spread_bp IS NOT NULL", [r.ticker]).fetchone()[0]
-        exe = (f"limit order at or inside the ask; measured spread {spread:.1f} bp" if spread else
-               "limit order at or inside the ask; no live spread measured yet (bucket assumption applies)")
-        exe += ("; enter in the morning rather than wait for a dip - the intraday half-life study found the "
-                "day session moves the way the composite points (IC +0.046 09:30-15:15, t 6.9)")
-        parts.append(
-            f"<details id='{_e(r.ticker)}'><summary>{_e(r.ticker)} · {_e(r.type)} ({r.horizon}d) · net {r.expected_net * 100:+.2f}%</summary><div class='kv'>"
-            f"<div>Why now</div><div>flagged by {_e(r.flagged_by)}; 12-1m {row['mom_12_1'] * 100:+.0f}%, vs 52w high {row['dist_52w_high'] * 100:+.0f}%, vol {row['vol_60'] * 100:.0f}%, 20d {row['ret_20d'] * 100:+.1f}%</div>"
-            f"<div>Evidence</div><div>{_e(r.evidence)} (t {r.evidence_t if r.evidence_t is not None else '-'}); {_e(r.source)}</div>"
-            f"<div>Historical analogues</div><div>{ana}</div>"
-            f"<div>Range over {r.horizon} sessions</div><div>{rng_txt}</div>"
-            f"<div>Expected net alpha</div><div>{_alpha(r.alpha)}</div>"
-            f"<div>Position size</div><div>{pl['shares']} shares = Rs {pl['notional']:,.0f} ({pl['weight']:.1%} of Rs {capital / 1e5:,.0f} lakh), sized by the {_e(pl['sized_by'])}</div>"
-            f"<div>Entry / stop</div><div>reference {r.price:,.2f}; stop {pl['stop_price']:,.2f} ({pl['stop_distance']:.0%} below)</div>"
-            f"<div>Target</div><div>none: the exit study found targets add no return; time exit by {pl['time_exit_on']}</div>"
-            f"<div>Invalidation</div><div>the stop, or the composite falling into the bottom 20% at a monthly review</div>"
-            f"<div>Execution</div><div>{exe}</div>"
-            f"<div>Status</div><div>{_e(pl['status'])} - information, not advice</div></div></details>")
     parts.append("<p class='sub'>Information computed from public statistics. It does not know your finances, needs or tax, and nothing here is sent to a broker.</p></main>")
     return "\n".join(parts)
 
