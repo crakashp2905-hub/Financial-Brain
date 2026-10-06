@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS positions (
     entry_day DATE, entry_px DOUBLE, exit_day DATE, exit_px DOUBLE, exit_reason VARCHAR,
     last_day DATE, last_px DOUBLE, held INTEGER, bench DOUBLE,
     PRIMARY KEY (version, mode, signal_day, ticker));
+CREATE TABLE IF NOT EXISTS skips (
+    version VARCHAR, mode VARCHAR, signal_day DATE, ticker VARCHAR, rank INTEGER, expected_net DOUBLE, reason VARCHAR,
+    PRIMARY KEY (version, mode, signal_day, ticker));
 """
 
 
@@ -228,7 +231,14 @@ def step(rcon, book, day: date, *, mode: str, spec: Spec = POSITION, capital: fl
     if ranked.empty:
         return 0
     added = 0
-    for _, r in choose(ranked, held, len(held), top_n=spec.top_n, max_open=spec.max_open).iterrows():
+    chosen = choose(ranked, held, len(held), top_n=spec.top_n, max_open=spec.max_open)
+    for k, r in enumerate(ranked.head(spec.top_n).itertuples(), 1):     # the rejections, so nothing silently vanishes
+        if r.ticker in set(chosen["ticker"]):
+            continue
+        why = "already held" if r.ticker in held else "no free slot"
+        book.execute("INSERT OR REPLACE INTO skips VALUES (?,?,?,?,?,?,?)",
+                     [spec.version, mode, day, r.ticker, k, float(r.expected_net), why])
+    for _, r in chosen.iterrows():
         if spec.style == "swing":
             shares, cost = int(r["shares"]), float(r["cost"])
         else:
@@ -260,6 +270,7 @@ def replay(rcon, book, start: date, end: date | None = None, *, spec: Spec = POS
         raise BookError("a replay is never labelled live")
     end = end or rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
     book.execute("DELETE FROM positions WHERE mode = ? AND version = ?", [mode, spec.version])
+    book.execute("DELETE FROM skips WHERE mode = ? AND version = ?", [mode, spec.version])
     added = 0
     for d in sessions(rcon, start, end):
         _resolve(rcon, book, mode, d, spec)            # only what is known by d's close decides the free slots
@@ -342,3 +353,24 @@ def render(book, spec: Spec = POSITION) -> str:
                          f"{s['entry_days']} entry days) | stopped {s['stopped']:.0%} | held {s['mean_held']:.0f} sessions")
             lines.append(f"  net P&L Rs {s['net_rs']:,.0f} against Rs {s['bench_rs']:,.0f} for the universe on the same money")
     return "\n".join(lines)
+
+
+def attribution(rcon, book, mode: str, spec: Spec = POSITION, *, limit: int = 400) -> dict:
+    """Where the sold positions' returns came from: market, sector, stock selection, costs (fills are at closes, so
+    entry and exit timing are zero by construction). Means per trade, from ``portfolio/journal.attribute``."""
+    from ..portfolio import journal as J
+    df = frame(book, mode, spec)
+    sold = df[df["status"] == "SOLD"].tail(limit) if len(df) else df
+    if sold.empty:
+        return {}
+    trips = pd.DataFrame({"symbol": sold["ticker"], "product": "CNC", "side": "long", "qty": sold["shares"],
+                          "entry_day": sold["entry_day"], "exit_day": sold["exit_day"], "entry_px": sold["entry_px"],
+                          "exit_px": sold["exit_px"], "gross": sold["shares"] * (sold["exit_px"] - sold["entry_px"]),
+                          "ret": sold["gross"]})
+    a = J.attribute(rcon, trips)
+    a = a[a["attributed"]] if "attributed" in a else a
+    if a.empty:
+        return {}
+    out = {k: float(a[k].mean()) for k in ("market", "sector", "selection", "costs", "net")}
+    out["trades"] = int(len(a))
+    return out

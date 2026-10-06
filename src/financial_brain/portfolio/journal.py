@@ -118,8 +118,16 @@ def attribute(rcon, trips: pd.DataFrame) -> pd.DataFrame:
         beta = float(ex["beta_market"].iloc[0]) if len(ex) else 1.0
         sec = ex["home_sector"].iloc[0] if len(ex) else None
         sbeta = float(ex["beta_sector"].iloc[0]) if len(ex) and pd.notna(ex["beta_sector"].iloc[0]) else 0.0
-        mret = float(lv.loc[d1, X.MARKET] / lv.loc[d0, X.MARKET] - 1) if X.MARKET in lv else 0.0
-        sret = float(lv.loc[d1, sec] / lv.loc[d0, sec] - 1) if sec in lv else None
+        lv = lv.sort_index()
+
+        def level(name, d):                         # the last level on or before d: an index can miss a session
+            col = lv[name][lv.index <= d].dropna() if name in lv else []
+            return float(col.iloc[-1]) if len(col) else None
+
+        m0, m1 = level(X.MARKET, d0), level(X.MARKET, d1)
+        mret = m1 / m0 - 1 if m0 and m1 else 0.0
+        s0, s1 = (level(sec, d0), level(sec, d1)) if sec else (None, None)
+        sret = s1 / s0 - 1 if s0 and s1 else None
         seg = Segment.INTRADAY if t["product"] == "MIS" or d0 == d1 else Segment.DELIVERY
         cost = cm.round_trip(turnover=t["entry_px"] * t["qty"], segment=seg, include_impact=False)["total"] / (t["entry_px"] * t["qty"])
         a = autopsy(t, stock_ret=float(c[d1] / c[d0] - 1), market_ret=mret, sector_ret=sret, beta=beta, sector_beta=sbeta,

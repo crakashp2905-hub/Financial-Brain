@@ -128,7 +128,7 @@ MODE_LABEL = {"live": "Live (the evidence)",
               "replay-week": "Last week, replayed (one week decides nothing: a demonstration of the mechanics)"}
 
 
-def book_panel(book, spec=None) -> str:
+def book_panel(book, spec=None, rcon=None) -> str:
     """Every suggestion the book bought, and how it was sold - losers included, best next to worst."""
     from ..decisions import plan as P
     from . import book as BK
@@ -170,6 +170,15 @@ def book_panel(book, spec=None) -> str:
                        "<div class='wrap'><table><tr><th>Stock</th><th>Status</th><th>Signal</th><th class='r'>Bought</th><th class='r'>Last</th>"
                        "<th class='r'>Net so far</th><th class='r'>Stop</th><th>Sell by</th><th class='r'>Shares</th></tr>" + "".join(rows) + "</table></div>")
         sold = df[df["status"] == "SOLD"]
+        if len(sold) and rcon is not None:
+            try:
+                at = BK.attribution(rcon, book, mode, spec, limit=150)
+            except Exception:                           # noqa: BLE001 - the panel renders without it
+                at = {}
+            if at:
+                out.append(f"<div class='sub' style='margin-top:8px'>Where the return came from, per trade (last {at['trades']} sold): "
+                           f"market {at['market'] * 100:+.2f}% · sector {at['sector'] * 100:+.2f}% · <b>stock selection {at['selection'] * 100:+.2f}%</b> · "
+                           f"costs {at['costs'] * 100:+.2f}% = net {at['net'] * 100:+.2f}%</div>")
         if len(sold):
             out.append(_spark(sold))
             out.append("<div class='grid' style='grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr))'>"
@@ -349,9 +358,9 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
                      "<tr><th class='r'>#</th><th>Stock</th><th class='r'>Price</th><th class='r'>Stop</th><th>Sell by</th><th class='r'>Shares</th>"
                      "<th class='r'>Rs</th><th class='r'>Exp. 7d</th><th class='r'>Cost</th><th class='r'>Net</th><th class='r'>Vol</th></tr>" + rows + "</table></div></details>")
     if book is not None:
-        parts.append(book_panel(book, BK.SWING))
+        parts.append(book_panel(book, BK.SWING, rcon))
     if book is not None:
-        parts.append(book_panel(book, BK.POSITION))
+        parts.append(book_panel(book, BK.POSITION, rcon))
     # ---------------------------------------------------------------- intraday paper trades
     parts.append("<h2>Intraday paper trades (live-v1: ORB and GAP, flat by 15:15)</h2>")
     week = ledger.execute("""SELECT day, mode, strategy, COUNT(*), SUM(CASE WHEN net_pnl > 0 THEN 1 ELSE 0 END), SUM(gross_pnl), SUM(costs), SUM(net_pnl)

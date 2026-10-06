@@ -239,3 +239,13 @@ def test_positioning_against_the_previous_snapshot_and_not_across_a_roll():
     p = {r["symbol"]: r for r in FNO.positioning(c, "2026-10-06", min_history=2)}
     assert p["X"]["buildup"] == FNO.LONG_BUILDUP and p["X"]["iv_percentile"] == 1.0
     assert p["Y"]["buildup"] == "ROLLED" and p["Y"]["oi_change"] is None
+
+
+def test_spot_and_fno_join_without_inventing_positioning(tmp_path):
+    import duckdb
+    import pandas as pd
+    from financial_brain.ingest import kite_fno as KF
+    con = duckdb.connect(str(tmp_path / "f.duckdb"))
+    cs = pd.DataFrame({"ticker": ["A", "B"], "mom_12_1": [0.1, 0.2]})
+    out = KF.combined(con, cs, "2026-10-06")
+    assert list(out["ticker"]) == ["A", "B"] and out["basis_annualised"].isna().all()

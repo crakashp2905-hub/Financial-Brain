@@ -224,3 +224,16 @@ def positioning(con, day: str, *, min_history: int = 20) -> list[dict]:
                     "basis_annualised": basis, "atm_iv": iv, "iv_percentile": ivp,
                     "iv_history_days": len(hist)})
     return out
+
+
+def combined(ledger, cs, day: str):
+    """Spot and F&O in one frame: the cross-section's spot features joined with each F&O name's build-up, futures
+    basis and implied-vol percentile for ``day``. Names without F&O keep NaN, so a model sees 'no derivatives'
+    rather than a fabricated neutral. Pre-registered test: 'PRE-REGISTERED F&O positioning with spot', run once
+    60 sessions of snapshots exist."""
+    import pandas as pd
+    pos = pd.DataFrame(positioning(ledger, day))
+    if pos.empty:
+        return cs.assign(buildup=None, basis_annualised=float("nan"), iv_percentile=float("nan"), oi_change=float("nan"))
+    pos = pos.rename(columns={"symbol": "ticker"})[["ticker", "buildup", "basis_annualised", "iv_percentile", "oi_change"]]
+    return cs.merge(pos, on="ticker", how="left")

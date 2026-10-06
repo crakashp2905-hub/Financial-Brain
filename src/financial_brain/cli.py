@@ -1624,6 +1624,23 @@ def cmd_alerts(args) -> int:
     return 0
 
 
+def cmd_lifecycle(args) -> int:
+    """One opportunity end to end: found, taken or rejected (and why), sold, resolved."""
+    import duckdb
+    from .opportunity import lifecycle as LC
+    from .paper import book as BK
+    from .paper import intraday_runner as IR
+    led = IR.ledger()
+    bk = duckdb.connect(str(BK.PATH), read_only=True) if BK.PATH.exists() else None
+    try:
+        print(LC.render(args.ticker, args.day, LC.timeline(args.ticker, args.day, ledger=led, book=bk)))
+    finally:
+        led.close()
+        if bk is not None:
+            bk.close()
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -2276,6 +2293,11 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("alerts", help="desktop alerts: opportunities, holdings exiting by rule, a failed run")
     g.add_argument("--dry-run", action="store_true", help="show what would be sent, send nothing")
     g.set_defaults(fn=cmd_alerts)
+
+    g = sub.add_parser("lifecycle", help="one opportunity end to end: found, taken or rejected, sold, resolved")
+    g.add_argument("ticker")
+    g.add_argument("--day", required=True, help="the signal day, YYYY-MM-DD")
+    g.set_defaults(fn=cmd_lifecycle)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)
