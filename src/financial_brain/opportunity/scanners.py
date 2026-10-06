@@ -70,6 +70,27 @@ EVIDENCE = {
     "event": (None, None, "ANALOGUE_ONLY", "Analogues report edge over the all-filings baseline"),
     "fundamental_value": (None, 1.8, "FAINT_BOTH_SAMPLES", "Result of fundamentals factors (primary sample; holdout)"),
 }
+#: The pre-registration each scanner's evidence was tested under (None: untested or descriptive only).
+PREREG = {"momentum": "PRE-REGISTERED half-life and second-order spillover",
+          "relative_strength": "PRE-REGISTERED half-life and second-order spillover",
+          "low_volatility": "PRE-REGISTERED half-life and second-order spillover",
+          "composite": "PRE-REGISTERED opportunity engine replay",
+          "mean_reversion": "PRE-REGISTERED swing and intraday setups with stops",
+          "breakout": "PRE-REGISTERED swing and intraday setups with stops",
+          "event": "PRE-REGISTERED setup analogues and earnings reaction",
+          "fundamental_value": "PRE-REGISTERED fundamentals factors",
+          "volatility_expansion": "PRE-REGISTERED half-life and second-order spillover", "volume_anomaly": None}
+
+
+def spec_hash() -> str:
+    """A hash of everything that prices an opportunity: change any of it and every experiment id changes."""
+    import hashlib
+    import json
+    spec = {"model": MODEL, "deciles": DECILE_20D, "scale": {str(k): round(v, 6) for k, v in HORIZON_SCALE.items()},
+            "horizon": HORIZON, "evidence": {k: list(v) for k, v in EVIDENCE.items()}}
+    return hashlib.sha256(json.dumps(spec, sort_keys=True, default=str).encode()).hexdigest()[:12]
+
+
 HORIZON = {"momentum": 60, "relative_strength": 60, "low_volatility": 60, "composite": 20, "mean_reversion": 5,
            "breakout": 10, "volume_anomaly": 5, "volatility_expansion": 20, "event": 5, "fundamental_value": 60}
 
@@ -94,6 +115,10 @@ class Opportunity:
     price: float
     features: dict = field(default_factory=dict)
     alpha: dict = field(default_factory=dict)     #: the itemised expected net alpha (decisions/net_alpha)
+    direction: str = "long"                       #: delivery is long only; shorts are intraday-only in cash
+    evidence_ids: list = field(default_factory=list)   #: the result notes the expected return rests on
+    experiment_id: str = ""                       #: pre-registration + a hash of the model spec that priced it
+    distribution: dict = field(default_factory=dict)   #: p10 / p50 / p90 of the horizon return, and how it was made
 
     def as_dict(self) -> dict:
         d = asdict(self)
@@ -166,6 +191,7 @@ def scan(cs: pd.DataFrame, as_of: date, *, events: set | None = None, ep: dict |
     out = []
     cs = cs[(cs["vol_60"] > 0) & (cs["adv20"] > 0) & (cs["price"] > 0)].reset_index(drop=True)
     exp20 = decile_expectation(cs)
+    spec = spec_hash()
     for name, (mask, score) in conditions(cs, events, ep).items():
         ic, t, status, source = EVIDENCE[name]
         h = HORIZON[name]
@@ -184,7 +210,11 @@ def scan(cs: pd.DataFrame, as_of: date, *, events: set | None = None, ep: dict |
             out.append(Opportunity(
                 instrument=str(r["lineage"]), ticker=str(r["ticker"]), as_of=as_of, horizon=h, type=name,
                 expected_return=float(exp_ret), expected_risk=sigma_h, liquidity=float(r["adv20"]), cost=float(c),
-                expected_net=float(na.net), alpha=na.as_dict(), evidence=status, evidence_t=t, source=source,
+                expected_net=float(na.net), alpha=na.as_dict(),
+                evidence_ids=[x.strip() for x in source.split(";") if x.strip() and x.strip() != "-"],
+                experiment_id=f"{PREREG.get(name) or 'unregistered'} | spec {spec}",
+                distribution={"p10": float(exp_ret - 1.2816 * sigma_h), "p50": float(exp_ret), "p90": float(exp_ret + 1.2816 * sigma_h),
+                              "basis": "normal around the decile expectation, sigma = the name's 60-day volatility over the horizon"}, evidence=status, evidence_t=t, source=source,
                 expiry=_expiry(as_of, h), invalidation=float(pl["stop_price"]), price=float(r["price"]),
                 features={"z": z, "mom_12_1": float(r["mom_12_1"]), "dist_52w_high": float(r["dist_52w_high"]),
                           "vol_60": float(r["vol_60"]), "ret_20d": float(r["ret_20d"])}))

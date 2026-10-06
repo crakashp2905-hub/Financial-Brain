@@ -95,3 +95,20 @@ def test_net_alpha_renders_like_a_ledger():
     text = na.render()
     assert "Expected net alpha" in text and "Spread" in text and "Risk penalty" in text
     assert na.spread == pytest.approx(2 * NA.HALF_SPREAD_BP["mid"] / 1e4)
+
+
+def test_every_opportunity_is_fully_typed_and_traceable():
+    from pathlib import Path
+    research = Path(__file__).resolve().parents[1] / "brain" / "07-Research"
+    for o in S.scan(cs(), date(2026, 10, 5)):
+        assert o.direction == "long" and o.evidence_ids and "| spec " in o.experiment_id
+        d = o.distribution
+        assert d["p10"] < d["p50"] < d["p90"] and d["p50"] == pytest.approx(o.expected_return)
+        prereg = o.experiment_id.split(" | ")[0]
+        assert prereg == "unregistered" or (research / f"{prereg}.md").exists()
+
+
+def test_the_experiment_id_changes_when_the_model_does(monkeypatch):
+    before = S.spec_hash()
+    monkeypatch.setitem(S.DECILE_20D, 10, 0.5)
+    assert S.spec_hash() != before

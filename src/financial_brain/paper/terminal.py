@@ -232,6 +232,12 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
         out.append("<div class='note'><b>Nothing clears costs by a margin today.</b> These are the best available, shown so you can see "
                    "why - not because they are good trades. Expected returns come from one measured model (what names in the same "
                    "composite decile earned, 2016-26, in-sample).</div>")
+    tied = best.head(top)["type"].value_counts()
+    if len(tied) and tied.iloc[0] >= top * 0.7:
+        out.append(f"<div class='note'><b>Read with care:</b> {tied.iloc[0]} of these {top} were flagged by the {_e(tied.index[0])} scanner. "
+                   "Every name in a composite decile gets the same expected return and the ties are ordered by cost and risk, which "
+                   "favour large, calm names; the half-life table found the low-volatility end of the ranking does not pay long-only "
+                   "(top quintile -0.30% over 60 sessions, momentum +1.65%). A fix is a new pre-registered ranking version, not an edit.</div>")
     comp = TV.components(cs)
     dec = S.decile_expectation(cs)
     fno = {}
