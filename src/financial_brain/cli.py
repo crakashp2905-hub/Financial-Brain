@@ -1537,6 +1537,8 @@ def cmd_my_portfolio(args) -> int:
             asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
             best = S.best_per_name(S.scan(S.cross_section(rcon, asof), asof)).sort_values("expected_net", ascending=False).head(10)
             a = MB.analyse(rcon, bk, asof, candidates=best)
+            entries = MB.record_entries(con, bk, a["composite_pct"], asof)
+            a = MB.analyse(rcon, bk, asof, candidates=best, entries=entries)
         finally:
             rcon.close()
         rk = a["risk"]
@@ -1544,6 +1546,10 @@ def cmd_my_portfolio(args) -> int:
               f"{rk['at_stops']:.1%} of the book at risk to the stops; largest sector {rk['top_sector']}")
         for h in a["holdings"]:
             print(f"  {h['symbol']:12s} {h['since_cost'] * 100:+6.1f}% since cost  health {h['score']:3.0f}  {h['recommendation']:13s} {h['reason']}")
+            x = h["exit"]
+            print(f"      exit brain: {x['action']}" + (f" {x['reduce_fraction']:.0%}" if x["action"] == "REDUCE" else "")
+                  + f" ({'tested rule' if x['tested_basis'] else 'rule of thumb'}): "
+                  + "; ".join(f"{v['view']} {v['action']}" for v in x["views"]))
         if a["alternatives"] is not None:
             print("\nwhere the next unit of risk goes furthest (alpha per unit of risk added to this book):")
             for r in a["alternatives"].head(5).itertuples():
@@ -1578,6 +1584,22 @@ def cmd_journal(args) -> int:
                       f"sector {r.sector * 100:+.2f}  selection {r.selection * 100:+.2f}  entry {r.entry * 100:+.2f}  exit {r.exit * 100:+.2f}  costs {r.costs * 100:+.2f}")
         rep = J.report(at[at["attributed"]] if "attributed" in at else at)
         print(f"report: {rep}")
+        try:
+            from .evaluation import regret as RG
+            from .paper import intraday_runner as IR
+            led = IR.ledger()
+            lists = led.execute("SELECT day, rank, ticker, net FROM terminal_lists").df()
+            led.close()
+            rcon = duckdb.connect(str(load().db_path), read_only=True)
+            try:
+                jv = RG.journal_vs_list(trips, lists, rcon)
+            finally:
+                rcon.close()
+            for r in jv.itertuples():
+                print(f"  you chose {r.symbol} ({r.trip * 100:+.2f}%); the list of {r.list_day} averaged {r.list_mean * 100:+.2f}% over the same "
+                      f"days and its best, {r.list_best}, did {r.list_best_ret * 100:+.2f}%" + (" - it was on the list" if r.on_list else ""))
+        except Exception as e:                          # noqa: BLE001 - no lists stored yet
+            print(f"  (no terminal list to compare with yet: {str(e)[:60]})")
     return 0
 
 

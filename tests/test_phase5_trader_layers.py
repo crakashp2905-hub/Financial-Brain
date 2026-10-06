@@ -249,3 +249,17 @@ def test_spot_and_fno_join_without_inventing_positioning(tmp_path):
     cs = pd.DataFrame({"ticker": ["A", "B"], "mom_12_1": [0.1, 0.2]})
     out = KF.combined(con, cs, "2026-10-06")
     assert list(out["ticker"]) == ["A", "B"] and out["basis_annualised"].isna().all()
+
+
+def test_rollover_is_the_next_months_share_of_open_interest():
+    from datetime import date
+    from financial_brain.ingest import kite_fno as KF
+    inst = [{"instrument_type": "FUT", "name": "ABC", "expiry": "2026-10-28", "tradingsymbol": "ABC26OCTFUT"},
+            {"instrument_type": "FUT", "name": "ABC", "expiry": "2026-11-25", "tradingsymbol": "ABC26NOVFUT"}]
+
+    def quote(keys, kind):
+        book = {"NFO:ABC26OCTFUT": {"last_price": 101.0, "oi": 300}, "NFO:ABC26NOVFUT": {"last_price": 102.0, "oi": 100},
+                "NSE:ABC": {"last_price": 100.0}}
+        return {k: book[k] for k in keys if k in book}
+    r = KF.futures_snapshot({"ABC"}, instrument_list=inst, quote_fn=quote, today=date(2026, 10, 7))["ABC"]
+    assert r["fut_expiry"] == "2026-10-28" and r["rollover"] == pytest.approx(0.25)

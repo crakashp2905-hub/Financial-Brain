@@ -179,6 +179,18 @@ def book_panel(book, spec=None, rcon=None) -> str:
                 out.append(f"<div class='sub' style='margin-top:8px'>Where the return came from, per trade (last {at['trades']} sold): "
                            f"market {at['market'] * 100:+.2f}% · sector {at['sector'] * 100:+.2f}% · <b>stock selection {at['selection'] * 100:+.2f}%</b> · "
                            f"costs {at['costs'] * 100:+.2f}% = net {at['net'] * 100:+.2f}%</div>")
+        if len(sold) and rcon is not None and mode != "live":
+            try:
+                from ..evaluation import regret as RG
+                cands = RG.book_candidates(book, rcon, spec.version, mode)
+                recent = sorted(cands["day"].unique())[-60:]
+                rs = RG.summary(RG.by_day(cands[cands["day"].isin(recent)]))
+                if rs.get("days"):
+                    out.append(f"<div class='sub'>Selection, last {rs['days']} signal days with alternatives: the names taken beat the names "
+                               f"passed over by {rs['skill'] * 100:+.2f}% (t {rs['skill_t']:+.1f}) on {rs['hit']:.0%} of days; perfect hindsight would "
+                               f"have added {rs['regret'] * 100:.2f}% a day's pick.</div>")
+            except Exception:                           # noqa: BLE001
+                pass
         if len(sold):
             out.append(_spark(sold))
             out.append("<div class='grid' style='grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr))'>"
@@ -228,7 +240,93 @@ def my_portfolio_panel(rcon, asof, candidates) -> str:
     return "\n".join(out)
 
 
-def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, breadth_state, clears, top: int = 10) -> str:
+def _my_book_analysis(rcon, asof, candidates):
+    from ..portfolio import my_book as MB
+    if not MB.PATH.exists():
+        return None
+    con = MB.connect(read_only=True)
+    try:
+        bk = MB.latest(con)
+        entries = {s_: {"first_day": d, "composite_pct": c, "price": p_}
+                   for s_, d, c, p_ in con.execute("SELECT * FROM holding_entry").fetchall()} \
+            if con.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'holding_entry'").fetchone()[0] else {}
+    finally:
+        con.close()
+    return None if bk.empty else MB.analyse(rcon, bk, asof, candidates=candidates, entries=entries)
+
+
+def decision_summary(rcon, asof, cs, best, breadth_state, ks_level, my) -> str:
+    """The front door: the funnel from every tradable name to the few that improve this book, the open positions
+    with an action each, and today's risks."""
+    from ..portfolio import next_capital as NC
+    tradable = rcon.execute("SELECT COUNT(*) FROM features WHERE business_date = ?", [asof]).fetchone()[0]
+    flagged = best
+    survive = flagged[flagged["expected_net"] > 0]
+    gate = survive[survive["evidence"] == "REPLICATED_HELD_OUT"]
+    regime_ok = ks_level == "OK" and (breadth_state or "").lower() != "weak"
+    fits = gate if regime_ok else gate.iloc[0:0]
+    improve = fits.iloc[0:0]
+    if my is not None and len(fits):
+        try:
+            cand = fits.head(50)[["ticker", "expected_net"]].rename(columns={"expected_net": "net"})
+            names = list(set(cand["ticker"]) | set(my["book_inr"]))
+            px = rcon.execute("""SELECT ticker, business_date, close_adj FROM adjusted_prices WHERE business_date <= ?
+                                 AND business_date > ?::DATE - INTERVAL 400 DAY AND ticker IN (SELECT UNNEST(?))""", [asof, asof, names]).df()
+            cov = px.pivot_table(index="business_date", columns="ticker", values="close_adj").pct_change(fill_method=None).tail(250).cov() * 252
+            t = NC.compare(cand, cov, my["book_inr"])
+            improve = t[(t["alpha_per_risk"] > 0) & (t["corr_to_book"] < 0.5)]
+        except Exception:                                # noqa: BLE001
+            pass
+    steps = [(f"{tradable:,}", "names traded today"), (f"{len(flagged):,}", "flagged by a scanner"),
+             (f"{len(survive):,}", "expected net alpha above zero after costs"),
+             (f"{len(gate):,}", "rest on signals whose IC replicated and held out (but the ranking that orders them, v1, "
+                                "failed its 2022-26 walk-forward - see Evidence, by kind)"),
+             (f"{len(fits):,}", "pass the regime gate (kill switch OK, breadth not weak - a stated rule)"),
+             (f"{len(improve):,}" if my is not None else "-", "improve your book (alpha per unit of added risk > 0, correlation < 0.5)")]
+    out = ["<h2>Today, in one line each</h2><div class='wrap' style='padding:10px 14px'>"
+           + " &rarr; ".join(f"<b>{n}</b> {_e(w)}" for n, w in steps) + "</div>"]
+    if my is not None:
+        rows = "".join(
+            f"<tr><td>{_e(h['symbol'])}</td><td class='r'>{_pct(h['since_cost'])}</td><td class='r'>{h['score']:.0f}%</td>"
+            f"<td>{_chip(h['exit']['action'])}" + (f" {h['exit']['reduce_fraction']:.0%}" if h['exit']['action'] == 'REDUCE' else '') + "</td>"
+            f"<td>{'tested rule' if h['exit']['tested_basis'] else 'rule of thumb'}</td>"
+            f"<td style='white-space:normal'>{_e('; '.join(v['view'] + ' ' + v['action'] + ': ' + v['why'] for v in h['exit']['views'] if v['action'] != 'HOLD') or 'all six views HOLD')}</td></tr>"
+            for h in my["holdings"])
+        out.append("<div class='sub' style='margin-top:8px'>Open positions - the exit brain's six views (thesis, technical, time, risk, event, portfolio):</div>"
+                   "<div class='wrap'><table><tr><th>Position</th><th class='r'>Since cost</th><th class='r'>Thesis health</th><th>Action</th>"
+                   "<th>Basis</th><th>Views not at HOLD</th></tr>" + rows + "</table></div>")
+    risks = []
+    if (breadth_state or "").lower() in ("narrow", "weak"):
+        risks.append(f"breadth is {breadth_state}: few stocks are carrying the index")
+    if ks_level != "OK":
+        risks.append(f"kill switch: {ks_level}")
+    if my is not None and my["risk"].get("top_sector") and my["risk"]["top_sector"][1] > 0.5:
+        risks.append(f"{my['risk']['top_sector'][1]:.0%} of your book is in {my['risk']['top_sector'][0]}")
+    if my is not None and my["risk"].get("beta", 0) > 1.2:
+        risks.append(f"your book's beta is {my['risk']['beta']:.2f}: a 1% market fall is about {my['risk']['beta']:.1f}% for you")
+    vix = rcon.execute("""SELECT close_level FROM index_levels_canonical WHERE index_name = 'India VIX' AND variant = 'PRICE'
+                          AND business_date <= ? ORDER BY business_date DESC LIMIT 6""", [asof]).fetchall()
+    if len(vix) == 6 and vix[0][0] > 1.2 * vix[5][0]:
+        risks.append(f"India VIX up {vix[0][0] / vix[5][0] - 1:.0%} in 5 sessions")
+    out.append("<div class='sub' style='margin-top:8px'>Risks: " + (" · ".join(_e(r) for r in risks) if risks else "none flagged by the rules") + "</div>")
+    return "\n".join(out)
+
+
+def evidence_panel(ledger, book) -> str:
+    from ..evaluation import evidence_tiers as ET
+    rows = ET.ledger(intraday=ledger, book=book)
+    mark = lambda t: "&#10003;" if t.get("passed") else ("&#10007;" if t.get("passed") is False else "&middot;")    # noqa: E731
+    return ("<h2>Evidence, by kind (never mixed)</h2><div class='wrap'><table><tr><th>Strategy</th><th>Historical</th><th>Walk-forward</th>"
+            "<th>Paper-forward</th><th>Live-forward</th><th>Confidence</th></tr>"
+            + "".join(f"<tr><td>{_e(x['strategy'])}</td>"
+                      + "".join(f"<td style='white-space:normal'>{mark(x['tiers'][k])} {_e(x['tiers'][k]['result'])}</td>"
+                                for k in (ET.HISTORICAL, ET.WALK, ET.PAPER, ET.LIVE))
+                      + f"<td>{_chip(x['confidence'])}</td></tr>" for x in rows) + "</table></div>"
+            "<div class='sub'>Confidence comes from the forward tiers only: NONE without a passed walk-forward test, LIMITED until "
+            "the paper record reaches 100 trades, and never above MODERATE while there is no live record.</div>")
+
+
+def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, breadth_state, clears, top: int = 10, my=None) -> str:
     """What should I trade today: the top names by expected net alpha, each answered the way a trader asks."""
     from ..decisions import plan as P
     from ..evaluation import setup_analogues as SA
@@ -258,7 +356,8 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
     except Exception:                                   # noqa: BLE001 - no snapshots yet
         fno = {}
     shown = best.head(top)
-    rows, cards, sizing = [], [], []
+    rows, cards, sizing, full = [], [], [], []
+    from ..decisions import opportunity_card as OC
     for k, r in enumerate(shown.itertuples(), 1):
         i = cs.index[cs["ticker"] == r.ticker][0]
         row = cs.loc[i]
@@ -290,11 +389,63 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
         rows.append(f"<tr><td class='r'>{k}</td><td><a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a></td><td>LONG</td><td class='r'>{_pct(r.expected_net)}</td>"
                     f"<td>{r.horizon} sessions</td><td class='r'>{o.get('p_up', float('nan')):.0%}</td><td class='r'>{o.get('reward_risk', float('nan')):.2f}</td>"
                     f"<td class='r'>{plan['stop_distance']:.1%}</td><td>{_e(r.evidence)}</td></tr>")
+        sigma_h = float(row["vol_60"]) * np.sqrt(int(r.horizon) / 252)
+        full.append(OC.FullOpportunity(
+            instrument=str(r.instrument), ticker=r.ticker, timestamp=str(asof), opportunity_type=r.type, direction="long",
+            horizon=int(r.horizon), market_regime=breadth_state, sector_regime={},
+            technical_state={k2: float(row[k2]) for k2 in ("mom_12_1", "dist_52w_high", "vol_60", "ret_20d", "rsi_14") if pd.notna(row.get(k2))},
+            fundamental_state=fund or {}, derivative_state=fno.get(r.ticker) or {}, forecast_distribution=r.distribution,
+            expected_return=float(r.expected_return), expected_downside=-o.get("loss_if_wrong", float("nan")) if o else None,
+            expected_cost=float(r.cost), alpha=r.alpha, chain=OC.alpha_chain(float(r.expected_net), sigma_h, None),
+            probability_of_profit=o.get("p_up") if o else None,
+            mfe_expectation=ana["mfe5_median"] if ana else None, mae_expectation=ana["mae5_median"] if ana else None,
+            invalidation={"stop": plan["stop_price"], "rules": ["close below the stop", "composite in the bottom 20%"]},
+            liquidity={"adv20_inr": float(row["adv20"])}, capacity_inr=OC.capacity_inr(float(row["adv20"])),
+            position_size={k2: plan[k2] for k2 in ("shares", "notional", "weight", "stop_distance")},
+            evidence={"status": r.evidence, "ids": r.evidence_ids, "experiment": r.experiment_id}))
         cards.append(TV.card(r, row, comp.loc[i], rank=k, universe=len(cs), decile_mean=float(dec.loc[i]), analogue=ana,
                              breadth_state=breadth_state, fno=fno.get(r.ticker), returns=rets, plan=plan, sid=sid, fund=fund))
     out.append("<div class='wrap'><table><tr><th class='r'>#</th><th>Stock</th><th>Direction</th><th class='r'>Net alpha</th><th>Horizon</th>"
                "<th class='r'>P(up)</th><th class='r'>Reward/risk</th><th class='r'>Stop</th><th>Evidence</th></tr>" + "".join(rows) + "</table></div>")
     out.append(TV.calculator(sizing))
+    try:                                                # the day's list, kept so your trades can be compared with it later
+        ledger.execute("CREATE TABLE IF NOT EXISTS terminal_lists (day VARCHAR, rank INTEGER, ticker VARCHAR, lineage VARCHAR, net DOUBLE, PRIMARY KEY (day, rank))")
+        ledger.executemany("INSERT OR REPLACE INTO terminal_lists VALUES (?,?,?,?,?)",
+                           [(str(asof), k, r.ticker, str(r.instrument), float(r.expected_net)) for k, r in enumerate(shown.itertuples(), 1)])
+    except Exception:                                   # noqa: BLE001 - a read-only ledger skips it
+        pass
+    try:
+        import json as _json
+        OUT.parent.mkdir(parents=True, exist_ok=True)
+        (OUT.parent / "opportunities.json").write_text("[" + ",".join(x.to_json() for x in full) + "]", encoding="utf-8")
+    except Exception:                                   # noqa: BLE001
+        pass
+    if my is not None and my.get("cov") is not None:
+        try:
+            from ..portfolio import next_capital as NC
+            names = list(set(shown["ticker"]) | set(my["book_inr"]))
+            px = rcon.execute("""SELECT ticker, business_date, close_adj FROM adjusted_prices WHERE business_date <= ?
+                                 AND business_date > ?::DATE - INTERVAL 400 DAY AND ticker IN (SELECT UNNEST(?))""", [asof, asof, names]).df()
+            cov = px.pivot_table(index="business_date", columns="ticker", values="close_adj").pct_change(fill_method=None).tail(250).cov() * 252
+            cand = shown[["ticker", "expected_net", "cost"]].rename(columns={"expected_net": "net"})
+            cmp_ = NC.compare(cand, cov, my["book_inr"])
+            alloc = NC.allocate(cand, cov, my["book_inr"], budget=100_000)
+            top3 = cmp_.head(3)
+            out.append("<h3 style='margin-top:14px'>Before you buy: the alternatives, given what you hold</h3><div class='wrap'><table>"
+                       "<tr><th></th>" + "".join(f"<th class='r'>{_e(t)}</th>" for t in top3["ticker"]) + "</tr>"
+                       + "".join(f"<tr><td>{lab}</td>" + "".join(f"<td class='r'>{fn(v)}</td>" for v in top3[col]) + "</tr>"
+                                 for lab, col, fn in (("Expected net alpha", "net", lambda v: f"{v * 100:+.2f}%"),
+                                                      ("Volatility (a year)", "vol", lambda v: f"{v:.0%}"),
+                                                      ("Cost", "cost", lambda v: f"{v * 100:.2f}%"),
+                                                      ("Correlation with your book", "corr_to_book", lambda v: f"{v:+.2f}"),
+                                                      ("Alpha per unit of added risk", "alpha_per_risk", lambda v: f"{v:.3f}")))
+                       + f"</table></div><div class='sub'>{_e(NC.reason(cmp_))}.</div>")
+            out.append("<div class='sub' style='margin-top:6px'><b>Where the next Rs 1 lakh goes</b> (alpha minus the variance it adds to your book, "
+                       "Rs 10,000 at a time, at most 10% of the book in a name): "
+                       + ", ".join(f"{_e(t)} Rs {v:,.0f}" for t, v in alloc["allocation"].items())
+                       + f"{', ' if alloc['allocation'] else ''}cash Rs {alloc['cash']:,.0f}.</div>")
+        except Exception as e:                          # noqa: BLE001
+            out.append(f"<div class='sub'>comparison unavailable: {_e(str(e)[:80])}</div>")
     out += cards
     try:
         from ..opportunity import ranking_v2 as R2
@@ -363,9 +514,15 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     opps = S.scan(cs, asof, capital=capital)
     best = S.best_per_name(opps).sort_values("expected_net", ascending=False)
     clears = int((best["expected_net"] >= 0.005).sum())
+    try:
+        my = _my_book_analysis(rcon, asof, best.head(10))
+    except Exception:                                   # noqa: BLE001
+        my = None
+    parts.append(decision_summary(rcon, asof, cs, best, b.get("state"), ks.get("level", "OK"), my))
     parts.append(trader_section(rcon, ledger, cs, best, asof, capital=capital, analogue_pool=analogue_pool,
-                                breadth_state=b.get("state"), clears=clears))
+                                breadth_state=b.get("state"), clears=clears, my=my))
     parts.append(my_portfolio_panel(rcon, asof, best.head(10)))
+    parts.append(evidence_panel(ledger, book))
     # ---------------------------------------------------------------- swing candidates (top 50)
     from ..decisions import plan as _P
     from . import book as BK

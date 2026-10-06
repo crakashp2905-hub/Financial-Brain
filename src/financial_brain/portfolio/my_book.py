@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS holdings_snap (
 CREATE TABLE IF NOT EXISTS positions_snap (
     day DATE, tradingsymbol VARCHAR, exchange VARCHAR, product VARCHAR, quantity DOUBLE, average_price DOUBLE,
     last_price DOUBLE, pnl DOUBLE, PRIMARY KEY (day, tradingsymbol, product));
+CREATE TABLE IF NOT EXISTS holding_entry (
+    symbol VARCHAR PRIMARY KEY, first_day DATE, composite_pct DOUBLE, price DOUBLE);
 CREATE TABLE IF NOT EXISTS my_trades (
     trade_id VARCHAR PRIMARY KEY, day DATE, ts VARCHAR, tradingsymbol VARCHAR, exchange VARCHAR, product VARCHAR,
     side VARCHAR, quantity DOUBLE, price DOUBLE);
@@ -132,7 +134,15 @@ def risk(book: pd.DataFrame, cov: pd.DataFrame, betas: dict, stops: dict, sector
             "weights": w.to_dict(), "by_sector": by_sector.to_dict()}
 
 
-def analyse(rcon, bk: pd.DataFrame, asof, *, candidates: pd.DataFrame | None = None) -> dict:
+def record_entries(con, bk: pd.DataFrame, pct: dict, day) -> dict:
+    """The first day each holding is seen: its composite rank and price then. Never overwritten."""
+    for r in bk.itertuples():
+        con.execute("INSERT OR IGNORE INTO holding_entry VALUES (?,?,?,?)", [r.tradingsymbol, day, pct.get(r.tradingsymbol), r.last_price])
+    return {s: {"first_day": d, "composite_pct": c, "price": p}
+            for s, d, c, p in con.execute("SELECT * FROM holding_entry").fetchall()}
+
+
+def analyse(rcon, bk: pd.DataFrame, asof, *, candidates: pd.DataFrame | None = None, entries: dict | None = None) -> dict:
     """Thesis health per holding, the book's risk, and which candidates add the least risk for their alpha."""
     from ..decisions import plan as P
     from ..graph import exposure as X
@@ -177,6 +187,28 @@ def analyse(rcon, bk: pd.DataFrame, asof, *, candidates: pd.DataFrame | None = N
                      "value": r.value, "since_cost": r.since_cost, "sector": sectors.get(r.tradingsymbol),
                      "beta": betas.get(r.tradingsymbol), **th,
                      "reason": "; ".join(t for ok, t in th["checks"] if not ok) or "all checks pass"})
+    # the exit brain: six views per holding, against the snapshot taken the first day the holding was seen
+    from ..decisions import exit_brain as XB
+    sector_w = {}
+    tot = float(bk["value"].sum())
+    for r in bk.itertuples():
+        sector_w[sectors.get(r.tradingsymbol)] = sector_w.get(sectors.get(r.tradingsymbol), 0.0) + r.value / tot
+    for h in rows:
+        ent = entries.get(h["symbol"]) if entries else None
+        fr = f.loc[h["symbol"]] if h["symbol"] in f.index else pd.Series(dtype=float)
+        if isinstance(fr, pd.DataFrame):
+            fr = fr.iloc[0]
+        held = None
+        if ent and ent.get("first_day"):
+            held = int(rcon.execute("SELECT COUNT(DISTINCT business_date) FROM features WHERE business_date > ? AND business_date <= ?",
+                                    [ent["first_day"], asof]).fetchone()[0])
+        h["exit"] = XB.decide(composite_now=pct.get(h["symbol"]), composite_entry=(ent or {}).get("composite_pct"),
+                              price=float(h["last"]), cost=float(h["avg"]), stop=float(h["stop"]),
+                              above_ma200=bool(fr["above_ma200"]) if pd.notna(fr.get("above_ma200")) else None,
+                              held_sessions=held, horizon=60,
+                              atr_pctile=float(fr["atr_pctile_250"]) if pd.notna(fr.get("atr_pctile_250")) else None,
+                              recent_filing=False, weight=float(h["value"]) / tot, sector_weight=sector_w.get(h["sector"], 0.0))
+        h["since_entry"] = ent
     names = [n for n in syms if n in cov.index]
     rk = risk(bk[bk["tradingsymbol"].isin(names)] if names else bk, cov, betas, stops, sectors)
     alts = None
@@ -185,4 +217,5 @@ def analyse(rcon, bk: pd.DataFrame, asof, *, candidates: pd.DataFrame | None = N
         keep = [n for n in cov.index if n in set(names) | set(c["ticker"])]
         if len(c):
             alts = M.scores(c, cov.loc[keep, keep], {n: rk["weights"][n] for n in names})
-    return {"holdings": rows, "risk": rk, "alternatives": alts}
+    return {"holdings": rows, "risk": rk, "alternatives": alts, "composite_pct": pct, "cov": cov,
+            "book_inr": dict(zip(bk["tradingsymbol"], bk["value"]))}

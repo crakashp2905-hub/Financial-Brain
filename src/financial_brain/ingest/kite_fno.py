@@ -165,21 +165,23 @@ def classify_buildup(price_change: float, oi_change: float, *, min_price: float 
 
 
 def futures_snapshot(symbols, *, instrument_list, quote_fn, today: date | None = None) -> dict:
-    """Near-month future and spot for each symbol: price, open interest, and the basis (annualised)."""
+    """Near-month future and spot for each symbol: price, open interest, the basis (annualised), and the rollover -
+    the next month's share of near + next open interest (traders moving positions forward before expiry)."""
     today = today or date.today()
-    futs = {}
+    by_name: dict[str, list] = {}
     for r in instrument_list:
         if r.get("instrument_type") == "FUT" and (r.get("name") or "").upper() in symbols and r.get("expiry", "") >= today.isoformat():
-            cur = futs.get(r["name"].upper())
-            if cur is None or r["expiry"] < cur["expiry"]:
-                futs[r["name"].upper()] = r
+            by_name.setdefault(r["name"].upper(), []).append(r)
+    futs = {k: sorted(v, key=lambda r: r["expiry"])[0] for k, v in by_name.items()}
+    nxt = {k: sorted(v, key=lambda r: r["expiry"])[1] for k, v in by_name.items() if len(v) > 1}
     if not futs:
         return {}
     fq, sq = {}, {}
     names = list(futs)
     for i in range(0, len(names), MAX_BATCH):
         part = names[i:i + MAX_BATCH]
-        fq.update(quote_fn([f"NFO:{futs[s]['tradingsymbol']}" for s in part], "full"))
+        fq.update(quote_fn([f"NFO:{futs[s]['tradingsymbol']}" for s in part]
+                           + [f"NFO:{nxt[s]['tradingsymbol']}" for s in part if s in nxt], "full"))
         sq.update(quote_fn([f"NSE:{s}" for s in part], "ltp"))
     out = {}
     for s in names:
@@ -188,17 +190,23 @@ def futures_snapshot(symbols, *, instrument_list, quote_fn, today: date | None =
             continue
         days = max((datetime.strptime(futs[s]["expiry"], "%Y-%m-%d").date() - today).days, 1)
         basis = f["last_price"] / sp - 1.0
+        near_oi = float(f.get("oi") or 0)
+        next_oi = float((fq.get(f"NFO:{nxt[s]['tradingsymbol']}") or {}).get("oi") or 0) if s in nxt else None
         out[s] = {"spot": float(sp), "fut": float(f["last_price"]), "fut_expiry": futs[s]["expiry"],
-                  "fut_oi": float(f.get("oi") or 0), "basis": basis, "basis_annualised": basis * 365 / days}
+                  "fut_oi": near_oi, "basis": basis, "basis_annualised": basis * 365 / days,
+                  "rollover": next_oi / (near_oi + next_oi) if next_oi is not None and near_oi + next_oi > 0 else None}
     return out
 
 
 def save_snapshot(con, day: str, rows: dict[str, dict]) -> int:
     con.execute(SNAPSHOT_SCHEMA)
+    con.execute("ALTER TABLE fno_snapshots ADD COLUMN IF NOT EXISTS rollover DOUBLE")      # added 2026-10-07
     for s, r in rows.items():
-        con.execute("INSERT OR REPLACE INTO fno_snapshots VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        con.execute("""INSERT OR REPLACE INTO fno_snapshots (day, symbol, spot, fut, fut_expiry, fut_oi, basis, basis_annualised,
+                       atm_iv, skew_5pct, pcr_oi, max_pain, rollover) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     [day, s, r.get("spot"), r.get("fut"), r.get("fut_expiry"), r.get("fut_oi"), r.get("basis"),
-                     r.get("basis_annualised"), r.get("atm_iv"), r.get("skew_5pct"), r.get("pcr_oi"), r.get("max_pain")])
+                     r.get("basis_annualised"), r.get("atm_iv"), r.get("skew_5pct"), r.get("pcr_oi"), r.get("max_pain"),
+                     r.get("rollover")])
     return len(rows)
 
 
