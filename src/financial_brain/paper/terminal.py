@@ -311,6 +311,18 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
                              f"<td class='r'>{r.dist_52w_high * 100:+.0f}%</td></tr>" for k, r in enumerate(v2.itertuples(), 1)) + "</table></div>")
     except Exception as e:                              # noqa: BLE001 - the page renders without it
         out.append(f"<div class='sub'>ranking v2 unavailable: {_e(str(e)[:80])}</div>")
+    try:
+        from ..evaluation import learned_model as LM
+        lm = LM.score_day(rcon, asof).head(top)
+        out.append("<h3 style='margin-top:14px'>Challenger view: the learned model (161 library features combined, walk-forward)</h3>"
+                   "<div class='sub'>Qualified as a live challenger: in 2022-26 its top 20 earned +0.77% a month over the 500 most liquid names after "
+                   "costs (t 2.3), ahead of plain momentum by 0.29% a month - not significantly (t 0.5) - and it lost to momentum in 2019-21. "
+                   "It ranks; it does not give a return figure. Competes live from 2026-10-07.</div><div class='wrap'><table>"
+                   "<tr><th class='r'>#</th><th>Stock</th><th class='r'>Model rank score</th></tr>"
+                   + "".join(f"<tr><td class='r'>{k}</td><td>{_e(r.ticker)}</td><td class='r'>{r.pred:.3f}</td></tr>"
+                             for k, r in enumerate(lm.itertuples(), 1)) + "</table></div>")
+    except Exception as e:                              # noqa: BLE001
+        out.append(f"<div class='sub'>learned model unavailable: {_e(str(e)[:80])}</div>")
     wn = TV.watched_not_traded(best, set(shown["ticker"]))
     if wn:
         out.append("<h3 style='margin-top:14px'>Watched, not on the list</h3><div class='wrap'><table><tr><th>Stock</th><th>Type</th>"

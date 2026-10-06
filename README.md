@@ -16,7 +16,7 @@ evidence, its point-in-time validity, a historical base rate from comparable sit
 its net alpha after costs, its place in the portfolio, a realistic execution and a counterfactual outcome - and
 every test is written down before it is run (`fb preregs` audits that against git).
 
-**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,277 tests.
+**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,293 tests.
 Every trading day the system now scans the market, posts a 09:30 board, paper-trades its intraday rules
 through the session and scores itself against everything it passed over. See [The daily loop](#the-daily-loop).
 
@@ -162,6 +162,7 @@ Validation modules, used from Python rather than the CLI:
 | `features/fundamentals_pit.py` | 295k point-in-time observations from exchange XBRL (revisions numbered, never overwritten; `as_known_on` a date): EBITDA, EBIT, debt, cash, book value, cash flow, and P/E, P/B, EV/EBITDA, ROE, ROCE, debt/equity, interest cover at a price - labelled stale where the results are |
 | `evaluation/half_life_table.py` | Every signal at every horizon as a trader reads it: excess, hit rate, Sharpe, MFE/MAE, turnover, cost drag, net. Momentum is the only signal that pays long-only at every horizon (+1.50% net over 60 sessions); low volatility ranks well but its top quintile under-earns |
 | `opportunity/lifecycle.py` / `fb lifecycle TICKER --day D` | One opportunity end to end: found, taken or rejected (and why), sold, resolved. Every opportunity is typed: direction, evidence ids, an experiment id (pre-registration + a hash of the pricing model), an outcome distribution |
+| `features/library.py` / `evaluation/deep_library.py` / `evaluation/learned_model.py` | **The deep feature library**: 161 features as of each close (no look-ahead, tested) - fair value gaps, liquidity sweeps, structure, order blocks, ~15 candles, Fibonacci (retracements, golden pocket, extensions, Fibonacci MAs), pivots, Ichimoku, SAR, Supertrend, Heikin-Ashi, 30+ named oscillators, volume profile, anchored VWAP, Gann, Wyckoff, harmonics. Every feature tested alone under a 5% false-discovery rate across the library, in 4 liquidity tiers and held out: 26 count, all versions of volatility, reversal, liquidity or momentum; no FVG, Fibonacci-level, Gann, harmonic or candle effect counts as named. Bullish FVG retests underperform; bearish ones keep lagging (t -10, to be tested as an avoid-filter). A walk-forward LightGBM over all of them earned +0.77% a month in 2022-26 (t 2.3), 0.29% ahead of momentum (not significant) - a live challenger |
 | `decisions/net_alpha.py` | **Expected net alpha, itemised** - expected return, benchmark, fees and taxes, spread, impact, risk penalty - the one quantity every scanner, book and terminal row is ranked on |
 | `evaluation/neutral.py` | Signals with market beta, home sector, size (turnover proxy) and volatility removed: momentum keeps 94%, 52-week high 91%, the composite 102% (t 4.3) - stock selection, not disguised factor bets |
 | `research/preregistry.py` / `fb preregs` | Audits every pre-registration against git: committed before its result, never edited after it (19 audited, 0 violations; one amendment, made before any result) |

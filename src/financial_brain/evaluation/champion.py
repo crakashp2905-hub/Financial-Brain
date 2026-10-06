@@ -60,7 +60,8 @@ class ChampionError(ValueError):
 WAITING_FOR_DATA = ("value_ep", "quality_margin", "earnings_surprise")
 
 
-def picks(cs: pd.DataFrame, *, events: set | None = None, swing: pd.DataFrame | None = None) -> dict[str, pd.DataFrame]:
+def picks(cs: pd.DataFrame, *, events: set | None = None, swing: pd.DataFrame | None = None,
+          learned: pd.DataFrame | None = None) -> dict[str, pd.DataFrame]:
     """Each strategy's book for a session: the rows it would hold. ``events``: lineages with a material filing on
     the previous session; ``swing``: the swing book's ranking (both optional, joined from 2026-10-06)."""
     if len(cs) < 100:
@@ -78,6 +79,9 @@ def picks(cs: pd.DataFrame, *, events: set | None = None, swing: pd.DataFrame | 
     from ..opportunity import ranking_v2 as R2
     c["v2"] = R2.score(c).to_numpy()
     out["ranking_v2_top"] = c[c["v2"] >= q("v2", 1 - TOP_FRACTION)]    # joined 2026-10-07 (PRE-REGISTERED ranking v2)
+    if learned is not None and len(learned):
+        top = learned.head(max(1, int(TOP_FRACTION * len(learned))))      # joined 2026-10-07 (Result of the deep feature library)
+        out["learned_model_top"] = c[c["lineage"].isin(set(top["lineage"]))]
     if events:
         out["event_names"] = c[c["lineage"].isin(events)]
     if swing is not None and len(swing):
@@ -107,8 +111,13 @@ def record(research_con, ledger_con, day: date, *, costs: CostModel | None = Non
         swing = BK.swing_ranking(research_con, day)
     except Exception:                                   # noqa: BLE001 - the swing list is optional
         swing = None
+    try:
+        from . import learned_model as LM
+        learned = LM.score_day(research_con, day)
+    except Exception:                                   # noqa: BLE001 - no trained model yet, or a short history
+        learned = None
     n = {}
-    for name, df in picks(cs, events=events, swing=swing).items():
+    for name, df in picks(cs, events=events, swing=swing, learned=learned).items():
         rows = []
         for r in df.itertuples():
             c = costs.round_trip_sized(order_value=min(5e5, 0.1 * r.adv20), adv_value=r.adv20,
