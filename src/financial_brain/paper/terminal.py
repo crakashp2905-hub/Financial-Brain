@@ -254,6 +254,31 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
                      + "".join(f"<tr><td>{w[0]}</td><td>{_e(w[1])}</td><td>{_e(w[2])}</td><td class='r'>{w[3]}</td><td class='r'>{w[4]}</td>"
                                f"<td class='r'>{(w[5] or 0):,.0f}</td><td class='r'>{(w[6] or 0):,.0f}</td><td class='r {'pos' if (w[7] or 0) > 0 else 'neg'}'>{(w[7] or 0):,.0f}</td></tr>"
                                for w in week) + "</table></div>")
+    try:
+        from . import execution as XA
+        xa = XA.attribution(ledger)
+    except Exception:                                   # noqa: BLE001 - older ledgers lack the decision prices
+        xa = []
+    if xa:
+        parts.append("<div class='sub' style='margin-top:10px'>Where the money went: what the signal earned at its trigger prices, what execution "
+                     "cost (spread and fills), and the charges - the three add up to net.</div><div class='wrap'><table>"
+                     "<tr><th>Strategy</th><th>Mode</th><th class='r'>Trades</th><th class='r'>Signal Rs</th><th class='r'>Execution Rs</th>"
+                     "<th class='r'>Charges Rs</th><th class='r'>Net Rs</th><th class='r'>Net bp/trade notional</th></tr>"
+                     + "".join(f"<tr><td>{_e(x['strategy'])}</td><td>{_e(x['mode'])}</td><td class='r'>{x['trades']}</td>"
+                               f"<td class='r {'pos' if x['signal_inr'] > 0 else 'neg'}'>{x['signal_inr']:,.0f}</td><td class='r neg'>{x['execution_inr']:,.0f}</td>"
+                               f"<td class='r neg'>{x['charges_inr']:,.0f}</td><td class='r {'pos' if x['net_inr'] > 0 else 'neg'}'>{x['net_inr']:,.0f}</td>"
+                               f"<td class='r'>{x['net_bp']:+.1f}</td></tr>" for x in xa) + "</table></div>")
+    try:
+        from . import loss_review as LR
+        wm = LR.with_market_view(ledger)
+    except Exception:                                   # noqa: BLE001 - older ledgers have no context columns
+        wm = None
+    if wm:
+        w, a = wm["with"], wm["against"]
+        parts.append(f"<div class='note'><b>Your rule, tracked on the real trades: only with the market.</b> Over {wm['days']} day(s) of trades with context: "
+                     f"with the market {w['trades']} trades, Rs {w['net_inr']:,.0f} ({w['bp']:+.1f} bp a trade); against it {a['trades']} trades, "
+                     f"Rs {a['net_inr']:,.0f} ({a['bp']:+.1f} bp). {_e(wm['status'])}: on 2024-26 minute data the same filter doubled gross in the "
+                     "first year and added nothing in the held-out year. This line keeps checking it live.</div>")
     led_day = ledger.execute("SELECT MAX(day) FROM trades").fetchone()[0]
     if led_day:
         t = ledger.execute("""SELECT strategy, symbol, side, qty, entry_px, exit_px, exit_reason, net_pnl, mode FROM trades

@@ -67,3 +67,22 @@ def test_the_review_has_no_way_to_change_a_rule():
     src = Path(L.__file__).read_text(encoding="utf-8")
     for bad in ("VERSION =", "TARGET_R", "place_order", "STRATEGIES"):
         assert bad not in src
+
+
+def test_the_with_market_view_splits_the_real_trades(tmp_path):
+    from financial_brain.paper import intraday_runner as R
+    con = R.ledger(tmp_path / "l.duckdb")
+    e = I.DayEngine("2026-10-06")
+    for sym in ("A", "B", "C"):
+        e.add_symbol(sym, 100.0)
+        e.set_opening(sym, open_px=100.0, or_hi=101.0, or_lo=99.0)
+    e.on_price("C", datetime(2026, 10, 6, 9, 31), 97.0)                 # market falling
+    for t in e.on_price("A", datetime(2026, 10, 6, 9, 32), 101.5):      # long: against the market
+        R.save(con, t, "replay")
+    for t in e.on_price("B", datetime(2026, 10, 6, 9, 33), 98.5):       # short: with the market
+        R.save(con, t, "replay")
+    for t in e.end_of_day(datetime(2026, 10, 6, 15, 20), {"A": 100.0, "B": 98.0, "C": 97.0}):
+        R.save(con, t, "replay")
+    v = L.with_market_view(con)
+    # C's own short breakout (09:31, market falling) is with the market too
+    assert v["with"]["trades"] == 2 and v["against"]["trades"] == 1 and v["status"].startswith("SHADOW")

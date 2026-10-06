@@ -115,3 +115,21 @@ def render(r: dict) -> str:
             lines.append(f"{x.pattern:40s} {x.trades:6d} {x.days:5d} {x.mean_bp:+8.1f} {x.t:+6.2f} {x.net_inr:10,.0f} "
                          f"{x.loss_share:9.0%}{'  <- losing pattern (hypothesis)' if x.losing else ''}")
     return "\n".join(lines)
+
+
+def with_market_view(con) -> dict | None:
+    """The owner's rule - trade only with the market - read off the real paper trades: the ones taken with the
+    market's direction at entry (and the daily trend, when known) against the ones taken against it. A view, not
+    a strategy: the same filter failed its held-out test (Result of trading with the market trend)."""
+    df = con.execute("""SELECT day, side, net_pnl, entry_px * qty AS notional, mkt_ret, daily_up FROM trades
+                        WHERE exit_ts IS NOT NULL AND strategy = 'ORB' AND mkt_ret IS NOT NULL""").df()
+    if df.empty:
+        return None
+    up = df["side"] == "long"
+    aligned = ((df["mkt_ret"] > 0) == up) & (df["daily_up"].isna() | (df["daily_up"].astype("boolean") == up).fillna(True))
+    out = {"status": "SHADOW - not qualified (failed the held-out test)", "days": int(df["day"].nunique())}
+    for k, g in (("with", df[aligned]), ("against", df[~aligned])):
+        out[k] = {"trades": int(len(g)), "net_inr": float(g["net_pnl"].sum()),
+                  "bp": float((g["net_pnl"] / g["notional"]).mean() * 1e4) if len(g) else float("nan"),
+                  "won": float((g["net_pnl"] > 0).mean()) if len(g) else float("nan")}
+    return out

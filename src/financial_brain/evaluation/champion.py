@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from datetime import date
 
+import duckdb
 import numpy as np
 import pandas as pd
 
@@ -53,8 +54,15 @@ class ChampionError(ValueError):
     pass
 
 
-def picks(cs: pd.DataFrame) -> dict[str, pd.DataFrame]:
-    """Each strategy's book for a session: the rows it would hold."""
+#: Value and quality cannot join yet: exchange XBRL results stop at the quarter ended Dec 2024 (later results moved
+#: to NSE's "Integrated Filing" feed, not yet ingested), so a value or quality book today would rank on figures up
+#: to 18 months stale - not a fair contest. They join when that feed is covered.
+WAITING_FOR_DATA = ("value_ep", "quality_margin", "earnings_surprise")
+
+
+def picks(cs: pd.DataFrame, *, events: set | None = None, swing: pd.DataFrame | None = None) -> dict[str, pd.DataFrame]:
+    """Each strategy's book for a session: the rows it would hold. ``events``: lineages with a material filing on
+    the previous session; ``swing``: the swing book's ranking (both optional, joined from 2026-10-06)."""
     if len(cs) < 100:
         raise ChampionError(f"{len(cs)} names is too few")
     c = cs.copy()
@@ -67,6 +75,10 @@ def picks(cs: pd.DataFrame) -> dict[str, pd.DataFrame]:
         "relative_strength": c[c["dist_52w_high"] >= q("dist_52w_high", 1 - TOP_FRACTION)],
         "all_but_worst_20": c[c["z"] > q("z", 0.2)],
     }
+    if events:
+        out["event_names"] = c[c["lineage"].isin(events)]
+    if swing is not None and len(swing):
+        out["swing_top50"] = c[c["ticker"].isin(set(swing.head(50)["ticker"]))]
     best = S.best_per_name(S.scan(cs, LOCK_DATE))
     if not best.empty:
         top = best.sort_values("expected_net", ascending=False).head(max(1, int(TOP_FRACTION * len(c))))
@@ -81,8 +93,19 @@ def record(research_con, ledger_con, day: date, *, costs: CostModel | None = Non
     ledger_con.execute(SCHEMA)
     costs = costs or CostModel()
     cs = S.cross_section(research_con, day)
+    try:
+        events = {r[0] for r in research_con.execute("""
+            SELECT DISTINCT l.lineage FROM announcements a JOIN security_lineage l ON l.isin = a.isin
+            WHERE a.business_date = ? AND a.materiality IN ('HIGH', 'CRITICAL')""", [day]).fetchall()}
+    except duckdb.CatalogException:                     # a database without filings: no event book that day
+        events = set()
+    from ..paper import book as BK
+    try:
+        swing = BK.swing_ranking(research_con, day)
+    except Exception:                                   # noqa: BLE001 - the swing list is optional
+        swing = None
     n = {}
-    for name, df in picks(cs).items():
+    for name, df in picks(cs, events=events, swing=swing).items():
         rows = []
         for r in df.itertuples():
             c = costs.round_trip_sized(order_value=min(5e5, 0.1 * r.adv20), adv_value=r.adv20,

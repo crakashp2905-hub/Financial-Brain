@@ -1,13 +1,22 @@
 # Financial-Brain
 
-An AI-native financial research system for Indian markets, in which the AI is the analyst
-rather than the interface.
+**An empirical, AI-native market decision engine for Indian markets.**
 
-> LLM = reasoning and orchestration. Market data, fundamentals, filings, indicators and
-> the investor's own philosophy = source of truth.
-> `Data → Evidence → Context → Thesis → Risk → Decision → Outcome → Learning`
+Given only the information available at a moment in time, it looks for the best available opportunity across the
+whole liquid market, estimates the distribution of outcomes, states the **expected net alpha** (expected return
+minus benchmark, fees, spread, impact and a risk penalty), allocates risk, executes on paper under realistic
+costs, and learns from both the trades it took and the opportunities it rejected.
 
-**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,223 tests.
+> LLM = reasoning and orchestration. Point-in-time market data, exchange XBRL fundamentals, filings and the
+> measured evidence = source of truth.
+> `Data → Evidence → Opportunity → Expected net alpha → Risk → Decision → Execution → Outcome → Learning`
+
+What sets it apart from systems where *an AI produces a signal*: every signal here arrives with its empirical
+evidence, its point-in-time validity, a historical base rate from comparable situations, a forecast distribution,
+its net alpha after costs, its place in the portfolio, a realistic execution and a counterfactual outcome - and
+every test is written down before it is run (`fb preregs` audits that against git).
+
+**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,250 tests.
 Every trading day the system now scans the market, posts a 09:30 board, paper-trades its intraday rules
 through the session and scores itself against everything it passed over. See [The daily loop](#the-daily-loop).
 
@@ -146,6 +155,11 @@ Validation modules, used from Python rather than the CLI:
 | `evaluation/after_tax.py` | The same return series taxed as an active book (all gains realised yearly) and as buy-and-hold (deferred): tax takes about 20% of an active sleeve's CAGR, deferral is worth 2-3 points a year |
 | `evaluation/news_model.py` | Headline classifier on filings: text lowered strength AUC and direction missed the bar |
 | `opportunity/scanners.py` | Ten named scanners (momentum, relative strength, low volatility, composite, mean reversion, breakout, volume anomaly, volatility expansion, event, fundamental value), each with its evidence status and horizon. Expected return comes from **one** model - what the name's composite decile earned in the replay, scaled by the half-life curve - so scanners say *why* a name is interesting but cannot each invent a return |
+| `decisions/net_alpha.py` | **Expected net alpha, itemised** - expected return, benchmark, fees and taxes, spread, impact, risk penalty - the one quantity every scanner, book and terminal row is ranked on |
+| `evaluation/neutral.py` | Signals with market beta, home sector, size (turnover proxy) and volatility removed: momentum keeps 94%, 52-week high 91%, the composite 102% (t 4.3) - stock selection, not disguised factor bets |
+| `research/preregistry.py` / `fb preregs` | Audits every pre-registration against git: committed before its result, never edited after it (19 audited, 0 violations; one amendment, made before any result) |
+| `paper/execution.py` | Each intraday strategy's P&L split into what the signal earned at its trigger prices, what execution cost, and the charges |
+| `paper/loss_review.py` *with-market view* | The owner's rule - trade only with the market - tracked on the real trades every day as a labelled shadow (it failed its held-out test) |
 | `paper/loss_review.py` / `fb loss-review [--propose]` | **Learning from the bad trades.** Every intraday paper trade records its decision-time context (market move since the open, daily trend, gap, opening-range width, minute); the review finds the situations that keep losing, one observation per day, with the chance count beside them, and writes them as PROPOSED hypotheses. Nothing changes until a hypothesis is pre-registered and survives data it was not found on. First test of the loop - *trade only with the market trend* - doubled ORB's gross in the training year and added nothing in the held-out year (net -21 to -25 bp); it does not qualify |
 | `paper/book.py` / `fb book [--book swing-v1\|book-v1] [--replay START --label L] [--report]` | **Paper books for the suggestions**, each pre-registered: *swing-v1* buys the top 50 swing candidates each evening (2% each, at most 50 open, swing stop, sold after 7 sessions), *book-v1* the top 5 position names (60 sessions). Bought at the next close, sold at the stop or the horizon, net of the sized round trip, against the universe bought and held over the same days. Every trade is kept and the terminal shows the worst beside the best. Replays are labelled in-sample; the live record is the evidence (verdict after 100 trades over 20 entry days). book-v1's replay since 2023: +0.79% a trade net but **-3.1% against the universe** (t -2.5) - a large-cap tilt through a small-cap rally |
 | `paper/terminal.py` / `fb terminal` | One HTML page: market and breadth, kill switch, top opportunities, paper trades, what changed (filings, escaped), strategy health and champion standings, and a drill-down per name (why now, evidence, analogues, range, net alpha, size, stop, time exit, execution). Written to `data/terminal/index.html` |
@@ -181,7 +195,7 @@ so a five-minute signal is never evaluated with a twenty-day framework or the ot
 
 | Mode | Holding period | Universe and data | Judged by | Evidence today |
 |---|---|---|---|---|
-| **Investor** | months to years | point-in-time prices, XBRL fundamentals, filings, promoter graph | after-tax return against holding the index, with deferral | Fundamentals mostly null in the primary sample (earnings yield the one faint hint, holdout pending). Buy-and-hold's tax deferral is worth 2-3 points a year to beat |
+| **Investor** | months to years | point-in-time prices, XBRL fundamentals, filings, promoter graph | after-tax return against holding the index, with deferral | Fundamentals faint in both samples (earnings yield positive but never significant; earnings surprise strongest in smaller names, t 3.4, under the bar). Buy-and-hold's tax deferral is worth 2-3 points a year to beat |
 | **Position / quant** | 1-6 months | full liquid universe (~1,500 names), daily features | net alpha over the *same* universe after costs and tax, replicated across size tiers | Momentum and 52-week-high: about +3 points a year over the same universe after cost and tax, **in-sample**. Information still accruing at 120 sessions |
 | **Swing** | 5-10 sessions | daily setups on liquid names | net return over a *random* liquid name (the mean, not the median) | **None.** Pullback, oversold, breakout and strength setups lose 0.2-0.6% a trade net |
 | **Intraday** | minutes to the close | Kite minute bars and live quotes, 200-300 names | net bp a trade after the intraday schedule | **None.** Opening-range breakout: gross ~0, net -15 to -21 bp over 251,000 trades. Now being measured live |
