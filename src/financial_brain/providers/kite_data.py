@@ -147,7 +147,7 @@ def token_for(tradingsymbol: str, instrument_list: list[dict] | None = None,
 
 
 def candles(instrument_token: int, start: date | datetime, as_of: date | datetime, *,
-            interval: str = "minute") -> list[dict]:
+            interval: str = "minute", continuous: bool = False, oi: bool = False) -> list[dict]:
     """Candles from ``start`` up to ``as_of``, inclusive.
 
     ``as_of`` is required, not defaulted to now. On a live stream the difference between
@@ -158,13 +158,17 @@ def candles(instrument_token: int, start: date | datetime, as_of: date | datetim
     if interval not in INTERVALS:
         raise KiteDataError(f"interval must be one of {INTERVALS}")
     fmt = "%Y-%m-%d %H:%M:%S" if isinstance(start, datetime) else "%Y-%m-%d"
-    body = _get(f"/instruments/historical/{instrument_token}/{interval}",
-                {"from": start.strftime(fmt), "to": as_of.strftime(fmt)})
+    params = {"from": start.strftime(fmt), "to": as_of.strftime(fmt)}
+    if continuous:
+        params["continuous"] = 1            # futures: expired contracts stitched into one series (day interval)
+    if oi:
+        params["oi"] = 1
+    body = _get(f"/instruments/historical/{instrument_token}/{interval}", params)
     out = []
     for row in body["data"]["candles"]:
-        ts, o, h, lo, c, vol, *_ = (*row, None)[:6] if len(row) < 6 else row
-        out.append({"ts": ts, "open": o, "high": h, "low": lo, "close": c,
-                    "volume": vol})
+        ts, o, h, lo, c, vol = (list(row) + [None] * 6)[:6]
+        out.append({"ts": ts, "open": o, "high": h, "low": lo, "close": c, "volume": vol,
+                    "oi": row[6] if len(row) > 6 else None})
     return out
 
 
