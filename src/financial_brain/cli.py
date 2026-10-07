@@ -1693,9 +1693,11 @@ def cmd_zoo(args) -> int:
     try:
         led = duckdb.connect(str(IR.LEDGER), read_only=True)
         fno = sorted({r[0] for r in led.execute("SELECT DISTINCT symbol FROM fno_snapshots").fetchall()})
+        snap = led.execute("""SELECT day, symbol, spot, fut, fut_expiry, basis_annualised FROM fno_snapshots
+                              WHERE day >= CAST(current_date - INTERVAL 10 DAY AS VARCHAR)""").df()
         led.close()
     except Exception:                                   # noqa: BLE001 - the ledger is busy in market hours
-        fno = []
+        fno, snap = [], None
     if not fno:
         try:
             h = duckdb.connect("data/futures_history.duckdb", read_only=True)
@@ -1706,7 +1708,7 @@ def cmd_zoo(args) -> int:
     z = Z.connect()
     try:
         if not args.report:
-            print(Z.run(rcon, z, fno_symbols=fno))
+            print(Z.run(rcon, z, fno_symbols=fno, fno_snap=snap))
         print(Z.summary(z).round(5).to_string())
     finally:
         z.close()

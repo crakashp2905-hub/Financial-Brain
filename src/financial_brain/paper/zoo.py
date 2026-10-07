@@ -26,7 +26,9 @@ RULES = ("ma_cross_50_200", "ema_ribbon", "macd_cross", "bollinger_reversion", "
          "atr_breakout", "ichimoku_breakout", "donchian_55_20", "cci_trend", "volume_spike_entry")
 KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pairs_coint": "long_short",
         "pca_statarb": "long_short", "vix_mean_reversion": "index", "scale_trader": "index", "grid": "index",
-        "martingale": "index", "anti_martingale": "index"}
+        "martingale": "index", "anti_martingale": "index", "carry_basis_10": "carry"}
+CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
+CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS zoo_targets (strategy VARCHAR, day DATE, key VARCHAR, weight DOUBLE, PRIMARY KEY (strategy, day, key));
@@ -64,7 +66,7 @@ def settle(z, strategy: str, day: date, prev_day: date | None, rets: dict, bench
     for k in keys:
         dw = new.get(k, 0.0) - old.get(k, 0.0)
         side = old.get(k, 0.0) if abs(old.get(k, 0.0)) > abs(new.get(k, 0.0)) else new.get(k, 0.0)
-        rate = COST_INDEX if k == INDEX else (COST_SHORT if side < 0 else COST_LONG)
+        rate = CARRY_RATE if k.startswith("CARRY:") else COST_INDEX if k == INDEX else (COST_SHORT if side < 0 else COST_LONG)
         cost += abs(dw) * rate
     z.execute("DELETE FROM zoo_targets WHERE strategy = ? AND day = ?", [strategy, day])
     if new:
@@ -202,6 +204,29 @@ def index_targets(nifty: pd.Series, vix: pd.Series, z, day: date) -> dict[str, f
     return out
 
 
+def carry_targets(snap: pd.DataFrame, st: dict, day: date) -> tuple[dict, dict]:
+    """``snap``: today's F&O snapshot (symbol, spot, fut, fut_expiry, basis_annualised). Positions held to expiry; new
+    ones where the annualised basis exceeds 10% with at least 5 days left, up to 10 names."""
+    pos = {k: v for k, v in (st.get("pos") or {}).items() if str(v) > str(day)}          # past expiry: settled, gone
+    for r in snap.sort_values("basis_annualised", ascending=False).itertuples():
+        if len(pos) >= CARRY_MAX:
+            break
+        if r.symbol in pos or r.basis_annualised is None or not np.isfinite(r.basis_annualised):
+            continue
+        left = (pd.Timestamp(r.fut_expiry).date() - day).days
+        if r.basis_annualised > CARRY_MIN_BASIS and left >= CARRY_MIN_DAYS:
+            pos[r.symbol] = str(r.fut_expiry)
+    n = max(len(pos), 1)
+    return {f"CARRY:{s_}": 1.0 / n for s_ in pos}, {"pos": pos}
+
+
+def carry_returns(prev: pd.DataFrame, today: pd.DataFrame) -> dict:
+    """Per symbol: (change in spot - change in the same future) / previous spot."""
+    m = prev.merge(today, on="symbol", suffixes=("_p", "_t"))
+    m = m[m["fut_expiry_p"] == m["fut_expiry_t"]]                    # same contract; a roll is an exit, not a return
+    return {f"CARRY:{r.symbol}": float(((r.spot_t - r.spot_p) - (r.fut_t - r.fut_p)) / r.spot_p) for r in m.itertuples()}
+
+
 def summary(z) -> pd.DataFrame:
     df = z.execute("SELECT * FROM zoo_pnl ORDER BY strategy, day").df()
     if df.empty:
@@ -214,7 +239,8 @@ def summary(z) -> pd.DataFrame:
     return out.sort_values("vs_bench", ascending=False)
 
 
-def run(rcon, z, *, day: date | None = None, fno_symbols: list[str] | None = None) -> dict:
+def run(rcon, z, *, day: date | None = None, fno_symbols: list[str] | None = None,
+        fno_snap: pd.DataFrame | None = None) -> dict:
     """One evening: settle yesterday's targets at today's close, then set today's. Idempotent per day."""
     from ..features import technical as TE
     day = day or pd.Timestamp(rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]).date()
@@ -269,4 +295,13 @@ def run(rcon, z, *, day: date | None = None, fno_symbols: list[str] | None = Non
         for name, e in index_targets(lv["Nifty 50"], lv["India VIX"], z, day).items():
             if name not in done:
                 out[name] = settle(z, name, day, prev, rets, nb, {INDEX: e} if e else {})
+    if fno_snap is not None and len(fno_snap) and "carry_basis_10" not in done:
+        today_s = fno_snap[fno_snap["day"].astype(str) == str(day)]
+        prev_s = fno_snap[fno_snap["day"].astype(str) == str(prev)] if prev is not None else fno_snap.iloc[0:0]
+        if len(today_s):
+            crets = carry_returns(prev_s, today_s) if len(prev_s) else {}
+            w, st = carry_targets(today_s, _state(z, "carry_basis_10"), day)
+            _save_state(z, "carry_basis_10", st)
+            rf_day = 0.065 * ((day - prev).days if prev else 0) / 365
+            out["carry_basis_10"] = settle(z, "carry_basis_10", day, prev, {**rets, **crets}, rf_day, w)
     return {"day": day, "prev": prev, "settled": len(out)}

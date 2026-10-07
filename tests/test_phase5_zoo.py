@@ -43,3 +43,16 @@ def test_martingale_state_doubles_after_a_loss(tmp_path):
     st = Z._state(z, "martingale")
     assert st["stake"] == pytest.approx(0.04) and not st["ruined"]
     assert Z._state(z, "anti_martingale")["stake"] == pytest.approx(0.02)
+
+
+def test_the_carry_book_enters_rich_bases_and_earns_spot_minus_future():
+    day = date(2026, 10, 7)
+    snap = pd.DataFrame({"symbol": ["RICH", "THIN", "LATE"], "spot": [100.0, 100.0, 100.0], "fut": [101.0, 100.2, 101.0],
+                         "fut_expiry": ["2026-10-27", "2026-10-27", "2026-10-09"], "basis_annualised": [0.18, 0.04, 0.18]})
+    w, st = Z.carry_targets(snap, {}, day)
+    assert set(w) == {"CARRY:RICH"} and st["pos"]["RICH"] == "2026-10-27"      # LATE has too few days left
+    nxt = snap.assign(spot=[101.0, 100.0, 100.0], fut=[101.6, 100.2, 101.0])
+    r = Z.carry_returns(snap, nxt)
+    assert r["CARRY:RICH"] == pytest.approx((1.0 - 0.6) / 100)                   # the basis narrowed by 0.4
+    w2, st2 = Z.carry_targets(nxt, st, date(2026, 10, 28))
+    assert "CARRY:RICH" not in w2                                                  # held to expiry, then gone
