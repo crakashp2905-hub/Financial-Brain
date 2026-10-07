@@ -313,6 +313,31 @@ def decision_summary(rcon, asof, cs, best, breadth_state, ks_level, my) -> str:
     return "\n".join(out)
 
 
+def zoo_panel() -> str:
+    """Every tested daily strategy, live on paper, rules frozen as tested."""
+    import duckdb as _db
+    from . import zoo as Z
+    if not Z.PATH.exists():
+        return ""
+    try:
+        zc = _db.connect(str(Z.PATH), read_only=True)
+        try:
+            sm = Z.summary(zc)
+        finally:
+            zc.close()
+    except Exception:                                   # noqa: BLE001 - being written by the refresh at this moment
+        return ""
+    if sm.empty:
+        return ""
+    return ("<h2>The zoo: every tested strategy, live on paper</h2><div class='sub'>Rules frozen exactly as tested; each earns the next "
+            "session's return on the weights it set at a close, after costs. No verdict before 60 sessions.</div><div class='wrap'><table>"
+            "<tr><th>Strategy</th><th>Kind</th><th class='r'>Sessions</th><th class='r'>Net since start</th><th class='r'>vs its benchmark</th>"
+            "<th class='r'>Holdings</th></tr>"
+            + "".join(f"<tr><td>{_e(n)}</td><td>{_e(r['kind'])}</td><td class='r'>{int(r['days'])}</td><td class='r'>{_pct(r['net_total'])}</td>"
+                      f"<td class='r'>{_pct(r['vs_bench'])}</td><td class='r'>{int(r['holdings'])}</td></tr>" for n, r in sm.iterrows())
+            + "</table></div>")
+
+
 def evidence_panel(ledger, book) -> str:
     from ..evaluation import evidence_tiers as ET
     rows = ET.ledger(intraday=ledger, book=book)
@@ -524,6 +549,7 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
                                 breadth_state=b.get("state"), clears=clears, my=my))
     parts.append(my_portfolio_panel(rcon, asof, best.head(10)))
     parts.append(evidence_panel(ledger, book))
+    parts.append(zoo_panel())
     # ---------------------------------------------------------------- swing candidates (top 50)
     from ..decisions import plan as _P
     from . import book as BK
@@ -549,6 +575,7 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
         parts.append(book_panel(book, BK.POSITION, rcon))
         parts.append(book_panel(book, BK.LEARNED, rcon))
         parts.append(book_panel(book, BK.MOMENTUM, rcon))
+        parts.append(book_panel(book, BK.RANKING_V2, rcon))
     # ---------------------------------------------------------------- intraday paper trades
     parts.append("<h2>Intraday paper trades (live-v1: ORB and GAP, flat by 15:15)</h2>")
     week = ledger.execute("""SELECT day, mode, strategy, COUNT(*), SUM(CASE WHEN net_pnl > 0 THEN 1 ELSE 0 END), SUM(gross_pnl), SUM(costs), SUM(net_pnl)

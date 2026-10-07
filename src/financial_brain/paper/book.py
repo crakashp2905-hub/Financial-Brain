@@ -53,7 +53,9 @@ LEARNED = Spec("learned-v1", 20, 20, "position", 20, 0.05, "Learned-model book: 
                ranker="learned")
 MOMENTUM = Spec("momentum-v1", 20, 20, "position", 20, 0.05, "Momentum book (the champion): top 20, 20 sessions",
                 ranker="momentum")
-BOOKS = {s.version: s for s in (POSITION, SWING, LEARNED, MOMENTUM)}
+RANKING_V2 = Spec("v2-v1", 20, 20, "position", 20, 0.05, "Ranking v2 book (challenger): top 20 by momentum + 52-week high, 20 sessions",
+                  ranker="v2")
+BOOKS = {s.version: s for s in (POSITION, SWING, LEARNED, MOMENTUM, RANKING_V2)}
 # the first book's names, kept so its tests and callers read as before
 VERSION, TOP_N, MAX_OPEN = POSITION.version, POSITION.top_n, POSITION.max_open
 
@@ -148,6 +150,11 @@ def factor_ranking(rcon, day: date, spec: Spec, capital: float = CAPITAL) -> pd.
         from ..evaluation import learned_model as LM
         sc = LM.score_day(rcon, day)
         cs = cs.merge(sc[["lineage", "pred", "why"]], on="lineage", how="inner").sort_values("pred", ascending=False)
+    elif spec.ranker == "v2":
+        from ..opportunity import ranking_v2 as R2
+        cs = cs.dropna(subset=["mom_12_1", "dist_52w_high"])
+        cs = cs.assign(v2=R2.score(cs).to_numpy()).sort_values("v2", ascending=False)
+        cs["why"] = [f"12-month momentum {m * 100:+.0f}%, {d * 100:+.0f}% from the 52-week high" for m, d in zip(cs["mom_12_1"], cs["dist_52w_high"])]
     else:
         cs = cs.dropna(subset=["mom_12_1"]).sort_values("mom_12_1", ascending=False)
         cs["why"] = [f"12-month momentum {m * 100:+.0f}%" for m in cs["mom_12_1"]]
@@ -262,7 +269,7 @@ def step(rcon, book, day: date, *, mode: str, spec: Spec = POSITION, capital: fl
     held = {r[0] for r in occ}
     if len(held) >= spec.max_open:
         return 0
-    if spec.ranker in ("learned", "momentum"):
+    if spec.ranker in ("learned", "momentum", "v2"):
         ranked = factor_ranking(rcon, day, spec, capital)
     else:
         ranked = swing_ranking(rcon, day, spec, capital, costs) if spec.style == "swing" else ranking(rcon, day, capital)

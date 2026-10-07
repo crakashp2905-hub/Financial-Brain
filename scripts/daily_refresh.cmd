@@ -4,7 +4,8 @@ rem 1. prices, indices, actions, announcements, regime, features - so the next 0
 rem 2. champion/challenger: record today's locked out-of-sample picks, resolve matured cohorts
 rem 3. F&O snapshot: futures basis and OI, option-chain statistics, day-over-day positioning (needs the Kite token)
 rem 4. loss review: situations that keep losing become PROPOSED hypotheses (never applied automatically)
-rem 5. both suggestion books (top-5 position, top-50 swing): sell what hit its stop or horizon, buy today's names at the next close
+rem 5. the paper books (position, swing, learned model, momentum, ranking v2) and the zoo (every tested daily strategy)
+rem    both suggestion books (top-5 position, top-50 swing): sell what hit its stop or horizon, buy today's names at the next close
 rem 6. your Kite holdings, positions and today's trade book (read only, stored in data\my_portfolio.duckdb)
 rem 7. the terminal page, data\terminal\index.html
 rem 8. desktop alerts: a holding exiting by rule, a name clearing 1 percent net, a failed paper run
@@ -18,6 +19,7 @@ python -c "from financial_brain import env; env.load(); from financial_brain.cli
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['fno-snapshot']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['loss-review', '--propose']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['book']))" >> %LOG% 2>&1
+python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['zoo']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['my-portfolio', '--sync']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['terminal']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['alerts']))" >> %LOG% 2>&1

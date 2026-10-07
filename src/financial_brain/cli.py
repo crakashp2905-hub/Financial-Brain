@@ -1684,6 +1684,36 @@ def cmd_daily_results(args) -> int:
     return 0
 
 
+def cmd_zoo(args) -> int:
+    """The live paper zoo: every tested daily strategy on paper, rules frozen as tested."""
+    import duckdb
+    from .paper import intraday_runner as IR
+    from .paper import zoo as Z
+    rcon = duckdb.connect(str(load().db_path), read_only=True)
+    try:
+        led = duckdb.connect(str(IR.LEDGER), read_only=True)
+        fno = sorted({r[0] for r in led.execute("SELECT DISTINCT symbol FROM fno_snapshots").fetchall()})
+        led.close()
+    except Exception:                                   # noqa: BLE001 - the ledger is busy in market hours
+        fno = []
+    if not fno:
+        try:
+            h = duckdb.connect("data/futures_history.duckdb", read_only=True)
+            fno = sorted({r[0] for r in h.execute("SELECT DISTINCT symbol FROM futures_daily").fetchall()} - {"NIFTY", "BANKNIFTY"})
+            h.close()
+        except Exception:                               # noqa: BLE001 - no F&O list at all: no pairs or stat-arb tonight
+            fno = []
+    z = Z.connect()
+    try:
+        if not args.report:
+            print(Z.run(rcon, z, fno_symbols=fno))
+        print(Z.summary(z).round(5).to_string())
+    finally:
+        z.close()
+        rcon.close()
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -2345,6 +2375,10 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("daily-results", help="the day's paper results in one report")
     g.add_argument("--day", help="YYYY-MM-DD (default today)")
     g.set_defaults(fn=cmd_daily_results)
+
+    g = sub.add_parser("zoo", help="the live paper zoo: every tested daily strategy on paper")
+    g.add_argument("--report", action="store_true", help="print the record only")
+    g.set_defaults(fn=cmd_zoo)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)

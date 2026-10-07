@@ -69,6 +69,22 @@ def build(ledger, day: str, *, book=None) -> str:
             s = BK.summary(book, "live", spec)
             extra = f", open P&L Rs {s['open_net_rs']:,.0f} (universe Rs {s['open_bench_rs']:,.0f})" if "open_net_rs" in s else ""
             lines.append(f"- {spec.label}: {s['closed']} sold, {s['open']} open{extra} - {s['verdict']}")
+    try:
+        import duckdb as _db
+        from . import zoo as Z
+        if Z.PATH.exists():
+            zc = _db.connect(str(Z.PATH), read_only=True)
+            try:
+                sm = Z.summary(zc)
+            finally:
+                zc.close()
+            if len(sm):
+                lines += ["", "## The zoo - every tested daily strategy on paper (rules frozen as tested; no verdict before 60 sessions)", "",
+                          "| strategy | kind | sessions | net since start | vs its benchmark | holdings |", "|---|---|---|---|---|---|"]
+                for name, r in sm.iterrows():
+                    lines.append(f"| {name} | {r['kind']} | {int(r['days'])} | {r['net_total'] * 100:+.2f}% | {r['vs_bench'] * 100:+.2f}% | {int(r['holdings'])} |")
+    except Exception as e:                              # noqa: BLE001 - the report stands without it
+        lines.append(f"(zoo unavailable: {str(e)[:80]})")
     return "\n".join(lines) + "\n"
 
 
