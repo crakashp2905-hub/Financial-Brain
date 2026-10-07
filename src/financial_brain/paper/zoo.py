@@ -236,6 +236,12 @@ def summary(z) -> pd.DataFrame:
                         "last_net": g["net"].last(), "holdings": g["holdings"].last()})
     out["vs_bench"] = out["net_total"] - out["bench_total"]
     out["kind"] = [KIND.get(s, "book") for s in out.index]
+    from ..evaluation import performance as PF
+    sh = {}
+    for name, x in df.groupby("strategy"):
+        r = x["net"].iloc[1:]                         # the first evening only sets weights
+        sh[name] = PF.stats(r, periods=252).get("sharpe") if len(r) >= 20 else float("nan")
+    out["sharpe"] = pd.Series(sh)                     # annualised, above 6.5%; shown from 20 sessions
     return out.sort_values("vs_bench", ascending=False)
 
 

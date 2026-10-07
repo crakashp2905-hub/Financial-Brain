@@ -59,6 +59,11 @@ def _alpha(a: dict) -> str:
             + f" <b>net {a['net'] * 100:+.2f}%</b> over {a['horizon']} sessions")
 
 
+def _chart(t) -> str:
+    """A link to the name's chart page (written beside the terminal by paper/charts.py)."""
+    return f"<a href='charts/{html.escape(str(t).replace('&', '_'))}.html'>chart</a>"
+
+
 def _e(x) -> str:
     return html.escape("" if x is None else str(x))
 
@@ -161,7 +166,7 @@ def book_panel(book, spec=None, rcon=None) -> str:
             rows = []
             for r in held.itertuples():
                 sell_by = P._add_sessions(pd.Timestamp(r.entry_day).date(), int(r.horizon)) if pd.notna(r.entry_day) else f"{r.horizon} sessions after entry"
-                rows.append(f"<tr><td>{_e(r.ticker)}</td><td>{_e(r.status)}</td><td>{_d(r.signal_day)}</td>"
+                rows.append(f"<tr><td>{_e(r.ticker)} · {_chart(r.ticker)}</td><td>{_e(r.status)}</td><td>{_d(r.signal_day)}</td>"
                             f"<td class='r'>{'-' if pd.isna(r.entry_px) else f'{r.entry_px:,.2f}'}</td>"
                             f"<td class='r'>{'-' if pd.isna(r.last_px) else f'{r.last_px:,.2f}'}</td>"
                             f"<td class='r'>{'-' if pd.isna(r.net) else _pct(r.net)}</td><td class='r'>{r.stop:,.2f}</td>"
@@ -224,7 +229,7 @@ def my_portfolio_panel(rcon, asof, candidates) -> str:
            f"<div class='tile'><div class='k'>At risk to the stops</div><div class='v'>{rk['at_stops']:.1%}</div><div class='sub'>of the book, if every plan stop is hit</div></div>"
            f"<div class='tile'><div class='k'>Largest sector</div><div class='v'>{rk['top_sector'][1]:.0%}</div><div class='sub'>{_e(rk['top_sector'][0])}</div></div></div>"]
     rows = "".join(
-        f"<tr><td>{_e(h['symbol'])}</td><td class='r'>{h['qty']:,.0f}</td><td class='r'>{h['avg']:,.2f}</td><td class='r'>{h['last']:,.2f}</td>"
+        f"<tr><td>{_e(h['symbol'])} · {_chart(h['symbol'])}</td><td class='r'>{h['qty']:,.0f}</td><td class='r'>{h['avg']:,.2f}</td><td class='r'>{h['last']:,.2f}</td>"
         f"<td class='r'>{_pct(h['since_cost'])}</td><td class='r'>{h['stop']:,.2f}</td>"
         f"<td><div style='background:var(--line);width:90px;height:8px;border-radius:4px;display:inline-block;vertical-align:middle'>"
         f"<div style='background:{'var(--pos)' if h['score'] >= 60 else 'var(--warn)' if h['recommendation'] != 'EXIT BY RULE' else 'var(--neg)'};width:{h['score'] * 0.9:.0f}px;height:8px;border-radius:4px'></div></div> {h['score']:.0f}</td>"
@@ -332,9 +337,10 @@ def zoo_panel() -> str:
     return ("<h2>The zoo: every tested strategy, live on paper</h2><div class='sub'>Rules frozen exactly as tested; each earns the next "
             "session's return on the weights it set at a close, after costs. No verdict before 60 sessions.</div><div class='wrap'><table>"
             "<tr><th>Strategy</th><th>Kind</th><th class='r'>Sessions</th><th class='r'>Net since start</th><th class='r'>vs its benchmark</th>"
-            "<th class='r'>Holdings</th></tr>"
+            "<th class='r'>Sharpe</th><th class='r'>Holdings</th></tr>"
             + "".join(f"<tr><td>{_e(n)}</td><td>{_e(r['kind'])}</td><td class='r'>{int(r['days'])}</td><td class='r'>{_pct(r['net_total'])}</td>"
-                      f"<td class='r'>{_pct(r['vs_bench'])}</td><td class='r'>{int(r['holdings'])}</td></tr>" for n, r in sm.iterrows())
+                      f"<td class='r'>{_pct(r['vs_bench'])}</td><td class='r'>{'-' if r['sharpe'] != r['sharpe'] else format(r['sharpe'], '+.2f')}</td>"
+                      f"<td class='r'>{int(r['holdings'])}</td></tr>" for n, r in sm.iterrows())
             + "</table></div>")
 
 
@@ -412,7 +418,7 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
             fund = None
         sid = f"r{k}"
         sizing.append({"id": sid, "price": float(r.price), "stop": float(plan["stop_price"]), "adv": float(row["adv20"])})
-        rows.append(f"<tr><td class='r'>{k}</td><td><a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a></td><td>LONG</td><td class='r'>{_pct(r.expected_net)}</td>"
+        rows.append(f"<tr><td class='r'>{k}</td><td><a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a> · {_chart(r.ticker)}</td><td>LONG</td><td class='r'>{_pct(r.expected_net)}</td>"
                     f"<td>{r.horizon} sessions</td><td class='r'>{o.get('p_up', float('nan')):.0%}</td><td class='r'>{o.get('reward_risk', float('nan')):.2f}</td>"
                     f"<td class='r'>{plan['stop_distance']:.1%}</td><td>{_e(r.evidence)}</td></tr>")
         sigma_h = float(row["vol_60"]) * np.sqrt(int(r.horizon) / 252)
@@ -642,6 +648,21 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
         parts.append(f"<tr><td>{_e(s['strategy'])} vs {C.CHAMPION}</td><td>locked OOS</td><td class='r'>{s.get('cohorts', 0)} cohorts</td><td class='r'>-</td>"
                      f"<td>{_chip(s['status'])}</td><td>promotion needs {C.MIN_COHORTS} cohorts at t >= {C.T_PROMOTE}</td></tr>")
     parts.append("</table></div>")
+    try:
+        from . import charts as CH
+        names = list(best.head(10)["ticker"])
+        if book is not None:
+            names += [r[0] for r in book.execute("SELECT DISTINCT ticker FROM positions WHERE mode = 'live' AND exit_day IS NULL").fetchall()]
+        from ..portfolio import my_book as MB
+        if MB.PATH.exists():
+            _c = MB.connect(read_only=True)
+            try:
+                names += list(MB.latest(_c).get("tradingsymbol", []))
+            finally:
+                _c.close()
+        CH.build_many(rcon, names, asof, book=book, out=OUT.parent / "charts")
+    except Exception as e:                              # noqa: BLE001 - the terminal renders without charts
+        parts.append(f"<div class='sub'>charts unavailable: {_e(str(e)[:100])}</div>")
     parts.append("<p class='sub'>Information computed from public statistics. It does not know your finances, needs or tax, and nothing here is sent to a broker.</p></main>")
     return "\n".join(parts)
 

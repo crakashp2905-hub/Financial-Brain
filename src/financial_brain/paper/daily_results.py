@@ -80,9 +80,10 @@ def build(ledger, day: str, *, book=None) -> str:
                 zc.close()
             if len(sm):
                 lines += ["", "## The zoo - every tested daily strategy on paper (rules frozen as tested; no verdict before 60 sessions)", "",
-                          "| strategy | kind | sessions | net since start | vs its benchmark | holdings |", "|---|---|---|---|---|---|"]
+                          "| strategy | kind | sessions | net since start | vs its benchmark | Sharpe (from 20 sessions) | holdings |", "|---|---|---|---|---|---|---|"]
                 for name, r in sm.iterrows():
-                    lines.append(f"| {name} | {r['kind']} | {int(r['days'])} | {r['net_total'] * 100:+.2f}% | {r['vs_bench'] * 100:+.2f}% | {int(r['holdings'])} |")
+                    lines.append(f"| {name} | {r['kind']} | {int(r['days'])} | {r['net_total'] * 100:+.2f}% | {r['vs_bench'] * 100:+.2f}% | "
+                                 f"{'-' if r['sharpe'] != r['sharpe'] else format(r['sharpe'], '+.2f')} | {int(r['holdings'])} |")
     except Exception as e:                              # noqa: BLE001 - the report stands without it
         lines.append(f"(zoo unavailable: {str(e)[:80]})")
     return "\n".join(lines) + "\n"

@@ -140,4 +140,5 @@ def _score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_pa
     tick = dict(rcon.execute("SELECT lineage, ticker FROM adjusted_prices WHERE business_date = ? AND lineage IN (SELECT UNNEST(?))",
                              [day, list(frame["lineage"])]).fetchall())
     frame["ticker"] = frame["lineage"].map(tick)
-    return frame[["lineage", "ticker", "pred", "why"]].sort_values("pred", ascending=False).reset_index(drop=True)
+    cols = ["lineage", "ticker", "pred", "why"] + [f for f in meta["features"] if f in frame.columns]
+    return frame[cols].sort_values("pred", ascending=False).reset_index(drop=True)   # features kept for percentiles
