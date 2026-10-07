@@ -65,7 +65,7 @@ def build(ledger, day: str, *, book=None) -> str:
     if book is not None:
         from . import book as BK
         lines += ["", "## Paper books (bought and sold at closes; updated by the 18:45 refresh)", ""]
-        for spec in (BK.SWING, BK.POSITION):
+        for spec in BK.BOOKS.values():
             s = BK.summary(book, "live", spec)
             extra = f", open P&L Rs {s['open_net_rs']:,.0f} (universe Rs {s['open_bench_rs']:,.0f})" if "open_net_rs" in s else ""
             lines.append(f"- {spec.label}: {s['closed']} sold, {s['open']} open{extra} - {s['verdict']}")

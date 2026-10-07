@@ -44,11 +44,16 @@ class Spec:
     horizon: int | None          #: sessions held; None = the opportunity's own horizon
     max_weight: float
     label: str
+    ranker: str = "v1"           #: "v1" (the terminal's list), "swing", "learned" or "momentum"
 
 
 POSITION = Spec("book-v1", 5, 10, "position", None, 0.10, "Position book: top 5 a day, up to 60 sessions")
 SWING = Spec("swing-v1", 50, 50, "swing", 7, 0.02, "Swing book: top 50 a day, 7 sessions")
-BOOKS = {s.version: s for s in (POSITION, SWING)}
+LEARNED = Spec("learned-v1", 20, 20, "position", 20, 0.05, "Learned-model book: top 20 of the 500 most liquid, 20 sessions",
+               ranker="learned")
+MOMENTUM = Spec("momentum-v1", 20, 20, "position", 20, 0.05, "Momentum book (the champion): top 20, 20 sessions",
+                ranker="momentum")
+BOOKS = {s.version: s for s in (POSITION, SWING, LEARNED, MOMENTUM)}
 # the first book's names, kept so its tests and callers read as before
 VERSION, TOP_N, MAX_OPEN = POSITION.version, POSITION.top_n, POSITION.max_open
 
@@ -76,6 +81,7 @@ def connect(path: Path = PATH, read_only: bool = False) -> duckdb.DuckDBPyConnec
     con = duckdb.connect(str(path))
     con.execute(SCHEMA)
     old = con.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'book_positions'").fetchone()[0]
+    con.execute("ALTER TABLE positions ADD COLUMN IF NOT EXISTS why VARCHAR")      # the combination behind a buy
     if old:                                     # the first layout keyed rows without the book's version
         con.execute("INSERT OR IGNORE INTO positions SELECT * FROM book_positions")
         con.execute("DROP TABLE book_positions")
@@ -127,6 +133,35 @@ def ranking(rcon, day: date, capital: float = CAPITAL) -> pd.DataFrame:
         return best
     best = best.merge(cs[["ticker", "lineage", "adv20", "vol_60"]].drop_duplicates("ticker"), on="ticker", how="left")
     return best.sort_values("expected_net", ascending=False).reset_index(drop=True)
+
+
+def factor_ranking(rcon, day: date, spec: Spec, capital: float = CAPITAL) -> pd.DataFrame:
+    """learned-v1 / momentum-v1: the 500 most liquid names, ordered by the learned model's score or by 12-1
+    momentum, each with the plan's position stop. The learned book also carries each name's reasons."""
+    from ..decisions import plan as P
+    from ..opportunity import scanners as S
+    cs = S.cross_section(rcon, day)
+    if cs.empty:
+        return pd.DataFrame()
+    cs = cs.sort_values("adv20", ascending=False).head(500)
+    if spec.ranker == "learned":
+        from ..evaluation import learned_model as LM
+        sc = LM.score_day(rcon, day)
+        cs = cs.merge(sc[["lineage", "pred", "why"]], on="lineage", how="inner").sort_values("pred", ascending=False)
+    else:
+        cs = cs.dropna(subset=["mom_12_1"]).sort_values("mom_12_1", ascending=False)
+        cs["why"] = [f"12-month momentum {m * 100:+.0f}%" for m in cs["mom_12_1"]]
+    rows = []
+    for r in cs.head(spec.top_n * 2).itertuples():
+        try:
+            pl = P.plan(ticker=r.ticker, price=float(r.price), vol_annual=float(r.vol_60), adv_inr=float(r.adv20),
+                        capital_inr=capital, style="position", max_weight=spec.max_weight)
+        except P.PlanError:
+            continue
+        rows.append({"ticker": r.ticker, "lineage": r.lineage, "type": spec.ranker, "horizon": spec.horizon,
+                     "price": float(r.price), "invalidation": float(pl["stop_price"]), "adv20": float(r.adv20),
+                     "vol_60": float(r.vol_60), "expected_net": 0.0, "why": r.why})
+    return pd.DataFrame(rows)
 
 
 def swing_ranking(rcon, day: date, spec: Spec = SWING, capital: float = CAPITAL,
@@ -227,7 +262,10 @@ def step(rcon, book, day: date, *, mode: str, spec: Spec = POSITION, capital: fl
     held = {r[0] for r in occ}
     if len(held) >= spec.max_open:
         return 0
-    ranked = swing_ranking(rcon, day, spec, capital, costs) if spec.style == "swing" else ranking(rcon, day, capital)
+    if spec.ranker in ("learned", "momentum"):
+        ranked = factor_ranking(rcon, day, spec, capital)
+    else:
+        ranked = swing_ranking(rcon, day, spec, capital, costs) if spec.style == "swing" else ranking(rcon, day, capital)
     if ranked.empty:
         return 0
     added = 0
@@ -248,10 +286,10 @@ def step(rcon, book, day: date, *, mode: str, spec: Spec = POSITION, capital: fl
             cost = costs.round_trip_sized(order_value=shares * float(r["price"]), adv_value=float(r["adv20"]),
                                           daily_vol=float(r["vol_60"]) / np.sqrt(252.0))["total"]
         book.execute("""INSERT OR REPLACE INTO positions (version, mode, signal_day, rank, ticker, lineage, type,
-                        horizon, shares, stop, ref_price, expected_net, cost) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        horizon, shares, stop, ref_price, expected_net, cost, why) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                      [spec.version, mode, day, int(r["rank"]), r["ticker"], r["lineage"], r["type"],
                       int(spec.horizon or r["horizon"]), shares, float(r["invalidation"]), float(r["price"]),
-                      float(r["expected_net"]), float(cost)])
+                      float(r["expected_net"]), float(cost), r.get("why")])
         added += 1
     return added
 

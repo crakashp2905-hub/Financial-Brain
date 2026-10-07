@@ -165,10 +165,11 @@ def book_panel(book, spec=None, rcon=None) -> str:
                             f"<td class='r'>{'-' if pd.isna(r.entry_px) else f'{r.entry_px:,.2f}'}</td>"
                             f"<td class='r'>{'-' if pd.isna(r.last_px) else f'{r.last_px:,.2f}'}</td>"
                             f"<td class='r'>{'-' if pd.isna(r.net) else _pct(r.net)}</td><td class='r'>{r.stop:,.2f}</td>"
-                            f"<td>{sell_by}</td><td class='r'>{r.shares}</td></tr>")
+                            f"<td>{sell_by}</td><td class='r'>{r.shares}</td>"
+                            f"<td style='white-space:normal;min-width:260px'>{_e(getattr(r, 'why', None) or '')}</td></tr>")
             out.append("<div class='sub' style='margin-top:10px'>Holding now (net of the round trip; each sells at its stop or on the date shown)</div>"
                        "<div class='wrap'><table><tr><th>Stock</th><th>Status</th><th>Signal</th><th class='r'>Bought</th><th class='r'>Last</th>"
-                       "<th class='r'>Net so far</th><th class='r'>Stop</th><th>Sell by</th><th class='r'>Shares</th></tr>" + "".join(rows) + "</table></div>")
+                       "<th class='r'>Net so far</th><th class='r'>Stop</th><th>Sell by</th><th class='r'>Shares</th><th>Why it was bought</th></tr>" + "".join(rows) + "</table></div>")
         sold = df[df["status"] == "SOLD"]
         if len(sold) and rcon is not None:
             try:
@@ -546,6 +547,8 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
         parts.append(book_panel(book, BK.SWING, rcon))
     if book is not None:
         parts.append(book_panel(book, BK.POSITION, rcon))
+        parts.append(book_panel(book, BK.LEARNED, rcon))
+        parts.append(book_panel(book, BK.MOMENTUM, rcon))
     # ---------------------------------------------------------------- intraday paper trades
     parts.append("<h2>Intraday paper trades (live-v1: ORB and GAP, flat by 15:15)</h2>")
     week = ledger.execute("""SELECT day, mode, strategy, COUNT(*), SUM(CASE WHEN net_pnl > 0 THEN 1 ELSE 0 END), SUM(gross_pnl), SUM(costs), SUM(net_pnl)

@@ -93,7 +93,7 @@ def test_the_swing_book_is_kept_apart_and_a_week_replay_is_labelled(tmp_path):
     con = _book(tmp_path, [row("replay", 1, 130)])
     r = row("replay-week", 2, 90, sold=False)
     r[0] = B.SWING.version
-    con.execute("""INSERT INTO positions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", r)
+    con.execute("""INSERT INTO positions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", r + [None])
     assert B.summary(con, "replay-week", B.SWING)["open"] == 1
     assert B.summary(con, "replay", B.SWING)["closed"] == 0           # the position book's trade is not the swing book's
     html = T.book_panel(con, B.SWING)
@@ -101,3 +101,15 @@ def test_the_swing_book_is_kept_apart_and_a_week_replay_is_labelled(tmp_path):
     assert B.modes(con, B.SWING) == ["live", "replay-week"]
     with pytest.raises(B.BookError):
         B.replay(None, con, D0, D0, spec=B.SWING, mode="live")
+
+
+def test_the_learned_and_momentum_books_exist_and_record_why(tmp_path, monkeypatch):
+    con = B.connect(tmp_path / "b.duckdb")
+    ranked = pd.DataFrame({"ticker": ["A", "B"], "lineage": ["LA", "LB"], "type": "learned", "horizon": 20, "price": 100.0,
+                           "invalidation": 90.0, "adv20": 1e9, "vol_60": 0.3, "expected_net": 0.0,
+                           "why": ["+ 50-day average above the 200-day; - small daily range", "+ low 1-year volatility"]})
+    monkeypatch.setattr(B, "factor_ranking", lambda rcon, day, spec, capital=B.CAPITAL: ranked)
+    monkeypatch.setattr(B, "_plan_shares", lambda r, capital, spec=B.POSITION: 10)
+    assert B.step(None, con, D0, mode="live", spec=B.LEARNED) == 2
+    why = dict(con.execute("SELECT ticker, why FROM positions WHERE version = 'learned-v1'").fetchall())
+    assert why["A"].startswith("+ 50-day average") and {"learned-v1", "momentum-v1"} <= set(B.BOOKS)
