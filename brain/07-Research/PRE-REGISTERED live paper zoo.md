@@ -40,3 +40,12 @@ test, not against today's P&L. Nothing in the zoo changes any rule; it only reco
   rules near zero, fast rules losing to costs) - Spearman correlation above 0.5.
 * **Z2** Martingale is ruined, or in a drawdown above 50%, within its first 250 sessions with probability above the
   shuffled-path estimate's 93% ... i.e. it is not ruined only if the Nifty avoids a losing streak.
+
+## Addendum, 2026-10-07: the carry book (written before it runs)
+
+After [[Result of cash-and-carry and basis trading]]: **carry_basis_10** joins the zoo. From each evening's F&O
+snapshot (`fno_snapshots`: spot, near future, expiry, annualised basis), any F&O stock whose annualised basis exceeds
+10% with at least 5 calendar days to expiry is entered (long spot, short the near future, equal weight, at most 10
+names), held to expiry, P&L marked daily as the change in spot minus the change in the future, per rupee of spot, after
+0.265% round-trip costs. Benchmark: the risk-free rate (6.5% a year). Prediction **Z3**: after 60 sessions its excess
+over the risk-free rate is positive, as in the history (+0.14% a contract, about +1.7% a year).
