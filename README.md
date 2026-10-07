@@ -16,7 +16,7 @@ evidence, its point-in-time validity, a historical base rate from comparable sit
 its net alpha after costs, its place in the portfolio, a realistic execution and a counterfactual outcome - and
 every test is written down before it is run (`fb preregs` audits that against git).
 
-**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,304 tests.
+**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,331 tests.
 Every trading day the system now scans the market, posts a 09:30 board, paper-trades its intraday rules
 through the session and scores itself against everything it passed over. See [The daily loop](#the-daily-loop).
 
