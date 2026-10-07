@@ -46,7 +46,7 @@ def _trade_spread(z: np.ndarray, entry: float, exit_: float) -> np.ndarray:
 
 
 def pairs_distance(px: pd.DataFrame, *, formation: int = 250, trading: int = 125, n_pairs: int = 20,
-                   entry: float = 2.0, cost: float = 0.004) -> pd.DataFrame:
+                   entry: float = 2.0, cost: float = 0.004, daily: bool = False) -> pd.DataFrame:
     """Rolling formation / trading windows. Returns one row per trading window: gross and net return of the pairs book."""
     out = []
     for s in range(formation, len(px) - trading, trading):
@@ -69,10 +69,18 @@ def pairs_distance(px: pd.DataFrame, *, formation: int = 250, trading: int = 125
             pos = _trade_spread(spread / sd, entry, 0.0 + 1e-9)
             ri, rj = np.diff(ti) / ti[:-1], np.diff(tj) / tj[:-1]
             pnl = pos[:-1] * (ri - rj) / 2                            # long one leg, short the other, half each
-            trades = np.abs(np.diff(np.concatenate([[0], pos]))).sum()
+            chg = np.abs(np.diff(np.concatenate([[0], pos])))
+            trades = chg.sum()
             rets.append((pnl.sum(), pnl.sum() - trades * cost / 2))
+            if daily:
+                day_net = pnl - chg[:-1] * cost / 2
+                for k_, dv in enumerate(day_net):
+                    out.append({"d": t.index[k_ + 1], "net_day": dv / n_pairs})
         g, n = np.mean([r[0] for r in rets]), np.mean([r[1] for r in rets])
-        out.append({"start": px.index[s], "gross": g, "net": n, "pairs": len(rets)})
+        if not daily:
+            out.append({"start": px.index[s], "gross": g, "net": n, "pairs": len(rets)})
+    if daily:
+        return pd.DataFrame(out).groupby("d")["net_day"].sum().reset_index()
     return pd.DataFrame(out)
 
 
