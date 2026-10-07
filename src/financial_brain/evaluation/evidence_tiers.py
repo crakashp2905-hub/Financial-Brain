@@ -29,6 +29,11 @@ STATIC = {
     "ORB intraday": (("gross ~0, net -15 to -21 bp over 251k trades", False, "Result of the opening-range breakout with stops"),
                      ("trend filters added nothing in the 2025-26 held-out year", False, "Result of trading with the market trend")),
 }
+#: Historical net Sharpe above 6.5% (monthly, annualised) for 2022-26, its probabilistic Sharpe and its deflated Sharpe
+#: against 330 trials (Result of Sharpe ratio and Sharpe allocation). None where no monthly series was tested.
+SHARPE = {"naive momentum (champion)": (0.22, 0.68, 0.03), "ranking v1 (terminal list)": (0.33, 0.75, 0.05),
+          "ranking v2 (challenger)": (0.44, 0.82, 0.07), "learned model (challenger)": (0.88, 0.97, 0.29),
+          "swing book (top 50)": None, "ORB intraday": (-8.99, 0.00, 0.00)}
 PAPER_KEYS = {"ORB intraday": ("intraday", "ORB"), "swing book (top 50)": ("book", "swing-v1"),
               "ranking v1 (terminal list)": ("book", "book-v1")}
 VERDICT_TRADES = 100
@@ -55,7 +60,9 @@ def ledger(*, intraday=None, book=None) -> list[dict]:
                 tiers[PAPER] = {"result": f"{n} sold, {o} open in the live paper book", "passed": None, "n": n}
         except Exception:                               # noqa: BLE001 - a missing table leaves the tier empty
             pass
-        out.append({"strategy": name, "tiers": tiers, "confidence": confidence(tiers)})
+        sh = SHARPE.get(name)
+        out.append({"strategy": name, "tiers": tiers, "confidence": confidence(tiers),
+                    "sharpe": dict(zip(("sharpe", "psr", "dsr"), sh)) if sh else None})
     return out
 
 

@@ -56,3 +56,26 @@ def test_the_carry_book_enters_rich_bases_and_earns_spot_minus_future():
     assert r["CARRY:RICH"] == pytest.approx((1.0 - 0.6) / 100)                   # the basis narrowed by 0.4
     w2, st2 = Z.carry_targets(nxt, st, date(2026, 10, 28))
     assert "CARRY:RICH" not in w2                                                  # held to expiry, then gone
+
+
+def test_sharpe_allocator_weights_by_trailing_sharpe_and_earns_them(tmp_path):
+    z = Z.connect(tmp_path / "z.duckdb")
+    rng = np.random.default_rng(1)
+    months = pd.period_range("2022-01", "2026-09", freq="M")
+    panel = pd.DataFrame({"carry: basis > 10%": 0.0075 + rng.normal(0, 0.001, len(months)),   # high Sharpe
+                          "rule: macd_cross": -0.002 + rng.normal(0, 0.05, len(months)),        # below cash
+                          "nifty: grid": 0.006 + rng.normal(0, 0.02, len(months))}, index=months)
+    w = Z.allocator_weights(z, date(2026, 10, 7), panel)
+    assert set(w) <= {"carry_basis_10", "grid"} and w["carry_basis_10"] > w.get("grid", 0)
+    assert sum(w.values()) == pytest.approx(1.0)
+    d0, d1 = date(2026, 10, 7), date(2026, 10, 8)
+    for s, n in (("carry_basis_10", 0.001), ("grid", 0.004)):
+        z.execute("INSERT INTO zoo_pnl VALUES (?,?,0,0,0,0,1)", [s, d0])
+        z.execute("INSERT INTO zoo_targets VALUES (?,?,?,1.0)", [s, d0, "X"])           # fully invested: no cash interest
+        z.execute("INSERT INTO zoo_pnl VALUES (?,?,?,0,?,0,1)", [s, d1, n, n])
+    r0 = Z.run_allocator(z, d0, None, panel)
+    assert r0["cost"] == pytest.approx(Z.ALLOC_COST) and r0["net"] == pytest.approx(-Z.ALLOC_COST)   # buys in once
+    r1 = Z.run_allocator(z, d1, d0, panel)
+    assert r1["cost"] == 0.0                                                 # same month: no rebalance
+    assert r1["gross"] == pytest.approx(w["carry_basis_10"] * 0.001 + w.get("grid", 0) * 0.004)
+    assert r1["bench"] == pytest.approx(0.0025)

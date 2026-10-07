@@ -26,7 +26,7 @@ RULES = ("ma_cross_50_200", "ema_ribbon", "macd_cross", "bollinger_reversion", "
          "atr_breakout", "ichimoku_breakout", "donchian_55_20", "cci_trend", "volume_spike_entry")
 KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pairs_coint": "long_short",
         "pca_statarb": "long_short", "vix_mean_reversion": "index", "scale_trader": "index", "grid": "index",
-        "martingale": "index", "anti_martingale": "index", "carry_basis_10": "carry"}
+        "martingale": "index", "anti_martingale": "index", "carry_basis_10": "carry", "sharpe_allocator": "allocator"}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -227,6 +227,89 @@ def carry_returns(prev: pd.DataFrame, today: pd.DataFrame) -> dict:
     return {f"CARRY:{r.symbol}": float(((r.spot_t - r.spot_p) - (r.fut_t - r.fut_p)) / r.spot_p) for r in m.itertuples()}
 
 
+# ------------------------------------------------------------------------------------------------- sharpe allocator
+
+#: the historical panel's strategies that run in this zoo (panel name -> zoo name). The stock-selection books
+#: (momentum, learned, rankings) live in paper/book.py, not here, so the live allocator splits over these only.
+PANEL = Path("data") / "strategy_monthly_panel.parquet"
+ALLOCATOR = "sharpe_allocator"
+ALLOC_MAP = {**{f"rule: {r}": r for r in RULES}, "pairs by distance (long-short)": "pairs_distance",
+             "pca stat-arb (long-short)": "pca_statarb", "nifty: VIX mean reversion": "vix_mean_reversion",
+             "nifty: scale-trader": "scale_trader", "nifty: grid": "grid", "carry: basis > 10%": "carry_basis_10"}
+ALLOC_COST, RF = 0.003, 0.065
+
+
+def _alloc_nets(z, day: date | None = None) -> pd.DataFrame:
+    """Each zoo strategy's daily net on the same footing as the historical panel: cash interest on the idle share
+    for index, long-short and carry books (as in their tested series), none for the long-only rules."""
+    q = "SELECT p.strategy, p.day, p.net FROM zoo_pnl p WHERE p.strategy IN (SELECT UNNEST(?))" + (" AND p.day <= ?" if day else "")
+    df = z.execute(q + " ORDER BY day", [list(ALLOC_MAP.values())] + ([day] if day else [])).df()
+    if df.empty:
+        return df
+    ex = z.execute("SELECT strategy, day, SUM(ABS(weight)) AS gross_w FROM zoo_targets GROUP BY 1, 2").df()
+    df = df.sort_values(["strategy", "day"])
+    df["prev"] = df.groupby("strategy")["day"].shift()
+    df = df.merge(ex.rename(columns={"day": "prev"}), on=["strategy", "prev"], how="left")
+    days = (pd.to_datetime(df["day"]) - pd.to_datetime(df["prev"])).dt.days.fillna(0)
+    rf_day = RF * days / 365
+    kind = df["strategy"].map(KIND)
+    idle = np.where(kind == "long_short", 1.0, np.where(kind == "long_only", 0.0, (1 - df["gross_w"].fillna(0)).clip(lower=0)))
+    df["adj"] = np.where(df["prev"].isna(), 0.0, df["net"] + idle * rf_day)
+    return df
+
+
+def allocator_weights(z, day: date, panel: pd.DataFrame | None = None) -> dict[str, float]:
+    """This month's weights: proportional to each zoo strategy's trailing 36-month Sharpe (positive only), from the
+    historical panel extended by the zoo's own complete live months - set only from months before ``day``'s."""
+    from ..evaluation import performance as PF
+    if panel is None:
+        if not PANEL.exists():
+            return {}
+        panel = pd.read_parquet(PANEL)
+    P = panel[[c for c in ALLOC_MAP if c in panel.columns]].rename(columns=ALLOC_MAP)
+    month = pd.Period(pd.Timestamp(day), "M")
+    live = _alloc_nets(z, day)
+    if len(live):
+        live["m"] = pd.PeriodIndex(pd.to_datetime(live["day"]), freq="M")
+        g = live[live["m"] < month].groupby(["m", "strategy"])
+        lm = g["adj"].apply(lambda x: float(np.prod(1 + x) - 1)).unstack()
+        lm = lm[g.size().unstack().min(axis=1).reindex(lm.index).fillna(0) >= 15]      # complete months only
+        P = pd.concat([P[P.index < (lm.index.min() if len(lm) else month)], lm]).sort_index()
+    P = P[P.index < month]
+    P.loc[month] = 0.0                                                  # a row to set weights for; its returns unused
+    A = PF.sharpe_allocation(P, rf=RF, turnover_cost=ALLOC_COST)
+    if A.empty or A.index[-1] != month:
+        return {}
+    w = A.iloc[-1][[c for c in A.columns if c.startswith("w_")]]
+    return {k[2:]: float(v) for k, v in w.items() if v > 0}
+
+
+def run_allocator(z, day: date, prev: date | None, panel: pd.DataFrame | None = None) -> dict | None:
+    """Settle the Sharpe allocator after the strategies it holds have settled ``day``: it earns its weights times
+    their nets, cash interest on what it leaves idle, and 0.3% on the share it moves at each month's rebalance."""
+    st = _state(z, ALLOCATOR)
+    month = str(pd.Period(pd.Timestamp(day), "M"))
+    old = st.get("w", {})
+    w = old
+    if st.get("month") != month:
+        w = allocator_weights(z, day, panel)
+        if not w and old:
+            w = old                                                     # no panel: keep last month's weights
+    nets = _alloc_nets(z, day)
+    today = nets[nets["day"].astype(str) == str(day)].set_index("strategy")["adj"] if len(nets) else pd.Series(dtype=float)
+    days = (day - prev).days if prev else 0
+    gross = float(sum(v * today.get(k, 0.0) for k, v in old.items())) + (1 - sum(old.values())) * RF * days / 365 if prev and old else 0.0
+    cost = sum(abs(w.get(k, 0.0) - old.get(k, 0.0)) for k in set(w) | set(old)) * ALLOC_COST
+    bench = float(today.mean()) if prev and len(today) else 0.0         # equal weight across the same strategies
+    row = {"gross": gross, "cost": cost, "net": gross - cost, "bench": bench, "holdings": int(sum(1 for v in w.values() if v))}
+    z.execute("INSERT OR REPLACE INTO zoo_pnl VALUES (?,?,?,?,?,?,?)", [ALLOCATOR, day, *row.values()])
+    z.execute("DELETE FROM zoo_targets WHERE strategy = ? AND day = ?", [ALLOCATOR, day])
+    if w:
+        z.executemany("INSERT INTO zoo_targets VALUES (?,?,?,?)", [(ALLOCATOR, day, k, v) for k, v in w.items()])
+    _save_state(z, ALLOCATOR, {"month": month, "w": w})
+    return row
+
+
 def summary(z) -> pd.DataFrame:
     df = z.execute("SELECT * FROM zoo_pnl ORDER BY strategy, day").df()
     if df.empty:
@@ -310,4 +393,6 @@ def run(rcon, z, *, day: date | None = None, fno_symbols: list[str] | None = Non
             _save_state(z, "carry_basis_10", st)
             rf_day = 0.065 * ((day - prev).days if prev else 0) / 365
             out["carry_basis_10"] = settle(z, "carry_basis_10", day, prev, {**rets, **crets}, rf_day, w)
+    if ALLOCATOR not in done and out:
+        out[ALLOCATOR] = run_allocator(z, day, prev)
     return {"day": day, "prev": prev, "settled": len(out)}

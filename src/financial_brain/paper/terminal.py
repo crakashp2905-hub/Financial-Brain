@@ -349,13 +349,15 @@ def evidence_panel(ledger, book) -> str:
     rows = ET.ledger(intraday=ledger, book=book)
     mark = lambda t: "&#10003;" if t.get("passed") else ("&#10007;" if t.get("passed") is False else "&middot;")    # noqa: E731
     return ("<h2>Evidence, by kind (never mixed)</h2><div class='wrap'><table><tr><th>Strategy</th><th>Historical</th><th>Walk-forward</th>"
-            "<th>Paper-forward</th><th>Live-forward</th><th>Confidence</th></tr>"
+            "<th>Paper-forward</th><th>Live-forward</th><th class='r'>Sharpe 2022-26 (PSR / DSR)</th><th>Confidence</th></tr>"
             + "".join(f"<tr><td>{_e(x['strategy'])}</td>"
                       + "".join(f"<td style='white-space:normal'>{mark(x['tiers'][k])} {_e(x['tiers'][k]['result'])}</td>"
                                 for k in (ET.HISTORICAL, ET.WALK, ET.PAPER, ET.LIVE))
+                      + (f"<td class='r'>{x['sharpe']['sharpe']:+.2f} ({x['sharpe']['psr']:.2f} / {x['sharpe']['dsr']:.2f})</td>" if x.get("sharpe") else "<td class='r'>-</td>")
                       + f"<td>{_chip(x['confidence'])}</td></tr>" for x in rows) + "</table></div>"
             "<div class='sub'>Confidence comes from the forward tiers only: NONE without a passed walk-forward test, LIMITED until "
-            "the paper record reaches 100 trades, and never above MODERATE while there is no live record.</div>")
+            "the paper record reaches 100 trades, and never above MODERATE while there is no live record. Sharpe is net, above 6.5%; "
+            "PSR is the probability the true Sharpe is above zero; DSR the same after 330 trials - none reaches 0.95.</div>")
 
 
 def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, breadth_state, clears, top: int = 10, my=None) -> str:
