@@ -33,6 +33,17 @@ def research(days=60, n=200, seed=0, edge=None):
     return con, cal
 
 
+
+@pytest.fixture(autouse=True)
+def _no_real_model(monkeypatch):
+    """The learned challenger reads a trained model and a cache under data/; these tests must not."""
+    from financial_brain.evaluation import learned_model as LM
+
+    def none(*a, **k):
+        raise LM.LearnedModelError("no model in tests")
+    monkeypatch.setattr(LM, "score_day", none)
+
+
 def test_nothing_before_the_lock_can_be_recorded():
     r, _ = research(5)
     with pytest.raises(C.ChampionError):

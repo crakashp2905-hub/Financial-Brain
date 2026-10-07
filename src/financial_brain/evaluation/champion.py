@@ -123,7 +123,8 @@ def record(research_con, ledger_con, day: date, *, costs: CostModel | None = Non
             c = costs.round_trip_sized(order_value=min(5e5, 0.1 * r.adv20), adv_value=r.adv20,
                                        daily_vol=r.vol_60 / np.sqrt(252.0))["total"]
             rows.append((day.isoformat(), name, r.ticker, r.lineage, float(c)))
-        ledger_con.executemany("INSERT OR REPLACE INTO champion_picks VALUES (?,?,?,?,?)", rows)
+        if rows:                                         # a challenger with nothing to hold that day records nothing
+            ledger_con.executemany("INSERT OR REPLACE INTO champion_picks VALUES (?,?,?,?,?)", rows)
         n[name] = len(rows)
     return n
 
