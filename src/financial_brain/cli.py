@@ -1663,6 +1663,27 @@ def cmd_lifecycle(args) -> int:
     return 0
 
 
+def cmd_daily_results(args) -> int:
+    """The day's paper results in one report (data/paper_reports/DATE-results.md)."""
+    import datetime as _dt
+    import duckdb
+    from .paper import book as BK
+    from .paper import daily_results as DR
+    from .paper import intraday_runner as IR
+    day = args.day or _dt.date.today().isoformat()
+    led = duckdb.connect(str(IR.LEDGER), read_only=True)
+    bk = duckdb.connect(str(BK.PATH), read_only=True) if BK.PATH.exists() else None
+    try:
+        text = DR.build(led, day, book=bk)
+    finally:
+        led.close()
+        if bk is not None:
+            bk.close()
+    print(text)
+    print(f"written: {DR.write(text, day)}")
+    return 0
+
+
 def cmd_filings(args) -> int:
     """Read the documents a day's material filings point at, and mint what they say."""
     from .ingest import filings
@@ -2320,6 +2341,10 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("ticker")
     g.add_argument("--day", required=True, help="the signal day, YYYY-MM-DD")
     g.set_defaults(fn=cmd_lifecycle)
+
+    g = sub.add_parser("daily-results", help="the day's paper results in one report")
+    g.add_argument("--day", help="YYYY-MM-DD (default today)")
+    g.set_defaults(fn=cmd_daily_results)
 
     g = sub.add_parser("filings", help="read the PDF a filing points at (C11)")
     g.add_argument("--date", required=True)
