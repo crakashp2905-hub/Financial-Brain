@@ -535,7 +535,8 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     day = day or asof
     parts = [f"<title>Financial-Brain terminal</title><style>{CSS}</style><main>",
              f"<h1>Financial-Brain</h1><div class='sub'>Terminal for {day} · data through {asof} · written "
-             f"{datetime.now().strftime('%Y-%m-%d %H:%M')} · paper only, no orders exist in this system</div>"]
+             f"{datetime.now().strftime('%Y-%m-%d %H:%M')} · paper only, no orders exist in this system · "
+             f"<a href='signals.html'>signal screener: every algorithm and indicator, the stocks it fires on, their charts</a></div>"]
     # ---------------------------------------------------------------- market
     b = BR.breadth(rcon, asof)
     parts += ["<h2>Market</h2>", market_panel(rcon),
@@ -663,6 +664,17 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
             finally:
                 _c.close()
         CH.build_many(rcon, names, asof, book=book, out=OUT.parent / "charts")
+        from . import signals as SG
+        from . import zoo as Z
+        zc = None
+        if Z.PATH.exists():
+            import duckdb as _dd
+            zc = _dd.connect(str(Z.PATH), read_only=True)
+        try:
+            SG.build(rcon, asof, book=book, zoo=zc, out=OUT.parent / "signals.html")
+        finally:
+            if zc is not None:
+                zc.close()
     except Exception as e:                              # noqa: BLE001 - the terminal renders without charts
         parts.append(f"<div class='sub'>charts unavailable: {_e(str(e)[:100])}</div>")
     parts.append("<p class='sub'>Information computed from public statistics. It does not know your finances, needs or tax, and nothing here is sent to a broker.</p></main>")

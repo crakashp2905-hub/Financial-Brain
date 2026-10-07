@@ -125,8 +125,9 @@ def levels(b: pd.DataFrame) -> list[dict]:
     return out
 
 
-def markers(b: pd.DataFrame, extra: dict[str, list] | None = None) -> dict[str, list]:
-    """Buy and sell markers per strategy: the eleven technical rules' position changes, plus any book's trades."""
+def markers(b: pd.DataFrame, extra: dict[str, list] | None = None, sf: pd.DataFrame | None = None) -> dict[str, list]:
+    """Buy and sell markers per strategy: the eleven technical rules' position changes, any book's trades, and - with
+    ``sf`` (paper/signals.signal_frame) - every indicator's firings."""
     from ..evaluation import rule_systems as RS
     d = [_t(x) for x in b["d"]]
     out = {}
@@ -136,6 +137,23 @@ def markers(b: pd.DataFrame, extra: dict[str, list] | None = None) -> dict[str, 
         out[name] = [{"time": d[i], "position": "belowBar" if ch[i] > 0 else "aboveBar", "color": "#2e7d32" if ch[i] > 0 else "#c62828",
                       "shape": "arrowUp" if ch[i] > 0 else "arrowDown", "text": "buy" if ch[i] > 0 else "sell"}
                      for i in np.flatnonzero(ch) if i >= len(d) - 260]
+    if sf is not None:
+        from . import signals as SG
+        for k in sf.columns:
+            if k.startswith("algo:"):
+                continue
+            x = sf[k].to_numpy()
+            ms = []
+            for i in np.flatnonzero(x):
+                if i < len(d) - 260:
+                    continue
+                side = SG.side_of(k, x[i])
+                up = side != "sell"
+                ms.append({"time": d[i], "position": "belowBar" if up else "aboveBar",
+                           "color": "#2e7d32" if side == "buy" else "#c62828" if side == "sell" else "#8d6e00",
+                           "shape": "arrowUp" if side == "buy" else "arrowDown" if side == "sell" else "circle", "text": side})
+            if ms:
+                out[f"indicator: {SG.label(k)}"] = ms
     for k, v in (extra or {}).items():
         out[k] = v
     return out
@@ -174,6 +192,7 @@ th{position:sticky;top:0;background:var(--card);color:var(--muted);font-size:12p
 <div class="ctl" id="ctl"></div>
 <div class="ctl"><label>Buy/sell signals of <select id="sig"></select></label></div>
 <div id="price" class="pane" style="height:460px"></div><div id="rsi" class="pane" style="height:120px"></div><div id="macd" class="pane" style="height:140px"></div>
+<h3>Firing on this stock now</h3><div class="sub">%(fired)s</div>
 <h3>Why the brain holds it</h3><div class="sub">%(why)s</div>
 <h3>Every indicator, today</h3><div class="sub">%(consensus)s</div>
 <div class="wrap"><table><tr><th>Feature</th><th>Value</th><th>Percentile vs the 500</th><th>Bullish when</th><th>Evidence</th></tr>%(rows)s</table></div>
@@ -220,17 +239,23 @@ addEventListener('resize', () => charts.forEach((c,i) => { const el=[ 'price','r
 
 
 def page(ticker: str, b: pd.DataFrame, *, subtitle: str = "", why: str = "", table: list[dict] | None = None,
-         extra_markers: dict | None = None, default_signal: str | None = None, consensus: str = "") -> str:
-    data = {"s": overlays(b), "levels": levels(b), "markers": markers(b, extra_markers), "default_signal": default_signal}
+         extra_markers: dict | None = None, default_signal: str | None = None, consensus: str = "",
+         sf: pd.DataFrame | None = None, fired: list[str] | None = None) -> str:
+    data = {"s": overlays(b), "levels": levels(b), "markers": markers(b, extra_markers, sf), "default_signal": default_signal}
     rows = "".join(f"<tr><td>{html.escape(r['feature'])}</td><td>{r['value']}</td><td>{'-' if r['percentile'] is None else r['percentile']}</td>"
                    f"<td>{r['bullish_when']}</td><td>{html.escape(r['evidence'])}</td></tr>" for r in (table or []))
     return PAGE % {"ticker": html.escape(ticker), "subtitle": html.escape(subtitle), "why": html.escape(why or "-"),
-                   "consensus": html.escape(consensus), "rows": rows, "lwc": LWC,
+                   "consensus": html.escape(consensus), "rows": rows,
+                   "fired": html.escape("; ".join(fired)) if fired else "nothing in the last 5 sessions (see the signal screener)", "lwc": LWC,
                    "data": json.dumps(data).replace("</", "<\\/")}
 
 
-def build_many(rcon, tickers: list[str], asof, *, book=None, out: Path = OUT) -> dict[str, Path]:
-    """Chart pages for ``tickers`` as of ``asof``. Returns ticker -> path."""
+def build_many(rcon, tickers: list[str], asof, *, book=None, out: Path = OUT, fired: dict[str, list[str]] | None = None,
+               frames: dict[str, tuple] | None = None) -> dict[str, Path]:
+    """Chart pages for ``tickers`` as of ``asof``. ``frames``: ticker -> (bars, features, signal frame) already
+    computed by paper/signals; ``fired``: ticker -> what fired lately. Returns ticker -> path."""
+    from ..evaluation import rule_systems as RS
+    from . import signals as SG
     from ..evaluation import learned_model as LM
     from ..features import library as LB
     from ..features import technical as TE
@@ -266,11 +291,16 @@ def build_many(rcon, tickers: list[str], asof, *, book=None, out: Path = OUT) ->
             if xd:
                 m.append({"time": _t(xd), "position": "aboveBar", "color": "#c62828", "shape": "arrowDown", "text": f"{v} sell"})
     paths = {}
+    frames = frames or {}
     for tk in tickers:
-        g = bars[bars["lineage"] == lin.get(tk)].reset_index(drop=True)
-        if len(g) < 220:
-            continue
-        f = LB.compute(g)
+        if tk in frames:
+            g, f, sf = frames[tk]
+        else:
+            g = bars[bars["lineage"] == lin.get(tk)].reset_index(drop=True)
+            if len(g) < 220:
+                continue
+            f = LB.compute(g)
+            sf = SG.signal_frame(f, RS.rules(g))
         latest = f[LB.feature_names(f)].iloc[-1]
         why, pct, cons = "", None, ""
         if scored is not None and lin.get(tk) in set(scored["lineage"]):
@@ -290,6 +320,7 @@ def build_many(rcon, tickers: list[str], asof, *, book=None, out: Path = OUT) ->
         sub = f"Data through {asof}. Overlays and levels as known at each close; markers show each rule's own buys and sells."
         p = out / f"{tk.replace('&', '_')}.html"
         p.write_text(page(tk, g, subtitle=sub, why=why, table=table, extra_markers=trades.get(tk),
-                          default_signal=next(iter(trades.get(tk, {})), "ma_cross_50_200"), consensus=cons), encoding="utf-8")
+                          default_signal=next(iter(trades.get(tk, {})), "ma_cross_50_200"), consensus=cons,
+                          sf=sf, fired=(fired or {}).get(tk)), encoding="utf-8")
         paths[tk] = p
     return paths
