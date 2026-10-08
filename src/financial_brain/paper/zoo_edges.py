@@ -324,3 +324,23 @@ def i2_day(rcon, day: date, *, lookback: int = 20) -> float | None:
         total += spread - 2 * E.INTRADAY_RT
         slots += 1
     return total if slots else None
+
+
+VERDICT["edge_l2_learned_ls"] = "failed (t +0.65 / +2.44; strongest futures result)"
+
+
+def l2_targets(rcon, day: date, fno_lins: list[str], frac: float = 0.10) -> dict:
+    """L2: the learned model's scores for the F&O names, long the top decile and short the bottom, equal gross."""
+    from ..evaluation import learned_model as LM
+    sc = LM.score_day(rcon, day)
+    if sc is None or sc.empty:
+        return {}
+    s = sc[sc["lineage"].isin(fno_lins)].set_index("lineage")["pred"]
+    if len(s) < 50:
+        return {}
+    L = s[s >= s.quantile(1 - frac)].index
+    S = s[s <= s.quantile(frac)].index
+    w = {k: 1.0 / len(L) for k in L}
+    for k in S:
+        w[k] = w.get(k, 0.0) - 1.0 / len(S)
+    return w

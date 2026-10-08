@@ -31,7 +31,7 @@ KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pair
         **{k: "edge" for k in ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan", "edge_s1_no_news_reversal",
                                "edge_s2_reaction_drift", "edge_f1_long_buildup", "edge_f2_short_covering", "edge_z1_turn_of_month",
                                "edge_i1_index_intraday", "edge_w1_reversal_ls", "edge_w2_52wh_ls", "edge_w3_momentum_ls",
-                               "edge_e1_mom_ensemble", "edge_x1_overnight", "edge_x2_opening_fade", "edge_i2_seasonality_ls")}}
+                               "edge_e1_mom_ensemble", "edge_x1_overnight", "edge_x2_opening_fade", "edge_i2_seasonality_ls", "edge_l2_learned_ls")}}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -377,9 +377,10 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
     if ZE._first_of_month(z, day) or "W3" not in st:
         st["W3"] = ZE.ls_targets(closes, fno_lins, "W3")
         st["E1"] = ZE.ensemble_target(rcon, day)
+        st["L2"] = ZE.l2_targets(rcon, day, fno_lins)
     st["k"] = k + 1
     ZE.save(z, "edge_w", st)
-    for n, key in (("edge_w1_reversal_ls", "W1"), ("edge_w2_52wh_ls", "W2"), ("edge_w3_momentum_ls", "W3")):
+    for n, key in (("edge_w1_reversal_ls", "W1"), ("edge_w2_52wh_ls", "W2"), ("edge_w3_momentum_ls", "W3"), ("edge_l2_learned_ls", "L2")):
         if n not in done and fno_lins:
             out[n] = settle(z, n, day, prev, rets, 0.0, st.get(key, {}))
     if "edge_e1_mom_ensemble" not in done:
