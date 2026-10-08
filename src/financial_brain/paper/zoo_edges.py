@@ -175,3 +175,152 @@ def state(z, s: str) -> dict:
 
 def save(z, s: str, st: dict) -> None:
     z.execute("INSERT OR REPLACE INTO zoo_state VALUES (?, ?)", [s, json.dumps(st, default=str)])
+
+
+# ------------------------------------------------------------------------------------------------- batch two
+
+VERDICT.update({"edge_w1_reversal_ls": "failed (t -1.2 / -1.4; negative gross)", "edge_w2_52wh_ls": "failed (t -0.0 / -1.3)",
+                "edge_w3_momentum_ls": "failed (t -0.0 / +0.5)", "edge_e1_mom_ensemble": "failed (t +0.7 / -0.1)",
+                "edge_x1_overnight": "failed (t +5.9 / +1.1: faded since 2022)", "edge_x2_opening_fade": "failed (t -0.5 / -0.1)"})
+
+
+def ls_targets(closes: pd.DataFrame, fno_lins: list[str], kind: str, frac: float = 0.10) -> dict:
+    """W1 (5-session reversal), W2 (nearness to the 52-week high), W3 (12-1 momentum): market-neutral deciles of
+    the F&O names, +1 long and -1 short."""
+    C = closes[[c for c in fno_lins if c in closes.columns]]
+    if len(C) < 253 and kind != "W1":
+        return {}
+    if kind == "W1":
+        sc = -(C.iloc[-1] / C.iloc[-6] - 1)
+    elif kind == "W2":
+        sc = C.iloc[-1] / C.iloc[-252:].max()
+    else:
+        sc = C.iloc[-22] / C.iloc[-253] - 1
+    sc = sc.dropna()
+    if len(sc) < 50:
+        return {}
+    L = sc[sc >= sc.quantile(1 - frac)].index
+    S = sc[sc <= sc.quantile(frac)].index
+    w = {k: 1.0 / len(L) for k in L}
+    for k in S:
+        w[k] = w.get(k, 0.0) - 1.0 / len(S)
+    return w
+
+
+def ensemble_target(rcon, day: date) -> dict:
+    from ..evaluation import edges as E
+    P = _panel(rcon, day)
+    ens = E.ensemble_scores(P)
+    last = P["C"].index[-1]
+    if last not in ens.index:
+        ens.loc[last] = E.ensemble_scores(P).iloc[-1]
+    pick = ens.loc[last].dropna().nlargest(20).index
+    return {k: 1.0 / len(pick) for k in pick}
+
+
+def index_day(day: date) -> dict:
+    """X1 (yesterday's close to today's open) and X2 (today's opening fade) from Kite's Nifty 50 bars."""
+    from datetime import datetime, time
+    from ..evaluation import edges as E
+    try:
+        from ..providers import kite_data as kd
+        bars = kd.candles(256265, datetime.combine(day, time(9, 15)), datetime.combine(day, time(15, 30)), interval="minute")
+        daily = kd.candles(256265, pd.Timestamp(day) - pd.Timedelta(days=130), pd.Timestamp(day), interval="day")
+    except Exception:                                   # noqa: BLE001 - no token: nothing tonight
+        return {}
+    if not bars or len(daily) < 2:
+        return {}
+    b = pd.DataFrame(bars)
+    out = {}
+    dd = pd.DataFrame(daily)
+    dd["d"] = pd.to_datetime(dd["ts"]).dt.tz_localize(None).dt.normalize()
+    dd = dd.set_index("d")
+    today = pd.Timestamp(day)
+    if today in dd.index:
+        prev_close = float(dd["close"][dd.index < today].iloc[-1])
+        out["edge_x1_overnight"] = float(b["open"].iloc[0]) / prev_close - 1 - 2 * E.INDEX_ONE_WAY
+    # X2 needs the 09:15-09:30 moves of the previous 60 sessions: from the stored minute history plus today
+    try:
+        path = "data/edges/nifty50_minute.parquet"
+        h = pd.read_parquet(path)
+        b["ts"] = pd.to_datetime(b["ts"])
+        h = pd.concat([h, b[h.columns.intersection(b.columns)]]).drop_duplicates("ts").sort_values("ts")
+        h.to_parquet(path)                              # the stored history grows by a day each evening
+        dly = E.index_daily_from_minutes(h)
+        ev = E.opening_fade(dly)
+        if today in ev.index:
+            out["edge_x2_opening_fade"] = float(ev.loc[today, "net"])
+        else:
+            out["edge_x2_opening_fade"] = 0.0           # no signal today: flat
+    except Exception:                                   # noqa: BLE001
+        pass
+    return out
+
+
+VERDICT["edge_i2_seasonality_ls"] = "failed on cost (gross +3.6 bp a slot, t +9; net -3% a day)"
+HH_PATH = "data/edges/halfhour.parquet"
+
+
+def i2_day(rcon, day: date, *, lookback: int = 20) -> float | None:
+    """I2 for ``day``: every half-hour slot, long the top and short the bottom decile of the names' mean same-slot
+    return over the previous ``lookback`` sessions; the day's sum over slots, net of both legs' intraday costs.
+    The slot history (``HH_PATH``) starts from the minute-bar table and grows by a day each evening from Kite."""
+    from datetime import datetime, time
+    from pathlib import Path
+    from ..evaluation import edges as E
+    if Path(HH_PATH).exists():
+        hh = pd.read_parquet(HH_PATH)
+    else:
+        hh = E.half_hour_returns(rcon)
+        hh["r"] = hh["end_px"] / hh["start_px"] - 1
+        hh = hh[hh["n"] >= 10][["s", "d", "slot", "r"]]
+        hh["d"] = pd.to_datetime(hh["d"])
+    today = pd.Timestamp(day)
+    if not (hh["d"] == today).any():
+        try:
+            from ..providers import kite_data as kd
+            inst = kd.instruments("NSE")
+        except Exception:                               # noqa: BLE001 - no token
+            return None
+        rows = []
+        for sym in sorted(hh["s"].unique()):
+            tok = kd.token_for(sym, inst)
+            if tok is None:
+                continue
+            try:
+                bars = kd.candles(tok, datetime.combine(day, time(9, 15)), datetime.combine(day, time(15, 30)), interval="minute")
+            except Exception:                           # noqa: BLE001 - one name failing leaves the rest
+                continue
+            if len(bars) < 100:
+                continue
+            b = pd.DataFrame(bars)
+            b["ts"] = pd.to_datetime(b["ts"])
+            mins = b["ts"].dt.hour * 60 + b["ts"].dt.minute - 555
+            b["slot"] = mins // 30
+            b = b[(b["slot"] >= 0) & (b["slot"] <= 12)]
+            g = b.groupby("slot").agg(c0=("close", "first"), c1=("close", "last"), n=("close", "size"))
+            g["start"] = g["c1"].shift(1).fillna(g["c0"])
+            for slot, r in g.iterrows():
+                if r["n"] >= 10:
+                    rows.append({"s": sym, "d": today, "slot": int(slot), "r": float(r["c1"] / r["start"] - 1)})
+        if not rows:
+            return None
+        hh = pd.concat([hh, pd.DataFrame(rows)], ignore_index=True)
+        hh.to_parquet(HH_PATH)
+    total, slots = 0.0, 0
+    for slot, g in hh[hh["d"] <= today].groupby("slot"):
+        R = g.pivot_table(index="d", columns="s", values="r")
+        if today not in R.index:
+            continue
+        sig = R[R.index < today].tail(lookback)
+        if len(sig) < 15:
+            continue
+        sig = sig.mean()
+        r = R.loc[today]
+        sig = sig[r.reindex(sig.index).notna()]
+        if len(sig) < 100:
+            continue
+        spread = r[sig[sig >= sig.quantile(0.9)].index].mean() - r[sig[sig <= sig.quantile(0.1)].index].mean()
+        total += spread - 2 * E.INTRADAY_RT
+        slots += 1
+    return total if slots else None

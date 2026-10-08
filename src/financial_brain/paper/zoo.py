@@ -30,7 +30,8 @@ KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pair
         "results_reaction_short": "long_short",
         **{k: "edge" for k in ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan", "edge_s1_no_news_reversal",
                                "edge_s2_reaction_drift", "edge_f1_long_buildup", "edge_f2_short_covering", "edge_z1_turn_of_month",
-                               "edge_i1_index_intraday")}}
+                               "edge_i1_index_intraday", "edge_w1_reversal_ls", "edge_w2_52wh_ls", "edge_w3_momentum_ls",
+                               "edge_e1_mom_ensemble", "edge_x1_overnight", "edge_x2_opening_fade", "edge_i2_seasonality_ls")}}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -365,6 +366,34 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
     if day in lv.index and "edge_z1_turn_of_month" not in done:
         e = ZE.z1_exposure(day)
         out["edge_z1_turn_of_month"] = settle(z, "edge_z1_turn_of_month", day, prev, rets, rets.get(INDEX, 0.0), {INDEX: e} if e else {})
+    # batch two: W1, W2 weekly and W3 monthly in futures (market-neutral), E1 monthly
+    fno_lins = [l for _, l in rcon.execute("SELECT ticker, lineage FROM adjusted_prices WHERE business_date = ? AND ticker IN (SELECT UNNEST(?))",
+                                           [day, fno_symbols or []]).fetchall()]
+    st = ZE.state(z, "edge_w")
+    k = int(st.get("k", 0))
+    if k % 5 == 0 or "W1" not in st:
+        st["W1"] = ZE.ls_targets(closes, fno_lins, "W1")
+        st["W2"] = ZE.ls_targets(closes, fno_lins, "W2")
+    if ZE._first_of_month(z, day) or "W3" not in st:
+        st["W3"] = ZE.ls_targets(closes, fno_lins, "W3")
+        st["E1"] = ZE.ensemble_target(rcon, day)
+    st["k"] = k + 1
+    ZE.save(z, "edge_w", st)
+    for n, key in (("edge_w1_reversal_ls", "W1"), ("edge_w2_52wh_ls", "W2"), ("edge_w3_momentum_ls", "W3")):
+        if n not in done and fno_lins:
+            out[n] = settle(z, n, day, prev, rets, 0.0, st.get(key, {}))
+    if "edge_e1_mom_ensemble" not in done:
+        out["edge_e1_mom_ensemble"] = settle(z, "edge_e1_mom_ensemble", day, prev, rets, ubench, st.get("E1", {}))
+    for n, r in ZE.index_day(day).items():               # X1, X2: settled from Kite's Nifty bars
+        if n not in done:
+            c = INDEX_RT_I1 if r != 0.0 else 0.0
+            z.execute("INSERT OR REPLACE INTO zoo_pnl VALUES (?,?,?,?,?,?,?)", [n, day, r + c, c, r, 0.0, int(r != 0.0)])
+            out[n] = {"net": r}
+    if "edge_i2_seasonality_ls" not in done:             # I2: settled from the day's minute bars of the 300 names
+        r = ZE.i2_day(rcon, day)
+        if r is not None:
+            z.execute("INSERT OR REPLACE INTO zoo_pnl VALUES (?,?,?,?,?,?,?)", ["edge_i2_seasonality_ls", day, None, None, r, 0.0, 13])
+            out["edge_i2_seasonality_ls"] = {"net": r}
     # I1: an intraday trade, settled from the day's minute bars
     if "edge_i1_index_intraday" not in done:
         r = ZE.i1_return(day)
