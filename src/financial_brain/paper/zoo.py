@@ -26,7 +26,11 @@ RULES = ("ma_cross_50_200", "ema_ribbon", "macd_cross", "bollinger_reversion", "
          "atr_breakout", "ichimoku_breakout", "donchian_55_20", "cci_trend", "volume_spike_entry")
 KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pairs_coint": "long_short",
         "pca_statarb": "long_short", "vix_mean_reversion": "index", "scale_trader": "index", "grid": "index",
-        "martingale": "index", "anti_martingale": "index", "carry_basis_10": "carry", "sharpe_allocator": "allocator"}
+        "martingale": "index", "anti_martingale": "index", "carry_basis_10": "carry", "sharpe_allocator": "allocator",
+        "results_reaction_short": "long_short",
+        **{k: "edge" for k in ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan", "edge_s1_no_news_reversal",
+                               "edge_s2_reaction_drift", "edge_f1_long_buildup", "edge_f2_short_covering", "edge_z1_turn_of_month",
+                               "edge_i1_index_intraday")}}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -310,6 +314,70 @@ def run_allocator(z, day: date, prev: date | None, panel: pd.DataFrame | None = 
     return row
 
 
+def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols, lv) -> dict:
+    """The candidates of ``PRE-REGISTERED edges for every mode`` on paper (paper/zoo_edges.py)."""
+    from . import zoo_edges as ZE
+    out = {}
+    sessions = [pd.Timestamp(r[0]).date() for r in rcon.execute(
+        "SELECT DISTINCT business_date FROM features WHERE business_date <= ? ORDER BY 1 DESC LIMIT 30", [day]).fetchall()][::-1]
+    closes = pd.DataFrame({lin: b.set_index("d")["c"] for lin, b in by.items()}).sort_index()
+    # monthly: P1, P2, P3
+    names = ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan")
+    st = ZE.state(z, "edge_monthly")
+    if ZE._first_of_month(z, day) or not st.get("targets"):
+        st = {"targets": ZE.monthly_targets(rcon, day), "set": str(day)}
+        ZE.save(z, "edge_monthly", st)
+    for n in names:
+        if n not in done:
+            out[n] = settle(z, n, day, prev, rets, ubench, st["targets"].get(n, {}))
+    # every five sessions: S1
+    st = ZE.state(z, "edge_s1")
+    k = int(st.get("k", 0))
+    if k % 5 == 0 or "w" not in st:
+        st["w"] = ZE.s1_targets(rcon, day, uni, closes)
+    st["k"] = k + 1
+    ZE.save(z, "edge_s1", st)
+    if "edge_s1_no_news_reversal" not in done:
+        out["edge_s1_no_news_reversal"] = settle(z, "edge_s1_no_news_reversal", day, prev, rets, ubench, st["w"])
+    # S2, daily
+    if "edge_s2_reaction_drift" not in done:
+        w, st2 = ZE.s2_targets(rcon, day, ZE.state(z, "edge_s2"), sessions)
+        ZE.save(z, "edge_s2", st2)
+        out["edge_s2_reaction_drift"] = settle(z, "edge_s2_reaction_drift", day, prev, rets, ubench, w)
+    # F1 / F2, every five sessions
+    if fno_symbols and "edge_f1_long_buildup" not in done:
+        st = ZE.state(z, "edge_f")
+        k = int(st.get("k", 0))
+        if k % 5 == 0 or "f1" not in st:
+            import duckdb as _dd
+            fut = _dd.connect("data/futures_history.duckdb", read_only=True)
+            try:
+                tick = dict(rcon.execute("SELECT ticker, lineage FROM adjusted_prices WHERE business_date = ? AND ticker IN (SELECT UNNEST(?))",
+                                         [day, fno_symbols]).fetchall())
+                st["f1"], st["f2"] = ZE.oi_targets(fut, tick, closes, day)
+            finally:
+                fut.close()
+        st["k"] = k + 1
+        ZE.save(z, "edge_f", st)
+        out["edge_f1_long_buildup"] = settle(z, "edge_f1_long_buildup", day, prev, rets, ubench, st["f1"])
+        out["edge_f2_short_covering"] = settle(z, "edge_f2_short_covering", day, prev, rets, 0.0, st["f2"])
+    # Z1
+    if day in lv.index and "edge_z1_turn_of_month" not in done:
+        e = ZE.z1_exposure(day)
+        out["edge_z1_turn_of_month"] = settle(z, "edge_z1_turn_of_month", day, prev, rets, rets.get(INDEX, 0.0), {INDEX: e} if e else {})
+    # I1: an intraday trade, settled from the day's minute bars
+    if "edge_i1_index_intraday" not in done:
+        r = ZE.i1_return(day)
+        if r is not None:
+            z.execute("INSERT OR REPLACE INTO zoo_pnl VALUES (?,?,?,?,?,?,?)",
+                      ["edge_i1_index_intraday", day, r + INDEX_RT_I1, INDEX_RT_I1, r, 0.0, 1])
+            out["edge_i1_index_intraday"] = {"net": r}
+    return out
+
+
+INDEX_RT_I1 = 0.0004
+
+
 def summary(z) -> pd.DataFrame:
     df = z.execute("SELECT * FROM zoo_pnl ORDER BY strategy, day").df()
     if df.empty:
@@ -375,6 +443,14 @@ def run(rcon, z, *, day: date | None = None, fno_symbols: list[str] | None = Non
             w, st = pairs_targets(P, _state(z, name), coint=coint)
             _save_state(z, name, st)
             out[name] = settle(z, name, day, prev, rets, 0.0, w)
+        if "results_reaction_short" not in done:        # Result of bad news keeps going: short rejected results, long Nifty
+            from ..decisions import news_filter as NF
+            bad = NF.flagged(rcon, day)
+            shorts = [l for l in lins if l in bad]
+            w = {l: -1.0 / len(shorts) for l in shorts}
+            if shorts:
+                w[INDEX] = 1.0
+            out["results_reaction_short"] = settle(z, "results_reaction_short", day, prev, rets, 0.0, w)
         if "pca_statarb" not in done and len(P) > 260:
             w, st = pca_targets(P.pct_change(fill_method=None).iloc[1:], _state(z, "pca_statarb"))
             _save_state(z, "pca_statarb", st)
@@ -393,6 +469,10 @@ def run(rcon, z, *, day: date | None = None, fno_symbols: list[str] | None = Non
             _save_state(z, "carry_basis_10", st)
             rf_day = 0.065 * ((day - prev).days if prev else 0) / 365
             out["carry_basis_10"] = settle(z, "carry_basis_10", day, prev, {**rets, **crets}, rf_day, w)
+    try:
+        out.update(edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols, lv))
+    except Exception as e:                              # noqa: BLE001 - the rest of the zoo settles regardless
+        print(f"edge strategies skipped tonight: {e}")
     if ALLOCATOR not in done and out:
         out[ALLOCATOR] = run_allocator(z, day, prev)
     return {"day": day, "prev": prev, "settled": len(out)}

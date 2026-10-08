@@ -45,6 +45,7 @@ class Spec:
     max_weight: float
     label: str
     ranker: str = "v1"           #: "v1" (the terminal's list), "swing", "learned" or "momentum"
+    avoid_bad_results: bool = False   #: skip names whose results the market just rejected (decisions/news_filter)
 
 
 POSITION = Spec("book-v1", 5, 10, "position", None, 0.10, "Position book: top 5 a day, up to 60 sessions")
@@ -55,7 +56,14 @@ MOMENTUM = Spec("momentum-v1", 20, 20, "position", 20, 0.05, "Momentum book (the
                 ranker="momentum")
 RANKING_V2 = Spec("v2-v1", 20, 20, "position", 20, 0.05, "Ranking v2 book (challenger): top 20 by momentum + 52-week high, 20 sessions",
                   ranker="v2")
-BOOKS = {s.version: s for s in (POSITION, SWING, LEARNED, MOMENTUM, RANKING_V2)}
+#: the same three books with the bad-results filter (Result of bad news keeps going); the v1 books run on as controls
+LEARNED_F = Spec("learned-v2", 20, 20, "position", 20, 0.05, "Learned-model book, avoiding rejected results",
+                 ranker="learned", avoid_bad_results=True)
+MOMENTUM_F = Spec("momentum-v2", 20, 20, "position", 20, 0.05, "Momentum book, avoiding rejected results",
+                  ranker="momentum", avoid_bad_results=True)
+RANKING_V2_F = Spec("v2-v2", 20, 20, "position", 20, 0.05, "Ranking v2 book, avoiding rejected results",
+                    ranker="v2", avoid_bad_results=True)
+BOOKS = {s.version: s for s in (POSITION, SWING, LEARNED, MOMENTUM, RANKING_V2, LEARNED_F, MOMENTUM_F, RANKING_V2_F)}
 # the first book's names, kept so its tests and callers read as before
 VERSION, TOP_N, MAX_OPEN = POSITION.version, POSITION.top_n, POSITION.max_open
 
@@ -275,6 +283,19 @@ def step(rcon, book, day: date, *, mode: str, spec: Spec = POSITION, capital: fl
         ranked = swing_ranking(rcon, day, spec, capital, costs) if spec.style == "swing" else ranking(rcon, day, capital)
     if ranked.empty:
         return 0
+    if spec.avoid_bad_results:
+        from ..decisions import news_filter as NF
+        bad = NF.flagged(rcon, day)
+        top = ranked.head(spec.top_n + len(bad)).reset_index(drop=True)
+        for k, r in enumerate(top.itertuples(), 1):
+            if r.lineage not in bad:
+                continue
+            book.execute("INSERT OR REPLACE INTO skips VALUES (?,?,?,?,?,?,?)",
+                         [spec.version, mode, day, r.ticker, k, float(r.expected_net),
+                          f"avoided: results reaction {bad[r.lineage]:+.1%}, bottom fifth"])
+        ranked = ranked[~ranked["lineage"].isin(bad)].reset_index(drop=True)
+        if ranked.empty:
+            return 0
     added = 0
     chosen = choose(ranked, held, len(held), top_n=spec.top_n, max_open=spec.max_open)
     for k, r in enumerate(ranked.head(spec.top_n).itertuples(), 1):     # the rejections, so nothing silently vanishes
