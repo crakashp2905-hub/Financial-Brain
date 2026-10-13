@@ -488,3 +488,33 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   to timing rules is available to the quintile tests - and `evaluation/genome.py` tests
   one-strategy-per-stock walk-forward, with a `cheat=True` mode that measures how much
   in-sample selection inflates itself.
+- 2026-10-13 — **Owner: "complete all the steps" (edge plan 0-4 and the execution plan).** Done in one session;
+  the live intraday paper runner was running all day, so nothing wrote `financial_brain.duckdb` (its read-only
+  opens would fail against a writer) - the trial ledger is a committed file instead.
+  * **Step 0 - ADR-0004 one evidence standard** (`evaluation/standard.py`): G1 pre-registered, G2 net of per-name
+    costs, G3 |t| >= 2 same sign in 2016-21 and 2022-26, G4 beats the 95th pct of equal-size / equal-turnover /
+    equal-weighting random books, G5 out of sample. G1-G4 = CANDIDATE, G5 = CONFIRMED. Bonferroni reported, not
+    gating. **Budget 8 trials a quarter**, ledger `docs/trials/ledger.jsonl` (append-only; 2 of 8 used in 2026Q4).
+  * **Step 1 - M1 cost-aware momentum book: FAIL G3** (+1.36% / +0.75% net excess per 40 sessions, t 1.45 / 1.24)
+    but **G4 passes by a distance** (random books' 95th pct +0.14, mean -0.97): real ordering, too weak on 65
+    periods. Turnover 45%. N2 exclusion -0.01pp. In the zoo as `edge_m1_momentum_book` from 2026-10-14.
+  * **Step 2 - G5 monitor** `fb oos` (evening refresh, after zoo): each ADR-0004 trial's live zoo record vs its
+    backtest 2022-26 band (90%; FAILED_EARLY after 3 month ends below), measured intraday shortfall vs the cost
+    model, meta-label readiness. `h20` and the three hy_ OOS hypotheses keep their own clocks (registry).
+  * **Step 3 - F3 short build-up (futures OI up, price down) as an avoid flag: FAIL** (wrong sign 2019-21). All
+    three single-stock OI configurations have now failed. **X3 XBRL earnings-surprise drift registered OOS-only**,
+    blocked on NSE Integrated Filing (owner: capture the page's network request). Pledge / auditor resignation
+    not spent: already seen in-sample and too rare to move a 40-name book.
+  * **Execution layer - ADR-0005**, `execution/oms/` (model, journal, broker, kite_broker, risk_gate, killswitch,
+    rollout, reconcile, slicer, shortfall, evidence, engine) + `fb live` + `docs/RUNBOOK-LIVE.md`. Idempotent order
+    state machine with UNKNOWN (timeouts looked up by tag, never re-sent), exactly-once hash-chained journal
+    (`data/oms.duckdb`), pre-trade gate (session, price band, size, daily notional, gross, allowlist, NSE F&O ban
+    list - unreadable list refuses all), reconciliation halts + demotes on mismatch, broker kill switch cancels at
+    the broker, stages OFF/TICKET/SMALL_AUTO/SCALED (human promotes one step with enforced criteria; demotion
+    automatic), TWAP/VWAP under a participation cap, shortfall vs the simulator. **Five locks before KiteBroker
+    sends anything; all closed today** (`fb live status`). Claude never opens them.
+  * **Meta-label loop** `evaluation/metalabel.py`: refuses < 300 trades / 60 sessions; within-day paired
+    context test with BH FDR + both halves; purged walk-forward; proposals only.
+  **Next:** after tonight's refresh, check `fb oos` shows M1/F3 settling; `fb live rehearse` in market hours (10
+  sessions count toward TICKET); no stage can usefully arm until a strategy is CANDIDATE (none is: N2 is a filter).
+  Trials left this quarter: 6 - spend them only on orthogonal data (X3 when filings arrive).

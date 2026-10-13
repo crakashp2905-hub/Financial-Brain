@@ -129,8 +129,8 @@ def _print_rows(rows: list[dict], limit: int = 40) -> None:
 
 def modules():
     """The command modules, imported lazily so a broken one cannot take down `fb --help`."""
-    from . import company, decide, oos, opportunities, portfolio, trials, worldstate
-    return (worldstate, company, trials, portfolio, opportunities, decide, oos)
+    from . import company, decide, live, oos, opportunities, portfolio, trials, worldstate
+    return (worldstate, company, trials, portfolio, opportunities, decide, oos, live)
 
 
 def register_all(sub) -> list[str]:

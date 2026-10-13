@@ -47,6 +47,13 @@ Next: see [docs/HANDOFF.md](docs/HANDOFF.md) and [docs/BUILD-FLOW.md](docs/BUILD
 
 ## What has actually been validated
 
+**2026-10-13, under one bar ([ADR-0004](docs/adr/0004-one-evidence-standard.md)):** the cost-aware momentum book
+(momentum + 52-week high, 40-session hold, no-trade band) is positive net in both halves (+1.36% / +0.75% per 40
+sessions) and beats an equal-turnover random-book null by a distance, but t is 1.45 / 1.24 - **not an edge yet**; it
+is being forward-tested. Futures short build-up fails. The order management system exists
+([ADR-0005](docs/adr/0005-broker-path-behind-stages.md), [runbook](docs/RUNBOOK-LIVE.md)) and is locked: nothing can
+reach the broker until a strategy is confirmed out of sample and the owner arms a stage.
+
 **Added since 2026-10-03, each pre-registered:** costs beat the edge for everything except slow momentum (a delivery
 round trip is ~0.24-0.45%, 84% of the fixed part is STT); tax takes ~20% of an active strategy's CAGR; index timing
 rules halve drawdowns but none beats buy-and-hold; stops neither help nor hurt; swing and opening-range setups lose
@@ -195,6 +202,9 @@ Validation modules, used from Python rather than the CLI:
 | [docs/adr/0002-tiered-models.md](docs/adr/0002-tiered-models.md) | Why models are chosen by measurement, and how a route is calibrated and verified |
 | [docs/adr/0003-untrusted-text-and-prompt-versioning.md](docs/adr/0003-untrusted-text-and-prompt-versioning.md) | Treating fetched text as data, not instructions; why a calibration belongs to a prompt |
 | [docs/PHASE-0.md](docs/PHASE-0.md) | What Phase 0 delivered, what the first real backfill discovered, and the gaps carried forward |
+| [docs/adr/0004-one-evidence-standard.md](docs/adr/0004-one-evidence-standard.md) | The one bar every strategy passes, and the 8-trials-a-quarter budget |
+| [docs/adr/0005-broker-path-behind-stages.md](docs/adr/0005-broker-path-behind-stages.md) | The order path, its five locks, and the rollout stages |
+| [docs/RUNBOOK-LIVE.md](docs/RUNBOOK-LIVE.md) | Operating the OMS: before stage 1, daily, and when something goes wrong |
 | [docs/adr/](docs/adr/) | Architecture decision records |
 | [brain/](brain/) | Obsidian vault — the same material as a linked graph. Open `brain/` as a vault; start at `00-Meta/Home.md` |
 

@@ -9,6 +9,9 @@ updated: 2026-09-23
 
 # Kite readiness
 
+> [!note] Superseded in part on 2026-10-13 by [[ADR-0005 broker path behind stages]]: an order path now exists in
+> `execution/oms/` (never in `providers/`, which stays read-only), closed behind five locks the owner alone opens.
+
 Kite for **market data only**, never orders. That removes the objection this project has
 been making: the argument was always against execution, not against data.
 
