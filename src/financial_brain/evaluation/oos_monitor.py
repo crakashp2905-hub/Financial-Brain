@@ -39,6 +39,7 @@ class Registration:
     hold: int                   #: sessions per rebalance
     backtest: str               #: parquet of the per-period net series the registration judged
     column: str = "net"
+    components: tuple = ()      #: a fixed-weight combination: ((strategy, weight), ...) of other registrations
 
 
 REGISTERED = (
@@ -46,6 +47,12 @@ REGISTERED = (
                  "data/edges/m1_net.parquet"),
     Registration("edge_f3_short_buildup", "PRE-REGISTERED short build-up avoid filter", "2026-10-12", 20,
                  "data/edges/f3_short_net.parquet"),
+    Registration("carry_basis_10", "PRE-REGISTERED edges batch three", "2026-10-13", 21,
+                 "data/edges/c1_monthly.parquet"),
+    Registration("edge_eapr_announcement_short", "PRE-REGISTERED out-of-sample batch three", "2026-10-13", 10,
+                 "data/edges/eapr_monthly.parquet"),
+    Registration("combo_m1_carry", "PRE-REGISTERED out-of-sample batch three", "2026-10-13", 1, "",
+                 components=(("edge_m1_momentum_book", 0.5), ("carry_basis_10", 0.5))),
 )
 
 
@@ -59,9 +66,11 @@ def band(backtest: pd.Series, hold: int) -> tuple[float, float]:
     return float(b.mean() / hold), float(b.std(ddof=1) / np.sqrt(hold))
 
 
-def assess(live: pd.DataFrame, backtest: pd.Series, reg: Registration) -> dict:
-    """``live``: the zoo's rows for the strategy (day, net, bench), from the session after the cutoff."""
-    mu, sd = band(backtest, reg.hold)
+def assess(live: pd.DataFrame, backtest: pd.Series | None, reg: Registration,
+           moments: tuple[float, float] | None = None) -> dict:
+    """``live``: the zoo's rows for the strategy (day, net, bench), from the session after the cutoff. ``moments``
+    (per-session mean, sd) replaces the backtest for a combination."""
+    mu, sd = moments if moments is not None else band(backtest, reg.hold)
     live = live.copy()
     live["day"] = pd.to_datetime(live["day"])
     live = live[live["day"] > pd.Timestamp(reg.cutoff)].sort_values("day")
@@ -94,9 +103,34 @@ def assess(live: pd.DataFrame, backtest: pd.Series, reg: Registration) -> dict:
             "per_session_backtest": (mu, sd)}
 
 
+def _combination(zoo_con, reg: Registration, regs) -> dict:
+    """A fixed-weight combination: live excess is the weighted sum of the components' daily excess; the band's
+    moments combine the components' per-session moments assuming independence (stated in the registration)."""
+    by = {r.strategy: r for r in regs}
+    mu, var, parts = 0.0, 0.0, []
+    for name, w in reg.components:
+        c = by[name]
+        if not Path(c.backtest).exists():
+            return {"strategy": reg.strategy, "verdict": PENDING, "why": f"no backtest for {name}"}
+        m, s_ = band(pd.read_parquet(c.backtest)[c.column], c.hold)
+        mu, var = mu + w * m, var + (w * s_) ** 2
+        x = zoo_con.execute("SELECT day, net - COALESCE(bench, 0) AS x FROM zoo_pnl WHERE strategy = ? ORDER BY day",
+                            [name]).df().set_index("day")["x"] * w
+        parts.append(x.rename(name))
+    live = pd.concat(parts, axis=1).dropna()
+    if live.empty:
+        return {"strategy": reg.strategy, "verdict": PENDING, "sessions": 0, "rebalances": 0, "months": [],
+                "why": "no session where every component settled"}
+    frame = pd.DataFrame({"day": live.index, "net": live.sum(axis=1).to_numpy(), "bench": 0.0})
+    return assess(frame, None, reg, moments=(mu, float(np.sqrt(var))))
+
+
 def report(zoo_con, regs=REGISTERED) -> list[dict]:
     out = []
     for reg in regs:
+        if reg.components:
+            out.append(_combination(zoo_con, reg, regs))
+            continue
         if not Path(reg.backtest).exists():
             out.append({"strategy": reg.strategy, "verdict": PENDING, "why": f"no backtest at {reg.backtest}"})
             continue

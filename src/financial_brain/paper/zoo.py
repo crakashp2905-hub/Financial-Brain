@@ -32,7 +32,8 @@ KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pair
                                "edge_s2_reaction_drift", "edge_f1_long_buildup", "edge_f2_short_covering", "edge_z1_turn_of_month",
                                "edge_i1_index_intraday", "edge_w1_reversal_ls", "edge_w2_52wh_ls", "edge_w3_momentum_ls",
                                "edge_e1_mom_ensemble", "edge_x1_overnight", "edge_x2_opening_fade", "edge_i2_seasonality_ls", "edge_l2_learned_ls",
-                               "edge_m1_momentum_book", "edge_f3_short_buildup")}}
+                               "edge_m1_momentum_book", "edge_f3_short_buildup", "edge_eap_announcement_premium",
+                               "edge_eapr_announcement_short")}}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -406,6 +407,11 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
         st["k"] = k + 1
         ZE.save(z, "edge_f3", st)
         out["edge_f3_short_buildup"] = settle(z, "edge_f3_short_buildup", day, prev, rets, 0.0, st["w"])
+    if fno_lins and "edge_eap_announcement_premium" not in done:      # EAP, daily (batch three)
+        w_eap = ZE.eap_targets(rcon, day, fno_lins)
+        out["edge_eap_announcement_premium"] = settle(z, "edge_eap_announcement_premium", day, prev, rets, 0.0, w_eap)
+        out["edge_eapr_announcement_short"] = settle(z, "edge_eapr_announcement_short", day, prev, rets, 0.0,
+                                                     {k: -v for k, v in w_eap.items()})
     for n, r in ZE.index_day(day).items():               # X1, X2: settled from Kite's Nifty bars
         if n not in done:
             c = INDEX_RT_I1 if r != 0.0 else 0.0

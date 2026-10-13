@@ -388,3 +388,60 @@ def f3_targets(fut, lins_by_symbol: dict, closes: pd.DataFrame, day: date) -> di
     w = {lins_by_symbol[s]: -1.0 / len(flagged) for s in flagged}
     w["NIFTY50"] = 1.0
     return w
+
+
+VERDICT["edge_eap_announcement_premium"] = "registered 2026-10-13 (EAP); verdict in Result of edges batch three"
+KIND["edge_eap_announcement_premium"] = "edge"
+
+
+def eap_targets(rcon, day: date, fno_lins: list[str]) -> dict:
+    """EAP on ``day``'s close: long every F&O name whose results board meeting was intimated 3-15 sessions ahead and
+    whose holding window (the intimation's close to the close of the session after the meeting) covers tonight;
+    short the Nifty for the same notional. Equal weight across the names held."""
+    from ..evaluation import batch_three as B3
+    sess = [pd.Timestamp(r[0]) for r in rcon.execute(
+        "SELECT DISTINCT business_date FROM features WHERE business_date <= ? ORDER BY 1 DESC LIMIT 40", [day]).fetchall()][::-1]
+    if len(sess) < 20:
+        return {}
+    idx = pd.DatetimeIndex(sess)
+    rows = rcon.execute("""SELECT DISTINCT a.business_date AS ann, a.headline, p.lineage FROM announcements a
+                           JOIN (SELECT DISTINCT isin, lineage FROM adjusted_prices WHERE isin IS NOT NULL
+                                 AND lineage IN (SELECT UNNEST(?))) p USING (isin)
+                           WHERE a.event_type = 'BOARD_MEETING' AND lower(a.headline) LIKE '%result%'
+                             AND a.business_date > ? AND a.business_date <= ?""",
+                        [fno_lins, sess[0].date(), day]).fetchall()
+    today = pd.Timestamp(day)
+    held = set()
+    for ann, headline, lin in rows:
+        m = B3.SCHEDULED.search(headline or "")
+        if not m:
+            continue
+        try:
+            meet = pd.Timestamp(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        except ValueError:
+            continue
+        p0 = idx.searchsorted(pd.Timestamp(ann))
+        if p0 >= len(idx):
+            continue
+        # sessions to the meeting, counted on the exchange calendar where known and on weekdays beyond it
+        k = len(pd.bdate_range(idx[p0] + pd.Timedelta(days=1), meet)) if meet > idx[-1] else idx.searchsorted(meet) - p0
+        if not (B3.EAP_MIN <= k <= B3.EAP_MAX):
+            continue
+        meet_pos = idx.searchsorted(meet)
+        exit_session_passed = meet_pos + 1 < len(idx) and idx[meet_pos + 1] <= today
+        if idx[p0] <= today and not exit_session_passed:
+            held.add(lin)
+    if not held:
+        return {}
+    w = {lin: 1.0 / len(held) for lin in held}
+    w["NIFTY50"] = -1.0
+    return w
+
+
+VERDICT["edge_eapr_announcement_short"] = "out-of-sample only (sign-flip of failed EAP, chosen after the result)"
+KIND["edge_eapr_announcement_short"] = "edge"
+
+
+def eapr_targets(rcon, day: date, fno_lins: list[str]) -> dict:
+    """EAPR: EAP's book with every sign flipped (short the names, long the Nifty)."""
+    return {k: -v for k, v in eap_targets(rcon, day, fno_lins).items()}
