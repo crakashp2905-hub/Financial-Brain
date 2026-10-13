@@ -518,3 +518,19 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   **Next:** after tonight's refresh, check `fb oos` shows M1/F3 settling; `fb live rehearse` in market hours (10
   sessions count toward TICKET); no stage can usefully arm until a strategy is CANDIDATE (none is: N2 is a filter).
   Trials left this quarter: 6 - spend them only on orthogonal data (X3 when filings arrive).
+- 2026-10-13 (evening) — **Owner: "work on everything you can to get multiple edges ... and make trades."**
+  * **Batch three (trials 3-5): 0/3.** C1 rich-basis carry (>10% annualised) +0.12% over risk-free per contract in
+    *both* halves, t 1.44 / 3.89, G4 passes by 7 t-units - short of G3 in 2016-21 only. N2 as a Nifty-hedged
+    futures short **loses** (-0.6%/event): N2 is a filter in the 500, not a short in the F&O 200. EAP (long into
+    scheduled results) runs the **wrong way** (-1.2% / -0.4%). Every Nifty-hedged F&O book pays the F&O universe's
+    outperformance of the index - hedge with the traded basket next time (new registration).
+  * **Out-of-sample only (no trial; chosen after results):** EAPR (short into scheduled results) and COMBO (M1 + C1,
+    equal capital). Both in `fb oos`; EAPR in the zoo as `edge_eapr_announcement_short`.
+  * **Trial 6: betting against beta in stock futures: FAIL** (-0.26% / -0.08% a month, t -0.47 / -0.15) - the
+    volatility family is closed in every form tested (long-only, risk-adjusted, beta-neutral). In the zoo as
+    `edge_bab_futures`. **2 trials left in 2026Q4: keep them for X3 (XBRL earnings drift) and orthogonal data.**
+  * Tonight's 18:45 refresh failed on DNS (`getaddrinfo`) and there was **no Kite login today** (live intraday paper
+    run aborted). Refresh re-run by hand after the network returned.
+  * **State for "make trades":** no strategy is CANDIDATE, so no stage can be armed (ADR-0005). Closest: M1 and C1,
+    positive in both halves; their live zoo records are their G5. Tone step skipped 2026-10-13 (Ollama busy with
+    another project); run `fb tone` when it is free.

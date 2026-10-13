@@ -445,3 +445,30 @@ KIND["edge_eapr_announcement_short"] = "edge"
 def eapr_targets(rcon, day: date, fno_lins: list[str]) -> dict:
     """EAPR: EAP's book with every sign flipped (short the names, long the Nifty)."""
     return {k: -v for k, v in eap_targets(rcon, day, fno_lins).items()}
+
+
+VERDICT["edge_bab_futures"] = "failed (t -0.5 / -0.2; volatility family closed)"
+KIND["edge_bab_futures"] = "edge"
+
+
+def bab_targets(closes: pd.DataFrame, nifty: pd.Series, fno_lins: list[str]) -> dict:
+    """BAB on the last session of ``closes`` (sessions x lineages) - the registered construction: shrunk 252-session
+    betas to the Nifty, bottom third long scaled 1/beta_L, top third short scaled 1/beta_H."""
+    from ..evaluation import bab as BB
+    C = closes[[c for c in fno_lins if c in closes.columns]].copy()
+    C.index = pd.to_datetime(C.index)
+    N = pd.Series(nifty.to_numpy(), index=pd.to_datetime(nifty.index)).reindex(C.index).ffill()
+    if len(C) <= BB.WINDOW:
+        return {}
+    b = BB.betas(C, N, C.index[-1]).dropna()
+    b = b[b > 0]
+    if len(b) < 30:
+        return {}
+    srt = b.sort_values()
+    n = len(srt) // 3
+    longs, shorts = list(srt.index[:n]), list(srt.index[-n:])
+    bl, bh = float(b[longs].mean()), float(b[shorts].mean())
+    w = {k: 1.0 / n / bl for k in longs}
+    for k in shorts:
+        w[k] = w.get(k, 0.0) - 1.0 / n / bh
+    return w

@@ -33,7 +33,7 @@ KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pair
                                "edge_i1_index_intraday", "edge_w1_reversal_ls", "edge_w2_52wh_ls", "edge_w3_momentum_ls",
                                "edge_e1_mom_ensemble", "edge_x1_overnight", "edge_x2_opening_fade", "edge_i2_seasonality_ls", "edge_l2_learned_ls",
                                "edge_m1_momentum_book", "edge_f3_short_buildup", "edge_eap_announcement_premium",
-                               "edge_eapr_announcement_short")}}
+                               "edge_eapr_announcement_short", "edge_bab_futures")}}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -412,6 +412,12 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
         out["edge_eap_announcement_premium"] = settle(z, "edge_eap_announcement_premium", day, prev, rets, 0.0, w_eap)
         out["edge_eapr_announcement_short"] = settle(z, "edge_eapr_announcement_short", day, prev, rets, 0.0,
                                                      {k: -v for k, v in w_eap.items()})
+    if fno_lins and "edge_bab_futures" not in done:      # BAB, monthly (trial 6, failed; on paper with its verdict)
+        st = ZE.state(z, "edge_bab")
+        if ZE._first_of_month(z, day) or "w" not in st:
+            st = {"w": ZE.bab_targets(closes, lv["Nifty 50"], fno_lins), "set": str(day)}
+            ZE.save(z, "edge_bab", st)
+        out["edge_bab_futures"] = settle(z, "edge_bab_futures", day, prev, rets, 0.0, st["w"])
     for n, r in ZE.index_day(day).items():               # X1, X2: settled from Kite's Nifty bars
         if n not in done:
             c = INDEX_RT_I1 if r != 0.0 else 0.0
