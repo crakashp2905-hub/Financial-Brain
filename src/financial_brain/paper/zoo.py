@@ -31,7 +31,8 @@ KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pair
         **{k: "edge" for k in ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan", "edge_s1_no_news_reversal",
                                "edge_s2_reaction_drift", "edge_f1_long_buildup", "edge_f2_short_covering", "edge_z1_turn_of_month",
                                "edge_i1_index_intraday", "edge_w1_reversal_ls", "edge_w2_52wh_ls", "edge_w3_momentum_ls",
-                               "edge_e1_mom_ensemble", "edge_x1_overnight", "edge_x2_opening_fade", "edge_i2_seasonality_ls", "edge_l2_learned_ls")}}
+                               "edge_e1_mom_ensemble", "edge_x1_overnight", "edge_x2_opening_fade", "edge_i2_seasonality_ls", "edge_l2_learned_ls",
+                               "edge_m1_momentum_book", "edge_f3_short_buildup")}}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -385,6 +386,26 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
             out[n] = settle(z, n, day, prev, rets, 0.0, st.get(key, {}))
     if "edge_e1_mom_ensemble" not in done:
         out["edge_e1_mom_ensemble"] = settle(z, "edge_e1_mom_ensemble", day, prev, rets, ubench, st.get("E1", {}))
+    # ADR-0004 trials: M1 every 40 sessions, F3 every 20 (both from the registration; the record never tunes them)
+    if "edge_m1_momentum_book" not in done:
+        w, st = ZE.m1_targets(rcon, day, ZE.state(z, "edge_m1"))
+        ZE.save(z, "edge_m1", st)
+        out["edge_m1_momentum_book"] = settle(z, "edge_m1_momentum_book", day, prev, rets, ubench, w)
+    if fno_symbols and "edge_f3_short_buildup" not in done:
+        st = ZE.state(z, "edge_f3")
+        k = int(st.get("k", 0))
+        if k % 20 == 0 or "w" not in st:
+            import duckdb as _dd
+            fut = _dd.connect("data/futures_history.duckdb", read_only=True)
+            try:
+                tick = dict(rcon.execute("SELECT ticker, lineage FROM adjusted_prices WHERE business_date = ? AND ticker IN (SELECT UNNEST(?))",
+                                         [day, fno_symbols]).fetchall())
+                st["w"] = ZE.f3_targets(fut, tick, closes, day)
+            finally:
+                fut.close()
+        st["k"] = k + 1
+        ZE.save(z, "edge_f3", st)
+        out["edge_f3_short_buildup"] = settle(z, "edge_f3_short_buildup", day, prev, rets, 0.0, st["w"])
     for n, r in ZE.index_day(day).items():               # X1, X2: settled from Kite's Nifty bars
         if n not in done:
             c = INDEX_RT_I1 if r != 0.0 else 0.0

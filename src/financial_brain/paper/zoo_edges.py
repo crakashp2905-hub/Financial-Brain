@@ -308,7 +308,7 @@ def i2_day(rcon, day: date, *, lookback: int = 20) -> float | None:
         hh = pd.concat([hh, pd.DataFrame(rows)], ignore_index=True)
         hh.to_parquet(HH_PATH)
     total, slots = 0.0, 0
-    for slot, g in hh[hh["d"] <= today].groupby("slot"):
+    for _slot, g in hh[hh["d"] <= today].groupby("slot"):
         R = g.pivot_table(index="d", columns="s", values="r")
         if today not in R.index:
             continue
@@ -343,4 +343,48 @@ def l2_targets(rcon, day: date, fno_lins: list[str], frac: float = 0.10) -> dict
     w = {k: 1.0 / len(L) for k in L}
     for k in S:
         w[k] = w.get(k, 0.0) - 1.0 / len(S)
+    return w
+
+
+# ------------------------------------------------------------------------------------------------- ADR-0004 trials
+
+VERDICT.update({"edge_m1_momentum_book": "failed G3 (t +1.5 / +1.2), beat the random-book null; forward test (G5)",
+                "edge_f3_short_buildup": "failed (t -1.2 / +0.9, wrong sign 2019-21)"})
+KIND.update({"edge_m1_momentum_book": "edge", "edge_f3_short_buildup": "edge"})
+
+
+def m1_targets(rcon, day: date, st: dict) -> tuple[dict, dict]:
+    """M1, rebalanced every 40 sessions (``PRE-REGISTERED cost-aware momentum book``); between rebalances the
+    weights drift and are carried as they were set."""
+    from ..evaluation import momentum_book as MB
+    k = int(st.get("k", 0))
+    if k % MB.HOLD == 0 or "w" not in st:
+        w, held = MB.targets(rcon, day, st.get("held", []))
+        st = {"w": w, "held": held, "set": str(day)}
+    st["k"] = k + 1
+    return st["w"], st
+
+
+def f3_targets(fut, lins_by_symbol: dict, closes: pd.DataFrame, day: date) -> dict:
+    """F3 on ``day``: short the F&O names in short build-up, long the Nifty for the same notional (as F2 and N2 are
+    traded here). Empty when the futures history does not reach ``day``."""
+    from ..evaluation import short_buildup as SB
+    oi = fut.execute("""SELECT symbol, d, SUM(oi) AS oi FROM futures_daily WHERE d <= ? AND d > ?::DATE - INTERVAL 20 DAY
+                        AND oi > 0 GROUP BY 1, 2""", [day, day]).df()
+    if oi.empty:
+        return {}
+    oi["d"] = pd.to_datetime(oi["d"])
+    O = oi.pivot(index="d", columns="symbol", values="oi").sort_index()
+    if len(O) < SB.K + 1 or O.index[-1] != pd.Timestamp(day):
+        return {}
+    syms = [s for s in O.columns if lins_by_symbol.get(s) in closes.columns]
+    Sp = pd.DataFrame({s: closes[lins_by_symbol[s]] for s in syms})
+    Sp.index = pd.to_datetime(Sp.index)
+    Sp = Sp.reindex(O.index)
+    M = Sp.notna() & O[syms].notna()
+    flagged, _ = SB.flags(Sp, O[syms], M, O.index[-1])
+    if not flagged:
+        return {}
+    w = {lins_by_symbol[s]: -1.0 / len(flagged) for s in flagged}
+    w["NIFTY50"] = 1.0
     return w
