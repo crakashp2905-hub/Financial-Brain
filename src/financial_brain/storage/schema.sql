@@ -555,6 +555,20 @@ CREATE TABLE IF NOT EXISTS mf_nav (
     PRIMARY KEY (scheme_code, nav_date)
 );
 
+-- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
+-- went to delivery. Filed under the trade date the file's header states.
+CREATE TABLE IF NOT EXISTS delivery (
+    symbol          VARCHAR NOT NULL,
+    series          VARCHAR NOT NULL,
+    business_date   DATE NOT NULL,
+    qty_traded      BIGINT,
+    deliv_qty       BIGINT,
+    deliv_pct       DOUBLE,
+    lake_key        VARCHAR,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (symbol, series, business_date)
+);
+
 -- Articles fetched on demand from a filing's own link (providers/news_article.py).
 -- Title, time and the publisher's summary only - never the body.
 CREATE TABLE IF NOT EXISTS news_articles (

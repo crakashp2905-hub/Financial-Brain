@@ -1846,6 +1846,21 @@ def cmd_mfnav(args) -> int:
     return 0
 
 
+def cmd_delivery(args) -> int:
+    """NSE delivery position: --prefetch fills the lake (network, no database); otherwise load lake -> table."""
+    from .ingest import delivery
+    cfg = load()
+    start, end = _d(args.start), _d(args.end or args.start)
+    if args.prefetch:
+        r = delivery.prefetch(cfg, start, end, workers=args.workers)
+        print({k: (v if k != "failed" else v[:10]) for k, v in r.items()}, f"failed total {len(r['failed'])}")
+        return 0 if not r["failed"] else 1
+    with Database(cfg).connect() as con:
+        r = delivery.load(con, cfg, start, end)
+        print({k: (v if k != "date_mismatch" else v[:5]) for k, v in r.items()})
+    return 0
+
+
 def cmd_newsref(args) -> int:
     """News referenced by a day's filings - extracted from the filing text, not fetched."""
     from .events import newsref
@@ -2408,6 +2423,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--only-missing", action="store_true",
                    help="only filings whose headline could not be extracted")
     g.set_defaults(fn=cmd_newsfetch)
+
+    g = sub.add_parser("delivery", help="NSE delivery position (MTO): --prefetch to the lake, then load")
+    g.add_argument("--start", required=True)
+    g.add_argument("--end")
+    g.add_argument("--prefetch", action="store_true")
+    g.add_argument("--workers", type=int, default=4)
+    g.set_defaults(fn=cmd_delivery)
 
     g = sub.add_parser("mfnav", help="mutual-fund NAVs from AMFI (public feed)")
     g.add_argument("--date")
