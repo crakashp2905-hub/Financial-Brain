@@ -53,34 +53,51 @@ def prefetch(cfg, start: date, end: date, *, workers: int = 4, provider=None) ->
     return out
 
 
-def load(con, cfg, start: date, end: date) -> dict:
-    """Lake -> ``delivery`` (and ``lake_manifest``). Idempotent: a day already loaded is replaced by the same rows."""
+def load(con, cfg, start: date, end: date, *, batch_days: int = 120) -> dict:
+    """Lake -> ``delivery`` (and ``lake_manifest``), set-based: each batch of days is parsed in Python, then replaced
+    with one DELETE and one INSERT ... SELECT (row-wise inserts of ~3,000 rows a day took hours). Idempotent."""
+    import pandas as pd
     lake = RawLake(cfg.lake)
     out = {"days": 0, "rows": 0, "date_mismatch": []}
     now = datetime.now(timezone.utc)
-    for d in _days(start, end):
-        if not lake.exists(SOURCE, DATASET, d, _filename(d)):
-            continue
-        y, m, dd = d.isoformat().split("-")
-        key = f"{SOURCE}/{DATASET}/{y}/{m}/{dd}/{_filename(d)}"
-        obj = lake.meta(key)
-        trade, rows = parse(lake.read(key))
-        if trade != d:
-            out["date_mismatch"].append((str(d), str(trade)))   # filed under the header's date regardless
-        when = trade or d
-        con.execute("""INSERT INTO lake_manifest (key, source, dataset, business_date, filename, url, retrieved_at,
-                       sha256, size_bytes, http_status, content_type) VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                       ON CONFLICT (key) DO NOTHING""",
-                    [obj.key, obj.source, obj.dataset, obj.business_date, obj.filename, obj.url, obj.retrieved_at,
-                     obj.sha256, obj.size_bytes, obj.http_status, obj.content_type])
-        con.execute("DELETE FROM delivery WHERE business_date = ?", [when])
-        con.executemany("""INSERT INTO delivery (symbol, series, business_date, qty_traded, deliv_qty, deliv_pct,
-                           lake_key, observed_at) VALUES (?,?,?,?,?,?,?,?)
-                           ON CONFLICT (symbol, series, business_date) DO NOTHING""",
-                        [[r["symbol"], r["series"], when, r["qty_traded"], r["deliv_qty"], r["deliv_pct"], key, now]
-                         for r in rows])
-        out["days"] += 1
-        out["rows"] += len(rows)
+    days = [d for d in _days(start, end) if lake.exists(SOURCE, DATASET, d, _filename(d))]
+    for i in range(0, len(days), batch_days):
+        frames, manifest, dates = [], [], []
+        for d in days[i:i + batch_days]:
+            y, m, dd = d.isoformat().split("-")
+            key = f"{SOURCE}/{DATASET}/{y}/{m}/{dd}/{_filename(d)}"
+            obj = lake.meta(key)
+            trade, rows = parse(lake.read(key))
+            if trade != d:
+                out["date_mismatch"].append((str(d), str(trade)))   # filed under the header's date regardless
+            when = trade or d
+            manifest.append([obj.key, obj.source, obj.dataset, obj.business_date, obj.filename, obj.url,
+                             obj.retrieved_at, obj.sha256, obj.size_bytes, obj.http_status, obj.content_type])
+            if rows:
+                f = pd.DataFrame(rows)
+                f["business_date"], f["lake_key"] = when, key
+                frames.append(f)
+            dates.append(when)
+        con.executemany("""INSERT INTO lake_manifest (key, source, dataset, business_date, filename, url, retrieved_at,
+                           sha256, size_bytes, http_status, content_type) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                           ON CONFLICT (key) DO NOTHING""", manifest)
+        batch = pd.concat(frames, ignore_index=True).drop_duplicates(["symbol", "series", "business_date"])
+        batch["observed_at"] = now
+        con.register("_delivery_batch", batch)
+        con.execute("BEGIN TRANSACTION")
+        try:
+            con.execute("DELETE FROM delivery WHERE business_date IN (SELECT UNNEST(?))", [dates])
+            con.execute("""INSERT INTO delivery (symbol, series, business_date, qty_traded, deliv_qty, deliv_pct, lake_key,
+                           observed_at) SELECT symbol, series, business_date, qty_traded, deliv_qty, deliv_pct, lake_key,
+                           observed_at FROM _delivery_batch""")
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")
+            raise
+        finally:
+            con.unregister("_delivery_batch")
+        out["days"] += len(dates)
+        out["rows"] += len(batch)
     return out
 
 

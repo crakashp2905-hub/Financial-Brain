@@ -472,3 +472,86 @@ def bab_targets(closes: pd.DataFrame, nifty: pd.Series, fno_lins: list[str]) -> 
     for k in shorts:
         w[k] = w.get(k, 0.0) - 1.0 / n / bh
     return w
+
+
+# ------------------------------------------------------------------ trials 7 and 8 (both failed; on paper with verdicts)
+
+def _k7_names() -> list[str]:
+    from ..evaluation import chart_setups as K
+    return [f"edge_k7_{s}" for s in K.SETUPS]
+
+
+for _n in _k7_names():
+    VERDICT[_n] = "failed (trial 7: no chart or candle setup had a 5-session edge in futures)"
+    KIND[_n] = "edge"
+VERDICT["edge_d1_delivery_ls"] = "failed (trial 8: t +1.0 / +0.1; G4 narrowly)"
+KIND["edge_d1_delivery_ls"] = "edge"
+
+
+def k7_targets(rcon, day: date, fno_lins: list[str]) -> dict[str, dict]:
+    """Every setup of trial 7 on ``day``'s close: a setup that fired at session s is held from the close of s+1 to
+    the close of s+6, so tonight's book holds the setups that fired in the last five sessions before today. Each
+    setup's book: side / n on its names, hedged with -side spread equally over every F&O name (the registered
+    equal-weighted F&O hedge)."""
+    import warnings
+
+    from ..evaluation import chart_setups as K
+    from ..features import library as LB
+    from ..features import technical as TE
+    rcon.execute(TE.BARS_SQL)
+    bars = rcon.execute("""SELECT lineage, d, o, h, l, c, v FROM _tbars WHERE lineage IN (SELECT UNNEST(?)) AND d <= ?
+                           AND d > ?::DATE - INTERVAL 420 DAY ORDER BY lineage, d""", [fno_lins, day, day]).df()
+    bars["d"] = pd.to_datetime(bars["d"])
+    today = pd.Timestamp(day)
+    held: dict[str, set] = {s: set() for s in K.SETUPS}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for lin, b in bars.groupby("lineage"):
+            b = b.reset_index(drop=True)
+            if len(b) < 120 or b["d"].iloc[-1] != today:
+                continue
+            f = LB.compute(b[["d", "o", "h", "l", "c", "v"]])
+            n = len(b)
+            for setup, (_, fire) in K.SETUPS.items():
+                fired = np.flatnonzero(fire(f, b).fillna(False).to_numpy())
+                fired = fired[fired >= n - 1 - 5 - K.HOLD]          # recent enough to matter, with dedupe context
+                last, keep = -10**9, []
+                for i in fired:
+                    if i - last >= K.HOLD:
+                        keep.append(i)
+                        last = i
+                if any(n - 6 <= i <= n - 2 for i in keep):        # fired at s in [today-5, today-1]
+                    held[setup].add(lin)
+    out = {}
+    for setup, (side, _) in K.SETUPS.items():
+        names = held[setup]
+        if not names:
+            out[f"edge_k7_{setup}"] = {}
+            continue
+        w = {k: side / len(names) for k in names}
+        for k in fno_lins:
+            w[k] = w.get(k, 0.0) - side / len(fno_lins)
+        out[f"edge_k7_{setup}"] = {k: v for k, v in w.items() if abs(v) > 1e-12}
+    return out
+
+
+def d1_targets(rcon, day: date, fno_lins: list[str]) -> dict:
+    """Trial 8's book on ``day``'s close: long the top fifth and short the bottom fifth of the F&O names by delivery
+    share (last 20 sessions minus the 120 before), equal weight."""
+    from ..evaluation import delivery_share as DS
+    d = rcon.execute("""SELECT p.lineage, d.business_date, d.deliv_pct FROM delivery d
+                        JOIN adjusted_prices p ON p.ticker = d.symbol AND p.business_date = d.business_date
+                        WHERE d.series = 'EQ' AND p.lineage IN (SELECT UNNEST(?)) AND d.business_date <= ?
+                          AND d.business_date > ?::DATE - INTERVAL 260 DAY""", [fno_lins, day, day]).df()
+    if d.empty:
+        return {}
+    D = d.pivot_table(index="business_date", columns="lineage", values="deliv_pct").sort_index()
+    sc = DS.score(D).iloc[-1].dropna()
+    if len(sc) < 50 or pd.Timestamp(D.index[-1]) != pd.Timestamp(day):
+        return {}
+    hi, lo = sc.quantile(1 - DS.FRAC), sc.quantile(DS.FRAC)
+    L, S_ = sc[sc >= hi].index, sc[sc <= lo].index
+    w = {k: 1.0 / len(L) for k in L}
+    for k in S_:
+        w[k] = w.get(k, 0.0) - 1.0 / len(S_)
+    return w

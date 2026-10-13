@@ -534,3 +534,16 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   * **State for "make trades":** no strategy is CANDIDATE, so no stage can be armed (ADR-0005). Closest: M1 and C1,
     positive in both halves; their live zoo records are their G5. Tone step skipped 2026-10-13 (Ollama busy with
     another project); run `fb tone` when it is free.
+- 2026-10-14 (night) — **Owner: "test more edges, chart and candlestick ones too, and do everything else."**
+  * **New data: NSE delivery position (MTO)**, `providers/nse_delivery.py`, `ingest/delivery.py`, table `delivery`,
+    `fb delivery --start X [--end Y] [--prefetch]`: 2,920 sessions 2015-01-01..2026-10-13, 5.94M rows, 0 failures.
+    Set-based load (one INSERT ... SELECT per 120 days; the row-wise version was abandoned after 16 min). In the
+    evening refresh (step 1b). NSE's own files misspell "rade Date" on a few days - filed under the requested date.
+  * **Trial 7 - 17 chart/candle setups as hedged futures (5 sessions, enter t+1): 0/17.** Gross effects are +/-0.1%;
+    the matched-study candle effects (marubozu +0.95%, bearish engulfing -0.62%) vanish when entry is one session
+    later - bid-ask bounce. Chart/candle setups are closed on daily bars: factors, events and futures all fail.
+  * **Trial 8 - delivery share long-short in futures: FAIL** (+0.46% / +0.06% per 20 sessions, t 0.98 / 0.15).
+  * **2026Q4 budget spent: 8 of 8, all FAIL.** Next trials 2027Q1: X3 (XBRL drift, when filings arrive), delivery
+    share in mid/small caps (a new universe), whatever new data the owner unblocks. Do not register a 9th this
+    quarter (`standard.record` refuses).
+  * Zoo: 40 edge strategies now, including `edge_k7_<setup>` x17 (~100 s a night) and `edge_d1_delivery_ls`.

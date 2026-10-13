@@ -33,7 +33,12 @@ KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pair
                                "edge_i1_index_intraday", "edge_w1_reversal_ls", "edge_w2_52wh_ls", "edge_w3_momentum_ls",
                                "edge_e1_mom_ensemble", "edge_x1_overnight", "edge_x2_opening_fade", "edge_i2_seasonality_ls", "edge_l2_learned_ls",
                                "edge_m1_momentum_book", "edge_f3_short_buildup", "edge_eap_announcement_premium",
-                               "edge_eapr_announcement_short", "edge_bab_futures")}}
+                               "edge_eapr_announcement_short", "edge_bab_futures",
+                               "edge_d1_delivery_ls")},
+        **{f"edge_k7_{s_}": "edge" for s_ in ("bull_marubozu", "hammer", "bull_engulf", "morning_star", "sweep_lows", "bos_up",
+                                             "fvg_bull_retest", "gap_up_unfilled", "high55_volume", "bear_engulf",
+                                             "shooting_star", "evening_star", "sweep_highs", "bos_down", "fvg_bear_retest",
+                                             "gap_down_unfilled", "low55_volume")}}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -418,6 +423,21 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
             st = {"w": ZE.bab_targets(closes, lv["Nifty 50"], fno_lins), "set": str(day)}
             ZE.save(z, "edge_bab", st)
         out["edge_bab_futures"] = settle(z, "edge_bab_futures", day, prev, rets, 0.0, st["w"])
+    if fno_lins:                                         # trial 7: the 17 chart and candle setups, daily
+        try:
+            for n, w in ZE.k7_targets(rcon, day, fno_lins).items():
+                if n not in done:
+                    out[n] = settle(z, n, day, prev, rets, 0.0, w)
+        except Exception as e:                           # noqa: BLE001 - the library is heavy; the rest still settles
+            print(f"k7 setups skipped tonight: {e}")
+    if fno_lins and "edge_d1_delivery_ls" not in done:  # trial 8, every 20 sessions
+        st = ZE.state(z, "edge_d1")
+        k = int(st.get("k", 0))
+        if k % 20 == 0 or "w" not in st:
+            st["w"] = ZE.d1_targets(rcon, day, fno_lins)
+        st["k"] = k + 1
+        ZE.save(z, "edge_d1", st)
+        out["edge_d1_delivery_ls"] = settle(z, "edge_d1_delivery_ls", day, prev, rets, 0.0, st["w"])
     for n, r in ZE.index_day(day).items():               # X1, X2: settled from Kite's Nifty bars
         if n not in done:
             c = INDEX_RT_I1 if r != 0.0 else 0.0
