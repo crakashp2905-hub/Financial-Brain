@@ -562,3 +562,11 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   * **Owner raised 2026Q4's budget 8 -> 9** (ADR-0004 amendment 1, `standard.BUDGET_OVERRIDES`). Batch four run:
     **0/9** (best Q7 t +1.03 / +0.10; VWAP bounce -0.4 bp/trade over 1,900). Index timing on price alone is closed.
     **2026Q4 is now 9 of 9; a tenth is refused.** Next: 2027Q1.
+- 2026-10-14 (evening) — **Insider/promoter direction pilot** (the owner's Form-4 idea, Indian equivalent: SAST Reg.
+  29, 96k filings): confident direction from only **4 of 40** sampled (25 scanned; text tables flatten; EasyOCR
+  ~47 s/form and loses layout). `docintel/sast.py` + tests; build plan in "Pilot - insider and promoter direction
+  from SAST filings" (coordinate tables, OCR with boxes on liquid names, hand labels first). EasyOCR fetched its
+  recognition model on first use.
+  * **2027Q1 queue (registered, not run):** delivery share in ranks 201-750 (long-only, delivery costs); X3 XBRL
+    earnings drift (blocked on NSE Integrated Filing); an insider test once the SAST build reaches a validated set.
+  * Live paper 2026-10-14 completed (owner logged in): ORB 55 trades, net -Rs 1,133 (gross +3,305, costs 4,438).
