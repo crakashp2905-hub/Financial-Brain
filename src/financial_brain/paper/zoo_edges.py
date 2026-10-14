@@ -555,3 +555,40 @@ def d1_targets(rcon, day: date, fno_lins: list[str]) -> dict:
     for k in S_:
         w[k] = w.get(k, 0.0) - 1.0 / len(S_)
     return w
+
+
+# ------------------------------------------------------------------ batch four (registered 2026-10-14; test pending budget)
+
+Q_RULES = ("q1_extreme_down_long", "q2_extreme_up_short", "q3_rsi_long", "q4_rsi_short", "q5_above_ma10",
+           "q6_dip_ma10", "q7_cross_ma10_3d", "q8_ten_day_extremes")
+for _q in Q_RULES:
+    VERDICT[f"edge_{_q}"] = "registered 2026-10-14; in-sample test pending the trial budget"
+    KIND[f"edge_{_q}"] = "edge"
+VERDICT["edge_v1_vwap_bounce"] = "registered 2026-10-14; in-sample test pending the trial budget"
+KIND["edge_v1_vwap_bounce"] = "edge"
+
+
+def q_targets(nifty: pd.Series) -> dict[str, float]:
+    """Each rule's position for the next session, from the Nifty's closes up to tonight (the paper record uses the
+    close; the registered test uses the 15:15 price - a stated difference)."""
+    from ..evaluation import index_rules as IR
+    p = pd.Series(nifty.to_numpy(dtype=float), index=pd.to_datetime(nifty.index)).dropna()
+    if len(p) < 260:
+        return {}
+    pos = IR.positions(p)
+    return {f"edge_{k}": float(v.iloc[-1]) for k, v in pos.items()}
+
+
+def v1_return(day: date) -> float | None:
+    """V1's net return for ``day`` from the stored Nifty minute history (grown each evening by ``index_day``)."""
+    from ..evaluation import index_rules as IR
+    try:
+        h = pd.read_parquet("data/edges/nifty50_minute.parquet")
+    except Exception:                                   # noqa: BLE001
+        return None
+    h["ts"] = pd.to_datetime(h["ts"])
+    today = h[h["ts"].dt.tz_localize(None).dt.normalize() == pd.Timestamp(day)]
+    if today.empty:
+        return None
+    s = IR.vwap_bounce(today)
+    return float(s.iloc[0]) if len(s) else 0.0           # no setup today: flat

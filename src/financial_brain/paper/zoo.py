@@ -38,7 +38,10 @@ KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pair
         **{f"edge_k7_{s_}": "edge" for s_ in ("bull_marubozu", "hammer", "bull_engulf", "morning_star", "sweep_lows", "bos_up",
                                              "fvg_bull_retest", "gap_up_unfilled", "high55_volume", "bear_engulf",
                                              "shooting_star", "evening_star", "sweep_highs", "bos_down", "fvg_bear_retest",
-                                             "gap_down_unfilled", "low55_volume")}}
+                                             "gap_down_unfilled", "low55_volume")},
+        **{f"edge_{q}": "edge" for q in ("q1_extreme_down_long", "q2_extreme_up_short", "q3_rsi_long", "q4_rsi_short",
+                                         "q5_above_ma10", "q6_dip_ma10", "q7_cross_ma10_3d", "q8_ten_day_extremes",
+                                         "v1_vwap_bounce")}}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -448,6 +451,17 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
         if r is not None:
             z.execute("INSERT OR REPLACE INTO zoo_pnl VALUES (?,?,?,?,?,?,?)", ["edge_i2_seasonality_ls", day, None, None, r, 0.0, 13])
             out["edge_i2_seasonality_ls"] = {"net": r}
+    if day in lv.index:                                  # batch four: eight Nifty rules, daily (paper only)
+        for n, w in ZE.q_targets(lv["Nifty 50"]).items():
+            if n not in done:
+                out[n] = settle(z, n, day, prev, rets, 0.0, {INDEX: w} if w else {})
+    if "edge_v1_vwap_bounce" not in done:               # V1: settled from today's Nifty minute bars, after index_day
+        r = ZE.v1_return(day)
+        if r is not None:
+            c = INDEX_RT_I1 if r != 0.0 else 0.0
+            z.execute("INSERT OR REPLACE INTO zoo_pnl VALUES (?,?,?,?,?,?,?)",
+                      ["edge_v1_vwap_bounce", day, r + c, c, r, 0.0, int(r != 0.0)])
+            out["edge_v1_vwap_bounce"] = {"net": r}
     # I1: an intraday trade, settled from the day's minute bars
     if "edge_i1_index_intraday" not in done:
         r = ZE.i1_return(day)
