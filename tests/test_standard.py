@@ -72,7 +72,7 @@ def test_judge_without_a_null_is_not_a_candidate(tmp_path):
 
 def test_an_owner_override_raises_only_its_own_quarter(tmp_path):
     p = tmp_path / "ledger.jsonl"
-    for i in range(9):
-        S.record({"name": f"o{i}"}, p, on=date(2026, 11, 1))           # 2026Q4 allows 9 (amendment 1)
+    for i in range(S.BUDGET_OVERRIDES["2026Q4"]):
+        S.record({"name": f"o{i}"}, p, on=date(2026, 11, 1))           # 2026Q4's owner-raised cap
     with pytest.raises(S.StandardError, match="budget"):
-        S.record({"name": "o10"}, p, on=date(2026, 12, 1))
+        S.record({"name": "one more"}, p, on=date(2026, 12, 1))

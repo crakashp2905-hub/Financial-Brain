@@ -59,3 +59,11 @@ is appended to `docs/trials/ledger.jsonl` (append-only, committed, so git dates 
 `PRE-REGISTERED index mean reversion and VWAP` (nine rules, multiplicity stated inside it). The owner chose this over
 waiting for 2027Q1, when asked. The cap is otherwise unchanged; `standard.BUDGET_OVERRIDES` records the exception so
 the ledger enforces it.
+
+## Amendment 2 (2026-10-14, owner decision)
+
+2026Q4's budget is raised from 9 to **10**, for one trial only: the family test registered in
+`PRE-REGISTERED published price anomalies` (the catalogue's untested price anomalies, multiplicity stated inside it,
+judged additionally by White's Reality Check / Hansen's SPA and the probability of backtest overfitting across the
+family). Asked whether to run now or wait for 2027Q1, the owner answered: "do it in detail but do all of it with
+depth".
