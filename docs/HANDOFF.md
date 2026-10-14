@@ -559,3 +559,6 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   * **In-sample test NOT run: 2026Q4 budget is spent.** Waiting for the owner's decision (raise the budget by one,
     or wait for 2027Q1). It needs no database (minute-bar parquet only), so it can run any time.
   * Tone step: Ollama free again; runs in tonight's refresh (not during market hours - it writes the DB).
+  * **Owner raised 2026Q4's budget 8 -> 9** (ADR-0004 amendment 1, `standard.BUDGET_OVERRIDES`). Batch four run:
+    **0/9** (best Q7 t +1.03 / +0.10; VWAP bounce -0.4 bp/trade over 1,900). Index timing on price alone is closed.
+    **2026Q4 is now 9 of 9; a tenth is refused.** Next: 2027Q1.
