@@ -61,15 +61,18 @@ Over the 15 monthly series, aligned from 2018-02 (104 months):
   (A11, A13).
 * **P4 half right**: SPA does not reject; PBO is 0.33, not above 0.5.
 
-## The finding: rising volume and improving liquidity outperform
+## The finding: falling volume and worsening liquidity underperform
 
-A11 and A13 are one observation seen twice: names whose rupee volume is rising, and whose price impact per rupee is
-falling, beat names losing volume - in both halves, at t -2.3 to -3.5 for the registered (losing) side, and -0.90% a
-month gross between the extremes of A13. Read the right way round it is the **high-volume return premium**
-(Gervais, Kaniel & Mingelgrin 2001: stocks with unusually high trading volume subsequently rise, through visibility)
-- a published effect, but **found here as the sign-flip of registered hypotheses, in-sample**, which is the oldest way
-to manufacture a result. It therefore earns no verdict. It is registered out of sample and as a held-out replication
-on names this test never touched: [[PRE-REGISTERED high-volume return premium]].
+A11 and A13 came out significantly reversed in both halves (t -2.3 to -3.5 for the registered side). The natural
+reading is the **high-volume return premium** (Gervais, Kaniel & Mingelgrin 2001) - but measured the same way, the
+*opposite* extremes as long-only books are weak: buying the top fifth by rising volume earned +0.14% / -0.15% a month
+net, buying the fifth with improving liquidity +0.05% / +0.27% (computed after the result, to set out-of-sample bands;
+not evidence). So the effect is **asymmetric**: names whose volume is drying up and whose price impact is rising
+underperform, and the other end does not mirror it. That is an **avoid** signal, the shape N2 had, not a buy signal.
+
+It was found as the sign-flip of registered hypotheses, in-sample, so it earns no verdict. Registered out of sample
+and for held-out replication on names this test never touched: [[PRE-REGISTERED high-volume return premium]] (the
+long books) and [[PRE-REGISTERED drying-up volume avoid filter]] (the avoid reading, which is what the data shows).
 
 Also visible: intermediate momentum (A1) and seasonality (A3) carry real long-short spreads (t 3.3 and 2.6 gross) that
 long-only books with delivery costs cannot harvest - the momentum family's familiar shape.

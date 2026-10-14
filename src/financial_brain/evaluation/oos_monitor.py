@@ -51,6 +51,10 @@ REGISTERED = (
                  "data/edges/c1_monthly.parquet"),
     Registration("edge_eapr_announcement_short", "PRE-REGISTERED out-of-sample batch three", "2026-10-13", 10,
                  "data/edges/eapr_monthly.parquet"),
+    Registration("edge_hv1_rising_volume", "PRE-REGISTERED high-volume return premium", "2026-10-14", 21,
+                 "data/edges/hv1_rising_volume_net.parquet"),
+    Registration("edge_hv2_improving_liquidity", "PRE-REGISTERED high-volume return premium", "2026-10-14", 21,
+                 "data/edges/hv2_improving_liquidity_net.parquet"),
     Registration("combo_m1_carry", "PRE-REGISTERED out-of-sample batch three", "2026-10-13", 1, "",
                  components=(("edge_m1_momentum_book", 0.5), ("carry_basis_10", 0.5))),
 )

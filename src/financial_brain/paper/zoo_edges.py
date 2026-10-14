@@ -592,3 +592,57 @@ def v1_return(day: date) -> float | None:
         return None
     s = IR.vwap_bounce(today)
     return float(s.iloc[0]) if len(s) else 0.0           # no setup today: flat
+
+
+# ------------------------------------------------------------------ trial 10 (failed) and the high-volume premium (OOS)
+
+A_NAMES = ("A1_intermediate_mom", "A2_long_term_reversal", "A3_return_seasonality", "A4_ivol", "A5_max", "A6_idio_skew",
+           "A7_vol_of_vol", "A8_downside_beta", "A9_coskewness", "A10_amihud", "A11_volume_trend", "A12_zero_days",
+           "A13_illiq_shock", "A14_day_of_week", "A15_halloween", "A16_india_year_end")
+for _a in A_NAMES:
+    VERDICT[f"edge_{_a.lower()}"] = "failed (trial 10: 0 of 16 published anomalies; SPA p 0.68)"
+    KIND[f"edge_{_a.lower()}"] = "edge"
+for _h in ("edge_hv1_rising_volume", "edge_hv2_improving_liquidity"):
+    VERDICT[_h] = "out-of-sample only (found as a sign flip in trial 10); held-out test in 2027Q1"
+    KIND[_h] = "edge"
+
+
+def anomaly_targets(rcon, day: date) -> dict[str, dict]:
+    """Monthly books for A1-A13 and HV1-HV2 (``evaluation.anomalies.targets``), keyed by zoo name."""
+    from ..evaluation import anomalies as AN
+    return {f"edge_{k.lower()}": w for k, w in AN.targets(rcon, day).items()}
+
+
+def calendar_exposures(day: date, nifty_closes: pd.Series) -> dict[str, float]:
+    """A14 (flat over the session ending Monday), A15 (long November-April). The next session is taken as the next
+    weekday - a holiday shifts it by a day, stated."""
+    nxt = pd.Timestamp(day) + pd.offsets.BDay(1)
+    return {"edge_a14_day_of_week": 0.0 if nxt.weekday() == 0 else 1.0,
+            "edge_a15_halloween": 1.0 if nxt.month in (11, 12, 1, 2, 3, 4) else 0.0}
+
+
+def a16_window(day: date) -> bool:
+    """A16's holding window: from the fifth-last weekday of March to the last weekday of April (weekdays stand in
+    for sessions beyond the data)."""
+    d = pd.Timestamp(day)
+    mar = pd.bdate_range(f"{d.year}-03-01", f"{d.year}-03-31")
+    apr = pd.bdate_range(f"{d.year}-04-01", f"{d.year}-04-30")
+    return mar[-5] <= d < apr[-1]
+
+
+def a16_targets(rcon, day: date, uni: list[str]) -> dict:
+    """Bottom fifth of ``uni`` by the April-February return, equal weight."""
+    y = pd.Timestamp(day).year
+    px = rcon.execute("""SELECT lineage, business_date, close_adj FROM adjusted_prices WHERE lineage IN (SELECT UNNEST(?))
+                         AND business_date BETWEEN ? AND ?""", [uni, f"{y - 1}-03-01", f"{y}-02-28"]).df()
+    if px.empty:
+        return {}
+    px["business_date"] = pd.to_datetime(px["business_date"])
+    C = px.pivot_table(index="business_date", columns="lineage", values="close_adj").sort_index()
+    start = C[C.index.month == 3].iloc[-1] if (C.index.year == y - 1).any() else None
+    end = C[(C.index.year == y) & (C.index.month == 2)]
+    if start is None or end.empty:
+        return {}
+    r = (end.iloc[-1] / start - 1).dropna()
+    losers = r[r <= r.quantile(0.2)].index
+    return {k: 1.0 / len(losers) for k in losers} if len(losers) else {}

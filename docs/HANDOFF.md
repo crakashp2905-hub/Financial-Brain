@@ -570,3 +570,20 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   * **2027Q1 queue (registered, not run):** delivery share in ranks 201-750 (long-only, delivery costs); X3 XBRL
     earnings drift (blocked on NSE Integrated Filing); an insider test once the SAST build reaches a validated set.
   * Live paper 2026-10-14 completed (owner logged in): ORB 55 trades, net -Rs 1,133 (gross +3,305, costs 4,438).
+- 2026-10-14 (night) — **"OpenWater" / "DeepDive" validation engines: not found** (web + GitHub). Public validation
+  toolkits share walk-forward, deflated Sharpe, PBO/CSCV, random-entry, permutation and Reality Check/SPA; this
+  project lacked Reality Check/SPA and PBO - now `evaluation/family_validation.py` (calibrated on planted families).
+  * **Trial 10 (owner: budget 9 -> 10, amendment 2): 16 untested published price anomalies, 0/16.** SPA p 0.68,
+    PBO 0.33, IS->OOS slope -0.61. Depth per anomaly (IC by four tiers, long-short, turnover) in the result note.
+    Intermediate momentum and seasonality order names (LS t 3.3, 2.6) but long-only delivery books cannot harvest
+    it; ivol/MAX/skew order names in every tier and lose long-only.
+  * **Finding (no verdict - a sign flip):** falling volume (A11) and worsening liquidity (A13) underperform in both
+    halves (t -2.3 to -3.5); the opposite extremes are weak (+0.14%/-0.15%, +0.05%/+0.27% a month), so it is an
+    **avoid** shape. Registered: `PRE-REGISTERED high-volume return premium` (long books, OOS now) and
+    `PRE-REGISTERED drying-up volume avoid filter` (the avoid reading); **held-out test on ranks 501-1000 is the first
+    2027Q1 trial.**
+  * Zoo: 67 edge strategies (16 anomalies + HV1/HV2 added). 2026Q4 ledger 10 of 10.
+  * **Refresh killed by Ctrl-C at 18:48 again** (task 0xC000013A - visible console closed), and **the tone step hung
+    on Ollama** (busy serving another project) two nights running; refresh re-run by hand without tone. Owner
+    decisions pending: hide the refresh task (as the intraday one is); give tone a timeout or skip it when Ollama is
+    busy.

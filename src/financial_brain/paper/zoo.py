@@ -41,7 +41,12 @@ KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pair
                                              "gap_down_unfilled", "low55_volume")},
         **{f"edge_{q}": "edge" for q in ("q1_extreme_down_long", "q2_extreme_up_short", "q3_rsi_long", "q4_rsi_short",
                                          "q5_above_ma10", "q6_dip_ma10", "q7_cross_ma10_3d", "q8_ten_day_extremes",
-                                         "v1_vwap_bounce")}}
+                                         "v1_vwap_bounce")},
+        **{f"edge_{a.lower()}": "edge" for a in ("A1_intermediate_mom", "A2_long_term_reversal", "A3_return_seasonality",
+                                                "A4_ivol", "A5_max", "A6_idio_skew", "A7_vol_of_vol", "A8_downside_beta",
+                                                "A9_coskewness", "A10_amihud", "A11_volume_trend", "A12_zero_days",
+                                                "A13_illiq_shock", "A14_day_of_week", "A15_halloween", "A16_india_year_end",
+                                                "hv1_rising_volume", "hv2_improving_liquidity")}}
 CARRY_RATE = 0.00265 / 2          #: half the cash-and-carry round trip, charged on entry and on exit
 CARRY_MIN_BASIS, CARRY_MIN_DAYS, CARRY_MAX = 0.10, 5, 10
 
@@ -462,6 +467,33 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
             z.execute("INSERT OR REPLACE INTO zoo_pnl VALUES (?,?,?,?,?,?,?)",
                       ["edge_v1_vwap_bounce", day, r + c, c, r, 0.0, int(r != 0.0)])
             out["edge_v1_vwap_bounce"] = {"net": r}
+    # trial 10 (failed) and the high-volume premium (out of sample): monthly books, daily calendar rules, A16 in season
+    anames = [f"edge_{a.lower()}" for a in ZE.A_NAMES[:13]] + ["edge_hv1_rising_volume", "edge_hv2_improving_liquidity"]
+    if any(n not in done for n in anames):
+        st = ZE.state(z, "edge_anomalies")
+        if ZE._first_of_month(z, day) or not st.get("w"):
+            try:
+                st = {"w": ZE.anomaly_targets(rcon, day), "set": str(day)}
+                ZE.save(z, "edge_anomalies", st)
+            except Exception as e:                       # noqa: BLE001 - keep yesterday's books rather than none
+                print(f"anomaly books not refreshed tonight: {e}")
+        for n in anames:
+            if n not in done:
+                out[n] = settle(z, n, day, prev, rets, ubench, st.get("w", {}).get(n, {}))
+    if day in lv.index:
+        for n, e in ZE.calendar_exposures(day, lv["Nifty 50"]).items():
+            if n not in done:
+                out[n] = settle(z, n, day, prev, rets, rets.get(INDEX, 0.0), {INDEX: e} if e else {})
+    if "edge_a16_india_year_end" not in done:
+        st = ZE.state(z, "edge_a16")
+        if ZE.a16_window(day):
+            if st.get("year") != pd.Timestamp(day).year:
+                st = {"year": pd.Timestamp(day).year, "w": ZE.a16_targets(rcon, day, uni)}
+                ZE.save(z, "edge_a16", st)
+            w = st.get("w", {})
+        else:
+            w = {}
+        out["edge_a16_india_year_end"] = settle(z, "edge_a16_india_year_end", day, prev, rets, ubench, w)
     # I1: an intraday trade, settled from the day's minute bars
     if "edge_i1_index_intraday" not in done:
         r = ZE.i1_return(day)

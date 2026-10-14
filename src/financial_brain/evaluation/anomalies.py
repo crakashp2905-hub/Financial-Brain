@@ -132,8 +132,8 @@ def books_for(P: dict, sig: pd.DataFrame, side: int, dates: list) -> tuple[dict,
     return books, eligible, F.loc[list(books)], pd.Series(bench).reindex(list(books))
 
 
-def run_cross(P: dict, sigs: dict, name: str, dates: list) -> dict:
-    side = SIDES[name]
+def run_cross(P: dict, sigs: dict, name: str, dates: list, *, side: int | None = None) -> dict:
+    side = SIDES[name] if side is None else side
     books, eligible, F, bench = books_for(P, sigs[name], side, dates)
     cost = P["cost"].reindex(F.index)
     net = S.book_series(F, cost, bench, books)
@@ -206,3 +206,28 @@ def year_end(P: dict) -> tuple[pd.DataFrame, callable]:
         arr = pools[d]
         return [float(rng.choice(arr, size=min(n, len(arr)), replace=False).mean())]
     return ev, pool
+
+
+#: The out-of-sample books of ``PRE-REGISTERED high-volume return premium``: (signal, side), sides reversed.
+HV = {"HV1_rising_volume": ("A11_volume_trend", +1), "HV2_improving_liquidity": ("A13_illiq_shock", -1)}
+
+
+def targets(rcon, day) -> dict[str, dict]:
+    """Every cross-sectional anomaly's book (and the two HV books) for ``day``'s close: the best fifth by the
+    registered side, equal weight, among the 500 most liquid."""
+    P = panel(rcon)
+    P = {k: (v.loc[: pd.Timestamp(day)] if isinstance(v, (pd.DataFrame, pd.Series)) else v) for k, v in P.items()}
+    d = P["C"].index[-1]
+    dates = E.month_ends(P["C"].index, "2015-01-01") + [d]
+    sigs = signals(P, dates)
+    uni = P["U"].loc[d][P["U"].loc[d]].index
+    out = {}
+    books = {**{k: (k, s) for k, s in SIDES.items()}, **HV}
+    for name, (sig_name, side) in books.items():
+        s = (side * sigs[sig_name].loc[d, uni]).dropna()
+        if len(s) < 100:
+            out[name] = {}
+            continue
+        top = s[s >= s.quantile(0.8)].index
+        out[name] = {k: 1.0 / len(top) for k in top}
+    return out

@@ -33,4 +33,4 @@ def test_turn_of_month_window():
 
 def test_every_edge_strategy_is_kinded_and_carries_a_verdict():
     edges = [k for k, v in Z.KIND.items() if v == "edge"]
-    assert len(edges) == 49 and all(k in ZE.VERDICT for k in edges)
+    assert len(edges) == 67 and all(k in ZE.VERDICT for k in edges)
