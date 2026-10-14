@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import re
 
-TOTAL = re.compile(r"e\)\s*Total\s*\(?\s*a\s*\+\s*b\s*\+\s*c\s*(?:\+\s*d)?\s*\)?(.{0,160})", re.I | re.S)
+#: The label only; the text after each label (up to the next one, at most 160 characters) is its row. A greedy
+#: capture swallowed the next label when totals sat close together and read three totals as one.
+TOTAL = re.compile(r"e\)\s*Total\s*\(?\s*a\s*\+\s*b\s*\+\s*c\s*(?:\+\s*d)?\s*\)?", re.I)
 NUM = re.compile(r"(?<![\d.])(\d{1,3}(?:,\d{2,3})+|\d+)(?![\d,])")
 PCT = re.compile(r"(\d{1,3}(?:\.\d+)?)\s*%")
 INTER_SE = re.compile(r"inter[\s-]*se", re.I)
@@ -37,7 +39,7 @@ def _total(segment: str) -> tuple[float | None, float | None]:
 
 def read(text: str) -> dict:
     t = re.sub(r"[ \t]+", " ", text or "")
-    totals = [_total(m.group(1)) for m in TOTAL.finditer(t)]
+    totals = [_total(seg[:160]) for seg in TOTAL.split(t)[1:]]
     # The prescribed format itself lists "inter-se transfer" among its example modes, so only the cover letter (the
     # text before the format begins) can say that this transaction was one.
     form = re.search(r"Format for disclosures?|Part\s*-?\s*A\b", t, re.I)
