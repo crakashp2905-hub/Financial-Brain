@@ -52,3 +52,10 @@ is appended to `docs/trials/ledger.jsonl` (append-only, committed, so git dates 
 * The bar no longer drifts upward with unrelated trials, but the budget caps how fast ideas are spent.
 * G4 makes the harness test itself: a strategy that only beats an equal-turnover random book by luck fails.
 * G5 takes calendar time that no analysis shortens. At a 20-session rebalance, 12 rebalances is about 12 months.
+
+## Amendment 1 (2026-10-14, owner decision)
+
+2026Q4's budget is raised from 8 to **9**, for one trial only: the family test registered in
+`PRE-REGISTERED index mean reversion and VWAP` (nine rules, multiplicity stated inside it). The owner chose this over
+waiting for 2027Q1, when asked. The cap is otherwise unchanged; `standard.BUDGET_OVERRIDES` records the exception so
+the ledger enforces it.

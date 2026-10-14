@@ -31,6 +31,8 @@ MIN_T = 2.0
 NULL_QUANTILE = 0.95
 NULL_DRAWS = 200
 BUDGET_PER_QUARTER = 8
+#: Owner-approved exceptions to the cap, by quarter (ADR-0004 amendments). Each one is a written decision.
+BUDGET_OVERRIDES = {"2026Q4": 9}           # amendment 1, 2026-10-14: the index mean reversion and VWAP family
 LEDGER = Path("docs") / "trials" / "ledger.jsonl"
 
 CANDIDATE, FAIL = "CANDIDATE", "FAIL"
@@ -159,8 +161,10 @@ def ledger(path: Path = LEDGER) -> list[dict]:
     return [json.loads(ln) for ln in Path(path).read_text(encoding="utf-8").splitlines() if ln.strip()]
 
 
-def check_budget(on: date, path: Path = LEDGER, budget: int = BUDGET_PER_QUARTER) -> dict:
+def check_budget(on: date, path: Path = LEDGER, budget: int | None = None) -> dict:
     q = _quarter(on)
+    if budget is None:
+        budget = BUDGET_OVERRIDES.get(f"{q[0]}Q{q[1]}", BUDGET_PER_QUARTER)
     used = [r for r in ledger(path) if r.get("kind") == "trial" and _quarter(date.fromisoformat(r["date"])) == q]
     return {"quarter": f"{q[0]}Q{q[1]}", "used": len(used), "budget": budget, "left": budget - len(used),
             "ok": len(used) < budget}

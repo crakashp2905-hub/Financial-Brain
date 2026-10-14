@@ -56,15 +56,23 @@ def test_random_books_match_size_and_turnover():
 def test_budget_refuses_the_ninth_trial_and_a_repeat(tmp_path):
     p = tmp_path / "ledger.jsonl"
     for i in range(S.BUDGET_PER_QUARTER):
-        S.record({"name": f"t{i}"}, p, on=date(2026, 10, 13))
+        S.record({"name": f"t{i}"}, p, on=date(2027, 4, 13))
     with pytest.raises(S.StandardError, match="budget"):
-        S.record({"name": "t9"}, p, on=date(2026, 11, 1))
-    S.record({"name": "next quarter"}, p, on=date(2027, 1, 5))
+        S.record({"name": "t9"}, p, on=date(2027, 5, 1))
+    S.record({"name": "next quarter"}, p, on=date(2027, 7, 5))
     with pytest.raises(S.StandardError, match="already"):
-        S.record({"name": "next quarter"}, p, on=date(2027, 1, 6))
-    S.record({"kind": "history", "name": "context"}, p, on=date(2027, 1, 6))   # history rows never count
+        S.record({"name": "next quarter"}, p, on=date(2027, 7, 6))
+    S.record({"kind": "history", "name": "context"}, p, on=date(2027, 7, 6))   # history rows never count
 
 
 def test_judge_without_a_null_is_not_a_candidate(tmp_path):
     r = S.judge("no such registration", _series(0.02, 0.02), repo=tmp_path)
     assert r["verdict"] == S.FAIL and "G1" in r["failed"] and "G4" in r["failed"]
+
+
+def test_an_owner_override_raises_only_its_own_quarter(tmp_path):
+    p = tmp_path / "ledger.jsonl"
+    for i in range(9):
+        S.record({"name": f"o{i}"}, p, on=date(2026, 11, 1))           # 2026Q4 allows 9 (amendment 1)
+    with pytest.raises(S.StandardError, match="budget"):
+        S.record({"name": "o10"}, p, on=date(2026, 12, 1))
