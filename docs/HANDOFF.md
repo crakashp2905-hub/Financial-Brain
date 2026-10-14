@@ -547,3 +547,15 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
     share in mid/small caps (a new universe), whatever new data the owner unblocks. Do not register a 9th this
     quarter (`standard.record` refuses).
   * Zoo: 40 edge strategies now, including `edge_k7_<setup>` x17 (~100 s a night) and `edge_d1_delivery_ls`.
+- 2026-10-14 (morning) — **Owner supplied three sources** (QuantPedia automated edge analysis; Tradezella trading
+  edge; a Medium "60 edges" post whose Substack original lists only ~9 edges in text - the rest are images or
+  paywalled; Medium itself returns 403 to fetches). Mapped against what was tested: QuantPedia's short-horizon index
+  mean-reversion rules and a VWAP bounce are new; ORB-on-gaps, turn-of-month, pre-holiday, option-premium selling,
+  order wins and the low-vol regime were already tested; Form 4 / contract awards / ETF flows / ship, flight and
+  weather data are US-only or absent.
+  * **Batch four registered** (`PRE-REGISTERED index mean reversion and VWAP`, 70e0a6b): Q1-Q8 Nifty rules on the
+    15:15 price + V1 VWAP bounce, one family trial, timing alpha vs own trailing exposure, circular-shift null.
+    Code `evaluation/index_rules.py` (tests use synthetic data only). **On paper in the zoo from 2026-10-14.**
+  * **In-sample test NOT run: 2026Q4 budget is spent.** Waiting for the owner's decision (raise the budget by one,
+    or wait for 2027Q1). It needs no database (minute-bar parquet only), so it can run any time.
+  * Tone step: Ollama free again; runs in tonight's refresh (not during market hours - it writes the DB).
