@@ -6,10 +6,16 @@ tags:
   - intraday
   - loss-patterns
 date: 2026-10-14
-status: pre-registered
+status: withdrawn
 ---
 
 # PRE-REGISTERED recurring-loss patterns in intraday breakouts
+
+> **WITHDRAWN 2026-10-14, never run.** Registered by a session that had not read ADR-0004: the 2026Q4 trial budget
+> was already spent (9 of 9 with amendment 1), and ADR-0004 closes intraday direction strategies and says a losing
+> context "becomes a hypothesis, never a fix". No data was computed against it. It may be re-registered in 2027Q1 as
+> a trial if the owner chooses to spend a slot on it; until then the nightly `fb loss-review --propose` keeps turning
+> recurring losing contexts into PROPOSED hypotheses.
 
 Written on 2026-10-14 before anything below is computed. The owner asked the brain to find patterns, check for
 edges, and constantly avoid recurring losses. The live record's biggest recurring loss is the opening-range breakout
