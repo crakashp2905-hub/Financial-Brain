@@ -562,9 +562,9 @@ def d1_targets(rcon, day: date, fno_lins: list[str]) -> dict:
 Q_RULES = ("q1_extreme_down_long", "q2_extreme_up_short", "q3_rsi_long", "q4_rsi_short", "q5_above_ma10",
            "q6_dip_ma10", "q7_cross_ma10_3d", "q8_ten_day_extremes")
 for _q in Q_RULES:
-    VERDICT[f"edge_{_q}"] = "registered 2026-10-14; in-sample test pending the trial budget"
+    VERDICT[f"edge_{_q}"] = "failed (trial 9: no Nifty mean-reversion or MA10 rule reached t 2 in either half)"
     KIND[f"edge_{_q}"] = "edge"
-VERDICT["edge_v1_vwap_bounce"] = "registered 2026-10-14; in-sample test pending the trial budget"
+VERDICT["edge_v1_vwap_bounce"] = "failed (trial 9: 1,900 trades, -0.4 bp each net)"
 KIND["edge_v1_vwap_bounce"] = "edge"
 
 

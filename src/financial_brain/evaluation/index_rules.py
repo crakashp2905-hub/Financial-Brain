@@ -112,6 +112,12 @@ def shift_null(p: pd.Series, w: pd.Series, *, draws: int = S.NULL_DRAWS, seed: i
 
 def vwap_bounce(minutes: pd.DataFrame) -> pd.Series:
     """V1: per session, the one trade's return (entry at the touching bar's close, exit at 15:15) minus 4 bp."""
+    t = vwap_trades(minutes)
+    return (t["side"] * t["move"] - INTRADAY_RT) if len(t) else pd.Series(dtype=float)
+
+
+def vwap_trades(minutes: pd.DataFrame) -> pd.DataFrame:
+    """V1's trades: session -> side and the raw move from entry to 15:15 (for the outcome and for its null)."""
     m = minutes.copy()
     m["ts"] = pd.to_datetime(m["ts"])
     m["d"] = m["ts"].dt.tz_localize(None).dt.normalize()
@@ -138,5 +144,5 @@ def vwap_bounce(minutes: pd.DataFrame) -> pd.Series:
             continue
         i, side = first
         entry = g["close"].iloc[i]
-        out[d] = side * (exit_px / entry - 1) - INTRADAY_RT
-    return pd.Series(out, dtype=float)
+        out[d] = {"side": side, "move": exit_px / entry - 1}
+    return pd.DataFrame.from_dict(out, orient="index")
