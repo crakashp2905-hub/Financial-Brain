@@ -58,3 +58,14 @@ def test_volume_surge_needs_twenty_sessions_of_slot_history():
     sc = IF.scan_symbol("X", m, fno_days=set(pd.to_datetime(m["ts"].dt.tz_localize(None).dt.normalize()).unique()))
     ev = [e for e in sc["events"]["I3_surge_15m"] if str(e["d"].date()) == d]
     assert len(ev) == 1 and ev[0]["t_in"] == "10:15" and ev[0]["side"] == 1
+
+
+def test_a_late_opening_day_is_skipped_not_crashed():
+    m, px = _history(21)
+    d = "2024-02-01"
+    ts = pd.date_range(f"{d} 09:40", f"{d} 15:29", freq="1min", tz="Asia/Kolkata")      # first bar 09:40
+    late = pd.DataFrame({"ts": ts, "open": px * 1.03, "high": px * 1.031, "low": px * 1.029, "close": px * 1.03,
+                         "volume": 1000.0})
+    m = pd.concat([m, late], ignore_index=True)
+    sc = IF.scan_symbol("X", m, fno_days=set(pd.to_datetime(m["ts"].dt.tz_localize(None).dt.normalize()).unique()))
+    assert not [e for e in sc["events"]["I5_gap_fade"] if str(e["d"].date()) == d]

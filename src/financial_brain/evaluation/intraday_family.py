@@ -72,7 +72,11 @@ def scan_symbol(sym: str, m: pd.DataFrame, fno_days: set) -> dict:
         close_at = day.set_index("hm")["close"]
         grid = close_at.reindex(GRID).ffill()
         grid_rows.append({"d": d, **{k: float(v) for k, v in grid.items()}})
-        exit_1515 = float(close_at[close_at.index <= "15:15"].iloc[-1])
+        upto = close_at[close_at.index <= "15:15"]
+        if upto.empty:
+            prev_close = c_last
+            continue
+        exit_1515 = float(upto.iloc[-1])
         in_fno = d in fno_days
         # I2 pieces: first half hour and last half hour
         try:
@@ -96,8 +100,9 @@ def scan_symbol(sym: str, m: pd.DataFrame, fno_days: set) -> dict:
                     events["I1_gap_and_go"].append({"d": d, "sym": sym, "side": side, "t_in": e["hm"],
                                                     "gross": side * (exit_1515 / e["close"] - 1)})
             # I5: fade a gap of 2% or more from 09:20
-            if abs(gap) >= 0.02:
-                e = day[day["hm"] <= "09:19"].iloc[-1]
+            early = day[day["hm"] <= "09:19"]
+            if abs(gap) >= 0.02 and len(early):           # a stock that opened late (halt, pre-open) has no 09:20 entry
+                e = early.iloc[-1]
                 side = -1 if gap > 0 else 1
                 events["I5_gap_fade"].append({"d": d, "sym": sym, "side": side, "t_in": "09:20",
                                               "gross": side * (exit_1515 / e["close"] - 1)})
