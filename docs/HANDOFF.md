@@ -601,3 +601,13 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
   * **ADR-0006 small-allocation tier: PROPOSED, not in force** - nobody qualifies at t >= 2.5 (carry 2.40).
   * **SAST step 1** (6654f9a): row-wise layout read + cover-letter cross-check; direction on 9/40 sampled; one
     earlier "confident" read was wrong.
+  * **Knowledge base** (d311033, 6d40942): `fb kb build|search|card` -> `data/knowledge.duckdb`: 417 evidence cards,
+    658 test records, 41 primitives. Verdicts: passed 1 (N2), candidate 5, signal_robust 22 (ranking only - not
+    tradeable, some run opposite to the trader's claim), signal_no_edge 80, failed 221, untested 88. Rebuild after
+    each result.
+  * **Combination agent** (`research/combo_agent.py`, registration 1b4bfb9): 51 triggers x 10 contexts x 2 sides x
+    3 horizons = 3,060; a System One prior (qwen2.5:7b via `system1.ollama_decide`, definitions only - never results,
+    which span the validation period) picks one side/horizon or "no mechanism" per (trigger, context), shrinking
+    the family to <= 510. Search 2016-22 only; **validation 2023-26 locked** (`combo_agent.validate` refuses without
+    a trial). Prep cached (`data/edges/agent_events.parquet`, 742,583 events); search waiting for Ollama (busy with
+    another project) -> `data/edges/agent_search.log`; falls back to the full grid after 4 hours.
