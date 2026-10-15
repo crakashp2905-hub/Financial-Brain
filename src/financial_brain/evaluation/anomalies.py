@@ -231,3 +231,42 @@ def targets(rcon, day) -> dict[str, dict]:
         top = s[s >= s.quantile(0.8)].index
         out[name] = {k: 1.0 / len(top) for k in top}
     return out
+
+
+# ------------------------------------------------------------------ 2027Q1: the held-out replication (not run before)
+
+def held_out_panel(rcon) -> dict:
+    """The panel for ``PRE-REGISTERED high-volume return premium`` / ``drying-up volume avoid filter`` test 2: the
+    universe each month end is ranks **501-1000** by 20-session turnover - names the anomaly test never used."""
+    P = E.load(rcon, n=1000)
+    K = P["K"]
+    P["U"] = (K > 500) & (K <= 1000)
+    v = rcon.execute("""SELECT lineage, business_date AS d, COALESCE(traded_volume, 0) AS v FROM adjusted_prices
+                        WHERE lineage IN (SELECT UNNEST(?)) AND business_date >= '2015-01-01'""",
+                     [list(P["C"].columns)]).df()
+    v["d"] = pd.to_datetime(v["d"])
+    P["V"] = v.pivot_table(index="d", columns="lineage", values="v").reindex(index=P["C"].index, columns=P["C"].columns)
+    n = rcon.execute("""SELECT business_date, close_level FROM index_levels_canonical WHERE index_name = 'Nifty 50'
+                        AND variant = 'PRICE' ORDER BY 1""").df()
+    P["N"] = n.set_index(pd.to_datetime(n["business_date"]))["close_level"].reindex(P["C"].index).ffill()
+    P["R"], P["RN"] = P["C"].pct_change(fill_method=None), P["N"].pct_change()
+    return P
+
+
+def avoid_series(P: dict, sig: pd.DataFrame, side: int, dates: list) -> pd.Series:
+    """The avoid reading: the flagged fifth's equal-weighted return minus the universe's, gross, per month end.
+    ``side`` picks the flagged end: DV1 bottom fifth of volume trend (side -1), DV2 top fifth of illiquidity shock
+    (side +1)."""
+    C, U = P["C"], P["U"]
+    out = {}
+    hold = [d for d in dates if d >= pd.Timestamp("2016-01-01")]
+    for d, nxt in zip(hold, hold[1:]):
+        uni = U.loc[d][U.loc[d]].index
+        f = (C.loc[nxt, uni] / C.loc[d, uni] - 1)
+        s = (side * sig.loc[d, uni]).dropna()
+        s = s[f.reindex(s.index).notna()]
+        if len(s) < 100:
+            continue
+        flagged = s[s >= s.quantile(0.8)].index
+        out[d] = float(f[flagged].mean() - f[s.index].mean())
+    return pd.Series(out, dtype=float)
