@@ -16,4 +16,4 @@ def test_build_labels_and_searches(tmp_path):
     assert k.execute("SELECT verdict FROM cards WHERE card_id = 'zoo:results_reaction_short'").fetchone()[0] == "passed"
     k.close()
     hits = KB.search("marubozu", path=tmp_path / "kb.duckdb")
-    assert hits and all("marubozu" in (h["name"] + h["card_id"]).lower() or True for h in hits)
+    assert hits and any("marubozu" in h["name"].lower() for h in hits)

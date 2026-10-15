@@ -91,9 +91,14 @@ def build(rcon, *, path: Path = PATH, repo: Path = Path(".")) -> dict:
         return c
 
     def test(cid, origin, horizon, stat, a, b, verdict, on, detail=None):
+        def num(x):
+            try:
+                x = float(x)
+            except (TypeError, ValueError):
+                return None
+            return x if np.isfinite(x) else None
         tests.append({"card_id": cid, "origin": origin, "horizon": str(horizon), "stat": stat,
-                      "value_a": None if a is None or not np.isfinite(a) else float(a),
-                      "value_b": None if b is None or not np.isfinite(b) else float(b),
+                      "value_a": num(a), "value_b": num(b),
                       "verdict": verdict, "tested_on": str(on), "detail": json.dumps(detail or {}, default=str)})
 
     # 1. feature library sweep
