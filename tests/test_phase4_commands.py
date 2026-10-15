@@ -89,7 +89,7 @@ def test_every_command_accepts_json():
                 "portfolio": [name, "book", "--as-of", "2026-09-18"],
                 "opportunities": [name, "--as-of", "2026-09-18"],
                 "decide": [name, "list"],
-                "oos": [name], "live": [name, "status"]}[name]
+                "oos": [name], "live": [name, "status"], "kb": [name, "search", "x"]}[name]
         args = p.parse_args([*argv, "--json"])
         assert args.json is True, f"{name} does not honour --json"
 
