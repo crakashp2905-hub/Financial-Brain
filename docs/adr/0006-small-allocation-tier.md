@@ -1,8 +1,10 @@
-# ADR-0006: A small-allocation tier for modest edges (PROPOSED - not in force)
+# ADR-0006: A small-allocation tier for modest edges
 
-Status: **proposed 2026-10-15, awaiting the owner's decision.** Nothing in the code reads this ADR; `rollout.eligible`
-is unchanged. Written because the owner asked for "all your recommendations", and the recommendation was to write
-this up for a decision, not to apply it.
+Status: **accepted 2026-10-15**, unchanged from the proposal. The owner, given the decision ("item 4"), answered
+"do 4". Implemented in `evaluation/small_tier.py` (the checks), `execution/oms/rollout.py` (`CANDIDATE_SMALL` reaches
+TICKET only, `SMALL_TIER_LIMITS`: Rs 25,000 deployed, Rs 10,000 an order) and `services/trading.verdict`. At
+acceptance **no strategy qualifies** (momentum full-sample t 1.86, carry 2.40; neither has 40 live sessions). The
+owner may reverse this at any time.
 
 ## The problem
 
@@ -50,6 +52,3 @@ exists to prevent. C1 may reach it as live months accumulate (its 2022-26 half i
   being down over any single year. The cap (Rs 25,000, owner-approved orders) bounds that cost; it does not remove it.
 * The point of the tier is **measurement** (real fills, real costs, real slippage against the simulator), not profit.
 
-## Decision needed from the owner
-
-Accept, reject, or change the threshold/cap - **before** looking at whether any strategy then qualifies.

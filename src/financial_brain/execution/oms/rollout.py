@@ -26,10 +26,16 @@ PATH = Path("data") / "live" / "stage.json"
 OFF, TICKET, SMALL_AUTO, SCALED = 0, 1, 2, 3
 NAMES = {OFF: "OFF", TICKET: "TICKET", SMALL_AUTO: "SMALL_AUTO", SCALED: "SCALED"}
 REQUIRED_VERDICT = {OFF: None, TICKET: "CANDIDATE", SMALL_AUTO: "CONFIRMED", SCALED: "CONFIRMED"}
-VERDICT_RANK = {"FAIL": 0, "FAILED": 0, "FAILED_EARLY": 0, "PENDING": 0, "CANDIDATE": 1, "CONFIRMED": 2}
+#: CANDIDATE_SMALL (ADR-0006, accepted 2026-10-15) reaches TICKET like CANDIDATE, under its own smaller cap; never
+#: the automatic stages.
+VERDICT_RANK = {"FAIL": 0, "FAILED": 0, "FAILED_EARLY": 0, "PENDING": 0, "CANDIDATE_SMALL": 1, "CANDIDATE": 1,
+                "CONFIRMED": 2}
 
 SMALL = Limits(max_order_inr=10_000, max_position_inr=10_000, max_daily_notional_inr=50_000, max_gross_inr=50_000,
                max_orders_per_day=20, max_orders_per_minute=5)
+#: ADR-0006: a CANDIDATE_SMALL strategy at TICKET - Rs 25,000 deployed at most, Rs 10,000 an order.
+SMALL_TIER_LIMITS = Limits(max_order_inr=10_000, max_position_inr=10_000, max_daily_notional_inr=25_000,
+                           max_gross_inr=25_000, max_orders_per_day=10, max_orders_per_minute=5)
 TICKET_LIMITS = Limits(max_order_inr=25_000, max_position_inr=25_000, max_daily_notional_inr=50_000,
                        max_gross_inr=50_000, max_orders_per_day=20, max_orders_per_minute=5)
 
@@ -79,10 +85,12 @@ def eligible(stage: int, verdict: str | None) -> bool:
     return need is None or VERDICT_RANK.get(verdict or "", 0) >= VERDICT_RANK[need]
 
 
-def limits(st: dict) -> Limits | None:
+def limits(st: dict, verdict: str | None = None) -> Limits | None:
     s = st["stage"]
     if s == OFF:
         return None
+    if verdict == "CANDIDATE_SMALL":
+        return SMALL_TIER_LIMITS if s == TICKET else None       # the tier never trades above TICKET
     if s == TICKET:
         return TICKET_LIMITS
     if s == SMALL_AUTO:

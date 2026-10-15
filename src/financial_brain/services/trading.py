@@ -63,6 +63,17 @@ def verdict(strategy: str) -> str:
     for row in S.ledger():
         if row.get("prereg") == reg.get(strategy) and row.get("verdict") == S.CANDIDATE:
             return "CANDIDATE"
+    # ADR-0006 (accepted 2026-10-15): a modest edge that clears the small tier's fixed checks.
+    from ..evaluation import small_tier as ST
+    try:
+        z = duckdb.connect(str(ZOO), read_only=True)
+        try:
+            if ST.assess(strategy, z)["qualifies"]:
+                return ST.CANDIDATE_SMALL
+        finally:
+            z.close()
+    except duckdb.Error:
+        pass
     return "FAIL"
 
 

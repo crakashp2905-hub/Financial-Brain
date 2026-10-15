@@ -48,11 +48,12 @@ class OMS:
     def _stage(self) -> dict:
         return RO.load(self.stage_path)
 
-    def _limits(self) -> RG.Limits | None:
+    def _limits(self, strategy: str | None = None) -> RG.Limits | None:
         st = self._stage()
+        verdict = self.verdicts.get(strategy) if strategy else None
         if not self.live_broker:
-            return RO.limits(st) or self.paper_limits
-        return RO.limits(st)
+            return RO.limits(st, verdict) or self.paper_limits
+        return RO.limits(st, verdict)
 
     def _context(self, o: M.Order, ltp: float | None) -> RG.Context:
         today = [x for x in self.j.orders(day=o.day) if x.state not in (M.REJECTED_RISK, M.NEW)]
@@ -92,7 +93,7 @@ class OMS:
                     arrival_price=arrival_price or limit_price)
         self._save(o, "CREATED")
         st = self._stage()
-        lim = self._limits()
+        lim = self._limits(strategy)
         why = []
         if lim is None:
             why.append(f"rollout stage {RO.NAMES[st['stage']]}: no live orders")

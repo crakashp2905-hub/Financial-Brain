@@ -284,3 +284,12 @@ def test_the_order_path_lives_in_one_file_only():
         assert '"/orders/regular' not in body and "'/orders/regular" not in body, path
         if "api.kite.trade" in body:                      # a file that talks to Kite may only read
             assert 'method="POST"' not in body and 'method="DELETE"' not in body, path
+
+
+def test_small_tier_reaches_ticket_only_under_its_own_cap(tmp_path):
+    p = tmp_path / "stage.json"
+    RO._write({"stage": RO.TICKET, "history": []}, p)
+    assert RO.eligible(RO.TICKET, "CANDIDATE_SMALL") and not RO.eligible(RO.SMALL_AUTO, "CANDIDATE_SMALL")
+    assert RO.limits(RO.load(p), "CANDIDATE_SMALL").max_gross_inr == 25_000
+    RO._write({"stage": RO.SMALL_AUTO, "history": []}, p)
+    assert RO.limits(RO.load(p), "CANDIDATE_SMALL") is None              # never above TICKET
