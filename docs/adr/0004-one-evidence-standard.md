@@ -67,3 +67,9 @@ the ledger enforces it.
 judged additionally by White's Reality Check / Hansen's SPA and the probability of backtest overfitting across the
 family). Asked whether to run now or wait for 2027Q1, the owner answered: "do it in detail but do all of it with
 depth".
+
+## Amendment 3 (2026-10-15, owner decision)
+
+2026Q4's budget is raised from 10 to **11**, for one trial only: `PRE-REGISTERED intraday and swing family on minute
+bars` (nine rules on the 2016-2026 minute history). The owner was given the choice (now, or as the second trial of
+2027Q1) with "run it when the data lands" as the recommendation, and answered "do all your recommendations".
