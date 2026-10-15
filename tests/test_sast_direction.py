@@ -24,3 +24,17 @@ def test_inter_se_comes_from_the_letter_not_the_template():
 def test_unreadable_forms_are_left_unread():
     assert sast.read("a scanned page with no text")["direction"] is None
     assert sast.read("e) Total (a+b+c) 25,000 e) Total (a+b+c) 30,000")["direction"] is None   # shares only
+
+
+def test_letter_direction_reads_the_verb_and_count_not_the_regulation_name():
+    assert sast.letter_direction("Sub: Substantial Acquisition of Shares. ... acquisition of 38,739 equity shares. "
+                                 "Format for disclosures") == 1
+    assert sast.letter_direction("in connection with sale of 25,000 equity shares. Format for disclosures") == -1
+    assert sast.letter_direction("Regulation 29(2) of SEBI (Substantial Acquisition of Shares). Format for disclosures") is None
+
+
+def test_source_has_no_control_characters():
+    """A shell edit once turned every regex word boundary in this module into a literal backspace, silently."""
+    import pathlib
+    src = pathlib.Path(sast.__file__).read_text(encoding="utf-8")
+    assert not any(ord(ch) < 32 and ch not in "\n\r\t" for ch in src)

@@ -29,6 +29,17 @@ before and after, each closed by an `e) Total (a+b+c)` row.
 
 **Confident coverage today: 4 of 40 (10%).** Not enough to test anything.
 
+## Step 1 done (2026-10-15): layout reading and the letter cross-check
+
+* The form is re-read **by row** from word coordinates (PyMuPDF), so each `Total` keeps its own numbers.
+* The cover letter's own statement - "acquisition of 38,739 equity shares", "sale of 25,000 shares" (a verb followed by
+  a share count; the regulation's name never is) - is read separately and used as a **cross-check**.
+* **One of the original four "confident" reads was wrong**: International Conveyors was read as a sale (68.74% ->
+  0.06%) - the last percentage was the quantity acquired; its letter says acquisition, and the layout read agrees.
+  The earlier precision claim did not hold; the cross-check is why.
+* On the 15 text-layer forms: **2 high** (form and letter agree), **3 form-only**, **4 letter-only**, 6 unreadable;
+  no conflicts. Direction from either source on **9 of 40** sampled (22%), up from 4.
+
 ## What it would take (the build, for 2027Q1)
 
 1. Read the form as a **table** from coordinates (`docintel/tables.py` already rebuilds results tables this way), for
