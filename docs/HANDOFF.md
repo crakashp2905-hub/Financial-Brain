@@ -587,3 +587,17 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
     on Ollama** (busy serving another project) two nights running; refresh re-run by hand without tone. Owner
     decisions pending: hide the refresh task (as the intraday one is); give tone a timeout or skip it when Ollama is
     busy.
+- 2026-10-15 — **Owner: "do all your recommendations".**
+  * **Minute history pull running** (started 11:27 IST, ~8 h): 795 names (union of each year's top-300 since 2016;
+    current listings only - delisted names unavailable) -> `data/minute_history.duckdb` (own file, ~50 GB), log
+    `data/minute_pull.log`. Resumable (`ingest/kite_minute.ingest_symbol` skips covered windows). **Do not open that
+    file for writing while it runs.**
+  * **Trial 11 queued** (`PRE-REGISTERED intraday and swing family on minute bars`, amendment 3): a background
+    chain starts `scratchpad/t11.py` when the pull logs "done" -> `data/edges/t11.log`, `t11_result.json`. Code
+    `evaluation/intraday_family.py`. Record the trial and write the result note when it lands.
+  * **Tone step guarded** (89aa9ec): skips when Ollama has another client's model loaded; 20-minute deadline.
+  * **Refresh kill on 10-14 not explained**: the task already runs hidden (run_hidden.vbs); System log shows only
+    DCOM noise. A watchdog re-run task is proposed, not created (owner decision).
+  * **ADR-0006 small-allocation tier: PROPOSED, not in force** - nobody qualifies at t >= 2.5 (carry 2.40).
+  * **SAST step 1** (6654f9a): row-wise layout read + cover-letter cross-check; direction on 9/40 sampled; one
+    earlier "confident" read was wrong.
