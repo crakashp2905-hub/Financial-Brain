@@ -2054,7 +2054,8 @@ def cmd_daily(args) -> int:
         from .events import tone
         with Database(cfg).connect() as con:
             d = con.execute("SELECT MAX(business_date) FROM universe_snapshots").fetchone()[0]
-            return tone.classify_day(con, d, limit=tone.DAILY_LIMIT)
+            return tone.classify_day(con, d, limit=tone.DAILY_LIMIT, deadline_s=tone.DAILY_DEADLINE_S,
+                                     check_busy=True)
     step("announcement tone (model router)", announcement_tone)
     def invalidation_monitor():
         from .decisions import monitor
