@@ -31,10 +31,7 @@ different zone, and the opening range is exactly a session boundary.
 """
 from __future__ import annotations
 
-import json
-import tempfile
 from datetime import date, datetime, timedelta
-from pathlib import Path
 
 MAX_WINDOW_DAYS = 60            # measured: the endpoint refuses more
 DEFAULT_YEARS = 2
@@ -129,36 +126,32 @@ def covered(con, instrument_token: int) -> tuple[date | None, date | None]:
 
 def _bulk_insert(con, token: int, tradingsymbol: str, isin: str | None,
                  rows: list[dict]) -> int:
-    """Load through a newline-delimited JSON staging file.
+    """Load a window of bars in one set-based insert from a registered DataFrame.
 
-    executemany binds parameters row by row at roughly 1.2 ms each, which is fine for
-    a day of filings and hopeless here: one name-year is ~94,000 minute bars, so a
-    hundred names would be hours of binding rather than minutes of fetching. The staging
-    file turns it into a single scan.
-    """
-    with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False,
-                                     encoding="utf-8") as fh:
-        staging = Path(fh.name)
-        for r in rows:
-            fh.write(json.dumps({
-                "instrument_token": token, "tradingsymbol": tradingsymbol,
-                "isin": isin, "ts": r["ts"], "open": r["open"], "high": r["high"],
-                "low": r["low"], "close": r["close"],
-                "volume": int(r["volume"] or 0)}) + "\n")
+    executemany binds parameters row by row at roughly 1.2 ms each - hopeless at ~94,000 minute bars a name-year. A
+    newline-delimited JSON staging file was used first and failed on 2026-10-15 for three names: ``json.dumps``
+    writes a missing price as ``NaN``, which is not JSON, and DuckDB rejected the line. A DataFrame carries missing
+    values as nulls."""
+    import pandas as pd
+    df = pd.DataFrame({
+        "instrument_token": token, "tradingsymbol": tradingsymbol, "isin": isin,
+        "ts": pd.to_datetime([r["ts"] for r in rows], utc=True),
+        "open": pd.to_numeric([r.get("open") for r in rows], errors="coerce"),
+        "high": pd.to_numeric([r.get("high") for r in rows], errors="coerce"),
+        "low": pd.to_numeric([r.get("low") for r in rows], errors="coerce"),
+        "close": pd.to_numeric([r.get("close") for r in rows], errors="coerce"),
+        "volume": pd.Series(pd.to_numeric([r.get("volume") for r in rows], errors="coerce")).fillna(0).astype("int64").to_numpy(),
+    })
+    con.register("_minute_batch", df)
     try:
-        con.execute(f"""
+        con.execute("""
             INSERT INTO minute_bars
-              (instrument_token, tradingsymbol, isin, ts, open, high, low, close,
-               volume, source)
-            SELECT instrument_token, tradingsymbol, isin, ts::TIMESTAMPTZ,
-                   open, high, low, close, volume, 'KITE'
-            FROM read_json('{staging.as_posix()}', format='newline_delimited', columns={{
-                'instrument_token': 'BIGINT', 'tradingsymbol': 'VARCHAR',
-                'isin': 'VARCHAR', 'ts': 'VARCHAR', 'open': 'DOUBLE', 'high': 'DOUBLE',
-                'low': 'DOUBLE', 'close': 'DOUBLE', 'volume': 'BIGINT'}})
+              (instrument_token, tradingsymbol, isin, ts, open, high, low, close, volume, source)
+            SELECT instrument_token, tradingsymbol, isin, ts, open, high, low, close, volume, 'KITE'
+            FROM _minute_batch
             ON CONFLICT DO NOTHING""")
     finally:
-        staging.unlink(missing_ok=True)
+        con.unregister("_minute_batch")
     return len(rows)
 
 

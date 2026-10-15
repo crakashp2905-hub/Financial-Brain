@@ -206,3 +206,19 @@ def test_the_advertised_callback_url_matches_what_is_registered_with_kite():
     redirect silently goes nowhere."""
     from financial_brain.providers.kite_login_server import Receiver
     assert Receiver(port=8765).url == "http://127.0.0.1:8765/kite/callback"
+
+
+def test_minute_insert_takes_missing_prices_as_nulls():
+    """2026-10-15: the JSON staging path wrote NaN, which is not JSON, and three names failed to load."""
+    import duckdb
+
+    from financial_brain.ingest import kite_minute as KM
+    con = duckdb.connect()
+    con.execute(KM.SCHEMA)
+    rows = [{"ts": "2016-01-01T09:15:00+0530", "open": 10.0, "high": 11.0, "low": 9.0, "close": 10.5, "volume": 100},
+            {"ts": "2016-01-01T09:16:00+0530", "open": float("nan"), "high": None, "low": 9.0, "close": 10.5,
+             "volume": None}]
+    KM._bulk_insert(con, 1, "X", None, rows)
+    KM._bulk_insert(con, 1, "X", None, rows)                       # idempotent
+    got = con.execute("SELECT open, high, volume FROM minute_bars ORDER BY ts").fetchall()
+    assert got == [(10.0, 11.0, 100), (None, None, 0)]
