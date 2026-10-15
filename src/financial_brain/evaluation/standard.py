@@ -32,7 +32,7 @@ NULL_QUANTILE = 0.95
 NULL_DRAWS = 200
 BUDGET_PER_QUARTER = 8
 #: Owner-approved exceptions to the cap, by quarter (ADR-0004 amendments). Each one is a written decision.
-BUDGET_OVERRIDES = {"2026Q4": 11}          # amendments 1-3: index mean reversion; published anomalies; intraday family
+BUDGET_OVERRIDES = {"2026Q4": 13}          # amendments 1-4: index MR; anomalies; intraday family; X3 + multi-factor
 LEDGER = Path("docs") / "trials" / "ledger.jsonl"
 
 CANDIDATE, FAIL = "CANDIDATE", "FAIL"

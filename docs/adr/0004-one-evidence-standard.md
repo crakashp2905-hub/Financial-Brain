@@ -73,3 +73,10 @@ depth".
 2026Q4's budget is raised from 10 to **11**, for one trial only: `PRE-REGISTERED intraday and swing family on minute
 bars` (nine rules on the 2016-2026 minute history). The owner was given the choice (now, or as the second trial of
 2027Q1) with "run it when the data lands" as the recommendation, and answered "do all your recommendations".
+
+## Amendment 4 (2026-10-15, owner decision)
+
+2026Q4's budget is raised from 11 to **13**, for two trials: the out-of-sample test of `PRE-REGISTERED earnings
+surprise drift out of sample` (registered 2026-10-13; runnable now that the Integrated Filing results exist) and
+`PRE-REGISTERED multi-factor quality value low-risk book` (registered 2026-10-15 before computing). Offered "run them now
+(another amendment) or January", the owner answered "do it".
