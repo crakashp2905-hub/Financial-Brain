@@ -1861,6 +1861,27 @@ def cmd_delivery(args) -> int:
     return 0
 
 
+def cmd_integrated_filing(args) -> int:
+    """NSE Integrated Filing - Financials (results from the March-2025 quarter on): --prefetch to the lake, then load."""
+    from .ingest import integrated_filing as IF
+    cfg = load()
+    start, end = _d(args.start), _d(args.end or args.start)
+    if args.prefetch:
+        syms = None
+        if args.universe:
+            with Database(cfg, read_only=True).connect() as con:
+                syms = {r[0] for r in con.execute("""WITH r AS (SELECT p.ticker, ROW_NUMBER() OVER (PARTITION BY f.business_date
+                           ORDER BY f.adv20 DESC) rk FROM features f JOIN adjusted_prices p USING (lineage, business_date)
+                           WHERE f.business_date IN (SELECT MAX(business_date) FROM features GROUP BY year(business_date),
+                           quarter(business_date)) AND f.business_date >= '2025-01-01' AND f.adv20 > 0)
+                           SELECT DISTINCT ticker FROM r WHERE rk <= ?""", [args.universe]).fetchall()}
+        print(IF.prefetch(cfg, start, end, symbols=syms, on_progress=lambda a, o: print(a, o, flush=True)))
+        return 0
+    with Database(cfg).connect() as con:
+        print(IF.load(con, cfg, start, end))
+    return 0
+
+
 def cmd_newsref(args) -> int:
     """News referenced by a day's filings - extracted from the filing text, not fetched."""
     from .events import newsref
@@ -2424,6 +2445,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--only-missing", action="store_true",
                    help="only filings whose headline could not be extracted")
     g.set_defaults(fn=cmd_newsfetch)
+
+    g = sub.add_parser("integrated-filing", help="NSE Integrated Filing results (2025-): --prefetch, then load")
+    g.add_argument("--start", required=True)
+    g.add_argument("--end")
+    g.add_argument("--prefetch", action="store_true")
+    g.add_argument("--universe", type=int, default=0, help="limit XBRL downloads to the N most liquid names")
+    g.set_defaults(fn=cmd_integrated_filing)
 
     g = sub.add_parser("delivery", help="NSE delivery position (MTO): --prefetch to the lake, then load")
     g.add_argument("--start", required=True)

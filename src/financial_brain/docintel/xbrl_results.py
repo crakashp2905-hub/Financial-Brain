@@ -24,6 +24,10 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
 NS_FIN = "http://www.bseindia.com/xbrl/fin/"
+#: Integrated Filing (NSE, results from the March-2025 quarter on) uses SEBI's taxonomy, versioned by date in the
+#: namespace ("http://www.sebi.gov.in/xbrl/2026-01-31/in-capmkt"); the concepts and the OneD/FourD contexts are the
+#: same as the older results XBRL, so any version of it is accepted.
+NS_SEBI_PREFIX, NS_SEBI_SUFFIX = "http://www.sebi.gov.in/xbrl/", "/in-capmkt"
 NS_XBRLI = "http://www.xbrl.org/2003/instance"
 CTX = {"OneD": "Q", "FourD": "YTD", "OneI": "I", "FourI": "I_PRIOR"}
 
@@ -68,6 +72,15 @@ def _local(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
 
+def _is_results_ns(tag: str) -> bool:
+    if tag.startswith("{" + NS_FIN):
+        return True
+    if tag.startswith("{" + NS_SEBI_PREFIX):
+        ns = tag[1:tag.index("}")]
+        return ns.endswith(NS_SEBI_SUFFIX)
+    return False
+
+
 def parse(payload: bytes) -> Instance:
     try:
         root = ET.fromstring(payload)
@@ -90,7 +103,7 @@ def parse(payload: bytes) -> Instance:
     # OneD/FourD without ever defining them (only the dimensional segment contexts are defined), so
     # requiring a definition rejected most of the archive; the id is the contract, a scenario is the tell.
     for el in root:
-        if not el.tag.startswith("{" + NS_FIN):
+        if not _is_results_ns(el.tag):
             continue
         ref = el.get("contextRef")
         label = CTX.get(ref)
