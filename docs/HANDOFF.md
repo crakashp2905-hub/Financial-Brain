@@ -611,3 +611,9 @@ Plan: `docs/BUILD-FLOW.md` §4. Order chosen so nothing needs owner credentials 
     the family to <= 510. Search 2016-22 only; **validation 2023-26 locked** (`combo_agent.validate` refuses without
     a trial). Prep cached (`data/edges/agent_events.parquet`, 742,583 events); search waiting for Ollama (busy with
     another project) -> `data/edges/agent_search.log`; falls back to the full grid after 4 hours.
+- 2026-10-15 (evening) — **Fundamentals unblocked and loaded**: NSE Integrated Filing (endpoint in
+  `brain/04-Data-Sources/NSE structured disclosures ...`), 13,076 statements Mar-2025 -> Sep-2026 quarters, 99.5% pass
+  arithmetic; `financial_results` now continuous 2019 -> 2026. **ADR-0006 accepted** (c945e96; nobody qualifies).
+  Insider XBRL feed (`/api/corporates-pit-gg`) exists but **history starts July 2026** - forward collection only.
+  Minute history complete: 610 names (142 delisted/renamed unavailable). Trial 11 rerunning after a late-open crash
+  fix (78d039e) -> `data/edges/t11.log`.
