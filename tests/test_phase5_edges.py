@@ -1,5 +1,4 @@
 """Edge candidates: the registered bar, calendar windows, cost of turnover, the index intraday rule."""
-from datetime import date
 
 import numpy as np
 import pandas as pd

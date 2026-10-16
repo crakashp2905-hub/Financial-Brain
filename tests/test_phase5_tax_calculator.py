@@ -1,7 +1,6 @@
 import inspect
 from datetime import date
 
-import numpy as np
 import pytest
 
 from financial_brain.costs import calculator as CC

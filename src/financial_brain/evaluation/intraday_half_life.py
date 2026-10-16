@@ -62,7 +62,7 @@ def ic_table(px: pd.DataFrame, sig: pd.DataFrame) -> dict:
         res = {}
         for k in OFFSETS:
             ics = []
-            for s, g in d.groupby("session"):
+            for s, g in d.groupby("session"):  # noqa: B007
                 g = g.dropna(subset=[f"r_{k}", "mom_12_1", "dist_52w_high", "vol_60", "ret_20d"])
                 if len(g) < 30:
                     continue

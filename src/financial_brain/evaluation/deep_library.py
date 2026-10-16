@@ -57,7 +57,7 @@ def sweep(panel: pd.DataFrame, features: list[str], *, step20: int = 4) -> pd.Da
             if p[f].nunique() < 2 or len(p) < 1000:
                 continue
             g = p.groupby("d")
-            ic = g.apply(lambda x: x[f].rank().corr(x[ycol].rank()) if x[f].nunique() > 1 else np.nan).dropna()
+            ic = g.apply(lambda x: x[f].rank().corr(x[ycol].rank()) if x[f].nunique() > 1 else np.nan).dropna()  # noqa: B023
             if len(ic) < 20:
                 continue
             t = _t(ic)
@@ -65,15 +65,15 @@ def sweep(panel: pd.DataFrame, features: list[str], *, step20: int = 4) -> pd.Da
             tiers = {}
             for name, lo, hi in TIERS:
                 q = p[(p["liq_rank"] >= lo) & (p["liq_rank"] <= hi)]
-                ti = q.groupby("d").apply(lambda x: x[f].rank().corr(x[ycol].rank()) if x[f].nunique() > 1 else np.nan)
+                ti = q.groupby("d").apply(lambda x: x[f].rank().corr(x[ycol].rank()) if x[f].nunique() > 1 else np.nan)  # noqa: B023
                 tiers[name] = _t(ti)
             agree = sum(1 for v in tiers.values() if v == v and np.sign(v) == sign and abs(v) >= 2)
             held = ic[[d >= SPLIT for d in ic.index]]
             # long-only: the top quintile in the feature's own direction, against the date's mean
             def top_excess(x):
-                s = sign * x[f]
+                s = sign * x[f]  # noqa: B023
                 k = max(1, int(0.2 * len(x)))
-                return x.loc[s.nlargest(k).index, ycol].mean() - x[ycol].mean()
+                return x.loc[s.nlargest(k).index, ycol].mean() - x[ycol].mean()  # noqa: B023
             ex = g.apply(top_excess)
             rows.append({"feature": f, "h": h, "dates": len(ic), "ic": float(ic.mean()), "t": t,
                          "p": float(2 * norm.sf(abs(t))) if t == t else 1.0, "tiers_agree": agree,

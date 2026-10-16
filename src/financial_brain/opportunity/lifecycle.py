@@ -12,7 +12,6 @@ The pieces are recorded where they happen - the scanners' ``opportunities`` tabl
 """
 from __future__ import annotations
 
-import pandas as pd
 
 ORDER = {"FOUND": 0, "REJECTED": 1, "TAKEN": 1, "SOLD": 2, "RESOLVED": 3}
 

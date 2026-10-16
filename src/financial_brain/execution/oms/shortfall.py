@@ -25,8 +25,8 @@ def realised_bp(orders: list[M.Order]) -> dict:
         return {"filled_qty": 0, "realised_bp": None}
     q = sum(o.filled_qty for o in filled)
     side = filled[0].side
-    avg = sum(o.avg_price * o.filled_qty for o in filled) / q
-    arrival = filled[0].arrival_price
+    avg = sum(float(o.avg_price or 0.0) * o.filled_qty for o in filled) / q
+    arrival = float(filled[0].arrival_price or 0.0)
     sign = 1 if side == M.BUY else -1
     total = sum(o.qty for o in orders)
     return {"filled_qty": q, "avg_price": avg, "arrival": arrival,

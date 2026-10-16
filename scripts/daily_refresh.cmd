@@ -2,6 +2,7 @@
 rem Evening refresh, weekdays 18:45 (Windows task "FinanceBrain Daily Refresh"). All read-only market data.
 rem 1. prices, indices, actions, announcements, regime, features - so the next 09:30 board ranks on current data
 rem 1b. NSE delivery position (MTO) for today: lake, then the delivery table
+rem 1c. NSE structured insider disclosures (PIT XBRL) for yesterday and today: lake, then insider_disclosures
 rem 2. champion/challenger: record today's locked out-of-sample picks, resolve matured cohorts
 rem 3. F&O snapshot: futures basis and OI, option-chain statistics, day-over-day positioning (needs the Kite token)
 rem 4. loss review: situations that keep losing become PROPOSED hypotheses (never applied automatically)
@@ -18,6 +19,9 @@ set LOG=data\paper_reports\refresh-%D%.log
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['daily']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['delivery', '--start', '%D%', '--prefetch', '--workers', '1']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['delivery', '--start', '%D%']))" >> %LOG% 2>&1
+for /f %%i in ('powershell -NoProfile -Command "(Get-Date).AddDays(-1).ToString('yyyy-MM-dd')"') do set Y=%%i
+python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['insider', '--start', '%Y%', '--end', '%D%', '--prefetch']))" >> %LOG% 2>&1
+python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['insider', '--start', '%Y%', '--end', '%D%']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['champion', '--record']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['fno-snapshot']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['loss-review', '--propose']))" >> %LOG% 2>&1

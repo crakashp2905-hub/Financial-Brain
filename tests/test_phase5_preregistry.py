@@ -71,6 +71,27 @@ def test_a_result_older_than_its_hypothesis_is_caught(repo):
     assert status(repo, "PRE-REGISTERED a.md") == "RESULT_BEFORE_REGISTRATION"
 
 
+def test_a_result_the_registration_cites_as_its_origin_is_not_its_result(repo):
+    write(repo, "Result of x.md", "x looked asymmetric")
+    commit(repo, "res x", "2026-01-01T10:00:00+05:30")
+    write(repo, "PRE-REGISTERED a.md", "written after [[Result of x]]; out of sample only")
+    commit(repo, "reg", "2026-01-02T10:00:00+05:30")
+    write(repo, "Result of x.md", "x looked asymmetric; see [[PRE-REGISTERED a]]")
+    commit(repo, "link", "2026-01-02T11:00:00+05:30")
+    row = next(r for r in PR.audit(repo) if r["prereg"] == "PRE-REGISTERED a.md")
+    assert row["status"] == "NO_RESULT_YET" and row["origins"] == ["Result of x.md"]
+
+
+def test_an_origin_added_to_the_registration_later_does_not_excuse_an_older_result(repo):
+    write(repo, "Result of a.md", "see [[PRE-REGISTERED a]]")
+    commit(repo, "res", "2026-01-01T10:00:00+05:30")
+    write(repo, "PRE-REGISTERED a.md", "claim A")
+    commit(repo, "reg", "2026-01-02T10:00:00+05:30")
+    write(repo, "PRE-REGISTERED a.md", "claim A, after [[Result of a]]")
+    commit(repo, "edit", "2026-01-03T10:00:00+05:30")
+    assert status(repo, "PRE-REGISTERED a.md") == "RESULT_BEFORE_REGISTRATION"
+
+
 def test_this_repository_has_no_violations():
     root = Path(__file__).resolve().parents[1]
     bad = [r["prereg"] for r in PR.audit(root) if r["status"] in PR.VIOLATIONS]

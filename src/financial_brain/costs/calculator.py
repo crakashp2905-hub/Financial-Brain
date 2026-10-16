@@ -17,7 +17,7 @@ Information, not advice.
 from __future__ import annotations
 
 from .india import CostModel, Segment, Side
-from .tax import INTRADAY, TaxRules, classify, tax_on_gain
+from .tax import TaxRules, classify, tax_on_gain
 
 BUCKETS = ("mega", "large", "mid", "small")
 LEGS = ("stt", "exchange", "sebi", "stamp", "brokerage", "gst", "dp")

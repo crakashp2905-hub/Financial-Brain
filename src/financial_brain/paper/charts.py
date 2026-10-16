@@ -284,7 +284,7 @@ def build_many(rcon, tickers: list[str], asof, *, book=None, out: Path = OUT, fi
     trades = {}
     if book is not None:
         for v, tk, ed, ep, xd, xp in book.execute("""SELECT version, ticker, entry_day, entry_px, exit_day, exit_px FROM positions
-                                                     WHERE mode = 'live' AND ticker IN (SELECT UNNEST(?))""", [tickers]).fetchall():
+                                                     WHERE mode = 'live' AND ticker IN (SELECT UNNEST(?))""", [tickers]).fetchall():  # noqa: B007
             m = trades.setdefault(tk, {}).setdefault(f"book: {v}", [])
             if ed:
                 m.append({"time": _t(ed), "position": "belowBar", "color": "#2e7d32", "shape": "arrowUp", "text": f"{v} buy"})

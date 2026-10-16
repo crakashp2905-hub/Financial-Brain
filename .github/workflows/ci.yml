@@ -1,0 +1,36 @@
+# Every push and pull request: the full suite on a clean Windows and Linux install from pyproject alone, plus lint,
+# type checks on the critical modules, a dependency audit and the schema migration tests.
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the pre-registration audit reads git history
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install (pyproject only)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Lint
+        run: python -m ruff check src tests
+      - name: Type check (OMS, evidence standard, pre-registry)
+        run: python -m mypy
+      - name: Schema migrations
+        run: python -m pytest -q tests/test_migrations.py
+      - name: Test suite
+        run: python -m pytest -q
+      - name: Dependency audit
+        run: python -m pip_audit --skip-editable

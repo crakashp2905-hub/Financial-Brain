@@ -30,6 +30,8 @@ def by_day(cands: pd.DataFrame) -> pd.DataFrame:
     if len(out):
         out["skill"] = out["chosen_mean"] - out["all_mean"]
         out["regret"] = out["best"] - out["chosen_mean"]
+        # pandas 3 stores a string column with missing values as NaN; "no miss" stays None on every version
+        out["missed"] = pd.Series([x if isinstance(x, str) else None for x in out["missed"]], index=out.index, dtype=object)
     return out
 
 

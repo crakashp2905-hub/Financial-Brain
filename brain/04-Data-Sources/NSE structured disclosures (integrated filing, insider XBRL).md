@@ -25,7 +25,7 @@ archive host, no session.
 * Loaded 2026-10-15 for the 700 most liquid names each quarter: 13,103 filings stored, 13,076 statements promoted to
   `financial_results`, 99.5% pass their arithmetic check. `fb integrated-filing --prefetch`, then load.
 
-## Insider trading, structured (not yet collected)
+## Insider trading, structured (collected nightly from 2026-10-15)
 
 `/api/corporates-pit-gg?index=equities&from_date=DD-MM-YYYY&to_date=DD-MM-YYYY`
 
@@ -33,6 +33,7 @@ archive host, no session.
   filings are a new requirement. About 620 disclosures a month.
 * Each XBRL: category of person, transaction type (buy/sell), number and value of securities, holding before and after
   (shares and %), mode (market purchase, off-market, ...), dates, ISIN.
+* **Collected** by `ingest/insider_xbrl.py` (`fb insider --prefetch`, then load) into `insider_disclosures`, one row
+  per disclosure; step 1c of the evening refresh fetches yesterday and today. Backfilled from 2026-07-01.
 * **Use:** a forward record only - an insider/promoter net-buying signal can be tested out of sample after 6-12 months
-  of nightly collection. Earlier history exists only as SAST/PIT PDFs ([[Pilot - insider and promoter direction from
-  SAST filings]]).
+  of nightly collection. Earlier history exists only as SAST/PIT PDFs ([[Pilot - insider and promoter direction from SAST filings]]).

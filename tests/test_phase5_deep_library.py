@@ -3,7 +3,6 @@ from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from financial_brain.evaluation import deep_library as DL
 
@@ -50,7 +49,7 @@ def test_walk_forward_never_trains_on_its_test_year():
     p = panel(n_dates=260)
     out = DL.walk_forward(p, ["good", "noise"], years=range(2020, 2023), model_factory=Spy)
     assert out["d"].min() >= date(2020, 1, 1) and len(seen) == 3 and seen == sorted(seen)
-    first_test = p[(p["d"] >= date(2020, 1, 1))]
+    first_test = p[(p["d"] >= date(2020, 1, 1))]  # noqa: F841
     assert seen[0] <= (p["d"] < date(2020, 1, 1) - timedelta(days=30)).sum()
 
 

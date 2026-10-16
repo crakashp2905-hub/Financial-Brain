@@ -68,7 +68,7 @@ def table(panel: pd.DataFrame, outcome: str = "fwd20") -> pd.DataFrame:
         for level, controls in LEVELS:
             if name == "low_vol" and "vol" in controls:
                 continue                              # the signal is the control: undefined
-            ics = panel.groupby("session").apply(lambda g: residual_ic(g, col, sign, outcome, controls)).dropna()
+            ics = panel.groupby("session").apply(lambda g: residual_ic(g, col, sign, outcome, controls)).dropna()  # noqa: B023
             if len(ics) < 10:
                 continue
             rows.append({"signal": name, "level": level, "sessions": len(ics), "ic": float(ics.mean()),
@@ -101,7 +101,7 @@ def build_panel(con, *, start, end, names: int = 500, step: int = 20, sector_eve
     pos = {pd.Timestamp(x).date(): i for i, x in enumerate(close.index)}
     sectors, sector_asof = {}, None
     out = []
-    for k, d in enumerate(sessions[::step]):
+    for k, d in enumerate(sessions[::step]):  # noqa: B007
         if d not in pos or pos[d] < 260:
             continue
         cs = con.execute("""SELECT lineage, adv20, vol_60, mom_12_1, dist_52w_high, ret_20d FROM features

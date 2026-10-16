@@ -107,7 +107,7 @@ def unmet(to: int, evidence: dict) -> list[str]:
     for k, need in CRITERIA.get(to, {}).items():
         have = evidence.get(k)
         if k == "strategy_verdict_at_least":
-            ok = VERDICT_RANK.get(have or "", 0) >= VERDICT_RANK[need]
+            ok = VERDICT_RANK.get(str(have or ""), 0) >= VERDICT_RANK[str(need)]
         elif k.endswith("_max"):
             ok = have is not None and have <= need
         elif isinstance(need, bool):

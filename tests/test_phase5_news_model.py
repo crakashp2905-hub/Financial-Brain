@@ -1,6 +1,5 @@
 from datetime import date
 
-import numpy as np
 
 from financial_brain.evaluation import news_model as N
 

@@ -1,7 +1,6 @@
 """Rules as trading systems: positions decided at the close, costs on every change, money management that can ruin."""
 import numpy as np
 import pandas as pd
-import pytest
 
 from financial_brain.evaluation import rule_systems as RS
 

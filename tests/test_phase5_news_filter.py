@@ -2,7 +2,6 @@
 from datetime import date
 
 import duckdb
-import numpy as np
 import pandas as pd
 
 from financial_brain.decisions import news_filter as NF

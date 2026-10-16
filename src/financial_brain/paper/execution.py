@@ -26,7 +26,7 @@ def attribution(con, *, mode: str | None = None) -> list[dict]:
         FROM trades {where} GROUP BY 1, 2 ORDER BY 1, 2""", params).fetchall()
     out = []
     for s, m, n, notional, sig, gross, charges, net in rows:
-        bp = lambda x: x / notional * 1e4 if notional else float("nan")      # noqa: E731
+        bp = lambda x: x / notional * 1e4 if notional else float("nan")  # noqa: B023, E731
         out.append({"strategy": s, "mode": m, "trades": n, "signal_inr": sig, "execution_inr": gross - sig,
                     "gross_inr": gross, "charges_inr": -charges, "net_inr": net,
                     "signal_bp": bp(sig), "execution_bp": bp(gross - sig), "charges_bp": bp(-charges), "net_bp": bp(net)})

@@ -1,6 +1,5 @@
 """Execution algorithms on a simulated minute tape: no look-ahead, honest passive fills, sensible costs."""
 import numpy as np
-import pytest
 
 from financial_brain.execution import algos as X
 

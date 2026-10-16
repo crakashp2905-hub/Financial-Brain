@@ -833,3 +833,35 @@ CREATE TABLE IF NOT EXISTS xbrl_facts (
     value      DOUBLE,
     PRIMARY KEY (seq_number, concept, ctx)
 );
+
+-- NSE structured insider-trading disclosures (ingest/insider_xbrl.py): SEBI PIT XBRL, one row per disclosure in a
+-- filing. A forward record from July 2026 (the feed has no earlier history). A revision is its own filing (app_id).
+CREATE TABLE IF NOT EXISTS insider_disclosures (
+    app_id          VARCHAR NOT NULL,
+    disclosure      VARCHAR NOT NULL,
+    symbol          VARCHAR,
+    isin            VARCHAR,
+    company         VARCHAR,
+    regulation      VARCHAR,
+    revised         BOOLEAN,
+    submission      VARCHAR,
+    disseminated_at TIMESTAMP,
+    category        VARCHAR,
+    person          VARCHAR,
+    instrument      VARCHAR,
+    side            VARCHAR,
+    qty             DOUBLE,
+    value_inr       DOUBLE,
+    held_before     DOUBLE,
+    pct_before      DOUBLE,
+    held_after      DOUBLE,
+    pct_after       DOUBLE,
+    mode            VARCHAR,
+    trade_from      DATE,
+    trade_to        DATE,
+    intimated_on    DATE,
+    exchange        VARCHAR,
+    lake_key        VARCHAR,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (app_id, disclosure)
+);

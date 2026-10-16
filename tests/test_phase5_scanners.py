@@ -79,7 +79,6 @@ def test_a_zero_volatility_row_is_excluded_not_a_crash():
 
 
 def test_every_opportunity_carries_its_itemised_net_alpha_and_the_items_add_up():
-    from financial_brain.decisions import net_alpha as NA
     for o in S.scan(cs(), date(2026, 10, 5)):
         a = o.alpha
         assert a["net"] == pytest.approx(a["expected_return"] - a["benchmark"] - a["fees"] - a["spread"]

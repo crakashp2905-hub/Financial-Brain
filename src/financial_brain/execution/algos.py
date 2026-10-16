@@ -76,7 +76,7 @@ def _mkt_price(day: Day, t: int, q: float) -> float:
 def simulate(day: Day, order: Order, algo: Algo, *, seed: int = 0) -> dict:
     rng = np.random.default_rng(seed)
     algo.reset(day, order, rng)
-    remaining, cost, passive, carry = order.qty, 0.0, 0.0, 0.0
+    remaining, cost, passive, carry = order.qty, 0.0, 0.0, 0.0  # noqa: F841
     for t in range(order.start, order.end + 1):
         if remaining <= 1e-9:
             break

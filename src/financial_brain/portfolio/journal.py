@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from collections import deque
 
-import numpy as np
 import pandas as pd
 
 MIN_TRIPS = 30
@@ -121,7 +120,7 @@ def attribute(rcon, trips: pd.DataFrame) -> pd.DataFrame:
         lv = lv.sort_index()
 
         def level(name, d):                         # the last level on or before d: an index can miss a session
-            col = lv[name][lv.index <= d].dropna() if name in lv else []
+            col = lv[name][lv.index <= d].dropna() if name in lv else []  # noqa: B023
             return float(col.iloc[-1]) if len(col) else None
 
         m0, m1 = level(X.MARKET, d0), level(X.MARKET, d1)

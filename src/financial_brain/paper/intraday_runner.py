@@ -274,7 +274,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                     candles_fn = kd.candles
                 if token_fn is None:
                     inst = kd.instruments("NSE")
-                    token_fn = lambda s: kd.token_for(s, inst)          # noqa: E731
+                    token_fn = lambda s: kd.token_for(s, inst)  # noqa: B023, E731
                 exact = opening_from_candles(list(eng.symbols), now.date(), candles_fn=candles_fn, token_fn=token_fn)
                 for sym, (op, hi, lo) in exact.items():
                     try:
@@ -390,7 +390,7 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
     bq = {sym: {"price": None, "open": s_.open, "high": s_.or_hi, "low": s_.or_lo, "prev_close": s_.prev_close}
           for sym, s_ in eng.symbols.items() if s_.open is not None}
     first = {}
-    for ts, sym, px in stream:
+    for ts, sym, px in stream:  # noqa: B007
         if sym not in first:
             first[sym] = px                             # the first price at or after 09:30
     for sym in bq:

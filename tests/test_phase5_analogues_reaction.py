@@ -11,7 +11,7 @@ from financial_brain.evaluation import setup_analogues as SA
 def pool(n_days=200, n=60, seed=0):
     rng = np.random.default_rng(seed)
     rows = []
-    for k, d in enumerate(pd.bdate_range("2018-01-01", periods=n_days)):
+    for k, d in enumerate(pd.bdate_range("2018-01-01", periods=n_days)):  # noqa: B007
         for i in range(n):
             f = rng.normal(0, 1, len(SA.FEATURES))
             x5 = 0.01 * f[0] + rng.normal(0, 0.02)          # the first feature predicts the 5-day outcome

@@ -86,7 +86,7 @@ def run(events: pd.DataFrame, links: pd.DataFrame, prices: pd.DataFrame, *, hori
                 cols = [c for c in names if c in lp.columns]
                 if not cols:
                     return np.nan
-                return float(((lp.iloc[i + h][cols] - lp.iloc[i][cols]) - mkt).mean())
+                return float(((lp.iloc[i + h][cols] - lp.iloc[i][cols]) - mkt).mean())  # noqa: B023
 
             sgn = np.sign(r.ar_react)
             real.append(sgn * abn(r.sibs))

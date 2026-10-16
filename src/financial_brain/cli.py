@@ -1861,6 +1861,19 @@ def cmd_delivery(args) -> int:
     return 0
 
 
+def cmd_insider(args) -> int:
+    """NSE structured insider disclosures (PIT XBRL, July 2026 on): --prefetch to the lake, then load."""
+    from .ingest import insider_xbrl as IX
+    cfg = load()
+    start, end = _d(args.start), _d(args.end or args.start)
+    if args.prefetch:
+        print(IX.prefetch(cfg, start, end))
+        return 0
+    with Database(cfg).connect() as con:
+        print(IX.load(con, cfg, start, end))
+    return 0
+
+
 def cmd_integrated_filing(args) -> int:
     """NSE Integrated Filing - Financials (results from the March-2025 quarter on): --prefetch to the lake, then load."""
     from .ingest import integrated_filing as IF
@@ -2452,6 +2465,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--prefetch", action="store_true")
     g.add_argument("--universe", type=int, default=0, help="limit XBRL downloads to the N most liquid names")
     g.set_defaults(fn=cmd_integrated_filing)
+
+    g = sub.add_parser("insider", help="NSE structured insider disclosures (2026-07 on): --prefetch, then load")
+    g.add_argument("--start", required=True)
+    g.add_argument("--end")
+    g.add_argument("--prefetch", action="store_true")
+    g.set_defaults(fn=cmd_insider)
 
     g = sub.add_parser("delivery", help="NSE delivery position (MTO): --prefetch to the lake, then load")
     g.add_argument("--start", required=True)

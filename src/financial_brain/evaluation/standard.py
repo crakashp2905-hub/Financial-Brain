@@ -121,10 +121,10 @@ def null_separation(real: pd.Series, F, cost, bench, books: dict, eligible: dict
     for i in range(draws):
         s = book_series(F, cost, bench, random_books(books, eligible, seed=seed + i), weigh)
         sims.append(replication(s, direction=direction)["stat"])
-    sims = np.array([x for x in sims if np.isfinite(x)])
-    q = float(np.quantile(sims, NULL_QUANTILE)) if len(sims) else float("nan")
-    return {"stat": stat, "null_q95": q, "null_mean": float(sims.mean()) if len(sims) else np.nan,
-            "draws": int(len(sims)), "pass": bool(np.isfinite(stat) and np.isfinite(q) and stat > q)}
+    arr = np.array([x for x in sims if np.isfinite(x)])
+    q = float(np.quantile(arr, NULL_QUANTILE)) if len(arr) else float("nan")
+    return {"stat": stat, "null_q95": q, "null_mean": float(arr.mean()) if len(arr) else np.nan,
+            "draws": int(len(arr)), "pass": bool(np.isfinite(stat) and np.isfinite(q) and stat > q)}
 
 
 # ------------------------------------------------------------------------------------------------- G1 + verdict

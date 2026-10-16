@@ -1,7 +1,6 @@
 """Spreads and arbitrage: the cointegration test, pairs on a planted relation, PCA residual reversal."""
 import numpy as np
 import pandas as pd
-import pytest
 
 from financial_brain.evaluation import arbitrage as AR
 

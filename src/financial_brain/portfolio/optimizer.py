@@ -58,7 +58,7 @@ def optimize(mu, cov, *, w_prev=None, cost=None, risk_aversion: float = 5.0,
 
     cons = [{"type": "ineq", "fun": lambda x: budget - unpack(x)[0].sum(),
              "jac": lambda x: np.r_[-np.ones(n), np.ones(n)]}]
-    bounds = [(0.0, max_weight)] * n + [(0.0, 1.0)] * n
+    bounds = [(0.0, max_weight)] * n + [(0.0, 1.0)] * n  # noqa: F841
     # w >= 0 and w <= max_weight expressed on b and s
     cons += [{"type": "ineq", "fun": lambda x: unpack(x)[0],
               "jac": lambda x: np.hstack([np.eye(n), -np.eye(n)])},

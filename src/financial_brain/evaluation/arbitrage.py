@@ -113,7 +113,7 @@ def pairs_coint(px: pd.DataFrame, *, formation: int = 250, trading: int = 125, n
         scored.sort()
         rets = []
         lt = np.log(t.to_numpy())
-        for tstat, i, j, b, mu, sd in scored[:n_pairs]:
+        for tstat, i, j, b, mu, sd in scored[:n_pairs]:  # noqa: B007
             e = lt[:, i] - (b[0] + b[1] * lt[:, j])
             pos = _trade_spread((e - mu) / sd, entry, exit_)
             ri, rj = np.diff(np.exp(lt[:, i])) / np.exp(lt[:-1, i]), np.diff(np.exp(lt[:, j])) / np.exp(lt[:-1, j])

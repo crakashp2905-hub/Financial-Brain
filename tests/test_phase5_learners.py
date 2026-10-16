@@ -36,6 +36,7 @@ def test_the_genetic_weights_favour_the_planted_feature():
 
 
 def test_the_lstm_walk_forward_predicts_only_its_test_years():
+    pytest.importorskip("torch")                       # the `forecasting` extra, not `dev`
     p = panel(n_dates=180, n=60)
     out = LR.lstm_walk_forward(p, ["a", "b"], steps=5, years=range(2023, 2024), epochs=1, min_train=1000)
     assert len(out) and out["d"].min() >= date(2023, 1, 1)

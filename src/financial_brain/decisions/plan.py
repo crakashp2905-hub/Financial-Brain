@@ -18,7 +18,7 @@ tax position or other holdings, so it is information, not advice, and nothing in
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 import numpy as np
 

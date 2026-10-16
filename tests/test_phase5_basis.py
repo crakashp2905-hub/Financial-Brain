@@ -1,5 +1,5 @@
 """Cash-and-carry: expiry calendar (Thursday, then Tuesday from Sept 2025), and the carry earned by a converging basis."""
-from datetime import date, timedelta
+from datetime import date
 
 import numpy as np
 import pandas as pd

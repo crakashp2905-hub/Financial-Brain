@@ -5,7 +5,9 @@ only then run; the result is a separate note that links back to it (``[[PRE-REGI
 holds the evidence that this order was kept. This module reads it:
 
     registered      the commit that first added the pre-registration, and the hash of its text then
-    result          the first commit of every result note that links to it
+    result          the first commit of every result note that links to it - except a note the registration
+                    itself cites, as first committed, and that already existed then: that is its declared origin
+                    (a filter written after reading a result, saying so), not its result
     edits           every later commit that changed the pre-registration
 
 and gives each a status:
@@ -51,7 +53,7 @@ def audit(repo: Path = Path(".")) -> list[dict]:
     repo = Path(repo)
     folder = repo / RESEARCH
     notes = {p.name: p.read_text(encoding="utf-8", errors="replace") for p in folder.glob("*.md")}
-    out = []
+    out: list[dict] = []
     for name in sorted(n for n in notes if n.startswith("PRE-REGISTERED")):
         rel = (RESEARCH / name).as_posix()
         commits = _commits(repo, rel)
@@ -62,14 +64,20 @@ def audit(repo: Path = Path(".")) -> list[dict]:
         stem = re.escape(name[:-3])
         linked = [n for n, txt in notes.items() if n != name and not n.startswith("PRE-REGISTERED")
                   and re.search(r"\[\[" + stem + r"(\|[^\]]*)?\]\]", txt)]
-        results = []
+        first_text = _git(repo, "show", f"{reg_hash}:{rel}")
+        results, origins = [], []
         for n in linked:
             c = _commits(repo, (RESEARCH / n).as_posix())
-            if c:
-                results.append({"note": n, "commit": c[0][0], "time": c[0][1]})
+            if not c:
+                continue
+            cited = re.search(r"\[\[" + re.escape(n[:-3]) + r"(\|[^\]]*)?\]\]", first_text)
+            if cited and c[0][1] < reg_time:
+                origins.append(n)
+                continue
+            results.append({"note": n, "commit": c[0][0], "time": c[0][1]})
         edits = [{"commit": h, "time": t} for h, t in commits[1:]
                  if _sha(repo, h, rel) != _sha(repo, reg_hash, rel)]
-        first_result = min((r["time"] for r in results), default=None)
+        first_result = min((r["time"] for r in results), default="")
         if not results:
             status = "NO_RESULT_YET"
         elif first_result < reg_time:
@@ -81,7 +89,8 @@ def audit(repo: Path = Path(".")) -> list[dict]:
         else:
             status = "OK"
         out.append({"prereg": name, "status": status, "registered": reg_time, "registered_commit": reg_hash[:8],
-                    "sha256": _sha(repo, reg_hash, rel)[:16], "results": results, "edits": edits})
+                    "sha256": _sha(repo, reg_hash, rel)[:16], "results": results, "origins": origins,
+                    "edits": edits})
     return out
 
 

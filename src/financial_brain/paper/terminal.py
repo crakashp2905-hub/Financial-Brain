@@ -9,7 +9,7 @@ it) is HTML-escaped and shown as data.
 from __future__ import annotations
 
 import html
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -34,6 +34,7 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,t
 th{font-size:12px;color:var(--muted);font-weight:600}td.r,th.r{text-align:right}tr:last-child td{border-bottom:none}
 .pos{color:var(--pos)}.neg{color:var(--neg)}.chip{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;border:1px solid var(--line);color:var(--muted)}
 .chip.warn{border-color:var(--warn);color:var(--warn)}.chip.ok{border-color:var(--pos);color:var(--pos)}.chip.bad{border-color:var(--neg);color:var(--neg)}
+.tier{display:inline-block;border:1px dashed var(--muted);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--muted)}.tier.confirmed{border-style:solid;border-color:var(--pos);color:var(--pos)}tr.unconfirmed td{opacity:.62}
 .note{border-left:3px solid var(--warn);padding:6px 10px;background:var(--card);margin:8px 0;color:var(--fg)}
 details{background:var(--card);border:1px solid var(--line);border-radius:6px;margin:8px 0;padding:10px 12px}
 summary{cursor:pointer;font-weight:600}summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -66,6 +67,21 @@ def _chart(t) -> str:
 
 def _e(x) -> str:
     return html.escape("" if x is None else str(x))
+
+
+def _tier(claim: str) -> str:
+    """The one claim a list may make (``evidence_tiers.CLAIMS``), shown on every row and heading."""
+    from ..evaluation import evidence_tiers as ET
+    cls = "tier confirmed" if claim == ET.CONFIRMED else "tier"
+    return f"<span class='{cls}' title='{_e(ET.CLAIMS.get(claim, ''))}'>{_e(claim)}</span>"
+
+
+def _claim_note(claim: str, what: str) -> str:
+    from ..evaluation import evidence_tiers as ET
+    if claim == ET.CONFIRMED:
+        return ""
+    return (f"<div class='note'><b>{_e(what)}: {_e(claim)}.</b> {_e(ET.CLAIMS[claim]).capitalize()}. Not a trade recommendation and "
+            "not a tip: no strategy has a confirmed out-of-sample and paper record, so cash remains a valid answer.</div>")
 
 
 def _chip(state: str) -> str:
@@ -368,7 +384,10 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
     from ..ingest import kite_fno as KF
     from ..opportunity import scanners as S
     from . import trader_view as TV
-    out = [f"<h2>What should I trade today? Top {top} by expected net alpha</h2>"]
+    from ..evaluation import evidence_tiers as ET
+    claim = ET.list_claim(ET.LIST_STRATEGY["terminal list"])
+    out = [f"<h2>Today's ranked list: top {top} by modelled net alpha {_tier(claim)}</h2>",
+           _claim_note(claim, "Every row below is a")]
     if clears == 0:
         out.append("<div class='note'><b>Nothing clears costs by a margin today.</b> These are the best available, shown so you can see "
                    "why - not because they are good trades. Expected returns come from one measured model (what names in the same "
@@ -389,6 +408,27 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
             fno = {x["symbol"]: x for x in KF.positioning(ledger, day)}
     except Exception:                                   # noqa: BLE001 - no snapshots yet
         fno = {}
+    from ..decisions import risk_filters as RF
+    try:
+        from ..regime import brain as RB
+        row = rcon.execute("SELECT regime FROM market_regime WHERE version = ? AND business_date <= ? "
+                           "ORDER BY business_date DESC LIMIT 1", [RB.latest(rcon), asof]).fetchone()
+        regime = row[0] if row else None
+    except Exception:                                   # noqa: BLE001 - no regime table: the crisis rule cannot fire
+        regime = None
+    try:
+        liq = RF.liquidity_trend(rcon, asof, [str(x) for x in best.head(top * 3)["instrument"]])
+    except Exception:                                   # noqa: BLE001
+        liq = None
+    screened = RF.apply(best.head(top * 3), regime=regime, liquidity=liq)
+    removed = screened[screened["filtered"] != ""].head(top)
+    best = screened[screened["filtered"] == ""]
+    cash = RF.cash_share(screened, slots=top)
+    out.append(f"<div class='note'><b>Risk filters first ({_e(regime or 'regime unknown')}).</b> Of the top {top} by modelled "
+               f"alpha, {int((screened.head(top)['filtered'] != '').sum())} were removed by the avoid rules; an equal-slot "
+               f"book would hold <b>{cash:.0%} cash</b>. Cash is an answer, not an accident."
+               + ("".join(f"<br>· {_e(t)}: {_e(RF.RULES[w])}" for t, w in zip(removed["ticker"], removed["filtered"])) if len(removed) else "")
+               + "</div>")
     shown = best.head(top)
     rows, cards, sizing, full = [], [], [], []
     from ..decisions import opportunity_card as OC
@@ -420,9 +460,9 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
             fund = None
         sid = f"r{k}"
         sizing.append({"id": sid, "price": float(r.price), "stop": float(plan["stop_price"]), "adv": float(row["adv20"])})
-        rows.append(f"<tr><td class='r'>{k}</td><td><a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a> · {_chart(r.ticker)}</td><td>LONG</td><td class='r'>{_pct(r.expected_net)}</td>"
+        rows.append(f"<tr class='{'' if claim == ET.CONFIRMED else 'unconfirmed'}'><td class='r'>{k}</td><td><a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a> · {_chart(r.ticker)}</td><td>LONG</td><td class='r'>{_pct(r.expected_net)}</td>"
                     f"<td>{r.horizon} sessions</td><td class='r'>{o.get('p_up', float('nan')):.0%}</td><td class='r'>{o.get('reward_risk', float('nan')):.2f}</td>"
-                    f"<td class='r'>{plan['stop_distance']:.1%}</td><td>{_e(r.evidence)}</td></tr>")
+                    f"<td class='r'>{plan['stop_distance']:.1%}</td><td>{_tier(claim)}<br><span class='sub'>signal: {_e(r.evidence)}</span></td></tr>")
         sigma_h = float(row["vol_60"]) * np.sqrt(int(r.horizon) / 252)
         full.append(OC.FullOpportunity(
             instrument=str(r.instrument), ticker=r.ticker, timestamp=str(asof), opportunity_type=r.type, direction="long",
@@ -440,7 +480,7 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
         cards.append(TV.card(r, row, comp.loc[i], rank=k, universe=len(cs), decile_mean=float(dec.loc[i]), analogue=ana,
                              breadth_state=breadth_state, fno=fno.get(r.ticker), returns=rets, plan=plan, sid=sid, fund=fund))
     out.append("<div class='wrap'><table><tr><th class='r'>#</th><th>Stock</th><th>Direction</th><th class='r'>Net alpha</th><th>Horizon</th>"
-               "<th class='r'>P(up)</th><th class='r'>Reward/risk</th><th class='r'>Stop</th><th>Evidence</th></tr>" + "".join(rows) + "</table></div>")
+               "<th class='r'>P(up)</th><th class='r'>Reward/risk</th><th class='r'>Stop</th><th>Claim (evidence tier)</th></tr>" + "".join(rows) + "</table></div>")
     out.append(TV.calculator(sizing))
     try:                                                # the day's list, kept so your trades can be compared with it later
         ledger.execute("CREATE TABLE IF NOT EXISTS terminal_lists (day VARCHAR, rank INTEGER, ticker VARCHAR, lineage VARCHAR, net DOUBLE, PRIMARY KEY (day, rank))")
@@ -449,7 +489,6 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
     except Exception:                                   # noqa: BLE001 - a read-only ledger skips it
         pass
     try:
-        import json as _json
         OUT.parent.mkdir(parents=True, exist_ok=True)
         (OUT.parent / "opportunities.json").write_text("[" + ",".join(x.to_json() for x in full) + "]", encoding="utf-8")
     except Exception:                                   # noqa: BLE001
@@ -484,7 +523,8 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
     try:
         from ..opportunity import ranking_v2 as R2
         v2 = R2.rank(cs, horizon=60, capital=capital).head(top)
-        out.append("<h3 style='margin-top:14px'>Challenger view: ranking v2 (momentum + 52-week high, no tie-breaking by cost)</h3>"
+        out.append("<h3 style='margin-top:14px'>Challenger view: ranking v2 (momentum + 52-week high, no tie-breaking by cost) "
+                   + _tier(ET.list_claim(ET.LIST_STRATEGY["ranking v2"])) + "</h3>"
                    "<div class='sub'>Not qualified: in its 2022-26 test it beat this list by 0.35-0.40% a month and plain momentum by 0.3%, "
                    "but not significantly (t 0.5-0.8), and its own net was +0.01% / +0.19% a month. It competes live from 2026-10-07. "
                    "<b>Its expected returns are a straight-line slope frozen on 2016-21: in 2022-26 its top 20 earned about a third of what "
@@ -499,7 +539,8 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
     try:
         from ..evaluation import learned_model as LM
         lm = LM.score_day(rcon, asof).head(top)
-        out.append("<h3 style='margin-top:14px'>Challenger view: the learned model (161 library features combined, walk-forward)</h3>"
+        out.append("<h3 style='margin-top:14px'>Challenger view: the learned model (161 library features combined, walk-forward) "
+                   + _tier(ET.list_claim(ET.LIST_STRATEGY["learned model"])) + "</h3>"
                    "<div class='sub'>Qualified as a live challenger: in 2022-26 its top 20 earned +0.77% a month over the 500 most liquid names after "
                    "costs (t 2.3), ahead of plain momentum by 0.29% a month - not significantly (t 0.5) - and it lost to momentum in 2019-21. "
                    "It ranks; it does not give a return figure. Competes live from 2026-10-07.</div><div class='wrap'><table>"
@@ -519,16 +560,39 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
     return "\n".join(out)
 
 
+def freshness(rcon, now: datetime | None = None) -> list[str]:
+    """Why today's page may be stale: each input's last date against the last session that should be loaded by now
+    (a weekday; today's only after the 18:45 refresh). A holiday reads as one session behind - said, not hidden."""
+    now = now or datetime.now()
+    expect = now.date() if now.hour * 60 + now.minute >= 19 * 60 + 30 else now.date() - timedelta(days=1)
+    while expect.weekday() >= 5:
+        expect -= timedelta(days=1)
+    issues = []
+    for table, col in (("eod_prices", "business_date"), ("adjusted_prices", "business_date"), ("features", "business_date"),
+                       ("market_regime", "business_date")):
+        try:
+            last = rcon.execute(f"SELECT MAX({col}) FROM {table}").fetchone()[0]
+        except Exception:                               # noqa: BLE001 - a missing table is itself a finding
+            issues.append(f"{table}: unreadable")
+            continue
+        last = last.date() if isinstance(last, datetime) else last
+        if last is None or last < expect:
+            issues.append(f"{table} ends {last}, expected {expect} (a failed step, or a market holiday)")
+    return issues
+
+
+def _freshness_banner(issues: list[str]) -> str:
+    if not issues:
+        return ""
+    return ("<div class='note' style='border-left-color:var(--neg)'><b>STALE INPUTS - do not act on this page.</b> "
+            + " · ".join(_e(x) for x in issues) + "</div>")
+
+
 def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None) -> str:
-    from ..decisions import forecast_ev as FE
-    from ..decisions import plan as P
     from ..evaluation import champion as C
-    from ..evaluation import setup_analogues as SA
-    from ..forecasting.null import Climatology
     from ..opportunity import scanners as S
     from ..regime import breadth as BR
     from ..risk import killswitch as KS
-    from . import board as BD
     from . import intraday_runner as IR
 
     asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
@@ -536,7 +600,8 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     parts = [f"<title>Financial-Brain terminal</title><style>{CSS}</style><main>",
              f"<h1>Financial-Brain</h1><div class='sub'>Terminal for {day} · data through {asof} · written "
              f"{datetime.now().strftime('%Y-%m-%d %H:%M')} · paper only, no orders exist in this system · "
-             f"<a href='signals.html'>signal screener: every algorithm and indicator, the stocks it fires on, their charts</a></div>"]
+             f"<a href='signals.html'>signal screener: every algorithm and indicator, the stocks it fires on, their charts</a></div>",
+             _freshness_banner(freshness(rcon))]
     # ---------------------------------------------------------------- market
     b = BR.breadth(rcon, asof)
     parts += ["<h2>Market</h2>", market_panel(rcon),

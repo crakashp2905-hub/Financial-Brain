@@ -72,3 +72,34 @@ def confidence(tiers: dict) -> str:
     if tiers[PAPER].get("n", 0) < VERDICT_TRADES:
         return "LIMITED"
     return "MODERATE"                                   # the ceiling while live-forward is empty
+
+
+# ------------------------------------------------------------------ the claim a displayed opportunity may make
+
+OBSERVATION, REPLICATED, FORWARD_PAPER, CONFIRMED = ("Historical observation", "Replicated candidate",
+                                                     "Forward-paper evidence", "Confirmed strategy")
+CLAIMS = {
+    OBSERVATION: "an interesting pattern only - it has not passed the historical gates",
+    REPLICATED: "passed the internal historical gates (ADR-0004 G1-G4); paper only",
+    FORWARD_PAPER: "predicted before the outcome and tracked on paper since; still zero real capital",
+    CONFIRMED: "passed the full out-of-sample and paper criteria (ADR-0004 G5)",
+}
+#: The strategy behind each list the terminal shows.
+LIST_STRATEGY = {"terminal list": "ranking v1 (terminal list)", "ranking v2": "ranking v2 (challenger)",
+                 "learned model": "learned model (challenger)"}
+
+
+def claim_tier(*, replicated: bool, paper_forward: bool, confirmed: bool) -> str:
+    """The one claim allowed. Monotone: each tier needs every tier below it, so a paper record on a strategy that
+    failed its historical gates is still an observation, and nothing is 'confirmed' without G5."""
+    if not replicated:
+        return OBSERVATION
+    if confirmed and paper_forward:
+        return CONFIRMED
+    return FORWARD_PAPER if paper_forward else REPLICATED
+
+
+def list_claim(strategy: str, *, paper_forward: bool = False, confirmed: bool = False) -> str:
+    """The claim for a list produced by one of the ``STATIC`` strategies: replicated means its walk-forward passed."""
+    walk = STATIC.get(strategy)
+    return claim_tier(replicated=bool(walk and walk[1][1]), paper_forward=paper_forward, confirmed=confirmed)

@@ -86,7 +86,7 @@ def drivers(booster, ranked: np.ndarray, features: list[str], *, up: int = 5, do
     out = []
     for row, ranks in zip(contrib, ranked):
         order = np.argsort(row)
-        name = lambda i: f"{LABELS.get(features[i], features[i].replace('_', ' '))} {level(ranks[i])}"   # noqa: E731
+        name = lambda i: f"{LABELS.get(features[i], features[i].replace('_', ' '))} {level(ranks[i])}"  # noqa: B023, E731
         pos = [f"+ {name(i)}" for i in order[::-1][:up] if row[i] > 0]
         neg = [f"- {name(i)}" for i in order[:down] if row[i] < 0]
         out.append("; ".join(pos + neg))

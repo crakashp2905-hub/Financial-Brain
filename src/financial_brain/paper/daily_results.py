@@ -8,18 +8,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pandas as pd
 
 REPORTS = Path("data") / "paper_reports"
 
 
 def build(ledger, day: str, *, book=None) -> str:
     from . import execution as XA
-    from . import loss_review as LR
     lines = [f"# Financial-Brain paper results - {day}", "", "Paper only: no order exists in this system. Information, not advice.", ""]
     run = ledger.execute("SELECT mode, status, polls, started, finished, note FROM runs WHERE day = ? ORDER BY mode", [day]).fetchall()
     if run:
-        for mode, status, polls, st, fin, note in run:
+        for mode, status, polls, st, fin, note in run:  # noqa: B007
             lines.append(f"- **{mode} run:** {status}, {polls or 0} polls, {str(st)[11:16]}-{str(fin)[11:16] if fin else '?'}")
     else:
         lines.append("- **No run recorded today** (a holiday, or the run did not start - check the Kite login).")

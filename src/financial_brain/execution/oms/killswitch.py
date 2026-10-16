@@ -42,21 +42,23 @@ def _write(state: dict, path: Path | None) -> None:
 
 
 def trip(reason: str, broker=None, *, path: Path | None = None, journal=None) -> dict:
-    state = {"tripped": True, "reason": reason, "at": datetime.now(timezone.utc).isoformat(), "cancelled": [],
-             "cancel_errors": []}
+    cancelled: list[str] = []
+    errors: list[str] = []
+    state = {"tripped": True, "reason": reason, "at": datetime.now(timezone.utc).isoformat(), "cancelled": cancelled,
+             "cancel_errors": errors}
     _write(state, path)
     if broker is not None:
         try:
             live = [b for b in broker.orders() if b.state in (M.OPEN, M.PARTIAL)]
         except Exception as e:                           # noqa: BLE001 - the switch stays tripped regardless
-            state["cancel_errors"].append(f"could not list orders: {e}")
+            errors.append(f"could not list orders: {e}")
             live = []
         for b in live:
             try:
                 broker.cancel(b.broker_id)
-                state["cancelled"].append(b.broker_id)
+                cancelled.append(b.broker_id)
             except Exception as e:                       # noqa: BLE001
-                state["cancel_errors"].append(f"{b.broker_id}: {e}")
+                errors.append(f"{b.broker_id}: {e}")
         _write(state, path)
     if journal is not None:
         journal.note("KILL_SWITCH_TRIPPED", state, key=f"ks|{state['at']}")

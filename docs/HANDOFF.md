@@ -59,6 +59,17 @@ Phase 1. If session limits hit, autostart after the limit period is over."*
 
 ---
 
+## Latest (2026-10-15, night) - read docs/READINESS.md
+
+* **2026Q4 trial budget is spent (13/13).** All 13 FAIL: X3 earnings surprise OOS, MF multi-factor book and the I/S
+  minute-bar family were the last three. No trial before 2027-01-01.
+* The owner's 13-area readiness list lives in `docs/READINESS.md` (DONE / PARTIAL / OPEN / TIME / OWNER per item).
+* Reproducibility: numpy, pandas, scipy and scikit-learn are core dependencies; `.[dev]` runs every test;
+  `requirements-lock.txt`; CI in `.github/workflows/ci.yml` (Windows and Linux).
+* Terminal: every list carries one of four evidence claims (the main list is a *Historical observation*, muted);
+  risk filters run first, and cash is stated; a red STALE banner appears when an input lags.
+* Insider PIT XBRL is collected nightly (refresh step 1c) into `insider_disclosures`, backfilled from 2026-07-01.
+
 ## Current state (2026-09-18, evening)
 
 - **Prices:** NSE + BSE bhavcopy, **2015-01-01 → 2026-09-18, 2,903 sessions each, zero
