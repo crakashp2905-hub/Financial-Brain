@@ -43,6 +43,14 @@ CONTRACTS = [
              "history starts 2026-07 only - a forward record", 5),
     Contract("index_levels", "business_date", "NSE index archives", "trade date", "kept as published",
              "historical constituents only partly known", 5),
+    Contract("index_total_return", "business_date", "niftyindices.com TRI / NTR (19 indices)", "trade date",
+             "replaced by the latest download", "membership history only from 2026-10-18 (not published)", 5),
+    Contract("bulk_block_deals", "trade_date", "NSE bulk/block deal archives (CSV)", "trade date; published that evening",
+             "a month's file replaces the month", "client names as reported", 5),
+    Contract("fii_dii_flows", "trade_date", "NSE fiidiiTradeReact", "trade date", "kept per day",
+             "forward record from 2026-10-16 only", 5),
+    Contract("macro_series", "obs_date", "FRED (USD-INR, Brent, India 10y, call money, CPI)",
+             "observation period, NOT release date", "latest revision served", "CPI ends 2025-03; monthly series lag", 45),
 ]
 
 

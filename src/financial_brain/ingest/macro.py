@@ -72,7 +72,12 @@ def load(con, cfg, day: date | None = None) -> dict:
         if lake.meta(key) is None:
             continue
         obs = parse(lake.read(key))
+        import pandas as pd
+        df = pd.DataFrame([(s, o, v, desc, lag, now) for o, v in obs],
+                          columns=["series", "obs_date", "value", "description", "release_lag_days", "observed_at"])
         con.execute("DELETE FROM macro_series WHERE series = ?", [s])
-        con.executemany("INSERT INTO macro_series VALUES (?,?,?,?,?,?)", [[s, o, v, desc, lag, now] for o, v in obs])
+        con.register("df", df)
+        con.execute("INSERT INTO macro_series SELECT * FROM df")
+        con.unregister("df")
         out[s] = len(obs)
     return out
