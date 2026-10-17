@@ -1964,6 +1964,150 @@ def cmd_delivery(args) -> int:
     return 0
 
 
+def cmd_nse_archives(args) -> int:
+    """NSE dated derivatives archives (F&O bhavcopy, ban list, participant OI/volume): --prefetch, then load."""
+    from .ingest import nse_archives as NA
+    cfg = load()
+    start, end = _d(args.start), _d(args.end or args.start)
+    kinds = [k for k in (args.kinds or ",".join(NA.KINDS)).split(",") if k]
+    if args.prefetch:
+        print(NA.prefetch(cfg, kinds, start, end, on_progress=lambda d, o: print(d, o, flush=True)))
+        return 0
+    if "fo_bhav" in kinds:
+        print("fo_bhav ->", NA.FO_DB, NA.load_fo(cfg, start, end))
+    if set(kinds) - {"fo_bhav"}:
+        with Database(cfg).connect() as con:
+            print(NA.load_small(con, cfg, start, end))
+    return 0
+
+
+def cmd_shareholding(args) -> int:
+    """NSE shareholding patterns: --prefetch (--all for every traded symbol's history; default the last 3 days), then load."""
+    from .ingest import shareholding as SH
+    cfg = load()
+    if args.prefetch:
+        if args.all:
+            with Database(cfg, read_only=True).connect() as con:
+                syms = [r[0] for r in con.execute("""SELECT DISTINCT ticker FROM adjusted_prices
+                        WHERE business_date >= (SELECT MAX(business_date) FROM adjusted_prices) - INTERVAL 30 DAY
+                        ORDER BY 1""").fetchall()]
+            print(f"{len(syms)} symbols")
+            print(SH.prefetch(cfg, symbols=syms, on_progress=lambda k, o: print(k, o, flush=True)))
+        else:
+            a, b = SH.window()
+            print(SH.prefetch(cfg, start=a, end=b))
+        return 0
+    with Database(cfg).connect() as con:
+        print(SH.load(con, cfg))
+    return 0
+
+
+def cmd_bulk_deals(args) -> int:
+    """NSE bulk deals, block deals and short-selling disclosures by month: --prefetch, then load."""
+    from .ingest import bulk_deals as BD
+    cfg = load()
+    start, end = _d(args.start), _d(args.end or args.start)
+    if args.prefetch:
+        print(BD.prefetch(cfg, start, end))
+        return 0
+    with Database(cfg).connect() as con:
+        print(BD.load(con, cfg, start, end))
+    return 0
+
+
+def cmd_index_tri(args) -> int:
+    """NSE index total-return series and today's constituent lists (niftyindices.com): download and load."""
+    from .ingest import index_tri as IT
+    cfg = load()
+    print(IT.prefetch(cfg, _d(args.start), _d(args.end) if args.end else __import__("datetime").date.today()))
+    with Database(cfg).connect() as con:
+        print(IT.load(con, cfg, since=_d(args.start)))
+    return 0
+
+
+def cmd_disclosures(args) -> int:
+    """NSE structured disclosures (corporate actions, SAST Reg. 29, pledges, encumbrance, event calendar)."""
+    from .ingest import nse_disclosures as ND
+    cfg = load()
+    ds = [k for k in (args.datasets or ",".join(ND.DATASETS)).split(",") if k]
+    if args.prefetch:
+        print(ND.prefetch(cfg, ds, _d(args.start), _d(args.end) if args.end else __import__("datetime").date.today()))
+        return 0
+    with Database(cfg).connect() as con:
+        print(ND.load(con, cfg, ds, since=_d(args.since) if args.since else None))
+    return 0
+
+
+def cmd_kite_history(args) -> int:
+    """Widen the Kite pulls (needs today's Kite login): minute bars for the top-N a year, continuous futures with OI."""
+    import duckdb
+    from .ingest import kite_history as KH
+    prog = lambda i, n, s, x: print(f"{i}/{n} {s} {x}", flush=True)     # noqa: E731
+    if args.what in ("minute", "all"):
+        r = duckdb.connect(str(load().db_path), read_only=True)
+        try:
+            names = KH.minute_universe(r, args.top)
+        finally:
+            r.close()
+        print(f"{len(names)} names (top {args.top} a year)")
+        print(KH.run_minute(names, on_progress=prog))
+    if args.what in ("futures", "all"):
+        print(KH.run_futures(on_progress=prog))
+    return 0
+
+
+def cmd_depth_archive(args) -> int:
+    """Market hours: full quotes (5-level book, OI) for every F&O stock, near future and index options near the money,
+    once a minute, into data/depth_archive.duckdb. Needs the day's Kite login; never places orders."""
+    from .ingest import depth_archive as DA
+    print(DA.run(until=args.until))
+    return 0
+
+
+def cmd_rating_actions(args) -> int:
+    """Rebuild rating_actions: every CREDIT_RATING announcement with its direction (upgrade, downgrade, outlook...)."""
+    import collections
+    import pandas as pd
+    from .events import rating_direction as RD
+    with Database(load()).connect() as con:
+        rows = con.execute("""SELECT news_id, isin, business_date, published_at,
+                                     coalesce(headline, '') || ' ' || coalesce(subject, '') FROM announcements
+                              WHERE event_type = 'CREDIT_RATING'""").fetchall()
+        df = pd.DataFrame([(n, i, d, p, RD.direction(t), RD.SIGN[RD.direction(t)], t[:500]) for n, i, d, p, t in rows],
+                          columns=["news_id", "isin", "business_date", "published_at", "direction", "sign", "text"])
+        df = df.drop_duplicates("news_id")
+        con.register("df", df)
+        con.execute("DELETE FROM rating_actions")
+        con.execute("INSERT INTO rating_actions SELECT * FROM df")
+        con.unregister("df")
+    print(len(df), dict(collections.Counter(df["direction"])))
+    return 0
+
+
+def cmd_flows(args) -> int:
+    """Today's FII/FPI and DII cash-market flows (NSE) and SEBI's RSS items: forward records, collected nightly."""
+    from .ingest import flows as FL
+    from .ingest import sebi as SB
+    cfg = load()
+    with Database(cfg).connect() as con:
+        for name, fn in (("flows", FL.collect), ("sebi", SB.collect)):
+            try:
+                print(name, fn(con, cfg))
+            except Exception as e:                      # noqa: BLE001 - one source failing does not stop the other
+                print(name, "failed:", str(e)[:120])
+    return 0
+
+
+def cmd_macro(args) -> int:
+    """FRED macro series (USD-INR, Brent, India 10y, call money, CPI): download to the lake and load."""
+    from .ingest import macro as MC
+    cfg = load()
+    print(MC.prefetch(cfg))
+    with Database(cfg).connect() as con:
+        print(MC.load(con, cfg))
+    return 0
+
+
 def cmd_insider(args) -> int:
     """NSE structured insider disclosures (PIT XBRL, July 2026 on): --prefetch to the lake, then load."""
     from .ingest import insider_xbrl as IX
@@ -2581,6 +2725,55 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--prefetch", action="store_true")
     g.add_argument("--universe", type=int, default=0, help="limit XBRL downloads to the N most liquid names")
     g.set_defaults(fn=cmd_integrated_filing)
+
+    g = sub.add_parser("nse-archives", help="NSE F&O bhavcopy, ban list, participant OI/volume: --prefetch, then load")
+    g.add_argument("--start", required=True)
+    g.add_argument("--end")
+    g.add_argument("--kinds", help="comma list of fo_bhav,fo_ban,participant_oi,participant_vol (default all)")
+    g.add_argument("--prefetch", action="store_true")
+    g.set_defaults(fn=cmd_nse_archives)
+
+    g = sub.add_parser("shareholding", help="NSE shareholding patterns (2021Q3 on): --prefetch [--all], then load")
+    g.add_argument("--prefetch", action="store_true")
+    g.add_argument("--all", action="store_true", help="every traded symbol's full history (backfill)")
+    g.set_defaults(fn=cmd_shareholding)
+
+    g = sub.add_parser("bulk-deals", help="NSE bulk/block deals and short selling by month: --prefetch, then load")
+    g.add_argument("--start", required=True)
+    g.add_argument("--end")
+    g.add_argument("--prefetch", action="store_true")
+    g.set_defaults(fn=cmd_bulk_deals)
+
+    g = sub.add_parser("index-tri", help="NSE index total-return series and constituent snapshots")
+    g.add_argument("--start", default="2015-01-01")
+    g.add_argument("--end")
+    g.set_defaults(fn=cmd_index_tri)
+
+    g = sub.add_parser("disclosures", help="NSE corporate actions, SAST Reg 29, pledges, encumbrance, event calendar")
+    g.add_argument("--start", default="2015-01-01")
+    g.add_argument("--end")
+    g.add_argument("--datasets", help="comma list (default all)")
+    g.add_argument("--since", help="load only files from this month on (nightly)")
+    g.add_argument("--prefetch", action="store_true")
+    g.set_defaults(fn=cmd_disclosures)
+
+    g = sub.add_parser("kite-history", help="widen Kite pulls: minute bars (top N a year), continuous futures + OI")
+    g.add_argument("what", choices=["minute", "futures", "all"])
+    g.add_argument("--top", type=int, default=1000)
+    g.set_defaults(fn=cmd_kite_history)
+
+    g = sub.add_parser("depth-archive", help="market hours: 5-level book + OI for all F&O names each minute")
+    g.add_argument("--until", default="15:31")
+    g.set_defaults(fn=cmd_depth_archive)
+
+    g = sub.add_parser("rating-actions", help="rebuild credit-rating actions with their direction")
+    g.set_defaults(fn=cmd_rating_actions)
+
+    g = sub.add_parser("flows", help="today's FII/DII cash-market flows (a forward record)")
+    g.set_defaults(fn=cmd_flows)
+
+    g = sub.add_parser("macro", help="FRED macro series: USD-INR, Brent, India 10y, call money, CPI")
+    g.set_defaults(fn=cmd_macro)
 
     g = sub.add_parser("insider", help="NSE structured insider disclosures (2026-07 on): --prefetch, then load")
     g.add_argument("--start", required=True)

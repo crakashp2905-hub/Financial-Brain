@@ -865,3 +865,156 @@ CREATE TABLE IF NOT EXISTS insider_disclosures (
     observed_at     TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (app_id, disclosure)
 );
+
+-- NSE F&O ban list per trade date (ingest/nse_archives.py). fo_ban_days records every day read, so a day with an
+-- empty ban list is distinguishable from a day never collected.
+CREATE TABLE IF NOT EXISTS fo_ban (
+    trade_date      DATE NOT NULL,
+    symbol          VARCHAR NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (trade_date, symbol)
+);
+CREATE TABLE IF NOT EXISTS fo_ban_days (
+    trade_date      DATE PRIMARY KEY,
+    n               INTEGER,
+    observed_at     TIMESTAMPTZ NOT NULL
+);
+
+-- NSE participant-wise open interest and volume in equity derivatives (Client / DII / FII / Pro / TOTAL), contracts.
+CREATE TABLE IF NOT EXISTS participant_positions (
+    trade_date      DATE NOT NULL,
+    kind            VARCHAR NOT NULL,      -- oi | volume
+    client_type     VARCHAR NOT NULL,
+    measure         VARCHAR NOT NULL,      -- e.g. 'Future Index Long'
+    contracts       DOUBLE,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (trade_date, kind, client_type, measure)
+);
+
+-- NSE shareholding patterns (ingest/shareholding.py), from the September-2021 quarter. known_at = the later of the
+-- broadcast and submission times: the filing is usable from then. Facts are category totals only (no holder names).
+CREATE TABLE IF NOT EXISTS shareholding_filings (
+    record_id       VARCHAR PRIMARY KEY,
+    symbol          VARCHAR,
+    isin            VARCHAR,
+    period_end      DATE,
+    known_at        TIMESTAMP,
+    broadcast_at    TIMESTAMP,
+    submitted_at    TIMESTAMP,
+    revised         VARCHAR,
+    promoter_pct    DOUBLE,
+    public_pct      DOUBLE,
+    lake_key        VARCHAR,
+    facts           INTEGER,
+    observed_at     TIMESTAMPTZ NOT NULL
+);
+CREATE TABLE IF NOT EXISTS shareholding_facts (
+    record_id       VARCHAR NOT NULL,
+    category        VARCHAR NOT NULL,      -- e.g. MutualFundsOrUTI, InstitutionsForeignPortfolioInvestorCategoryOne
+    concept         VARCHAR NOT NULL,      -- e.g. ShareholdingAsAPercentageOfTotalNumberOfShares
+    value           DOUBLE,
+    PRIMARY KEY (record_id, category, concept)
+);
+
+-- NSE bulk and block deals and short-selling disclosures (ingest/bulk_deals.py). seq keeps two identical lines of
+-- one day's file apart; a month's file replaces that month.
+CREATE TABLE IF NOT EXISTS bulk_block_deals (
+    kind            VARCHAR NOT NULL,      -- bulk | block
+    trade_date      DATE NOT NULL,
+    seq             INTEGER NOT NULL,
+    symbol          VARCHAR,
+    security        VARCHAR,
+    client          VARCHAR,
+    side            VARCHAR,
+    qty             DOUBLE,
+    price           DOUBLE,
+    remarks         VARCHAR,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (kind, trade_date, seq)
+);
+CREATE TABLE IF NOT EXISTS short_selling (
+    trade_date      DATE NOT NULL,
+    symbol          VARCHAR,
+    security        VARCHAR,
+    qty             DOUBLE,
+    observed_at     TIMESTAMPTZ NOT NULL
+);
+
+-- Macro series from FRED (ingest/macro.py). obs_date is the observation period, NOT the release date: lag each series
+-- by release_lag_days before using it, and treat monthly values as revised.
+CREATE TABLE IF NOT EXISTS macro_series (
+    series          VARCHAR NOT NULL,
+    obs_date        DATE NOT NULL,
+    value           DOUBLE,
+    description     VARCHAR,
+    release_lag_days INTEGER,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (series, obs_date)
+);
+
+-- NSE index total-return series (gross TRI and net TRI) and constituent snapshots (ingest/index_tri.py). Membership
+-- history is only what has been snapshotted since 2026-10-18: niftyindices publishes the current list only.
+CREATE TABLE IF NOT EXISTS index_total_return (
+    index_name      VARCHAR NOT NULL,
+    business_date   DATE NOT NULL,
+    tri             DOUBLE,
+    ntr             DOUBLE,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (index_name, business_date)
+);
+CREATE TABLE IF NOT EXISTS index_membership (
+    index_name      VARCHAR NOT NULL,
+    as_of           DATE NOT NULL,
+    symbol          VARCHAR,
+    isin            VARCHAR,
+    industry        VARCHAR,
+    observed_at     TIMESTAMPTZ NOT NULL
+);
+
+-- Daily FII/FPI and DII cash-market flows, Rs crore (ingest/flows.py). A forward record from 2026-10-18.
+CREATE TABLE IF NOT EXISTS fii_dii_flows (
+    trade_date      DATE NOT NULL,
+    category        VARCHAR NOT NULL,
+    buy_cr          DOUBLE,
+    sell_cr         DOUBLE,
+    net_cr          DOUBLE,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (trade_date, category)
+);
+
+-- Structured NSE disclosure listings (ingest/nse_disclosures.py): corporate actions, SAST Reg. 29 acquisitions and
+-- disposals, Reg. 31/32 pledges, encumbrance declarations, the event calendar. The row as published (payload JSON),
+-- keyed by its content hash; usable from broadcast_at where the listing gives one.
+CREATE TABLE IF NOT EXISTS nse_disclosures (
+    dataset         VARCHAR NOT NULL,
+    record_key      VARCHAR NOT NULL,
+    event_date      DATE,
+    broadcast_at    TIMESTAMP,
+    symbol          VARCHAR,
+    isin            VARCHAR,
+    company         VARCHAR,
+    payload         VARCHAR,
+    lake_key        VARCHAR,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (dataset, record_key)
+);
+
+-- SEBI RSS items (ingest/sebi.py): orders, enforcement, circulars. A forward record from 2026-10-18.
+CREATE TABLE IF NOT EXISTS sebi_items (
+    link            VARCHAR PRIMARY KEY,
+    title           VARCHAR,
+    published       DATE,
+    section         VARCHAR,
+    observed_at     TIMESTAMPTZ NOT NULL
+);
+
+-- Credit-rating announcements with their direction (events/rating_direction.py), rebuilt from announcements.
+CREATE TABLE IF NOT EXISTS rating_actions (
+    news_id         VARCHAR PRIMARY KEY,
+    isin            VARCHAR,
+    business_date   DATE,
+    published_at    TIMESTAMP,
+    direction       VARCHAR,
+    sign            INTEGER,
+    text            VARCHAR
+);
