@@ -588,6 +588,48 @@ def _freshness_banner(issues: list[str]) -> str:
             + " · ".join(_e(x) for x in issues) + "</div>")
 
 
+def workstation_panel(rcon, asof, shown: pd.DataFrame, *, capital: float, holdings: list[str] | None = None) -> str:
+    """What is coming for the names in view, and what each top name's order would look like (a preview only)."""
+    from ..decisions import plan as P
+    from . import workstation as W
+    today = asof if isinstance(asof, date) else asof.date()
+    focus = set(shown["ticker"]) | set(holdings or [])
+    isins = dict(rcon.execute("SELECT isin, ANY_VALUE(ticker) FROM adjusted_prices WHERE business_date = ? AND isin IS NOT NULL "
+                              "GROUP BY isin", [asof]).fetchall())
+    bm = W.board_meetings(rcon, today)
+    ex = W.ex_dates(rcon, today)
+    mine = bm[bm["isin"].map(isins).isin(focus)] if len(bm) else bm
+    out = ["<h2>Calendar: the next three weeks</h2><div class='sub'>F&amp;O monthly expiry: "
+           + ", ".join(str(d) for d in W.expiries(today)) + f" · board meetings ahead: {len(bm)} ({int(bm['results'].sum()) if len(bm) else 0} for results) · "
+           f"ex-dates ahead: {len(ex)} · macro events (RBI, budget, data releases): <b>not collected</b></div>"]
+    rows = [f"<tr><td>{r.date}</td><td>{_e(isins.get(r.isin, ''))}</td><td>{_e(r.company)}</td><td>{'results' if r.results else 'board meeting'}</td></tr>"
+            for r in mine.sort_values("date").itertuples()] if len(mine) else []
+    exm = ex[ex["isin"].map(isins).isin(focus)] if len(ex) else ex
+    rows += [f"<tr><td>{r.date}</td><td>{_e(isins.get(r.isin, ''))}</td><td></td><td>{_e(r.action_type)} ex-date</td></tr>" for r in exm.itertuples()]
+    out.append("<div class='wrap'><table><tr><th>Date</th><th>Stock</th><th>Company</th><th>Event</th></tr>"
+               + ("".join(rows) or "<tr><td colspan='4'>nothing scheduled for the names on the list or in your book</td></tr>") + "</table></div>")
+    when = W.next_session_10am(today)
+    tix = []
+    for r in shown.itertuples():
+        try:
+            row = rcon.execute("SELECT vol_60, adv20 FROM features f JOIN adjusted_prices p USING (lineage, business_date) "
+                               "WHERE p.ticker = ? AND f.business_date = ?", [r.ticker, asof]).fetchone()
+            pl = P.plan(ticker=r.ticker, price=float(r.price), vol_annual=float(row[0]), adv_inr=float(row[1]), capital_inr=capital,
+                        style="position" if r.horizon >= 20 else "swing", as_of=today)
+            tix.append(W.ticket(symbol=r.ticker, price=float(r.price), shares=int(pl["shares"]), cost_one_side=float(r.cost) / 2, when=when))
+        except Exception as e:                          # noqa: BLE001 - one name failing does not hide the rest
+            tix.append({"symbol": r.ticker, "shares": 0, "verdict": f"no preview: {str(e)[:50]}"})
+    out.append(f"<h3 style='margin-top:14px'>Order ticket preview (nothing is created or sent) - the risk gate at stage SMALL, {when:%a %d %b %H:%M} IST</h3>"
+               "<div class='wrap'><table><tr><th>Stock</th><th class='r'>Shares (plan)</th><th class='r'>Limit</th><th class='r'>Notional</th>"
+               "<th class='r'>Modelled cost</th><th>Risk gate</th></tr>"
+               + "".join(f"<tr><td>{_e(t['symbol'])}</td><td class='r'>{t['shares']}</td><td class='r'>{t.get('limit', float('nan')):,.2f}</td>"
+                         f"<td class='r'>{t.get('notional', 0):,.0f}</td><td class='r'>{t.get('cost_inr', 0):,.0f}</td>"
+                         f"<td style='white-space:normal'>{_e(t['verdict'])}</td></tr>" for t in tix) + "</table></div>"
+               "<div class='sub'>The F&amp;O ban list, the kill switch and the stage are checked again at send time. A refusal here at the plan's size "
+               "is the point: stage SMALL caps an order at Rs 10,000.</div>")
+    return "".join(out)
+
+
 def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None) -> str:
     from ..evaluation import champion as C
     from ..opportunity import scanners as S
@@ -621,6 +663,11 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     parts.append(decision_summary(rcon, asof, cs, best, b.get("state"), ks.get("level", "OK"), my))
     parts.append(trader_section(rcon, ledger, cs, best, asof, capital=capital, analogue_pool=analogue_pool,
                                 breadth_state=b.get("state"), clears=clears, my=my))
+    try:
+        parts.append(workstation_panel(rcon, asof, best.head(10), capital=capital,
+                                       holdings=[h["symbol"] for h in (my or {}).get("holdings", [])] if my else None))
+    except Exception as e:                              # noqa: BLE001 - the page renders without it
+        parts.append(f"<div class='sub'>calendar / ticket preview unavailable: {_e(str(e)[:80])}</div>")
     parts.append(my_portfolio_panel(rcon, asof, best.head(10)))
     parts.append(evidence_panel(ledger, book))
     parts.append(zoo_panel())

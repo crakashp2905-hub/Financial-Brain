@@ -1516,6 +1516,81 @@ def cmd_preregs(args) -> int:
     return 1 if any(r["status"] in PR.VIOLATIONS for r in rows) else 0
 
 
+def cmd_data_contracts(args) -> int:
+    """Each source's contract (source, time carried, revision policy, limits) and whether it is met today."""
+    import duckdb
+    from . import data_contracts as DC
+    rcon = duckdb.connect(str(load().db_path), read_only=True)
+    try:
+        rows = DC.check(rcon)
+    finally:
+        rcon.close()
+    for r in rows:
+        print(f"{'OK  ' if r['ok'] else 'FAIL'} {r['table']:20s} {r.get('rows', 0):>11,} rows  {str(r.get('first', ''))[:10]} .. "
+              f"{str(r.get('last', ''))[:19]}  {r['why']}")
+        if r.get("limits"):
+            print(f"      {r['source']}; time: {r['times']}; revisions: {r['revisions']}; limits: {r['limits']}")
+    return 0 if all(r["ok"] for r in rows) else 1
+
+
+def cmd_reproduce(args) -> int:
+    """Recreate a recorded trial: fingerprint its inputs, then run its script (the ledger is never written)."""
+    import json
+    import duckdb
+    from .evaluation import standard as S
+    from .research import reproduce as RP
+    if args.list or not args.name:
+        rec = {r["name"]: r for r in S.ledger() if r.get("kind") == "trial"}
+        for n, (script, _) in RP.TRIALS.items():
+            print(f"  {n:58s} {script:30s} {rec.get(n, {}).get('verdict', '-')}")
+        return 0
+    if args.name not in RP.TRIALS:
+        print(f"no script for {args.name!r}; fb reproduce --list")
+        return 2
+    rcon = duckdb.connect(str(load().db_path), read_only=True)
+    try:
+        m = RP.manifest(rcon, args.name)
+    finally:
+        rcon.close()
+    print(json.dumps(m, indent=1))
+    if args.fingerprint_only:
+        return 0
+    return RP.run_script(args.name)
+
+
+def cmd_stress(args) -> int:
+    """Stress your Kite holdings: India's own bad episodes replayed on the names, plus market, sector and liquidity shocks."""
+    import duckdb
+    from .portfolio import my_book as MB
+    from .portfolio import stress as ST
+    con = MB.connect(read_only=True)
+    try:
+        h = con.execute("""SELECT tradingsymbol, quantity, last_price FROM holdings_snap
+                           WHERE day = (SELECT MAX(day) FROM holdings_snap) AND quantity > 0""").df()
+    finally:
+        con.close()
+    if h.empty:
+        print("no holdings stored yet (fb my-portfolio --sync after the Kite login)")
+        return 0
+    rcon = duckdb.connect(str(load().db_path), read_only=True)
+    try:
+        asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
+        book = ST.book_from_holdings(rcon, h, asof)
+        prices, index = ST.load_inputs(rcon, list(book["ticker"]))
+    finally:
+        rcon.close()
+    r = ST.run(book, prices, index)
+    print(f"book Rs {r['book_inr']:,.0f}")
+    for k, v in r["scenarios"].items():
+        extra = f" (proxied by beta: {', '.join(v['proxied'])})" if v.get("proxied") else ""
+        print(f"  {k:18s} {v['share'] * 100:+6.1f}%  Rs {v['pnl_inr']:+,.0f}{extra}")
+    lq = r["liquidation_sessions"]
+    print(f"  liquidity: worst {lq['worst']:.1f} sessions to exit ({lq['worst_name']}) at 10% of a halved ADV; "
+          f"{lq['share_out_in_1_session']:.0%} of the book out in one session")
+    print(f"  not modelled: {'; '.join(r['not_modelled'])}")
+    return 0
+
+
 def cmd_my_portfolio(args) -> int:
     """Your Kite holdings (read only): thesis health, book risk, better alternatives. Information, not advice."""
     import datetime as _dt
@@ -1562,10 +1637,15 @@ def cmd_my_portfolio(args) -> int:
 def cmd_journal(args) -> int:
     """Your round trips from the Kite trade book, each with an autopsy; a report once there are enough."""
     import duckdb
+    import pandas as pd
     from .portfolio import journal as J
     from .portfolio import my_book as MB
     con = MB.connect()
     try:
+        if getattr(args, "import_path", None):
+            from pathlib import Path as _P
+            from .portfolio import tradebook_import as TI
+            print(TI.load(con, TI.parse(_P(args.import_path).read_text(encoding="utf-8"))))
         t = con.execute("SELECT trade_id, ts, day, tradingsymbol, product, side, quantity, price FROM my_trades").df()
     finally:
         con.close()
@@ -1584,6 +1664,29 @@ def cmd_journal(args) -> int:
                       f"sector {r.sector * 100:+.2f}  selection {r.selection * 100:+.2f}  entry {r.entry * 100:+.2f}  exit {r.exit * 100:+.2f}  costs {r.costs * 100:+.2f}")
         rep = J.report(at[at["attributed"]] if "attributed" in at else at)
         print(f"report: {rep}")
+        from .portfolio import behaviour_review as BRV
+        rcon = duckdb.connect(str(load().db_path), read_only=True)
+        try:
+            def closes(sym):
+                d = rcon.execute("SELECT business_date, close_adj FROM adjusted_prices WHERE ticker = ? ORDER BY business_date",
+                                 [sym]).df()
+                return d.set_index(pd.to_datetime(d["business_date"]))["close_adj"] if len(d) else None
+            ev = {}
+            for sym, day in rcon.execute("""SELECT DISTINCT p.ticker, a.business_date FROM announcements a
+                    JOIN (SELECT DISTINCT isin, ticker FROM adjusted_prices) p USING (isin)
+                    WHERE a.materiality = 'high' AND p.ticker IN (SELECT UNNEST(?))""", [list(set(trips["symbol"]))]).fetchall():
+                ev.setdefault(sym, set()).add(day)
+            rv = BRV.review(t, at.assign(net=at["net"]) if "net" in at else trips, closes, events=ev)
+        finally:
+            rcon.close()
+        print(f"habits: {rv['tag_counts']}; days over {BRV.MAX_TRADES_DAY} fills: {rv['overtrading_days']}; "
+              f"averaging down: {len(rv['averaging_down'])}")
+        ap = rv["anti_playbook"]
+        print(f"anti-playbook ({ap.get('note', '')}):")
+        for e in ap["entries"]:
+            print(f"  AVOID {e['tag']}: {e['trips']} trips, mean net {e['mean_net'] * 100:+.2f}%, t {e['t']:.1f}")
+        if not ap["entries"]:
+            print("  nothing yet - it needs at least 8 trips of a habit losing at t <= -2")
         try:
             from .evaluation import regret as RG
             from .paper import intraday_runner as IR
@@ -2408,11 +2511,24 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("preregs", help="audit pre-registrations against git (before the result, unchanged after)")
     g.set_defaults(fn=cmd_preregs)
 
+    g = sub.add_parser("data-contracts", help="every source's contract and whether it is met today")
+    g.set_defaults(fn=cmd_data_contracts)
+
+    g = sub.add_parser("reproduce", help="recreate a recorded trial: input fingerprint + its script")
+    g.add_argument("name", nargs="?")
+    g.add_argument("--list", action="store_true")
+    g.add_argument("--fingerprint-only", action="store_true")
+    g.set_defaults(fn=cmd_reproduce)
+
+    g = sub.add_parser("stress", help="stress your holdings: 2016/2018/2020/2022/2024 episodes, market, sector, liquidity")
+    g.set_defaults(fn=cmd_stress)
+
     g = sub.add_parser("my-portfolio", help="your Kite holdings (read only): thesis health, risk, alternatives")
     g.add_argument("--sync", action="store_true", help="read holdings, positions and today's trades from Kite first")
     g.set_defaults(fn=cmd_my_portfolio)
 
     g = sub.add_parser("journal", help="your round trips from the Kite trade book, with an autopsy each")
+    g.add_argument("--import", dest="import_path", help="add fills from a Zerodha Console tradebook export (CSV)")
     g.set_defaults(fn=cmd_journal)
 
     g = sub.add_parser("alerts", help="desktop alerts: opportunities, holdings exiting by rule, a failed run")

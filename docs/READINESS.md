@@ -19,10 +19,10 @@ bar will not be moved to change that.
 |---|---|---|
 | `pip install -e .[dev]` installs everything the tests import | DONE (2026-10-15) | `pyproject.toml`: numpy, pandas, scipy and scikit-learn are now core (they are imported at module level), and `dev` adds pytest, ruff, mypy, pip-audit, pypdf, pymupdf and lightgbm. torch is the only thing excluded; no test needs it |
 | SciPy gap fixed | DONE | as above |
-| clean Windows and Linux environments pass | PARTIAL | Windows: a fresh venv from pyproject alone (it resolved pandas 3 / numpy 2.5) ran 1,428 tests: 1,423 passed and 5 failed (missing pyarrow, a pandas-3 None/NaN change, a wrapped wikilink, the torch test not skipping). All 5 were fixed and re-run green. Linux: runs in CI (`.github/workflows/ci.yml`) on the first push, not yet observed green |
+| clean Windows and Linux environments pass | PARTIAL | Windows: a fresh venv from pyproject alone (it resolved pandas 3 / numpy 2.5) ran 1,428 tests: 1,423 passed and 5 failed (missing pyarrow, a pandas-3 None/NaN change, a wrapped wikilink, the torch test not skipping). All 5 were fixed and re-run green. CI's first run (2026-10-16): Linux 1,426 passed / 2 failed, Windows 1,427 / 1. The causes were a test pinning a stdlib robots.txt bug that newer Python fixed, and a **real bug**: on a machine up for less than the session TTL, the NSE session was never warmed (`monotonic()` counts from boot). Both fixed, with a regression test |
 | CI on every commit: tests, lint, types, audit, migrations | DONE (config) / TIME (first run) | `.github/workflows/ci.yml`: ruff (repo-wide clean; 20 reviewed `noqa`, all closures called inside their own loop), mypy on the OMS, `standard.py` and `preregistry.py` (clean), pip-audit, `tests/test_migrations.py`, full pytest, Windows and Linux |
 | no untracked source in a research result | DONE | `fundamental_tests.py` committed with its tests, both pre-registrations and both ledger rows |
-| result = commit + data snapshot + params + seed + lockfile | PARTIAL | seeds are fixed in code, params are in the pre-registrations, and the lockfile is `requirements-lock.txt`. **Gap:** no content hash of the research DB is recorded per trial. The raw lake is hashed per object, but the derived DB is not |
+| result = commit + data snapshot + params + seed + lockfile | DONE (2026-10-16) going forward; PARTIAL for older trials | `fb reproduce "<trial>"` fingerprints every input table (rows, last date, order-independent value hash), then runs the trial's script, now in the repo (`scripts/trials/`, all 13 trials of 2026Q4). `standard.record` stamps the commit and lockfile hash on every new trial. Manifests for X3, MF and I/S are in `docs/trials/manifests/`. The ten earlier trials have scripts but no fingerprint from their own run day: the data has refreshed since |
 | high coverage and adversarial tests on critical modules | PARTIAL | OMS (`tests/test_oms.py`: timeouts, duplicates, partial fills, restarts, kill switch), standard, preregistry and ingest have tests. No coverage measurement yet (OPEN) |
 | a failed step cannot yield a fresh-looking stale signal | DONE (2026-10-15) | `paper/terminal.freshness`: each input's last date against the expected session, with a red "STALE INPUTS - do not act" banner; tested |
 
@@ -35,7 +35,7 @@ bar will not be moved to change that.
 | EOD coverage, corporate actions, ISIN successions | PARTIAL | `isin_successions`, `security_lineage`, `gap_reviews`; anomalies are classified via `fb gaps`. Not every demerger is reconciled |
 | PIT investable universe | DONE | `edges.load`: the top 500 by trailing adv20 on each date, never today's list |
 | historical index membership and TR benchmarks | PARTIAL | `index_constituents` is partial; `nifty_tr` exists for NIFTY 50 |
-| DQ service-level targets | PARTIAL | `dq_results` checks exist; there are no written SLOs (OPEN) |
+| DQ service-level targets and per-source contracts | DONE (2026-10-16) | `data_contracts.py` / `fb data-contracts`: for each of nine sources, the source, the time it carries, the revision policy, known limits and a maximum lag, measured live (exit code 1 when any fails). Duplicate and null-rate targets are not yet in it |
 
 ## 3. Point-in-time fundamentals
 
@@ -165,3 +165,15 @@ None has happened.
    * a backup job with a restore drill;
    * the refresh watchdog;
    * stress tests.
+
+## The owner's second list (2026-10-16)
+
+| item | status | evidence / gap |
+|---|---|---|
+| 1. a proven forward edge | **TIME** | the registered tests run on their own; the 2026Q4 budget is spent, so nothing new is added. See section 6 |
+| 2. reproducible engineering | DONE / PARTIAL | dependencies, lockfile, CI, `fb reproduce` and data fingerprints (above). **Look-ahead checks:** `tests/test_fundamental_tests.py` (SUE uses only prior quarters), `test_phase5_preregistry.py` (order of registration). A general automated look-ahead scanner is OPEN |
+| 3. data moat | PARTIAL / OWNER | **in the store:** results 2019-26, insider XBRL from 2026-07, delivery, announcements, ratings, pledges and order wins as separate event types, contracts (`fb data-contracts`). **OPEN (code):** bulk/block deals, shareholding patterns, historical ban list. **OWNER (licensed):** consensus estimates and revisions, delisted-name intraday history, full historical index constituents |
+| 4. trader workstation | PARTIAL | the terminal has: the ranked list with its evidence claim; explicit "no trade" (the risk filters and the cash share); catalyst, evidence, regime, net alpha, downside, liquidity and invalidation per name; **new** a calendar (board and results meetings parsed from intimations, ex-dates, F&O expiries); **new** an order-ticket preview with the real risk gate's verdict; post-trade review (`fb journal`). Exposure by sector is shown; by factor and failure mode it is not (OPEN). Macro calendar not collected |
+| 5. execution calibration | DONE (tooling) / **TIME** (evidence) | `fb live quality`: fill rate, partials, rejections, slippage against arrival, latency and the gap to the modelled cost, by liquidity bucket, live and rehearsal kept apart. There are no fills yet. Contract-note reconciliation is OPEN (PDF parsing). Kill-switch drills are in `tests/test_oms.py`; live drills need the owner |
+| 6. portfolio construction | PARTIAL | sizing by volatility, liquidity participation, weight cap and risk per trade (`decisions/plan.py`); cash explicit; capacity per name; **new** `fb stress`: 2016, 2018, 2020, 2022 and 2024 replayed on the held names, market -20% through beta, sector rotation, and liquidation time at 10% of a halved ADV. On the owner's book today COVID would have cost 57%. Not modelled: INR shock (no FX series), factor caps |
+| 7. personal learning loop | DONE (2026-10-16), waiting on trades | `fb journal --import <Console tradebook.csv>`; detectors for overtrading, averaging down, premature exits, event chasing and ignored invalidations (`portfolio/behaviour_review.py`); comparison with the day's approved list (`evaluation/regret.journal_vs_list`); an anti-playbook (a habit with at least 8 trips, losing at t <= -2, printed with how many habits were examined). The journal is empty today: Kite keeps one day of trades, so an export import is the way to fill it |

@@ -1,0 +1,15 @@
+{
+ "trial": "I/S intraday and swing family on minute bars (9 rules)",
+ "script": "scripts\\trials\\is_minute_family.py",
+ "commit": "ac7a8fa2351cf716be10a97909c28c203b1ec358",
+ "lockfile": "9eaee61aeb8cfa08",
+ "data": {
+  "adjusted_prices": {
+   "rows": 4966776,
+   "last": "2026-10-15",
+   "hash": "3681a04f03f0c65e"
+  }
+ },
+ "taken_at": "2026-10-16T10:53:05",
+ "note": "taken 2026-10-16 before the evening refresh: the inputs are those the trial read on 2026-10-15 (no refresh in between); the code commit is the one that recorded it"
+}

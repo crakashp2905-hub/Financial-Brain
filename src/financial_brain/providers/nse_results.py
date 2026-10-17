@@ -42,7 +42,7 @@ class NSEResults(Provider):
     def __init__(self, *, min_interval: float = MIN_INTERVAL):
         self.min_interval = min_interval
         self._last = 0.0
-        self._warmed = 0.0
+        self._warmed: float | None = None      # never warmed (monotonic() counts from boot: 0.0 could read as fresh)
         self._jar = http.cookiejar.CookieJar()
         self._opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self._jar))
 
@@ -59,7 +59,7 @@ class NSEResults(Provider):
         needs_session = host == "www.nseindia.com"
         last: Exception | None = None
         for attempt in range(3):
-            if needs_session and time.monotonic() - self._warmed > SESSION_TTL:
+            if needs_session and (self._warmed is None or time.monotonic() - self._warmed > SESSION_TTL):
                 try:
                     self._warm()
                 except OSError as e:               # DNS failure, no route, timeout: a failed attempt, not a crash
@@ -85,7 +85,7 @@ class NSEResults(Provider):
                 last = e
             if needs_session:
                 self._jar.clear()                     # a failed session is rebuilt, not reused
-                self._warmed = 0.0
+                self._warmed = None
             time.sleep(1.5 * (attempt + 1))
         raise FetchError(f"failed after 3 attempts: {last}", retryable=True)
 

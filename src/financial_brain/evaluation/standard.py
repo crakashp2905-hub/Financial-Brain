@@ -180,7 +180,9 @@ def record(entry: dict, path: Path = LEDGER, *, on: date | None = None) -> dict:
             raise StandardError(f"trial budget spent: {b['used']} of {b['budget']} in {b['quarter']}")
         if any(r.get("name") == entry["name"] and r.get("kind") == "trial" for r in ledger(path)):
             raise StandardError(f"{entry['name']!r} already has a recorded trial")
-    row = {"kind": "trial", "date": on.isoformat(), "recorded_at": datetime.now(timezone.utc).isoformat(), **entry}
+    from ..research import reproduce as RP
+    row = {"kind": "trial", "date": on.isoformat(), "recorded_at": datetime.now(timezone.utc).isoformat(),
+           "commit": RP.git_commit(), "lockfile": RP.lock_sha(), **entry}
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with Path(path).open("a", encoding="utf-8") as f:
         f.write(json.dumps(row, sort_keys=True, default=str) + "\n")

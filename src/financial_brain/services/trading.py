@@ -168,6 +168,30 @@ def rehearse(strategy: str) -> dict:
             "counted_toward_stage_1": counted}
 
 
+def execution_quality() -> dict:
+    """Fill rate, slippage against arrival, latency and the gap to the modelled cost, by liquidity bucket, for the
+    live journal and the rehearsal (paper) journal - kept apart, because only the live one measures a real market."""
+    from ..execution.oms import journal as J
+    from ..execution.oms import quality as Q
+    r = duckdb.connect("data/financial_brain.duckdb", read_only=True)
+    try:
+        adv = dict(r.execute("""SELECT p.ticker, f.adv20 FROM features f JOIN adjusted_prices p USING (lineage, business_date)
+                                WHERE f.business_date = (SELECT MAX(business_date) FROM features)""").fetchall())
+    finally:
+        r.close()
+    out = {}
+    for name, path in (("live", LIVE_JOURNAL), ("rehearsal", PAPER_JOURNAL)):
+        if not path.exists():
+            out[name] = {"note": "no journal yet"}
+            continue
+        j = J.Journal(path)
+        try:
+            out[name] = Q.report(j.orders(), j.events(), adv) or {"note": "no orders yet"}
+        finally:
+            j.close()
+    return out
+
+
 def verify() -> dict:
     from ..execution.oms import journal as J
     j = J.Journal(LIVE_JOURNAL)

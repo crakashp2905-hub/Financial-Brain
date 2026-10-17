@@ -19,7 +19,7 @@ from ..services import trading
 
 def register(sub) -> str:
     g = sub.add_parser("live", help="order management: stages, approvals, kill switch, rehearsal (ADR-0005)")
-    g.add_argument("action", choices=["status", "rehearse", "promote", "approve", "decline", "kill", "reset", "verify"])
+    g.add_argument("action", choices=["status", "rehearse", "promote", "approve", "decline", "kill", "reset", "verify", "quality"])
     g.add_argument("order_id", nargs="?")
     g.add_argument("--to", type=int)
     g.add_argument("--by", help="your name: approvals, promotions and resets refuse agent: actors")
@@ -59,6 +59,8 @@ def run(args) -> int:
         return c.emit(trading.rehearse(args.strategy), args, _dump)
     if a == "verify":
         return c.emit(trading.verify(), args, _dump)
+    if a == "quality":
+        return c.emit(trading.execution_quality(), args, _dump)
     if a == "kill":
         return c.emit(trading.kill(args.reason, args.strategy), args, _dump)
     if not args.by:

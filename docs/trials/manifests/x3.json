@@ -1,0 +1,35 @@
+{
+ "trial": "X3 earnings surprise drift out of sample",
+ "script": "scripts\\trials\\x3_mf_fundamentals.py",
+ "commit": "ac7a8fa2351cf716be10a97909c28c203b1ec358",
+ "lockfile": "9eaee61aeb8cfa08",
+ "data": {
+  "financial_results": {
+   "rows": 41710,
+   "last": "2026-10-15 19:25:09",
+   "hash": "e4ebdb742bad542d"
+  },
+  "xbrl_facts": {
+   "rows": 5458680,
+   "last": null,
+   "hash": "d169788318b6c17d"
+  },
+  "adjusted_prices": {
+   "rows": 4966776,
+   "last": "2026-10-15",
+   "hash": "3681a04f03f0c65e"
+  },
+  "features": {
+   "rows": 4966776,
+   "last": "2026-10-15",
+   "hash": "ecabd01d98a1d933"
+  },
+  "eod_prices": {
+   "rows": 16168074,
+   "last": "2026-10-15",
+   "hash": "d3cd33a5d8fae0b9"
+  }
+ },
+ "taken_at": "2026-10-16T10:52:52",
+ "note": "taken 2026-10-16 before the evening refresh: the inputs are those the trial read on 2026-10-15 (no refresh in between); the code commit is the one that recorded it"
+}

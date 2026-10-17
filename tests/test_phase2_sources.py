@@ -104,9 +104,9 @@ def test_robots_understands_wildcards_where_the_stdlib_does_not():
     import urllib.robotparser
     stdlib = urllib.robotparser.RobotFileParser()
     stdlib.parse(ROBOTS.splitlines())
-    assert stdlib.can_fetch("financial-brain/1.0",
-                            "https://x.com/stocks/company_info/print_main.php"), \
-        "pinning the stdlib gap this class exists to close"
+    # Older Pythons read this disallowed page as allowed (the gap this class closes); newer patch releases may
+    # match wildcards themselves. Our parser must block it either way - the stdlib's answer is not pinned.
+    stdlib.can_fetch("financial-brain/1.0", "https://x.com/stocks/company_info/print_main.php")
 
 
 def test_longest_matching_rule_wins():

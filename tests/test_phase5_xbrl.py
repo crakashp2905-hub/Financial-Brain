@@ -255,3 +255,18 @@ def test_a_network_failure_while_warming_the_session_is_a_fetch_error_not_a_cras
     monkeypatch.setattr("financial_brain.providers.nse_results.time.sleep", lambda s: None)
     with pytest.raises(FetchError):
         p.filings("TCS")
+
+
+def test_a_new_provider_warms_its_session_even_on_a_freshly_booted_machine(monkeypatch):
+    p = NSEResults(min_interval=0)
+    monkeypatch.setattr("financial_brain.providers.nse_results.time.monotonic", lambda: 5.0)   # 5 s after boot
+    warmed = []
+
+    def warm():
+        warmed.append(1)
+        raise OSError("down")
+    monkeypatch.setattr(p, "_warm", warm)
+    monkeypatch.setattr("financial_brain.providers.nse_results.time.sleep", lambda s: None)
+    with pytest.raises(FetchError):
+        p.filings("TCS")
+    assert warmed

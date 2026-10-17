@@ -293,3 +293,21 @@ def test_small_tier_reaches_ticket_only_under_its_own_cap(tmp_path):
     assert RO.limits(RO.load(p), "CANDIDATE_SMALL").max_gross_inr == 25_000
     RO._write({"stage": RO.SMALL_AUTO, "history": []}, p)
     assert RO.limits(RO.load(p), "CANDIDATE_SMALL") is None              # never above TICKET
+
+
+def test_execution_quality_by_bucket():
+    from financial_brain.execution.oms import model as M
+    from financial_brain.execution.oms import quality as Q
+    a = M.Order(client_id="c1", strategy="s", day="d", symbol="BIG", exchange="NSE", side=M.BUY, qty=10, limit_price=101,
+                state=M.FILLED, filled_qty=10, avg_price=100.2, arrival_price=100.0)
+    b = M.Order(client_id="c2", strategy="s", day="d", symbol="SMALLCO", exchange="NSE", side=M.SELL, qty=10,
+                limit_price=99, state=M.CANCELLED, filled_qty=4, avg_price=99.0, arrival_price=100.0)
+    c = M.Order(client_id="c3", strategy="s", day="d", symbol="SMALLCO", exchange="NSE", side=M.BUY, qty=5,
+                limit_price=99, state=M.REJECTED_RISK)
+    ev = [{"client_id": "c1", "state": M.SUBMITTED, "at": "2026-10-16T09:20:00"},
+          {"client_id": "c1", "state": M.FILLED, "at": "2026-10-16T09:20:03"}]
+    r = Q.report([a, b, c], ev, {"BIG": 6e9, "SMALLCO": 5e7})
+    assert r["mega"]["slippage_bp"] == pytest.approx(20.0) and r["mega"]["latency_s_median"] == 3.0
+    assert r["mega"]["gap_bp"] == pytest.approx(20.0 - 12.5)
+    assert r["small"]["risk_rejected"] == 1 and r["small"]["fill_rate"] == pytest.approx(0.4)
+    assert r["small"]["slippage_bp"] == pytest.approx(100.0) and r["small"]["partial_share"] == 1.0
