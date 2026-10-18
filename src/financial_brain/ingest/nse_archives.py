@@ -197,7 +197,8 @@ def load_small(con, cfg, start: date, end: date) -> dict:
     for d, key in _objects(lake, "fo_ban", start, end):
         syms = parse_ban(lake.read(key))
         con.execute("DELETE FROM fo_ban WHERE trade_date = ?", [d])
-        con.executemany("INSERT INTO fo_ban VALUES (?, ?, ?)", [[d, s, now] for s in syms])
+        if syms:                                         # an empty list is a valid day: nothing in the ban period
+            con.executemany("INSERT INTO fo_ban VALUES (?, ?, ?)", [[d, s, now] for s in syms])
         con.execute("INSERT OR REPLACE INTO fo_ban_days VALUES (?, ?, ?)", [d, len(syms), now])
         out["fo_ban"] += 1
     for kind in ("participant_oi", "participant_vol"):
