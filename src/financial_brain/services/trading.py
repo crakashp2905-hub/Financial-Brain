@@ -46,25 +46,34 @@ def render_trials(rows: list[dict]) -> str:
 
 
 def verdict(strategy: str) -> str:
-    """The strategy's ADR-0004 standing: CONFIRMED from G5, CANDIDATE from the ledger, else FAIL."""
+    """ADR-0004 standing: a forward result can confirm only its exact G1-G4 candidate."""
     from ..evaluation import oos_monitor as OM
     from ..evaluation import standard as S
+    from ..evaluation import small_tier as ST
+
+    reg = next((r for r in OM.REGISTERED if r.strategy == strategy), None)
+    if reg is None:
+        return "FAIL"
+    candidate = bool(reg.trial_name and any(
+        row.get("name") == reg.trial_name and row.get("prereg") == reg.prereg
+        and row.get("verdict") == S.CANDIDATE for row in S.ledger()))
     try:
         z = duckdb.connect(str(ZOO), read_only=True)
         try:
             for r in OM.report(z):
-                if r["strategy"] == strategy and r["verdict"] == OM.CONFIRMED:
+                if r["strategy"] != strategy:
+                    continue
+                if r["verdict"] in (OM.FAILED, OM.FAILED_EARLY):
+                    return "FAIL"
+                if candidate and r["verdict"] == OM.CONFIRMED:
                     return "CONFIRMED"
         finally:
             z.close()
     except duckdb.Error:
         pass
-    reg = {x.strategy: x.prereg for x in OM.REGISTERED}
-    for row in S.ledger():
-        if row.get("prereg") == reg.get(strategy) and row.get("verdict") == S.CANDIDATE:
-            return "CANDIDATE"
+    if candidate:
+        return "CANDIDATE"
     # ADR-0006 (accepted 2026-10-15): a modest edge that clears the small tier's fixed checks.
-    from ..evaluation import small_tier as ST
     try:
         z = duckdb.connect(str(ZOO), read_only=True)
         try:

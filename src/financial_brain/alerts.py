@@ -1,8 +1,9 @@
 """Alerts: tell the owner when something is worth acting on, instead of asking them to watch a page.
 
-Windows desktop notifications, raised locally through PowerShell; nothing leaves the machine. The text is built
-only from the system's own numbers and symbols and is passed to PowerShell in environment variables, never pasted
-into the script, so no data can become a command. Each alert has a key and is sent once (``data/alerts_sent.json``).
+Windows desktop notifications are raised locally through PowerShell. Optional Telegram
+notifications go only to the owner-configured chat when both credentials are present in the
+environment. Alert text is passed to PowerShell in environment variables, never pasted into
+the script, so no data can become a command. Each transport has a separate sent ledger.
 
 Triggers (all rule-based):
 
@@ -16,10 +17,13 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import urllib.parse
+import urllib.request
 from datetime import date
 from pathlib import Path
 
 SENT = Path("data") / "alerts_sent.json"
+TELEGRAM_SENT = Path("data") / "alerts_sent_telegram.json"
 CLEAR_NET = 0.01               #: +1% net over the horizon: alerts are for the rare name that clearly clears
 
 _PS = r"""
@@ -40,6 +44,27 @@ def toast(title: str, body: str) -> bool:
                            capture_output=True, timeout=30)
         return r.returncode == 0
     except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def telegram_configured() -> bool:
+    """The owner opts in by supplying both values outside the repository."""
+    return bool(os.environ.get("FB_ALERT_TELEGRAM_BOT_TOKEN") and os.environ.get("FB_ALERT_TELEGRAM_CHAT_ID"))
+
+
+def telegram(title: str, body: str) -> bool:
+    """Send only to the explicitly configured chat; never log a bot token or response body."""
+    token = os.environ.get("FB_ALERT_TELEGRAM_BOT_TOKEN")
+    chat = os.environ.get("FB_ALERT_TELEGRAM_CHAT_ID")
+    if not token or not chat:
+        return False
+    data = urllib.parse.urlencode({"chat_id": chat, "text": f"{title}\n{body}"}).encode()
+    request = urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=data,
+                                     method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return bool(json.loads(response.read()).get("ok"))
+    except (OSError, ValueError):
         return False
 
 

@@ -13,6 +13,8 @@ def test_fingerprint_order_independent_and_value_sensitive():
     assert fa == fb and fa["t"]["rows"] == 2 and fa["t"]["last"] == "2026-01-02"
     b.execute("UPDATE t SET x = 2.5 WHERE x = 2.0")
     assert RP.fingerprint(b, ["t"])["t"]["hash"] != fa["t"]["hash"]
+    b.execute("UPDATE t SET x = CASE WHEN business_date = DATE '2026-01-01' THEN 2.0 ELSE 1.0 END")
+    assert RP.fingerprint(b, ["t"])["t"]["hash"] != fa["t"]["hash"]
     assert RP.fingerprint(a, ["nope"])["nope"] == {"missing": True}
 
 
@@ -22,3 +24,8 @@ def test_every_2026q4_trial_has_a_script_in_the_repo():
     assert names <= set(RP.TRIALS)
     for script, _ in RP.TRIALS.values():
         assert (RP.SCRIPTS / script).exists()
+
+
+def test_intraday_manifest_names_the_minute_warehouse_and_basis_file():
+    assert set(RP.TRIAL_FILES["is_minute_family.py"]) == {
+        "data/minute_history.duckdb", "data/basis_contracts.parquet"}

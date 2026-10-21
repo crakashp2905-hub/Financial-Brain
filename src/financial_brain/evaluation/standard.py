@@ -51,6 +51,27 @@ def tstat(x: pd.Series) -> float:
     return float(x.mean() / (x.std(ddof=1) / np.sqrt(len(x))))
 
 
+def dependence_audit(x: pd.Series, *, max_lag: int) -> dict:
+    """Report a Newey-West-style t alongside the registered iid t, without rewriting old trials.
+
+    The lag should cover the overlap of adjacent return windows. This is a diagnostic
+    until a new, prospective evidence standard fixes its lag choice and acceptance bar.
+    """
+    a = pd.Series(x).dropna().to_numpy(dtype=float)
+    n = len(a)
+    if n < 3 or max_lag < 0 or not np.isfinite(a).all():
+        return {"n": n, "lag": max_lag, "t_hac": float("nan")}
+    m = float(a.mean())
+    residual = a - m
+    lag = min(max_lag, n - 1)
+    long_run = float(np.dot(residual, residual) / n)
+    for j in range(1, lag + 1):
+        covariance = float(np.dot(residual[j:], residual[:-j]) / n)
+        long_run += 2 * (1 - j / (lag + 1)) * covariance
+    t_hac = m / np.sqrt(long_run / n) if long_run > 0 else float("nan")
+    return {"n": n, "lag": lag, "t_iid": tstat(pd.Series(a)), "t_hac": float(t_hac)}
+
+
 def halves(s: pd.Series, split: pd.Timestamp = SPLIT) -> tuple[pd.Series, pd.Series]:
     s = pd.Series(s).dropna()
     s.index = pd.to_datetime(s.index)
@@ -75,9 +96,15 @@ def book_series(F: pd.DataFrame, cost: pd.DataFrame, bench: pd.Series, books: di
     returns weights summing to 1 (equal weight when omitted) - the null must be weighted the way the book is."""
     out, prev = {}, pd.Series(dtype=float)
     for d in sorted(books):
-        names = [x for x in books[d] if np.isfinite(F.at[d, x])]
+        names = list(books[d])
         if not names:
             continue
+        # The portfolio was selected at d. Dropping a name because its future return is missing
+        # silently redistributes capital with hindsight (especially for delistings/suspensions).
+        missing = [x for x in names if x not in F.columns or not np.isfinite(F.at[d, x])]
+        if missing:
+            raise ValueError(f"missing forward return on {d} for {missing[:5]}; resolve the "
+                             "delisting/suspension outcome before evaluating this book")
         w = weigh(d, names) if weigh else pd.Series(1.0 / len(names), index=names)
         g = float((w * F.loc[d, names]).sum())
         dw = w.sub(prev, fill_value=0).abs()

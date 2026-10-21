@@ -16,7 +16,7 @@ evidence, its point-in-time validity, a historical base rate from comparable sit
 its net alpha after costs, its place in the portfolio, a realistic execution and a counterfactual outcome - and
 every test is written down before it is run (`fb preregs` audits that against git).
 
-**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**. 1,331 tests.
+**Status:** Phases 0–3 complete; **Phase 4 - live paper testing - started 2026-10-05**.
 Every trading day the system now scans the market, posts a 09:30 board, paper-trades its intraday rules
 through the session and scores itself against everything it passed over. See [The daily loop](#the-daily-loop).
 
@@ -148,7 +148,7 @@ Validation modules, used from Python rather than the CLI:
 | `evaluation/event_response.py` | 606k filings with their price response, and "have we seen this before?" analogues using only closed outcome windows |
 | `features/intraday.py` | First-hour features from minute bars (300 names, 55M bars). Only `range_1h` has a directional IC, and its tails earn 0.5 bp against 14-54 bp of cost |
 | `ingest/ticks.py` | Live ticks into the same minute bars (cumulative-volume differencing, late ticks dropped); the streaming connection is the owner's to open |
-| `ingest/xbrl_results.py` / `providers/nse_results.py` | Point-in-time fundamentals from the exchange's own XBRL: every results filing since the quarter ended Dec 2018, `filed_at` = the exchange's dissemination time, restatements as new rows, several hundred facts a filing, arithmetic checked (every promoted statement passed). NSE moved results after Dec 2024 to "Integrated Filing", which is not covered yet |
+| `ingest/xbrl_results.py` / `providers/nse_results.py` / `ingest/integrated_filing.py` | Point-in-time fundamentals from the exchange's own XBRL, including the Integrated Filing feed from 2025 onward; dissemination time, revisions and arithmetic checks are retained |
 | `evaluation/half_life.py` | How long a signal's information lasts: reversal halves in 16 sessions; momentum, 52-week-high and low-vol are still accruing at 120 |
 | `evaluation/spillover.py` | Does a results reaction pass through promoter siblings? No: a clean null at 1, 5 and 20 sessions |
 | `risk/killswitch.py` / `risk/degradation.py` | Drawdown, daily-loss, stale-data, degraded-edge and cost-overrun trips that halt the paper loop; only a human resets it. CUSUM + rolling-t detector on the IC |
@@ -166,6 +166,7 @@ Validation modules, used from Python rather than the CLI:
 | `providers/kite_account.py` / `portfolio/my_book.py` / `fb my-portfolio --sync` | **Your own Kite account, read only** (holdings, positions, trade book; three exact paths, GET only, stored in `data/`): since cost, thesis health by rules (EXIT BY RULE only on the plan's tested exits), book volatility, beta, share at risk to the stops, sector concentration, and which of today's names add the least risk for their alpha |
 | `portfolio/journal.py` / `fb journal` | Your round trips (FIFO) with an autopsy each - market, sector, selection, entry and exit against the day's close, costs - and a report on strengths and weaknesses once 30 trips exist |
 | `alerts.py` / `fb alerts` | Windows desktop alerts, sent once each: a holding exiting by rule, a name clearing +1% net, a halted loop, a live run that did not complete |
+| `signals/watch.py` | Market-hours stock and option scenario watcher: fresh Kite quotes, bootstrap baseline probabilities, two-sided option quotes, holding stop reviews, deduplicated desktop and optional Telegram alerts. Unconfirmed opportunities are labelled WATCH; no order is sent |
 | `features/fundamentals_pit.py` | 295k point-in-time observations from exchange XBRL (revisions numbered, never overwritten; `as_known_on` a date): EBITDA, EBIT, debt, cash, book value, cash flow, and P/E, P/B, EV/EBITDA, ROE, ROCE, debt/equity, interest cover at a price - labelled stale where the results are |
 | `evaluation/half_life_table.py` | Every signal at every horizon as a trader reads it: excess, hit rate, Sharpe, MFE/MAE, turnover, cost drag, net. Momentum is the only signal that pays long-only at every horizon (+1.50% net over 60 sessions); low volatility ranks well but its top quintile under-earns |
 | `opportunity/lifecycle.py` / `fb lifecycle TICKER --day D` | One opportunity end to end: found, taken or rejected (and why), sold, resolved. Every opportunity is typed: direction, evidence ids, an experiment id (pre-registration + a hash of the pricing model), an outcome distribution |
@@ -233,7 +234,7 @@ decisions made before their outcomes, which nothing else can supply.
 | Time (IST, weekdays) | What runs | Where it writes |
 |---|---|---|
 | 08:52 | Reminder if today's Kite token is missing: run `scripts\kite_login.cmd` (the owner logs in; nothing automates credentials) | notification |
-| 09:05 | Windows task *FinanceBrain Paper Intraday* starts `fb paper-intraday` (exits itself on holidays) | `data/paper_live.duckdb` |
+| 09:05 | Windows task *FinanceBrain Paper Intraday* starts paper trading and the stock/options watch loop (both exit after the close) | `data/paper_live.duckdb`, `data/forecasts/watch.jsonl` |
 | 09:30 | **The board**: every liquid name ranked by expected net alpha, the five best with invalidation level and plan size, and the morning setups; "nothing clears costs" when that is true | `data/paper_reports/DATE-board-live.md` |
 | 09:30-15:15 | Paper trading of the intraday rules (version live-v1, pre-registered), every trade written as it opens and closes | ledger |
 | 15:15 | Flat; same-day outcome for every board name, so the top five are scored against the rest | `DATE-live.md` |
@@ -243,8 +244,22 @@ decisions made before their outcomes, which nothing else can supply.
 `fb terminal` rebuilds the one-page view at any time; open `data/terminal/index.html` in a browser.
 `fb paper-intraday --report` prints the accumulated evidence per strategy (COLLECTING until 100 trades, then
 LOSING / WINNING / NO_EDGE_DETECTED / DIFFERS_FROM_BACKTEST). `fb paper-intraday --replay DATE` replays a past day
-with the same rules, labelled `replay` and kept apart from live evidence. There is no order code anywhere: Kite is
-read-only, and human approval remains the only path to a real trade.
+with the same rules, labelled `replay` and kept apart from live evidence. The watch loop has no order path. The
+separate OMS retains its evidence, stage and human-approval locks.
+
+The watch loop polls every 60 seconds during market hours. It reads the prior close's opportunity snapshot and
+today's Kite quotes. A positive historical scanner result produces **WATCH BUY**, not a confirmed trade call. A held
+stock crossing its recorded stop produces **SELL REVIEW**. For listed options it shows the nearest at-the-money call
+and put, live two-sided quotes, expiry break-even and a bootstrap payoff scenario before fees. The options archive is
+too short to support a validated options strategy; no options message says BUY or SELL. Forecasts are recorded before
+their outcomes for later evaluation. To inspect without sending, run
+`.venv\Scripts\python.exe -m financial_brain.signals.watch --once --dry-run` during market hours.
+
+Desktop notifications need an interactive Windows session. To opt into phone messages, set
+`FB_ALERT_TELEGRAM_BOT_TOKEN` and `FB_ALERT_TELEGRAM_CHAT_ID` in the owner's environment and start the bot's private
+chat first. These secrets stay out of git. The Telegram transport follows the
+[official Bot API](https://core.telegram.org/bots/api#sendmessage). With no Kite session or fresh quote, no market
+signal is sent. See [the success plan](docs/SUCCESS-PLAN.md) for the evidence and operating work that remains.
 
 ## Decisions still open
 

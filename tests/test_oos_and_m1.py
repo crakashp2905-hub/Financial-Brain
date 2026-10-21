@@ -25,6 +25,12 @@ def test_pending_until_twelve_rebalances_then_confirmed():
     assert r["verdict"] == OM.CONFIRMED
 
 
+def test_positive_paper_outside_band_is_not_confirmed():
+    r = OM.assess(_live(0.1, 240), _bt(), REG)
+    assert r["verdict"] == OM.FAILED
+    assert "outside" in r["why"]
+
+
 def test_three_month_ends_below_the_band_fail_early():
     r = OM.assess(_live(-0.01, 80), _bt(), REG)
     assert r["verdict"] == OM.FAILED_EARLY

@@ -6,8 +6,8 @@ record with the backtest the registration judged:
     band        at k sessions after the start, the backtest's 2022-26 per-session distribution gives
                 mean*k +/- 1.645*sd*sqrt(k) - the 90% range a cumulative live net excess should sit in
     early stop  three consecutive month ends below the band's lower edge: FAILED_EARLY
-    verdict     12 rebalances after the cutoff with a positive net mean: CONFIRMED; with a non-positive one: FAILED;
-                before that: PENDING
+    verdict     12 rebalances after the cutoff, positive net mean, and cumulative return inside the 90% band:
+                CONFIRMED; a non-positive mean or an out-of-band result: FAILED; before that: PENDING
 
 The per-session moments come from per-period ones (mean/h, sd/sqrt(h)), which assumes the period's sessions are
 independent - stated, and conservative in the sense that it widens nothing that the data would narrow.
@@ -40,15 +40,16 @@ class Registration:
     backtest: str               #: parquet of the per-period net series the registration judged
     column: str = "net"
     components: tuple = ()      #: a fixed-weight combination: ((strategy, weight), ...) of other registrations
+    trial_name: str | None = None  #: exact G1-G4 ledger row; never infer from a shared preregistration
 
 
 REGISTERED = (
     Registration("edge_m1_momentum_book", "PRE-REGISTERED cost-aware momentum book", "2026-10-12", 40,
-                 "data/edges/m1_net.parquet"),
+                 "data/edges/m1_net.parquet", trial_name="M1 cost-aware momentum book"),
     Registration("edge_f3_short_buildup", "PRE-REGISTERED short build-up avoid filter", "2026-10-12", 20,
-                 "data/edges/f3_short_net.parquet"),
+                 "data/edges/f3_short_net.parquet", trial_name="F3 short build-up avoid filter"),
     Registration("carry_basis_10", "PRE-REGISTERED edges batch three", "2026-10-13", 21,
-                 "data/edges/c1_monthly.parquet"),
+                 "data/edges/c1_monthly.parquet", trial_name="C1 rich-basis carry"),
     Registration("edge_eapr_announcement_short", "PRE-REGISTERED out-of-sample batch three", "2026-10-13", 10,
                  "data/edges/eapr_monthly.parquet"),
     Registration("edge_hv1_rising_volume", "PRE-REGISTERED high-volume return premium", "2026-10-14", 21,
@@ -98,8 +99,10 @@ def assess(live: pd.DataFrame, backtest: pd.Series | None, reg: Registration,
     if run >= EARLY_STOP_MONTHS:
         verdict, why = FAILED_EARLY, f"{run} consecutive month ends below the backtest's 90% band"
     elif rebalances >= MIN_REBALANCES:
-        verdict = CONFIRMED if x.mean() > 0 else FAILED
-        why = f"{rebalances} rebalances, mean net excess {x.mean() * 1e4:+.2f} bp a session"
+        inside = bool(lo[-1] <= cum[-1] <= hi[-1])
+        verdict = CONFIRMED if x.mean() > 0 and inside else FAILED
+        why = (f"{rebalances} rebalances, mean net excess {x.mean() * 1e4:+.2f} bp a session; "
+               f"cumulative result {'inside' if inside else 'outside'} the 90% band")
     else:
         verdict, why = PENDING, f"{rebalances} of {MIN_REBALANCES} rebalances"
     return {"strategy": reg.strategy, "verdict": verdict, "why": why, "sessions": len(x), "rebalances": rebalances,

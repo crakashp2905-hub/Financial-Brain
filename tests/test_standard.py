@@ -53,6 +53,23 @@ def test_random_books_match_size_and_turnover():
         assert len(set(rb[a]) & set(rb[b])) == len(set(books[a]) & set(books[b]))
 
 
+def test_missing_future_return_does_not_remove_a_selected_holding():
+    d = pd.Timestamp("2026-01-01")
+    f = pd.DataFrame([[0.1, np.nan]], index=[d], columns=["A", "B"])
+    c = pd.DataFrame(0.0, index=[d], columns=["A", "B"])
+    with pytest.raises(ValueError, match="missing forward return"):
+        S.book_series(f, c, pd.Series({d: 0.0}), {d: ["A", "B"]})
+
+
+def test_dependence_audit_reduces_an_overlapping_signal_t_statistic():
+    rng = np.random.default_rng(9)
+    innovations = rng.normal(0, 1, 500)
+    overlapping = pd.Series(0.05 + np.convolve(innovations, np.ones(10) / 10, mode="same"))
+    audit = S.dependence_audit(overlapping, max_lag=9)
+    assert audit["lag"] == 9
+    assert abs(audit["t_hac"]) < abs(audit["t_iid"])
+
+
 def test_budget_refuses_the_ninth_trial_and_a_repeat(tmp_path):
     p = tmp_path / "ledger.jsonl"
     for i in range(S.BUDGET_PER_QUARTER):

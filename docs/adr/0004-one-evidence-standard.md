@@ -27,8 +27,10 @@ A strategy has an edge only when it passes **every** gate below, in order. `eval
 | G4 null separation | the replication statistic min(t_a, t_b) beats the 95th percentile of the same statistic over random books with the **same number of names and the same turnover** drawn from the same universe |
 | G5 out of sample | positive net mean over >= 12 rebalances after the registration's data cutoff, and the live paper record inside the backtest's 90% band (`evaluation/oos_monitor.py`) |
 
-Verdicts: G1-G4 pass -> `CANDIDATE` (paper-traded, sized at zero real capital); G5 pass -> `CONFIRMED`. Nothing
-below `CONFIRMED` may be considered for real money (ADR-0005).
+Verdicts: G1-G4 pass -> `CANDIDATE` (paper-traded, sized at zero real capital); G5 pass -> `CONFIRMED`. G5 is checked
+only against the exact trial's G1-G4 ledger row, and its cumulative result must be inside the registered 90% band.
+ADR-0006 later added a separately gated, human-approved `CANDIDATE_SMALL` ticket tier; no unqualified strategy
+can use it. The default broker path remains OFF (ADR-0005).
 
 The Bonferroni bar is still reported beside every result, as information about the size of the search; it is no
 longer the gate. G3 is the stronger test: two independent halves at |t| >= 2 have joint probability
