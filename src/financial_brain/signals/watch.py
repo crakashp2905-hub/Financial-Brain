@@ -243,7 +243,8 @@ def once(*, now: datetime | None = None, dry_run: bool = False,
         quote = spots.get(f"NSE:{s}") or {}
         spot = float(quote.get("last_price") or 0)
         if spot > 0 and _fresh(quote, now):
-            contracts.extend(_option_contracts(instruments, s, spot, today, include_wings=True))
+            contracts.extend(_option_contracts(instruments, s, spot, today,
+                                               include_wings=OQ.licensed()))
     contract_symbols = [f"NFO:{c['tradingsymbol']}" for c in contracts]
     option_quotes = {}
     for start in range(0, len(contract_symbols), KD.MAX_QUOTE_SYMBOLS):
@@ -271,6 +272,7 @@ def once(*, now: datetime | None = None, dry_run: bool = False,
     local = AL.send(alerts)
     mobile = AL.send(alerts, notify=AL.telegram, path=AL.TELEGRAM_SENT) if AL.telegram_configured() else []
     return {"status": "ok", "alerts": len(alerts), "options_quotes_archived": archived_quotes,
+            "options_archive_status": "licensed" if OQ.licensed() else "disabled_unlicensed",
             "desktop_sent": len(local), "telegram_sent": len(mobile)}
 
 

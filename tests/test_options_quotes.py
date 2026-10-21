@@ -14,7 +14,8 @@ def _contract():
             "expiry": "2026-11-24", "strike": 100, "instrument_type": "CE", "lot_size": 50}
 
 
-def test_store_keeps_contract_identity_and_full_book(tmp_path):
+def test_store_keeps_contract_identity_and_full_book(tmp_path, monkeypatch):
+    monkeypatch.setenv("FB_OPTIONS_ARCHIVE_LICENSE_APPROVED", "1")
     now = datetime(2026, 10, 22, 10, 0, tzinfo=OQ.IST)
     q = {"NFO:ABC26NOV100CE": {"last_price": 9.5, "timestamp": now,
                                 "depth": {"buy": [{"price": 9, "quantity": 200}],
@@ -39,3 +40,10 @@ def test_incomplete_book_is_retained_not_counted_as_two_sided():
 def test_naive_receipt_time_is_rejected():
     with pytest.raises(ValueError, match="timezone"):
         OQ.records([], {}, {}, datetime(2026, 10, 22, 10))
+
+
+def test_unlicensed_archive_does_not_create_database(tmp_path, monkeypatch):
+    monkeypatch.delenv("FB_OPTIONS_ARCHIVE_LICENSE_APPROVED", raising=False)
+    path = tmp_path / "forbidden.duckdb"
+    assert OQ.store([_contract()], {}, {}, datetime(2026, 10, 22, 10, tzinfo=OQ.IST), path=path) == 0
+    assert not path.exists()

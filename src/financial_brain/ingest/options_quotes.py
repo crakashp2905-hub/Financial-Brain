@@ -7,6 +7,7 @@ silently discarded: missing liquidity is part of a strategy's feasibility record
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -77,9 +78,16 @@ def records(instruments: list[dict], quotes: dict[str, dict], spots: dict[str, d
     return rows
 
 
+def licensed() -> bool:
+    """Only the owner can assert an express right to retain broker market data."""
+    return os.environ.get("FB_OPTIONS_ARCHIVE_LICENSE_APPROVED") == "1"
+
+
 def store(instruments: list[dict], quotes: dict[str, dict], spots: dict[str, dict],
           received_at: datetime, *, path: Path = PATH) -> int:
-    """Append observations to an isolated local database; no broker order API is used."""
+    """Append only with explicit license acknowledgement; no broker order API is used."""
+    if not licensed():
+        return 0
     rows = records(instruments, quotes, spots, received_at)
     if not rows:
         return 0
