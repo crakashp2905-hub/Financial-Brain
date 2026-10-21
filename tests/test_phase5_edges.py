@@ -42,6 +42,18 @@ def test_selection_charges_only_the_weight_that_changes():
     assert s["bench"].iloc[0] == pytest.approx(float((C.iloc[5] / C.iloc[0] - 1).mean()))
 
 
+def test_selected_missing_exit_is_not_silently_dropped():
+    idx = pd.bdate_range("2020-01-01", periods=10)
+    C = pd.DataFrame({"A": [100.0] * 5 + [np.nan] * 5,
+                      "B": [100.0] * 10}, index=idx)
+    P = {"C": C, "U": pd.DataFrame(True, index=idx, columns=C.columns),
+         "cost": pd.DataFrame(0.003, index=idx, columns=C.columns)}
+    with pytest.raises(ValueError, match="unresolved future return"):
+        E.selection_series(P, {idx[0]: ["A", "B"]}, 5)
+    with pytest.raises(ValueError, match="unresolved future return"):
+        E.monthly_selection(P, {idx[0]: ["A", "B"], idx[5]: ["B"]})
+
+
 def test_index_intraday_momentum_takes_the_first_half_hours_sign():
     ts = pd.date_range("2024-01-02 09:15", "2024-01-02 15:29", freq="min", tz="Asia/Kolkata")
     close = pd.Series(100.0, index=ts)

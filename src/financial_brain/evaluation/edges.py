@@ -68,7 +68,10 @@ def selection_series(P: dict, picks: dict, k: int, *, bench: str = "universe") -
     for d, names in sorted(picks.items()):
         if d not in F.index:
             continue
-        w = _weights([x for x in names if np.isfinite(F.at[d, x])])
+        missing = [x for x in names if x not in F.columns or not np.isfinite(F.at[d, x])]
+        if missing:
+            raise ValueError(f"unresolved future return for selected holding(s) on {d}: {missing[:5]}")
+        w = _weights(names)
         if w.empty:
             continue
         uni = U.loc[d]
@@ -258,7 +261,10 @@ def monthly_selection(P: dict, picks: dict) -> pd.DataFrame:
         if nxt is None:
             break
         r = C.loc[nxt] / C.loc[d] - 1
-        w = _weights([x for x in picks[d] if np.isfinite(r[x])])
+        missing = [x for x in picks[d] if x not in r.index or not np.isfinite(r[x])]
+        if missing:
+            raise ValueError(f"unresolved future return for selected holding(s) on {d}: {missing[:5]}")
+        w = _weights(picks[d])
         uni = U.loc[d][U.loc[d]].index
         ub = float(r[uni].mean())
         g = float((w * r[w.index]).sum())

@@ -1,6 +1,7 @@
 """Group 5 of the hundred algorithms: options strategies on the Nifty 50, **synthetic**.
 
-There is no options price history in this archive (nightly chain snapshots began 2026-10-05). So options are priced
+This older experiment predates the NSE F&O daily-close archive now in ``data/fo_history.duckdb``. It uses
+synthetic prices because the nightly executable bid/ask chain snapshots began 2026-10-05. Options are priced
 with Black-Scholes, using India VIX as the implied volatility and the Nifty's actual path to settle them. No skew, no
 real quotes, no bid-ask beyond the stated slippage: every number here is an approximation and an upper bound on
 realism, labelled synthetic wherever it appears. Nothing here is used by the brain to decide anything.

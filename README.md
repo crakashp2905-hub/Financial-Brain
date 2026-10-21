@@ -250,8 +250,9 @@ separate OMS retains its evidence, stage and human-approval locks.
 The watch loop polls every 60 seconds during market hours. It reads the prior close's opportunity snapshot and
 today's Kite quotes. A positive historical scanner result produces **WATCH BUY**, not a confirmed trade call. A held
 stock crossing its recorded stop produces **SELL REVIEW**. For listed options it shows the nearest at-the-money call
-and put, live two-sided quotes, expiry break-even and a bootstrap payoff scenario before fees. The options archive is
-too short to support a validated options strategy; no options message says BUY or SELL. Forecasts are recorded before
+and put, live two-sided quotes, expiry break-even and a bootstrap payoff scenario before fees. The F&O daily-close
+archive reaches back to 2015, but the executable bid/ask archive is too short to validate an options strategy;
+no options message says BUY or SELL. Forecasts are recorded before
 their outcomes for later evaluation. To inspect without sending, run
 `.venv\Scripts\python.exe -m financial_brain.signals.watch --once --dry-run` during market hours.
 
@@ -259,7 +260,8 @@ Desktop notifications need an interactive Windows session. To opt into phone mes
 `FB_ALERT_TELEGRAM_BOT_TOKEN` and `FB_ALERT_TELEGRAM_CHAT_ID` in the owner's environment and start the bot's private
 chat first. These secrets stay out of git. The Telegram transport follows the
 [official Bot API](https://core.telegram.org/bots/api#sendmessage). With no Kite session or fresh quote, no market
-signal is sent. See [the success plan](docs/SUCCESS-PLAN.md) for the evidence and operating work that remains.
+signal is sent. See [the edge-development results](docs/EDGE-DEVELOPMENT.md) and
+[the success plan](docs/SUCCESS-PLAN.md) for the evidence and operating work that remains.
 
 ## Decisions still open
 
