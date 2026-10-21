@@ -234,7 +234,7 @@ decisions made before their outcomes, which nothing else can supply.
 | Time (IST, weekdays) | What runs | Where it writes |
 |---|---|---|
 | 08:52 | Reminder if today's Kite token is missing: run `scripts\kite_login.cmd` (the owner logs in; nothing automates credentials) | notification |
-| 09:05 | Windows task *FinanceBrain Paper Intraday* starts paper trading and the stock/options watch loop (both exit after the close) | `data/paper_live.duckdb`, `data/forecasts/watch.jsonl` |
+| 09:05 | Windows task *FinanceBrain Paper Intraday* starts paper trading and the stock/options watch loop (both exit after the close) | `data/paper_live.duckdb`, `data/forecasts/watch.jsonl`, `data/options_quotes.duckdb` |
 | 09:30 | **The board**: every liquid name ranked by expected net alpha, the five best with invalidation level and plan size, and the morning setups; "nothing clears costs" when that is true | `data/paper_reports/DATE-board-live.md` |
 | 09:30-15:15 | Paper trading of the intraday rules (version live-v1, pre-registered), every trade written as it opens and closes | ledger |
 | 15:15 | Flat; same-day outcome for every board name, so the top five are scored against the rest | `DATE-live.md` |

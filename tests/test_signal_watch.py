@@ -57,6 +57,19 @@ def test_stale_quotes_cannot_produce_watch_or_sell_alert():
     assert out == []
 
 
+def test_wing_quotes_are_requested_without_extra_option_alerts():
+    contracts = []
+    for kind in ("CE", "PE"):
+        for strike in (99.0, 100.0, 101.0):
+            contracts.append({"name": "ABC", "instrument_type": kind, "expiry": "2026-11-24",
+                              "strike": strike, "tradingsymbol": f"ABC-{strike:g}-{kind}"})
+    atm = W._option_contracts(contracts, "ABC", 100, date(2026, 10, 22))
+    archive = W._option_contracts(contracts, "ABC", 100, date(2026, 10, 22), include_wings=True)
+    assert [(c["instrument_type"], c["strike"]) for c in atm] == [("CE", 100), ("PE", 100)]
+    assert [(c["instrument_type"], c["strike"]) for c in archive] == [
+        ("CE", 100), ("CE", 101), ("PE", 100), ("PE", 99)]
+
+
 def test_watch_alerts_never_call_unconfirmed_stock_or_option_a_buy():
     today = date(2026, 10, 22)
     now = datetime(2026, 10, 22, 10, 0, tzinfo=W.IST)

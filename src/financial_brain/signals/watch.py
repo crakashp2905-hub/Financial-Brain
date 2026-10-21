@@ -20,6 +20,7 @@ import pandas as pd
 from .. import alerts as AL
 from ..forecasting.distribution import ForecastError
 from ..forecasting.null import Climatology
+from ..ingest import options_quotes as OQ
 from ..providers import kite_data as KD
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -66,7 +67,8 @@ def option_scenario(dist, *, symbol: str, expiry: str, strike: float, kind: str,
             "model": dist.model, "evidence": "scenario only; no validated options edge"}
 
 
-def _option_contracts(instruments: list[dict], symbol: str, spot: float, today: date) -> list[dict]:
+def _option_contracts(instruments: list[dict], symbol: str, spot: float, today: date,
+                      *, include_wings: bool = False) -> list[dict]:
     options = [r for r in instruments if r.get("name") == symbol
                and r.get("instrument_type") in ("CE", "PE")
                and str(r.get("expiry", "")) > today.isoformat()]
@@ -74,9 +76,22 @@ def _option_contracts(instruments: list[dict], symbol: str, spot: float, today: 
         return []
     expiry = min(str(r["expiry"]) for r in options)
     near = [r for r in options if str(r["expiry"]) == expiry]
-    return [min((r for r in near if r["instrument_type"] == kind),
-                key=lambda r: abs(float(r["strike"]) - spot), default=None)
-            for kind in ("CE", "PE") if any(r["instrument_type"] == kind for r in near)]
+    selected = []
+    for kind in ("CE", "PE"):
+        side = [r for r in near if r["instrument_type"] == kind]
+        if not side:
+            continue
+        atm = min(side, key=lambda r: abs(float(r["strike"]) - spot))
+        selected.append(atm)
+        if include_wings:
+            strike = float(atm["strike"])
+            outer = [r for r in side if (float(r["strike"]) > strike if kind == "CE"
+                                       else float(r["strike"]) < strike)
+                     and 0.005 <= abs(float(r["strike"]) / strike - 1) <= 0.03]
+            if outer:
+                target = strike * (1.01 if kind == "CE" else 0.99)
+                selected.append(min(outer, key=lambda r: abs(float(r["strike"]) - target)))
+    return selected
 
 
 def _two_sided(quote: dict) -> tuple[float, float] | None:
@@ -223,12 +238,13 @@ def once(*, now: datetime | None = None, dry_run: bool = False,
     instruments = _instruments()
     holding_symbols = {r["symbol"] for r in holdings}
     spots = KD.quote([f"NSE:{s}" for s in sorted(set(symbols) | holding_symbols)], "full")
-    contract_symbols = []
+    contracts = []
     for s in symbols:
         quote = spots.get(f"NSE:{s}") or {}
         spot = float(quote.get("last_price") or 0)
         if spot > 0 and _fresh(quote, now):
-            contract_symbols.extend(f"NFO:{c['tradingsymbol']}" for c in _option_contracts(instruments, s, spot, today))
+            contracts.extend(_option_contracts(instruments, s, spot, today, include_wings=True))
+    contract_symbols = [f"NFO:{c['tradingsymbol']}" for c in contracts]
     option_quotes = {}
     for start in range(0, len(contract_symbols), KD.MAX_QUOTE_SYMBOLS):
         option_quotes.update(KD.quote(contract_symbols[start:start + KD.MAX_QUOTE_SYMBOLS], "full"))
@@ -236,6 +252,7 @@ def once(*, now: datetime | None = None, dry_run: bool = False,
                                          instruments, holdings, today=today, now=now)
     if dry_run:
         return {"status": "dry_run", "alerts": alerts, "observations": observations}
+    archived_quotes = OQ.store(contracts, option_quotes, spots, now)
     FORECAST_LOG.parent.mkdir(parents=True, exist_ok=True)
     seen = set()
     if FORECAST_LOG.exists():
@@ -253,7 +270,8 @@ def once(*, now: datetime | None = None, dry_run: bool = False,
                 seen.add(identity)
     local = AL.send(alerts)
     mobile = AL.send(alerts, notify=AL.telegram, path=AL.TELEGRAM_SENT) if AL.telegram_configured() else []
-    return {"status": "ok", "alerts": len(alerts), "desktop_sent": len(local), "telegram_sent": len(mobile)}
+    return {"status": "ok", "alerts": len(alerts), "options_quotes_archived": archived_quotes,
+            "desktop_sent": len(local), "telegram_sent": len(mobile)}
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -21,6 +21,11 @@ haircuts can exceed that denominator.
 
 The earlier swing edge evaluator now refuses to silently remove a selected holding whose future return is
 missing. Old published trial results remain unchanged and require a separate data-outcome audit before reuse.
+The market watcher also now appends every returned ATM CE/PE and approximately 1%-OTM wing book it requests to
+`data/options_quotes.duckdb`,
+including source/receipt times, contract identity, bid/ask size, five-level depth and a quality flag for missing
+or crossed books. This starts prospectively when the owner runs the watcher with a valid Kite session. It does
+not retroactively produce history and does not cover the *full* option chain yet.
 
 ## Training observations, not recommendations
 
@@ -42,7 +47,7 @@ five-session positions were not treated as independent samples and no significan
 | Long CE/PE | Difference between option-implied and subsequently realised movement, with event/time-of-day conditioning | Historical executable bid/ask/depth, strike/expiry identity, PIT lot size and all fees; show both early/late training stability and an untouched prospective period. Daily closes alone cannot do this. |
 | Call/put debit/credit spreads | Defined-risk volatility or skew dislocation, never naked short options | Both legs quoted and fillable at the same timestamp, margin/physical-settlement constraints, tail stress and actual broker cost receipts; compare against no-trade and simple vertical baselines. |
 
-The practical priority is to archive the full live option chain and broker fills with timestamps, including
+The practical priority is to expand this narrow quote archive to the full live option chain and broker fills with timestamps, including
 failed or rejected orders, then register one distinct mechanism for the next permitted trial period. A useful
 research system must be able to output **no trade**. The current stock/options watcher remains a scenario and
 review tool, not an automatic call/put buy or sell recommender.
