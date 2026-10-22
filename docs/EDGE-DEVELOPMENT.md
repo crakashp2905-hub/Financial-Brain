@@ -38,6 +38,14 @@ The eight directional CE/PE debit/credit vertical variants also had negative mea
 different costs is a sensitivity study, not a licence to pick the most flattering result. Their overlapping
 five-session positions were not treated as independent samples and no significance claim is made.
 
+`python -m financial_brain.evaluation.oi_positioning` adds a distinct, training-only positioning question using
+the near-money Nifty put/call OI ratio in [NSE's after-close F&O bhavcopy](https://nsearchives.nseindia.com/content/circulars/MSD74764.pdf). Its prior 252-session percentile bands
+are shifted one session, and outcomes begin at the **next** index open. From 1,423 eligible 2016-2021 days, the
+high-ratio condition's five-session mean was +0.122% versus +0.095% unconditionally: only **+2.7 basis points**
+of descriptive separation *before costs*. The next-session separation was about +3.3 bp. The low-ratio
+condition was not stronger. These are index-point proxies, not futures fills, and five-session outcomes overlap.
+No OI strategy has been promoted or assigned a trial verdict.
+
 ## Next candidates and falsification requirements
 
 | Domain | Mechanism worth testing next | Required data and failure test |
@@ -45,6 +53,7 @@ five-session positions were not treated as independent samples and no significan
 | Swing long/short | Delayed post-disclosure repricing conditional on dissemination time and crowding, not candle shape | Point-in-time filing timestamps, survivorship-complete security lineage, next-session executable entry; beat equal-turnover filing peers and index after costs. Prior earnings tests failed, so a new mechanism must be genuinely distinct. |
 | Swing risk overlay | Avoid high adverse-selection or unexitable names, including failed delistings and repeated gap days | Compare *kept plus missed winners* against the unfiltered book; do not report only avoided losers. |
 | Intraday | Liquidity/impact-aware execution or a no-trade filter around auction, circuit and wide-spread states | Timestamped two-sided quotes, next-bar fills, exchange sessions and broker execution logs; beat a schedule-matched random/null and a simple passive execution baseline. Existing direction rules failed. |
+| Intraday / swing positioning | Option OI crowding linked to subsequent index movement | A separated source and execution benchmark. The initial near-money put/call OI bands showed only 2–3 bp training separation, so this version is not ready for a registered trade test. |
 | Long CE/PE | Difference between option-implied and subsequently realised movement, with event/time-of-day conditioning | Historical executable bid/ask/depth, strike/expiry identity, PIT lot size and all fees; show both early/late training stability and an untouched prospective period. Daily closes alone cannot do this. |
 | Call/put debit/credit spreads | Defined-risk volatility or skew dislocation, never naked short options | Both legs quoted and fillable at the same timestamp, margin/physical-settlement constraints, tail stress and actual broker cost receipts; compare against no-trade and simple vertical baselines. |
 
