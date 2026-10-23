@@ -1,5 +1,53 @@
 # Edge development: swing, intraday and options
 
+## MQL5 / Pine-inspired mechanisms (2026-10-24, research only)
+
+`evaluation/script_mechanisms.py` implements three **independently specified** ideas; no
+third-party source code was copied. The point is to test a mechanism under Indian data and
+costs, not to import an author's equity curve:
+
+1. A 55-session stock breakout conditioned on **yesterday's** Nifty 50 regime (Nifty close
+   above its 200-session average). This is compared with the same breakout without the
+   regime condition; signal at the completed close, earliest entry next session open.
+2. A 20-session breakout after a prior 10-session true-range average below 65% of the
+   prior 60-session average, with current volume above the previous 20-session median.
+   It is a frozen compression mechanism, not another optimised Supertrend variant.
+3. A stock intraday **no-trade** gate using a fresh two-sided depth book, requested size,
+   spread and visible book-walk. The default 15 bp spread and 25 bp walk caps are
+   explicit engineering assumptions, not tuned or validated thresholds. It never adds a trade. `liquidity_counterfactual` compares
+   a frozen baseline's kept trades with *all* skipped trades, counting missed winners.
+
+Run a single-symbol training diagnostic in PowerShell:
+`$env:PYTHONPATH='src'; python -m financial_brain.evaluation.script_mechanisms --symbol RELIANCE`.
+The runner reads Kite minute bars and the research DB
+read-only, and refuses observations after 2021. It uses a provisional 20 bp stock round
+trip; this is not measured slippage. The two swing rules currently make no live alert,
+paper order or trial-ledger entry. The liquidity gate needs archived decision-time quote
+books paired with frozen baseline paper trades before it can be scored historically.
+The existing quote/paper archives start in the later forward period; they are not a
+sealed training set for tuning this filter or rewriting frozen ORB/GAP rules.
+
+Initial four-name convenience check (RELIANCE, TCS, INFY, HDFCBANK), **not a sampled
+cross-sectional universe**: each has 1,477 training sessions. The regime-conditioned
+breakout had lower mean net than the same unfiltered breakout on RELIANCE (0.551% vs
+0.734%), INFY (0.325% vs 0.698%) and HDFCBANK (0.004% vs 0.095%); TCS was less
+negative (-0.582% vs -0.662%). The strict compression rule selected only 0, 2, 7 and
+1 observations respectively—far too few for inference; their outcomes vary in sign.
+Returns overlap, use raw minute prices without a complete corporate-action/survivorship
+audit, and assume next-open entry without a measured fill. The regime condition did **not**
+show consistent incremental benefit, and there is no reason to call any of the three "best"
+or tradeable. Do not tune these thresholds to RELIANCE or query the 2022–2026 holdout to
+rescue a result. First gather data-quality and execution evidence; a distinct registered
+trial can be considered under ADR-0004 in the next permitted period.
+
+Source-method cautions: [TradingView's repainting guidance](https://www.tradingview.com/pine-script-docs/concepts/repainting/)
+and [broker-emulator documentation](https://www.tradingview.com/pine-script-docs/concepts/strategies/)
+explain why a Pine chart backtest cannot substitute for next-bar execution and observed
+quotes. [MQL5's strategy-testing documentation](https://www.mql5.com/en/docs/runtime/testing)
+is a research workflow, not validation on NSE. [Kite's historical-data documentation](https://kite.trade/docs/connect/v3/historical/)
+also limits what can be reconstructed for expired options. Respect each script's licence
+before copying code; this module uses only general mechanisms.
+
 ## Research-programme diagnostics (2026-10-24)
 
 `python -m financial_brain.evaluation.research_program` reads the existing ledgers without
