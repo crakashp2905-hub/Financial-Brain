@@ -10,6 +10,7 @@ from financial_brain.evaluation import oos_monitor as OM
 from financial_brain.evaluation import standard as S
 from financial_brain.services import trading as T
 from financial_brain.signals import watch as W
+from financial_brain.providers import kite_data as KD
 
 
 def test_failed_historical_trial_cannot_be_promoted_by_forward_result():
@@ -84,11 +85,11 @@ def test_watch_alerts_never_call_unconfirmed_stock_or_option_a_buy():
     alerts, observations = W.build_alerts(
         opportunities, {"ABC": history}, {"NSE:ABC": quote, "NFO:ABC-CE": option_quote},
         [contract], [], today=today, now=now)
-    assert len(alerts) == 2 and len(observations) == 2
-    assert alerts[0]["title"].startswith("WATCH BUY")
-    assert "No validated buy signal" in alerts[0]["body"]
-    assert alerts[1]["title"].startswith("OPTION WATCH")
-    assert "no validated options edge" in alerts[1]["body"]
+    assert len(alerts) == 1 and len(observations) == 2
+    assert alerts[0]["title"].startswith("RESEARCH WATCH")
+    assert "no trade signal" in alerts[0]["title"]
+    assert "no validated buy signal" in alerts[0]["body"]
+    assert "no validated options edge" in observations[1]["evidence"]
 
 
 def test_telegram_requires_explicit_configuration(monkeypatch):
@@ -96,3 +97,32 @@ def test_telegram_requires_explicit_configuration(monkeypatch):
     monkeypatch.delenv("FB_ALERT_TELEGRAM_CHAT_ID", raising=False)
     assert not A.telegram_configured()
     assert not A.telegram("title", "body")
+
+
+def test_watcher_loads_env_before_polling(monkeypatch):
+    calls = []
+    monkeypatch.setattr(W.env, "load", lambda: calls.append("env"))
+    monkeypatch.setattr(W, "_session_preflight", lambda now: calls.append("session"))
+    monkeypatch.setattr(W, "once", lambda **kw: calls.append("poll") or {"status": "ok"})
+    assert W.main(["--once", "--dry-run"]) == 0
+    assert calls == ["env", "session", "poll"]
+
+
+def test_missing_session_is_checked_even_without_opportunities(monkeypatch):
+    now = datetime(2026, 10, 22, 10, 0, tzinfo=W.IST)
+    def missing():
+        raise KD.KiteNotConfigured("login required")
+    monkeypatch.setattr(KD, "credentials", missing)
+    with pytest.raises(KD.KiteNotConfigured, match="login required"):
+        W._session_preflight(now)
+
+
+def test_login_notice_is_suppressed_for_dry_run(monkeypatch):
+    sent = []
+    monkeypatch.setattr(W.AL, "send", lambda alerts, **kw: sent.extend(alerts))
+    monkeypatch.setattr(W.AL, "telegram_configured", lambda: False)
+    W._session_notice(date(2026, 10, 22), dry_run=True)
+    assert sent == []
+    W._session_notice(date(2026, 10, 22), dry_run=False)
+    assert len(sent) == 1 and sent[0]["key"] == "kite-session:2026-10-22"
+    assert "No market signal or order" in sent[0]["body"]

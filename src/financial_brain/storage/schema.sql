@@ -1018,3 +1018,41 @@ CREATE TABLE IF NOT EXISTS rating_actions (
     sign            INTEGER,
     text            VARCHAR
 );
+
+-- Official CPI and IIP from MoSPI (ingest/mospi.py). available_on is the conservative first day a value could be
+-- known (release-calendar rule); use it, never the period, in any signal.
+CREATE TABLE IF NOT EXISTS official_macro (
+    series          VARCHAR NOT NULL,      -- CPI | IIP
+    period          DATE NOT NULL,         -- first day of the month measured
+    base_year       VARCHAR NOT NULL,
+    category        VARCHAR NOT NULL,      -- CPI: Rural/Urban/Combined; IIP: General/Sectoral/Use-based
+    subcategory     VARCHAR NOT NULL,
+    value           DOUBLE,
+    growth          DOUBLE,                -- CPI inflation % / IIP growth %, year on year
+    status          VARCHAR,               -- CPI: P provisional, F final
+    available_on    DATE,
+    observed_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (series, period, base_year, category, subcategory)
+);
+
+-- Rating direction read from the attached letter where the headline gave none (ingest/rating_docs.py).
+CREATE TABLE IF NOT EXISTS rating_pdf_direction (
+    news_id         VARCHAR PRIMARY KEY,
+    direction       VARCHAR,
+    sign            INTEGER,
+    chars           INTEGER,
+    observed_at     TIMESTAMPTZ NOT NULL
+);
+
+-- Monthly business updates (auto sales, cement despatches, power generation, loan book / AUM updates...) found among
+-- the announcements by their own subject line (ingest/monthly_updates.py). The figures stay in the attachment.
+CREATE TABLE IF NOT EXISTS monthly_updates (
+    news_id         VARCHAR PRIMARY KEY,
+    isin            VARCHAR,
+    company         VARCHAR,
+    business_date   DATE,
+    published_at    TIMESTAMP,
+    kind            VARCHAR,
+    headline        VARCHAR,
+    attachment      VARCHAR
+);

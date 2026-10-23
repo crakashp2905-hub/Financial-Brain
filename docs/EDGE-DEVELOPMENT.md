@@ -1,5 +1,25 @@
 # Edge development: swing, intraday and options
 
+## Research-programme diagnostics (2026-10-24)
+
+`python -m financial_brain.evaluation.research_program` reads the existing ledgers without
+writing a trial, changing M1, or promoting an OMS verdict. On 2026-10-24 it found only eight
+valid M1 forward daily observations (2026-10-12 to 2026-10-22), with mean daily net excess
+-0.6295 percentage points over that short sample. This is **not** an independent-rebalance
+estimate or a verdict. The intraday paper-execution report belongs to ORB/GAP, **not M1**,
+and its simulated fills are not broker fills. The option-book archive was absent.
+
+The module also supplies three fail-closed research primitives: `filter_counterfactual`
+charges foregone winners as well as avoided losers on a complete frozen training book;
+`event_peer_diagnostic` requires publication-before-entry timestamps, matched net peer
+returns, and an exit inside the sealed 2016-2021 training period; `vertical_roundtrip`
+requires fresh simultaneous two-sided entry/exit books for the same defined-risk spread,
+visible size and explicit total charges. They produce descriptions, not BUY/SELL calls or
+new trials. The timestamp-coverage report counts field presence, not proof that every
+stored timestamp is the original exchange dissemination time. In particular, do not use
+`evaluation.news_model.load` as a new PIT event-test universe without changing its
+2025-liquidity universe selection: that selection looks ahead for earlier events.
+
 Updated 2026-10-21. **No new tradeable edge has been established.** An edge means incremental return after
 actual costs, an appropriate baseline and the prospective gates in ADR-0004. A strategy idea, an in-sample
 average or a model probability is not that result. The 2026Q4 registered trial budget is exhausted; this work

@@ -17,7 +17,7 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 
-from .. import alerts as AL
+from .. import alerts as AL, env
 from ..forecasting.distribution import ForecastError
 from ..forecasting.null import Climatology
 from ..ingest import options_quotes as OQ
@@ -187,11 +187,11 @@ def build_alerts(opportunities: list[dict], histories: dict[str, list[float]],
                     "evidence": row.get("evidence", {}).get("status", "unknown")}
         observations.append(baseline)
         if net >= WATCH_NET:
-            alerts.append({"key": f"watch-buy:{today}:{symbol}",
-                           "title": f"WATCH BUY: {symbol} (unconfirmed)",
-                           "body": (f"Live Rs {spot:,.2f}; {dist.horizon}-session baseline P(up) "
-                                    f"{baseline['p_up_baseline']:.0%}. Historical model net {net:+.2%}; "
-                                    f"evidence {baseline['evidence']}. Review in terminal. No validated buy signal.")})
+            alerts.append({"key": f"research-watch:{today}:{symbol}",
+                           "title": f"RESEARCH WATCH: {symbol} — no trade signal",
+                           "body": (f"Unconfirmed historical observation; no validated buy signal. "
+                                    f"Quote Rs {spot:,.2f} at {q['timestamp']}; modelled net {net:+.2%} "
+                                    f"over {dist.horizon} sessions is not a proven edge. Review risk and alternatives in terminal.")})
         contracts = _option_contracts(instruments, symbol, spot, today)
         for c in contracts:
             key = f"NFO:{c['tradingsymbol']}"
@@ -209,11 +209,8 @@ def build_alerts(opportunities: list[dict], histories: dict[str, list[float]],
                                      ask=ask, bid=bid, lot=int(float(c.get("lot_size") or 0)))
             option.update(record_type="option", day=today.isoformat(), as_of=str(as_of))
             observations.append(option)
-            alerts.append({"key": f"watch-option:{today}:{c['tradingsymbol']}",
-                           "title": f"OPTION WATCH: {option['contract']}",
-                           "body": (f"Ask Rs {ask:,.2f}; expiry break-even Rs {option['break_even']:,.2f}; "
-                                    f"baseline P(profit before fees) {option['p_profit_before_fees']:.0%}. "
-                                    "Scenario only; no validated options edge or order.")})
+            # Preserve the scenario for research without interrupting the trader.
+            # Its payoff excludes fees and has no validated options edge.
     return alerts, observations
 
 
@@ -276,6 +273,25 @@ def once(*, now: datetime | None = None, dry_run: bool = False,
             "desktop_sent": len(local), "telegram_sent": len(mobile)}
 
 
+def _session_preflight(now: datetime) -> None:
+    """Check the local session even when there is no fresh opportunity snapshot."""
+    if now.weekday() < 5 and MARKET_OPEN <= now.time() < MARKET_CLOSE:
+        KD.credentials()
+
+
+def _session_notice(day: date, *, dry_run: bool) -> None:
+    if dry_run:
+        return
+    message = [{"key": f"kite-session:{day}", "title": "Finance Brain: Kite session unavailable",
+                "body": "Market watch is paused. Complete scripts\\kite_login.cmd in Zerodha; if already logged in, check API access. No market signal or order was sent."}]
+    try:
+        AL.send(message)
+        if AL.telegram_configured():
+            AL.send(message, notify=AL.telegram, path=AL.TELEGRAM_SENT)
+    except OSError:
+        pass  # A notification/ledger failure must not stop session recovery; retry next poll.
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Read-only stock and option watch alerts during market hours")
     parser.add_argument("--once", action="store_true", help="poll once and exit")
@@ -284,16 +300,28 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.poll_seconds < 30:
         parser.error("poll interval must be at least 30 seconds")
+    env.load()
+    last_error = None
     while True:
+        now = datetime.now(IST)
         try:
-            result = once(dry_run=args.dry_run)
+            _session_preflight(now)
+            result = once(now=now, dry_run=args.dry_run)
             print(json.dumps(result, default=str), flush=True)
+            if last_error is not None:
+                print("watch recovered", flush=True)
+            last_error = None
         except (OSError, ValueError, duckdb.Error, KD.KiteDataError, KD.KiteNotConfigured) as exc:
-            print(f"watch unavailable: {type(exc).__name__}: {str(exc)[:120]}", flush=True)
+            error = f"{type(exc).__name__}: {str(exc)[:120]}"
+            if error != last_error:
+                print(f"watch unavailable: {error}", flush=True)
+            last_error = error
+            if isinstance(exc, (KD.KiteNotConfigured, KD.KiteAuthError)):
+                _session_notice(now.date(), dry_run=args.dry_run)
             if args.once:
                 return 1
         if args.once or datetime.now(IST).time() >= MARKET_CLOSE:
-            return 0
+            return 1 if last_error is not None else 0
         time.sleep(args.poll_seconds)
 
 

@@ -59,7 +59,11 @@ def test_shareholding_known_at_is_the_later_time_and_facts_are_category_totals()
          b'<s:ShareholdingAsAPercentageOfTotalNumberOfShares contextRef="MutualFundsOrUTI_ContextI">0.23</s:ShareholdingAsAPercentageOfTotalNumberOfShares>'
          b'<s:NumberOfShares contextRef="IndividualsOrHUF_Context15">100</s:NumberOfShares>'
          b'<s:NameOfTheShareholder contextRef="MutualFundsOrUTI_ContextI">X</s:NameOfTheShareholder></xbrli:xbrl>')
-    assert SH.parse_xbrl(x) == [("MutualFundsOrUTI", "ShareholdingAsAPercentageOfTotalNumberOfShares", 0.23)]
+    assert SH.parse_xbrl(x) == [("mutualfundsoruti", "ShareholdingAsAPercentageOfTotalNumberOfShares", 0.23)]
+    assert SH.category("MutualFundsOrUtiI") == SH.category("MutualFundsOrUTI_ContextI") == "mutualfundsoruti"
+    assert SH.category("InstitutionsForeignPortfolioInvestorCatergoryOneI") == "institutionsforeignportfolioinvestorcategoryone"
+    assert SH.category("DetailsSharesHeldByIndividualsOrHUF001I") is None and SH.category("OneI") is None
+    assert SH.category("IndividualsOrHUF_Context15") is None
 
 
 def test_macro_tri_and_flows():
@@ -103,3 +107,24 @@ def test_rating_direction():
     assert RD.direction("Credit rating withdrawn at the request of the company") == "withdrawn"
     assert RD.direction("Intimation of credit rating") == "unclear"
     assert RD.SIGN[RD.direction("downgraded")] == -1
+
+
+def test_ipo_lockins_and_mospi_availability():
+    from financial_brain.ingest import mospi as MO
+    from financial_brain.ingest import nse_disclosures as ND
+    d = dict(ND.lockin_dates(date(2026, 1, 16)))
+    assert d["anchor_half"] == date(2026, 2, 14) and d["anchor_rest"] == date(2026, 4, 15)
+    assert MO.available_on("CPI", date(2025, 12, 1)) == date(2026, 1, 13)
+    assert MO.available_on("IIP", date(2026, 8, 1)) == date(2026, 10, 13)
+    row = MO.parse("CPI", b'{"data":[{"baseyear":"2012","year":2025,"month":"August","sector":"Combined",'
+                          b'"subgroup":"General-Overall","index":"197.0","inflation":"2.07","status":"F"}]}')
+    assert row[0][1] == date(2025, 8, 1) and row[0][5] == 197.0 and row[0][8] == date(2025, 9, 13)
+
+
+def test_monthly_update_kinds():
+    from financial_brain.ingest import monthly_updates as MU
+    assert MU.kind_of("Maruti Suzuki - Sales for the month of September 2026 (units)") == "auto_sales"
+    assert MU.kind_of("UltraTech: cement despatch volumes for October") == "cement_steel_volumes"
+    assert MU.kind_of("NTPC power generation for the month") == "power_generation"
+    assert MU.kind_of("Business update for the quarter - AUM as on 30 September") == "business_update"
+    assert MU.kind_of("Outcome of board meeting") is None

@@ -42,13 +42,27 @@ def known_at(r: dict) -> datetime | None:
     return max(ts) if ts else None
 
 
+def category(ctx: str) -> str | None:
+    """The category a context totals, normalised across the two SHP taxonomies (``MutualFundsOrUTI_ContextI`` in the
+    current one, ``MutualFundsOrUtiI`` before 2025), or None for per-holder and filing-level contexts."""
+    if ctx.endswith("_ContextI"):
+        name = ctx[: -len("_ContextI")]
+    elif ctx.endswith("I") and not re.search(r"\d", ctx) and not ctx.startswith(("Details", "D_")):
+        name = ctx[:-1]
+    else:
+        return None
+    if name in ("One", "Main", "") or re.search(r"\d", name):
+        return None
+    return name.lower().replace("catergory", "category")
+
+
 def parse_xbrl(payload: bytes) -> list[tuple[str, str, float]]:
-    """(category, concept, value) for every numeric fact in a category-total context."""
+    """(category, concept, value) for every numeric fact in a category-total context (no per-holder rows)."""
     root = ET.fromstring(payload)
     out = []
     for el in root:
-        ctx = el.get("contextRef") or ""
-        if not ctx.endswith("_ContextI"):
+        cat = category(el.get("contextRef") or "")
+        if cat is None:
             continue
         concept = el.tag.rsplit("}", 1)[-1]
         if SKIP.search(concept):
@@ -57,7 +71,7 @@ def parse_xbrl(payload: bytes) -> list[tuple[str, str, float]]:
             v = float((el.text or "").strip())
         except ValueError:
             continue
-        out.append((ctx[: -len("_ContextI")], concept, v))
+        out.append((cat, concept, v))
     return out
 
 

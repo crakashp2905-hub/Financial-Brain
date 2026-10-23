@@ -5,7 +5,8 @@ rem 1b. NSE delivery position (MTO) for today: lake, then the delivery table
 rem 1c. NSE structured insider disclosures (PIT XBRL) for yesterday and today: lake, then insider_disclosures
 rem 1d. free datasets (2026-10-18): F&O bhavcopy, ban list, participant OI/volume; shareholding filings of the last 3 days;
 rem     bulk/block deals and short selling (this month); NSE corporate actions, SAST Reg 29, pledges, encumbrance, event
-rem     calendar; FII/DII flows and SEBI RSS; FRED macro; index total return + constituent lists
+rem     calendar, IPOs; FII/DII flows and SEBI RSS; FRED + MoSPI macro; index total return + constituent lists;
+rem     rating letters (300 a night, oldest backlog last), rating directions, monthly business updates, call transcripts
 rem 2. champion/challenger: record today's locked out-of-sample picks, resolve matured cohorts
 rem 3. F&O snapshot: futures basis and OI, option-chain statistics, day-over-day positioning (needs the Kite token)
 rem 4. loss review: situations that keep losing become PROPOSED hypotheses (never applied automatically)
@@ -35,7 +36,10 @@ python -c "from financial_brain import env; env.load(); from financial_brain.cli
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['disclosures', '--start', '%M%', '--prefetch']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['disclosures', '--since', '%M%']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['flows']))" >> %LOG% 2>&1
+python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['rating-docs', '--limit', '300']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['rating-actions']))" >> %LOG% 2>&1
+python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['monthly-updates']))" >> %LOG% 2>&1
+python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['calls-backfill', '--start', '%Y%', '--end', '%D%']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['macro']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['index-tri', '--start', '%M%']))" >> %LOG% 2>&1
 python -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['champion', '--record']))" >> %LOG% 2>&1

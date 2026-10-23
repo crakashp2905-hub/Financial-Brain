@@ -8,6 +8,8 @@ into an error, and reading a price from after the moment being reasoned about.
 from __future__ import annotations
 
 import json
+import io
+import urllib.error
 from datetime import date, datetime
 
 import pytest
@@ -64,6 +66,37 @@ def test_a_stale_access_token_is_not_used(monkeypatch, tmp_path):
     path.write_text(json.dumps({"access_token": "fresh",
                                 "login_day": date.today().isoformat()}))
     assert kl.stored_token() == "fresh"
+
+
+def test_http_auth_rejection_has_a_distinct_error(monkeypatch):
+    monkeypatch.setattr(kd, "credentials", lambda: ("key", "token"))
+    monkeypatch.setattr(kd, "_throttle", lambda: None)
+
+    def rejected(*args, **kwargs):
+        raise urllib.error.HTTPError("https://api.kite.trade/quote", 403, "Forbidden", {}, io.BytesIO(b"forbidden"))
+
+    monkeypatch.setattr(kd.urllib.request, "urlopen", rejected)
+    with pytest.raises(kd.KiteAuthError, match="403"):
+        kd._get("/quote")
+
+
+def test_token_exception_response_has_a_distinct_error(monkeypatch):
+    monkeypatch.setattr(kd, "credentials", lambda: ("key", "token"))
+    monkeypatch.setattr(kd, "_throttle", lambda: None)
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"status":"error","error_type":"TokenException","message":"expired"}'
+
+    monkeypatch.setattr(kd.urllib.request, "urlopen", lambda *args, **kwargs: Response())
+    with pytest.raises(kd.KiteAuthError, match="session rejected"):
+        kd._get("/quote")
 
 
 def test_the_login_url_carries_only_the_api_key(monkeypatch):

@@ -166,7 +166,7 @@ Validation modules, used from Python rather than the CLI:
 | `providers/kite_account.py` / `portfolio/my_book.py` / `fb my-portfolio --sync` | **Your own Kite account, read only** (holdings, positions, trade book; three exact paths, GET only, stored in `data/`): since cost, thesis health by rules (EXIT BY RULE only on the plan's tested exits), book volatility, beta, share at risk to the stops, sector concentration, and which of today's names add the least risk for their alpha |
 | `portfolio/journal.py` / `fb journal` | Your round trips (FIFO) with an autopsy each - market, sector, selection, entry and exit against the day's close, costs - and a report on strengths and weaknesses once 30 trips exist |
 | `alerts.py` / `fb alerts` | Windows desktop alerts, sent once each: a holding exiting by rule, a name clearing +1% net, a halted loop, a live run that did not complete |
-| `signals/watch.py` | Market-hours stock and option scenario watcher: fresh Kite quotes, bootstrap baseline probabilities, two-sided option quotes, holding stop reviews, deduplicated desktop and optional Telegram alerts. Unconfirmed opportunities are labelled WATCH; no order is sent |
+| `signals/watch.py` | Market-hours research watcher: fresh Kite quotes, bootstrap baseline observations, two-sided option scenarios and holding stop reviews. Unconfirmed stocks are explicitly labelled **research watch — no trade signal**; option scenarios are logged without push alerts. No order is sent |
 | `features/fundamentals_pit.py` | 295k point-in-time observations from exchange XBRL (revisions numbered, never overwritten; `as_known_on` a date): EBITDA, EBIT, debt, cash, book value, cash flow, and P/E, P/B, EV/EBITDA, ROE, ROCE, debt/equity, interest cover at a price - labelled stale where the results are |
 | `evaluation/half_life_table.py` | Every signal at every horizon as a trader reads it: excess, hit rate, Sharpe, MFE/MAE, turnover, cost drag, net. Momentum is the only signal that pays long-only at every horizon (+1.50% net over 60 sessions); low volatility ranks well but its top quintile under-earns |
 | `opportunity/lifecycle.py` / `fb lifecycle TICKER --day D` | One opportunity end to end: found, taken or rejected (and why), sold, resolved. Every opportunity is typed: direction, evidence ids, an experiment id (pre-registration + a hash of the pricing model), an outcome distribution |
@@ -182,6 +182,7 @@ Validation modules, used from Python rather than the CLI:
 | `paper/loss_review.py` / `fb loss-review [--propose]` | **Learning from the bad trades.** Every intraday paper trade records its decision-time context (market move since the open, daily trend, gap, opening-range width, minute); the review finds the situations that keep losing, one observation per day, with the chance count beside them, and writes them as PROPOSED hypotheses. Nothing changes until a hypothesis is pre-registered and survives data it was not found on. First test of the loop - *trade only with the market trend* - doubled ORB's gross in the training year and added nothing in the held-out year (net -21 to -25 bp); it does not qualify |
 | `paper/book.py` / `fb book [--book swing-v1\|book-v1] [--replay START --label L] [--report]` | **Paper books for the suggestions**, each pre-registered: *swing-v1* buys the top 50 swing candidates each evening (2% each, at most 50 open, swing stop, sold after 7 sessions), *book-v1* the top 5 position names (60 sessions). Bought at the next close, sold at the stop or the horizon, net of the sized round trip, against the universe bought and held over the same days. Every trade is kept and the terminal shows the worst beside the best. Replays are labelled in-sample; the live record is the evidence (verdict after 100 trades over 20 entry days). book-v1's replay since 2023: +0.79% a trade net but **-3.1% against the universe** (t -2.5) - a large-cap tilt through a small-cap rally |
 | `paper/terminal.py` / `fb terminal` | One HTML page: market and breadth, kill switch, top opportunities, paper trades, what changed (filings, escaped), strategy health and champion standings, and a drill-down per name (why now, evidence, analogues, range, net alpha, size, stop, time exit, execution). Written to `data/terminal/index.html` |
+| `paper/decision_journal.py` | Owner-entered, append-only record of prospective choices and decision latency; descriptive workflow evaluation only, with no order path. See [trader decision workflow](docs/TRADER-DECISION-WORKFLOW.md) |
 | `evaluation/setup_analogues.py` | The 200 most similar past situations by eight ranked features, shown beside the whole pool. Out of sample its 5-day IC is +0.053 against momentum's +0.009 (t 3.1, under the bar), probably short-term reversal; descriptive only |
 | `evaluation/earnings_reaction.py` | Results reaction by surprise: day 0 top-minus-bottom quintile +1.5% (t 6.4), nothing after - no post-earnings drift to trade |
 | `evaluation/intraday_half_life.py` | Daily signals inside the next day: the composite's IC from 09:30 to 15:15 is +0.046 (t 6.9), carried by low volatility and the 52-week high. Not a strategy (costs); a reason not to wait for a dip on entry |
@@ -222,6 +223,13 @@ so a five-minute signal is never evaluated with a twenty-day framework or the ot
 | **Swing** | 5-10 sessions | daily setups on liquid names | net return over a *random* liquid name (the mean, not the median) | **None.** Pullback, oversold, breakout and strength setups lose 0.2-0.6% a trade net |
 | **Intraday** | minutes to the close | Kite minute bars and live quotes, 200-300 names | net bp a trade after the intraday schedule | **None.** Opening-range breakout: gross ~0, net -15 to -21 bp over 251,000 trades. Now being measured live |
 
+The existing `data/minute_history.duckdb` Kite archive reached 2026-10-15 when checked on 2026-10-24.
+After the owner completes that day's Kite login, `scripts\kite_history_refresh.cmd` refreshes the last 45 calendar
+days for each year's top 300 liquid names. For a different bounded period use
+`fb kite-history minute --top 300 --start YYYY-MM-DD`. Both paths refuse a missing session before opening the
+writable history database and return a failure status if any symbol pull fails. The archive is historical candles,
+not historical executable bid/ask; no option-fill claim should be inferred from it.
+
 `fb plan TICKER --style position|swing|intraday` gives size, horizon and exits for any name and states the mode's
 evidence first. `fb costs-calc` shows what a trade costs and what tax takes. Neither is advice.
 
@@ -255,6 +263,11 @@ archive reaches back to 2015, but the executable bid/ask archive is too short to
 no options message says BUY or SELL. Forecasts are recorded before
 their outcomes for later evaluation. To inspect without sending, run
 `.venv\Scripts\python.exe -m financial_brain.signals.watch --once --dry-run` during market hours.
+
+The watcher loads `.env` itself. If today's Kite session is missing or rejected, it sends one deduplicated login
+reminder, pauses market signals, and retries after the owner completes `scripts\kite_login.cmd`; the paper loop also
+waits for a usable session rather than exhausting its ordinary feed-error budget. A session still unavailable at
+the close is recorded as `session_unavailable`, never as a completed paper day.
 
 Desktop notifications need an interactive Windows session. To opt into phone messages, set
 `FB_ALERT_TELEGRAM_BOT_TOKEN` and `FB_ALERT_TELEGRAM_CHAT_ID` in the owner's environment and start the bot's private

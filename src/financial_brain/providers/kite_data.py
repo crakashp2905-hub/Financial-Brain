@@ -76,6 +76,10 @@ class KiteDataError(RuntimeError):
     """Kite refused a request. The message carries its reason, never a credential."""
 
 
+class KiteAuthError(KiteDataError):
+    """Kite rejected the current session; a new owner login may be required."""
+
+
 def credentials() -> tuple[str, str]:
     """API key from the environment, access token from the environment or today's file."""
     from .kite_login import stored_token
@@ -115,6 +119,8 @@ def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             raw = r.read()
     except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            raise KiteAuthError(f"Kite session rejected (HTTP {e.code}) on {path}") from e
         raise KiteDataError(f"{e.code} from {path}: {e.read()[:200]!r}") from e
     except OSError as e:
         raise KiteDataError(f"{path}: {e}") from e
@@ -123,6 +129,8 @@ def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
         return {"status": "success", "raw": raw}       # /instruments returns CSV
     body = json.loads(raw)
     if body.get("status") != "success":
+        if body.get("error_type") == "TokenException":
+            raise KiteAuthError(f"Kite session rejected on {path}")
         raise KiteDataError(f"Kite error on {path}: {body.get('message', body)}")
     return body
 

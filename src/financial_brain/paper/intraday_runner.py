@@ -221,6 +221,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         log.warning("quote archive unavailable: %s", str(e)[:120])
         qcon = None
     polls = failures = 0
+    session_issue = None
     seen_today = False
     last: dict[str, float] = {}
     opened = False
@@ -237,6 +238,16 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             for i in range(0, len(syms), 450):
                 q.update(quote_fn([f"NSE:{s}" for s in syms[i:i + 450]], "full"))   # full: includes the order book
             failures = 0
+            if session_issue is not None:
+                log.info("Kite session recovered; paper polling resumed")
+                session_issue = None
+        except (kd.KiteNotConfigured, kd.KiteAuthError) as e:
+            issue = type(e).__name__
+            if issue != session_issue:
+                log.warning("Kite session unavailable: %s. Complete scripts\\kite_login.cmd or check API access; paper polling will retry.", issue)
+            session_issue = issue
+            sleep_fn(max(poll, 60))
+            continue
         except Exception as e:                          # noqa: BLE001 - a bad poll is not the end of the day
             failures += 1
             log.warning("quote failed (%s/%s): %s", failures, max_failures, str(e)[:120])
@@ -323,16 +334,17 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                 for t in eng.end_of_day(now.replace(tzinfo=None), last):
                     save(con, t, "live")
         sleep_fn(poll)
-    if not eng.closed_for_day:
+    if session_issue is None and not eng.closed_for_day:
         for t in eng.end_of_day(now_fn().replace(tzinfo=None), last):
             save(con, t, "live")
-    record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status="complete",
+    status = "session_unavailable" if session_issue is not None else "complete"
+    record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,
                symbols=len(syms), polls=polls, note=json.dumps({"skipped": len(eng.skipped)}))
     if qcon is not None:
         qcon.close()
-    if _has_board(con):
+    if session_issue is None and _has_board(con):
         BD.resolve_close(con, day, "live", last)
-    out = {"day": day, "status": "complete", "summary": eng.summary(), "polls": polls}
+    out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls}
     write_report(con, day, "live", eng)
     return out
 

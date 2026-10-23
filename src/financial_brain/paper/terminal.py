@@ -39,6 +39,8 @@ th{font-size:12px;color:var(--muted);font-weight:600}td.r,th.r{text-align:right}
 details{background:var(--card);border:1px solid var(--line);border-radius:6px;margin:8px 0;padding:10px 12px}
 summary{cursor:pointer;font-weight:600}summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .kv{display:grid;grid-template-columns:200px 1fr;gap:4px 12px;margin-top:8px}.kv div:nth-child(odd){color:var(--muted)}
+.decision-first{border:2px solid var(--accent);border-radius:8px;padding:14px;background:var(--card);margin-top:14px}
+.decision-first h2{margin:0 0 8px}.decision-first .tile{min-width:0}.decision-first .v{font-size:16px}
 @media (max-width:600px){.kv{grid-template-columns:1fr}}
 """
 
@@ -334,6 +336,31 @@ def decision_summary(rcon, asof, cs, best, breadth_state, ks_level, my) -> str:
     return "\n".join(out)
 
 
+def decision_first(best, *, asof, stale: list[str], kill_level: str, my) -> str:
+    """A fast, conservative front door; research estimates never become trade instructions."""
+    blocked = bool(stale) or kill_level != "OK"
+    status = "DATA / RISK HOLD" if blocked else "NO VALIDATED TRADE SIGNAL"
+    reason = ("Stale inputs or the kill switch block new decisions. " if blocked else
+              "No strategy has a confirmed forward-paper edge. ")
+    holdings = (my or {}).get("holdings", [])
+    review = [h for h in holdings if h.get("exit", {}).get("action") not in (None, "HOLD")]
+    holding_text = (", ".join(_e(h["symbol"]) for h in review[:3]) +
+                    (f" +{len(review) - 3} more" if len(review) > 3 else "")) if review else "None flagged"
+    candidates = best.head(3) if best is not None else []
+    watches = ", ".join(f"<a href='#{_e(r.ticker)}'>{_e(r.ticker)}</a>" for r in candidates.itertuples()) or "None"
+    return ("<section class='decision-first' aria-label='Decision first'><h2>Decision first</h2>"
+            f"<div class='v'><b>{status}</b></div><div class='sub'>{reason}Cash is a valid choice. "
+            "Research estimates below are not calibrated trade probabilities.</div>"
+            "<div class='grid' style='margin-top:10px'>"
+            f"<div class='tile'><div class='k'>Portfolio to review</div><div class='v'>{holding_text}</div>"
+            "<div class='sub'>A review is not an automatic sell order.</div></div>"
+            f"<div class='tile'><div class='k'>Top research watches</div><div class='v'>{watches}</div>"
+            "<div class='sub'>Historical ranking only; no buy instruction.</div></div>"
+            f"<div class='tile'><div class='k'>Evidence and data</div><div class='v'>Historical observation</div>"
+            f"<div class='sub'>As of {_e(asof)} · {len(stale)} stale input(s) · kill switch {_e(kill_level)}</div></div>"
+            "</div></section>")
+
+
 def zoo_panel() -> str:
     """Every tested daily strategy, live on paper, rules frozen as tested."""
     import duckdb as _db
@@ -479,8 +506,9 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
             evidence={"status": r.evidence, "ids": r.evidence_ids, "experiment": r.experiment_id}))
         cards.append(TV.card(r, row, comp.loc[i], rank=k, universe=len(cs), decile_mean=float(dec.loc[i]), analogue=ana,
                              breadth_state=breadth_state, fno=fno.get(r.ticker), returns=rets, plan=plan, sid=sid, fund=fund))
-    out.append("<div class='wrap'><table><tr><th class='r'>#</th><th>Stock</th><th>Direction</th><th class='r'>Net alpha</th><th>Horizon</th>"
-               "<th class='r'>P(up)</th><th class='r'>Reward/risk</th><th class='r'>Stop</th><th>Claim (evidence tier)</th></tr>" + "".join(rows) + "</table></div>")
+    out.append("<div class='sub'>Model estimates below are exploratory, not calibrated odds or an actionable edge.</div>"
+               "<div class='wrap'><table><tr><th class='r'>#</th><th>Stock</th><th>Direction</th><th class='r'>Modelled net</th><th>Horizon</th>"
+               "<th class='r'>Baseline P(up)</th><th class='r'>Baseline reward/risk</th><th class='r'>Stop</th><th>Claim (evidence tier)</th></tr>" + "".join(rows) + "</table></div>")
     out.append(TV.calculator(sizing))
     try:                                                # the day's list, kept so your trades can be compared with it later
         ledger.execute("CREATE TABLE IF NOT EXISTS terminal_lists (day VARCHAR, rank INTEGER, ticker VARCHAR, lineage VARCHAR, net DOUBLE, PRIMARY KEY (day, rank))")
@@ -639,11 +667,12 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
 
     asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
     day = day or asof
+    stale = freshness(rcon)
     parts = [f"<title>Financial-Brain terminal</title><style>{CSS}</style><main>",
              f"<h1>Financial-Brain</h1><div class='sub'>Terminal for {day} · data through {asof} · written "
              f"{datetime.now().strftime('%Y-%m-%d %H:%M')} · paper only, no orders exist in this system · "
              f"<a href='signals.html'>signal screener: every algorithm and indicator, the stocks it fires on, their charts</a></div>",
-             _freshness_banner(freshness(rcon))]
+             _freshness_banner(stale)]
     # ---------------------------------------------------------------- market
     b = BR.breadth(rcon, asof)
     parts += ["<h2>Market</h2>", market_panel(rcon),
@@ -660,6 +689,7 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
         my = _my_book_analysis(rcon, asof, best.head(10))
     except Exception:                                   # noqa: BLE001
         my = None
+    parts.insert(3, decision_first(best, asof=asof, stale=stale, kill_level=ks.get("level", "OK"), my=my))
     parts.append(decision_summary(rcon, asof, cs, best, b.get("state"), ks.get("level", "OK"), my))
     parts.append(trader_section(rcon, ledger, cs, best, asof, capital=capital, analogue_pool=analogue_pool,
                                 breadth_state=b.get("state"), clears=clears, my=my))

@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from financial_brain.paper import intraday_runner as R
+from financial_brain.providers import kite_data as KD
 
 
 class Clock:
@@ -73,6 +74,42 @@ def test_a_failing_feed_aborts_after_the_limit_rather_than_spinning_all_day(setu
         raise RuntimeError("token expired")
     out = R.run_live(quote_fn=broken, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb", max_failures=5)
     assert out["status"] == "aborted" and "token expired" in out["why"]
+
+
+def test_missing_session_retries_then_resumes_without_aborting(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 27, tzinfo=R.IST))
+    quotes = fake_quotes(c)
+    attempts = 0
+
+    def late_login(symbols, kind):
+        nonlocal attempts
+        attempts += 1
+        if attempts <= 2:
+            raise KD.KiteNotConfigured("no token")
+        return quotes(symbols, kind)
+
+    def finish_after_recovery(seconds):
+        c.sleep(seconds)
+        if c.t.hour == 9 and c.t.minute >= 32:
+            c.t = datetime(2026, 10, 6, 15, 31, tzinfo=R.IST)
+
+    out = R.run_live(quote_fn=late_login, now_fn=c.now, sleep_fn=finish_after_recovery,
+                     path=setup / "l.duckdb", max_failures=1)
+    assert out["status"] == "complete" and out["polls"] > 0
+    assert attempts > 2
+
+
+def test_missing_session_at_close_is_not_recorded_as_complete(setup):
+    c = Clock(datetime(2026, 10, 6, 15, 29, tzinfo=R.IST))
+
+    def missing(symbols, kind):
+        raise KD.KiteAuthError("session rejected")
+
+    out = R.run_live(quote_fn=missing, now_fn=c.now, sleep_fn=c.sleep,
+                     path=setup / "l.duckdb", max_failures=1)
+    assert out["status"] == "session_unavailable" and out["polls"] == 0
+    row = R.ledger(setup / "l.duckdb").execute("SELECT status FROM runs WHERE mode = 'live'").fetchone()
+    assert row == ("session_unavailable",)
 
 
 def test_bar_path_puts_the_low_first_on_an_up_bar():

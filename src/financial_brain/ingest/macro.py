@@ -3,6 +3,9 @@
 ``https://fred.stlouisfed.org/graph/fredgraph.csv?id=<series>`` (robots.txt allows it). Each download is the whole
 history; it goes to the raw lake (so a revised series is kept beside the old one) and replaces ``macro_series``.
 
+RBI's own site refuses automated access, so RBI series come only where FRED carries them (FX reserves via the IMF,
+private credit via the BIS); FRED's India policy-rate series stops in 2023 and is not used.
+
 **Not point in time.** FRED's date is the observation period, not the release date: India's CPI for a month is
 published about two weeks later, and FRED serves the latest revision. A signal must lag each series by its
 ``release_lag_days`` at least, and treat monthly values as revised data.
@@ -24,6 +27,16 @@ SERIES = {
     "INDIRLTLT01STM": ("India 10-year government bond yield, % (monthly)", 15),
     "IRSTCI01INM156N": ("India call money rate, % (monthly)", 15),
     "INDCPIALLMINMEI": ("India CPI, all items, index (monthly; OECD, ends 2025-03)", 45),
+    "TRESEGINM052N": ("India FX reserves excluding gold, USD million (monthly, IMF)", 45),
+    "QINPAMUSDA": ("Credit to India's private non-financial sector, USD billion (quarterly, BIS)", 120),
+    # Input costs for metal, mining and energy names (IMF primary commodity prices, monthly, USD). MCX's own site
+    # refuses automated access, so domestic futures prices are not collected.
+    "PCOPPUSDM": ("Copper, USD a tonne (monthly, IMF)", 45),
+    "PALUMUSDM": ("Aluminium, USD a tonne (monthly, IMF)", 45),
+    "PZINCUSDM": ("Zinc, USD a tonne (monthly, IMF)", 45),
+    "PIORECRUSDM": ("Iron ore, USD a dry tonne (monthly, IMF)", 45),
+    "PCOALAUUSDM": ("Coal, Australian, USD a tonne (monthly, IMF)", 45),
+    "PNGASJPUSDM": ("LNG Japan, USD per MMBtu (monthly, IMF)", 45),
 }
 UA = "financial-brain/1.0 (personal research)"
 

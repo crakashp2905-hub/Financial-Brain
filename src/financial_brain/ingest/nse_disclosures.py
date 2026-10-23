@@ -11,6 +11,8 @@ Endpoints read on 2026-10-18 from NSE's own corporate-filings pages (``corporate
                                                          lender, shares and % encumbered (from 2019)
     encumbrance    /api/corp-encumbrance                 promoters' encumbrance declarations (> 20% / > 50%)
     event_calendar /api/event-calendar                   board meetings ahead, with purpose (forward only)
+    ipo            /api/public-past-issues               IPOs: dates, price, listing (from 2015); lock-in expiries are
+                                                         derived from SEBI's rules by ``lockin_dates`` (approximate)
 
 Rows are kept as they came (``payload`` JSON) with a content hash as key, the dataset's event date and the
 broadcast time where the listing gives one - a disclosure is usable from its broadcast, not its event date.
@@ -31,7 +33,19 @@ DATASETS = {
     "pledge": ("/api/corporate-pledgedata-sast3132?index=equities", date(2019, 1, 1), ("eventDetailsFromDate",)),
     "encumbrance": ("/api/corp-encumbrance?index=equities", date(2019, 1, 1), ("broadcastDate",)),
     "event_calendar": ("/api/event-calendar?index=equities", None, ("date",)),
+    "ipo": ("/api/public-past-issues?index=equities", date(2015, 1, 1), ("listingDate", "ipoEndDate")),
 }
+
+#: SEBI ICDR lock-ins counted from allotment (taken as the session before listing - approximate by a day or two):
+#: anchor investors half at 30 days and half at 90 (from 2023; 30 days for all anchors before), pre-IPO shareholders
+#: 6 months, promoters' minimum contribution 18 months and the excess 6 months (from 2021; 3 years / 1 year before).
+LOCKINS = [("anchor_half", 30), ("anchor_rest", 90), ("pre_ipo_and_promoter_excess", 182), ("promoter_minimum", 547)]
+
+
+def lockin_dates(listing: date) -> list[tuple[str, date]]:
+    """Approximate lock-in expiry dates for an IPO listed on ``listing`` (rule-derived, not filed)."""
+    allot = listing - timedelta(days=1)
+    return [(name, allot + timedelta(days=d)) for name, d in LOCKINS]
 BROADCAST = ("broadcastdate", "broadcastDate", "caBroadcastDate", "timestamp")
 FORMATS = ("%d-%b-%Y %H:%M:%S", "%d-%b-%Y %H:%M", "%d-%b-%Y", "%d-%m-%Y")
 

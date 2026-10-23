@@ -2042,7 +2042,13 @@ def cmd_kite_history(args) -> int:
     """Widen the Kite pulls (needs today's Kite login): minute bars for the top-N a year, continuous futures with OI."""
     import duckdb
     from .ingest import kite_history as KH
+    from .providers import kite_data as KD
+    if args.start and args.what == "futures":
+        print("--start applies to minute history only; continuous-futures history uses its own date range")
+        return 2
+    KD.credentials()  # Refuse before opening a writable historical database.
     prog = lambda i, n, s, x: print(f"{i}/{n} {s} {x}", flush=True)     # noqa: E731
+    failed = 0
     if args.what in ("minute", "all"):
         r = duckdb.connect(str(load().db_path), read_only=True)
         try:
@@ -2050,10 +2056,15 @@ def cmd_kite_history(args) -> int:
         finally:
             r.close()
         print(f"{len(names)} names (top {args.top} a year)")
-        print(KH.run_minute(names, on_progress=prog))
+        options = {"start": _d(args.start)} if args.start else {}
+        result = KH.run_minute(names, on_progress=prog, **options)
+        print(result)
+        failed += result["failed"]
     if args.what in ("futures", "all"):
-        print(KH.run_futures(on_progress=prog))
-    return 0
+        result = KH.run_futures(on_progress=prog)
+        print(result)
+        failed += result["failed"]
+    return 1 if failed else 0
 
 
 def cmd_depth_archive(args) -> int:
@@ -2076,11 +2087,56 @@ def cmd_rating_actions(args) -> int:
         df = pd.DataFrame([(n, i, d, p, RD.direction(t), RD.SIGN[RD.direction(t)], t[:500]) for n, i, d, p, t in rows],
                           columns=["news_id", "isin", "business_date", "published_at", "direction", "sign", "text"])
         df = df.drop_duplicates("news_id")
+        try:
+            pdf = dict(con.execute("SELECT news_id, direction FROM rating_pdf_direction WHERE direction <> 'unclear'").fetchall())
+        except Exception:                               # noqa: BLE001 - no letters read yet
+            pdf = {}
+        use = (df["direction"] == "unclear") & df["news_id"].isin(pdf)
+        df.loc[use, "direction"] = df.loc[use, "news_id"].map(pdf)
+        df.loc[use, "sign"] = df.loc[use, "direction"].map(RD.SIGN)
         con.register("df", df)
         con.execute("DELETE FROM rating_actions")
         con.execute("INSERT INTO rating_actions SELECT * FROM df")
         con.unregister("df")
     print(len(df), dict(collections.Counter(df["direction"])))
+    return 0
+
+
+def cmd_rating_docs(args) -> int:
+    """Read the direction of rating actions from their letters where the headline gave none (most recent first)."""
+    from .ingest import rating_docs as RDOC
+    cfg = load()
+    with Database(cfg).connect() as con:
+        print(RDOC.run(con, cfg, limit=args.limit))
+    return 0
+
+
+def cmd_monthly_updates(args) -> int:
+    """Index monthly business updates (auto sales, despatches, generation, AUM...) among the announcements."""
+    from .ingest import monthly_updates as MU
+    with Database(load()).connect() as con:
+        print(MU.rebuild(con))
+    return 0
+
+
+def cmd_calls_backfill(args) -> int:
+    """Earnings-call transcripts and investor presentations, day by day over a range (no embeddings: text only)."""
+    import datetime as _dt
+    from .ingest import calls as ing
+    cfg = load()
+    d, end = _d(args.start), _d(args.end) if args.end else _dt.date.today()
+    total = {"days": 0, "read": 0, "failed": 0}
+    while d <= end:
+        if d.weekday() < 5:
+            with Database(cfg).connect() as con:
+                r = ing.read_day(con, cfg, d, limit=args.per_day, embed=False)
+            total["days"] += 1
+            total["read"] += r.get("read", 0)
+            total["failed"] += r.get("failed", 0)
+            if d.day == 1:
+                print(d, total, flush=True)
+        d += _dt.timedelta(days=1)
+    print(total)
     return 0
 
 
@@ -2099,12 +2155,16 @@ def cmd_flows(args) -> int:
 
 
 def cmd_macro(args) -> int:
-    """FRED macro series (USD-INR, Brent, India 10y, call money, CPI): download to the lake and load."""
+    """FRED macro series (USD-INR, Brent, India 10y, call money, CPI) and MoSPI CPI/IIP: download to the lake and load."""
     from .ingest import macro as MC
+    from .ingest import mospi as MO
     cfg = load()
     print(MC.prefetch(cfg))
+    import datetime as _dt
+    print(MO.prefetch(cfg, start_year=args.mospi_from or _dt.date.today().year - 1))
     with Database(cfg).connect() as con:
         print(MC.load(con, cfg))
+        print(MO.load(con, cfg))
     return 0
 
 
@@ -2760,6 +2820,7 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("kite-history", help="widen Kite pulls: minute bars (top N a year), continuous futures + OI")
     g.add_argument("what", choices=["minute", "futures", "all"])
     g.add_argument("--top", type=int, default=1000)
+    g.add_argument("--start", help="minute history start date (YYYY-MM-DD); use for a bounded incremental refresh")
     g.set_defaults(fn=cmd_kite_history)
 
     g = sub.add_parser("depth-archive", help="market hours: 5-level book + OI for all F&O names each minute")
@@ -2769,10 +2830,24 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("rating-actions", help="rebuild credit-rating actions with their direction")
     g.set_defaults(fn=cmd_rating_actions)
 
+    g = sub.add_parser("rating-docs", help="rating direction from the attached letter where the headline gave none")
+    g.add_argument("--limit", type=int, default=500)
+    g.set_defaults(fn=cmd_rating_docs)
+
+    g = sub.add_parser("monthly-updates", help="index monthly business updates among the announcements")
+    g.set_defaults(fn=cmd_monthly_updates)
+
+    g = sub.add_parser("calls-backfill", help="earnings-call transcripts and presentations over a date range")
+    g.add_argument("--start", default="2021-01-01")
+    g.add_argument("--end")
+    g.add_argument("--per-day", type=int, default=200)
+    g.set_defaults(fn=cmd_calls_backfill)
+
     g = sub.add_parser("flows", help="today's FII/DII cash-market flows (a forward record)")
     g.set_defaults(fn=cmd_flows)
 
-    g = sub.add_parser("macro", help="FRED macro series: USD-INR, Brent, India 10y, call money, CPI")
+    g = sub.add_parser("macro", help="FRED macro series and MoSPI CPI/IIP")
+    g.add_argument("--mospi-from", type=int, help="first year of MoSPI to fetch (default: last year; 2013 to backfill)")
     g.set_defaults(fn=cmd_macro)
 
     g = sub.add_parser("insider", help="NSE structured insider disclosures (2026-07 on): --prefetch, then load")
