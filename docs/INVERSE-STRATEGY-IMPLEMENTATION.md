@@ -113,15 +113,14 @@ implicitly by `fb inverse` or routes to live execution.
 
 - Implemented and tested: known-rule synthetic data, action and lagged-sequence baselines,
   causal input checks, measured-fidelity state and lagged-action surrogate rules,
-  causal hidden-state regime filtering,
+  training-period EM-fitted Gaussian HMM with causal hidden-state filtering,
   descriptive regime performance/transitions, prequential ensemble comparison,
   calibration/abstention and selective paper-performance diagnostics, itemized alpha,
   execution-policy comparison with optional unfilled residuals, action timing/position
   error, train-frozen OOD flag, feasible-regret filtering, additive context schemas and
   opt-in paper capture, trader
   research report, and optional REA evidence import.
-- Incomplete: full-likelihood HMM fitting; empirical
-  ensemble validation on real forecasts; learned multivariate drift detection;
+- Incomplete: empirical ensemble validation on real forecasts; learned multivariate drift detection;
   historical order-book-aware execution; complete automatic capture of intraday
   counterfactual constraints at every paper decision; a comprehensive workstation/API for every research
   output; end-to-end existing-data result. These should not be
