@@ -134,3 +134,60 @@ class TrainingDistanceGate:
         return {"distances": distances, "ood": flags, "ood_fraction": float(flags.mean()) if len(flags) else None,
                 "threshold": self.threshold,
                 "warning": "OOD is a feature-distance flag, not a calibrated failure probability"}
+
+
+class TrainingDriftGate:
+    """Train-frozen multivariate kernel drift test for a batch of new observations.
+
+    The RBF bandwidth and null threshold use only training data. The null is an
+    empirical resampling reference, not a calibrated probability of model failure.
+    """
+
+    def __init__(self, *, reference_size: int = 80, resamples: int = 100,
+                 quantile: float = .99, seed: int = 7):
+        if reference_size < 20 or resamples < 20 or not .5 < quantile < 1:
+            raise ValueError("invalid drift-gate configuration")
+        self.reference_size = reference_size
+        self.resamples = resamples
+        self.quantile = quantile
+        self.seed = seed
+
+    @staticmethod
+    def _sqdist(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        return np.maximum(((a[:, None, :] - b[None, :, :]) ** 2).sum(axis=2), 0)
+
+    def _mmd2(self, a: np.ndarray, b: np.ndarray) -> float:
+        scale = self.bandwidth
+        aa = np.exp(-self._sqdist(a, a) / scale).mean()
+        bb = np.exp(-self._sqdist(b, b) / scale).mean()
+        ab = np.exp(-self._sqdist(a, b) / scale).mean()
+        return float(max(aa + bb - 2 * ab, 0))
+
+    def fit(self, training: np.ndarray) -> "TrainingDriftGate":
+        x = np.asarray(training, float)
+        if x.ndim != 2 or len(x) < 3 * self.reference_size or not np.isfinite(x).all():
+            raise ValueError("at least three reference windows of finite training data required")
+        self.center = np.median(x, axis=0)
+        self.scale = np.maximum(np.median(np.abs(x - self.center), axis=0) * 1.4826, 1e-6)
+        z = (x - self.center) / self.scale
+        self.reference = z[:self.reference_size].copy()
+        pool = z[self.reference_size:]
+        distances = self._sqdist(self.reference, self.reference)
+        positive = distances[distances > 0]
+        self.bandwidth = float(np.median(positive)) if len(positive) else 1.0
+        rng = np.random.default_rng(self.seed)
+        null = [self._mmd2(self.reference, pool[rng.choice(len(pool), self.reference_size,
+                                                            replace=False)]) for _ in range(self.resamples)]
+        self.threshold = float(np.quantile(null, self.quantile))
+        return self
+
+    def assess(self, observations: np.ndarray) -> dict:
+        if not hasattr(self, "threshold"):
+            raise ValueError("fit on a prior training period first")
+        x = np.asarray(observations, float)
+        if x.ndim != 2 or x.shape[1] != len(self.center) or len(x) < 20 or not np.isfinite(x).all():
+            raise ValueError("at least 20 finite observations with matching features required")
+        z = (x - self.center) / self.scale
+        statistic = self._mmd2(self.reference, z)
+        return {"mmd2": statistic, "threshold": self.threshold, "drift": statistic > self.threshold,
+                "n": len(x), "warning": "batch feature shift is not a calibrated trading-loss probability"}

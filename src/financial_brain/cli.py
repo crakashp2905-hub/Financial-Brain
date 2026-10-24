@@ -66,6 +66,11 @@ def cmd_inverse_audit(args) -> int:
     return 0
 
 
+def cmd_inverse_tool(args) -> int:
+    from .research.workstation import main as workstation_main
+    return workstation_main(args.args)
+
+
 # --------------------------------------------------------------------- commands
 def cmd_migrate(args) -> int:
     cfg = load()
@@ -2505,6 +2510,9 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--report-out")
     g.set_defaults(fn=cmd_inverse)
     sub.add_parser("inverse-audit", help="read-only coverage audit of decision histories").set_defaults(fn=cmd_inverse_audit)
+    g = sub.add_parser("inverse-tool", help="read-only research comparison and diagnostics")
+    g.add_argument("args", nargs=argparse.REMAINDER)
+    g.set_defaults(fn=cmd_inverse_tool)
 
     g = sub.add_parser("ingest", help="ingest bhavcopies for a date range")
     g.add_argument("--start", required=True)

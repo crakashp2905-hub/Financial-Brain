@@ -541,10 +541,12 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
                                          "participation": participation, "band": band,
                                          "excluded_events": list(exclude_events),
                                          "universe_label": universe_label},
-                            portfolio={"cash_before": cash_before, "cash_after": cash,
-                                       "held_before": sorted(held_before),
-                                       "held_after": sorted(positions), "target": target,
-                                       "trades": [t.lineage for t in trades]})
+                            portfolio={
+                                "known_before_execution": {"cash": cash_before,
+                                                           "held": sorted(held_before), "target": target},
+                                "realized_after_execution": {"cash": cash,
+                                                             "held": sorted(positions),
+                                                             "trades": [t.lineage for t in trades]}})
                         out.captured_contexts += 1
 
         # ------------------------------------------------------------- mark to market

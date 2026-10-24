@@ -28,6 +28,9 @@ snapshots. Calling `paper.engine.run(..., remember=True, capture_context=True)` 
 the candidate ranking, cash, holdings, target, and feasibility settings once per
 nonempty rebalance. It deliberately uses signal and execution **dates**, not an
 invented intraday decision timestamp, and remains opt-in for write/cost control.
+Within that snapshot, `known_before_execution` is separate from
+`realized_after_execution`; the latter must never be used as a model input for
+the former.
 The read-only `fb inverse-audit` command reports coverage without treating a
 rejected candidate as an observed order. On the local database inspected in this
 pass it found 41 recorded decisions (26 BUY, 14 WATCH, one AVOID) and 175,430
@@ -61,11 +64,20 @@ descriptive counterfactual regret. `research/ensemble_walkforward.py` compares e
 regularized static, regime-conditioned, and past-error-weighted online ensembles
 using only outcomes observed before each forecast. These methods still need
 time-stamped independently validated strategy forecasts and returns before real use.
+`evaluate_ensemble_paper` applies an operator-fixed expected-alpha threshold and
+compares after-cost return, alpha, drawdown, recorded turnover, and forecast error on
+completed nonoverlapping paper decisions; it does not tune that threshold.
+Its input must separate `cost_expected`/`benchmark_expected` (known at decision)
+from `cost_realized`/`benchmark_realized` (known only afterward); only the former
+can influence whether a trade is proposed.
+The ensemble CSV also requires timezone-aware `decision_ts`, `estimate_asof`, and
+`observed_at` fields; forecasts with `estimate_asof > decision_ts` are rejected.
 The reliability gate needs prior calibration outcomes and abstains without
 enough observations. It does not infer a success probability from model confidence.
 `research/diagnostics.py` adds fixed-threshold selective paper-performance curves,
 calibration bins with Wilson intervals, action timing/position errors, causal regime
-transitions, and a training-frozen feature-distance OOD flag.
+transitions, a training-frozen feature-distance OOD flag, and a train-only kernel
+two-sample drift gate. Neither drift flag is a failure-probability estimate.
 `research/counterfactual_store.py` inserts immutable context snapshots and rejects
 future-dated state; its alternative list explicitly records feasibility and reasons.
 
@@ -90,6 +102,13 @@ python -m financial_brain.research.inverse_strategy --history authorized.csv --a
 fb inverse --synthetic momentum --seed 7 --rows 900 --rules-out rules.json
 fb inverse --history authorized.csv --authorized --report-out research_report.json
 fb inverse-audit
+fb inverse-tool compare research_report_a.json research_report_b.json
+fb inverse-tool rules rules.json
+fb inverse-tool regime authorized.csv --authorized
+fb inverse-tool ensemble forecasts.csv --strategies s1 s2 --validated s1 s2 --paper --min-expected-alpha 0.002
+fb inverse-tool selective completed_paper_decisions.csv
+fb inverse-tool execution minute_bars.csv --qty 100 --fee-bp 5 --sigma-d 0.02 --half-spread-bp 2
+fb inverse-tool counterfactual CONTEXT_ID
 python -m pytest -q tests/test_inverse_strategy.py --basetemp D:\Finance-Brain\.pytest_inverse_temp
 ```
 
@@ -101,7 +120,10 @@ The CLI prints action-prediction metrics and rule fidelity, never a trading retu
 for synthetic policies. Model selection uses validation macro-F1. A final holdout is
 evaluated once per run; repeated manual redesign against it voids its independence.
 
-The other research operations are typed Python APIs: `compare_ensembles` requires
+The `fb inverse-tool` commands are read-only surfaces for saved reports, rules,
+authorized histories, completed-paper reliability curves, validated-strategy
+ensemble comparisons, minute-bar execution simulations, and stored counterfactual
+context. The other research operations are also typed Python APIs: `compare_ensembles` requires
 time-stamped, independently validated strategy forecasts; `ReliabilityGate.assess`
 and `selective_performance` require earlier calibration/completed paper outcomes;
 `rank_opportunities` requires explicitly calibrated reliability;
@@ -117,13 +139,13 @@ implicitly by `fb inverse` or routes to live execution.
   descriptive regime performance/transitions, prequential ensemble comparison,
   calibration/abstention and selective paper-performance diagnostics, itemized alpha,
   execution-policy comparison with optional unfilled residuals, action timing/position
-  error, train-frozen OOD flag, feasible-regret filtering, additive context schemas and
-  opt-in paper capture, trader
-  research report, and optional REA evidence import.
-- Incomplete: empirical ensemble validation on real forecasts; learned multivariate drift detection;
+  error, train-frozen OOD and multivariate drift gates, feasible-regret filtering,
+  additive context schemas and opt-in paper capture, read-only trader
+  research commands, and optional REA evidence import.
+- Incomplete: empirical ensemble validation on real forecasts;
   historical order-book-aware execution; complete automatic capture of intraday
-  counterfactual constraints at every paper decision; a comprehensive workstation/API for every research
-  output; end-to-end existing-data result. These should not be
+  counterfactual constraints at every paper decision; full online integration of
+  every research output into the main trading workstation; end-to-end existing-data result. These should not be
   represented as finished merely because interfaces exist.
 - Blocked on data and prospective time: authentic timestamped decisions with complete
   as-of state; permission to use any external histories; historical liquidity and
@@ -139,7 +161,7 @@ existing 2022–26 final market holdout must not be inspected to select new vari
 
 ## Verification in this implementation pass
 
-The final focused integration run passed 105 tests covering the new subsystem,
+The latest focused integration run passed 108 tests covering the new subsystem,
 bounded search, the existing paper engine and opportunity memory, execution
 attribution, and research paths.
 `ruff check src tests` passed. The full repository pytest run was started but stopped

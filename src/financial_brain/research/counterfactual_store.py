@@ -48,6 +48,8 @@ def record_rebalance_context(con, *, run_id: str, signal_session: date, executio
         raise ValueError("run id and strictly earlier signal session required")
     if any(not {"lineage", "rank", "score", "filtered"} <= set(item) for item in candidates):
         raise ValueError("candidate lacks contemporaneous ranking fields")
+    if set(portfolio) != {"known_before_execution", "realized_after_execution"}:
+        raise ValueError("portfolio must separate known-before and realized-after state")
     content = {"run_id": run_id, "signal_session": signal_session.isoformat(),
                "execution_session": execution_session.isoformat(), "candidates": candidates,
                "constraints": constraints, "portfolio": portfolio}

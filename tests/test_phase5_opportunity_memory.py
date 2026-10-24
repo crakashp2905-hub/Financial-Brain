@@ -57,7 +57,7 @@ def test_opt_in_rebalance_context_captures_feasible_state():
                        [result.experiment_id]).fetchall()
     assert len(rows) == result.captured_contexts == result.summary()["captured_contexts"]
     assert rows and all(row[0] < row[1] for row in rows)
-    assert '"min_adv"' in rows[0][3] and '"cash_before"' in rows[0][4]
+    assert '"min_adv"' in rows[0][3] and '"known_before_execution"' in rows[0][4]
 
 
 def test_context_capture_requires_memory_mode():

@@ -11,9 +11,10 @@ from financial_brain.research.counterfactual_store import (
     get_context, record_context, record_rebalance_context,
 )
 from financial_brain.research.diagnostics import (
-    TrainingDistanceGate, action_path_error, calibration_report, regime_transitions, selective_performance,
+    TrainingDistanceGate, TrainingDriftGate, action_path_error, calibration_report,
+    regime_transitions, selective_performance,
 )
-from financial_brain.research.ensemble_walkforward import compare_ensembles
+from financial_brain.research.ensemble_walkforward import compare_ensembles, evaluate_ensemble_paper
 from financial_brain.research.execution_compare import compare_execution
 from financial_brain.research.history_audit import audit_existing_history
 from financial_brain.research.inverse_strategy import (
@@ -26,6 +27,7 @@ from financial_brain.research.trader_contracts import (
     reliability_curve,
 )
 from financial_brain.research.trader_report import opportunity_report, strategy_report
+from financial_brain.research.workstation import compare_reports, main as workstation_main
 from financial_brain.storage.db import SCHEMA
 
 
@@ -126,7 +128,8 @@ def test_rea_disabled_and_redacts(tmp_path):
 def test_ensemble_walkforward_uses_only_known_outcomes():
     n = 90
     dates = pd.date_range("2020-01-01", periods=n, freq="D", tz="UTC")
-    panel = pd.DataFrame({"decision_ts": dates, "observed_at": dates + pd.Timedelta(days=2),
+    panel = pd.DataFrame({"decision_ts": dates, "estimate_asof": dates - pd.Timedelta(minutes=1),
+                          "observed_at": dates + pd.Timedelta(days=2),
                           "regime": np.arange(n) % 2, "realized": np.sin(np.arange(n)) / 100,
                           "a": np.zeros(n), "b": np.ones(n) / 100})
     first = compare_ensembles(panel, ("a", "b"), validated={"a", "b"}, min_train=20, window=30)
@@ -137,6 +140,34 @@ def test_ensemble_walkforward_uses_only_known_outcomes():
     assert first.forecast.tolist() == second.forecast.tolist()
     with pytest.raises(ValueError, match="unvalidated"):
         compare_ensembles(panel, ("a", "b"), validated={"a"})
+    future_estimate = panel.copy()
+    future_estimate.loc[0, "estimate_asof"] = dates[0] + pd.Timedelta(minutes=1)
+    with pytest.raises(ValueError, match="future estimate"):
+        compare_ensembles(future_estimate, ("a", "b"), validated={"a", "b"})
+    panel.loc[89, "realized"] = np.sin(89) / 100
+    panel["cost_expected"] = .001
+    panel["cost_realized"] = .001
+    panel["benchmark_expected"] = 0.0
+    panel["benchmark_realized"] = 0.0
+    panel["turnover"] = 1.0
+    paper = evaluate_ensemble_paper(panel, ("a", "b"), validated={"a", "b"},
+                                    min_train=20, window=30, min_expected_alpha=.002)
+    assert paper["status"] == "descriptive_paper_only"
+    assert set(paper["policies"]) == {"equal", "static", "regime", "online"}
+    changed_benchmark = panel.copy()
+    changed_benchmark.loc[89, "benchmark_realized"] = 99.0
+    changed_paper = evaluate_ensemble_paper(changed_benchmark, ("a", "b"),
+                                            validated={"a", "b"}, min_train=20, window=30,
+                                            min_expected_alpha=.002)
+    assert all(changed_paper["policies"][name]["trades"] == paper["policies"][name]["trades"]
+               for name in paper["policies"])
+    changed_cost = panel.copy()
+    changed_cost.loc[89, "cost_realized"] = .5
+    changed_paper = evaluate_ensemble_paper(changed_cost, ("a", "b"),
+                                            validated={"a", "b"}, min_train=20, window=30,
+                                            min_expected_alpha=.002)
+    assert all(changed_paper["policies"][name]["trades"] == paper["policies"][name]["trades"]
+               for name in paper["policies"])
 
 
 def test_immutable_counterfactual_context():
@@ -251,6 +282,19 @@ def test_train_frozen_ood_gate():
     assert gate.threshold == threshold
 
 
+def test_train_frozen_multivariate_drift_gate():
+    rng = np.random.default_rng(5)
+    training = rng.normal(size=(300, 2))
+    gate = TrainingDriftGate(reference_size=40, resamples=30, quantile=.95).fit(training)
+    stable = gate.assess(rng.normal(size=(50, 2)))
+    shifted = gate.assess(rng.normal(loc=4, size=(50, 2)))
+    assert shifted["drift"]
+    assert shifted["mmd2"] > stable["mmd2"]
+    threshold = gate.threshold
+    gate.assess(rng.normal(loc=10, size=(50, 2)))
+    assert gate.threshold == threshold
+
+
 def test_existing_decisions_require_matching_asof_snapshots():
     con = duckdb.connect(":memory:")
     con.execute("CREATE TABLE decisions (decision_id VARCHAR, isin VARCHAR, action VARCHAR, created_at TIMESTAMPTZ)")
@@ -276,13 +320,48 @@ def test_simultaneous_instruments_stay_in_same_chronological_fold():
     assert result.split["validation_end"] < result.split["holdout_start"]
 
 
+def test_workstation_compare_and_rule_inspection(tmp_path, capsys):
+    import json
+
+    data = synthetic_history("momentum", n=180)
+    result = infer_policy(data, models=("tree",))
+    rules = extract_rules(result, data)
+    report = strategy_report(result, rules, regime_report(data))
+    report_path, rules_path = tmp_path / "report.json", tmp_path / "rules.json"
+    report_path.write_text(json.dumps(report, default=str), encoding="utf-8")
+    rules_path.write_text(json.dumps(rules), encoding="utf-8")
+    assert compare_reports([report_path])[0]["health"] == "requires_market_validation"
+    assert workstation_main(["rules", str(rules_path)]) == 0
+    assert "validation_fidelity" in capsys.readouterr().out
+    assert workstation_main(["compare", str(report_path)]) == 0
+    assert "Never select" in capsys.readouterr().out
+
+
+def test_workstation_ensemble_paper_cli(tmp_path, capsys):
+    n = 90
+    dates = pd.date_range("2020-01-01", periods=n, freq="D", tz="UTC")
+    panel = pd.DataFrame({"decision_ts": dates, "estimate_asof": dates - pd.Timedelta(minutes=1),
+                          "observed_at": dates + pd.Timedelta(days=2),
+                          "regime": np.arange(n) % 2, "realized": np.sin(np.arange(n)) / 100,
+                          "a": np.zeros(n), "b": np.ones(n) / 100,
+                          "cost_expected": .001, "cost_realized": .001,
+                          "benchmark_expected": 0., "benchmark_realized": 0., "turnover": 1.})
+    path = tmp_path / "forecasts.csv"
+    panel.to_csv(path, index=False)
+    assert workstation_main(["ensemble", str(path), "--strategies", "a", "b",
+                             "--validated", "a", "b", "--min-train", "20", "--paper"]) == 0
+    assert "descriptive_paper_only" in capsys.readouterr().out
+
+
 def test_rebalance_context_idempotent_but_immutable():
     con = duckdb.connect(":memory:")
     con.execute(SCHEMA.read_text(encoding="utf-8"))
     kwargs = {"run_id": "paper-1", "signal_session": pd.Timestamp("2020-01-01").date(),
               "execution_session": pd.Timestamp("2020-01-02").date(),
               "candidates": [{"lineage": "TEST", "rank": 1, "score": .3, "filtered": False}],
-              "constraints": {"cash": 100}, "portfolio": {"held_before": []}}
+              "constraints": {"cash": 100},
+              "portfolio": {"known_before_execution": {"held": []},
+                            "realized_after_execution": {"held": []}}}
     first = record_rebalance_context(con, **kwargs)
     assert record_rebalance_context(con, **kwargs) == first
     with pytest.raises(ValueError, match="immutable"):
