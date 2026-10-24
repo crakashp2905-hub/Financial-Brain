@@ -1,5 +1,8 @@
 # Financial-Brain
 
+Inverse-policy research and its limits are documented in
+[docs/INVERSE-STRATEGY-IMPLEMENTATION.md](docs/INVERSE-STRATEGY-IMPLEMENTATION.md).
+
 **An empirical, AI-native market decision engine for Indian markets.**
 
 Given only the information available at a moment in time, it looks for the best available opportunity across the
@@ -184,6 +187,7 @@ Validation modules, used from Python rather than the CLI:
 | `paper/terminal.py` / `fb terminal` | One HTML page: market and breadth, kill switch, top opportunities, paper trades, what changed (filings, escaped), strategy health and champion standings, and a drill-down per name (why now, evidence, analogues, range, net alpha, size, stop, time exit, execution). Written to `data/terminal/index.html` |
 | `paper/decision_journal.py` | Owner-entered, append-only record of prospective choices and decision latency; descriptive workflow evaluation only, with no order path. See [trader decision workflow](docs/TRADER-DECISION-WORKFLOW.md) |
 | `evaluation/script_mechanisms.py` | Read-only, training-only MQL5/Pine-inspired mechanism diagnostics: regime breakout, compression breakout and a visible-depth no-trade filter. No imported source code, trial verdict or live signal; see [edge development](docs/EDGE-DEVELOPMENT.md) |
+| `evaluation/bounded_search.py` | Reproducible 2016–2021 random search over 81 comparable daily-stock entry variants on a historical F&O stock sample; reports the training-selected rule against an equal-turnover cohort and internal validation, never a trial verdict or trade alert |
 | `evaluation/setup_analogues.py` | The 200 most similar past situations by eight ranked features, shown beside the whole pool. Out of sample its 5-day IC is +0.053 against momentum's +0.009 (t 3.1, under the bar), probably short-term reversal; descriptive only |
 | `evaluation/earnings_reaction.py` | Results reaction by surprise: day 0 top-minus-bottom quintile +1.5% (t 6.4), nothing after - no post-earnings drift to trade |
 | `evaluation/intraday_half_life.py` | Daily signals inside the next day: the composite's IC from 09:30 to 15:15 is +0.046 (t 6.9), carried by low volatility and the 52-week high. Not a strategy (costs); a reason not to wait for a dip on entry |

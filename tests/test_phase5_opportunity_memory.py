@@ -44,6 +44,28 @@ def _rows(con, run_id, **where):
         [run_id, *where.values()]).fetchall()
 
 
+def test_opt_in_rebalance_context_captures_feasible_state():
+    con = _con()
+    con.execute("""CREATE TABLE paper_rebalance_context (
+        run_id VARCHAR, execution_session DATE, signal_session DATE, content_hash VARCHAR,
+        candidates_json VARCHAR, constraints_json VARCHAR, portfolio_json VARCHAR,
+        recorded_at TIMESTAMPTZ, PRIMARY KEY(run_id, execution_session))""")
+    result = _run(con, capture_context=True)
+    rows = con.execute("""SELECT signal_session, execution_session, candidates_json,
+                                 constraints_json, portfolio_json
+                          FROM paper_rebalance_context WHERE run_id = ?""",
+                       [result.experiment_id]).fetchall()
+    assert len(rows) == result.captured_contexts == result.summary()["captured_contexts"]
+    assert rows and all(row[0] < row[1] for row in rows)
+    assert '"min_adv"' in rows[0][3] and '"cash_before"' in rows[0][4]
+
+
+def test_context_capture_requires_memory_mode():
+    con = _con()
+    with pytest.raises(engine.PaperError, match="requires remember"):
+        _run(con, remember=False, capture_context=True)
+
+
 # ----------------------------------------------------------------- the rejections exist
 def test_the_rejected_candidates_are_recorded_not_only_the_holdings():
     """A book that logs only its holdings learns from a sample it selected itself."""

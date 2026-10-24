@@ -22,7 +22,10 @@ ROUND_TRIP_COST = 0.002  # training stress assumption, not a measured fill
 MAX_QUOTE_AGE = timedelta(seconds=120)
 
 
-def daily_signals(bars: pd.DataFrame, regimes: pd.Series) -> pd.DataFrame:
+def daily_signals(bars: pd.DataFrame, regimes: pd.Series, *, breakout_window: int = 55,
+                  compression_window: int = 20, short_atr_window: int = 10,
+                  long_atr_window: int = 60, compression_ratio: float = 0.65,
+                  volume_window: int = 20, volume_multiple: float = 1.0) -> pd.DataFrame:
     """Signal at the completed daily close; `regimes` is shifted one session.
 
     `bars` has unique, ascending session dates and raw OHLCV for one symbol.
@@ -30,6 +33,10 @@ def daily_signals(bars: pd.DataFrame, regimes: pd.Series) -> pd.DataFrame:
     influence today's signal. This function deliberately computes no future return.
     """
     required = {"session", "open", "high", "low", "close", "volume"}
+    if min(breakout_window, compression_window, short_atr_window, long_atr_window, volume_window) < 2:
+        raise ValueError("windows must be at least two sessions")
+    if short_atr_window >= long_atr_window or not 0 < compression_ratio < 1 or volume_multiple <= 0:
+        raise ValueError("invalid compression or volume parameters")
     if not required.issubset(bars) or bars.empty:
         raise ValueError("complete OHLCV bars are required")
     x = bars.copy().reset_index(drop=True)
@@ -51,18 +58,18 @@ def daily_signals(bars: pd.DataFrame, regimes: pd.Series) -> pd.DataFrame:
     # Yesterday's completed regime is used because a today-close regime could
     # itself consume today's breakout bar or be recomputed later.
     prior_regime = regimes.reset_index(drop=True).shift(1)
-    high55 = x["high"].rolling(55, min_periods=55).max().shift(1)
-    high20 = x["high"].rolling(20, min_periods=20).max().shift(1)
+    high55 = x["high"].rolling(breakout_window, min_periods=breakout_window).max().shift(1)
+    high20 = x["high"].rolling(compression_window, min_periods=compression_window).max().shift(1)
     previous_close = x["close"].shift(1)
     true_range = pd.concat([x["high"] - x["low"],
                             (x["high"] - previous_close).abs(),
                             (x["low"] - previous_close).abs()], axis=1).max(axis=1)
-    short_atr = true_range.rolling(10, min_periods=10).mean().shift(1)
-    long_atr = true_range.rolling(60, min_periods=60).mean().shift(1)
-    prior_volume = x["volume"].rolling(20, min_periods=20).median().shift(1)
+    short_atr = true_range.rolling(short_atr_window, min_periods=short_atr_window).mean().shift(1)
+    long_atr = true_range.rolling(long_atr_window, min_periods=long_atr_window).mean().shift(1)
+    prior_volume = x["volume"].rolling(volume_window, min_periods=volume_window).median().shift(1)
     market_ok = prior_regime.isin(("BULL", "TREND_UP", "UP"))
     base_breakout = x["close"] > high55
-    compression = (short_atr / long_atr < 0.65) & (x["close"] > high20) & (x["volume"] > prior_volume)
+    compression = (short_atr / long_atr < compression_ratio) & (x["close"] > high20) & (x["volume"] > volume_multiple * prior_volume)
     return pd.DataFrame({"session": x["session"],
                          "donchian_baseline": base_breakout.fillna(False).astype(bool),
                          "regime_breakout": (base_breakout & market_ok).fillna(False).astype(bool),

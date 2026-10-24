@@ -123,6 +123,7 @@ class Run:
     warnings: list[str] = field(default_factory=list)
     #: Rows written to opportunity_memory, when ``remember`` is on.
     remembered: int = 0
+    captured_contexts: int = 0
     #: What the traded universe did on its own, and what the market did. Computed by the engine
     #: rather than left to whoever remembers to ask: the first run here returned +41.75% on a
     #: universe that itself returned +22.65% against a market that fell 5.89%, and reporting the
@@ -156,6 +157,7 @@ class Run:
             "max_drawdown": _max_drawdown([e["equity"] for e in self.equity]),
             "trades": len(self.trades),
             "rebalances": len(self.rebalances),
+            "captured_contexts": self.captured_contexts,
             "charge_costs": self.config.get("charge_costs", True),
             "costs_inr": costs,
             "cost_drag": costs / start["equity"] if start["equity"] else float("nan"),
@@ -415,7 +417,7 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
         charge_costs: bool = True, band: float = REBALANCE_BAND,
         exclude_events: tuple[str, ...] = (),
         exclusion_sessions: int = EXCLUSION_SESSIONS,
-        remember: bool = False) -> Run:
+        remember: bool = False, capture_context: bool = False) -> Run:
     """Walk the sessions, holding a real book with real cash.
 
     ``restrict_to_minute_bars`` trades only names whose minute bars exist, which gives a run with
@@ -425,7 +427,11 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
     ``remember`` records every candidate at every rebalance into ``opportunity_memory``, including the
     ones rejected and why. Off by default: it needs a writable connection and writes roughly the
     universe size times the number of rebalances.
+    ``capture_context`` additionally stores one immutable session-level snapshot per
+    rebalance. It requires ``remember`` and a migrated writable database.
     """
+    if capture_context and not remember:
+        raise PaperError("capture_context requires remember=True")
     cal = _calendar(con, start, end)
     if len(cal) < rebalance * 2:
         raise PaperError(f"{len(cal)} sessions between {start} and {end} is too few")
@@ -461,6 +467,7 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
               "segment": segment.value, "simulate_fills": simulate_fills,
               "restrict_to_minute_bars": restrict_to_minute_bars,
               "charge_costs": charge_costs, "band": band,
+              "capture_context": capture_context,
               # Part of the experiment's identity: excluding a set of events is a different strategy,
               # and it is a searched choice that the ledger has to know was spent.
               "exclude_events": sorted(exclude_events),
@@ -486,6 +493,7 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
         if i > 0 and (i - 1) % rebalance == 0:
             prev = cal[i - 1]
             held_before = set(positions)
+            cash_before = cash
             target = _target_book(con, feature, prev, direction=direction,
                                   min_adv=min_adv, max_positions=max_positions,
                                   eligible=eligible,
@@ -515,13 +523,29 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
                     "trades": len(trades),
                     "notional": sum(t.notional for t in trades)})
                 if remember:
+                    considered = _considered(
+                        con, feature, prev, direction=direction, min_adv=min_adv,
+                        eligible=eligible, exclude_events=exclude_events,
+                        exclusion_sessions=exclusion_sessions)
                     out.remembered += _remember(
                         con, out.experiment_id, session, prev,
-                        considered=_considered(
-                            con, feature, prev, direction=direction, min_adv=min_adv,
-                            eligible=eligible, exclude_events=exclude_events,
-                            exclusion_sessions=exclusion_sessions),
+                        considered=considered,
                         target=target, positions=positions, before=held_before)
+                    if capture_context:
+                        from ..research.counterfactual_store import record_rebalance_context
+                        record_rebalance_context(
+                            con, run_id=out.experiment_id, signal_session=prev,
+                            execution_session=session, candidates=considered,
+                            constraints={"feature": feature, "direction": direction,
+                                         "min_adv": min_adv, "max_positions": max_positions,
+                                         "participation": participation, "band": band,
+                                         "excluded_events": list(exclude_events),
+                                         "universe_label": universe_label},
+                            portfolio={"cash_before": cash_before, "cash_after": cash,
+                                       "held_before": sorted(held_before),
+                                       "held_after": sorted(positions), "target": target,
+                                       "trades": [t.lineage for t in trades]})
+                        out.captured_contexts += 1
 
         # ------------------------------------------------------------- mark to market
         held_value, priced, stale = 0.0, 0, 0

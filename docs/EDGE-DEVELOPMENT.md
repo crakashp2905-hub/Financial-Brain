@@ -1,5 +1,50 @@
 # Edge development: swing, intraday and options
 
+## Bounded random search of comparable daily-stock entries (2026-10-24)
+
+`evaluation/bounded_search.py` performs a deterministic, **training-only** search. It
+samples 20 names from the F&O roster present at the start of 2016 (seed `20261024`),
+uses NSE EQ OHLCV through 2021 and records all 81 evaluated variants: 11 existing
+technical-rule entry conditions × three holding periods, plus 48 randomly selected
+regime-breakout/compression parameter combinations. The parameter catalogue is fixed
+before returns are loaded. Entries are at the next session's open after a completed-bar
+signal; exits are at a fixed 5/10/20-session close. A provisional 30 bp stock round trip
+is charged. Each event is compared with buying the same-date, same-horizon equal-weight
+sampled cohort at the same assumed cost. 2016–2018 selects one variant; 2019–2021 is
+internal validation. The 2022–2026 holdout remains unopened by this module.
+
+Run in PowerShell: `$env:PYTHONPATH='src'; python -m financial_brain.evaluation.bounded_search --symbols 20 --random-budget 48 --output data/edges/bounded_search_training_20261024.json`.
+The local JSON includes every variant and is not a registered trial. The run does not
+write the preregistration ledger, change a paper strategy, or create a live signal.
+
+| Frozen search result | Description |
+|---|---|
+| Search size | 81 variants; 19 met the minimum positive training and 30-event screen |
+| Training-selected entry | Existing Ichimoku position's entry transition, held five sessions; **not** its original exit rule |
+| 2016–2018 selection | 333 events; +0.555% mean absolute net and +0.569% mean net excess per event; descriptive monthly t 2.44 |
+| 2019–2021 internal validation | 336 events; +0.763% mean absolute net, +0.245% mean net excess per event; median excess **-0.041%**, descriptive monthly t **0.40** |
+| Cost stress | At 60 bp assumed round trip, mean absolute net +0.463%; net excess is unchanged because the equal-turnover cohort pays the same extra cost |
+| Multiple-search diagnostic | On monthly mean excess events, validation SPA p 0.634 (RC p 0.248); descriptive only, not portfolio significance |
+
+The strongest-looking rule is **not an established edge**. The selected result is weak
+against the schedule-matched cohort, sensitive to tails (validation's best/worst events
+were roughly +61%/-40%), and has not been converted to a capital-constrained portfolio.
+The 11 fixed rules were *reinterpreted as entry events with fixed exits*; this does not
+replace their already registered tests. Historical adjusted factors have not been audited
+as point-in-time, overlapping positions share capital unrealistically, the 20-name
+convenience sample is not a survivorship-complete market, and 30/60 bp are assumptions
+rather than broker fills. In particular, do **not** mine the 2022–2026 holdout or choose
+the best 2019–2021 validation variant now. The next step is data/fill quality and a
+separately preregistered *single* mechanism in an available future trial period.
+
+Options, the intraday quote-depth filter, pairs, carry and portfolio allocation were
+not assigned a score by this grid. They require different contracts, timestamps, books,
+execution or capital models; calling them losers from a daily stock entry test would be
+false. A script backtest is not an observed fill—the [TradingView broker emulator](https://www.tradingview.com/pine-script-docs/concepts/strategies/)
+has explicit fill assumptions. Broad parameter searches also need a selection penalty;
+see the original [backtest-overfitting paper](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253)
+and [multiple-testing study](https://www.nber.org/papers/w20592).
+
 ## MQL5 / Pine-inspired mechanisms (2026-10-24, research only)
 
 `evaluation/script_mechanisms.py` implements three **independently specified** ideas; no

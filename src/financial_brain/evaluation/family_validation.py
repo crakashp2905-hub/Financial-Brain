@@ -70,7 +70,9 @@ def pbo(X: pd.DataFrame, *, blocks: int = 16) -> dict:
 
     def sharpe(M):
         s = M.std(axis=0, ddof=1)
-        return np.where(s > 0, M.mean(axis=0) / s, -np.inf)
+        out = np.full_like(s, -np.inf, dtype=float)
+        np.divide(M.mean(axis=0), s, out=out, where=s > 0)
+        return out
 
     for ins in combinations(range(blocks), blocks // 2):
         i_idx = np.concatenate([parts[j] for j in ins])

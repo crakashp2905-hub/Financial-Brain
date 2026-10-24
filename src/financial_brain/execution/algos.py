@@ -73,7 +73,8 @@ def _mkt_price(day: Day, t: int, q: float) -> float:
     return tp * (1 + day.hs + Y_IMPACT * sigma_1m * np.sqrt(q / v))
 
 
-def simulate(day: Day, order: Order, algo: Algo, *, seed: int = 0) -> dict:
+def simulate(day: Day, order: Order, algo: Algo, *, seed: int = 0,
+             force_completion: bool = True) -> dict:
     rng = np.random.default_rng(seed)
     algo.reset(day, order, rng)
     remaining, cost, passive, carry = order.qty, 0.0, 0.0, 0.0  # noqa: F841
@@ -101,15 +102,19 @@ def simulate(day: Day, order: Order, algo: Algo, *, seed: int = 0) -> dict:
                 cost += q * _mkt_price(day, t, q)
                 remaining = 0.0
     completion = remaining
-    if remaining > 1e-9:
+    if force_completion and remaining > 1e-9:
         t = order.end
         cost += remaining * _mkt_price(day, t, remaining)
         remaining = 0.0
-    avg = cost / order.qty
+    filled = order.qty - remaining
+    avg = cost / filled if filled > 1e-9 else None
     arrival = day.o[order.start]
     vwap = float((day.v * (day.h + day.l + day.c) / 3).sum() / max(day.v.sum(), 1.0))
-    return {"is_bp": (avg / arrival - 1) * 1e4, "vs_vwap_bp": (avg / vwap - 1) * 1e4, "passive": passive / order.qty,
-            "completion": completion / order.qty, "avg": avg}
+    return {"is_bp": (avg / arrival - 1) * 1e4 if avg is not None else None,
+            "vs_vwap_bp": (avg / vwap - 1) * 1e4 if avg is not None else None,
+            "passive": passive / order.qty, "completion": completion / order.qty,
+            "avg": avg, "fill_ratio": filled / order.qty,
+            "unfilled_ratio": remaining / order.qty}
 
 
 # ------------------------------------------------------------------------------------------- schedule algorithms

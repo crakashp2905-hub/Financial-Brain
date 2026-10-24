@@ -793,6 +793,35 @@ CREATE TABLE IF NOT EXISTS opportunity_memory (
     PRIMARY KEY (run_id, session, lineage)
 );
 
+-- Research-only immutable decision context for feasible counterfactual analysis.
+-- State and constraints are recorded as they were known at decision time. Never
+-- overwrite a row with information learned after the decision.
+CREATE TABLE IF NOT EXISTS inverse_decision_context (
+    context_id       VARCHAR PRIMARY KEY,
+    decision_ts      TIMESTAMPTZ NOT NULL,
+    state_asof       TIMESTAMPTZ NOT NULL,
+    instrument       VARCHAR NOT NULL,
+    action           VARCHAR NOT NULL,
+    state_json       VARCHAR NOT NULL,
+    constraints_json VARCHAR NOT NULL,
+    alternatives_json VARCHAR NOT NULL,
+    provenance       VARCHAR NOT NULL,
+    recorded_at      TIMESTAMPTZ NOT NULL
+);
+
+-- One immutable snapshot per paper rebalance; session-level timing is explicit.
+CREATE TABLE IF NOT EXISTS paper_rebalance_context (
+    run_id           VARCHAR NOT NULL,
+    execution_session DATE NOT NULL,
+    signal_session   DATE NOT NULL,
+    content_hash     VARCHAR NOT NULL,
+    candidates_json  VARCHAR NOT NULL,
+    constraints_json VARCHAR NOT NULL,
+    portfolio_json   VARCHAR NOT NULL,
+    recorded_at      TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (run_id, execution_session)
+);
+
 
 -- Every results PDF the bulk loader has tried, so a resumed run skips what already failed or had no
 -- statement instead of re-downloading it.

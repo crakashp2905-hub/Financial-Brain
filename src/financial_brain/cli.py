@@ -41,6 +41,31 @@ def _print_table(rows: list[dict], limit: int = 40) -> None:
         print(f"  ... {len(rows) - limit} more")
 
 
+def cmd_inverse(args) -> int:
+    """Research-only action-policy reconstruction; never places an order."""
+    from .research.inverse_strategy import main as inverse_main
+    argv = ["--seed", str(args.seed), "--rows", str(args.rows)]
+    if args.synthetic:
+        argv += ["--synthetic", args.synthetic]
+    if args.history:
+        argv += ["--history", args.history]
+    if args.authorized:
+        argv.append("--authorized")
+    if args.rules_out:
+        argv += ["--rules-out", args.rules_out]
+    if args.report_out:
+        argv += ["--report-out", args.report_out]
+    return inverse_main(argv)
+
+
+def cmd_inverse_audit(args) -> int:
+    """Report local research-history coverage without reading credentials or placing orders."""
+    from .research.history_audit import audit_existing_history
+    with Database(load(), read_only=True).connect() as con:
+        print(json.dumps(audit_existing_history(con), indent=2))
+    return 0
+
+
 # --------------------------------------------------------------------- commands
 def cmd_migrate(args) -> int:
     cfg = load()
@@ -2469,6 +2494,17 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("migrate", help="create/update the schema").set_defaults(fn=cmd_migrate)
     sub.add_parser("status", help="what the system currently holds").set_defaults(fn=cmd_status)
+
+    g = sub.add_parser("inverse", help="read-only inverse-policy research")
+    g.add_argument("--synthetic")
+    g.add_argument("--history")
+    g.add_argument("--authorized", action="store_true")
+    g.add_argument("--seed", type=int, default=7)
+    g.add_argument("--rows", type=int, default=900)
+    g.add_argument("--rules-out")
+    g.add_argument("--report-out")
+    g.set_defaults(fn=cmd_inverse)
+    sub.add_parser("inverse-audit", help="read-only coverage audit of decision histories").set_defaults(fn=cmd_inverse_audit)
 
     g = sub.add_parser("ingest", help="ingest bhavcopies for a date range")
     g.add_argument("--start", required=True)
