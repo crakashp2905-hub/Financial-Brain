@@ -80,7 +80,10 @@ def book_returns(con, weights: dict[str, float], *, end: date,
 
     by_date: dict = {}
     for d, isin, r in rows:
-        if r is not None and abs(r) < 0.5:
+        # A 50%+ collapse is precisely what a stress study must retain. Only
+        # impossible/non-finite observations are excluded; coverage reports
+        # the missing names rather than quietly replacing them with zero.
+        if r is not None and math.isfinite(r) and r >= -1:
             by_date.setdefault(d, {})[isin] = r
 
     dates, rets, cover = [], [], []
@@ -113,6 +116,7 @@ def rolling(returns: list[float], window: int) -> list[float]:
 def worst_windows(series: dict, *, windows=WINDOWS, top: int = 5) -> dict:
     """The worst outcomes the book would have had, dated."""
     rets, dates = series["returns"], series["dates"]
+    coverage = series.get("coverage", [])
     out = {}
     for w in windows:
         vals = rolling(rets, w)
@@ -124,6 +128,8 @@ def worst_windows(series: dict, *, windows=WINDOWS, top: int = 5) -> dict:
         tail = sorted(vals)[:k]
         out[w] = {
             "n": len(vals),
+            "minimum_constituent_coverage": min(coverage) if coverage else None,
+            "incomplete_constituent_days": sum(c < 1 for c in coverage),
             "worst": [{"return": vals[i],
                        "start": dates[i], "end": dates[min(i + w - 1, len(dates) - 1)]}
                       for i in idx],

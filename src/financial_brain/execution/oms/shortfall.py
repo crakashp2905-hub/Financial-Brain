@@ -20,9 +20,15 @@ from . import model as M
 
 
 def realised_bp(orders: list[M.Order]) -> dict:
+    if not orders:
+        return {"filled_qty": 0, "realised_bp": None, "unfilled_share": 0.0}
+    if len({o.side for o in orders}) != 1 or len({o.arrival_price for o in orders}) != 1:
+        raise ValueError("one parent shortfall needs one side and one arrival benchmark")
+    if any(o.filled_qty and (o.avg_price is None or o.arrival_price is None) for o in orders):
+        raise ValueError("filled order is missing its price or arrival benchmark")
     filled = [o for o in orders if o.filled_qty and o.avg_price and o.arrival_price]
     if not filled:
-        return {"filled_qty": 0, "realised_bp": None}
+        return {"filled_qty": 0, "realised_bp": None, "unfilled_share": 1.0}
     q = sum(o.filled_qty for o in filled)
     side = filled[0].side
     avg = sum(float(o.avg_price or 0.0) * o.filled_qty for o in filled) / q
@@ -49,7 +55,7 @@ def predicted_bp(con, *, symbol: str, session, side: str, qty: int, arrival: flo
 
 def summary(rows: list[dict]) -> dict:
     """``rows``: one per parent with realised_bp and predicted_bp."""
-    r = [x for x in rows if x.get("realised_bp") is not None and x.get("predicted_bp")]
+    r = [x for x in rows if x.get("realised_bp") is not None and x.get("predicted_bp") is not None]
     ratios = [x["realised_bp"] / x["predicted_bp"] for x in r if x["predicted_bp"] > 0]
     return {"parents": len(rows), "compared": len(r),
             "median_realised_bp": float(np.median([x["realised_bp"] for x in r])) if r else None,

@@ -33,6 +33,7 @@ def test_forward_record_attests_write_time(monkeypatch):
     assert report["unattested_days"] == 0
     assert report["resolved_attested_days"] == 0
     assert report["invalid_attestations"] == 0
+    assert prospective.verified_days(ledger) == set()  # local digest is not independent time proof
     with pytest.raises(champion.ChampionError, match="already attested"):
         prospective.record(_research(), ledger, TODAY, now=NOW)
 
@@ -44,6 +45,24 @@ def test_attestation_fails_closed_after_pick_mutation(monkeypatch):
     ledger.execute("UPDATE champion_picks SET cost = .5 WHERE day = ?", [TODAY.isoformat()])
     assert prospective.verified_days(ledger) == set()
     assert prospective.audit(ledger)["invalid_attestations"] == 1
+
+
+def test_external_anchor_is_required_and_reverified(monkeypatch):
+    monkeypatch.setattr(champion, "record", _fake_record)
+    ledger = duckdb.connect()
+    prospective.record(_research(), ledger, TODAY, now=NOW)
+    anchor_time = NOW.replace(minute=1)
+    prospective.attach_anchor(ledger, TODAY, provider="test-signer",
+                              anchored_at_utc=anchor_time, receipt="signed-batch")
+    assert prospective.verified_days(ledger) == set()
+    assert prospective.verified_days(ledger, verifier=lambda *args: args[-1] == "signed-batch") == {str(TODAY)}
+    assert prospective.audit(ledger, verifier=lambda *args: args[-1] == "signed-batch")[
+        "independently_verified_days"] == 1
+    def unavailable(*args):
+        raise ConnectionError("external verifier unavailable")
+    assert prospective.verified_days(ledger, verifier=unavailable) == set()
+    ledger.execute("UPDATE champion_pick_anchors SET receipt = 'tampered'")
+    assert prospective.verified_days(ledger, verifier=lambda *args: args[-1] == "signed-batch") == set()
 
 
 def test_forward_record_rejects_backfill_and_future_outcome(monkeypatch):

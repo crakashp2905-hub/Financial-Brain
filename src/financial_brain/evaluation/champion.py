@@ -54,6 +54,16 @@ class ChampionError(ValueError):
     pass
 
 
+def _cohort_columns(con) -> None:
+    """Add coverage without changing legacy seven-column inserts or old snapshots."""
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS selected_n INTEGER")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS missing_n INTEGER")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS worst_case_net DOUBLE")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS complete BOOLEAN")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS universe_coverage DOUBLE")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS universe_worst_case DOUBLE")
+
+
 #: Value and quality cannot join yet: exchange XBRL results stop at the quarter ended Dec 2024 (later results moved
 #: to NSE's "Integrated Filing" feed, not yet ingested), so a value or quality book today would rank on figures up
 #: to 18 months stale - not a fair contest. They join when that feed is covered.
@@ -130,8 +140,13 @@ def record(research_con, ledger_con, day: date, *, costs: CostModel | None = Non
 
 
 def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
-    """Score every cohort whose horizon has passed: gross, cost, net, and the universe mean for reference."""
+    """Score matured cohorts, retaining every missing selected outcome explicitly.
+
+    Missing names are not assigned an invented realised return. The -100% bound
+    is a sensitivity, and an incomplete cohort is ineligible for promotion.
+    """
     ledger_con.execute(SCHEMA)
+    _cohort_columns(ledger_con)
     days = [r[0] for r in ledger_con.execute(
         """SELECT DISTINCT day FROM champion_picks WHERE day NOT IN (SELECT DISTINCT day FROM champion_cohorts)""").fetchall()]
     done = 0
@@ -144,18 +159,30 @@ def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
         fwd = dict(research_con.execute("""
             SELECT a.lineage, b.close_adj / a.close_adj - 1 FROM adjusted_prices a
             JOIN adjusted_prices b ON b.lineage = a.lineage AND b.business_date = ?
-            WHERE a.business_date = ? AND a.close_adj > 0""", [cal[horizon], cal[0]]).fetchall())
-        if not fwd:
-            continue
-        uni = float(np.mean(list(fwd.values())))
+            WHERE a.business_date = ? AND a.close_adj > 0 AND b.close_adj > 0""",
+            [cal[horizon], cal[0]]).fetchall())
+        start_n = research_con.execute("""SELECT COUNT(DISTINCT lineage) FROM adjusted_prices
+                                          WHERE business_date = ? AND close_adj > 0""",
+                                       [cal[0]]).fetchone()[0]
+        universe_coverage = len(fwd) / start_n if start_n else None
+        universe_worst = ((sum(fwd.values()) - (start_n - len(fwd))) / start_n
+                          if start_n else None)
+        uni = float(np.mean(list(fwd.values()))) if fwd else None
         for strat, g in ledger_con.execute(
                 "SELECT strategy, lineage, cost FROM champion_picks WHERE day = ?", [day]).df().groupby("strategy"):
-            r = g["lineage"].map(fwd).dropna()
-            if r.empty:
-                continue
-            gross, cost = float(r.mean()), float(g.loc[r.index, "cost"].mean())
-            ledger_con.execute("INSERT OR REPLACE INTO champion_cohorts VALUES (?,?,?,?,?,?,?)",
-                               [day, strat, int(len(r)), gross, cost, gross - cost, uni])
+            observed = g["lineage"].map(fwd)
+            valid = observed.dropna()
+            selected_n, missing_n = len(g), int(observed.isna().sum())
+            gross = float(valid.mean()) if len(valid) else None
+            cost = float(g["cost"].mean())
+            worst = float((valid.sum() - missing_n) / selected_n - cost)
+            ledger_con.execute("""INSERT OR REPLACE INTO champion_cohorts
+                (day, strategy, n, gross, cost, net, universe, selected_n, missing_n, worst_case_net,
+                 complete, universe_coverage, universe_worst_case)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                [day, strat, int(len(valid)), gross, cost, gross - cost if gross is not None else None,
+                 uni, selected_n, missing_n, worst, missing_n == 0,
+                 universe_coverage, universe_worst])
         done += 1
     return done
 
@@ -164,7 +191,9 @@ def standings(ledger_con, horizon: int = HORIZON,
               eligible_days: set[str] | None = None) -> list[dict]:
     """Every challenger against the champion on non-overlapping cohorts (every ``horizon``-th recorded day)."""
     ledger_con.execute(SCHEMA)
-    df = ledger_con.execute("SELECT day, strategy, net FROM champion_cohorts").df()
+    _cohort_columns(ledger_con)
+    df = ledger_con.execute("SELECT day, strategy, net, complete FROM champion_cohorts").df()
+    df = df[df["complete"].fillna(True)]  # legacy rows remain diagnostic, never promotable
     if eligible_days is not None:
         df = df[df["day"].isin(eligible_days)]
     if df.empty:
@@ -180,8 +209,10 @@ def standings(ledger_con, horizon: int = HORIZON,
         t = float(d.mean() / (d.std(ddof=1) / np.sqrt(n))) if n > 2 and d.std(ddof=1) > 0 else float("nan")
         if n < MIN_COHORTS:
             status = "INSUFFICIENT_DATA"
-        elif t >= T_PROMOTE:
+        elif t >= T_PROMOTE and df["complete"].notna().all():
             status = "PROMOTE"
+        elif t >= T_PROMOTE:
+            status = "INSUFFICIENT_EVIDENCE"
         elif t <= -T_PROMOTE:
             status = "WORSE_THAN_CHAMPION"
         else:

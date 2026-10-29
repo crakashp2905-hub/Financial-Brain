@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, time
+from typing import Callable
 
 from ..costs.india import CostModel, Segment
 
@@ -41,11 +42,28 @@ TRIGGER_END = time(11, 0)
 TIME_EXIT = time(15, 15)
 TARGET_R = 2.0
 GAP_MIN = 0.015
+# Only open a setup whose stated target pays for its estimated round-trip
+# charges and spread. This is an entry filter, not a promise of realised profit.
+MIN_REWARD_COST_RATIO = 1.0
 STRATEGIES = ("ORB", "GAP")
 
 
 class EngineError(ValueError):
     pass
+
+
+@dataclass(frozen=True)
+class StrategyRule:
+    """Paper-only adapter for a decision-time intraday algorithm.
+
+    ``signal`` receives the symbol state, latest price, clock and the latest
+    observed market context. It returns ``(side, stop)`` or
+    ``(side, stop, target)``; no future bars or broker handle are supplied.
+    """
+
+    signal: Callable[[SymbolDay, float, time, dict], tuple | None]
+    requires: tuple[str, ...] = ()
+    version: str = "unversioned"
 
 
 @dataclass
@@ -108,12 +126,17 @@ class Trade:
 
 class DayEngine:
     def __init__(self, day: str, *, account: float = ACCOUNT_INR, risk: float = RISK_PER_TRADE,
-                 costs: CostModel | None = None, strategies=STRATEGIES, half_spread: dict | None = None):
+                 costs: CostModel | None = None, strategies=STRATEGIES, half_spread: dict | None = None,
+                 rules: dict[str, StrategyRule] | None = None):
         self.day = day
         self.account = account
         self.risk = risk
         self.costs = costs or CostModel()
         self.strategies = tuple(strategies)
+        self.rules = dict(rules or {})
+        unknown = set(self.strategies) - set(STRATEGIES) - set(self.rules)
+        if unknown:
+            raise EngineError(f"unregistered paper strategies: {', '.join(sorted(unknown))}")
         self.symbols: dict[str, SymbolDay] = {}
         self.trades: list[Trade] = []
         self.skipped: list[dict] = []
@@ -185,6 +208,18 @@ class DayEngine:
 
     # ----------------------------------------------------------------- rules
     def _signal(self, strat: str, s: SymbolDay, price: float, clock: time):
+        if strat in self.rules:
+            rule = self.rules[strat]
+            context = self.market.get(s.symbol, {})
+            if any(context.get(key) is None for key in rule.requires):
+                self.skipped.append({"symbol": s.symbol, "strategy": strat,
+                                     "why": "missing required context: " + ", ".join(
+                                         key for key in rule.requires if context.get(key) is None)})
+                return None
+            signal = rule.signal(s, price, clock, dict(context))
+            if signal is not None and (len(signal) not in (2, 3) or signal[0] not in ("long", "short")):
+                raise EngineError(f"{strat}: invalid paper signal")
+            return signal
         if strat == "ORB":
             if price > s.or_hi:
                 return ("long", s.or_lo)
@@ -214,7 +249,9 @@ class DayEngine:
         return (price * (1 + hs) if buying else price * (1 - hs)), 2 * hs * 1e4
 
     def _open(self, strat: str, s: SymbolDay, sig, ts: datetime, price: float):
-        side, stop = sig
+        side, stop = sig[:2]
+        if not isinstance(stop, (int, float)) or not 0 < stop < float("inf"):
+            raise EngineError(f"{strat}: invalid stop")
         decision = price
         price, spread = self.fill(s.symbol, decision, buying=(side == "long"))
         per_share = (price - stop) if side == "long" else (stop - price)
@@ -230,10 +267,27 @@ class DayEngine:
         if self.open_exposure() + qty * price > MAX_GROSS * self.account:
             self.skipped.append({"symbol": s.symbol, "strategy": strat, "why": "intraday exposure limit reached"})
             return None                    # not marked done: may open later when exposure frees up
-        if strat == "GAP":
+        if len(sig) == 3:
+            target = sig[2]
+            if not isinstance(target, (int, float)) or not 0 < target < float("inf"):
+                raise EngineError(f"{strat}: invalid target")
+        elif strat == "GAP":
             target = s.prev_close
         else:
             target = price + TARGET_R * per_share if side == "long" else price - TARGET_R * per_share
+        # Charge the exit-side spread as well as the statutory/broker charges.
+        # A live quote's spread is measured; replay uses the bucket assumption.
+        half_bp = (spread / 2 if spread is not None else self.half_spread.get(s.bucket, 8.0))
+        exit_est = target * (1 - half_bp / 1e4 if side == "long" else 1 + half_bp / 1e4)
+        reward = (exit_est - price if side == "long" else price - exit_est) * qty
+        charges = self.costs.round_trip(turnover=price * qty, segment=Segment.INTRADAY,
+                                        bucket=s.bucket, include_impact=False)["total"]
+        if reward <= MIN_REWARD_COST_RATIO * charges:
+            s.done.add(strat)
+            self.skipped.append({"symbol": s.symbol, "strategy": strat,
+                                 "why": "target reward does not cover projected round-trip costs",
+                                 "projected_reward_inr": reward, "projected_costs_inr": charges})
+            return None
         t = Trade(trade_id=f"{self.day}-{strat}-{s.symbol}", day=self.day, strategy=strat, symbol=s.symbol,
                   side=side, qty=qty, entry_ts=ts.isoformat(), entry_px=price, stop=stop, target=target,
                   bucket=s.bucket, entry_decision_px=decision, spread_bp=spread, **self.context(s, ts))
@@ -322,5 +376,6 @@ class DayEngine:
             out[strat] = {"trades": len(ts), "wins": sum(1 for t in ts if t.net_pnl > 0),
                           "gross": sum(t.gross_pnl for t in ts), "costs": sum(t.costs for t in ts),
                           "net": sum(t.net_pnl for t in ts), "mean_r": sum(t.r_multiple for t in ts) / len(ts),
+                          "positive_gross_below_costs": sum(1 for t in ts if 0 < t.gross_pnl <= t.costs),
                           "by_exit": {k: sum(1 for t in ts if t.exit_reason == k) for k in ("target", "stop", "time")}}
         return out

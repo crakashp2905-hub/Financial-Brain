@@ -313,6 +313,23 @@ def step(rcon, book, day: date, *, mode: str, spec: Spec = POSITION, capital: fl
                 continue
             cost = costs.round_trip_sized(order_value=shares * float(r["price"]), adv_value=float(r["adv20"]),
                                           daily_vol=float(r["vol_60"]) / np.sqrt(252.0))["total"]
+        # Scanner and swing candidates carry a calibrated expected net return.
+        # Reject a signal whose estimated gross edge cannot pay its own costs.
+        # Factor books intentionally carry no calibrated return yet; do not
+        # mistake their placeholder zero for a measured negative forecast.
+        if spec.ranker in ("v1", "swing"):
+            expected_gross = r.get("expected_return")
+            expected_net = r.get("expected_net")
+            if expected_gross is not None and pd.notna(expected_gross):
+                passes_costs = float(expected_gross) > float(cost)
+            else:
+                passes_costs = expected_net is not None and pd.notna(expected_net) and float(expected_net) > 0
+            if not passes_costs:
+                book.execute("INSERT OR REPLACE INTO skips VALUES (?,?,?,?,?,?,?)",
+                             [spec.version, mode, day, r["ticker"], int(r["rank"]),
+                              float(expected_net) if expected_net is not None else None,
+                              "projected reward does not cover round-trip costs"])
+                continue
         book.execute("""INSERT OR REPLACE INTO positions (version, mode, signal_day, rank, ticker, lineage, type,
                         horizon, shares, stop, ref_price, expected_net, cost, why) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                      [spec.version, mode, day, int(r["rank"]), r["ticker"], r["lineage"], r["type"],
@@ -371,7 +388,9 @@ def frame(book, mode: str, spec: Spec = POSITION) -> pd.DataFrame:
     return df
 
 
-def summary(book, mode: str, spec: Spec = POSITION) -> dict:
+def summary(book, mode: str, spec: Spec = POSITION, *, capital: float = CAPITAL) -> dict:
+    if capital <= 0:
+        raise BookError("capital must be positive")
     df = frame(book, mode, spec)
     closed = df[df["status"] == "SOLD"] if len(df) else df
     out = {"mode": mode, "version": spec.version, "closed": int(len(closed)),
@@ -388,6 +407,13 @@ def summary(book, mode: str, spec: Spec = POSITION) -> dict:
     out.update(entry_days=int(len(per_day)), win_rate=float((closed["net"] > 0).mean()),
                beat_universe=float((closed["excess"] > 0).mean()), mean_net=float(closed["net"].mean()),
                mean_excess=float(closed["excess"].mean()), t_excess=t, net_rs=float(closed["net_rs"].sum()),
+               gross_rs=float((closed["notional"] * closed["gross"]).sum()),
+               costs_rs=float((closed["notional"] * closed["cost"]).sum()),
+               traded_entry_notional_rs=float(closed["notional"].sum()),
+               approximate_round_trip_turnover_x=float(2 * closed["notional"].sum() / capital),
+               cost_drag_on_starting_capital=float((closed["notional"] * closed["cost"]).sum() / capital),
+               positive_gross_below_costs=int(((closed["gross"] > 0) &
+                                               (closed["gross"] <= closed["cost"])).sum()),
                bench_rs=float((closed["notional"] * closed["bench"]).sum()),
                stopped=float((closed["exit_reason"] == "stop").mean()), mean_held=float(closed["held"].mean()),
                first=str(closed["entry_day"].min()), last=str(closed["exit_day"].max()))

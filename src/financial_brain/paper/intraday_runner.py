@@ -16,7 +16,9 @@ to a broker: the only Kite calls are quotes and candles.
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
+import re
 import time as _time
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -60,6 +62,29 @@ EXTRA_COLUMNS = (("entry_decision_px", "DOUBLE"), ("exit_decision_px", "DOUBLE")
                  ("entry_walk_bp", "DOUBLE"))
 
 
+def cohort_path(base: Path, cohort: str | None, strategies, rules: dict[str, I.StrategyRule] | None) -> tuple[Path, str]:
+    """Keep strategy variants in separate ledgers instead of overwriting `(day, mode)`.
+
+    The digest identifies the declared rule versions and strategy selection. A
+    changed implementation must receive a new declared version by the caller.
+    """
+    selected = tuple(strategies)
+    extra = rules or {}
+    if extra and (not cohort or any(extra[k].version == "unversioned" for k in extra)):
+        raise ValueError("custom paper rules require a cohort name and explicit rule versions")
+    if cohort is not None and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", cohort):
+        raise ValueError("invalid paper cohort name")
+    unknown = set(selected) - set(I.STRATEGIES) - set(extra)
+    if unknown:
+        raise ValueError(f"unregistered paper strategies: {', '.join(sorted(unknown))}")
+    manifest = {"engine": I.VERSION, "strategies": selected,
+                "rules": {k: extra[k].version for k in sorted(extra)}}
+    fingerprint = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()[:12]
+    if cohort is None:
+        return base, fingerprint
+    return base.with_name(f"{base.stem}-{cohort}-{fingerprint}{base.suffix}"), fingerprint
+
+
 def ledger(path: Path = LEDGER):
     path.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(path))
@@ -100,7 +125,7 @@ def save(con, t: I.Trade, mode: str) -> None:
 
 def record_run(con, day: str, mode: str, **kw) -> None:
     con.execute("""INSERT OR REPLACE INTO runs VALUES (?,?,?,?,?,?,?,?,?)""",
-                [day, mode, I.VERSION, kw.get("started"), kw.get("finished"), kw.get("status"),
+                [day, mode, kw.get("version", I.VERSION), kw.get("started"), kw.get("finished"), kw.get("status"),
                  kw.get("symbols", 0), kw.get("polls", 0), kw.get("note")])
 
 
@@ -187,7 +212,8 @@ def opening_from_candles(symbols, day: date, *, candles_fn, token_fn) -> dict[st
 
 def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None, now_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
-             token_fn=None, daily_fn=None) -> dict:
+             token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
+             rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
     from ..providers import kite_data as kd
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
@@ -195,11 +221,12 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     day = now.date().isoformat()
     if now.time() > CLOSE or now.weekday() >= 5:
         return {"day": day, "status": "not_a_session", "why": "after the close or a weekend: nothing recorded"}
+    path, fingerprint = cohort_path(path, cohort, strategies, rules)
     con = ledger(path)
     uni = universe(n)
     syms = [u["tradingsymbol"] for u in uni]
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
-    eng = I.DayEngine(day)
+    eng = I.DayEngine(day, strategies=strategies, rules=rules)
     eng.daily_up = daily_up(date.fromisoformat(day))
     started = now.isoformat()
     daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
@@ -213,7 +240,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     if daily is not None and daily.attrs.get("opportunities"):
         from ..opportunity import scanners as S
         S.save(con, daily.attrs["opportunities"], day)
-    record_run(con, day, "live", started=started, status="running", symbols=len(syms))
+    record_run(con, day, "live", started=started, status="running", symbols=len(syms), version=fingerprint)
     try:
         from ..ingest import quote_archive as QA
         qcon = QA.connect()
@@ -253,7 +280,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             log.warning("quote failed (%s/%s): %s", failures, max_failures, str(e)[:120])
             if failures >= max_failures:
                 record_run(con, day, "live", started=started, finished=now.isoformat(), status="aborted",
-                           symbols=len(syms), polls=polls, note=f"quotes failing: {str(e)[:120]}")
+                           symbols=len(syms), polls=polls, note=f"quotes failing: {str(e)[:120]}", version=fingerprint)
                 return {"day": day, "status": "aborted", "why": str(e)[:200]}
             sleep_fn(poll)
             continue
@@ -276,7 +303,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                 eng.add_symbol(sym, float(o["close"]), buckets.get(sym, "large"))
         if clock >= HOLIDAY_CHECK and not seen_today:
             record_run(con, day, "live", started=started, finished=now.isoformat(), status="closed",
-                       symbols=len(syms), polls=polls, note="no trade printed today: holiday or no session")
+                       symbols=len(syms), polls=polls, note="no trade printed today: holiday or no session",
+                       version=fingerprint)
             return {"day": day, "status": "closed"}
         if not opened and clock >= I.OR_END:
             if clock > LATE_START:
@@ -339,13 +367,14 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             save(con, t, "live")
     status = "session_unavailable" if session_issue is not None else "complete"
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,
-               symbols=len(syms), polls=polls, note=json.dumps({"skipped": len(eng.skipped)}))
+               symbols=len(syms), polls=polls, note=json.dumps({"skipped": len(eng.skipped)}),
+               version=fingerprint)
     if qcon is not None:
         qcon.close()
     if session_issue is None and _has_board(con):
         BD.resolve_close(con, day, "live", last)
     out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls}
-    write_report(con, day, "live", eng)
+    write_report(con, day, "live", eng, cohort=cohort)
     return out
 
 
@@ -356,14 +385,16 @@ def path_of_bar(o, h, l, c):
 
 
 def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=None, path: Path = LEDGER,
-               daily_fn=None) -> dict:
+               daily_fn=None, strategies=I.STRATEGIES,
+               rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
     from ..providers import kite_data as kd
     candles_fn = candles_fn or kd.candles
     inst = kd.instruments("NSE") if token_fn is None else None
     token_fn = token_fn or (lambda s: kd.token_for(s, inst))
+    path, fingerprint = cohort_path(path, cohort, strategies, rules)
     con = ledger(path)
     uni = universe(n)
-    eng = I.DayEngine(day.isoformat())
+    eng = I.DayEngine(day.isoformat(), strategies=strategies, rules=rules)
     eng.daily_up = daily_up(day)
     stream = []
     vwap_at: dict = {}
@@ -387,12 +418,14 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
         used += 1
         pv = vv = 0.0
         for b in bars:
+            # The current minute's high, low and close are unknown at its open.
+            known_vwap = pv / vv if vv else None
             pv += (float(b["high"]) + float(b["low"]) + float(b["close"])) / 3 * float(b.get("volume") or 0)
             vv += float(b.get("volume") or 0)
             if b["ts"][11:16] < "09:30":
                 continue
             t0 = datetime.fromisoformat(b["ts"][:19])
-            vwap_at[(sym, t0)] = pv / vv if vv else None
+            vwap_at[(sym, t0)] = known_vwap
             for k, px in enumerate(path_of_bar(b["open"], b["high"], b["low"], b["close"])):
                 stream.append((t0 + timedelta(seconds=15 * k), sym, float(px)))
     stream.sort(key=lambda x: (x[0], x[1]))
@@ -421,8 +454,9 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
     if _has_board(con):
         BD.resolve_close(con, day.isoformat(), "replay", last)
     record_run(con, day.isoformat(), "replay", started=datetime.now(IST).isoformat(),
-               finished=datetime.now(IST).isoformat(), status="complete", symbols=used, polls=len(stream))
-    write_report(con, day.isoformat(), "replay", eng)
+               finished=datetime.now(IST).isoformat(), status="complete", symbols=used, polls=len(stream),
+               version=fingerprint)
+    write_report(con, day.isoformat(), "replay", eng, cohort=cohort)
     return {"day": day.isoformat(), "status": "complete", "symbols": used, "summary": eng.summary()}
 
 
@@ -455,7 +489,12 @@ def evidence(con, mode: str | None = None) -> list[dict]:
                 status = "NO_EDGE_DETECTED"
             out.append({"strategy": strat, "mode": md, "trades": len(rs), "days": days,
                         "net_inr": float(sum(r[3] for r in rs)), "gross_inr": float(sum(r[4] for r in rs)),
-                        "costs_inr": float(sum(r[5] for r in rs)), "net_bp_per_trade": float(bp.mean()) if len(bp) else float("nan"),
+                        "costs_inr": float(sum(r[5] for r in rs)),
+                        "notional_inr": float(sum(r[7] for r in rs)),
+                        "gross_bp_per_trade": float(np.mean([r[4] / r[7] * 1e4 for r in rs if r[7]])),
+                        "cost_bp_per_trade": float(np.mean([r[5] / r[7] * 1e4 for r in rs if r[7]])),
+                        "positive_gross_below_costs": sum(1 for r in rs if 0 < r[4] <= r[5]),
+                        "net_bp_per_trade": float(bp.mean()) if len(bp) else float("nan"),
                         "se_bp": float(se), "mean_r": float(np.mean([r[6] for r in rs])),
                         "win_rate": float(np.mean([r[3] > 0 for r in rs])), "backtest_bp": exp, "status": status,
                         "shortfall_bp": float(np.nanmean([r[8] for r in rs if r[8] is not None])) if any(r[8] is not None for r in rs) else None,
@@ -475,11 +514,11 @@ def evidence(con, mode: str | None = None) -> list[dict]:
     return out
 
 
-def write_report(con, day: str, mode: str, eng: I.DayEngine) -> Path:
+def write_report(con, day: str, mode: str, eng: I.DayEngine, *, cohort: str | None = None) -> Path:
     REPORTS.mkdir(parents=True, exist_ok=True)
-    p = REPORTS / f"{day}-{mode}.md"
-    lines = [f"# Paper trading {day} ({mode}, {I.VERSION})", "",
-             "Paper only: no order was placed. Costs are the intraday schedule plus impact; intraday profit is "
+    p = REPORTS / f"{day}-{mode}{'-' + cohort if cohort else ''}.md"
+    lines = [f"# Paper trading {day} ({mode}, {I.VERSION}, cohort {cohort or 'default'})", "",
+             "Paper only: no order was placed. Costs are the intraday schedule; quoted/assumed spread is in the fills. Intraday profit is "
              "taxed as business income at your slab rate, not modelled per trade here.", ""]
     for strat, s in eng.summary().items():
         if not s.get("trades"):
@@ -487,8 +526,9 @@ def write_report(con, day: str, mode: str, eng: I.DayEngine) -> Path:
             continue
         lines.append(f"- **{strat}**: {s['trades']} trades, {s['wins']} winners net, gross Rs {s['gross']:,.0f}, "
                      f"costs Rs {s['costs']:,.0f}, **net Rs {s['net']:,.0f}**, mean R {s['mean_r']:+.2f}, "
+                     f"positive-gross trades erased by charges {s['positive_gross_below_costs']}, "
                      f"exits {s['by_exit']}")
-    lines += ["", f"Skipped signals: {len(eng.skipped)} (exposure limit, or price already beyond its stop).", "",
+    lines += ["", f"Skipped signals: {len(eng.skipped)} (including cost, exposure and missing-input gates).", "",
               "## Evidence so far, all days"]
     for e in evidence(con):
         lines.append(f"- {e['strategy']} ({e['mode']}): {e['trades']} trades over {e['days']} day(s), net "

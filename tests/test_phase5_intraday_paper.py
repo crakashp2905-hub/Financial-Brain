@@ -25,6 +25,58 @@ def test_nothing_happens_before_the_range_is_set_or_inside_it():
     assert e.on_price("X", at(9, 35), 100.5) == []          # inside the range
 
 
+def test_registered_algorithm_uses_shared_paper_fills_and_risk():
+    rule = I.StrategyRule(lambda s, price, clock, market: ("long", 99.0, 104.0)
+                          if price > market["vwap"] else None, requires=("vwap",))
+    e = I.DayEngine("2026-10-06", strategies=("VWAP_TEST",), rules={"VWAP_TEST": rule})
+    e.add_symbol("X", 100.0)
+    e.set_opening("X", open_px=100.0, or_hi=101.0, or_lo=99.0)
+    assert e.on_price("X", at(9, 35), 101.5) == []
+    assert e.skipped[-1]["why"] == "missing required context: vwap"
+    e.set_market("X", vwap=100.5)
+    trade = e.on_price("X", at(9, 36), 101.5)[0]
+    assert trade.strategy == "VWAP_TEST" and trade.target == 104.0
+    assert trade.entry_px > 101.5 and trade.qty > 0
+    assert e.on_price("X", at(9, 37), 101.6) == []
+
+
+def test_unregistered_algorithm_fails_closed():
+    with pytest.raises(I.EngineError, match="unregistered"):
+        I.DayEngine("2026-10-06", strategies=("UNKNOWN",))
+
+
+def test_trade_is_rejected_when_target_cannot_pay_round_trip_costs():
+    rule = I.StrategyRule(lambda s, price, clock, market: ("long", 99.0, price + 0.001))
+    e = I.DayEngine("2026-10-06", strategies=("TINY_EDGE",), rules={"TINY_EDGE": rule})
+    e.add_symbol("X", 100.0)
+    e.set_opening("X", open_px=100.0, or_hi=101.0, or_lo=99.0)
+    assert e.on_price("X", at(9, 35), 101.5) == []
+    skipped = e.skipped[-1]
+    assert skipped["projected_reward_inr"] < skipped["projected_costs_inr"]
+    assert "round-trip costs" in skipped["why"]
+
+
+def test_custom_cohorts_are_versioned_and_isolated():
+    from financial_brain.paper.intraday_runner import cohort_path
+    from pathlib import Path
+
+    base = Path("data/paper_live.duckdb")
+    signal = lambda s, price, clock, market: None
+    a = {"TEST": I.StrategyRule(signal, version="v1")}
+    b = {"TEST": I.StrategyRule(signal, version="v2")}
+    first, first_id = cohort_path(base, "challenger", ("TEST",), a)
+    second, second_id = cohort_path(base, "challenger", ("TEST",), b)
+    assert first != second and first_id != second_id
+    assert cohort_path(base, "challenger", ("TEST",), a) == (first, first_id)
+    assert cohort_path(base, None, I.STRATEGIES, None)[0] == base
+    with pytest.raises(ValueError, match="cohort name"):
+        cohort_path(base, None, ("TEST",), a)
+    with pytest.raises(ValueError, match="versions"):
+        cohort_path(base, "challenger", ("TEST",), {"TEST": I.StrategyRule(signal)})
+    with pytest.raises(ValueError, match="invalid"):
+        cohort_path(base, "../escape", ("TEST",), a)
+
+
 FILL = 101.5 * (1 + 4 / 1e4)                                # no live book: the 'large' bucket's half-spread
 
 

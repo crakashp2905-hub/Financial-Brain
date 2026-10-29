@@ -101,3 +101,25 @@ def test_the_standings_detect_a_challenger_that_is_worse_than_the_champion():
     led.executemany("INSERT INTO champion_cohorts VALUES (?,?,?,?,?,?,?)", rows)
     s = {x["strategy"]: x for x in C.standings(led)}["composite_top"]
     assert s["cohorts"] == C.MIN_COHORTS and s["status"] == "WORSE_THAN_CHAMPION"
+
+
+def test_missing_selected_price_is_counted_and_never_silently_dropped():
+    led, research_con = duckdb.connect(), duckdb.connect()
+    led.execute(C.SCHEMA)
+    d0, d1 = date(2026, 10, 5), date(2026, 10, 6)
+    led.executemany("INSERT INTO champion_picks VALUES (?,?,?,?,?)", [
+        (str(d0), C.CHAMPION, "A", "LA", .01),
+        (str(d0), C.CHAMPION, "B", "LB", .01),
+    ])
+    research_con.execute("CREATE TABLE adjusted_prices(lineage VARCHAR, business_date DATE, close_adj DOUBLE)")
+    research_con.executemany("INSERT INTO adjusted_prices VALUES (?,?,?)", [
+        ("LA", d0, 100.0), ("LB", d0, 100.0), ("LA", d1, 110.0),
+    ])
+    assert C.resolve(led, research_con, horizon=1) == 1
+    n, selected, missing, complete, worst = led.execute("""SELECT n, selected_n, missing_n, complete,
+        worst_case_net FROM champion_cohorts""").fetchone()
+    assert (n, selected, missing, complete) == (1, 2, 1, False)
+    assert worst == pytest.approx((.1 - 1) / 2 - .01)
+    coverage, universe_worst = led.execute("SELECT universe_coverage, universe_worst_case FROM champion_cohorts").fetchone()
+    assert coverage == .5 and universe_worst == pytest.approx(-.45)
+    assert C.standings(led, horizon=1)[0]["cohorts"] == 0
