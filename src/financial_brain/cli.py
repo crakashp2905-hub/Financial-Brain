@@ -27,6 +27,69 @@ def _d(s: str) -> date:
     return datetime.strptime(s, "%Y-%m-%d").date()
 
 
+def cmd_brain(args) -> int:
+    """Run the read-only specialist coordinator over the saved trader snapshot."""
+    from pathlib import Path
+
+    from .agents import brain
+
+    snapshot = json.loads(Path(args.snapshot).read_text(encoding="utf-8"))
+    state_path = Path(args.kill_switch)
+    state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
+    print(json.dumps(brain.run(snapshot, state, limit=args.limit), indent=2, default=str))
+    return 0
+
+
+def cmd_agent_eval(args) -> int:
+    """Run the versioned, deterministic read-only agent guardrail suite."""
+    from .agents.evaluate import evaluate
+
+    result = evaluate()
+    print(json.dumps(result, indent=2))
+    return 0 if result["failed"] == 0 else 1
+
+
+def cmd_trader_core(args) -> int:
+    """Read-only integrated status of the trader's saved research artifacts."""
+    from .interfaces.trader_core import status
+
+    result = status(load().data_root, limit=args.limit)
+    print(json.dumps(result, indent=2, default=str))
+    return 0 if result["status"] == "RESEARCH_ONLY" else 2
+
+
+def cmd_options_audit(args) -> int:
+    """Read-only options history and live-book coverage report."""
+    from .ingest.options_audit import report
+
+    root = load().data_root
+    print(json.dumps(report(root / "fo_history.duckdb", root / "options_quotes.duckdb"),
+                     indent=2))
+    return 0
+
+
+def cmd_tool_list(args) -> int:
+    from .interfaces import gateway
+
+    print(json.dumps({"contract": gateway.CONTRACT, "operations": gateway.OPERATIONS,
+                      "read_only": True}, indent=2))
+    return 0
+
+
+def cmd_tool_call(args) -> int:
+    from .interfaces import gateway
+
+    try:
+        arguments = json.loads(args.args_json)
+    except json.JSONDecodeError as exc:
+        print(json.dumps({"contract": gateway.CONTRACT, "ok": False,
+                          "error": {"code": "bad_request", "message": str(exc)}}))
+        return 2
+    result = gateway.call(args.operation, arguments)
+    print(json.dumps(result, indent=2))
+    return 0 if result["ok"] else 2
+
+
 def _print_table(rows: list[dict], limit: int = 40) -> None:
     if not rows:
         print("  (no rows)")
@@ -1413,10 +1476,30 @@ def cmd_paper_intraday(args) -> int:
     return 0
 
 
+def cmd_paper_compare(args) -> int:
+    """Compare only exact matched live/replay paper trades; never modify the ledger."""
+    import duckdb
+
+    from .paper import reconcile
+
+    path = load().data_root / "paper_live.duckdb"
+    if not path.is_file():
+        print(json.dumps({"error": "paper ledger not available"}))
+        return 2
+    with duckdb.connect(str(path), read_only=True) as con:
+        result = reconcile.compare(con, start=_d(args.start) if args.start else None,
+                                   end=_d(args.end) if args.end else None)
+    if not args.pairs:
+        result.pop("pairs")
+    print(json.dumps(result, indent=2, default=str))
+    return 0
+
+
 def cmd_champion(args) -> int:
     """Record each strategy's picks after the lock, resolve matured cohorts, and print the standings."""
     import duckdb
     from .evaluation import champion as C
+    from .evaluation import prospective as P
     from .paper import intraday_runner as IR
     led = IR.ledger()
     rcon = duckdb.connect(str(load().db_path), read_only=True)
@@ -1426,13 +1509,32 @@ def cmd_champion(args) -> int:
             if day < C.LOCK_DATE:
                 print(f"latest features {day} are before the lock {C.LOCK_DATE}: nothing recorded")
             else:
-                print("recorded", day, C.record(rcon, led, day))
+                try:
+                    print("forward-attested", day, P.record(rcon, led, day))
+                except C.ChampionError as exc:
+                    print("not recorded:", exc)
         print("resolved cohorts:", C.resolve(led, rcon))
     finally:
         rcon.close()
-    for s in C.standings(led):
+    for s in C.standings(led, eligible_days=P.verified_days(led)):
         print(f"  {s['strategy']:20s} {s['status']:22s} cohorts {s.get('cohorts', 0):3d}"
               + (f"  net vs champion {s['mean_net_vs_champion']:+.2%} (t {s['t']:+.2f})" if s.get("cohorts") else ""))
+    print("prospective evidence:", json.dumps(P.audit(led)))
+    return 0
+
+
+def cmd_champion_audit(args) -> int:
+    """Read-only report of attested versus historical champion picks."""
+    import duckdb
+    from .evaluation import prospective as P
+
+    path = load().data_root / "paper_live.duckdb"
+    if not path.is_file():
+        print(json.dumps({"error": "paper ledger not available"}))
+        return 2
+    with duckdb.connect(str(path), read_only=True) as con:
+        result = P.audit(con)
+    print(json.dumps(result, indent=2))
     return 0
 
 
@@ -2499,6 +2601,11 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("migrate", help="create/update the schema").set_defaults(fn=cmd_migrate)
     sub.add_parser("status", help="what the system currently holds").set_defaults(fn=cmd_status)
+    sub.add_parser("agent-eval", help="run versioned read-only agent guardrail cases").set_defaults(fn=cmd_agent_eval)
+    g = sub.add_parser("trader-core", help="read-only integrated trader research status")
+    g.add_argument("--limit", type=int, default=20)
+    g.set_defaults(fn=cmd_trader_core)
+    sub.add_parser("options-audit", help="read-only option daily-history and quote-quality audit").set_defaults(fn=cmd_options_audit)
 
     g = sub.add_parser("inverse", help="read-only inverse-policy research")
     g.add_argument("--synthetic")
@@ -2708,6 +2815,21 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--date")
     g.set_defaults(fn=cmd_paper_daily)
 
+    g = sub.add_parser("brain", help="read-only specialist agents over saved opportunities; no orders")
+    g.add_argument("--snapshot", default="data/terminal/opportunities.json")
+    g.add_argument("--kill-switch", default="data/killswitch.json")
+    g.add_argument("--limit", type=int, default=10)
+    g.set_defaults(fn=cmd_brain)
+
+    g = sub.add_parser("tool", help="versioned read-only JSON contract shared with MCP")
+    tool_sub = g.add_subparsers(dest="tool_action", required=True)
+    t = tool_sub.add_parser("list", help="list available tools and argument names")
+    t.set_defaults(fn=cmd_tool_list)
+    t = tool_sub.add_parser("call", help="call one named read-only operation")
+    t.add_argument("operation")
+    t.add_argument("--args-json", default="{}", help="JSON object of bounded tool arguments")
+    t.set_defaults(fn=cmd_tool_call)
+
     g = sub.add_parser("plan", help="position size, horizon and exits for one name (information, not advice)")
     g.add_argument("ticker")
     g.add_argument("--capital", type=float, default=500_000.0)
@@ -2732,9 +2854,16 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--names", type=int, default=200)
     g.set_defaults(fn=cmd_paper_intraday)
 
+    g = sub.add_parser("paper-compare", help="read-only exact-day live/replay reconciliation")
+    g.add_argument("--start", help="first session, YYYY-MM-DD")
+    g.add_argument("--end", help="last session, YYYY-MM-DD")
+    g.add_argument("--pairs", action="store_true", help="include every exact matched trade")
+    g.set_defaults(fn=cmd_paper_compare)
+
     g = sub.add_parser("champion", help="champion/challenger on locked out-of-sample data")
     g.add_argument("--record", action="store_true")
     g.set_defaults(fn=cmd_champion)
+    sub.add_parser("champion-audit", help="read-only forward-attestation audit of champion picks").set_defaults(fn=cmd_champion_audit)
 
     g = sub.add_parser("fno-snapshot", help="evening F&O snapshot: basis, OI, IV, positioning (read-only)")
     g.add_argument("--chains", type=int, default=100)

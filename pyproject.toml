@@ -19,6 +19,9 @@ models = ["onnxruntime>=1.18", "tokenizers>=0.19", "numpy>=1.26"]
 # The HTTP surface in api/. Optional on purpose: a research system should not need a web
 # framework to run a backtest, and the core install stays duckdb + pytz.
 api = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2.6"]
+# Local, read-only MCP stdio server. Both the installed v1 maintenance SDK and v2
+# expose tool/resource decorators; imports are selected at runtime.
+mcp = ["mcp>=1.26,<3"]
 # Foundation-model forecasting. Optional for the same reason as `api`: the nulls, the scores and the
 # walk-forward harness in forecasting/ are pure Python and run on the core install, so a bootstrap
 # baseline can be established without torch. Kronos itself is a repository rather than a
@@ -33,6 +36,9 @@ fb = "financial_brain.cli:main"
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+"financial_brain.agents" = ["eval_cases.v1.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

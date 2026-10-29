@@ -160,10 +160,13 @@ def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
     return done
 
 
-def standings(ledger_con, horizon: int = HORIZON) -> list[dict]:
+def standings(ledger_con, horizon: int = HORIZON,
+              eligible_days: set[str] | None = None) -> list[dict]:
     """Every challenger against the champion on non-overlapping cohorts (every ``horizon``-th recorded day)."""
     ledger_con.execute(SCHEMA)
     df = ledger_con.execute("SELECT day, strategy, net FROM champion_cohorts").df()
+    if eligible_days is not None:
+        df = df[df["day"].isin(eligible_days)]
     if df.empty:
         return [{"strategy": s, "status": "INSUFFICIENT_DATA", "cohorts": 0} for s in ("composite_top",)]
     w = df.pivot_table(index="day", columns="strategy", values="net").sort_index()

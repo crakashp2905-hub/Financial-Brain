@@ -123,9 +123,8 @@ def _instruments() -> list[dict]:
 
 
 def _snapshot(path: Path, today: date) -> list[dict]:
-    rows = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(rows, list):
-        raise ValueError("opportunity snapshot is not a list")
+    from ..interfaces import snapshot as verified_snapshot
+    rows, _ = verified_snapshot.read(path)
     # A prior close is expected in the morning. An older board is not a live signal.
     valid = [r for r in rows if 0 < (today - date.fromisoformat(r["timestamp"])).days <= 4]
     return valid[:MAX_STOCKS]

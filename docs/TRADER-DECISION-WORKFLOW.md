@@ -22,8 +22,27 @@ positive in-sample alpha is a validated trading edge. At present, the answer for
 
 `python -m financial_brain.paper.decision_journal report`
 
-The journal is owner-entered and append-only. It measures choice counts and time to decide,
-not P&L or causal benefit. Do not backfill missed decisions as if they were prospective.
+For prospective decisions, capture the full decision-time context in a JSON object (quote
+timestamps, spread/depth if available, portfolio and cash constraints, kill-switch state,
+ranked alternatives, expected costs, evidence tier, and model/strategy version). Pass it
+with `--snapshot-file path/to/context.json` to `record`, then run
+`python -m financial_brain.paper.decision_journal audit`. The journal stores that object,
+its SHA-256 digest and a decision digest, rejects future as-of data and duplicate records,
+and reports how many decisions have snapshots. These hashes detect accidental editing; a
+local file is not an independent timestamp or tamper-proof audit trail. Capture only data
+whose storage is permitted under the applicable provider terms.
+
+The journal is owner-entered and append-only in normal use. It measures choice counts,
+snapshot coverage and time to decide, not P&L or causal benefit. Do not backfill missed
+decisions as if they were prospective. Existing schema-1 entries without decision hashes
+remain readable, but `audit` flags them as unsealed legacy records.
+
+`fb paper-compare --start YYYY-MM-DD --end YYYY-MM-DD` is a separate read-only
+diagnostic for the intraday paper ledger. It matches only closed live and replay trades
+with the same day, strategy, symbol and side; `--pairs` shows the individual matches.
+If the modes cover different sessions, it reports `NO_PAIRED_TRADES`, not an average
+execution difference. A same-day replay still uses historical minute bars and fill
+assumptions; it is not a brokerage fill or independent profitability result.
 
 ## Evaluation protocol
 

@@ -2,6 +2,20 @@
 
 Inverse-policy research and its limits are documented in
 [docs/INVERSE-STRATEGY-IMPLEMENTATION.md](docs/INVERSE-STRATEGY-IMPLEMENTATION.md).
+The read-only specialist coordinator and its limits are documented in
+[docs/FINANCIAL-BRAIN-AGENTS.md](docs/FINANCIAL-BRAIN-AGENTS.md).
+The shared read-only CLI/MCP contract is documented in
+[docs/MCP-CLI-CONTRACT.md](docs/MCP-CLI-CONTRACT.md).
+The current implementation-versus-roadmap audit is in
+[docs/ROADMAP-AUDIT-2026-10-29.md](docs/ROADMAP-AUDIT-2026-10-29.md).
+The [Trader Core v1 audit](docs/TRADER-CORE-V1-AUDIT.md) maps the nine product requirements
+to current code and unverified acceptance gates; `fb trader-core` provides a read-only
+integrated status of the saved research snapshot.
+The [Rust, US-linkage and options plan](docs/RUST-US-OPTIONS-PLAN.md) records the
+benchmark-first language decision and data/evidence requirements; `fb options-audit`
+reports the local derivatives-data coverage without treating candles as executable quotes.
+The [fresh trader-platform checklist audit](docs/TRADER-PLATFORM-CHECKLIST-AUDIT-2026-10-29.md)
+tracks each immediate, next and advanced requirement against source and remaining evidence.
 
 **An empirical, AI-native market decision engine for Indian markets.**
 
@@ -181,6 +195,8 @@ Validation modules, used from Python rather than the CLI:
 | `evaluation/neutral.py` | Signals with market beta, home sector, size (turnover proxy) and volatility removed: momentum keeps 94%, 52-week high 91%, the composite 102% (t 4.3) - stock selection, not disguised factor bets |
 | `research/preregistry.py` / `fb preregs` | Audits every pre-registration against git: committed before its result, never edited after it (19 audited, 0 violations; one amendment, made before any result) |
 | `paper/execution.py` | Each intraday strategy's P&L split into what the signal earned at its trigger prices, what execution cost, and the charges |
+| `paper/reconcile.py` / `fb paper-compare` | Read-only, exact-day/strategy/symbol/side comparison of closed live and replay paper trades; refuses to infer an execution gap from different days |
+| `evaluation/prospective.py` / `fb champion-audit` | Future champion picks get write-time attestation and the displayed standings exclude historical/unattested picks; the audit is read-only and existing picks cannot be retroactively certified |
 | `paper/loss_review.py` *with-market view* | The owner's rule - trade only with the market - tracked on the real trades every day as a labelled shadow (it failed its held-out test) |
 | `paper/loss_review.py` / `fb loss-review [--propose]` | **Learning from the bad trades.** Every intraday paper trade records its decision-time context (market move since the open, daily trend, gap, opening-range width, minute); the review finds the situations that keep losing, one observation per day, with the chance count beside them, and writes them as PROPOSED hypotheses. Nothing changes until a hypothesis is pre-registered and survives data it was not found on. First test of the loop - *trade only with the market trend* - doubled ORB's gross in the training year and added nothing in the held-out year (net -21 to -25 bp); it does not qualify |
 | `paper/book.py` / `fb book [--book swing-v1\|book-v1] [--replay START --label L] [--report]` | **Paper books for the suggestions**, each pre-registered: *swing-v1* buys the top 50 swing candidates each evening (2% each, at most 50 open, swing stop, sold after 7 sessions), *book-v1* the top 5 position names (60 sessions). Bought at the next close, sold at the stop or the horizon, net of the sized round trip, against the universe bought and held over the same days. Every trade is kept and the terminal shows the worst beside the best. Replays are labelled in-sample; the live record is the evidence (verdict after 100 trades over 20 entry days). book-v1's replay since 2023: +0.79% a trade net but **-3.1% against the universe** (t -2.5) - a large-cap tilt through a small-cap rally |

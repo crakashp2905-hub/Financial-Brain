@@ -9,6 +9,7 @@ it) is HTML-escaped and shown as data.
 from __future__ import annotations
 
 import html
+import json
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -518,7 +519,9 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
         pass
     try:
         OUT.parent.mkdir(parents=True, exist_ok=True)
-        (OUT.parent / "opportunities.json").write_text("[" + ",".join(x.to_json() for x in full) + "]", encoding="utf-8")
+        from ..interfaces import snapshot as verified_snapshot
+        verified_snapshot.publish(OUT.parent / "opportunities.json",
+                                  [json.loads(x.to_json()) for x in full], asof=asof)
     except Exception:                                   # noqa: BLE001
         pass
     if my is not None and my.get("cov") is not None:
