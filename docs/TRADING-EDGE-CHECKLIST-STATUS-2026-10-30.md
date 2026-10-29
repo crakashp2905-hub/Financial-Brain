@@ -2,8 +2,9 @@
 
 The attached technical checklist is a program specification, not proof of an edge. The 2026Q4 protected trial budget and final holdout must remain untouched. No code change here establishes profitable or deployable alpha.
 
-## Implemented in this local worktree
+## Implemented and verified
 
+- `main` is protected on GitHub with strict Ubuntu/Windows CI checks and one approving review; stale approvals are dismissed. Administrator enforcement is off for emergency maintenance. This setting was verified through the GitHub API after commit `66baa36` passed both platforms.
 - Champion cohort resolution no longer silently drops selected names without a forward price. It stores selected/observed/missing counts, survivor-only net, a -100%-for-missing sensitivity, universe coverage and the same universe sensitivity. Incomplete cohorts cannot satisfy promotion. This is a sensitivity, **not** a claim that every missing security lost 100%; corporate-action lineage and suspension/delisting reconciliation remain separate work.
 - Local pick hashes remain integrity evidence, but `verified_days()` now fails closed without an independently verified external receipt. `attach_anchor()` stores a candidate receipt before the earliest next entry; an explicitly configured verifier must validate its external signature and timestamp on every read. No trusted provider is configured, so there are currently **zero promotion-grade verified days** from this path.
 - OMS shortfall now rejects mixed-side/mixed-benchmark children and missing filled prices, reports unfilled share, and does not discard zero-prediction comparisons. New adversarial tests cover those branches.
@@ -12,7 +13,7 @@ The attached technical checklist is a program specification, not proof of an edg
 
 ## Still open — requires further engineering or external evidence
 
-- CI branch protection and review rules; supported dependency matrix/lockfile; performance baselines, release provenance and backup/restore drill.
+- Supported dependency matrix/lockfile; performance baselines, release provenance and backup/restore drill.
 - Independent signed time-anchor provider and verification implementation; source-specific market calendars/freshness; complete decision snapshot hashes.
 - Suspended/delisted lineage, corporate-action and missing-outcome adjudication; full-market PIT universe; purged evaluation, dependence-aware intervals and family-wise trial accounting.
 - OMS evidence/MCP/risk exposure adversarial coverage and per-module CI minimums; market-hours failure drills.
