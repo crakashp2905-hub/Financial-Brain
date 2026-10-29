@@ -16,7 +16,7 @@ approves a decision or places an order. If the kill-switch file is absent, it ab
 | Data | snapshot date and instrument identity | missing, future or stale input |
 | Evidence | tier and traceable evidence ids | missing ids; non-forward tiers stay research-only |
 | Risk | persisted kill switch, size and stop | absent/invalid switch, HALT, missing sizing/invalidation |
-| Economics | net, portfolio-adjusted alpha and costs | missing/nonfinite economics; nonpositive alpha means no new risk |
+| Economics | economic net alpha, portfolio utility and costs | missing/nonfinite economics; nonpositive economic alpha or utility means no new risk |
 | Adversary | invalidation rule, liquidity and distribution | any of these missing |
 
 The coordinator emits `ABSTAIN`, `NO_NEW_RISK`, `RESEARCH_WATCH`, or `HUMAN_REVIEW`.

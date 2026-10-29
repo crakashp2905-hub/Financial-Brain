@@ -92,17 +92,17 @@ WITH w AS (
 ), e AS (
     SELECT lineage, d, c, n,
            list_reduce(
-             list_transform(hist, (x, i) ->
-               x * pow(1 - 2.0/13, len(hist) - i)), (a, b) -> a + b)
+             list_transform(hist, lambda x, i:
+               x * pow(1 - 2.0/13, len(hist) - i)), lambda a, b: a + b)
              / list_reduce(
-             list_transform(hist, (x, i) -> pow(1 - 2.0/13, len(hist) - i)),
-             (a, b) -> a + b) AS ema12,
+             list_transform(hist, lambda x, i: pow(1 - 2.0/13, len(hist) - i)),
+             lambda a, b: a + b) AS ema12,
            list_reduce(
-             list_transform(hist, (x, i) ->
-               x * pow(1 - 2.0/27, len(hist) - i)), (a, b) -> a + b)
+             list_transform(hist, lambda x, i:
+               x * pow(1 - 2.0/27, len(hist) - i)), lambda a, b: a + b)
              / list_reduce(
-             list_transform(hist, (x, i) -> pow(1 - 2.0/27, len(hist) - i)),
-             (a, b) -> a + b) AS ema26
+             list_transform(hist, lambda x, i: pow(1 - 2.0/27, len(hist) - i)),
+             lambda a, b: a + b) AS ema26
     FROM w
 )
 SELECT lineage, d, c, n, ema12 - ema26 AS macd,

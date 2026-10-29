@@ -58,9 +58,12 @@ def _alpha(a: dict) -> str:
     if not a:
         return "-"
     items = [("expected return", a["expected_return"]), ("benchmark", -a["benchmark"]), ("fees and taxes", -a["fees"]),
-             ("spread", -a["spread"]), ("impact", -a["impact"]), ("risk penalty", -a["risk_penalty"])]
+             ("spread", -a["spread"]), ("impact", -a["impact"])]
     return (" ".join(f"{k} {v * 100:+.2f}% ·" for k, v in items)
-            + f" <b>net {a['net'] * 100:+.2f}%</b> over {a['horizon']} sessions")
+            + f" <b>economic net alpha {a['net'] * 100:+.2f}%</b>"
+            + f" · risk penalty {-a['risk_penalty'] * 100:+.2f}%"
+            + f" · utility {a.get('utility', a['net'] - a['risk_penalty']) * 100:+.2f}%"
+            + f" over {a['horizon']} sessions")
 
 
 def _chart(t) -> str:
@@ -498,7 +501,9 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
             technical_state={k2: float(row[k2]) for k2 in ("mom_12_1", "dist_52w_high", "vol_60", "ret_20d", "rsi_14") if pd.notna(row.get(k2))},
             fundamental_state=fund or {}, derivative_state=fno.get(r.ticker) or {}, forecast_distribution=r.distribution,
             expected_return=float(r.expected_return), expected_downside=-o.get("loss_if_wrong", float("nan")) if o else None,
-            expected_cost=float(r.cost), alpha=r.alpha, chain=OC.alpha_chain(float(r.expected_net), sigma_h, None),
+            expected_cost=float(r.cost), alpha=r.alpha,
+            chain=OC.alpha_chain(float(r.expected_net), sigma_h, None,
+                                 risk_penalty=float(r.alpha.get("risk_penalty", 0.0))),
             probability_of_profit=o.get("p_up") if o else None,
             mfe_expectation=ana["mfe5_median"] if ana else None, mae_expectation=ana["mae5_median"] if ana else None,
             invalidation={"stop": plan["stop_price"], "rules": ["close below the stop", "composite in the bottom 20%"]},

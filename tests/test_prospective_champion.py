@@ -32,8 +32,18 @@ def test_forward_record_attests_write_time(monkeypatch):
     assert report["attested_days"] == 1
     assert report["unattested_days"] == 0
     assert report["resolved_attested_days"] == 0
+    assert report["invalid_attestations"] == 0
     with pytest.raises(champion.ChampionError, match="already attested"):
         prospective.record(_research(), ledger, TODAY, now=NOW)
+
+
+def test_attestation_fails_closed_after_pick_mutation(monkeypatch):
+    monkeypatch.setattr(champion, "record", _fake_record)
+    ledger = duckdb.connect()
+    prospective.record(_research(), ledger, TODAY, now=NOW)
+    ledger.execute("UPDATE champion_picks SET cost = .5 WHERE day = ?", [TODAY.isoformat()])
+    assert prospective.verified_days(ledger) == set()
+    assert prospective.audit(ledger)["invalid_attestations"] == 1
 
 
 def test_forward_record_rejects_backfill_and_future_outcome(monkeypatch):
@@ -44,6 +54,9 @@ def test_forward_record_rejects_backfill_and_future_outcome(monkeypatch):
                            date(2026, 10, 20), now=NOW)
     with pytest.raises(champion.ChampionError, match="future outcomes"):
         prospective.record(_research(TODAY), ledger, date(2026, 10, 28), now=NOW)
+    with pytest.raises(champion.ChampionError, match="completed cash session"):
+        prospective.record(_research(TODAY), ledger, TODAY,
+                           now=datetime(2026, 10, 29, 8, tzinfo=timezone.utc))
     assert prospective.audit(ledger)["status"] == "NO_PICKS"
 
 

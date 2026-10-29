@@ -13,7 +13,7 @@ dependencies = ["duckdb>=1.0", "pytz>=2024.1", "numpy>=1.26", "pandas>=2.0", "sc
 docs = ["pypdf>=4.0"]
 # Everything the test suite imports. `pip install -e .[dev]` must be enough to run all of it; the only tests that
 # skip are the torch learners (a separate, large install: the `forecasting` extra).
-dev = ["pytest>=8.0", "ruff>=0.5", "mypy>=1.10", "pip-audit>=2.7", "pypdf>=4.0", "pymupdf>=1.24", "lightgbm>=4.0"]
+dev = ["pytest>=8.0", "coverage>=7.0", "ruff>=0.5", "mypy>=1.10", "pip-audit>=2.7", "pypdf>=4.0", "pymupdf>=1.24", "lightgbm>=4.0"]
 # Local tier-1 encoders (FinBERT via ONNX; no PyTorch). Ollama serves the GGUF models.
 models = ["onnxruntime>=1.18", "tokenizers>=0.19", "numpy>=1.26"]
 # The HTTP surface in api/. Optional on purpose: a research system should not need a web

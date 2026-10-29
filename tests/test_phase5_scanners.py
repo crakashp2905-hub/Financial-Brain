@@ -16,9 +16,9 @@ def cs(n=300, seed=0):
                          "atr_pctile_250": rng.uniform(0, 1, n), "atr_14_pct": 0.02})
 
 
-def test_every_opportunity_has_the_standard_fields_and_net_is_return_minus_cost_and_risk():
+def test_every_opportunity_has_the_standard_fields_and_net_is_return_minus_cost():
     opps = S.scan(cs(), date(2026, 10, 5))
-    assert opps and all(o.expected_net == pytest.approx(o.expected_return - o.cost - o.alpha["risk_penalty"]) for o in opps)
+    assert opps and all(o.expected_net == pytest.approx(o.expected_return - o.cost) for o in opps)
     o = opps[0]
     for f in ("instrument", "horizon", "type", "evidence", "expected_risk", "liquidity", "expiry", "invalidation"):
         assert getattr(o, f) is not None
@@ -82,7 +82,8 @@ def test_every_opportunity_carries_its_itemised_net_alpha_and_the_items_add_up()
     for o in S.scan(cs(), date(2026, 10, 5)):
         a = o.alpha
         assert a["net"] == pytest.approx(a["expected_return"] - a["benchmark"] - a["fees"] - a["spread"]
-                                         - a["impact"] - a["risk_penalty"])
+                                         - a["impact"])
+        assert a["utility"] == pytest.approx(a["net"] - a["risk_penalty"])
         assert o.expected_net == pytest.approx(a["net"]) and o.cost == pytest.approx(a["fees"] + a["spread"] + a["impact"])
         assert a["expected_return"] - a["benchmark"] == pytest.approx(o.expected_return)
         assert min(a["fees"], a["spread"], a["impact"], a["risk_penalty"]) >= 0

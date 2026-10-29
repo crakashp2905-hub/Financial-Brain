@@ -7,6 +7,12 @@ time. The worktree also contained uncommitted agent/MCP/journal changes from the
 preceding work; this audit preserves them. The remote GitHub and CI state were not
 verified by this local inspection.
 
+Update after this audit: the old statement about unavailable remote CI is historical.
+Direct Git remote access and GitHub Actions logs are now available; the 2026-10-29
+CI run failed on DuckDB's removed single-arrow lambda syntax in `features/technical.py`.
+The SQL has been updated to the supported lambda form. CI must rerun before claiming
+cross-platform restoration.
+
 Verification in this pass: focused agent/reconciliation tests passed (4/4) and Ruff
 passed on the changed Python files. The full repository suite was started but stopped
 before completion; it has no valid pass/fail result for this worktree. Do not interpret

@@ -60,7 +60,7 @@ class ChampionError(ValueError):
 WAITING_FOR_DATA = ("value_ep", "quality_margin", "earnings_surprise")
 
 
-def picks(cs: pd.DataFrame, *, events: set | None = None, swing: pd.DataFrame | None = None,
+def picks(cs: pd.DataFrame, *, as_of: date, events: set | None = None, swing: pd.DataFrame | None = None,
           learned: pd.DataFrame | None = None) -> dict[str, pd.DataFrame]:
     """Each strategy's book for a session: the rows it would hold. ``events``: lineages with a material filing on
     the previous session; ``swing``: the swing book's ranking (both optional, joined from 2026-10-06)."""
@@ -86,7 +86,7 @@ def picks(cs: pd.DataFrame, *, events: set | None = None, swing: pd.DataFrame | 
         out["event_names"] = c[c["lineage"].isin(events)]
     if swing is not None and len(swing):
         out["swing_top50"] = c[c["ticker"].isin(set(swing.head(50)["ticker"]))]
-    best = S.best_per_name(S.scan(cs, LOCK_DATE))
+    best = S.best_per_name(S.scan(cs, as_of))
     if not best.empty:
         top = best.sort_values("expected_net", ascending=False).head(max(1, int(TOP_FRACTION * len(c))))
         out["scanner_best_net"] = c[c["ticker"].isin(set(top["ticker"]))]
@@ -117,7 +117,7 @@ def record(research_con, ledger_con, day: date, *, costs: CostModel | None = Non
     except Exception:                                   # noqa: BLE001 - no trained model yet, or a short history
         learned = None
     n = {}
-    for name, df in picks(cs, events=events, swing=swing, learned=learned).items():
+    for name, df in picks(cs, as_of=day, events=events, swing=swing, learned=learned).items():
         rows = []
         for r in df.itertuples():
             c = costs.round_trip_sized(order_value=min(5e5, 0.1 * r.adv20), adv_value=r.adv20,

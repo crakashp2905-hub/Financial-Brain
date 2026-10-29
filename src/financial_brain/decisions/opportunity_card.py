@@ -13,9 +13,9 @@ the names a trader actually looks at, assembled from the modules that measure ea
 
 ``alpha_chain`` is the one formula the review asked for:
 
-    expected net alpha       = expected return - benchmark - fees - spread - impact - own-risk penalty
-    risk-adjusted alpha      = net / sigma over the horizon (alpha per unit of the name's own risk)
-    portfolio-adjusted alpha = net - crowding penalty, where crowding = RISK_AVERSION x 2 x Cov(name, book) over the
+    expected net alpha       = expected return - benchmark - fees - spread - impact
+    risk-adjusted utility    = net alpha - own-risk penalty
+    portfolio utility        = risk-adjusted utility - crowding penalty, where crowding = RISK_AVERSION x 2 x Cov(name, book) over the
                                horizon: the variance the name adds *through what is already held*
 """
 from __future__ import annotations
@@ -28,10 +28,15 @@ import numpy as np
 from .net_alpha import RISK_AVERSION
 
 
-def alpha_chain(net: float, sigma_h: float, cov_with_book_h: float | None) -> dict:
+def alpha_chain(net: float, sigma_h: float, cov_with_book_h: float | None,
+                *, risk_penalty: float = 0.0) -> dict:
     crowd = RISK_AVERSION * 2 * max(cov_with_book_h or 0.0, 0.0)
-    return {"expected_net_alpha": net, "risk_adjusted_alpha": net / sigma_h if sigma_h > 0 else float("nan"),
-            "crowding_penalty": crowd, "portfolio_adjusted_alpha": net - crowd}
+    utility = net - risk_penalty
+    return {"expected_net_alpha": net, "risk_adjusted_utility": utility,
+            "alpha_per_unit_risk": net / sigma_h if sigma_h > 0 else float("nan"),
+            "own_risk_penalty": risk_penalty, "crowding_penalty": crowd,
+            "portfolio_utility": utility - crowd,
+            "portfolio_adjusted_alpha": net - crowd}
 
 
 def capacity_inr(adv_inr: float, *, participation: float = 0.10, days: int = 1) -> float:

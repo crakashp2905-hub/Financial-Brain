@@ -14,8 +14,17 @@ def test_crowding_penalises_only_what_moves_with_the_book():
     a = OC.alpha_chain(0.02, 0.10, cov_with_book_h=0.002)
     b = OC.alpha_chain(0.02, 0.10, cov_with_book_h=-0.002)
     assert a["portfolio_adjusted_alpha"] < b["portfolio_adjusted_alpha"] == pytest.approx(0.02)
-    assert a["risk_adjusted_alpha"] == pytest.approx(0.2)
+    assert a["alpha_per_unit_risk"] == pytest.approx(0.2)
+    assert a["risk_adjusted_utility"] == pytest.approx(0.02)
     assert '"chain"' in OC.FullOpportunity("L", "T", "2026-10-07", "momentum", "long", 60, chain=a).to_json()
+
+
+def test_portfolio_utility_is_not_economic_net_alpha():
+    result = OC.alpha_chain(0.02, 0.10, cov_with_book_h=0.001,
+                            risk_penalty=0.004)
+    assert result["expected_net_alpha"] == pytest.approx(0.02)
+    assert result["risk_adjusted_utility"] == pytest.approx(0.016)
+    assert result["portfolio_utility"] < result["risk_adjusted_utility"]
 
 
 def cov3():

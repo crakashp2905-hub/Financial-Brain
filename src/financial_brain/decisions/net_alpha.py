@@ -5,8 +5,10 @@
   - fees                   statutory charges and brokerage on both legs (the cost schedule, incl. DP charge)
   - spread                 crossing the bid-ask on both legs, by liquidity bucket
   - impact                 square-root market impact of the order on both legs
-  - risk penalty           the variance this position adds at its planned weight, priced at RISK_AVERSION
   = expected net alpha
+
+  - risk penalty           the variance this position adds at its planned weight, priced at RISK_AVERSION
+  = risk-adjusted utility (not an economic return or alpha)
 
 Everything is a fraction of the position over the horizon. The expected *excess* return comes from a measured
 model (for the scanners: what the name's composite decile earned in the 2016-26 replay, scaled to the horizon), so
@@ -55,15 +57,21 @@ class NetAlpha:
 
     @property
     def net(self) -> float:
-        return self.excess - self.costs - self.risk_penalty
+        return self.excess - self.costs
+
+    @property
+    def utility(self) -> float:
+        return self.net - self.risk_penalty
 
     def as_dict(self) -> dict:
-        return {**asdict(self), "excess": self.excess, "costs": self.costs, "net": self.net}
+        return {**asdict(self), "excess": self.excess, "costs": self.costs,
+                "net": self.net, "utility": self.utility}
 
     def lines(self) -> list[tuple[str, float]]:
         return [("Expected return", self.expected_return), ("Expected benchmark", -self.benchmark),
                 ("Fees and taxes", -self.fees), ("Spread", -self.spread), ("Market impact", -self.impact),
-                ("Risk penalty", -self.risk_penalty), ("Expected net alpha", self.net)]
+                ("Expected net alpha", self.net), ("Risk penalty", -self.risk_penalty),
+                ("Risk-adjusted utility", self.utility)]
 
     def render(self) -> str:
         rows = self.lines()

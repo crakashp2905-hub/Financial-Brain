@@ -31,6 +31,15 @@ jobs:
       - name: Schema migrations
         run: python -m pytest -q tests/test_migrations.py
       - name: Test suite
-        run: python -m pytest -q
+        run: python -m coverage run --source=financial_brain -m pytest -q
+      - name: Critical-module coverage
+        run: python -m coverage report --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*"
+      - name: Coverage XML
+        run: python -m coverage xml
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}
+          path: coverage.xml
       - name: Dependency audit
         run: python -m pip_audit --skip-editable

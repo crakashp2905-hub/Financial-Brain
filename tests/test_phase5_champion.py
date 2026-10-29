@@ -57,6 +57,20 @@ def test_record_writes_every_strategy_with_the_champion_among_them():
     assert C.CHAMPION in n and "composite_top" in n and n[C.CHAMPION] == 40
 
 
+def test_scanner_challenger_uses_recorded_session_not_lock_date(monkeypatch):
+    r, cal = research(5)
+    seen = []
+    original = C.S.scan
+
+    def watch(cs, as_of, *args, **kwargs):
+        seen.append(as_of)
+        return original(cs, as_of, *args, **kwargs)
+
+    monkeypatch.setattr(C.S, "scan", watch)
+    C.record(r, duckdb.connect(), cal[2])
+    assert seen == [cal[2]]
+
+
 def test_cohorts_resolve_only_after_the_horizon_and_pay_their_costs():
     r, cal = research(30)
     led = duckdb.connect()

@@ -37,7 +37,7 @@ def test_the_challenger_joins_the_competition_only_when_scored():
                        "dist_52w_high": -rng.uniform(0, 0.4, 200), "ret_20d": rng.normal(0, 0.08, 200),
                        "turnover": 1e8, "ret_1d": 0.0, "ret_5d": 0.0, "rsi_14": 50.0, "adx_14": 20.0,
                        "atr_pctile_250": 0.5, "atr_14_pct": 0.02})
-    assert "learned_model_top" not in C.picks(cs)
+    assert "learned_model_top" not in C.picks(cs, as_of=date(2026, 10, 5))
     learned = pd.DataFrame({"lineage": cs["lineage"], "pred": np.arange(200)[::-1]})
-    got = C.picks(cs, learned=learned)["learned_model_top"]
+    got = C.picks(cs, as_of=date(2026, 10, 5), learned=learned)["learned_model_top"]
     assert set(got["lineage"]) == {f"L{i}" for i in range(int(C.TOP_FRACTION * 200))}

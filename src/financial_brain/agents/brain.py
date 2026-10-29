@@ -74,7 +74,7 @@ def economics_agent(item: dict) -> dict:
     chain = item.get("chain") or {}
     try:
         net = float(chain["expected_net_alpha"])
-        portfolio = float(chain["portfolio_adjusted_alpha"])
+        portfolio = float(chain.get("portfolio_utility", chain.get("portfolio_adjusted_alpha")))
         cost = float(item["expected_cost"])
     except (KeyError, TypeError, ValueError):
         return _agent("economics", "BLOCK", ["itemized economics missing"])
