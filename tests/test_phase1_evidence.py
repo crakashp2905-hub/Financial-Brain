@@ -46,6 +46,28 @@ def test_a_different_value_is_a_different_claim(db):
     assert a != b
 
 
+@pytest.mark.parametrize("revision", [
+    {"claim": "Nifty 50 close was revised"},
+    {"source": "OTHER"},
+    {"lake_key": "other-file"},
+    {"confidence": "low"},
+])
+def test_same_fact_id_with_changed_provenance_is_rejected(db, revision):
+    with db.connect() as con:
+        old = ledger.mint(con, **_claim())
+        with pytest.raises(ValueError, match="conflicting immutable evidence"):
+            ledger.mint(con, **_claim(**revision))
+        assert con.execute("SELECT COUNT(*) FROM evidence").fetchone()[0] == 1
+        assert ledger.current(con, old) == old
+
+
+def test_non_finite_evidence_value_is_rejected(db):
+    with db.connect() as con:
+        with pytest.raises(ValueError):
+            ledger.mint(con, **_claim(value={"close": float("nan")}))
+        assert con.execute("SELECT COUNT(*) FROM evidence").fetchone()[0] == 0
+
+
 def test_a_correction_supersedes_without_erasing(db):
     with db.connect() as con:
         old = ledger.mint(con, **_claim())

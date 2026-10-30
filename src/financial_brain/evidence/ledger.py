@@ -42,7 +42,7 @@ def _canon(v):
 def evidence_id(kind: str, subject: str, as_of, value, derivation: str) -> str:
     body = json.dumps(_canon({"kind": kind, "subject": subject, "as_of": as_of,
                               "value": value, "derivation": derivation}),
-                      sort_keys=True, separators=(",", ":"))
+                      sort_keys=True, separators=(",", ":"), allow_nan=False)
     return "ev_" + hashlib.sha256(body.encode()).hexdigest()[:24]
 
 
@@ -52,14 +52,26 @@ def mint(con, *, kind: str, subject: str, as_of, claim: str, value, source: str,
          supersedes: str | None = None, inputs: list[str] | None = None) -> str:
     """Record a claim; returns its evidence_id. Re-minting identical content is a no-op."""
     eid = evidence_id(kind, subject, as_of, value, derivation)
+    encoded_value = json.dumps(_canon(value), allow_nan=False)
+    encoded_inputs = json.dumps(inputs, allow_nan=False) if inputs else None
+    immutable = [kind, subject, as_of, published_at, claim, encoded_value, source,
+                 source_tier, lake_key, derivation, confidence, quality, supersedes,
+                 encoded_inputs]
     con.execute(
         """INSERT INTO evidence (evidence_id, kind, subject, as_of, published_at, claim,
            value, source, source_tier, lake_key, derivation, confidence, quality,
            supersedes, inputs, observed_at)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (evidence_id) DO NOTHING""",
-        [eid, kind, subject, as_of, published_at, claim, json.dumps(_canon(value)), source,
-         source_tier, lake_key, derivation, confidence, quality, supersedes,
-         json.dumps(inputs) if inputs else None, datetime.now(timezone.utc)])
+        [eid, *immutable, datetime.now(timezone.utc)])
+    # The historical ID intentionally omits some provenance fields. A replay
+    # with changed metadata must not silently inherit the old row's identity.
+    columns = ("kind", "subject", "as_of", "published_at", "claim", "value", "source",
+               "source_tier", "lake_key", "derivation", "confidence", "quality",
+               "supersedes", "inputs")
+    predicates = " AND ".join(f"{column} IS NOT DISTINCT FROM ?" for column in columns)
+    if not con.execute(f"SELECT 1 FROM evidence WHERE evidence_id = ? AND {predicates}",
+                       [eid, *immutable]).fetchone():
+        raise ValueError(f"conflicting immutable evidence for {eid}")
     return eid
 
 
