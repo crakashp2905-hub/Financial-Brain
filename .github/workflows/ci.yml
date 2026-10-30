@@ -20,6 +20,11 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Charting adapter contracts (no licensed assets)
+        run: node --test tests/js/advanced_charts_datafeed.test.mjs tests/js/advanced_charts_widget.test.mjs
       - name: Install (pyproject only)
         run: |
           python -m pip install --upgrade pip

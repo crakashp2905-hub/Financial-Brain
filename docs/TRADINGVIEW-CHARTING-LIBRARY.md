@@ -26,6 +26,20 @@ Current limits: UDF only serves archived one-minute Kite bars, up to seven days 
 
 Advanced Charts supplies the UI, **not market data**. Kite remains the authorized data source, subject to broker and exchange terms. Charting does not prove alpha or permit live trading.
 
+## API-reference coverage (Charting Library and Datafeed only)
+
+The [API reference](https://www.tradingview.com/charting-library-docs/latest/api/) is a catalog of thousands of types, including trading-platform types. Financial Brain uses the relevant **interfaces**, not every enum or drawing override. Broker API and Trading Platform order interfaces are expressly excluded.
+
+| Interface family | Current adapter | Remaining requirement |
+| --- | --- | --- |
+| Charting Library widget | `advanced_charts_widget.mjs` constructs a widget, awaits `chartReady()`, exposes `activeChart()`, theme change and disposal | Approved private library assets and an actual browser integration test |
+| Datafeed historical/symbology | `advanced_charts_datafeed.mjs` implements `onReady`, `resolveSymbol`, `searchSymbols`, `getBars` against the read-only UDF service | Complete contract identity, more intervals, corporate-action policy, longer-range paging |
+| Datafeed live bars | `subscribeBars`/`unsubscribeBars` are intentionally inert for this archive-only feed | Authenticated Kite WebSocket fanout, freshness/sequence checks and reconnect tests before enabling live status |
+| Quotes, depth, news, custom indicators, marks/drawings, saves/layouts | Not enabled | Each needs a licensed and tested data/annotation service, permissions, and appropriate source rights |
+| Broker API / Trading Platform orders | Not used | Remain outside the chart integration; existing OMS and its human gates stay authoritative |
+
+The JavaScript adapter is original project code; it does not contain TradingView's private library. CI runs its contract tests with Node, using a mocked widget. No bundled asset or completed visual/browser QA is claimed.
+
 ## Sources
 
 - [TradingView Advanced Charts quick start and access terms](https://www.tradingview.com/charting-library-docs/latest/quick-start/)
