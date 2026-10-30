@@ -4,6 +4,8 @@ The attached technical checklist is a program specification, not proof of an edg
 
 ## Implemented and verified
 
+- A bounded TradingView alert-observation parser now rejects stale/future events, non-allowlisted strategies, order-like instructions and malformed prices. It has no network ingress or order path. The connector boundaries and remaining live-readiness gates are specified in `CONNECTOR-AND-LIVE-READINESS.md`.
+
 - `main` is protected on GitHub with strict Ubuntu/Windows CI checks and one approving review; stale approvals are dismissed. Administrator enforcement is off for emergency maintenance. This setting was verified through the GitHub API after commit `66baa36` passed both platforms.
 - Champion cohort resolution no longer silently drops selected names without a forward price. It stores selected/observed/missing counts, survivor-only net, a -100%-for-missing sensitivity, universe coverage and the same universe sensitivity. Incomplete cohorts cannot satisfy promotion. This is a sensitivity, **not** a claim that every missing security lost 100%; corporate-action lineage and suspension/delisting reconciliation remain separate work.
 - Local pick hashes remain integrity evidence, but `verified_days()` now fails closed without an independently verified external receipt. `attach_anchor()` stores a candidate receipt before the earliest next entry; an explicitly configured verifier must validate its external signature and timestamp on every read. No trusted provider is configured, so there are currently **zero promotion-grade verified days** from this path.
