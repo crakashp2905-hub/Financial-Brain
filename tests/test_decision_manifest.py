@@ -15,6 +15,8 @@ def sample():
         "data_sha256": H, "universe_sha256": H, "picks_sha256": H,
         "calendar_sha256": H, "cost_model_sha256": H, "risk_limits_sha256": H,
         "decision_at_utc": "2026-10-31T10:30:00Z",
+        "data_watermark_at_utc": "2026-10-31T10:29:01Z",
+        "exchange_session_id": "NSE-CM-2026-10-31",
         "entry_earliest_at_utc": "2026-11-02T03:45:00Z",
         "exit_scheduled_at_utc": "2026-12-01T10:00:00Z",
         "holding_sessions": 20, "benchmark_id": "NIFTY500-TRI",
@@ -30,7 +32,8 @@ def sample():
         "exclusions": [{"lineage": "L3", "reason": "stale quote"}],
         "sources": [{"source_id": "kite-minute", "sha256": H,
                      "published_at_utc": "2026-10-31T10:29:00Z",
-                     "received_at_utc": "2026-10-31T10:29:01Z"}],
+                     "received_at_utc": "2026-10-31T10:29:01Z",
+                     "available_at_utc": "2026-10-31T10:29:01Z"}],
     }
 
 
@@ -51,6 +54,8 @@ def test_canonical_snapshot_is_stable_without_mutating_input():
     lambda x: x.update(entry_earliest_at_utc="2026-10-31T10:00:00Z"),
     lambda x: x["sources"][0].update(received_at_utc="2026-10-31T10:31:00Z"),
     lambda x: x["sources"][0].update(received_at_utc="2026-10-31T10:28:00Z"),
+    lambda x: x["sources"][0].update(available_at_utc="2026-10-31T10:29:00Z"),
+    lambda x: x.update(data_watermark_at_utc="2026-10-31T10:31:00Z"),
     lambda x: x["selections"][1].update(lineage="L2"),
     lambda x: x["selections"][0].update(weight_fraction="0.9"),
     lambda x: x.update(schema="fb.decision.v2"),

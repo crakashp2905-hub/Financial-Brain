@@ -21,12 +21,13 @@ class ManifestError(ValueError):
 TOP = {"schema", "day", "decision_id", "author", "strategy_sha256", "model_sha256",
        "data_sha256", "universe_sha256", "picks_sha256", "calendar_sha256",
        "cost_model_sha256", "risk_limits_sha256", "decision_at_utc",
-       "entry_earliest_at_utc", "exit_scheduled_at_utc", "holding_sessions", "benchmark_id",
+       "entry_earliest_at_utc", "exit_scheduled_at_utc", "data_watermark_at_utc",
+       "exchange_session_id", "holding_sessions", "benchmark_id",
        "capital_inr", "predicted_return_fraction", "predicted_cost_fraction", "forecast",
        "selections", "exclusions", "sources", "no_trade_reasons"}
 SELECTION = {"lineage", "symbol", "weight_fraction", "quantity"}
 EXCLUSION = {"lineage", "reason"}
-SOURCE = {"source_id", "sha256", "published_at_utc", "received_at_utc"}
+SOURCE = {"source_id", "sha256", "published_at_utc", "received_at_utc", "available_at_utc"}
 FORECAST = {"p10_fraction", "p50_fraction", "p90_fraction", "probability_exceeds_cost"}
 DECIMAL = re.compile(r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$")
 SHA = re.compile(r"^[0-9a-f]{64}$")
@@ -79,7 +80,7 @@ def canonical_bytes(value: dict) -> bytes:
     data = dict(_fields(value, TOP, "manifest"))
     if data["schema"] != "fb.decision.v1":
         raise ManifestError("unsupported manifest schema")
-    for key in ("decision_id", "author", "benchmark_id"):
+    for key in ("decision_id", "author", "benchmark_id", "exchange_session_id"):
         _name(data[key], key)
     for key in ("strategy_sha256", "model_sha256", "data_sha256", "universe_sha256", "picks_sha256",
                 "calendar_sha256", "cost_model_sha256", "risk_limits_sha256"):
@@ -91,8 +92,11 @@ def canonical_bytes(value: dict) -> bytes:
     decision = _utc(data["decision_at_utc"], "decision_at_utc")
     entry = _utc(data["entry_earliest_at_utc"], "entry_earliest_at_utc")
     exit_at = _utc(data["exit_scheduled_at_utc"], "exit_scheduled_at_utc")
+    watermark = _utc(data["data_watermark_at_utc"], "data_watermark_at_utc")
     if entry <= decision or exit_at <= entry or decision.astimezone(timezone.utc).date() < day:
         raise ManifestError("decision/entry ordering is invalid")
+    if watermark > decision:
+        raise ManifestError("data watermark is after decision")
     if isinstance(data["holding_sessions"], bool) or not isinstance(data["holding_sessions"], int) or data["holding_sessions"] < 1:
         raise ManifestError("invalid holding_sessions")
     _fraction(data["predicted_return_fraction"], "predicted return")
@@ -141,7 +145,8 @@ def canonical_bytes(value: dict) -> bytes:
         _sha(item["sha256"], "source digest")
         published = _utc(item["published_at_utc"], "publication")
         received = _utc(item["received_at_utc"], "receipt")
-        if published > received or received > decision:
+        available = _utc(item["available_at_utc"], "availability")
+        if published > received or received > available or available > decision:
             raise ManifestError("source was unavailable at decision time")
     if not data["sources"] or len({x["source_id"] for x in data["sources"]}) != len(data["sources"]):
         raise ManifestError("missing or duplicate sources")
@@ -150,9 +155,10 @@ def canonical_bytes(value: dict) -> bytes:
     data["decision_at_utc"] = decision.isoformat().replace("+00:00", "Z")
     data["entry_earliest_at_utc"] = entry.isoformat().replace("+00:00", "Z")
     data["exit_scheduled_at_utc"] = exit_at.isoformat().replace("+00:00", "Z")
+    data["data_watermark_at_utc"] = watermark.isoformat().replace("+00:00", "Z")
     data["no_trade_reasons"] = sorted(data["no_trade_reasons"])
     for source in data["sources"]:
-        for key in ("published_at_utc", "received_at_utc"):
+        for key in ("published_at_utc", "received_at_utc", "available_at_utc"):
             source[key] = _utc(source[key], key).isoformat().replace("+00:00", "Z")
     return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
                       allow_nan=False).encode("utf-8")

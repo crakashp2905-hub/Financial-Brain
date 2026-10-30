@@ -32,6 +32,8 @@ def _manifest(ledger, day=TODAY):
             "data_sha256": h, "universe_sha256": h, "picks_sha256": digest,
             "calendar_sha256": h, "cost_model_sha256": h, "risk_limits_sha256": h,
             "decision_at_utc": NOW.isoformat(),
+            "data_watermark_at_utc": "2026-10-29T11:59:01Z",
+            "exchange_session_id": "NSE-CM-2026-10-29",
             "entry_earliest_at_utc": "2026-10-30T03:45:00Z",
             "exit_scheduled_at_utc": "2026-11-30T10:00:00Z",
             "holding_sessions": 20, "benchmark_id": "NIFTY500-TRI",
@@ -43,7 +45,8 @@ def _manifest(ledger, day=TODAY):
             "selections": [{"lineage": "L1", "symbol": "TEST", "weight_fraction": "1", "quantity": 1}],
             "exclusions": [], "sources": [{"source_id": "test-source", "sha256": h,
                                       "published_at_utc": "2026-10-29T11:59:00Z",
-                                      "received_at_utc": "2026-10-29T11:59:01Z"}]}
+                                      "received_at_utc": "2026-10-29T11:59:01Z",
+                                      "available_at_utc": "2026-10-29T11:59:01Z"}]}
 
 
 def test_forward_record_attests_write_time(monkeypatch):
