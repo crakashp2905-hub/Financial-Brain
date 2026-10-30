@@ -5,6 +5,7 @@ import hashlib
 import json
 from datetime import date, datetime, time, timedelta, timezone
 
+from ..evidence.decision_manifest import canonical_bytes, ManifestError
 from . import champion
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -14,6 +15,9 @@ SCHEMA = """CREATE TABLE IF NOT EXISTS champion_pick_attestations (
 ANCHOR_SCHEMA = """CREATE TABLE IF NOT EXISTS champion_pick_anchors (
     day VARCHAR PRIMARY KEY, provider VARCHAR NOT NULL, anchored_at_utc TIMESTAMP NOT NULL,
     picks_sha256 VARCHAR NOT NULL, receipt VARCHAR NOT NULL)"""
+MANIFEST_SCHEMA = """CREATE TABLE IF NOT EXISTS champion_decision_manifests (
+    day VARCHAR PRIMARY KEY, manifest_json VARCHAR NOT NULL,
+    manifest_sha256 VARCHAR NOT NULL, picks_sha256 VARCHAR NOT NULL)"""
 
 
 def _pick_digest(con, day: str) -> str:
@@ -98,6 +102,35 @@ def locally_verified_days(ledger_con) -> set[str]:
         if day == latest and digest and digest == _pick_digest(ledger_con, day)}
 
 
+def attach_manifest(ledger_con, day: date, manifest: dict) -> str:
+    """Bind a complete canonical snapshot to locally recorded picks, once.
+
+This does not itself prove external timing or validate the exchange calendar.
+Only a new manifest and its independent receipt can enter ``verified_days``.
+    """
+    key = day.isoformat()
+    if key not in locally_verified_days(ledger_con):
+        raise champion.ChampionError("cannot bind manifest to missing or mutated picks")
+    try:
+        canonical = canonical_bytes(manifest)
+    except ManifestError as exc:
+        raise champion.ChampionError(f"invalid decision manifest: {exc}") from exc
+    if manifest["day"] != key or manifest["picks_sha256"] != _pick_digest(ledger_con, key):
+        raise champion.ChampionError("manifest day or pick digest mismatch")
+    recorded = ledger_con.execute("SELECT recorded_at_utc FROM champion_pick_attestations WHERE day = ?",
+                                  [key]).fetchone()[0].replace(tzinfo=timezone.utc)
+    decision = datetime.fromisoformat(manifest["decision_at_utc"].replace("Z", "+00:00"))
+    if decision.astimezone(timezone.utc) != recorded:
+        raise champion.ChampionError("manifest decision time must match recorded pick time")
+    ledger_con.execute(MANIFEST_SCHEMA)
+    if ledger_con.execute("SELECT 1 FROM champion_decision_manifests WHERE day = ?", [key]).fetchone():
+        raise champion.ChampionError("decision manifest already exists")
+    digest = hashlib.sha256(canonical).hexdigest()
+    ledger_con.execute("INSERT INTO champion_decision_manifests VALUES (?,?,?,?)",
+                       [key, canonical.decode("utf-8"), digest, manifest["picks_sha256"]])
+    return digest
+
+
 def attach_anchor(ledger_con, day: date, *, provider: str, anchored_at_utc: datetime,
                   receipt: str) -> None:
     """Store an external receipt; verification happens again on every read."""
@@ -106,6 +139,9 @@ def attach_anchor(ledger_con, day: date, *, provider: str, anchored_at_utc: date
     key = day.isoformat()
     if key not in locally_verified_days(ledger_con):
         raise champion.ChampionError("cannot anchor missing or mutated picks")
+    manifest = _manifest_row(ledger_con, key)
+    if manifest is None:
+        raise champion.ChampionError("full decision manifest required before anchoring")
     # Conservative next-calendar-day deadline; exchange holidays can only make
     # this earlier than the actual next eligible cash session.
     deadline = datetime.combine(day + timedelta(days=1), time(9, 15), IST)
@@ -116,11 +152,32 @@ def attach_anchor(ledger_con, day: date, *, provider: str, anchored_at_utc: date
     if anchored_at_utc < recorded:
         raise champion.ChampionError("external anchor predates the local pick record")
     ledger_con.execute(ANCHOR_SCHEMA)
+    ledger_con.execute("ALTER TABLE champion_pick_anchors ADD COLUMN IF NOT EXISTS manifest_sha256 VARCHAR")
     if ledger_con.execute("SELECT 1 FROM champion_pick_anchors WHERE day = ?", [key]).fetchone():
         raise champion.ChampionError("anchor already exists")
-    ledger_con.execute("INSERT INTO champion_pick_anchors VALUES (?,?,?,?,?)",
-                       [key, provider, anchored_at_utc.astimezone(timezone.utc).replace(tzinfo=None),
-                        _pick_digest(ledger_con, key), receipt])
+    ledger_con.execute("""INSERT INTO champion_pick_anchors
+        (day, provider, anchored_at_utc, picks_sha256, receipt, manifest_sha256)
+        VALUES (?,?,?,?,?,?)""",
+        [key, provider, anchored_at_utc.astimezone(timezone.utc).replace(tzinfo=None),
+         _pick_digest(ledger_con, key), receipt, manifest[1]])
+
+
+def _manifest_row(ledger_con, day: str) -> tuple[dict, str] | None:
+    tables = {r[0] for r in ledger_con.execute("SELECT table_name FROM information_schema.tables").fetchall()}
+    if "champion_decision_manifests" not in tables:
+        return None
+    row = ledger_con.execute("""SELECT manifest_json, manifest_sha256, picks_sha256
+        FROM champion_decision_manifests WHERE day = ?""", [day]).fetchone()
+    if row is None or row[2] != _pick_digest(ledger_con, day):
+        return None
+    try:
+        value = json.loads(row[0])
+        encoded = canonical_bytes(value)
+    except (ValueError, TypeError):
+        return None
+    if encoded.decode("utf-8") != row[0] or hashlib.sha256(encoded).hexdigest() != row[1]:
+        return None
+    return value, row[1]
 
 
 def verified_days(ledger_con, *, verifier=None) -> set[str]:
@@ -135,17 +192,24 @@ def verified_days(ledger_con, *, verifier=None) -> set[str]:
     tables = {r[0] for r in ledger_con.execute("SELECT table_name FROM information_schema.tables").fetchall()}
     if "champion_pick_anchors" not in tables:
         return set()
+    columns = {r[0] for r in ledger_con.execute("DESCRIBE champion_pick_anchors").fetchall()}
+    if "manifest_sha256" not in columns:
+        return set()  # legacy pick-only receipts cannot establish full decision evidence
     local = locally_verified_days(ledger_con)
     out = set()
-    for day, provider, anchored, digest, receipt in ledger_con.execute(
-            "SELECT day, provider, anchored_at_utc, picks_sha256, receipt FROM champion_pick_anchors").fetchall():
+    for day, provider, anchored, digest, receipt, manifest_digest in ledger_con.execute(
+            "SELECT day, provider, anchored_at_utc, picks_sha256, receipt, manifest_sha256 FROM champion_pick_anchors").fetchall():
+        manifest = _manifest_row(ledger_con, day)
+        if manifest is None:
+            continue
         deadline = datetime.combine(date.fromisoformat(day) + timedelta(days=1), time(9, 15), IST)
         recorded = ledger_con.execute("SELECT recorded_at_utc FROM champion_pick_attestations WHERE day = ?",
                                       [day]).fetchone()
         if (day in local and recorded and recorded[0] <= anchored < deadline.astimezone(timezone.utc).replace(tzinfo=None)
-                and digest == _pick_digest(ledger_con, day)):
+                and digest == _pick_digest(ledger_con, day) and manifest_digest == manifest[1]
+                and anchored < datetime.fromisoformat(manifest[0]["entry_earliest_at_utc"].replace("Z", "+00:00")).replace(tzinfo=None)):
             try:
-                if verifier(provider, day, digest, anchored, receipt):
+                if verifier(provider, day, manifest_digest, anchored, receipt):
                     out.add(day)
             except Exception:  # noqa: BLE001 - unavailable verifier never grants promotion
                 continue
