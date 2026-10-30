@@ -21,11 +21,16 @@ A challenger replaces the champion only when all of these hold on the locked rec
 3. it does so **after** its own sized round-trip costs (each cohort pays one full round trip);
 4. its stated expected return is not worse calibrated than the champion's (realised/stated slope).
 
-Until then the status is ``INSUFFICIENT_DATA`` - which is the honest status for every challenger today.
+The current resolver is a close-to-close ranking diagnostic (``ranking_close_v1``),
+not an executable next-session return. It is excluded from promotion regardless
+of apparent performance. Until an independently verified, scheduled, executable
+metric exists, the status remains insufficient evidence.
 """
 from __future__ import annotations
 
 from datetime import date
+from collections import Counter
+from collections.abc import Sequence
 
 import duckdb
 import numpy as np
@@ -41,6 +46,8 @@ TOP_FRACTION = 0.2
 MIN_COHORTS = 12
 T_PROMOTE = 2.0
 CHAMPION = "naive_momentum"
+RANKING_METRIC = "ranking_close_v1"
+EXECUTABLE_METRIC = "executable_next_session_v1"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS champion_picks (day VARCHAR, strategy VARCHAR, ticker VARCHAR, lineage VARCHAR,
@@ -62,6 +69,7 @@ def _cohort_columns(con) -> None:
     con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS complete BOOLEAN")
     con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS universe_coverage DOUBLE")
     con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS universe_worst_case DOUBLE")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS metric_version VARCHAR")
 
 
 #: Value and quality cannot join yet: exchange XBRL results stop at the quarter ended Dec 2024 (later results moved
@@ -127,7 +135,11 @@ def record(research_con, ledger_con, day: date, *, costs: CostModel | None = Non
     except Exception:                                   # noqa: BLE001 - no trained model yet, or a short history
         learned = None
     n = {}
-    for name, df in picks(cs, as_of=day, events=events, swing=swing, learned=learned).items():
+    books = picks(cs, as_of=day, events=events, swing=swing, learned=learned)
+    for name, df in books.items():
+        if df["lineage"].isna().any() or df["lineage"].duplicated().any():
+            raise ChampionError(f"{name}: missing or duplicate security lineage")
+    for name, df in books.items():
         rows = []
         for r in df.itertuples():
             c = costs.round_trip_sized(order_value=min(5e5, 0.1 * r.adv20), adv_value=r.adv20,
@@ -156,11 +168,13 @@ def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
             [day, horizon + 1]).fetchall()]
         if len(cal) <= horizon or str(cal[0]) != day:
             continue
-        fwd = dict(research_con.execute("""
+        fwd_rows = research_con.execute("""
             SELECT a.lineage, b.close_adj / a.close_adj - 1 FROM adjusted_prices a
             JOIN adjusted_prices b ON b.lineage = a.lineage AND b.business_date = ?
             WHERE a.business_date = ? AND a.close_adj > 0 AND b.close_adj > 0""",
-            [cal[horizon], cal[0]]).fetchall())
+            [cal[horizon], cal[0]]).fetchall()
+        multiplicity = Counter(lineage for lineage, _ in fwd_rows)
+        fwd = {lineage: ret for lineage, ret in fwd_rows if multiplicity[lineage] == 1}
         start_n = research_con.execute("""SELECT COUNT(DISTINCT lineage) FROM adjusted_prices
                                           WHERE business_date = ? AND close_adj > 0""",
                                        [cal[0]]).fetchone()[0]
@@ -171,6 +185,9 @@ def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
         for strat, g in ledger_con.execute(
                 "SELECT strategy, lineage, cost FROM champion_picks WHERE day = ?", [day]).df().groupby("strategy"):
             observed = g["lineage"].map(fwd)
+            # A legacy book may contain the same security under multiple ticker
+            # aliases. Neither alias gets an invented independent position return.
+            observed[g["lineage"].duplicated(keep=False)] = np.nan
             valid = observed.dropna()
             selected_n, missing_n = len(g), int(observed.isna().sum())
             gross = float(valid.mean()) if len(valid) else None
@@ -178,38 +195,74 @@ def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
             worst = float((valid.sum() - missing_n) / selected_n - cost)
             ledger_con.execute("""INSERT OR REPLACE INTO champion_cohorts
                 (day, strategy, n, gross, cost, net, universe, selected_n, missing_n, worst_case_net,
-                 complete, universe_coverage, universe_worst_case)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                 complete, universe_coverage, universe_worst_case, metric_version)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 [day, strat, int(len(valid)), gross, cost, gross - cost if gross is not None else None,
                  uni, selected_n, missing_n, worst, missing_n == 0,
-                 universe_coverage, universe_worst])
+                 universe_coverage, universe_worst, RANKING_METRIC])
         done += 1
     return done
 
 
 def standings(ledger_con, horizon: int = HORIZON,
-              eligible_days: set[str] | None = None) -> list[dict]:
-    """Every challenger against the champion on non-overlapping cohorts (every ``horizon``-th recorded day)."""
+              eligible_days: set[str] | None = None,
+              scheduled_days: Sequence[str | date] | None = None) -> list[dict]:
+    """Pair only predeclared rebalance dates; observed rows never choose the schedule.
+
+    ``scheduled_days`` must be a frozen list of non-overlapping *exchange-session*
+    entry dates supplied by the caller's registered protocol. The ledger cannot
+    infer missed dates or attest them after the fact. No schedule or external
+    verification means no promotion-grade cohorts, regardless of returns.
+    """
+    if horizon < 1:
+        raise ChampionError("horizon must be positive")
     ledger_con.execute(SCHEMA)
     _cohort_columns(ledger_con)
-    df = ledger_con.execute("SELECT day, strategy, net, complete FROM champion_cohorts").df()
-    df = df[df["complete"].fillna(True)]  # legacy rows remain diagnostic, never promotable
-    if eligible_days is not None:
-        df = df[df["day"].isin(eligible_days)]
+    df = ledger_con.execute("SELECT day, strategy, net, complete, metric_version FROM champion_cohorts").df()
     if df.empty:
         return [{"strategy": s, "status": "INSUFFICIENT_DATA", "cohorts": 0} for s in ("composite_top",)]
-    w = df.pivot_table(index="day", columns="strategy", values="net").sort_index()
-    w = w.iloc[::horizon]                               # non-overlapping cohorts only
+    strategies = sorted(set(df["strategy"]) - {CHAMPION}) or ["composite_top"]
+    if scheduled_days is None:
+        return [{"strategy": s, "status": "INSUFFICIENT_EVIDENCE", "cohorts": 0,
+                 "diagnostic_rows": int((df["strategy"] == s).sum()),
+                 "reason": "no precommitted exchange-session rebalance schedule"} for s in strategies]
+    schedule = [str(d) for d in scheduled_days]
+    if schedule != sorted(set(schedule)) or any(date.fromisoformat(d) < LOCK_DATE for d in schedule):
+        raise ChampionError("scheduled_days must be unique, ordered dates after the lock")
+    rows = {(r.day, r.strategy): r for r in df.itertuples(index=False)}
+    verified = eligible_days or set()
     out = []
-    for s in w.columns:
-        if s == CHAMPION:
-            continue
-        d = (w[s] - w[CHAMPION]).dropna() if CHAMPION in w.columns else pd.Series(dtype=float)
+    for s in strategies:
+        differences = []
+        diagnostic = withheld = legacy = incomplete = non_executable = 0
+        for day in schedule:
+            candidate, champion = rows.get((day, s)), rows.get((day, CHAMPION))
+            if candidate is None or champion is None:
+                withheld += 1
+                continue
+            if pd.isna(candidate.complete) or pd.isna(champion.complete):
+                legacy += 1
+                withheld += 1
+                continue
+            if not bool(candidate.complete) or not bool(champion.complete) or pd.isna(candidate.net) or pd.isna(champion.net):
+                incomplete += 1
+                withheld += 1
+                continue
+            diagnostic += 1
+            if candidate.metric_version != EXECUTABLE_METRIC or champion.metric_version != EXECUTABLE_METRIC:
+                non_executable += 1
+                withheld += 1
+                continue
+            if day in verified:
+                differences.append(float(candidate.net - champion.net))
+            else:
+                withheld += 1
+        d = pd.Series(differences, dtype=float)
         n = len(d)
         t = float(d.mean() / (d.std(ddof=1) / np.sqrt(n))) if n > 2 and d.std(ddof=1) > 0 else float("nan")
         if n < MIN_COHORTS:
             status = "INSUFFICIENT_DATA"
-        elif t >= T_PROMOTE and df["complete"].notna().all():
+        elif t >= T_PROMOTE and withheld == 0:
             status = "PROMOTE"
         elif t >= T_PROMOTE:
             status = "INSUFFICIENT_EVIDENCE"
@@ -217,6 +270,10 @@ def standings(ledger_con, horizon: int = HORIZON,
             status = "WORSE_THAN_CHAMPION"
         else:
             status = "NOT_DISTINGUISHABLE"
-        out.append({"strategy": s, "cohorts": n, "mean_net_vs_champion": float(d.mean()) if n else float("nan"),
+        out.append({"strategy": s, "cohorts": n, "diagnostic_cohorts": diagnostic,
+                    "scheduled_cohorts": len(schedule), "withheld_cohorts": withheld,
+                    "legacy_cohorts": legacy, "incomplete_cohorts": incomplete,
+                    "non_executable_cohorts": non_executable,
+                    "mean_net_vs_champion": float(d.mean()) if n else float("nan"),
                     "t": t, "status": status})
     return out

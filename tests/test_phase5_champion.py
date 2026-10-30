@@ -87,7 +87,7 @@ def test_until_a_year_of_cohorts_exists_every_challenger_is_insufficient():
     for d in cal[:21]:
         C.record(r, led, d)
     C.resolve(led, r)
-    assert all(s["status"] == "INSUFFICIENT_DATA" for s in C.standings(led))
+    assert all(s["status"] == "INSUFFICIENT_EVIDENCE" for s in C.standings(led))
 
 
 def test_the_standings_detect_a_challenger_that_is_worse_than_the_champion():
@@ -99,8 +99,127 @@ def test_the_standings_detect_a_challenger_that_is_worse_than_the_champion():
         rows.append((day, C.CHAMPION, 40, 0.02 + 0.001 * np.sin(k), 0.003, 0.017 + 0.001 * np.sin(k), 0.01))
         rows.append((day, "composite_top", 40, 0.01 + 0.001 * np.cos(k), 0.003, 0.007 + 0.001 * np.cos(k), 0.01))
     led.executemany("INSERT INTO champion_cohorts VALUES (?,?,?,?,?,?,?)", rows)
-    s = {x["strategy"]: x for x in C.standings(led)}["composite_top"]
+    C._cohort_columns(led)
+    led.execute("UPDATE champion_cohorts SET complete = TRUE, metric_version = ?", [C.EXECUTABLE_METRIC])
+    schedule = [rows[k * C.HORIZON * 2][0] for k in range(C.MIN_COHORTS)]
+    s = {x["strategy"]: x for x in C.standings(
+        led, scheduled_days=schedule, eligible_days=set(schedule))}["composite_top"]
     assert s["cohorts"] == C.MIN_COHORTS and s["status"] == "WORSE_THAN_CHAMPION"
+
+
+def test_missing_middle_day_does_not_shift_precommitted_schedule():
+    led = duckdb.connect()
+    led.execute(C.SCHEMA)
+    C._cohort_columns(led)
+    days = [date(2026, 10, 5 + k).isoformat() for k in range(4)]
+    for day in (days[0], days[2], days[3]):
+        for strategy, net in ((C.CHAMPION, .01), ("challenger", .02)):
+            led.execute("""INSERT INTO champion_cohorts
+                (day, strategy, n, gross, cost, net, universe, complete, metric_version)
+                VALUES (?, ?, 1, ?, 0, ?, 0, TRUE, ?)""", [day, strategy, net, net, C.EXECUTABLE_METRIC])
+    report = {x["strategy"]: x for x in C.standings(
+        led, horizon=1, scheduled_days=days[:3], eligible_days=set(days))}["challenger"]
+    assert report["cohorts"] == 2
+    assert report["scheduled_cohorts"] == 3
+    assert report["withheld_cohorts"] == 1
+    assert C.standings(led)[0]["cohorts"] == 0
+
+
+def test_legacy_and_incomplete_rows_never_enter_promotion_statistics():
+    led = duckdb.connect()
+    led.execute(C.SCHEMA)
+    C._cohort_columns(led)
+    days = [date(2026, 10, 5 + k).isoformat() for k in range(3)]
+    for day in days:
+        led.execute("""INSERT INTO champion_cohorts
+            (day, strategy, n, gross, cost, net, universe, complete, metric_version)
+            VALUES (?, ?, 1, 0, 0, 0, 0, TRUE, ?)""", [day, C.CHAMPION, C.EXECUTABLE_METRIC])
+    for day, net, complete in ((days[0], 1000., None), (days[1], .5, False), (days[2], .01, True)):
+        led.execute("""INSERT INTO champion_cohorts
+            (day, strategy, n, gross, cost, net, universe, complete, metric_version)
+            VALUES (?, 'challenger', 1, ?, 0, ?, 0, ?, ?)""",
+                    [day, net, net, complete, C.EXECUTABLE_METRIC])
+    report = {x["strategy"]: x for x in C.standings(
+        led, horizon=1, scheduled_days=days, eligible_days=set(days))}["challenger"]
+    assert report["cohorts"] == 1 and report["legacy_cohorts"] == 1
+    assert report["incomplete_cohorts"] == 1 and report["withheld_cohorts"] == 2
+    assert report["mean_net_vs_champion"] == pytest.approx(.01)
+    assert report["status"] != "PROMOTE"
+
+
+def test_champion_cost_is_fractional_return_not_rupees_or_bps():
+    from financial_brain.costs.india import CostModel
+
+    expected = CostModel().round_trip_sized(order_value=100_000, adv_value=10_000_000,
+                                            daily_vol=.02)["total"]
+    led, r = duckdb.connect(), duckdb.connect()
+    led.execute(C.SCHEMA)
+    led.execute("INSERT INTO champion_picks VALUES ('2026-10-05', ?, 'A', 'LA', ?)",
+                [C.CHAMPION, expected])
+    r.execute("CREATE TABLE adjusted_prices(lineage VARCHAR, business_date DATE, close_adj DOUBLE)")
+    r.executemany("INSERT INTO adjusted_prices VALUES (?,?,?)", [
+        ("LA", date(2026, 10, 5), 100.), ("LA", date(2026, 10, 6), 102.)])
+    C.resolve(led, r, horizon=1)
+    cost, net = led.execute("SELECT cost, net FROM champion_cohorts").fetchone()
+    assert 0 < cost < .1 and cost == pytest.approx(expected)
+    assert net == pytest.approx(.02 - expected)
+
+
+def test_duplicate_or_unsorted_schedule_is_refused():
+    led = duckdb.connect()
+    led.execute(C.SCHEMA)
+    led.execute("INSERT INTO champion_cohorts VALUES ('2026-10-05', 'challenger', 1, 0, 0, 0, 0)")
+    with pytest.raises(C.ChampionError, match="scheduled_days"):
+        C.standings(led, scheduled_days=["2026-10-06", "2026-10-05"])
+    with pytest.raises(C.ChampionError, match="scheduled_days"):
+        C.standings(led, scheduled_days=["2026-10-05", "2026-10-05"])
+
+
+def test_close_to_close_ranking_metric_cannot_be_promoted():
+    led = duckdb.connect()
+    led.execute(C.SCHEMA)
+    C._cohort_columns(led)
+    day = "2026-10-05"
+    for strategy, net in ((C.CHAMPION, 0.), ("challenger", 100.)):
+        led.execute("""INSERT INTO champion_cohorts
+            (day, strategy, n, gross, cost, net, universe, complete, metric_version)
+            VALUES (?, ?, 1, ?, 0, ?, 0, TRUE, ?)""", [day, strategy, net, net, C.RANKING_METRIC])
+    report = {x["strategy"]: x for x in C.standings(
+        led, horizon=1, scheduled_days=[day], eligible_days={day})}["challenger"]
+    assert report["cohorts"] == 0 and report["diagnostic_cohorts"] == 1
+    assert report["non_executable_cohorts"] == 1 and report["status"] != "PROMOTE"
+
+
+def test_duplicate_lineage_aliases_do_not_double_count_return():
+    led, r = duckdb.connect(), duckdb.connect()
+    led.execute(C.SCHEMA)
+    led.executemany("INSERT INTO champion_picks VALUES (?,?,?,?,?)", [
+        ("2026-10-05", C.CHAMPION, "OLD", "LA", .01),
+        ("2026-10-05", C.CHAMPION, "NEW", "LA", .01),
+    ])
+    r.execute("CREATE TABLE adjusted_prices(lineage VARCHAR, business_date DATE, close_adj DOUBLE)")
+    r.executemany("INSERT INTO adjusted_prices VALUES (?,?,?)", [
+        ("LA", date(2026, 10, 5), 100.), ("LA", date(2026, 10, 6), 110.)])
+    C.resolve(led, r, horizon=1)
+    selected, missing, complete = led.execute(
+        "SELECT selected_n, missing_n, complete FROM champion_cohorts").fetchone()
+    assert (selected, missing, complete) == (2, 2, False)
+
+
+def test_duplicated_price_lineage_is_unresolved_not_last_row_wins():
+    led, r = duckdb.connect(), duckdb.connect()
+    led.execute(C.SCHEMA)
+    led.execute("INSERT INTO champion_picks VALUES ('2026-10-05', ?, 'A', 'LA', .01)", [C.CHAMPION])
+    r.execute("CREATE TABLE adjusted_prices(lineage VARCHAR, business_date DATE, close_adj DOUBLE)")
+    r.executemany("INSERT INTO adjusted_prices VALUES (?,?,?)", [
+        ("LA", date(2026, 10, 5), 100.),
+        ("LA", date(2026, 10, 6), 110.),
+        ("LA", date(2026, 10, 6), 120.),
+    ])
+    C.resolve(led, r, horizon=1)
+    n, missing, complete = led.execute(
+        "SELECT n, missing_n, complete FROM champion_cohorts").fetchone()
+    assert (n, missing, complete) == (0, 1, False)
 
 
 def test_missing_selected_price_is_counted_and_never_silently_dropped():

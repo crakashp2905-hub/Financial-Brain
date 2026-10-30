@@ -24,7 +24,7 @@ champion attestation limits, and the economic-alpha/utility contract change.
 
 Given only the information available at a moment in time, it looks for the best available opportunity across the
 whole liquid market, estimates the distribution of outcomes, states the **expected net alpha** (expected return
-minus benchmark, fees, spread, impact and a risk penalty), allocates risk, executes on paper under realistic
+minus benchmark, fees, spread and impact; risk-adjusted utility applies a separate risk penalty), allocates risk, executes on paper under realistic
 costs, and learns from both the trades it took and the opportunities it rejected.
 
 > LLM = reasoning and orchestration. Point-in-time market data, exchange XBRL fundamentals, filings and the
