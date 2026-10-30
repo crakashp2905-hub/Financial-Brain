@@ -4,7 +4,8 @@ The attached technical checklist is a program specification, not proof of an edg
 
 ## Implemented and verified
 
-- A bounded TradingView alert-observation parser now rejects stale/future events, non-allowlisted strategies, order-like instructions and malformed prices. It has no network ingress or order path. The connector boundaries and remaining live-readiness gates are specified in `CONNECTOR-AND-LIVE-READINESS.md`.
+- A bounded TradingView alert-observation parser rejects stale/future events, non-allowlisted strategies, order-like instructions and malformed prices. It has no order path. The connector boundaries and remaining live-readiness gates are specified in `CONNECTOR-AND-LIVE-READINESS.md`.
+- A paper-only TradingView webhook inbox now authenticates a long bearer token, stores normalized observations and payload hashes in SQLite, deduplicates exact retries, and rejects conflicting alert-ID reuse. A standalone optional HTTP app exists, but no listener is started and TLS, URL-log redaction, rate limiting and ingress deployment are **not** established. The inbox is neither an order queue nor independent evidence attestation.
 
 - `main` is protected on GitHub with strict Ubuntu/Windows CI checks and one approving review; stale approvals are dismissed. Administrator enforcement is off for emergency maintenance. This setting was verified through the GitHub API after commit `66baa36` passed both platforms.
 - Champion cohort resolution no longer silently drops selected names without a forward price. It stores selected/observed/missing counts, survivor-only net, a -100%-for-missing sensitivity, universe coverage and the same universe sensitivity. Incomplete cohorts cannot satisfy promotion. This is a sensitivity, **not** a claim that every missing security lost 100%; corporate-action lineage and suspension/delisting reconciliation remain separate work.
