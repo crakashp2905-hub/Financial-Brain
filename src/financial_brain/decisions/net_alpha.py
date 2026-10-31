@@ -19,6 +19,7 @@ still lose to execution, and the paper ledger measures the two separately afterw
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from math import isfinite
 
 import numpy as np
 
@@ -46,6 +47,16 @@ class NetAlpha:
     impact: float
     risk_penalty: float
     source: str = ""
+
+    def __post_init__(self) -> None:
+        if isinstance(self.horizon, bool) or not isinstance(self.horizon, int) or self.horizon < 1:
+            raise ValueError("net-alpha horizon must be a positive session count")
+        for name in ("expected_return", "benchmark", "fees", "spread", "impact", "risk_penalty"):
+            value = getattr(self, name)
+            if not isfinite(value):
+                raise ValueError(f"net-alpha {name} must be finite fractional return")
+            if name in {"fees", "spread", "impact", "risk_penalty"} and value < 0:
+                raise ValueError(f"net-alpha {name} cannot be negative")
 
     @property
     def excess(self) -> float:
@@ -86,8 +97,16 @@ def compute(*, excess: float, horizon: int, order_value: float, adv_inr: float, 
             source: str = "") -> NetAlpha:
     """Itemise a candidate. ``excess``: the expected return over the benchmark at ``horizon`` sessions."""
     costs = costs or CostModel()
+    if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon < 1:
+        raise ValueError("horizon must be a positive session count")
+    for name, value in (("excess", excess), ("order_value", order_value), ("adv_inr", adv_inr),
+                        ("vol_annual", vol_annual), ("weight", weight)):
+        if not isfinite(value):
+            raise ValueError(f"{name} must be finite")
     if order_value <= 0 or adv_inr <= 0 or vol_annual <= 0:
         raise ValueError("order value, turnover and volatility must be positive")
+    if not 0 <= weight <= 1:
+        raise ValueError("portfolio weight must be between zero and one")
     bench = (1 + MARKET_DRIFT) ** (horizon / 252.0) - 1
     fees = costs.round_trip(turnover=order_value, segment=segment, include_impact=False)["total"] / order_value
     spread = 2 * HALF_SPREAD_BP[bucket(adv_inr)] / 1e4
