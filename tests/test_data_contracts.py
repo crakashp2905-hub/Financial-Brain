@@ -18,3 +18,19 @@ def test_lag_and_empty_tables_fail():
     assert not r["eod_prices"]["ok"] and r["eod_prices"]["lag_days"] == 15
     assert not r["delivery"]["ok"] and r["delivery"]["why"] == "empty"
     assert r["financial_results"]["ok"] and r["insider_disclosures"]["ok"] and r["features"]["ok"]
+
+
+def test_future_dated_source_and_null_date_rows_fail_closed():
+    con = duckdb.connect()
+    for c in DC.CONTRACTS:
+        kind = "TIMESTAMP" if c.date_col in ("filed_at", "disseminated_at") else "DATE"
+        con.execute(f"CREATE TABLE {c.table} ({c.date_col} {kind})")
+        con.execute(f"INSERT INTO {c.table} VALUES (?)", [date(2026, 10, 16)])
+    con.execute("UPDATE eod_prices SET business_date = DATE '2026-10-17'")
+    con.execute("INSERT INTO features VALUES (NULL)")
+    result = {x["table"]: x for x in DC.check(con, today=date(2026, 10, 16))}
+    assert not result["eod_prices"]["ok"]
+    assert result["eod_prices"]["why"].startswith("future-dated source")
+    assert not result["features"]["ok"]
+    assert result["features"]["null_date_rows"] == 1
+    assert result["features"]["date_coverage"] == 0.5
