@@ -225,6 +225,17 @@ class TestIngestion:
         job = make_job(cfg, {d: udiff_csv("2026-09-10")})   # yesterday's file
         assert job.run(d).status == STATUS_QUARANTINED
 
+    @pytest.mark.parametrize("bad_date", ["", "not-a-date", "2026-09-10"])
+    def test_one_invalid_trade_date_quarantines_entire_file(self, cfg, db, bad_date):
+        d = date(2026, 9, 11)
+        payload = udiff_csv("2026-09-11") + (
+            udiff_row(trad_dt=bad_date, isin="INE777777019", ticker="BADDATE",
+                      instr_id="999999") + "\n").encode()
+        result = make_job(cfg, {d: payload}).run(d)
+        assert result.status == STATUS_QUARANTINED
+        with db.connect() as con:
+            assert con.execute("SELECT COUNT(*) FROM universe_snapshots").fetchone()[0] == 0
+
     def test_every_run_is_recorded(self, cfg, db):
         d = date(2026, 9, 11)
         make_job(cfg, {d: udiff_csv("2026-09-11")}).run(d)
