@@ -24,6 +24,31 @@ def _fake_record(_research_con, ledger, day):
     return {champion.CHAMPION: 1}
 
 
+def _manifest(ledger, day=TODAY):
+    digest = prospective._pick_digest(ledger, day.isoformat())
+    h = "a" * 64
+    return {"schema": "fb.decision.v1", "day": day.isoformat(), "decision_id": "test-decision",
+            "author": "paper-test", "strategy_sha256": h, "model_sha256": h,
+            "data_sha256": h, "universe_sha256": h, "picks_sha256": digest,
+            "calendar_sha256": h, "cost_model_sha256": h, "risk_limits_sha256": h,
+            "decision_at_utc": NOW.isoformat(),
+            "data_watermark_at_utc": "2026-10-29T11:59:01Z",
+            "exchange_session_id": "NSE-CM-2026-10-29",
+            "entry_earliest_at_utc": "2026-10-30T03:45:00Z",
+            "exit_scheduled_at_utc": "2026-11-30T10:00:00Z",
+            "holding_sessions": 20, "benchmark_id": "NIFTY500-TRI",
+            "capital_inr": "100000",
+            "predicted_return_fraction": "0.01", "predicted_cost_fraction": "0.001",
+            "forecast": {"p10_fraction": "-0.05", "p50_fraction": "0.01",
+                         "p90_fraction": "0.06", "probability_exceeds_cost": "0.5"},
+            "no_trade_reasons": [],
+            "selections": [{"lineage": "L1", "symbol": "TEST", "weight_fraction": "1", "quantity": 1}],
+            "exclusions": [], "sources": [{"source_id": "test-source", "sha256": h,
+                                      "published_at_utc": "2026-10-29T11:59:00Z",
+                                      "received_at_utc": "2026-10-29T11:59:01Z",
+                                      "available_at_utc": "2026-10-29T11:59:01Z"}]}
+
+
 def test_forward_record_attests_write_time(monkeypatch):
     monkeypatch.setattr(champion, "record", _fake_record)
     ledger = duckdb.connect()
@@ -52,6 +77,10 @@ def test_external_anchor_is_required_and_reverified(monkeypatch):
     ledger = duckdb.connect()
     prospective.record(_research(), ledger, TODAY, now=NOW)
     anchor_time = NOW.replace(minute=1)
+    with pytest.raises(champion.ChampionError, match="manifest required"):
+        prospective.attach_anchor(ledger, TODAY, provider="test-signer",
+                                  anchored_at_utc=anchor_time, receipt="signed-batch")
+    prospective.attach_manifest(ledger, TODAY, _manifest(ledger))
     prospective.attach_anchor(ledger, TODAY, provider="test-signer",
                               anchored_at_utc=anchor_time, receipt="signed-batch")
     assert prospective.verified_days(ledger) == set()
@@ -63,6 +92,23 @@ def test_external_anchor_is_required_and_reverified(monkeypatch):
     assert prospective.verified_days(ledger, verifier=unavailable) == set()
     ledger.execute("UPDATE champion_pick_anchors SET receipt = 'tampered'")
     assert prospective.verified_days(ledger, verifier=lambda *args: args[-1] == "signed-batch") == set()
+
+
+def test_manifest_mutation_or_pick_only_legacy_anchor_never_verifies(monkeypatch):
+    monkeypatch.setattr(champion, "record", _fake_record)
+    ledger = duckdb.connect()
+    prospective.record(_research(), ledger, TODAY, now=NOW)
+    prospective.attach_manifest(ledger, TODAY, _manifest(ledger))
+    prospective.attach_anchor(ledger, TODAY, provider="test-signer",
+                              anchored_at_utc=NOW.replace(minute=1), receipt="signed-batch")
+    verifier = lambda *args: args[-1] == "signed-batch"
+    assert prospective.verified_days(ledger, verifier=verifier) == {str(TODAY)}
+    ledger.execute("UPDATE champion_decision_manifests SET manifest_json = '{}' WHERE day = ?", [str(TODAY)])
+    assert prospective.verified_days(ledger, verifier=verifier) == set()
+    ledger.execute("UPDATE champion_decision_manifests SET manifest_json = ? WHERE day = ?",
+                   [prospective.canonical_bytes(_manifest(ledger)).decode(), str(TODAY)])
+    ledger.execute("UPDATE champion_pick_anchors SET manifest_sha256 = NULL")
+    assert prospective.verified_days(ledger, verifier=verifier) == set()
 
 
 def test_forward_record_rejects_backfill_and_future_outcome(monkeypatch):
