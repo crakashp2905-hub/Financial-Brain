@@ -56,6 +56,7 @@ def test_canonical_snapshot_is_stable_without_mutating_input():
     lambda x: x["sources"][0].update(received_at_utc="2026-10-31T10:28:00Z"),
     lambda x: x["sources"][0].update(available_at_utc="2026-10-31T10:29:00Z"),
     lambda x: x.update(data_watermark_at_utc="2026-10-31T10:31:00Z"),
+    lambda x: x.update(data_watermark_at_utc="2026-10-31T10:29:00Z"),
     lambda x: x["selections"][1].update(lineage="L2"),
     lambda x: x["selections"][0].update(weight_fraction="0.9"),
     lambda x: x.update(schema="fb.decision.v2"),
