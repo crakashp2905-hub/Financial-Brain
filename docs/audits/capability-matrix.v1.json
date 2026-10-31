@@ -1,0 +1,46 @@
+{
+  "schema": "fb.capability-matrix.v1",
+  "scope": "Curated critical boundaries only; not a complete source inventory or evidence of profitable trading.",
+  "capabilities": [
+    {
+      "id": "champion-ranking-diagnostic",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "source": ["src/financial_brain/evaluation/champion.py"],
+      "tests": ["tests/test_phase5_champion.py"],
+      "blockers": ["No independently verified executable next-session cohorts", "No frozen exchange-session schedule proof"]
+    },
+    {
+      "id": "paper-decision-manifest",
+      "owner_role": "Evidence",
+      "maturity": "local_tested",
+      "source": ["src/financial_brain/evidence/decision_manifest.py", "src/financial_brain/evaluation/prospective.py"],
+      "tests": ["tests/test_decision_manifest.py", "tests/test_prospective_champion.py"],
+      "blockers": ["No independent signer or pinned trust root", "No actual forward-attested cohort"]
+    },
+    {
+      "id": "immutable-fact-ledger",
+      "owner_role": "Evidence",
+      "maturity": "local_tested",
+      "source": ["src/financial_brain/evidence/ledger.py"],
+      "tests": ["tests/test_phase1_evidence.py"],
+      "blockers": ["No independent artifact custody or external timestamp"]
+    },
+    {
+      "id": "paper-oms-reconciliation",
+      "owner_role": "Execution",
+      "maturity": "partial",
+      "source": ["src/financial_brain/execution/oms/reconcile.py", "src/financial_brain/execution/oms/engine.py"],
+      "tests": ["tests/test_oms.py", "tests/test_oms_shortfall_contract.py"],
+      "blockers": ["Market-hours broker failure drills and live-order authorization not complete"]
+    },
+    {
+      "id": "economic-net-alpha-model",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "source": ["src/financial_brain/decisions/net_alpha.py"],
+      "tests": ["tests/test_phase5_scanners.py", "tests/test_phase5_trader_core.py"],
+      "blockers": ["Model estimate is not validated net trading profit"]
+    }
+  ]
+}
