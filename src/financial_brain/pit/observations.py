@@ -120,12 +120,14 @@ class PITStore:
 
     # -------------------------------------------------------------- reading
     def as_of(self, as_of_time: datetime, *, entity_key: str | None = None,
-              attribute: str | None = None, entity_type: str = "security") -> list[dict]:
+              attribute: str | None = None, entity_type: str = "security",
+              require_observed: bool = False) -> list[dict]:
         """What was knowable at ``as_of_time``.
 
-        Filters on **published_at** (not observed_at) so a backtest sees a fact only once
-        the market could have seen it. Rows with no published_at fall back to observed_at,
-        which is conservative: we never claim to have known something earlier than we did.
+        By default this is a historical *market-public* view: publication gates
+        visibility, even if our archive acquired the document later. Forward
+        paper decisions must pass ``require_observed=True`` so system receipt
+        also predates the cutoff. Rows without publication fall back to receipt.
 
         When a fact was restated, the latest revision *published before the cutoff* wins.
         """
@@ -138,6 +140,7 @@ class PITStore:
                 FROM pit_observations
                 WHERE entity_type = ?
                   AND COALESCE(published_at, observed_at) <= ?
+                  AND (? = FALSE OR observed_at <= ?)
             ), ranked AS (
                 SELECT *, ROW_NUMBER() OVER (
                     PARTITION BY entity_key, attribute, period_end
@@ -150,7 +153,7 @@ class PITStore:
                    source, source_tier, evidence_key, revision_of
             FROM ranked WHERE rn = 1
         """
-        params: list = [entity_type, as_of_time]
+        params: list = [entity_type, as_of_time, require_observed, as_of_time]
         if entity_key:
             sql += " AND entity_key = ?"
             params.append(entity_key)

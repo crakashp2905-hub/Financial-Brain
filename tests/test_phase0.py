@@ -423,6 +423,18 @@ class TestPITStore:
             with pytest.raises(ValueError, match="timezone-aware"):
                 PITStore(con).as_of(datetime(2026, 10, 31, 12))
 
+    def test_forward_view_requires_system_receipt_before_cutoff(self, cfg, db):
+        with db.connect() as con:
+            store = PITStore(con)
+            store.record(Observation(entity_key="X", attribute="eps", value_num=1.0,
+                                     published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+                                     observed_at=datetime(2026, 8, 3, tzinfo=timezone.utc)))
+            cutoff = datetime(2026, 8, 2, tzinfo=timezone.utc)
+            assert len(store.as_of(cutoff)) == 1  # historical public-information study
+            assert store.as_of(cutoff, require_observed=True) == []  # forward paper
+            assert len(store.as_of(datetime(2026, 8, 4, tzinfo=timezone.utc),
+                                   require_observed=True)) == 1
+
     def test_source_tier_is_recorded(self, cfg, db):
         with db.connect() as con:
             store = PITStore(con)

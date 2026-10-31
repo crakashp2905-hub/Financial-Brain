@@ -1,0 +1,7 @@
+# Point-in-time clocks (partial contract)
+
+All new PIT writes and `PITStore.as_of` cutoffs require timezone-aware instants. DuckDB stores them as `TIMESTAMPTZ`; a naive local clock is rejected rather than interpreted differently on Windows, Linux or across DST. This does not retroactively attest historical rows already in the database.
+
+`event_time` is when the underlying event occurred; `published_at` is when the source made it public; `observed_at` is when Financial-Brain first stored it. A historical market-public study may use a fact after `published_at` even if this installation obtained it later. A forward paper decision must use `as_of(..., require_observed=True)`, which also requires `observed_at` no later than the cutoff. If publication time is unavailable, receipt time is the conservative visibility time. The first receipt is retained on an identical replay; changed immutable provenance under the same observation ID is rejected.
+
+The canonical paper-decision manifest separately records source publication, receipt and availability, the latest-input watermark, decision time and earliest entry time. Those ordering checks are local consistency checks, **not** proof of independent timing. A signed external receipt and pinned trust root remain required for promotion-grade cohorts. Existing callers of `PITStore.as_of` retain historical market-public semantics until each forward consumer is migrated explicitly; no current consumer is silently upgraded to forward evidence.
