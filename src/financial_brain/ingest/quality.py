@@ -59,6 +59,15 @@ ROW_PREDICATES = {
         "TRY_CAST(ClsPric AS DOUBLE) IS NOT NULL AND TRY_CAST(ClsPric AS DOUBLE) <= 0",
     "volume_non_negative":
         "TRY_CAST(TtlTradgVol AS BIGINT) < 0",
+    # A failed TRY_CAST previously made the other predicates evaluate to NULL,
+    # silently passing malformed numbers into the curated layer.
+    "numeric_fields_well_formed": " OR ".join(
+        f"(NULLIF(TRIM({column}), '') IS NOT NULL AND "
+        f"(TRY_CAST({column} AS DOUBLE) IS NULL OR "
+        f"NOT isfinite(TRY_CAST({column} AS DOUBLE))))"
+        for column in ("OpnPric", "HghPric", "LwPric", "ClsPric"))
+        + " OR (NULLIF(TRIM(TtlTradgVol), '') IS NOT NULL AND "
+          "NOT regexp_matches(TRIM(TtlTradgVol), '^-?[0-9]+$'))",
 }
 
 
