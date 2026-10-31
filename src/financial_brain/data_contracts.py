@@ -78,14 +78,31 @@ def check(rcon, today: date | None = None) -> list[dict]:
     out = []
     for c in CONTRACTS:
         try:
-            n, first, last = rcon.execute(f"SELECT COUNT(*), MIN({c.date_col}), MAX({c.date_col}) FROM {c.table}").fetchone()
+            n, dated, first, last = rcon.execute(
+                f"SELECT COUNT(*), COUNT({c.date_col}), MIN({c.date_col}), MAX({c.date_col}) "
+                f"FROM {c.table}").fetchone()
         except Exception as e:                          # noqa: BLE001 - a missing table breaks its contract
             out.append({"table": c.table, "ok": False, "why": f"unreadable: {str(e)[:60]}"})
             continue
         last_d = last.date() if isinstance(last, datetime) else last
         lag = (today - last_d).days if last_d else None
-        ok = bool(n) and lag is not None and lag <= c.max_lag
-        out.append({"table": c.table, "ok": ok, "rows": int(n), "first": str(first), "last": str(last), "lag_days": lag,
+        null_dates = int(n - dated)
+        ok = bool(n) and lag is not None and 0 <= lag <= c.max_lag and null_dates == 0
+        if not n:
+            why = "empty"
+        elif null_dates:
+            why = f"{null_dates} rows lack {c.date_col}"
+        elif lag is None:
+            why = "no dated rows"
+        elif lag < 0:
+            why = f"future-dated source ({-lag} days ahead)"
+        elif lag > c.max_lag:
+            why = f"{lag} days behind (max {c.max_lag})"
+        else:
+            why = ""
+        out.append({"table": c.table, "ok": ok, "rows": int(n), "dated_rows": int(dated),
+                    "null_date_rows": null_dates, "date_coverage": dated / n if n else 0.0,
+                    "first": str(first), "last": str(last), "lag_days": lag,
                     "max_lag": c.max_lag, "source": c.source, "times": c.times, "revisions": c.revisions,
-                    "limits": c.limits, "why": "" if ok else ("empty" if not n else f"{lag} days behind (max {c.max_lag})")})
+                    "limits": c.limits, "why": why})
     return out
