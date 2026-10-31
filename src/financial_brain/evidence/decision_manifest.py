@@ -150,6 +150,9 @@ def canonical_bytes(value: dict) -> bytes:
             raise ManifestError("source was unavailable at decision time")
     if not data["sources"] or len({x["source_id"] for x in data["sources"]}) != len(data["sources"]):
         raise ManifestError("missing or duplicate sources")
+    latest_source = max(_utc(item["available_at_utc"], "availability") for item in data["sources"])
+    if watermark < latest_source:
+        raise ManifestError("data watermark predates a decision source")
     for key, sort_key in (("selections", "lineage"), ("exclusions", "lineage"), ("sources", "source_id")):
         data[key] = sorted((dict(row) for row in data[key]), key=lambda row: row[sort_key])
     data["decision_at_utc"] = decision.isoformat().replace("+00:00", "Z")
