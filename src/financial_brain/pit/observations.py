@@ -78,6 +78,10 @@ class PITStore:
         """
         if obs.value_num is not None and not math.isfinite(obs.value_num):
             raise ValueError("PIT observation value_num must be finite")
+        for label in ("event_time", "published_at", "observed_at"):
+            instant = getattr(obs, label)
+            if instant is not None and (instant.tzinfo is None or instant.utcoffset() is None):
+                raise ValueError(f"PIT {label} must be timezone-aware")
         oid = obs.identity()
         immutable = [obs.entity_type, obs.entity_key, obs.attribute, obs.period_start,
                      obs.period_end, obs.value_num, obs.value_text, obs.unit, obs.event_time,
@@ -125,6 +129,8 @@ class PITStore:
 
         When a fact was restated, the latest revision *published before the cutoff* wins.
         """
+        if as_of_time.tzinfo is None or as_of_time.utcoffset() is None:
+            raise ValueError("PIT as_of_time must be timezone-aware")
         sql = """
             WITH visible AS (
                 SELECT *,

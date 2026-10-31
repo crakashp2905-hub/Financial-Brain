@@ -409,6 +409,20 @@ class TestPITStore:
                 store.record(Observation(entity_key="X", attribute="eps", value_num=value))
             assert con.execute("SELECT COUNT(*) FROM pit_observations").fetchone()[0] == 0
 
+    @pytest.mark.parametrize("timestamp_field", ["event_time", "published_at", "observed_at"])
+    def test_naive_pit_timestamp_is_rejected(self, cfg, db, timestamp_field):
+        with db.connect() as con:
+            store = PITStore(con)
+            with pytest.raises(ValueError, match="timezone-aware"):
+                store.record(Observation(entity_key="X", attribute="eps", value_num=1.0,
+                                         **{timestamp_field: datetime(2026, 10, 31, 12)}))
+            assert con.execute("SELECT COUNT(*) FROM pit_observations").fetchone()[0] == 0
+
+    def test_naive_pit_as_of_cutoff_is_rejected(self, cfg, db):
+        with db.connect() as con:
+            with pytest.raises(ValueError, match="timezone-aware"):
+                PITStore(con).as_of(datetime(2026, 10, 31, 12))
+
     def test_source_tier_is_recorded(self, cfg, db):
         with db.connect() as con:
             store = PITStore(con)
