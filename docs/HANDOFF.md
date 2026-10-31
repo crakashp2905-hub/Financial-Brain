@@ -37,11 +37,11 @@ Phase 1. If session limits hit, autostart after the limit period is over."*
 ## Working rules
 
 - Repo: `D:\Finance-Brain`, remote `crakashp2905-hub/Financial-Brain` (private), branch `main`.
-- Current development uses review branches (`codex/` prefix); normal code changes should enter protected `main` through a reviewed PR with Linux/Windows checks. Do not treat an administrator's bypass ability as the normal path.
+- Current development uses review branches (`codex/` prefix); normal code changes should enter protected `main` through a PR with required Linux/Windows checks. As of 2026-10-31, the owner set required approving reviews to zero; independent review remains recommended for high-risk changes but is not a merge gate. Do not treat an administrator's bypass ability as the normal path.
 - Python: `./.venv/Scripts/python.exe`. CLI: `./.venv/Scripts/python.exe -m financial_brain.cli <cmd>`.
 - Tests: `./.venv/Scripts/python.exe -m pytest tests/ -q` — all offline, must pass before any commit.
 - Commit with the configured local Git identity on a feature branch, explain *why* and report measured results.
-  Push the branch for reviewed PR/required CI checks; do not directly push normal code changes to protected `main`.
+  Push the branch for a PR and required CI checks; do not directly push normal code changes to protected `main`.
 - **Never commit `data/`** — large, rebuildable, and exchange data may not be redistributed.
 - **One database writer at a time.** Never run two `financial_brain` jobs that write.
 - **Lake first.** Never re-fetch bytes the lake holds. Backfills: `fb prefetch` (parallel,
