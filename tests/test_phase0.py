@@ -387,6 +387,54 @@ class TestPITStore:
             assert store.record(o) == store.record(o)
             assert store.coverage()["observations"] == 1
 
+    @pytest.mark.parametrize("revision", [{"unit": "INR"}, {"evidence_key": "other"},
+                                         {"notes": "changed source note"}])
+    def test_same_pit_id_with_changed_provenance_fails_closed(self, cfg, db, revision):
+        with db.connect() as con:
+            store = PITStore(con)
+            base = dict(entity_key="X", attribute="eps", value_num=5.0,
+                        period_end=date(2026, 6, 30), source="FILING",
+                        published_at=datetime(2026, 8, 1, tzinfo=timezone.utc))
+            original = store.record(Observation(**base))
+            with pytest.raises(ValueError, match="conflicting immutable PIT observation"):
+                store.record(Observation(**base, **revision))
+            assert con.execute("SELECT COUNT(*) FROM pit_observations").fetchone()[0] == 1
+            assert original == Observation(**base).identity()
+
+    @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+    def test_non_finite_pit_value_is_rejected(self, cfg, db, value):
+        with db.connect() as con:
+            store = PITStore(con)
+            with pytest.raises(ValueError, match="finite"):
+                store.record(Observation(entity_key="X", attribute="eps", value_num=value))
+            assert con.execute("SELECT COUNT(*) FROM pit_observations").fetchone()[0] == 0
+
+    @pytest.mark.parametrize("timestamp_field", ["event_time", "published_at", "observed_at"])
+    def test_naive_pit_timestamp_is_rejected(self, cfg, db, timestamp_field):
+        with db.connect() as con:
+            store = PITStore(con)
+            with pytest.raises(ValueError, match="timezone-aware"):
+                store.record(Observation(entity_key="X", attribute="eps", value_num=1.0,
+                                         **{timestamp_field: datetime(2026, 10, 31, 12)}))
+            assert con.execute("SELECT COUNT(*) FROM pit_observations").fetchone()[0] == 0
+
+    def test_naive_pit_as_of_cutoff_is_rejected(self, cfg, db):
+        with db.connect() as con:
+            with pytest.raises(ValueError, match="timezone-aware"):
+                PITStore(con).as_of(datetime(2026, 10, 31, 12))
+
+    def test_forward_view_requires_system_receipt_before_cutoff(self, cfg, db):
+        with db.connect() as con:
+            store = PITStore(con)
+            store.record(Observation(entity_key="X", attribute="eps", value_num=1.0,
+                                     published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+                                     observed_at=datetime(2026, 8, 3, tzinfo=timezone.utc)))
+            cutoff = datetime(2026, 8, 2, tzinfo=timezone.utc)
+            assert len(store.as_of(cutoff)) == 1  # historical public-information study
+            assert store.as_of(cutoff, require_observed=True) == []  # forward paper
+            assert len(store.as_of(datetime(2026, 8, 4, tzinfo=timezone.utc),
+                                   require_observed=True)) == 1
+
     def test_source_tier_is_recorded(self, cfg, db):
         with db.connect() as con:
             store = PITStore(con)
