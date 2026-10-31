@@ -97,6 +97,29 @@ def test_net_alpha_renders_like_a_ledger():
     assert na.spread == pytest.approx(2 * NA.HALF_SPREAD_BP["mid"] / 1e4)
 
 
+@pytest.mark.parametrize("change", [
+    {"excess": float("nan")}, {"order_value": float("inf")},
+    {"adv_inr": float("nan")}, {"vol_annual": float("-inf")},
+    {"weight": float("nan")}, {"weight": -0.1}, {"weight": 1.1},
+    {"horizon": 0}, {"horizon": True},
+])
+def test_net_alpha_rejects_invalid_fractional_inputs(change):
+    from financial_brain.decisions import net_alpha as NA
+    args = dict(excess=0.02, horizon=60, order_value=1e5, adv_inr=5e8,
+                vol_annual=0.3, weight=0.1)
+    args.update(change)
+    with pytest.raises(ValueError):
+        NA.compute(**args)
+
+
+def test_net_alpha_object_cannot_claim_negative_costs_or_nan_utility():
+    from financial_brain.decisions.net_alpha import NetAlpha
+    with pytest.raises(ValueError):
+        NetAlpha(60, 0.05, 0.02, -0.001, 0.001, 0.001, 0.01)
+    with pytest.raises(ValueError):
+        NetAlpha(60, 0.05, 0.02, 0.001, 0.001, 0.001, float("nan"))
+
+
 def test_every_opportunity_is_fully_typed_and_traceable():
     from pathlib import Path
     research = Path(__file__).resolve().parents[1] / "brain" / "07-Research"
