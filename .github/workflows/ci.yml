@@ -26,6 +26,8 @@ jobs:
           python -m pip install -e ".[dev]"
       - name: Lint
         run: python -m ruff check src tests
+      - name: Validate capability claims
+        run: python scripts/validate_capability_matrix.py
       - name: Type check (OMS, evidence standard, pre-registry)
         run: python -m mypy
       - name: Schema migrations
