@@ -387,6 +387,28 @@ class TestPITStore:
             assert store.record(o) == store.record(o)
             assert store.coverage()["observations"] == 1
 
+    @pytest.mark.parametrize("revision", [{"unit": "INR"}, {"evidence_key": "other"},
+                                         {"notes": "changed source note"}])
+    def test_same_pit_id_with_changed_provenance_fails_closed(self, cfg, db, revision):
+        with db.connect() as con:
+            store = PITStore(con)
+            base = dict(entity_key="X", attribute="eps", value_num=5.0,
+                        period_end=date(2026, 6, 30), source="FILING",
+                        published_at=datetime(2026, 8, 1, tzinfo=timezone.utc))
+            original = store.record(Observation(**base))
+            with pytest.raises(ValueError, match="conflicting immutable PIT observation"):
+                store.record(Observation(**base, **revision))
+            assert con.execute("SELECT COUNT(*) FROM pit_observations").fetchone()[0] == 1
+            assert original == Observation(**base).identity()
+
+    @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+    def test_non_finite_pit_value_is_rejected(self, cfg, db, value):
+        with db.connect() as con:
+            store = PITStore(con)
+            with pytest.raises(ValueError, match="finite"):
+                store.record(Observation(entity_key="X", attribute="eps", value_num=value))
+            assert con.execute("SELECT COUNT(*) FROM pit_observations").fetchone()[0] == 0
+
     def test_source_tier_is_recorded(self, cfg, db):
         with db.connect() as con:
             store = PITStore(con)

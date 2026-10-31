@@ -24,6 +24,7 @@ The four timestamps (docs/ARCHITECTURE.md):
 from __future__ import annotations
 
 import hashlib
+import math
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
@@ -70,12 +71,29 @@ class PITStore:
 
     # -------------------------------------------------------------- writing
     def record(self, obs: Observation) -> str:
-        """Append one observation. Returns its id. Idempotent on identical facts."""
+        """Append one observation; reject non-finite values and conflicting ID replays.
+
+        A repeat with the same immutable fields is a no-op even if it is received
+        again later; the first observed_at remains the historical receipt time.
+        """
+        if obs.value_num is not None and not math.isfinite(obs.value_num):
+            raise ValueError("PIT observation value_num must be finite")
         oid = obs.identity()
+        immutable = [obs.entity_type, obs.entity_key, obs.attribute, obs.period_start,
+                     obs.period_end, obs.value_num, obs.value_text, obs.unit, obs.event_time,
+                     obs.published_at, obs.source.upper(), obs.source_tier, obs.evidence_key,
+                     obs.revision_of, obs.notes]
         existing = self.con.execute(
             "SELECT observation_id FROM pit_observations WHERE observation_id = ?", [oid]
         ).fetchone()
         if existing:
+            columns = ("entity_type", "entity_key", "attribute", "period_start", "period_end",
+                       "value_num", "value_text", "unit", "event_time", "published_at",
+                       "source", "source_tier", "evidence_key", "revision_of", "notes")
+            matches = " AND ".join(f"{column} IS NOT DISTINCT FROM ?" for column in columns)
+            if not self.con.execute(f"SELECT 1 FROM pit_observations WHERE observation_id = ? AND {matches}",
+                                    [oid, *immutable]).fetchone():
+                raise ValueError(f"conflicting immutable PIT observation for {oid}")
             return oid
 
         self.con.execute(
@@ -84,10 +102,7 @@ class PITStore:
                 value_num, value_text, unit, event_time, published_at, observed_at,
                 source, source_tier, evidence_key, revision_of, notes)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            [oid, obs.entity_type, obs.entity_key, obs.attribute, obs.period_start,
-             obs.period_end, obs.value_num, obs.value_text, obs.unit, obs.event_time,
-             obs.published_at, obs.observed_at, obs.source.upper(), obs.source_tier,
-             obs.evidence_key, obs.revision_of, obs.notes],
+            [oid, *immutable[:10], obs.observed_at, *immutable[10:]],
         )
         return oid
 
