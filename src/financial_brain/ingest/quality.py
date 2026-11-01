@@ -52,10 +52,10 @@ ROW_PREDICATES = {
         "AND NOT regexp_matches(ISIN, '^[A-Z]{2}[A-Z0-9]{9}[0-9]$')",
     "ohlc_coherent":
         "TRY_CAST(HghPric AS DOUBLE) IS NOT NULL AND TRY_CAST(LwPric AS DOUBLE) IS NOT NULL "
-        "AND isfinite(TRY_CAST(OpnPric AS DOUBLE)) "
-        "AND isfinite(TRY_CAST(HghPric AS DOUBLE)) "
-        "AND isfinite(TRY_CAST(LwPric AS DOUBLE)) "
-        "AND isfinite(TRY_CAST(ClsPric AS DOUBLE)) "
+        "AND isfinite(TRY_CAST(OpnPric AS DOUBLE)) AND TRY_CAST(OpnPric AS DOUBLE) > 0 "
+        "AND isfinite(TRY_CAST(HghPric AS DOUBLE)) AND TRY_CAST(HghPric AS DOUBLE) > 0 "
+        "AND isfinite(TRY_CAST(LwPric AS DOUBLE)) AND TRY_CAST(LwPric AS DOUBLE) > 0 "
+        "AND isfinite(TRY_CAST(ClsPric AS DOUBLE)) AND TRY_CAST(ClsPric AS DOUBLE) > 0 "
         "AND (TRY_CAST(HghPric AS DOUBLE) < TRY_CAST(LwPric AS DOUBLE) "
         " OR TRY_CAST(OpnPric AS DOUBLE) > TRY_CAST(HghPric AS DOUBLE) "
         " OR TRY_CAST(OpnPric AS DOUBLE) < TRY_CAST(LwPric AS DOUBLE) "
@@ -63,6 +63,9 @@ ROW_PREDICATES = {
         " OR TRY_CAST(ClsPric AS DOUBLE) < TRY_CAST(LwPric AS DOUBLE))",
     "close_positive":
         "TRY_CAST(ClsPric AS DOUBLE) IS NOT NULL AND TRY_CAST(ClsPric AS DOUBLE) <= 0",
+    "ohlc_prices_positive": " OR ".join(
+        f"(TRY_CAST({column} AS DOUBLE) IS NOT NULL AND TRY_CAST({column} AS DOUBLE) <= 0)"
+        for column in ("OpnPric", "HghPric", "LwPric", "ClsPric")),
     "volume_non_negative":
         "TRY_CAST(TtlTradgVol AS BIGINT) < 0",
     # A failed TRY_CAST previously made the other predicates evaluate to NULL,
