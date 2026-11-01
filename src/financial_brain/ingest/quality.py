@@ -52,7 +52,13 @@ ROW_PREDICATES = {
         "AND NOT regexp_matches(ISIN, '^[A-Z]{2}[A-Z0-9]{9}[0-9]$')",
     "ohlc_coherent":
         "TRY_CAST(HghPric AS DOUBLE) IS NOT NULL AND TRY_CAST(LwPric AS DOUBLE) IS NOT NULL "
+        "AND isfinite(TRY_CAST(OpnPric AS DOUBLE)) "
+        "AND isfinite(TRY_CAST(HghPric AS DOUBLE)) "
+        "AND isfinite(TRY_CAST(LwPric AS DOUBLE)) "
+        "AND isfinite(TRY_CAST(ClsPric AS DOUBLE)) "
         "AND (TRY_CAST(HghPric AS DOUBLE) < TRY_CAST(LwPric AS DOUBLE) "
+        " OR TRY_CAST(OpnPric AS DOUBLE) > TRY_CAST(HghPric AS DOUBLE) "
+        " OR TRY_CAST(OpnPric AS DOUBLE) < TRY_CAST(LwPric AS DOUBLE) "
         " OR TRY_CAST(ClsPric AS DOUBLE) > TRY_CAST(HghPric AS DOUBLE) "
         " OR TRY_CAST(ClsPric AS DOUBLE) < TRY_CAST(LwPric AS DOUBLE))",
     "close_positive":
@@ -124,7 +130,8 @@ def check_bhavcopy(con, table: str, *, business_date: date, min_rows: int = 500)
         f"expected >= {min_rows} rows for a trading day", FILE))
 
     wrong_date = scalar(
-        f"SELECT COUNT(*) FROM {table} WHERE TRY_CAST(TradDt AS DATE) <> DATE '{business_date}'")
+        f"SELECT COUNT(*) FROM {table} "
+        f"WHERE TRY_CAST(TradDt AS DATE) IS DISTINCT FROM DATE '{business_date}'")
     out.append(CheckResult(
         "trade_date_matches_request", ERROR, wrong_date == 0, str(wrong_date),
         f"rows whose TradDt is not {business_date}", FILE))
