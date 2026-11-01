@@ -49,3 +49,26 @@ def test_open_outside_high_low_is_quarantined(open_price):
     assert any(result.name == "ohlc_coherent" for result in report.row_level)
     assert quality.partition_rows(con, "raw", report) == 1
     assert con.execute("SELECT reject_reason FROM raw_rejected").fetchone()[0] == "ohlc_coherent"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("TtlTrfVal", "NaN"), ("TtlTrfVal", "-1"),
+    ("TtlNbOfTxsExctd", "1.5"), ("TtlNbOfTxsExctd", "-1"),
+])
+def test_turnover_and_trade_count_are_well_formed(field, value):
+    con = duckdb.connect()
+    con.execute("CREATE TABLE raw (" + ", ".join(f"{column} VARCHAR" for column in UDIFF_COLUMNS) + ")")
+    row = {column: "" for column in UDIFF_COLUMNS}
+    row.update(TradDt="2026-10-30", FinInstrmTp="STK", ISIN="INE000000019",
+               FinInstrmId="1", TckrSymb="BAD", SctySrs="EQ",
+               OpnPric="100", HghPric="110", LwPric="95", ClsPric="105",
+               TtlTradgVol="1000", TtlTrfVal="105000", TtlNbOfTxsExctd="250")
+    row[field] = value
+    con.execute("INSERT INTO raw VALUES (" + ",".join("?" for _ in UDIFF_COLUMNS) + ")",
+                [row[column] for column in UDIFF_COLUMNS])
+    report = quality.check_bhavcopy(con, "raw", business_date=date(2026, 10, 30), min_rows=1)
+    assert report.publishable
+    expected = "turnover_well_formed" if field == "TtlTrfVal" else "trades_well_formed"
+    assert any(result.name == expected for result in report.row_level)
+    assert quality.partition_rows(con, "raw", report) == 1
+    assert con.execute("SELECT reject_reason FROM raw_rejected").fetchone()[0] == expected
