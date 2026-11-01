@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 
 from .capabilities import require
@@ -24,13 +25,20 @@ class PaperRunManifest:
     evidence_mode: str = "paper"
 
     def canonical(self) -> bytes:
-        require(self.capability)
+        capability = require(self.capability)
+        if self.mode != capability.mode:
+            raise ValueError("manifest mode does not match capability mode")
+        if self.capability_version != capability.version:
+            raise ValueError("unknown capability version")
         if self.mode not in {"daily", "intraday", "options"}:
             raise ValueError("unknown paper mode")
         if self.evidence_mode not in {"paper", "replay"}:
             raise ValueError("invalid evidence mode")
-        if not self.run_id or not self.day or len(self.data_hash) != 64:
+        if not self.run_id or not self.day or not re.fullmatch(r"[0-9a-f]{64}", self.data_hash):
             raise ValueError("incomplete paper manifest")
+        declared = set(self.required_inputs)
+        if not set(capability.requires).issubset(declared):
+            raise ValueError("required capability inputs are missing")
         payload = {
             "run_id": self.run_id, "day": self.day, "mode": self.mode,
             "capability": self.capability, "capability_version": self.capability_version,

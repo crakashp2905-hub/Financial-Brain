@@ -16,6 +16,7 @@ class PaperCapability:
     adapter: str
     paper_only: bool = True
     requires: tuple[str, ...] = ()
+    version: str = "v1"
 
 
 CAPABILITIES = (
