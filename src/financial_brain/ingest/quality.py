@@ -68,6 +68,15 @@ ROW_PREDICATES = {
         for column in ("OpnPric", "HghPric", "LwPric", "ClsPric")),
     "volume_non_negative":
         "TRY_CAST(TtlTradgVol AS BIGINT) < 0",
+    "turnover_well_formed":
+        "NULLIF(TRIM(TtlTrfVal), '') IS NOT NULL AND "
+        "(TRY_CAST(TtlTrfVal AS DOUBLE) IS NULL OR "
+        "NOT isfinite(TRY_CAST(TtlTrfVal AS DOUBLE)) OR "
+        "TRY_CAST(TtlTrfVal AS DOUBLE) < 0)",
+    "trades_well_formed":
+        "NULLIF(TRIM(TtlNbOfTxsExctd), '') IS NOT NULL AND "
+        "(NOT regexp_matches(TRIM(TtlNbOfTxsExctd), '^[0-9]+$') OR "
+        "TRY_CAST(TtlNbOfTxsExctd AS BIGINT) < 0)",
     # A failed TRY_CAST previously made the other predicates evaluate to NULL,
     # silently passing malformed numbers into the curated layer.
     "numeric_fields_well_formed": " OR ".join(
