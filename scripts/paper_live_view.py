@@ -45,7 +45,7 @@ if __name__ == "__main__":
         except OSError:
             subprocess.Popen([sys.executable, str(Path(__file__).resolve())],
                              cwd=ROOT, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-            for attempt in range(30):
+            for _attempt in range(30):
                 try:
                     with urllib.request.urlopen(url, timeout=1) as response:
                         if b"Finance-Brain" in response.read():
