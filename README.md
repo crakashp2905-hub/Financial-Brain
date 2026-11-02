@@ -274,6 +274,14 @@ decisions made before their outcomes, which nothing else can supply.
 | 18:45 | Windows task *FinanceBrain Daily Refresh*: prices, indices, actions, announcements, features; champion picks recorded and matured cohorts resolved; F&O snapshot; losing situations proposed as hypotheses; both suggestion books sell and buy on paper; your Kite holdings synced (read only); the terminal rebuilt; desktop alerts | research DB, `data/terminal/index.html` |
 
 `fb terminal` rebuilds the one-page view at any time; open `data/terminal/index.html` in a browser.
+
+For the intraday paper viewer, run `scripts\paper_live_view.cmd` and open
+`http://127.0.0.1:8776`. The runner publishes an atomic snapshot every quote poll;
+the page refreshes every 20 seconds and shows open positions, gross unrealised P&L,
+closed trades and realised net P&L after modelled costs. Snapshots older than 90 seconds
+are marked stale. This is a local, paper-only viewer with no order endpoints.
+A runner already active before this feature was installed begins publishing on its
+next start; do not restart an active paper session just to enable the viewer.
 `fb paper-intraday --report` prints the accumulated evidence per strategy (COLLECTING until 100 trades, then
 LOSING / WINNING / NO_EDGE_DETECTED / DIFFERS_FROM_BACKTEST). `fb paper-intraday --replay DATE` replays a past day
 with the same rules, labelled `replay` and kept apart from live evidence. The watch loop has no order path. The

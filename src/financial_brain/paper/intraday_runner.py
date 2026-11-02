@@ -252,6 +252,9 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     seen_today = False
     last: dict[str, float] = {}
     opened = False
+    from .live_view import publish
+    quote_at = None
+    publish(path, eng, now=now, status="Starting paper session", polls=polls)
     while True:
         now = now_fn()
         clock = now.time()
@@ -273,11 +276,15 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             if issue != session_issue:
                 log.warning("Kite session unavailable: %s. Complete scripts\\kite_login.cmd or check API access; paper polling will retry.", issue)
             session_issue = issue
+            publish(path, eng, now=now, status="Kite session unavailable — waiting for login",
+                    polls=polls, prices=last, quote_at=quote_at)
             sleep_fn(max(poll, 60))
             continue
         except Exception as e:                          # noqa: BLE001 - a bad poll is not the end of the day
             failures += 1
             log.warning("quote failed (%s/%s): %s", failures, max_failures, str(e)[:120])
+            publish(path, eng, now=now, status="Quote polling aborted" if failures >= max_failures else "Quote unavailable — retrying",
+                    polls=polls, prices=last, quote_at=quote_at)
             if failures >= max_failures:
                 record_run(con, day, "live", started=started, finished=now.isoformat(), status="aborted",
                            symbols=len(syms), polls=polls, note=f"quotes failing: {str(e)[:120]}", version=fingerprint)
@@ -285,6 +292,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             sleep_fn(poll)
             continue
         polls += 1
+        quote_at = now
         if qcon is not None:
             try:
                 QA.store(qcon, now.replace(tzinfo=None), q)
@@ -302,6 +310,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             if sym not in eng.symbols and o.get("close"):
                 eng.add_symbol(sym, float(o["close"]), buckets.get(sym, "large"))
         if clock >= HOLIDAY_CHECK and not seen_today:
+            publish(path, eng, now=now, status="No market session detected", polls=polls,
+                    prices=last, quote_at=quote_at)
             record_run(con, day, "live", started=started, finished=now.isoformat(), status="closed",
                        symbols=len(syms), polls=polls, note="no trade printed today: holiday or no session",
                        version=fingerprint)
@@ -361,6 +371,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             if clock >= I.TIME_EXIT and not eng.closed_for_day:
                 for t in eng.end_of_day(now.replace(tzinfo=None), last):
                     save(con, t, "live")
+        publish(path, eng, now=now, status="Paper session running", polls=polls,
+                prices=last, quote_at=quote_at)
         sleep_fn(poll)
     if session_issue is None and not eng.closed_for_day:
         for t in eng.end_of_day(now_fn().replace(tzinfo=None), last):
@@ -374,6 +386,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     if session_issue is None and _has_board(con):
         BD.resolve_close(con, day, "live", last)
     out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls}
+    publish(path, eng, now=now_fn(), status="Session complete" if status == "complete" else "Session unavailable",
+            polls=polls, prices=last, quote_at=quote_at)
     write_report(con, day, "live", eng, cohort=cohort)
     return out
 

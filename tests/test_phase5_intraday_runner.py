@@ -59,6 +59,25 @@ def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger
     assert (setup / "reports" / "2026-10-06-live.md").exists()
 
 
+def test_live_view_tracks_open_then_closed_trades_without_a_database_reader(setup):
+    from financial_brain.paper.live_view import view_path
+    c = Clock(datetime(2026, 10, 6, 9, 29, tzinfo=R.IST))
+    times = iter([(9, 30), (9, 40), (10, 0), (15, 31)])
+    snapshots = []
+    path = setup / "viewer.duckdb"
+
+    def advance(seconds):
+        snapshots.append(view_path(path).read_text(encoding="utf-8"))
+        hour, minute = next(times)
+        c.t = c.t.replace(hour=hour, minute=minute)
+
+    out = R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=advance, path=path)
+    assert out["status"] == "complete"
+    assert any("1 / 0" in s for s in snapshots)
+    assert any("0 / 1" in s for s in snapshots)
+    assert "Session complete" in view_path(path).read_text(encoding="utf-8")
+
+
 def test_a_holiday_is_detected_and_the_run_ends_quietly(setup):
     c = Clock(datetime(2026, 10, 2, 9, 10, tzinfo=R.IST))
     out = R.run_live(quote_fn=fake_quotes(c, day="2026-10-02", traded=False), now_fn=c.now, sleep_fn=c.sleep,
