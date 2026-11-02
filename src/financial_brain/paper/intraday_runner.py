@@ -515,9 +515,16 @@ def evidence(con, mode: str | None = None) -> list[dict]:
 
 
 def write_report(con, day: str, mode: str, eng: I.DayEngine, *, cohort: str | None = None) -> Path:
+    from .capabilities import require
+
     REPORTS.mkdir(parents=True, exist_ok=True)
     p = REPORTS / f"{day}-{mode}{'-' + cohort if cohort else ''}.md"
+    capability_names: list[str] = ["intraday_orb", "intraday_gap"]
+    if any(strategy not in I.STRATEGIES for strategy in eng.strategies):
+        capability_names.append("intraday_custom_rules")
+    capabilities = ", ".join(require(name).name for name in dict.fromkeys(capability_names))
     lines = [f"# Paper trading {day} ({mode}, {I.VERSION}, cohort {cohort or 'default'})", "",
+             f"Paper capabilities: {capabilities} (paper-only; required market inputs are enforced by the runner.)", "",
              "Paper only: no order was placed. Costs are the intraday schedule; quoted/assumed spread is in the fills. Intraday profit is "
              "taxed as business income at your slab rate, not modelled per trade here.", ""]
     for strat, s in eng.summary().items():
