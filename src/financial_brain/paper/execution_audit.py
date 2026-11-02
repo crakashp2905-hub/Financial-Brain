@@ -15,7 +15,6 @@ def audit(run) -> dict:
     intended = sum(max(int(t.intended_shares), 0) for t in trades)
     filled = sum(max(int(t.shares), 0) for t in trades)
     costs = sum(float(t.cost_inr) for t in trades)
-    net = sum(float(row.get("net", 0.0)) for row in run.equity if row.get("net") is not None)
     return {
         "experiment_id": run.experiment_id,
         "trades": len(trades),
