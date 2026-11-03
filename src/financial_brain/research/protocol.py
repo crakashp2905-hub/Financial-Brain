@@ -5,6 +5,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 
 @dataclass(frozen=True)
@@ -31,15 +32,23 @@ class ProtocolSpec:
                 raise ValueError("schedule contains an invalid session") from exc
             if parsed.isoformat() != day:
                 raise ValueError("schedule contains an invalid session")
+        if len(set(self.schedule)) != len(self.schedule):
+            raise ValueError("schedule contains duplicate sessions")
         if not all(isinstance(value, str) and value for value in (
                 self.benchmark, self.cost_model, self.risk_limits, self.capital_inr,
                 self.entry_rule, self.mark_rule)):
             raise ValueError("protocol fields must be non-empty")
+        try:
+            capital = Decimal(self.capital_inr)
+        except InvalidOperation as exc:
+            raise ValueError("capital_inr must be a positive finite decimal") from exc
+        if not capital.is_finite() or capital <= 0:
+            raise ValueError("capital_inr must be a positive finite decimal")
         payload = {
             "strategy": self.strategy, "strategy_version": self.strategy_version,
             "schedule": sorted(set(self.schedule)), "benchmark": self.benchmark,
             "cost_model": self.cost_model, "risk_limits": self.risk_limits,
-            "capital_inr": self.capital_inr, "entry_rule": self.entry_rule,
+            "capital_inr": format(capital.normalize(), "f"), "entry_rule": self.entry_rule,
             "mark_rule": self.mark_rule,
         }
         return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()

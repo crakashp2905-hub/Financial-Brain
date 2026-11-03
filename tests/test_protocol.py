@@ -24,3 +24,16 @@ def test_protocol_rejects_empty_identity_and_bad_session():
     for invalid in ("2026-99-99", "2026-11-31", "2026-11-2 "):
         with pytest.raises(ValueError, match="invalid session"):
             _spec(schedule=(invalid,)).canonical()
+
+
+def test_protocol_rejects_duplicate_sessions_and_invalid_capital():
+    with pytest.raises(ValueError, match="duplicate sessions"):
+        _spec(schedule=("2026-11-02", "2026-11-02")).canonical()
+    for invalid in ("not money", "0", "-1", "NaN", "Infinity"):
+        with pytest.raises(ValueError, match="positive finite decimal"):
+            _spec(capital_inr=invalid).canonical()
+
+
+def test_protocol_hash_canonicalizes_equivalent_capital():
+    assert _spec(capital_inr="1000000.00").sha256 == _spec(
+        capital_inr="1000000").sha256
