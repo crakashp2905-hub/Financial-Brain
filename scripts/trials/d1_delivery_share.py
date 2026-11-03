@@ -1,5 +1,5 @@
 import json, warnings; warnings.simplefilter("ignore")
-import duckdb, pandas as pd, numpy as np
+import duckdb, pandas as pd
 from financial_brain.evaluation import batch_three as B3, delivery_share as DS, standard as S
 basis=pd.read_parquet("data/basis_contracts.parquet")
 con=duckdb.connect("data/financial_brain.duckdb",read_only=True)
