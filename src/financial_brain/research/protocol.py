@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from datetime import date
 
 
 @dataclass(frozen=True)
@@ -21,8 +22,15 @@ class ProtocolSpec:
     def canonical(self) -> bytes:
         if not self.strategy or not self.strategy_version or not self.schedule:
             raise ValueError("protocol identity and schedule are required")
-        if any(not day or len(day) != 10 for day in self.schedule):
-            raise ValueError("schedule contains an invalid session")
+        for day in self.schedule:
+            if not isinstance(day, str) or len(day) != 10:
+                raise ValueError("schedule contains an invalid session")
+            try:
+                parsed = date.fromisoformat(day)
+            except ValueError as exc:
+                raise ValueError("schedule contains an invalid session") from exc
+            if parsed.isoformat() != day:
+                raise ValueError("schedule contains an invalid session")
         if not all(isinstance(value, str) and value for value in (
                 self.benchmark, self.cost_model, self.risk_limits, self.capital_inr,
                 self.entry_rule, self.mark_rule)):

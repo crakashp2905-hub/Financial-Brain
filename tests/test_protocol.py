@@ -21,3 +21,6 @@ def test_protocol_rejects_empty_identity_and_bad_session():
         _spec(strategy="").canonical()
     with pytest.raises(ValueError, match="invalid session"):
         _spec(schedule=("not-a-day",)).canonical()
+    for invalid in ("2026-99-99", "2026-11-31", "2026-11-2 "):
+        with pytest.raises(ValueError, match="invalid session"):
+            _spec(schedule=(invalid,)).canonical()
