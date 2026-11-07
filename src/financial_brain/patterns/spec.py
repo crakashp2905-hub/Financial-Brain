@@ -171,6 +171,7 @@ class PatternEvent:
     geometry: dict[str, Any] = field(default_factory=dict)
     evidence_tier: EvidenceTier = EvidenceTier.DESCRIPTIVE
     decision_at_utc: str | None = None
+    formation_start_utc: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.status, EventState):
@@ -199,6 +200,10 @@ class PatternEvent:
                 "confirmed_at_utc", self.confirmed_at_utc
             ):
                 raise InvalidContract("earliest entry cannot precede confirmation")
+        if self.formation_start_utc is not None:
+            start = _parse_aware("formation_start_utc", self.formation_start_utc)
+            if start > known:
+                raise InvalidContract("formation_start_utc follows candidate_known_at_utc")
         if self.decision_at_utc is not None:
             decision = _parse_aware("decision_at_utc", self.decision_at_utc)
             if decision < known:
@@ -226,6 +231,7 @@ class PatternEvent:
             "data_sha256": self.data_sha256,
             "evidence_tier": self.evidence_tier.value,
             "decision_at_utc": self.decision_at_utc,
+            "formation_start_utc": self.formation_start_utc,
         }
 
     @classmethod

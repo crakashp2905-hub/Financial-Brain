@@ -217,15 +217,16 @@ def triangles(
     out: list[Formation] = []
     seen: set[tuple[Any, ...]] = set()
     n = len(bars)
+    all_pivots = causal_pivots(bars.high, bars.low, left=left, right=right)
     for e in range(window, n):
-        pre = bars.head(e + 1)
-        pivots = [p for p in causal_pivots(pre.high, pre.low, left=left, right=right) if p.index >= e - window + 1]
+        # Pivots known by e are exactly the prefix pivots; filtering the full run avoids O(n^2) recomputation.
+        pivots = [p for p in all_pivots if p.known_at_index <= e and p.index >= e - window + 1]
         highs = [p for p in pivots if p.kind == "high"]
         lows = [p for p in pivots if p.kind == "low"]
         if len(highs) < 2 or len(lows) < 2:
             continue
         h0, h1, l0, l1 = highs[0], highs[-1], lows[0], lows[-1]
-        mean = sum(pre.close[e - window + 1 : e + 1]) / window
+        mean = sum(bars.close[e - window + 1 : e + 1]) / window
         line_hi = Line.through(h0.index, h0.price, h1.index, h1.price)
         line_lo = Line.through(l0.index, l0.price, l1.index, l1.price)
         s_hi, s_lo = line_hi.slope / mean, line_lo.slope / mean
@@ -333,12 +334,12 @@ def double_extrema(
 ) -> list[Formation]:
     out: list[Formation] = []
     seen: set[tuple[Any, ...]] = set()
+    all_pivots = causal_pivots(bars.high, bars.low, left=left, right=right)
     for e in range(window, len(bars)):
-        pre = bars.head(e + 1)
-        a = atr(pre, e)
+        a = atr(bars, e)
         if a is None:
             continue
-        pivots = [p for p in causal_pivots(pre.high, pre.low, left=left, right=right) if p.index >= e - window]
+        pivots = [p for p in all_pivots if p.known_at_index <= e and p.index >= e - window]
         for kind in ("low", "high"):
             pts = [p for p in pivots if p.kind == kind]
             for p1, p2 in zip(pts, pts[1:], strict=False):
@@ -378,12 +379,12 @@ def head_shoulders(
 ) -> list[Formation]:
     out: list[Formation] = []
     seen: set[tuple[Any, ...]] = set()
+    all_pivots = causal_pivots(bars.high, bars.low, left=left, right=right)
     for e in range(window, len(bars)):
-        pre = bars.head(e + 1)
-        a = atr(pre, e)
+        a = atr(bars, e)
         if a is None:
             continue
-        pivots = [p for p in causal_pivots(pre.high, pre.low, left=left, right=right) if p.index >= e - window]
+        pivots = [p for p in all_pivots if p.known_at_index <= e and p.index >= e - window]
         for kind in ("high", "low"):
             pts = [p for p in pivots if p.kind == kind]
             opp = [p for p in pivots if p.kind != kind]
@@ -445,3 +446,22 @@ def discover(bars: Bars) -> list[Formation]:
     """Batch discovery across every detector, in canonical order (CP-0090, CP-0069)."""
     found = [f for detector in DETECTORS for f in detector(bars)]
     return sorted(found, key=lambda f: (f.candidate_known_index, f.detector, f.start_index, str(f.geometry)))
+
+
+def formation_to_dict(f: Formation) -> dict[str, Any]:
+    """Plain representation for storage and restart (CP-0145)."""
+    return {
+        "detector": f.detector,
+        "version": f.version,
+        "start_index": f.start_index,
+        "candidate_known_index": f.candidate_known_index,
+        "direction": f.direction,
+        "confirmed_index": f.confirmed_index,
+        "confirmed_direction": f.confirmed_direction,
+        "failed_index": f.failed_index,
+        "geometry": dict(f.geometry),
+    }
+
+
+def formation_from_dict(d: dict[str, Any]) -> Formation:
+    return Formation(**d)

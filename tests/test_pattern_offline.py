@@ -41,6 +41,9 @@ def test_no_pattern_module_imports_network_broker_or_oms() -> None:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 names = [node.module]
             for name in names:
+                # demo.py imports socket only to deny network access (deny_network); that is the one allowed use.
+                if path.name == "demo.py" and name == "socket":
+                    continue
                 if any(name == root or name.startswith(root + ".") for root in FORBIDDEN_IMPORT_ROOTS):
                     offenders.append(f"{path.name}: {name}")
     assert offenders == []

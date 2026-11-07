@@ -47,7 +47,7 @@ pythonpath = ["src"]
 [tool.mypy]
 # Gated in CI: the modules where a type error can send, size or judge an order. Widened as modules are cleaned.
 files = ["src/financial_brain/execution/oms", "src/financial_brain/evaluation/standard.py",
-         "src/financial_brain/research/preregistry.py"]
+         "src/financial_brain/research/preregistry.py", "src/financial_brain/patterns"]
 ignore_missing_imports = true
 follow_imports = "silent"
 

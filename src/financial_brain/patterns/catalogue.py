@@ -101,6 +101,12 @@ class CatalogueEntry:
     stats: dict[str, TypedStat]
     basis: str | None
     raw: dict[str, Any] = field(repr=False, default_factory=dict)
+    # CP-0015: every book statistic is conditional and historical; CP-0017: references stay unverified;
+    # CP-0022: thresholds and lags are unset until precisely specified.
+    claim_kind: str = "none"
+    reference: dict[str, Any] = field(default_factory=dict)
+    parameters: dict[str, Any] | None = None
+    knowledge_lag: int | None = None
 
 
 @dataclass
@@ -198,6 +204,10 @@ def _validate_entry(raw: dict[str, Any], seen: set[str], errors: list[str]) -> C
         stats=stats,
         basis=basis,
         raw=raw,
+        claim_kind="historical_conditional" if stats else "none",
+        reference={"source_title": source, "edition": None, "chapter": None, "page_unverified": True},
+        parameters=None,
+        knowledge_lag=None,
     )
 
 
@@ -251,6 +261,17 @@ def main(argv: list[str] | None = None) -> int:
 
 class PromotionRefused(ValueError):
     """A definition status was raised without evidence or out of sequence."""
+
+
+class MissingParameters(ValueError):
+    """A detector or rule needs thresholds that the catalogue never fixed."""
+
+
+def require_parameters(entry: CatalogueEntry) -> dict[str, Any]:
+    """Undefined thresholds cannot silently fall back to fitted defaults (CP-0022)."""
+    if entry.parameters is None:
+        raise MissingParameters(f"{entry.id}: parameters are unset; a detector must declare them explicitly")
+    return entry.parameters
 
 
 def promote_definition_status(entry: CatalogueEntry, target: str, evidence: str | None) -> CatalogueEntry:
