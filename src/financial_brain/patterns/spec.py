@@ -170,6 +170,7 @@ class PatternEvent:
     earliest_entry_at_utc: str | None = None
     geometry: dict[str, Any] = field(default_factory=dict)
     evidence_tier: EvidenceTier = EvidenceTier.DESCRIPTIVE
+    decision_at_utc: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.status, EventState):
@@ -198,6 +199,16 @@ class PatternEvent:
                 "confirmed_at_utc", self.confirmed_at_utc
             ):
                 raise InvalidContract("earliest entry cannot precede confirmation")
+        if self.decision_at_utc is not None:
+            decision = _parse_aware("decision_at_utc", self.decision_at_utc)
+            if decision < known:
+                raise InvalidContract("decision_at_utc precedes candidate_known_at_utc")
+            if self.confirmed_at_utc and decision < _parse_aware("confirmed_at_utc", self.confirmed_at_utc):
+                raise InvalidContract("decision cannot precede confirmation")
+            if self.earliest_entry_at_utc and decision > _parse_aware(
+                "earliest_entry_at_utc", self.earliest_entry_at_utc
+            ):
+                raise InvalidContract("decision cannot follow earliest entry")
         canonical_json(self.geometry)  # rejects NaN/inf and unsupported types
 
     def to_dict(self) -> dict[str, Any]:
@@ -214,6 +225,7 @@ class PatternEvent:
             "geometry": self.geometry,
             "data_sha256": self.data_sha256,
             "evidence_tier": self.evidence_tier.value,
+            "decision_at_utc": self.decision_at_utc,
         }
 
     @classmethod
@@ -221,6 +233,50 @@ class PatternEvent:
         return cls(**data)
 
     def payload_sha256(self) -> str:
+        return sha256_hex(canonical_json(self.to_dict()))
+
+
+@dataclass(frozen=True)
+class PatternSignal:
+    """Research observation derived from an event (CP-0039).
+
+    Deliberately has no side, quantity, price or account fields, so it cannot be
+    converted into an order intent. ``research_only`` is fixed to True.
+    """
+
+    event_id: str
+    label: str
+    research_only: bool = True
+
+    def __post_init__(self) -> None:
+        if self.research_only is not True:
+            raise InvalidContract("PatternSignal is research-only")
+        if not self.event_id or not self.label:
+            raise InvalidContract("PatternSignal requires event_id and label")
+
+
+@dataclass(frozen=True)
+class Provenance:
+    """Inputs that reproduce a result exactly (CP-0035, CP-0037)."""
+
+    catalogue_sha256: str
+    code_commit: str
+    calendar_id: str
+    config_sha256: str
+
+    @staticmethod
+    def config_hash(parameters: dict[str, Any]) -> str:
+        return sha256_hex(canonical_json(parameters))
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "catalogue_sha256": self.catalogue_sha256,
+            "code_commit": self.code_commit,
+            "calendar_id": self.calendar_id,
+            "config_sha256": self.config_sha256,
+        }
+
+    def sha256(self) -> str:
         return sha256_hex(canonical_json(self.to_dict()))
 
 

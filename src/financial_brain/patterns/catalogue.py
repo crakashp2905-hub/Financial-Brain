@@ -15,7 +15,7 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -247,6 +247,31 @@ def main(argv: list[str] | None = None) -> int:
     for message in report.errors:
         print(f"ERROR: {message}", file=sys.stderr)
     return 0 if report.ok else 1
+
+
+class PromotionRefused(ValueError):
+    """A definition status was raised without evidence or out of sequence."""
+
+
+def promote_definition_status(entry: CatalogueEntry, target: str, evidence: str | None) -> CatalogueEntry:
+    """Advance ``definition_status`` one step at a time, only with recorded evidence (CP-0021).
+
+    Text alone can only ever hold ``descriptive``. Any higher status needs a
+    non-empty evidence reference and must follow the previous status directly.
+    """
+    if target not in DEFINITION_STATUSES:
+        raise ValueError(f"unknown definition status {target!r}")
+    current = DEFINITION_STATUSES.index(entry.definition_status)
+    wanted = DEFINITION_STATUSES.index(target)
+    if wanted == current:
+        return entry
+    if wanted < current:
+        raise PromotionRefused(f"{entry.id}: cannot demote {entry.definition_status} to {target}")
+    if wanted != current + 1:
+        raise PromotionRefused(f"{entry.id}: must advance one step from {entry.definition_status}")
+    if not evidence or not evidence.strip():
+        raise PromotionRefused(f"{entry.id}: promotion to {target} requires an evidence reference")
+    return replace(entry, definition_status=target)
 
 
 if __name__ == "__main__":

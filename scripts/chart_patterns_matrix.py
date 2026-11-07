@@ -44,6 +44,7 @@ PATTERN_TESTS = [
     "tests/test_pattern_pivots.py",
     "tests/test_pattern_offline.py",
     "tests/test_pattern_matrix.py",
+    "tests/test_pattern_stream_store.py",
 ]
 
 # task_id -> (source_files, test_files, notes). Scope limits are stated in notes.
@@ -147,6 +148,96 @@ EVIDENCE: dict[str, tuple[list[str], list[str], str]] = {
         ["src/financial_brain/patterns/pivots.py"],
         ["tests/test_pattern_pivots.py"],
         "Pivot not observable before its right window closes, for the pivot primitive.",
+    ),
+    "CP-0021": (
+        ["src/financial_brain/patterns/catalogue.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "promote_definition_status advances one step at a time and requires an evidence reference; text alone stays descriptive. Not yet wired to a registry store.",
+    ),
+    "CP-0035": (
+        ["src/financial_brain/patterns/spec.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "Provenance contract with catalogue, commit, calendar and config hashes. Not yet embedded in every result writer.",
+    ),
+    "CP-0037": (
+        ["src/financial_brain/patterns/spec.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "config_hash is a canonical SHA-256 of parameters, so a parameter change changes the hash. Event streams are not yet versioned by it.",
+    ),
+    "CP-0039": (
+        ["src/financial_brain/patterns/spec.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "PatternSignal is research_only with no side, quantity or price fields.",
+    ),
+    "CP-0069": (
+        ["src/financial_brain/patterns/events_store.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "sorted_events gives canonical order independent of input order.",
+    ),
+    "CP-0070": (
+        ["src/financial_brain/patterns/streaming.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "Streaming pivots equal batch output on every prefix for 25 seeded series. Pivot primitive only.",
+    ),
+    "CP-0071": (
+        ["src/financial_brain/patterns/streaming.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "Buffer capped at left+right+1 bars (tested over 10,000 bars). No active candidates exist yet, so the 'do not delete active candidates' rule is untested.",
+    ),
+    "CP-0072": (
+        ["src/financial_brain/patterns/pivots.py"],
+        ["tests/test_pattern_stream_store.py", "tests/test_pattern_pivots.py"],
+        "Constant series, one bar, empty input and NaN are covered for the pivot primitive. Spike and missing-bar cases are not yet covered.",
+    ),
+    "CP-0121": (
+        ["src/financial_brain/patterns/events_store.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "Append-only version log keyed by (event_id, status); history is never replaced.",
+    ),
+    "CP-0126": (
+        ["src/financial_brain/patterns/events_store.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "as_of(cutoff) returns the newest version knowable by the cutoff. EXPIRED and SUPERSEDED are rejected until they have a time field.",
+    ),
+    "CP-0128": (
+        ["src/financial_brain/patterns/events_store.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "Identical re-append is a no-op; a different payload under the same key raises ConflictingVersion.",
+    ),
+    "CP-0132": (
+        ["src/financial_brain/patterns/events_store.py"],
+        ["tests/test_pattern_stream_store.py"],
+        "Canonical sort key ignores insertion order and dict iteration order.",
+    ),
+    "CP-0058": (
+        ["src/financial_brain/patterns/geometry.py"],
+        ["tests/test_pattern_geometry.py"],
+        "TolerancePolicy names one unit (atr, pct or tick) and raises when its input is missing; units are never mixed.",
+    ),
+    "CP-0060": (
+        ["src/financial_brain/patterns/geometry.py"],
+        ["tests/test_pattern_geometry.py"],
+        "horizontal_touches counts only bars at or before known_upto. Breakout-level construction is not built yet.",
+    ),
+    "CP-0061": (
+        ["src/financial_brain/patterns/geometry.py"],
+        ["tests/test_pattern_geometry.py"],
+        "Line.through rejects vertical lines; intersection_index returns None for parallel lines. Convergence and angle tests are not built yet.",
+    ),
+    "CP-0066": (
+        ["src/financial_brain/patterns/geometry.py"],
+        ["tests/test_pattern_geometry.py"],
+        "fraction() returns None when the ratio is out of bounds or the denominator is zero. Compression and pole primitives are not built yet.",
+    ),
+    "CP-0067": (
+        ["src/financial_brain/patterns/geometry.py"],
+        ["tests/test_pattern_geometry.py"],
+        "resolve_bar_ambiguity returns AMBIGUOUS when one bar spans both stop and target, and never assumes a favourable order.",
+    ),
+    "CP-0073": (
+        ["src/financial_brain/patterns/geometry.py"],
+        ["tests/test_pattern_geometry.py"],
+        "DecisionTrace records each named check with value and threshold, and accepts only when every check passes. No detector uses it yet.",
     ),
     "CP-0149": (
         ["src/financial_brain/patterns/"],

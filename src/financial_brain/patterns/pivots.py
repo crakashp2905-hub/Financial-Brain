@@ -47,13 +47,33 @@ def causal_pivots(
     n = len(highs)
     out: list[Pivot] = []
     for i in range(left, n - right):
-        lo_window = range(i - left, i)
-        hi_window = range(i + 1, i + right + 1)
-        if all(highs[i] > highs[j] for j in lo_window) and all(highs[i] >= highs[j] for j in hi_window):
+        is_high, is_low = window_pivot(highs[i - left : i + right + 1], lows[i - left : i + right + 1], left, right)
+        if is_high:
             out.append(Pivot(i, "high", float(highs[i]), i + right))
-        if all(lows[i] < lows[j] for j in lo_window) and all(lows[i] <= lows[j] for j in hi_window):
+        if is_low:
             out.append(Pivot(i, "low", float(lows[i]), i + right))
     return out
+
+
+def window_pivot(
+    highs: Sequence[float], lows: Sequence[float], left: int, right: int
+) -> tuple[bool, bool]:
+    """Classify the centre bar (position ``left``) of a window of ``left+right+1`` bars.
+
+    Shared by the batch function and :class:`financial_brain.patterns.streaming.StreamingPivots`
+    so both apply the identical rule.
+    """
+    if len(highs) != left + right + 1 or len(lows) != left + right + 1:
+        raise ValueError("window must contain exactly left + right + 1 bars")
+    lo_window = range(0, left)
+    hi_window = range(left + 1, left + right + 1)
+    is_high = all(highs[left] > highs[j] for j in lo_window) and all(
+        highs[left] >= highs[j] for j in hi_window
+    )
+    is_low = all(lows[left] < lows[j] for j in lo_window) and all(
+        lows[left] <= lows[j] for j in hi_window
+    )
+    return is_high, is_low
 
 
 def known_pivots(pivots: Sequence[Pivot], as_of_index: int) -> list[Pivot]:

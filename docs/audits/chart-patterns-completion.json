@@ -274,14 +274,18 @@
       "workstream": "01 Canonical machine-readable catalogue"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "promote_definition_status advances one step at a time and requires an evidence reference; text alone stays descriptive. Not yet wired to a registry store.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/catalogue.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0021",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Add `definition_status` with `descriptive|formalized|implemented|fixture_verified|paper_eligible` values.",
       "workstream": "01 Canonical machine-readable catalogue"
     },
@@ -466,14 +470,18 @@
       "workstream": "02 Pattern contract, types and provenance"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Provenance contract with catalogue, commit, calendar and config hashes. Not yet embedded in every result writer.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/spec.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0035",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Define model-level provenance for catalogue version, source OHLC hash, code commit, calendar and config.",
       "workstream": "02 Pattern contract, types and provenance"
     },
@@ -490,14 +498,18 @@
       "workstream": "02 Pattern contract, types and provenance"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "config_hash is a canonical SHA-256 of parameters, so a parameter change changes the hash. Event streams are not yet versioned by it.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/spec.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0037",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Require frozen configuration hashes for each event stream.",
       "workstream": "02 Pattern contract, types and provenance"
     },
@@ -520,14 +532,18 @@
       "workstream": "02 Pattern contract, types and provenance"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "PatternSignal is research_only with no side, quantity or price fields.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/spec.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0039",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Define `PatternSignal` as optional research output, distinct from an `OrderIntent`.",
       "workstream": "02 Pattern contract, types and provenance"
     },
@@ -760,14 +776,18 @@
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "TolerancePolicy names one unit (atr, pct or tick) and raises when its input is missing; units are never mixed.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/geometry.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0058",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_geometry.py",
+      "test_files": [
+        "tests/test_pattern_geometry.py"
+      ],
       "title": "Implement ATR-normalized, percentage and tick-aware level proximity as separate explicit policies.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
@@ -784,26 +804,34 @@
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "horizontal_touches counts only bars at or before known_upto. Breakout-level construction is not built yet.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/geometry.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0060",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_geometry.py",
+      "test_files": [
+        "tests/test_pattern_geometry.py"
+      ],
       "title": "Implement horizontal support and resistance bands with observed touch counts.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Line.through rejects vertical lines; intersection_index returns None for parallel lines. Convergence and angle tests are not built yet.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/geometry.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0061",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_geometry.py",
+      "test_files": [
+        "tests/test_pattern_geometry.py"
+      ],
       "title": "Implement line intersections, convergence, divergence, angle and slope-in-time tests.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
@@ -856,26 +884,34 @@
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "fraction() returns None when the ratio is out of bounds or the denominator is zero. Compression and pole primitives are not built yet.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/geometry.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0066",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_geometry.py",
+      "test_files": [
+        "tests/test_pattern_geometry.py"
+      ],
       "title": "Implement compression, range-width, pole-height and retracement primitives in consistent price fractions.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "resolve_bar_ambiguity returns AMBIGUOUS when one bar spans both stop and target, and never assumes a favourable order.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/geometry.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0067",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_geometry.py",
+      "test_files": [
+        "tests/test_pattern_geometry.py"
+      ],
       "title": "Implement intrabar OHLC ambiguity detector for competing breakout/stop/target levels.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
@@ -892,62 +928,83 @@
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "sorted_events gives canonical order independent of input order.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/events_store.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0069",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Implement deterministic event ordering and stable tie-breaking across simultaneous candidates.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Streaming pivots equal batch output on every prefix for 25 seeded series. Pivot primitive only.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/streaming.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0070",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Implement stream-based incremental updates that consume one completed bar at a time.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Buffer capped at left+right+1 bars (tested over 10,000 bars). No active candidates exist yet, so the 'do not delete active candidates' rule is untested.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/streaming.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0071",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Implement bounded-memory lookback windows without deleting still-active candidates.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Constant series, one bar, empty input and NaN are covered for the pivot primitive. Spike and missing-bar cases are not yet covered.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/pivots.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0072",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py tests/test_pattern_pivots.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py",
+        "tests/test_pattern_pivots.py"
+      ],
       "title": "Add zero-division, one-bar, constant-price, spike, missing-bar and split tests.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "DecisionTrace records each named check with value and threshold, and accepts only when every check passes. No detector uses it yet.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/geometry.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0073",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_geometry.py",
+      "test_files": [
+        "tests/test_pattern_geometry.py"
+      ],
       "title": "Add a serializable geometric debug trace for each acceptance/rejection decision.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
@@ -1516,14 +1573,18 @@
       "workstream": "07 Candlesticks, gaps and weekly context"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Append-only version log keyed by (event_id, status); history is never replaced.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/events_store.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0121",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Build append-only candidate event stream with new state transitions instead of in-place replacement.",
       "workstream": "08 Event lifecycle, replay and auditing"
     },
@@ -1576,14 +1637,18 @@
       "workstream": "08 Event lifecycle, replay and auditing"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "as_of(cutoff) returns the newest version knowable by the cutoff. EXPIRED and SUPERSEDED are rejected until they have a time field.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/events_store.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0126",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Provide replay API with `as_of` filtering and immutable event histories.",
       "workstream": "08 Event lifecycle, replay and auditing"
     },
@@ -1600,14 +1665,18 @@
       "workstream": "08 Event lifecycle, replay and auditing"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Identical re-append is a no-op; a different payload under the same key raises ConflictingVersion.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/events_store.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0128",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Reject duplicate event IDs with conflicting payload hashes.",
       "workstream": "08 Event lifecycle, replay and auditing"
     },
@@ -1648,14 +1717,18 @@
       "workstream": "08 Event lifecycle, replay and auditing"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Canonical sort key ignores insertion order and dict iteration order.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/events_store.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0132",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_stream_store.py",
+      "test_files": [
+        "tests/test_pattern_stream_store.py"
+      ],
       "title": "Implement consistent event ordering on same session for multiple detectors.",
       "workstream": "08 Event lifecycle, replay and auditing"
     },
