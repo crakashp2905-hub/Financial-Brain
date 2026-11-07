@@ -45,6 +45,7 @@ PATTERN_TESTS = [
     "tests/test_pattern_offline.py",
     "tests/test_pattern_matrix.py",
     "tests/test_pattern_stream_store.py",
+    "tests/test_pattern_detectors.py",
 ]
 
 # task_id -> (source_files, test_files, notes). Scope limits are stated in notes.
@@ -141,7 +142,7 @@ EVIDENCE: dict[str, tuple[list[str], list[str], str]] = {
     ),
     "CP-0136": (
         ["src/financial_brain/patterns/pivots.py"],
-        ["tests/test_pattern_pivots.py"],
+        ["tests/test_pattern_pivots.py", "tests/test_pattern_detectors.py"],
         "Prefix invariance for the pivot primitive over 40 seeded random series. Covers the primitive only, not detectors.",
     ),
     "CP-0138": (
@@ -216,7 +217,7 @@ EVIDENCE: dict[str, tuple[list[str], list[str], str]] = {
     ),
     "CP-0060": (
         ["src/financial_brain/patterns/geometry.py"],
-        ["tests/test_pattern_geometry.py"],
+        ["tests/test_pattern_geometry.py", "tests/test_pattern_detectors.py"],
         "horizontal_touches counts only bars at or before known_upto. Breakout-level construction is not built yet.",
     ),
     "CP-0061": (
@@ -238,6 +239,111 @@ EVIDENCE: dict[str, tuple[list[str], list[str], str]] = {
         ["src/financial_brain/patterns/geometry.py"],
         ["tests/test_pattern_geometry.py"],
         "DecisionTrace records each named check with value and threshold, and accepts only when every check passes. No detector uses it yet.",
+    ),
+    "CP-0042": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Bars rejects OHLC inequality and non-finite values; quarantine_rows counts rejections by reason. Read-only source adapter is not built.',
+    ),
+    "CP-0059": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Two-point trendlines through the first and last known pivots of each type. Robust regression alternative is not built.',
+    ),
+    "CP-0062": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Head-and-shoulders neckline built from causally known intervening extrema; undefined necklines are skipped.',
+    ),
+    "CP-0074": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Rectangle candidate with flat top and bottom, minimum touches and bounded range fraction. Duration is a fixed window, not exchange-session aware.',
+    ),
+    "CP-0075": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Direction stays neutral until a close breaks either side; both upward and downward confirmation are recorded.',
+    ),
+    "CP-0076": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Ascending triangle: flat upper line, rising lows, two-touch minimum, converging check.',
+    ),
+    "CP-0077": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Descending triangle: flat lower line, falling highs; opposite breakouts are recorded, not discarded.',
+    ),
+    "CP-0078": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Symmetric triangle requires falling highs, rising lows and convergence; parallel and diverging fits are rejected.',
+    ),
+    "CP-0079": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Breakout confirmed only on a close beyond the line. Optional delayed re-test rule is not built.',
+    ),
+    "CP-0080": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Bullish and bearish flags with predeclared pole length, minimum pole return and retracement limit. The pole ends before the flag starts.',
+    ),
+    "CP-0082": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Rising and falling wedges require same-sign converging lines. Explanatory-quality rejection is not built.',
+    ),
+    "CP-0086": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Failed candidates are recorded with failed_index; confirmation in either direction is supported.',
+    ),
+    "CP-0090": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'discover() runs every detector and returns candidates, confirmations and failures in canonical order.',
+    ),
+    "CP-0091": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Tentative double bottom from two known lows with a neckline; unconfirmed and failed candidates are kept.',
+    ),
+    "CP-0092": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Confirmed double bottom on a close above the neckline, with recognition and confirmation timestamped separately.',
+    ),
+    "CP-0093": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Double top mirror with tentative and confirmed states. No success statistic is computed.',
+    ),
+    "CP-0095": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Head-and-shoulders bottom needs prior downtrend on known bars, symmetric shoulders, and emits only when the right shoulder is known.',
+    ),
+    "CP-0096": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Head-and-shoulders top with neckline break; earlier candidates are not rewritten.',
+    ),
+    "CP-0107": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Negative fixtures: strong trend is not a rectangle; flat series yields no triangles or double extrema.',
+    ),
+    "CP-0137": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        "Appending a large future rally and crash leaves earlier formations' as-of views unchanged.",
+    ),
+    "CP-0140": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_detectors.py'],
+        'Candidates that never confirm stay in the output as CANDIDATE or FAILED, so denominators include them.',
     ),
     "CP-0149": (
         ["src/financial_brain/patterns/"],

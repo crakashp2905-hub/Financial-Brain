@@ -1,5 +1,5 @@
 {
-  "commit": "713a40246d163a4af39f7b845fc10a9f43b1d71a",
+  "commit": "7598c3c11ffe9d6251737d4e06cb3cc23e5b3064",
   "dependency_sha256": {
     "pyproject.toml": "57ab3c32371f0bbafeca764ab0beeddcdfa75e31f8aae2520208748083417f50",
     "requirements-lock.txt": "47f613e2e061e88a22a3a2e996c581e7fcf1c42db2f3b468183b915345abf852"
@@ -10,14 +10,8 @@
     "docs/audits/pattern-baseline.json",
     "ocs/audits/chart-patterns-completion.json",
     "scripts/chart_patterns_matrix.py",
-    "src/financial_brain/patterns/catalogue.py",
-    "src/financial_brain/patterns/events_store.py",
-    "src/financial_brain/patterns/geometry.py",
-    "src/financial_brain/patterns/pivots.py",
-    "src/financial_brain/patterns/spec.py",
-    "src/financial_brain/patterns/streaming.py",
-    "tests/test_pattern_geometry.py",
-    "tests/test_pattern_stream_store.py"
+    "src/financial_brain/patterns/detectors.py",
+    "tests/test_pattern_detectors.py"
   ],
   "platform": "win32",
   "python": "3.13.5"

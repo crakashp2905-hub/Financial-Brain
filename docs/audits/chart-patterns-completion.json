@@ -576,14 +576,18 @@
       "workstream": "03 Market data, calendars and security identity"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Bars rejects OHLC inequality and non-finite values; quarantine_rows counts rejections by reason. Read-only source adapter is not built.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0042",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Validate OHLC inequalities, positive prices, finite volume and strictly increasing bar sessions.",
       "workstream": "03 Market data, calendars and security identity"
     },
@@ -792,14 +796,18 @@
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Two-point trendlines through the first and last known pivots of each type. Robust regression alternative is not built.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0059",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement robust trendline fitting with two-point and predeclared robust-regression alternatives.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
@@ -812,9 +820,10 @@
       ],
       "status": "implemented",
       "task_id": "CP-0060",
-      "test_command": "python -m pytest -q tests/test_pattern_geometry.py",
+      "test_command": "python -m pytest -q tests/test_pattern_geometry.py tests/test_pattern_detectors.py",
       "test_files": [
-        "tests/test_pattern_geometry.py"
+        "tests/test_pattern_geometry.py",
+        "tests/test_pattern_detectors.py"
       ],
       "title": "Implement horizontal support and resistance bands with observed touch counts.",
       "workstream": "04 Causal swing points and geometric primitives"
@@ -836,14 +845,18 @@
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Head-and-shoulders neckline built from causally known intervening extrema; undefined necklines are skipped.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0062",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement neckline and intermediate-peak/valley construction from causally known pivots.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
@@ -1009,86 +1022,114 @@
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Rectangle candidate with flat top and bottom, minimum touches and bounded range fraction. Duration is a fixed window, not exchange-session aware.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0074",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement rectangle-top candidate formation with flat resistance and bounded congestion.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Direction stays neutral until a close breaks either side; both upward and downward confirmation are recorded.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0075",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement rectangle-bottom candidate and separate upside/downside confirmed breakouts.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Ascending triangle: flat upper line, rising lows, two-touch minimum, converging check.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0076",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement ascending-triangle detector with flat upper boundary and rising known swing lows.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Descending triangle: flat lower line, falling highs; opposite breakouts are recorded, not discarded.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0077",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement descending-triangle detector with flat lower boundary and falling known swing highs.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Symmetric triangle requires falling highs, rising lows and convergence; parallel and diverging fits are rejected.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0078",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement symmetrical triangle with converging upper/lower slopes.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Breakout confirmed only on a close beyond the line. Optional delayed re-test rule is not built.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0079",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement support/resistance breakout confirmation at bar close with optional delayed re-test rule.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Bullish and bearish flags with predeclared pole length, minimum pole return and retracement limit. The pole ends before the flag starts.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0080",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement bullish and bearish flag candidates with predeclared pole, retracement and short duration.",
       "workstream": "05 Range and continuation detectors"
     },
@@ -1105,14 +1146,18 @@
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Rising and falling wedges require same-sign converging lines. Explanatory-quality rejection is not built.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0082",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement ascending and descending wedge geometry with slope and convergence constraints.",
       "workstream": "05 Range and continuation detectors"
     },
@@ -1153,14 +1198,18 @@
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Failed candidates are recorded with failed_index; confirmation in either direction is supported.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0086",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement alternate breakout directions and failed-breakout events for each range family.",
       "workstream": "05 Range and continuation detectors"
     },
@@ -1201,50 +1250,66 @@
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "discover() runs every detector and returns candidates, confirmations and failures in canonical order.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0090",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement a single batch discovery interface returning all candidate, confirmed and failed formations.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Tentative double bottom from two known lows with a neckline; unconfirmed and failed candidates are kept.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0091",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement tentative double-bottom formation with two past-observed lows and mid-peak.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Confirmed double bottom on a close above the neckline, with recognition and confirmation timestamped separately.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0092",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement confirmed double-bottom break over causal intermediate peak.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Double top mirror with tentative and confirmed states. No success statistic is computed.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0093",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement tentative and confirmed double-top mirror detector.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
@@ -1261,26 +1326,34 @@
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Head-and-shoulders bottom needs prior downtrend on known bars, symmetric shoulders, and emits only when the right shoulder is known.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0095",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement head-and-shoulders bottom with prior downtrend, symmetric shoulders and a causal neckline.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Head-and-shoulders top with neckline break; earlier candidates are not rewritten.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0096",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement head-and-shoulders top with prior uptrend and inverse neckline logic.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
@@ -1405,14 +1478,18 @@
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Negative fixtures: strong trend is not a rectangle; flat series yields no triangles or double extrema.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0107",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Implement negative fixtures showing that a vaguely similar formation is not sufficient.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
@@ -1777,22 +1854,27 @@
       ],
       "status": "implemented",
       "task_id": "CP-0136",
-      "test_command": "python -m pytest -q tests/test_pattern_pivots.py",
+      "test_command": "python -m pytest -q tests/test_pattern_pivots.py tests/test_pattern_detectors.py",
       "test_files": [
-        "tests/test_pattern_pivots.py"
+        "tests/test_pattern_pivots.py",
+        "tests/test_pattern_detectors.py"
       ],
       "title": "Add prefix-invariance property test: output at t equals full-run output restricted to t.",
       "workstream": "09 Causality, correctness and adversarial tests"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Appending a large future rally and crash leaves earlier formations' as-of views unchanged.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0137",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Add future-perturbation test: append large future rally/crash without altering earlier events.",
       "workstream": "09 Causality, correctness and adversarial tests"
     },
@@ -1825,14 +1907,18 @@
       "workstream": "09 Causality, correctness and adversarial tests"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Candidates that never confirm stay in the output as CANDIDATE or FAILED, so denominators include them.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0140",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_detectors.py",
+      "test_files": [
+        "tests/test_pattern_detectors.py"
+      ],
       "title": "Add candidate-vs-confirmation test with unconfirmed lookalikes.",
       "workstream": "09 Causality, correctness and adversarial tests"
     },
