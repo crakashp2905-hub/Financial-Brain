@@ -1916,6 +1916,26 @@ EVIDENCE: dict[str, tuple[list[str], list[str], str]] = {
         ['tests/test_pattern_wave9_realism.py'],
         'bars_completed_by returns only bars completed by the query time, in completion order; intraday and weekly examples; naive times refused.',
     ),
+    "CP-0151": (
+        ['scripts/mutation_patterns.py', 'docs/audits/mutation-report.json'],
+        ['tests/test_pattern_wave9_final.py'],
+        'Eight mutants across pivots, breakouts, failures, causality, completion time and calendar; all eight are killed. Report in docs/audits/mutation-report.json.',
+    ),
+    "CP-0156": (
+        ['src/financial_brain/patterns/pit_universe.py'],
+        ['tests/test_pattern_wave9_final.py'],
+        'valid_universe = equity snapshot tradable on the date AND stock-futures activity that day; read-only inputs; non-F&O names flagged or removed as requested.',
+    ),
+    "CP-0262": (
+        ['src/financial_brain/patterns/chart_svg.py'],
+        ['tests/test_pattern_wave9_final.py'],
+        'Static SVG candle chart: one candle per bar at 20 and 500 bars, fixed aspect ratio, escaped title, research label. The interactive Patterns tab is CP-0234 and is not built.',
+    ),
+    "CP-0376": (
+        ['docs/audits/pattern-release-metadata.json'],
+        ['tests/test_pattern_wave9_final.py'],
+        'Wheel built with python -m build (contains wave-9 modules); metadata records wheel SHA-256 and fixture seed hashes. Built on Windows; Linux smoke test pending CI.',
+    ),
     "CP-0149": (
         ["src/financial_brain/patterns/"],
         ["tests/test_pattern_offline.py"],

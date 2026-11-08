@@ -8,9 +8,9 @@ Platform: Windows 11, Python 3.13.5. Each row is one captured run on the wave-9 
 |---|---|---|
 | `python -m ruff check src tests` | 0 | All checks passed |
 | `python -m mypy` | 0 | Success: no issues found in 43 source files |
-| `python scripts/chart_patterns_matrix.py --check` | 0 | 374 of 406 items implemented, 23 incomplete, 9 not applicable with evidence |
+| `python scripts/chart_patterns_matrix.py --check` | 0 | 378 of 406 items implemented, 19 incomplete, 9 not applicable with evidence |
 | `python -m pytest -q tests/test_pattern_*.py` | 0 | 461 passed (includes 133 wave-9 tests) |
-| `python -m pytest -q` (full existing suite) | 0 | 2137 passed, 1 skipped (pre-existing), 730 warnings, 618 s |
+| `python -m pytest -q` (full existing suite) | 0 | 2158 passed, 1 skipped (pre-existing), 730 warnings, 758 s; see docs/audits/pattern-test-log.txt |
 | `python scripts/bench_patterns.py` | 0 | Per-symbol 0.059 s; projected full scan 29 s against a 600 s budget; decision python_sufficient (base commit) |
 | `python -m financial_brain.patterns.demo --offline` | 0 | SYNTHETIC; status NOT_EDGE_CONFIRMED |
 | `python scripts/build_pattern_fixtures.py` | 0 | 18 family examples written and checked |

@@ -2390,14 +2390,19 @@
       "workstream": "09 Causality, correctness and adversarial tests"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Eight mutants across pivots, breakouts, failures, causality, completion time and calendar; all eight are killed. Report in docs/audits/mutation-report.json.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "scripts/mutation_patterns.py",
+        "docs/audits/mutation-report.json"
+      ],
+      "status": "implemented",
       "task_id": "CP-0151",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_final.py",
+      "test_files": [
+        "tests/test_pattern_wave9_final.py"
+      ],
       "title": "Add mutation tests for pivot, breakout, calendar and event-time comparisons.",
       "workstream": "09 Causality, correctness and adversarial tests"
     },
@@ -2466,14 +2471,18 @@
       "workstream": "10 Offline research and study protocol"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "valid_universe = equity snapshot tradable on the date AND stock-futures activity that day; read-only inputs; non-F&O names flagged or removed as requested.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/pit_universe.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0156",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_final.py",
+      "test_files": [
+        "tests/test_pattern_wave9_final.py"
+      ],
       "title": "Define valid universe using historical point-in-time eligibility and F&O membership.",
       "workstream": "10 Offline research and study protocol"
     },
@@ -4138,14 +4147,18 @@
       "workstream": "16 Visual chart overlays and reproducible explanation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Static SVG candle chart: one candle per bar at 20 and 500 bars, fixed aspect ratio, escaped title, research label. The interactive Patterns tab is CP-0234 and is not built.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/chart_svg.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0262",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_final.py",
+      "test_files": [
+        "tests/test_pattern_wave9_final.py"
+      ],
       "title": "Provide readable charts for 20 bars and 500 bars without geometry distortion.",
       "workstream": "16 Visual chart overlays and reproducible explanation"
     },
@@ -5939,14 +5952,18 @@
       "workstream": "24 Release packaging, reliability and offline production behavior"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Wheel built with python -m build (contains wave-9 modules); metadata records wheel SHA-256 and fixture seed hashes. Built on Windows; Linux smoke test pending CI.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/audits/pattern-release-metadata.json"
+      ],
+      "status": "implemented",
       "task_id": "CP-0376",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_final.py",
+      "test_files": [
+        "tests/test_pattern_wave9_final.py"
+      ],
       "title": "Generate versioned release artifacts (wheel, docs, fixture seed metadata).",
       "workstream": "24 Release packaging, reliability and offline production behavior"
     },

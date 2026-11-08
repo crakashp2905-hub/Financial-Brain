@@ -17,6 +17,7 @@
 - Wave 9: optional lifecycle fields (invalidation and expiry reasons, observation and generation times) that leave existing hashes unchanged; resumable scans; detection traces.
 - Wave 9: read-only DuckDB and Parquet bar source, workstation view model, basket diagnostics, point-in-time controls, asynchronous completion, session boxes, capacity-adjusted turnover.
 - Wave 9: family example fixtures, pinned snapshots, schemas for catalogue and events, migration policy, `fb patterns` subcommand, operator and authoring guides.
-- Completion matrix: 374 of 406 checklist items implemented, 23 incomplete, 9 not applicable with benchmark evidence.
+- Wave 9 (final): mutation checks (8 of 8 killed), point-in-time valid universe (equity snapshot and stock-futures activity), static SVG charts, wheel build with release metadata, branch coverage 91% on the pattern package.
+- Completion matrix: 378 of 406 checklist items implemented, 19 incomplete, 9 not applicable with benchmark evidence.
 
 Known gaps: see `docs/audits/PATTERN-FINAL-GATES.md` and the incomplete rows in `docs/audits/chart-patterns-completion.json`.
