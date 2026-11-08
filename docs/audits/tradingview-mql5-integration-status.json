@@ -1,0 +1,1150 @@
+{
+  "addendum": "Financial_Brain_TradingView_MQL5_Algorithm_Research_Integration_2026-11-08",
+  "bar": "[##########################----] 109/128 (85.2%)",
+  "by_wave": {
+    "W1": {
+      "done": 31,
+      "total": 32
+    },
+    "W2": {
+      "done": 10,
+      "total": 11
+    },
+    "W3": {
+      "done": 28,
+      "total": 30
+    },
+    "W4": {
+      "done": 13,
+      "total": 21
+    },
+    "W5": {
+      "done": 20,
+      "total": 23
+    },
+    "W6": {
+      "done": 7,
+      "total": 11
+    }
+  },
+  "counts": {
+    "implemented": 90,
+    "not_applicable": 2,
+    "open": 19,
+    "verified_existing": 17
+  },
+  "done": 109,
+  "tasks": [
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-001",
+      "notes": "Registry validator rejects missing provenance and duplicate IDs.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-002",
+      "notes": "Indicators cannot be labelled executable; source types are fixed.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-003",
+      "notes": "TradingView open-source label recorded as reference_only; licence needs a reference.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-004",
+      "notes": "All MQL5 entries are reference_only unless a licence is recorded.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-005",
+      "notes": "A test fails if Pine or MQL5 source markers appear in runtime modules.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-006",
+      "notes": "docs/sources/CLEAN-ROOM.md states the rules; the test enforces the markers.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-007",
+      "notes": "Vendor figures render only as SOURCE_CLAIM; edge labels are refused.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-008",
+      "notes": "Registry hash changes when any source snapshot field changes.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-009",
+      "notes": "Each entry carries a family; families are listed with their overlaps.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-010",
+      "notes": "Unsuitable market tags are validated; every external item is paper-only.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py",
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-011",
+      "notes": "Registry and strategies load with the network denied; no site is needed.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-012",
+      "notes": "AlgorithmSpec validates fields, versions and sources.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-013",
+      "notes": "BarClock: earliest fill is always the bar after the signal.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-014",
+      "notes": "OrderSpec rejects incompatible kinds, prices and expiries.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-015",
+      "notes": "Cash equity cannot be shorted in a spec.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-016",
+      "notes": "CostModel with version; attach_cost_version refuses empty results.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-017",
+      "notes": "ReferenceBehaviorFixture checks signal and decision indices.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-018",
+      "notes": "Parity is fixed to BEHAVIOUR_ADAPTATION; exact parity is refused.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-019",
+      "notes": "spec_sha256 is canonical and order-independent.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py",
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-020",
+      "notes": "Higher-timeframe bars count only after they have closed.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-021",
+      "notes": "Missing, zero or non-finite inputs return ABSTAIN.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-022",
+      "notes": "Cash baseline returns zero; alpha vs cash is computed explicitly.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_pivots.py"
+      ],
+      "id": "ALG-023",
+      "notes": "causal_pivots: a pivot is known only after its right-hand bars.",
+      "status": "verified_existing",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-024",
+      "notes": "significant_swing is ATR-scaled and dimensionless.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-025",
+      "notes": "HH/HL/LH/LL labels use confirmed pivots; prefix-invariant.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-026",
+      "notes": "Trend state from labels; higher timeframe must be closed.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-027",
+      "notes": "weekly_completed never reports a week before its Friday.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-028",
+      "notes": "Independent structure and entry clocks are not yet separate objects.",
+      "status": "open",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-029",
+      "notes": "dedupe_events keys on lineage, timeframe and pivot identity; replays idempotent.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_pivots.py"
+      ],
+      "id": "ALG-030",
+      "notes": "EventLog is append-only with timestamped history.",
+      "status": "verified_existing",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-031",
+      "notes": "PivotMark keeps the bar index and the recognised-at bar separately.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-032",
+      "notes": "structure_state labels flat, ranging, volatile and gapping sequences.",
+      "status": "implemented",
+      "wave": "W1"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_trend_denominator.py"
+      ],
+      "id": "ALG-033",
+      "notes": "require_prior_trend keeps double tops only after a prior uptrend.",
+      "status": "implemented",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_trend_denominator.py"
+      ],
+      "id": "ALG-034",
+      "notes": "require_prior_trend keeps double bottoms only after a prior downtrend.",
+      "status": "implemented",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_detectors.py"
+      ],
+      "id": "ALG-035",
+      "notes": "double_extrema is ATR-aware and duration bounded.",
+      "status": "verified_existing",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_detectors.py"
+      ],
+      "id": "ALG-036",
+      "notes": "head_shoulders requires the right shoulder to be known before emitting.",
+      "status": "verified_existing",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_detectors.py"
+      ],
+      "id": "ALG-037",
+      "notes": "head_shoulders_bottom mirrors the top rules.",
+      "status": "verified_existing",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-038",
+      "notes": "The locked state is not in the lifecycle table yet.",
+      "status": "open",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-039",
+      "notes": "Confirmation uses closes; a wick alone never confirms (test added).",
+      "status": "implemented",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_trend_denominator.py"
+      ],
+      "id": "ALG-040",
+      "notes": "formation_denominator reports formed, confirmed, failed and open counts; rejected lookalikes stay in formed.",
+      "status": "implemented",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-041",
+      "notes": "One event per pivot identity; restart-resistant through dedupe.",
+      "status": "implemented",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
+      "id": "ALG-042",
+      "notes": "levels() never returns a profit target.",
+      "status": "verified_existing",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_detectors.py",
+        "tests/test_pattern_wave9_detectors.py"
+      ],
+      "id": "ALG-043",
+      "notes": "Prefix invariance: later bars never change emitted events.",
+      "status": "verified_existing",
+      "wave": "W2"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-044",
+      "notes": "donchian_upper uses bars strictly before t.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-045",
+      "notes": "basic_breakouts: long-only, reproducible reference level.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-046",
+      "notes": "Turtle 20/10 constants are fixed and not tuned.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-047",
+      "notes": "ATR-N sizing fails closed for bad stops or unfillable lots.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-048",
+      "notes": "two_break_confirmation is a separate, labelled hypothesis.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-049",
+      "notes": "trend_filtered_breakouts is a subset control, never a claimed improvement.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-050",
+      "notes": "ATR threshold uses past bars only; exact threshold tested.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-051",
+      "notes": "Keltner/EMA/ADX/volume family not implemented; needs a frozen grid.",
+      "status": "open",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-052",
+      "notes": "gap_aware_fill fills at the open when a gap crosses the trigger.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-053",
+      "notes": "incremental_pnl gives a paired difference against a baseline.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py",
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-054",
+      "notes": "NSE clock; foreign session keys are refused by the spec.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-055",
+      "notes": "opening_range freezes only after the last minute of the window closes.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-056",
+      "notes": "oco_intents and run_oco cancel the opposite side on entry.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-057",
+      "notes": "run_oco flattens at the end-of-session time; no overnight carry.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-058",
+      "notes": "range_excluded abstains on wide ranges and opening gaps.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-059",
+      "notes": "retest_signal requires a retest strictly after confirmation.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-060",
+      "notes": "failed_breakout_signal requires penetration then reentry.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-061",
+      "notes": "placebo_signal_times gives the same clock with no geometry.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-062",
+      "notes": "fill_if_available returns no fill for halts or zero volume.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-063",
+      "notes": "ist_clock converts UTC to IST and refuses naive timestamps.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-064",
+      "notes": "rolling_zscore uses only the bars before t.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-065",
+      "notes": "session_vwap resets at each session.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-066",
+      "notes": "vwap_rejection needs closed rejection bars.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-067",
+      "notes": "RSI/Keltner/MACD challenger not implemented.",
+      "status": "open",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-068",
+      "notes": "regime_abstain uses lagged returns only.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-069",
+      "notes": "pair_spread_z fits the hedge ratio on training data only.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-070",
+      "notes": "pair_is_tradable rejects cash equity short legs.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-071",
+      "notes": "next_size_after_loss never increases size.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-072",
+      "notes": "family_overlap_note keeps the K7 null visible.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_session_mean.py"
+      ],
+      "id": "ALG-073",
+      "notes": "after_cost_utility shows gross, net and turnover together.",
+      "status": "implemented",
+      "wave": "W3"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-074",
+      "notes": "Source-attributed strategy cards in the trader UI are not built.",
+      "status": "open",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-075",
+      "notes": "stale_check flags entries older than the allowed age.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-076",
+      "notes": "Neckline and breakout overlays with known_at are not drawn yet.",
+      "status": "open",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-077",
+      "notes": "Visual state separation in the UI is not built.",
+      "status": "open",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-078",
+      "notes": "Monetary display with tick and lot conventions is not built.",
+      "status": "open",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-079",
+      "notes": "Radar filters are not built in the UI.",
+      "status": "open",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-080",
+      "notes": "Compare panel is not built.",
+      "status": "open",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-081",
+      "notes": "Strategies package has no route to the order system; boundary test.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-082",
+      "notes": "Why-not-trade logging for algorithm events is not built.",
+      "status": "open",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-083",
+      "notes": "Offline UI demo for these algorithms is not built.",
+      "status": "open",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-084",
+      "notes": "realised_pnl raises NoFillRecord without a fill.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-085",
+      "notes": "next_open_fill_index: signal fills at the next bar, never earlier.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-086",
+      "notes": "resolve_intrabar takes the adverse branch when both levels hit.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-087",
+      "notes": "Gap through stop fills at the adverse open; tick rounding is adverse.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-088",
+      "notes": "participation_fill caps by volume and reports unfilled quantity.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-089",
+      "notes": "must_flat forces futures flat at expiry and intraday products at close.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-090",
+      "notes": "viewer_summary never sums open gross MTM with closed net.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_pivots.py"
+      ],
+      "id": "ALG-091",
+      "notes": "paper.Ledger double-entry identity exists in the paper package.",
+      "status": "verified_existing",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-092",
+      "notes": "coverage_score reports the exact denominator.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-093",
+      "notes": "usable_for_paper is false without instrument, cost or spec identity.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_structure_exec.py"
+      ],
+      "id": "ALG-094",
+      "notes": "monte_carlo_drill is repeatable under a fixed seed.",
+      "status": "implemented",
+      "wave": "W4"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-095",
+      "notes": "Every family declares null, alternative, sample and complexity.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-096",
+      "notes": "effective_trials de-duplicates by spec hash.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-097",
+      "notes": "Matched controls for 12-1 momentum, 52-week high, volatility and sector are not built for these families.",
+      "status": "open",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-098",
+      "notes": "cohort_report keeps pre- and post-confirmation cohorts separate.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_study.py"
+      ],
+      "id": "ALG-099",
+      "notes": "Purged split and embargo exist in patterns/study.py.",
+      "status": "verified_existing",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-100",
+      "notes": "paired_incremental uses net differences for ranking.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_study.py"
+      ],
+      "id": "ALG-101",
+      "notes": "Cluster block bootstrap exists in patterns/study.py.",
+      "status": "verified_existing",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-102",
+      "notes": "Benjamini-Hochberg exists; PBO warning threshold is not implemented.",
+      "status": "open",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_study.py"
+      ],
+      "id": "ALG-103",
+      "notes": "Trial budget guard refuses protected real-data trials in CI.",
+      "status": "verified_existing",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_learning_agent.py"
+      ],
+      "id": "ALG-104",
+      "notes": "Model registry versions are immutable; challengers cannot overwrite.",
+      "status": "verified_existing",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
+      "id": "ALG-105",
+      "notes": "scheduled_retrain uses matured labels only.",
+      "status": "verified_existing",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-106",
+      "notes": "verdict and release_gate never produce EDGE_CONFIRMED; assert_no_edge_label refuses it.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-107",
+      "notes": "StrategyAdapter protocol with a working adapter.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-108",
+      "notes": "Synthetic breakout, reversal and noisy-range generators.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_detectors.py",
+        "tests/test_pattern_wave9_detectors.py"
+      ],
+      "id": "ALG-109",
+      "notes": "Prefix-invariance property tests across detectors.",
+      "status": "verified_existing",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py",
+        "tests/test_algo_specs.py"
+      ],
+      "id": "ALG-110",
+      "notes": "Registry and spec validators reject typos and inconsistent metadata.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_breakouts.py"
+      ],
+      "id": "ALG-111",
+      "notes": "Donchian signals are invariant to price scale and shift.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
+      "id": "ALG-112",
+      "notes": "run_resumable gives identical outputs after an interruption.",
+      "status": "verified_existing",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-113",
+      "notes": "Risk and architecture checks are in CI for patterns; the strategies checks are not yet in CI config.",
+      "status": "open",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
+      "id": "ALG-114",
+      "notes": "scripts/bench_patterns.py records before and after timings.",
+      "status": "verified_existing",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-115",
+      "notes": "Benchmark decision python_sufficient: projected 29 s against a 600 s budget.",
+      "status": "not_applicable",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-116",
+      "notes": "No native backend was introduced, so no parity tests are needed.",
+      "status": "not_applicable",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-117",
+      "notes": "This tracker produces the feature status report.",
+      "status": "implemented",
+      "wave": "W5"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-118",
+      "notes": "python -m financial_brain.patterns.demo --offline runs with no credentials or network.",
+      "status": "verified_existing",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-119",
+      "notes": "Scripted trader walkthrough from chart to journal is not written as one end-to-end test.",
+      "status": "open",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-120",
+      "notes": "Daily historical-paper report with assumptions is not generated.",
+      "status": "open",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-121",
+      "notes": "The tracker reports source claim, implemented, locally tested and forward-pending columns.",
+      "status": "implemented",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-122",
+      "notes": "card() links source, spec hash and paper-only banner.",
+      "status": "implemented",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-123",
+      "notes": "Corrupted ledger and database-lock recovery is only partly tested for these families.",
+      "status": "open",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-124",
+      "notes": "The tracker writes docs/algorithm-library-status.md.",
+      "status": "implemented",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-125",
+      "notes": "A synthetic negative strategy is rejected by verdict().",
+      "status": "implemented",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [],
+      "id": "ALG-126",
+      "notes": "Final gate: all P0 functional tests pass in CI; not yet run on Linux.",
+      "status": "open",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_families.py"
+      ],
+      "id": "ALG-127",
+      "notes": "release_gate blocks promotion without forward observations.",
+      "status": "implemented",
+      "wave": "W6"
+    },
+    {
+      "evidence_tests": [
+        "tests/test_algo_registry.py"
+      ],
+      "id": "ALG-128",
+      "notes": "Registry is the dated bibliography; rights are recorded per entry.",
+      "status": "implemented",
+      "wave": "W6"
+    }
+  ],
+  "total": 128
+}
