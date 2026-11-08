@@ -117,7 +117,7 @@ def test_restart_recovery_every_state_is_exactly_once() -> None:
                         candidate_known_at_utc="2026-01-05T10:00:00+00:00", status=EventState.CANDIDATE,
                         data_sha256="1" * 64)
     conf = transition(base, EventState.CONFIRMED, confirmed_at_utc="2026-01-06T10:00:00+00:00")
-    inval = transition(conf, EventState.INVALIDATED, invalidated_at_utc="2026-01-07T10:00:00+00:00")
+    inval = transition(conf, EventState.INVALIDATED, invalidated_at_utc="2026-01-07T10:00:00+00:00", invalidation_reason="CLOSE_BEYOND_FAILURE")
     log = EventLog()
     for version in (base, conf, inval):
         log.append(version)

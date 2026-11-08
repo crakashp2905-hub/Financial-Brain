@@ -18,26 +18,34 @@
       "workstream": "00 Autonomous repository reconciliation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Local branch state recorded; remote PR status explicitly not checked.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/audits/pattern-branch-reconciliation.md"
+      ],
+      "status": "implemented",
       "task_id": "CP-0002",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Read main and all accessible chart-pattern branches; detect whether the research PR is merged or superseded.",
       "workstream": "00 Autonomous repository reconciliation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Existing modules reviewed; forbidden imports listed with the boundary test that enforces them.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/audits/pattern-module-inventory.md"
+      ],
+      "status": "implemented",
       "task_id": "CP-0003",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Inventory existing candle, technical-feature, geometry, chart UI, execution, risk and evaluation modules.",
       "workstream": "00 Autonomous repository reconciliation"
     },
@@ -74,14 +82,18 @@
       "workstream": "00 Autonomous repository reconciliation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Work sits on its own feature branch, not on main; no worktree was created.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/audits/pattern-branch-reconciliation.md"
+      ],
+      "status": "implemented",
       "task_id": "CP-0006",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Create an isolated feature branch/worktree for chart-pattern implementation.",
       "workstream": "00 Autonomous repository reconciliation"
     },
@@ -102,14 +114,18 @@
       "workstream": "00 Autonomous repository reconciliation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Limitations quoted from vault notes with line references; no coverage invented.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/audits/pattern-data-limitations.md"
+      ],
+      "status": "implemented",
       "task_id": "CP-0008",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Record 2016\u20132026 and F&O data limitations as stated in the vault without inventing coverage.",
       "workstream": "00 Autonomous repository reconciliation"
     },
@@ -338,26 +354,34 @@
       "workstream": "01 Canonical machine-readable catalogue"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Four source-quality fields added to CatalogueEntry; every value is UNASSESSED until assessed.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/catalogue.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0023",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Add `source_selection_bias`, `lookahead_risk`, `source_market`, `source_period` fields.",
       "workstream": "01 Canonical machine-readable catalogue"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "migrate_document sets the schema version, leaves the input unmodified and refuses any change to stable IDs.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/catalogue.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0024",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Version and migrate catalogues without changing the meaning of existing stable IDs.",
       "workstream": "01 Canonical machine-readable catalogue"
     },
@@ -620,14 +644,18 @@
       "workstream": "02 Pattern contract, types and provenance"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "BarSource reads DuckDB read-only and Parquet via DuckDB; dates bound as parameters; unsafe table names refused.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/source.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0041",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Create a read-only `BarSource` interface using the project's existing DuckDB and Parquet data.",
       "workstream": "03 Market data, calendars and security identity"
     },
@@ -969,14 +997,18 @@
       "workstream": "04 Causal swing points and geometric primitives"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "candidate_within_box: start and end on trading sessions, span at most max_sessions, checked against the session calendar.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/marketdata.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0063",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_realism.py",
+      "test_files": [
+        "tests/test_pattern_wave9_realism.py"
+      ],
       "title": "Implement candidate bounding boxes and duration limits in exchange sessions.",
       "workstream": "04 Causal swing points and geometric primitives"
     },
@@ -1255,14 +1287,18 @@
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "pennant_bullish/bearish: pole then symmetric taper inside a fixed 18-bar window. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0081",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement pennant candidates with tapering swing boundaries and bounded duration.",
       "workstream": "05 Range and continuation detectors"
     },
@@ -1283,38 +1319,50 @@
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "channel_rising/falling from known pivots with parallel-slope tolerance; direction neutral. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0083",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement rising and falling channel/continuation families without treating any trendline as proof of an edge.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "cup_with_handle: left lip, cup low, right lip, shallow handle emitted at a fixed handle length. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0084",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement causal cup-with-handle detector: left lip, cup low, right lip, handle and break.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "high_tight_flag: 80 percent rise in at most 40 bars, flag 5 to 20 bars, retrace at most 25 percent. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0085",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement high-tight-flag candidate with historical-only high-rise precondition and fixed flag-length limits.",
       "workstream": "05 Range and continuation detectors"
     },
@@ -1335,26 +1383,35 @@
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Streaming pivots equal batch pivots on pennant, cup and flag fixtures.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/streaming.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0087",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Implement a no-new-data streaming fixture covering all basic continuation patterns.",
       "workstream": "05 Range and continuation detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Small JSON geometry fixtures generated from synthetic OHLC; no source images.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "scripts/build_pattern_fixtures.py",
+        "tests/fixtures/patterns/family_examples.json"
+      ],
+      "status": "implemented",
       "task_id": "CP-0088",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Implement detector-specific geometry visual fixtures saved as small JSON, not source images.",
       "workstream": "05 Range and continuation detectors"
     },
@@ -1439,14 +1496,18 @@
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "triple_bottom/top: three equal extrema with bounded spacing asymmetry and a shared neckline. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0094",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement triple-bottom and triple-top candidate sequences with fixed symmetry and duration.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
@@ -1483,14 +1544,18 @@
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "rounding_bottom/top: quadratic fit with R-squared at least 0.8, vertex near centre, depth at least 5 percent. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0097",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement rounding-bottom and rounding-top geometry using a predeclared smoothness/curvature criterion.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
@@ -1519,38 +1584,50 @@
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "broadening_top/bottom from diverging known swing bands; name records the trailing move only. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0100",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement broadening-top/bottom bands from diverging known swing points.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "diamond_candidate: widening then narrowing with two pivots per side per half; never confirmed by this detector. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0101",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement diamond-style widening then narrowing candidate, with minimum evidence requirements.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "island_reversal top/bottom: opposite gaps around a non-overlapping island of up to five bars. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0102",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement island reversal from completed, non-overlapping range gaps.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
@@ -1567,38 +1644,50 @@
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "throwback_state: THROWBACK_HELD, THROWBACK_FAILED or PULLBACK_TOUCHED, computed from bars up to t only.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0104",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement separate throwback/pullback states after confirmed breakouts.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "levels() gives breakout and invalidation levels and always profit_target None.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0105",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement neckline, target and invalidation levels for explanatory overlays, not fitted profit targets.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "within_complexity_cap rejects shapes with more than six geometry points.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0106",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement complexity caps to reject combinations with too many free geometry parameters.",
       "workstream": "06 Reversal and complex geometric detectors"
     },
@@ -1699,14 +1788,18 @@
       "workstream": "07 Candlesticks, gaps and weekly context"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "three_methods bullish/bearish: strong first candle, three contained counter-trend bars, confirmation on a later close. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0113",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement rising/falling three-methods continuation with strict bar ordering.",
       "workstream": "07 Candlesticks, gaps and weekly context"
     },
@@ -1727,26 +1820,34 @@
       "workstream": "07 Candlesticks, gaps and weekly context"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "sr_confluence counts known pivots near a level and states observational_only with no multiplier.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0115",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement support/resistance confluence as an observational feature rather than a trading multiplier.",
       "workstream": "07 Candlesticks, gaps and weekly context"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "gap_up/gap_down candidates; the fill bar is stored as failed_index and hidden until it has happened.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0116",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_detectors.py",
+      "test_files": [
+        "tests/test_pattern_wave9_detectors.py"
+      ],
       "title": "Implement failed gap and gap-fill outcomes with future labels stored only after maturity.",
       "workstream": "07 Candlesticks, gaps and weekly context"
     },
@@ -1783,14 +1884,19 @@
       "workstream": "07 Candlesticks, gaps and weekly context"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "K7 notice and its G3 result appear in every JSON export banner; the vault note remains the full record.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/candles.py",
+        "src/financial_brain/patterns/report.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0119",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Preserve existing rejected K7 futures candle findings and their methodology in output metadata.",
       "workstream": "07 Candlesticks, gaps and weekly context"
     },
@@ -1859,14 +1965,18 @@
       "workstream": "08 Event lifecycle, replay and auditing"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "invalidated_at_utc and expired_at_utc each require an explicit reason; optional keys leave old hashes unchanged.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/spec.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0124",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Record invalidation and expiry timestamps with explicit reasons.",
       "workstream": "08 Event lifecycle, replay and auditing"
     },
@@ -1903,14 +2013,18 @@
       "workstream": "08 Event lifecycle, replay and auditing"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "observed_at_utc must not follow generated_at_utc; both are optional and separate.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/spec.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0127",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Separate source observation time from computed event generation time.",
       "workstream": "08 Event lifecycle, replay and auditing"
     },
@@ -1963,14 +2077,18 @@
       "workstream": "08 Event lifecycle, replay and auditing"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "ScanCheckpoint commits per bar atomically; an interrupted scan resumes after the last commit; manifest mismatch refused.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/ops.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0131",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Make scan interruption and restart resume at last committed bar.",
       "workstream": "08 Event lifecycle, replay and auditing"
     },
@@ -1991,14 +2109,18 @@
       "workstream": "08 Event lifecycle, replay and auditing"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "detection_trace records thresholds from the detector signature next to its geometry.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/ops.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0133",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Persist traceable detection reasons and thresholds with each event.",
       "workstream": "08 Event lifecycle, replay and auditing"
     },
@@ -2132,14 +2254,18 @@
       "workstream": "09 Causality, correctness and adversarial tests"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Rename keeps one lineage; a merger alias with two lineages is withheld; split and dividend adjustments checked on known values.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/marketdata.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0142",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Add split, merger, symbol rename and dividend fixtures.",
       "workstream": "09 Causality, correctness and adversarial tests"
     },
@@ -2292,14 +2418,18 @@
       "workstream": "09 Causality, correctness and adversarial tests"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Protected DuckDB file is hash-checked before and after reads; writes through a read-only connection fail.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/source.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0153",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add database readonly and no-modification test on protected historical tables.",
       "workstream": "09 Causality, correctness and adversarial tests"
     },
@@ -2604,14 +2734,18 @@
       "workstream": "11 Controls, attribution and incremental edge"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Liquidity, size and sector controls use attributes supplied for the decision date; missing values give DATA_INSUFFICIENT.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/risk_views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0173",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add liquidity, size and sector controls where point-in-time attributes are available.",
       "workstream": "11 Controls, attribution and incremental edge"
     },
@@ -2728,14 +2862,18 @@
       "workstream": "11 Controls, attribution and incremental edge"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "turnover_and_cost_delta adds capacity-adjusted turnover (each trade capped at participation times ADV) and the matching cost delta.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/risk_views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0181",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_realism.py",
+      "test_files": [
+        "tests/test_pattern_wave9_realism.py"
+      ],
       "title": "Measure turnover and capacity-adjusted cost deltas attributable to pattern filters.",
       "workstream": "11 Controls, attribution and incremental edge"
     },
@@ -3260,14 +3398,18 @@
       "workstream": "13 Risk engine, no-trade and trader safeguards"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "sector_concentration (HHI, largest share) and beta_diagnostics; unknown sector or beta is flagged, not hidden.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/risk_views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0215",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add concentration-by-sector and beta diagnostics for filtered candidate baskets.",
       "workstream": "13 Risk engine, no-trade and trader safeguards"
     },
@@ -3288,14 +3430,18 @@
       "workstream": "13 Risk engine, no-trade and trader safeguards"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "candidate_risk_explanations maps each rejection code to its plain reason with authorises_trade false.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/risk_views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0217",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Expose risk-gate explanations for each displayed candidate and its hypothetical ticket.",
       "workstream": "13 Risk engine, no-trade and trader safeguards"
     },
@@ -3568,14 +3714,18 @@
       "workstream": "15 Trader workstation and exploration UX"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "status_counts: per-state counts with latest known timestamp. The terminal panel that shows it is CP-0234, not yet built.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0235",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Show candidate, confirmed, invalidated and expired views with counts and timestamps.",
       "workstream": "15 Trader workstation and exploration UX"
     },
@@ -3596,14 +3746,18 @@
       "workstream": "15 Trader workstation and exploration UX"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "filter_rows applies symbol, family, timeframe, dates, state, liquidity floor, sector and evidence tier. Missing liquidity never passes.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0237",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add symbol search, family filter, timeframe, date range, status, liquidity and evidence-tier filtering.",
       "workstream": "15 Trader workstation and exploration UX"
     },
@@ -3624,86 +3778,114 @@
       "workstream": "15 Trader workstation and exploration UX"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "detail() gives geometry, bars, recognition time, invalidation and tests, marking anything unrecorded.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0239",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Create pattern detail page with geometry definition, observed bars, recognition time, invalidation and tests.",
       "workstream": "15 Trader workstation and exploration UX"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "compare_with_baseline: pattern state beside momentum and 52-week position; missing inputs stay visible.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0240",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add side-by-side comparison of latest pattern vs baseline momentum/52-week context.",
       "workstream": "15 Trader workstation and exploration UX"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "why_not_trade always returns reasons: not confirmed, DESCRIPTIVE tier, risk verdict, missing entry, cost caveat.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0241",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add `Why not trade?` panel explaining uncertainty, failed validations and position risk.",
       "workstream": "15 Trader workstation and exploration UX"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "ticket_preview: PAPER ONLY, entry eligibility, costs, capital and risk verdict; submittable is always false.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0242",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add paper ticket preview with entry eligibility, costs, capital required and risk gate verdict.",
       "workstream": "15 Trader workstation and exploration UX"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "allowed_action admits only the two paper actions and refuses everything else.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0243",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add `Add to paper watchlist` and `Simulate next session` actions only.",
       "workstream": "15 Trader workstation and exploration UX"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "knowable_at hides confirmations that were not yet visible at the slider time.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0244",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add historical event explorer with time slider showing what was knowable at each moment.",
       "workstream": "15 Trader workstation and exploration UX"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "status_page reports STALE data, failed scans, audit exceptions and paper-run health.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0245",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Build local status page for data freshness, failed scans, audit exceptions and paper run health.",
       "workstream": "15 Trader workstation and exploration UX"
     },
@@ -3860,74 +4042,98 @@
       "workstream": "16 Visual chart overlays and reproducible explanation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "overlay_markers keeps the signal bar and the earliest entry bar as separate markers.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0256",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Show the exact signal bar and earliest eligible entry bar as separate markers.",
       "workstream": "16 Visual chart overlays and reproducible explanation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "visible_boundaries drops any boundary beyond the displayed bar.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0257",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Draw formation boundaries exclusively using data available by the displayed time.",
       "workstream": "16 Visual chart overlays and reproducible explanation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "version_history lists revisions as new versions with changed fields; inputs are not mutated.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0258",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Add before/after comparison overlay showing revisions only as new event versions.",
       "workstream": "16 Visual chart overlays and reproducible explanation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "risk_zones gives the ATR band and hypothetical cost; guaranteed_target is always None.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0259",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Show risk zones, ATR range and hypothetical costs without guaranteed target claims.",
       "workstream": "16 Visual chart overlays and reproducible explanation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "hover_breakdown gives tolerance, pivots, duration and breakout threshold, marking missing values.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0260",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Provide a hover breakdown of level tolerance, pivots, duration and breakout threshold.",
       "workstream": "16 Visual chart overlays and reproducible explanation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "research_controls shows the matched baseline and lookalikes only in research mode.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0261",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Render controls: matched momentum baseline and unconfirmed lookalikes when in research mode.",
       "workstream": "16 Visual chart overlays and reproducible explanation"
     },
@@ -4200,14 +4406,19 @@
       "workstream": "17 Paper journal, feedback and simulation experience"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Synthetic bars flow through detection, paper preview and the view model with no network.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/demo.py",
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0279",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Add integration test from synthetic bars to detector to paper preview to journal to terminal.",
       "workstream": "17 Paper journal, feedback and simulation experience"
     },
@@ -4292,14 +4503,18 @@
       "workstream": "18 Controlled self-learning and research feedback"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Decision: no gradient-boosted framework is introduced; the calibration floor is 200 labels and no matured labels exist to train on.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/learning.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0285",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Use the existing LightGBM learner where appropriate rather than introducing unnecessary frameworks.",
       "workstream": "18 Controlled self-learning and research feedback"
     },
@@ -4360,14 +4575,19 @@
       "workstream": "18 Controlled self-learning and research feedback"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "scheduled_retrain refuses immature labels, registers a challenger and never promotes it.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/learning.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0290",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py",
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Implement scheduled retrain command on newly matured local fixture data.",
       "workstream": "18 Controlled self-learning and research feedback"
     },
@@ -4452,14 +4672,18 @@
       "workstream": "18 Controlled self-learning and research feedback"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "continual_dry_run uses seeded synthetic outcomes with an intentional shift; reports REVIEW and changes no registry.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/learning.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0296",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Provide a continual-learning dry-run using only synthetic matured outcomes and intentional distribution shift.",
       "workstream": "18 Controlled self-learning and research feedback"
     },
@@ -4912,14 +5136,19 @@
       "workstream": "21 Quality gates, CI and build reproducibility"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Catalogue rows and emitted events are validated against checked-in JSON schemas.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/schemas/pattern-catalogue.v1.schema.json",
+        "docs/schemas/pattern-event.v1.schema.json"
+      ],
+      "status": "implemented",
       "task_id": "CP-0325",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Add schema validation step for catalogue, pattern specs and run manifests.",
       "workstream": "21 Quality gates, CI and build reproducibility"
     },
@@ -4936,14 +5165,18 @@
       "workstream": "21 Quality gates, CI and build reproducibility"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Wave-9 scan has a 60 s guard; the recorded projection must stay under its 600 s budget.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/audits/pattern-benchmark.json"
+      ],
+      "status": "implemented",
       "task_id": "CP-0327",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Add performance benchmark guard with conservative tolerance for CI variance.",
       "workstream": "21 Quality gates, CI and build reproducibility"
     },
@@ -5056,26 +5289,34 @@
       "workstream": "21 Quality gates, CI and build reproducibility"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Offline demo and wave-9 scan emit zero warnings from the pattern package.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0335",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Add warnings budget: isolate existing 328 warnings and fail on new pattern-library warnings.",
       "workstream": "21 Quality gates, CI and build reproducibility"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Appendix lists each command with its exit code, platform, Python version and base commit; a test checks its structure.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/audits/pattern-evidence-appendix.md"
+      ],
+      "status": "implemented",
       "task_id": "CP-0336",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Generate testing evidence appendix containing command, exit code, Python version and commit SHA.",
       "workstream": "21 Quality gates, CI and build reproducibility"
     },
@@ -5128,26 +5369,35 @@
       "workstream": "22 Offline demo datasets and reproducible acceptance"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Six families, each with one positive and two negative synthetic examples, checked by the test suite.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "scripts/build_pattern_fixtures.py",
+        "tests/fixtures/patterns/family_examples.json"
+      ],
+      "status": "implemented",
       "task_id": "CP-0340",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Include one positive and two negative examples per supported pattern family.",
       "workstream": "22 Offline demo datasets and reproducible acceptance"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Noisy synthetic series with spread variation, a calendar gap, a 2:1 split and an illiquid run: quarantine, split adjustment, missing sessions, volume eligibility and detection all checked.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors2.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0341",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_realism.py",
+      "test_files": [
+        "tests/test_pattern_wave9_realism.py"
+      ],
       "title": "Include realistic noise, spread variation, non-trading days, split and illiquidity.",
       "workstream": "22 Offline demo datasets and reproducible acceptance"
     },
@@ -5200,14 +5450,18 @@
       "workstream": "22 Offline demo datasets and reproducible acceptance"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "bars_completed_by returns only bars completed by the query time, in completion order; intraday and weekly examples; naive times refused.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/marketdata.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0345",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_realism.py",
+      "test_files": [
+        "tests/test_pattern_wave9_realism.py"
+      ],
       "title": "Create intraday and weekly fixtures with asynchronous bar completion times.",
       "workstream": "22 Offline demo datasets and reproducible acceptance"
     },
@@ -5261,14 +5515,18 @@
       "workstream": "22 Offline demo datasets and reproducible acceptance"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Pinned hashes for the daily screen, empty state, risk rejection and loss review renderings.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "tests/fixtures/patterns/snapshots.json"
+      ],
+      "status": "implemented",
       "task_id": "CP-0349",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Create snapshot tests for the daily screen, empty state, risk rejection and loss review.",
       "workstream": "22 Offline demo datasets and reproducible acceptance"
     },
@@ -5365,14 +5623,18 @@
       "workstream": "23 Product docs, workflow and developer handoff"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Causal-window proof requirements, fixture template and labelling rules.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/PATTERNS-DETECTOR-AUTHORING.md"
+      ],
+      "status": "implemented",
       "task_id": "CP-0356",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Write detector-authoring guide with causal-window proof requirements and fixture templates.",
       "workstream": "23 Product docs, workflow and developer handoff"
     },
@@ -5425,26 +5687,34 @@
       "workstream": "23 Product docs, workflow and developer handoff"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Migration policy for detector, spec, catalogue and event schemas.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/PATTERNS-MIGRATION-POLICY.md"
+      ],
+      "status": "implemented",
       "task_id": "CP-0360",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Write versioning and migration policy for detector/spec/catalogue/event schemas.",
       "workstream": "23 Product docs, workflow and developer handoff"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Operator guide for corrupt bars, stale quotes, crashes and cache rebuilds.",
       "priority": "P1",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "docs/PATTERNS-OPERATIONS-GUIDE.md"
+      ],
+      "status": "implemented",
       "task_id": "CP-0361",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Write operations guide for data corruption, stale quotes, crashes and cache rebuild.",
       "workstream": "23 Product docs, workflow and developer handoff"
     },
@@ -5497,14 +5767,18 @@
       "workstream": "24 Release packaging, reliability and offline production behavior"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "fb patterns runs the offline pattern CLI; other fb commands are unchanged and still parse.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/cli.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0365",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Integrate with existing `fb` CLI without breaking other commands.",
       "workstream": "24 Release packaging, reliability and offline production behavior"
     },
@@ -5709,14 +5983,18 @@
       "workstream": "25 Trader acceptance and acceptance-test automation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "A double bottom is CANDIDATE at recognition and CONFIRMED only after its neckline close.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/detectors.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0379",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Automate task: trader distinguishes tentative vs confirmed double bottom.",
       "workstream": "25 Trader acceptance and acceptance-test automation"
     },
@@ -5769,26 +6047,34 @@
       "workstream": "25 Trader acceptance and acceptance-test automation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "filter_rows narrows by sector, liquidity, evidence tier and date interval together.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/views.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0383",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_modules.py",
+      "test_files": [
+        "tests/test_pattern_wave9_modules.py"
+      ],
       "title": "Automate task: trader filters candidate list by sector, liquidity, evidence and interval.",
       "workstream": "25 Trader acceptance and acceptance-test automation"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Each catalogue row has its claim kind, unverified page reference and UNASSESSED source-quality fields.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/catalogue.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0384",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Automate task: trader inspects source notes and historical claim caveats.",
       "workstream": "25 Trader acceptance and acceptance-test automation"
     },
@@ -6041,14 +6327,18 @@
       "workstream": "26 Final governance and honest 10/10 engineering signoff"
     },
     {
-      "notes": "Not implemented in this checkout.",
+      "notes": "Fixture-label versions: shadow, refused promotion on DESCRIPTIVE evidence, promotion on FORWARD_PAPER fixture evidence, rollback.",
       "priority": "P0",
-      "result": "NOT_RUN",
-      "source_files": [],
-      "status": "incomplete",
+      "result": "PASS",
+      "source_files": [
+        "src/financial_brain/patterns/learning.py"
+      ],
+      "status": "implemented",
       "task_id": "CP-0401",
-      "test_command": null,
-      "test_files": [],
+      "test_command": "python -m pytest -q tests/test_pattern_wave9_evidence.py",
+      "test_files": [
+        "tests/test_pattern_wave9_evidence.py"
+      ],
       "title": "Verify trained model versioning, shadow evaluation, drift and rollback operate on matured fixture labels.",
       "workstream": "26 Final governance and honest 10/10 engineering signoff"
     },

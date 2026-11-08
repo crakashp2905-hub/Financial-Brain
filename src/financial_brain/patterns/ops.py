@@ -5,6 +5,8 @@ Stage 24 reliability (CP-0366..0373, CP-0377). Nothing here touches protected re
 
 from __future__ import annotations
 
+import inspect
+import json
 import logging
 import os
 import tempfile
@@ -106,3 +108,63 @@ def load_event(data: dict[str, Any]) -> PatternEvent:
     if missing:
         raise ValueError(f"record missing required fields: {missing}")
     return PatternEvent.from_dict({**{"decision_at_utc": None}, **data})
+
+
+# ---------------------------------------------------------------- resumable scans and traces (CP-0131, CP-0133)
+class CheckpointConflict(RuntimeError):
+    """A checkpoint belongs to another manifest, or would move backwards."""
+
+
+class ScanCheckpoint:
+    """Records the last bar whose events were fully committed, so an interrupted scan resumes there (CP-0131)."""
+
+    def __init__(self, path: Path, manifest_sha256: str) -> None:
+        self._path = Path(path)
+        self._manifest = manifest_sha256
+
+    def last_committed(self) -> int:
+        """Index of the last committed bar, or ``-1`` when nothing is committed yet."""
+        if not self._path.exists():
+            return -1
+        data = json.loads(self._path.read_text(encoding="utf-8"))
+        if data.get("manifest") != self._manifest:
+            raise CheckpointConflict("checkpoint was written for a different manifest")
+        return int(data["last_committed"])
+
+    def commit(self, index: int) -> None:
+        current = self.last_committed()
+        if index < current:
+            raise CheckpointConflict(f"refusing to move the checkpoint back from {current} to {index}")
+        atomic_write_text(
+            self._path,
+            json.dumps({"manifest": self._manifest, "last_committed": index}, sort_keys=True),
+        )
+
+
+def run_resumable(total: int, checkpoint: ScanCheckpoint, process: Any) -> list[Any]:
+    """Process bars ``0..total-1`` in order, committing after each bar; a restart resumes after the last commit.
+
+    ``process(index)`` returns that bar's output. The function returns outputs for bars processed in this call.
+    """
+    outputs: list[Any] = []
+    start = checkpoint.last_committed() + 1
+    for index in range(start, total):
+        outputs.append(process(index))
+        checkpoint.commit(index)
+    return outputs
+
+
+def detection_trace(detector: Any, formation_geometry: dict[str, Any], *, detector_name: str, version: str) -> dict[str, Any]:
+    """The thresholds a detector ran with, next to what it found (CP-0133)."""
+    thresholds = {
+        name: param.default
+        for name, param in inspect.signature(detector).parameters.items()
+        if param.default is not inspect.Parameter.empty
+    }
+    return {
+        "detector": detector_name,
+        "version": version,
+        "thresholds": {k: v for k, v in sorted(thresholds.items())},
+        "geometry": dict(sorted(formation_geometry.items())),
+    }
+

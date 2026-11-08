@@ -1,6 +1,6 @@
 # Changelog: chart-pattern module
 
-## Unreleased (engineering waves 1-8)
+## Unreleased (engineering waves 1-9)
 
 - Offline guard (`PATTERN_DEV_MODE`, fail-closed), import boundary test.
 - Pattern contracts: spec, event, lifecycle, evidence tiers, canonical hashing, decision and formation-start clocks.
@@ -13,6 +13,10 @@
 - Ranking, four separate scores, trader recommendations, escaped offline HTML report and JSON export.
 - Shadow learning registry (immutable versions, rollback, fail-closed corruption), descriptive model, read-only agent with validation, refusals and redaction.
 - Offline demo, CLI (`scan`, `list`, `explain`, `paper-demo`, `audit`), health check, checksummed backup and restore, sign-off that never claims market edge.
-- Completion matrix: 303 of 406 checklist items implemented, 94 incomplete, 9 not applicable with benchmark evidence.
+- Wave 9: causal detectors (pennant, channel, cup with handle, high-tight flag, triple extrema, rounding, broadening, diamond, island reversal, three methods, failed gaps), throwback states, overlay levels with no profit target, complexity cap.
+- Wave 9: optional lifecycle fields (invalidation and expiry reasons, observation and generation times) that leave existing hashes unchanged; resumable scans; detection traces.
+- Wave 9: read-only DuckDB and Parquet bar source, workstation view model, basket diagnostics, point-in-time controls, asynchronous completion, session boxes, capacity-adjusted turnover.
+- Wave 9: family example fixtures, pinned snapshots, schemas for catalogue and events, migration policy, `fb patterns` subcommand, operator and authoring guides.
+- Completion matrix: 374 of 406 checklist items implemented, 23 incomplete, 9 not applicable with benchmark evidence.
 
 Known gaps: see `docs/audits/PATTERN-FINAL-GATES.md` and the incomplete rows in `docs/audits/chart-patterns-completion.json`.

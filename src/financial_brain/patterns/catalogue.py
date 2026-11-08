@@ -107,6 +107,11 @@ class CatalogueEntry:
     reference: dict[str, Any] = field(default_factory=dict)
     parameters: dict[str, Any] | None = None
     knowledge_lag: int | None = None
+    # CP-0023: source-quality fields. Every value starts UNASSESSED; nothing in the source notes assesses them yet.
+    source_selection_bias: str = "UNASSESSED"
+    lookahead_risk: str = "UNASSESSED"
+    source_market: str = "UNASSESSED"
+    source_period: str = "UNASSESSED"
 
 
 @dataclass
@@ -297,3 +302,49 @@ def promote_definition_status(entry: CatalogueEntry, target: str, evidence: str 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# ---------------------------------------------------------------- versioning and migration (CP-0024)
+CATALOGUE_SCHEMA_VERSION = "1"
+SOURCE_QUALITY_LEVELS = frozenset({"UNASSESSED", "LOW", "MEDIUM", "HIGH"})
+
+
+class MigrationRefused(ValueError):
+    """A migration would change the meaning or identity of an existing stable ID."""
+
+
+def migrate_document(data: dict[str, Any]) -> dict[str, Any]:
+    """Bring a catalogue document to :data:`CATALOGUE_SCHEMA_VERSION` without changing any stable ID (CP-0024).
+
+    A document with no ``schema_version`` is treated as version 0. The input is not mutated. Migration refuses
+    if any pattern ID would be dropped, renamed or duplicated.
+    """
+    version = str(data.get("schema_version", "0"))
+    if version not in ("0", CATALOGUE_SCHEMA_VERSION):
+        raise MigrationRefused(f"unknown schema_version {version!r}")
+    rows = data.get("patterns")
+    if not isinstance(rows, list):
+        raise MigrationRefused("document has no pattern list")
+    ids_before = [r.get("id") for r in rows if isinstance(r, dict)]
+    migrated = dict(data)
+    migrated["schema_version"] = CATALOGUE_SCHEMA_VERSION
+    migrated["patterns"] = [dict(r) for r in rows]
+    ids_after = [r.get("id") for r in migrated["patterns"]]
+    if ids_before != ids_after or len(set(ids_after)) != len(ids_after):
+        raise MigrationRefused("migration would change or duplicate stable IDs")
+    return migrated
+
+
+def source_quality(entry: CatalogueEntry) -> dict[str, str]:
+    """The four source-quality fields as a plain mapping, validated against the allowed levels."""
+    for name in ("source_selection_bias", "lookahead_risk"):
+        value = getattr(entry, name)
+        if value not in SOURCE_QUALITY_LEVELS:
+            raise ValueError(f"{entry.id}: {name} must be one of {sorted(SOURCE_QUALITY_LEVELS)}")
+    return {
+        "source_selection_bias": entry.source_selection_bias,
+        "lookahead_risk": entry.lookahead_risk,
+        "source_market": entry.source_market,
+        "source_period": entry.source_period,
+    }
+

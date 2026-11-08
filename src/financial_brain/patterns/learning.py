@@ -14,6 +14,7 @@ Rules enforced in code, not documentation:
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -155,3 +156,60 @@ def proposal(hypothesis: str, *, remaining_budget: int, family_size: int) -> dic
         "trial_budget_remaining": remaining_budget,
         "family_multiplicity_cost": f"{family_size} variants share the family error budget",
     }
+
+
+# ---------------------------------------------------------------- scheduled retrain and dry run (CP-0290, CP-0296)
+def scheduled_retrain(
+    labels: list[Label], *, now_index: int, registry: ModelRegistry, version_id: str
+) -> ModelVersion:
+    """Fit the descriptive model on matured labels only and register it as a challenger (CP-0290).
+
+    Immature labels are refused rather than skipped, so a retrain never silently drops evidence. The new version
+    is never promoted here: promotion still needs forward or external evidence.
+    """
+    if not labels:
+        raise ImmatureLabel("no labels to train on")
+    for lab in labels:
+        if now_index < lab.horizon_end_index:
+            raise ImmatureLabel(f"{lab.event_id}: horizon ends at {lab.horizon_end_index}, now is {now_index}")
+    n = len(labels)
+    mean = round(sum(lab.outcome for lab in labels) / n, 10)
+    calibration_state = "NO_CALIBRATION" if n < MIN_LABELS_FOR_CALIBRATION else "PENDING_CALIBRATION"
+    payload = json.dumps(
+        {"model": "laplace_mean_outcome", "n": n, "mean_outcome": mean, "calibration": calibration_state},
+        sort_keys=True,
+    ).encode("utf-8")
+    training_material = json.dumps(
+        [[lab.event_id, lab.decision_index, lab.horizon_end_index, lab.outcome] for lab in labels], sort_keys=True
+    ).encode("utf-8")
+    version = ModelVersion(
+        version_id=version_id,
+        artifact_sha256=hashlib.sha256(payload).hexdigest(),
+        training_hash=hashlib.sha256(training_material).hexdigest(),
+        features=(),
+        evaluation={"n": n, "calibration": calibration_state},
+        role="challenger",
+    )
+    registry.register(version, payload)
+    return version
+
+
+def continual_dry_run(*, seed: int, n_per_regime: int, shift: float) -> dict[str, Any]:
+    """Synthetic matured outcomes with an intentional mean shift, used to test drift detection only (CP-0296).
+
+    The outcomes are generated from ``seed``, never from market data. The result is labelled synthetic and
+    never promotes or changes any registered model.
+    """
+    import random
+
+    rng = random.Random(seed)
+    reference = [rng.gauss(0.0, 1.0) for _ in range(n_per_regime)]
+    recent = [rng.gauss(shift, 1.0) for _ in range(n_per_regime)]
+    return {
+        "synthetic": True,
+        "intentional_shift": shift,
+        "drift": drift_status(reference, recent),
+        "promoted": False,
+        "registry_changed": False,
+    }
+

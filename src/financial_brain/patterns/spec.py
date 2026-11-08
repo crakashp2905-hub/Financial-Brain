@@ -172,6 +172,11 @@ class PatternEvent:
     evidence_tier: EvidenceTier = EvidenceTier.DESCRIPTIVE
     decision_at_utc: str | None = None
     formation_start_utc: str | None = None
+    observed_at_utc: str | None = None  # when the source bar closed (CP-0127)
+    generated_at_utc: str | None = None  # when this event was computed (CP-0127)
+    expired_at_utc: str | None = None  # CP-0124: explicit expiry with a reason
+    invalidation_reason: str | None = None
+    expiry_reason: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.status, EventState):
@@ -214,9 +219,32 @@ class PatternEvent:
                 "earliest_entry_at_utc", self.earliest_entry_at_utc
             ):
                 raise InvalidContract("decision cannot follow earliest entry")
+        if self.observed_at_utc is not None and self.generated_at_utc is not None:
+            if _parse_aware("observed_at_utc", self.observed_at_utc) > _parse_aware(
+                "generated_at_utc", self.generated_at_utc
+            ):
+                raise InvalidContract("an event cannot be generated before its source was observed")
+        if self.invalidated_at_utc is not None and not self.invalidation_reason:
+            raise InvalidContract("an invalidation needs an explicit reason")
+        if self.expired_at_utc is not None:
+            if not self.expiry_reason:
+                raise InvalidContract("an expiry needs an explicit reason")
+            if _parse_aware("expired_at_utc", self.expired_at_utc) < known:
+                raise InvalidContract("expired_at_utc precedes candidate_known_at_utc")
         canonical_json(self.geometry)  # rejects NaN/inf and unsupported types
 
     def to_dict(self) -> dict[str, Any]:
+        body = self._core_dict()
+        # Optional lifecycle fields are added only when set, so events written before they existed hash unchanged.
+        for key in (
+            "observed_at_utc", "generated_at_utc", "expired_at_utc", "invalidation_reason", "expiry_reason",
+        ):
+            value = getattr(self, key)
+            if value is not None:
+                body[key] = value
+        return body
+
+    def _core_dict(self) -> dict[str, Any]:
         return {
             "event_id": self.event_id,
             "spec_sha256": self.spec_sha256,

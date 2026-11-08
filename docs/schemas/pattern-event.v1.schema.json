@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://financial-brain.local/schemas/pattern-event.v1.schema.json",
+  "title": "Chart-pattern event (v1)",
+  "description": "Serialised PatternEvent as produced by PatternEvent.to_dict(). Optional lifecycle keys are present only when set (CP-0124, CP-0127).",
+  "type": "object",
+  "required": [
+    "event_id", "spec_sha256", "lineage", "timeframe", "candidate_known_at_utc", "status",
+    "geometry", "data_sha256", "evidence_tier"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {"type": "string", "pattern": "^pev_[0-9a-f]{32}$"},
+    "spec_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "lineage": {"type": "string", "minLength": 1},
+    "timeframe": {"type": "string", "minLength": 1},
+    "candidate_known_at_utc": {"type": "string", "format": "date-time"},
+    "confirmed_at_utc": {"type": ["string", "null"], "format": "date-time"},
+    "invalidated_at_utc": {"type": ["string", "null"], "format": "date-time"},
+    "earliest_entry_at_utc": {"type": ["string", "null"], "format": "date-time"},
+    "status": {"type": "string", "enum": ["CANDIDATE", "CONFIRMED", "FAILED", "INVALIDATED", "EXPIRED", "SUPERSEDED"]},
+    "geometry": {"type": "object"},
+    "data_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "evidence_tier": {"type": "string", "enum": ["DESCRIPTIVE"]},
+    "decision_at_utc": {"type": ["string", "null"], "format": "date-time"},
+    "formation_start_utc": {"type": ["string", "null"], "format": "date-time"},
+    "observed_at_utc": {"type": "string", "format": "date-time"},
+    "generated_at_utc": {"type": "string", "format": "date-time"},
+    "expired_at_utc": {"type": "string", "format": "date-time"},
+    "invalidation_reason": {"type": "string", "minLength": 1},
+    "expiry_reason": {"type": "string", "minLength": 1}
+  }
+}

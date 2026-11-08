@@ -230,3 +230,29 @@ def adjust_for_dividend(closes: list[float], ex_index: int, amount: float) -> li
     if factor <= 0:
         raise ValueError("dividend exceeds the prior close")
     return [c * factor if i < ex_index else c for i, c in enumerate(closes)]
+
+
+# ---------------------------------------------------------------- asynchronous completion and session boxes (CP-0345, CP-0063)
+def bars_completed_by(rows: Iterable[dict[str, Any]], t_utc: str) -> list[dict[str, Any]]:
+    """Bars whose ``completed_at_utc`` is at or before ``t_utc``, in completion order (CP-0345).
+
+    Intraday and weekly bars complete at different times. A bar is usable only once it has completed, so the
+    result for any ``t`` contains no bar that finished later. Both timestamps must be timezone-aware.
+    """
+    cutoff = datetime.fromisoformat(normalize_timestamp(t_utc)[1])
+    out: list[tuple[datetime, dict[str, Any]]] = []
+    for row in rows:
+        _ist, utc = normalize_timestamp(str(row["completed_at_utc"]))
+        completed = datetime.fromisoformat(utc)
+        if completed <= cutoff:
+            out.append((completed, dict(row)))
+    return [row for _ts, row in sorted(out, key=lambda pair: pair[0])]
+
+
+def candidate_within_box(calendar: SessionCalendar, start: date, end: date, *, max_sessions: int) -> bool:
+    """True when a candidate starts and ends on trading sessions and spans at most ``max_sessions`` (CP-0063)."""
+    if end < start or max_sessions < 1:
+        return False
+    if not (calendar.is_trading(start) and calendar.is_trading(end)):
+        return False
+    return len(calendar.trading_days(start, end)) <= max_sessions

@@ -116,7 +116,7 @@ def test_legal_lifecycle_and_immutability() -> None:
     assert conf.status is EventState.CONFIRMED
     assert cand.status is EventState.CANDIDATE  # original untouched
     inv = transition(
-        conf, EventState.INVALIDATED, invalidated_at_utc="2026-01-07T10:00:00+00:00"
+        conf, EventState.INVALIDATED, invalidated_at_utc="2026-01-07T10:00:00+00:00", invalidation_reason="CLOSE_BEYOND_FAILURE"
     )
     assert inv.status is EventState.INVALIDATED
 
@@ -137,7 +137,7 @@ def test_illegal_transitions_raise(src: EventState, dst: EventState) -> None:
         if src is EventState.CONFIRMED:
             base = transition(base, EventState.CONFIRMED, confirmed_at_utc="2026-01-06T10:00:00+00:00")
         elif src in (EventState.INVALIDATED, EventState.EXPIRED, EventState.SUPERSEDED):
-            extra = {"invalidated_at_utc": "2026-01-06T10:00:00+00:00"} if src is EventState.INVALIDATED else {}
+            extra = {"invalidated_at_utc": "2026-01-06T10:00:00+00:00", "invalidation_reason": "CLOSE_BEYOND_FAILURE"} if src is EventState.INVALIDATED else {}
             base = transition(base, src, **extra)
         event = base
     with pytest.raises(InvalidTransition):

@@ -1561,6 +1561,361 @@ EVIDENCE: dict[str, tuple[list[str], list[str], str]] = {
         ['tests/test_pattern_final.py'],
         'dump_intents and load_intents restore intent states with a checksum; a tampered backup is refused.',
     ),
+    "CP-0002": (
+        ['docs/audits/pattern-branch-reconciliation.md'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Local branch state recorded; remote PR status explicitly not checked.',
+    ),
+    "CP-0003": (
+        ['docs/audits/pattern-module-inventory.md'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Existing modules reviewed; forbidden imports listed with the boundary test that enforces them.',
+    ),
+    "CP-0006": (
+        ['docs/audits/pattern-branch-reconciliation.md'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Work sits on its own feature branch, not on main; no worktree was created.',
+    ),
+    "CP-0008": (
+        ['docs/audits/pattern-data-limitations.md'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Limitations quoted from vault notes with line references; no coverage invented.',
+    ),
+    "CP-0023": (
+        ['src/financial_brain/patterns/catalogue.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Four source-quality fields added to CatalogueEntry; every value is UNASSESSED until assessed.',
+    ),
+    "CP-0024": (
+        ['src/financial_brain/patterns/catalogue.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'migrate_document sets the schema version, leaves the input unmodified and refuses any change to stable IDs.',
+    ),
+    "CP-0041": (
+        ['src/financial_brain/patterns/source.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'BarSource reads DuckDB read-only and Parquet via DuckDB; dates bound as parameters; unsafe table names refused.',
+    ),
+    "CP-0081": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'pennant_bullish/bearish: pole then symmetric taper inside a fixed 18-bar window. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0083": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'channel_rising/falling from known pivots with parallel-slope tolerance; direction neutral. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0084": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'cup_with_handle: left lip, cup low, right lip, shallow handle emitted at a fixed handle length. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0085": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'high_tight_flag: 80 percent rise in at most 40 bars, flag 5 to 20 bars, retrace at most 25 percent. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0087": (
+        ['src/financial_brain/patterns/streaming.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Streaming pivots equal batch pivots on pennant, cup and flag fixtures.',
+    ),
+    "CP-0088": (
+        ['scripts/build_pattern_fixtures.py', 'tests/fixtures/patterns/family_examples.json'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Small JSON geometry fixtures generated from synthetic OHLC; no source images.',
+    ),
+    "CP-0094": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'triple_bottom/top: three equal extrema with bounded spacing asymmetry and a shared neckline. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0097": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'rounding_bottom/top: quadratic fit with R-squared at least 0.8, vertex near centre, depth at least 5 percent. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0100": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'broadening_top/bottom from diverging known swing bands; name records the trailing move only. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0101": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'diamond_candidate: widening then narrowing with two pivots per side per half; never confirmed by this detector. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0102": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'island_reversal top/bottom: opposite gaps around a non-overlapping island of up to five bars. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0104": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'throwback_state: THROWBACK_HELD, THROWBACK_FAILED or PULLBACK_TOUCHED, computed from bars up to t only.',
+    ),
+    "CP-0105": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'levels() gives breakout and invalidation levels and always profit_target None.',
+    ),
+    "CP-0106": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'within_complexity_cap rejects shapes with more than six geometry points.',
+    ),
+    "CP-0113": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'three_methods bullish/bearish: strong first candle, three contained counter-trend bars, confirmation on a later close. Causal and prefix-invariant (checked in tests/test_pattern_wave9_detectors.py). ',
+    ),
+    "CP-0115": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'sr_confluence counts known pivots near a level and states observational_only with no multiplier.',
+    ),
+    "CP-0116": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_detectors.py'],
+        'gap_up/gap_down candidates; the fill bar is stored as failed_index and hidden until it has happened.',
+    ),
+    "CP-0119": (
+        ['src/financial_brain/patterns/candles.py', 'src/financial_brain/patterns/report.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'K7 notice and its G3 result appear in every JSON export banner; the vault note remains the full record.',
+    ),
+    "CP-0124": (
+        ['src/financial_brain/patterns/spec.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'invalidated_at_utc and expired_at_utc each require an explicit reason; optional keys leave old hashes unchanged.',
+    ),
+    "CP-0127": (
+        ['src/financial_brain/patterns/spec.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'observed_at_utc must not follow generated_at_utc; both are optional and separate.',
+    ),
+    "CP-0131": (
+        ['src/financial_brain/patterns/ops.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'ScanCheckpoint commits per bar atomically; an interrupted scan resumes after the last commit; manifest mismatch refused.',
+    ),
+    "CP-0133": (
+        ['src/financial_brain/patterns/ops.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'detection_trace records thresholds from the detector signature next to its geometry.',
+    ),
+    "CP-0142": (
+        ['src/financial_brain/patterns/marketdata.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Rename keeps one lineage; a merger alias with two lineages is withheld; split and dividend adjustments checked on known values.',
+    ),
+    "CP-0153": (
+        ['src/financial_brain/patterns/source.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'Protected DuckDB file is hash-checked before and after reads; writes through a read-only connection fail.',
+    ),
+    "CP-0173": (
+        ['src/financial_brain/patterns/risk_views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'Liquidity, size and sector controls use attributes supplied for the decision date; missing values give DATA_INSUFFICIENT.',
+    ),
+    "CP-0215": (
+        ['src/financial_brain/patterns/risk_views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'sector_concentration (HHI, largest share) and beta_diagnostics; unknown sector or beta is flagged, not hidden.',
+    ),
+    "CP-0217": (
+        ['src/financial_brain/patterns/risk_views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'candidate_risk_explanations maps each rejection code to its plain reason with authorises_trade false.',
+    ),
+    "CP-0235": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'status_counts: per-state counts with latest known timestamp. The terminal panel that shows it is CP-0234, not yet built.',
+    ),
+    "CP-0237": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'filter_rows applies symbol, family, timeframe, dates, state, liquidity floor, sector and evidence tier. Missing liquidity never passes.',
+    ),
+    "CP-0239": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'detail() gives geometry, bars, recognition time, invalidation and tests, marking anything unrecorded.',
+    ),
+    "CP-0240": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'compare_with_baseline: pattern state beside momentum and 52-week position; missing inputs stay visible.',
+    ),
+    "CP-0241": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'why_not_trade always returns reasons: not confirmed, DESCRIPTIVE tier, risk verdict, missing entry, cost caveat.',
+    ),
+    "CP-0242": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'ticket_preview: PAPER ONLY, entry eligibility, costs, capital and risk verdict; submittable is always false.',
+    ),
+    "CP-0243": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'allowed_action admits only the two paper actions and refuses everything else.',
+    ),
+    "CP-0244": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'knowable_at hides confirmations that were not yet visible at the slider time.',
+    ),
+    "CP-0245": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'status_page reports STALE data, failed scans, audit exceptions and paper-run health.',
+    ),
+    "CP-0256": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'overlay_markers keeps the signal bar and the earliest entry bar as separate markers.',
+    ),
+    "CP-0257": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'visible_boundaries drops any boundary beyond the displayed bar.',
+    ),
+    "CP-0258": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'version_history lists revisions as new versions with changed fields; inputs are not mutated.',
+    ),
+    "CP-0259": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'risk_zones gives the ATR band and hypothetical cost; guaranteed_target is always None.',
+    ),
+    "CP-0260": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'hover_breakdown gives tolerance, pivots, duration and breakout threshold, marking missing values.',
+    ),
+    "CP-0261": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'research_controls shows the matched baseline and lookalikes only in research mode.',
+    ),
+    "CP-0279": (
+        ['src/financial_brain/patterns/demo.py', 'src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Synthetic bars flow through detection, paper preview and the view model with no network.',
+    ),
+    "CP-0285": (
+        ['src/financial_brain/patterns/learning.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Decision: no gradient-boosted framework is introduced; the calibration floor is 200 labels and no matured labels exist to train on.',
+    ),
+    "CP-0290": (
+        ['src/financial_brain/patterns/learning.py'],
+        ['tests/test_pattern_wave9_modules.py', 'tests/test_pattern_wave9_evidence.py'],
+        'scheduled_retrain refuses immature labels, registers a challenger and never promotes it.',
+    ),
+    "CP-0296": (
+        ['src/financial_brain/patterns/learning.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'continual_dry_run uses seeded synthetic outcomes with an intentional shift; reports REVIEW and changes no registry.',
+    ),
+    "CP-0325": (
+        ['docs/schemas/pattern-catalogue.v1.schema.json', 'docs/schemas/pattern-event.v1.schema.json'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Catalogue rows and emitted events are validated against checked-in JSON schemas.',
+    ),
+    "CP-0327": (
+        ['docs/audits/pattern-benchmark.json'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Wave-9 scan has a 60 s guard; the recorded projection must stay under its 600 s budget.',
+    ),
+    "CP-0335": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Offline demo and wave-9 scan emit zero warnings from the pattern package.',
+    ),
+    "CP-0340": (
+        ['scripts/build_pattern_fixtures.py', 'tests/fixtures/patterns/family_examples.json'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Six families, each with one positive and two negative synthetic examples, checked by the test suite.',
+    ),
+    "CP-0349": (
+        ['tests/fixtures/patterns/snapshots.json'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Pinned hashes for the daily screen, empty state, risk rejection and loss review renderings.',
+    ),
+    "CP-0356": (
+        ['docs/PATTERNS-DETECTOR-AUTHORING.md'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Causal-window proof requirements, fixture template and labelling rules.',
+    ),
+    "CP-0360": (
+        ['docs/PATTERNS-MIGRATION-POLICY.md'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Migration policy for detector, spec, catalogue and event schemas.',
+    ),
+    "CP-0361": (
+        ['docs/PATTERNS-OPERATIONS-GUIDE.md'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Operator guide for corrupt bars, stale quotes, crashes and cache rebuilds.',
+    ),
+    "CP-0365": (
+        ['src/financial_brain/cli.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'fb patterns runs the offline pattern CLI; other fb commands are unchanged and still parse.',
+    ),
+    "CP-0379": (
+        ['src/financial_brain/patterns/detectors.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'A double bottom is CANDIDATE at recognition and CONFIRMED only after its neckline close.',
+    ),
+    "CP-0383": (
+        ['src/financial_brain/patterns/views.py'],
+        ['tests/test_pattern_wave9_modules.py'],
+        'filter_rows narrows by sector, liquidity, evidence tier and date interval together.',
+    ),
+    "CP-0384": (
+        ['src/financial_brain/patterns/catalogue.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Each catalogue row has its claim kind, unverified page reference and UNASSESSED source-quality fields.',
+    ),
+    "CP-0401": (
+        ['src/financial_brain/patterns/learning.py'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Fixture-label versions: shadow, refused promotion on DESCRIPTIVE evidence, promotion on FORWARD_PAPER fixture evidence, rollback.',
+    ),
+    "CP-0063": (
+        ['src/financial_brain/patterns/marketdata.py'],
+        ['tests/test_pattern_wave9_realism.py'],
+        'candidate_within_box: start and end on trading sessions, span at most max_sessions, checked against the session calendar.',
+    ),
+    "CP-0181": (
+        ['src/financial_brain/patterns/risk_views.py'],
+        ['tests/test_pattern_wave9_realism.py'],
+        'turnover_and_cost_delta adds capacity-adjusted turnover (each trade capped at participation times ADV) and the matching cost delta.',
+    ),
+    "CP-0336": (
+        ['docs/audits/pattern-evidence-appendix.md'],
+        ['tests/test_pattern_wave9_evidence.py'],
+        'Appendix lists each command with its exit code, platform, Python version and base commit; a test checks its structure.',
+    ),
+    "CP-0341": (
+        ['src/financial_brain/patterns/detectors2.py'],
+        ['tests/test_pattern_wave9_realism.py'],
+        'Noisy synthetic series with spread variation, a calendar gap, a 2:1 split and an illiquid run: quarantine, split adjustment, missing sessions, volume eligibility and detection all checked.',
+    ),
+    "CP-0345": (
+        ['src/financial_brain/patterns/marketdata.py'],
+        ['tests/test_pattern_wave9_realism.py'],
+        'bars_completed_by returns only bars completed by the query time, in completion order; intraday and weekly examples; naive times refused.',
+    ),
     "CP-0149": (
         ["src/financial_brain/patterns/"],
         ["tests/test_pattern_offline.py"],

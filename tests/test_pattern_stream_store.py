@@ -102,12 +102,12 @@ def test_first_version_must_be_candidate_and_transitions_enforced() -> None:
         log.append(conf)
     log.append(_candidate())
     log.append(conf)
-    inv = transition(conf, EventState.INVALIDATED, invalidated_at_utc=T2)
+    inv = transition(conf, EventState.INVALIDATED, invalidated_at_utc=T2, invalidation_reason="CLOSE_BEYOND_FAILURE")
     log.append(inv)
     # A fresh event that is invalidated cannot later be confirmed: illegal transition.
     log2 = EventLog()
     log2.append(_candidate("pev_z"))
-    invalid_z = transition(_candidate("pev_z"), EventState.INVALIDATED, invalidated_at_utc=T1)
+    invalid_z = transition(_candidate("pev_z"), EventState.INVALIDATED, invalidated_at_utc=T1, invalidation_reason="CLOSE_BEYOND_FAILURE")
     log2.append(invalid_z)
     with pytest.raises(InvalidTransition):
         log2.append(transition(invalid_z, EventState.CONFIRMED, confirmed_at_utc=T2))
