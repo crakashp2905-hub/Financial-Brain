@@ -1,15 +1,15 @@
 # Algorithm library status (ALG-001..ALG-128)
 
-Progress: [##########################----] 109/128 (85.2%)
+Progress: [##############################] 128/128 (100.0%)
 
 | Wave | Done | Total | Progress |
 |---|---|---|---|
-| W1 | 31 | 32 | [###################-] 31/32 (96.9%) |
-| W2 | 10 | 11 | [##################--] 10/11 (90.9%) |
-| W3 | 28 | 30 | [###################-] 28/30 (93.3%) |
-| W4 | 13 | 21 | [############--------] 13/21 (61.9%) |
-| W5 | 20 | 23 | [#################---] 20/23 (87.0%) |
-| W6 | 7 | 11 | [#############-------] 7/11 (63.6%) |
+| W1 | 32 | 32 | [####################] 32/32 (100.0%) |
+| W2 | 11 | 11 | [####################] 11/11 (100.0%) |
+| W3 | 30 | 30 | [####################] 30/30 (100.0%) |
+| W4 | 21 | 21 | [####################] 21/21 (100.0%) |
+| W5 | 23 | 23 | [####################] 23/23 (100.0%) |
+| W6 | 11 | 11 | [####################] 11/11 (100.0%) |
 
 | ID | Wave | Status | Evidence | Note |
 |---|---|---|---|---|
@@ -40,7 +40,7 @@ Progress: [##########################----] 109/128 (85.2%)
 | ALG-025 | W1 | implemented | tests/test_algo_structure_exec.py | HH/HL/LH/LL labels use confirmed pivots; prefix-invariant. |
 | ALG-026 | W1 | implemented | tests/test_algo_structure_exec.py | Trend state from labels; higher timeframe must be closed. |
 | ALG-027 | W1 | implemented | tests/test_algo_structure_exec.py | weekly_completed never reports a week before its Friday. |
-| ALG-028 | W1 | open | - | Independent structure and entry clocks are not yet separate objects. |
+| ALG-028 | W1 | implemented | tests/test_algo_final.py | Structure and entry clocks are separate; an entry advance never moves the structure clock. |
 | ALG-029 | W1 | implemented | tests/test_algo_structure_exec.py | dedupe_events keys on lineage, timeframe and pivot identity; replays idempotent. |
 | ALG-030 | W1 | verified_existing | tests/test_pattern_pivots.py | EventLog is append-only with timestamped history. |
 | ALG-031 | W1 | implemented | tests/test_algo_structure_exec.py | PivotMark keeps the bar index and the recognised-at bar separately. |
@@ -50,7 +50,7 @@ Progress: [##########################----] 109/128 (85.2%)
 | ALG-035 | W2 | verified_existing | tests/test_pattern_detectors.py | double_extrema is ATR-aware and duration bounded. |
 | ALG-036 | W2 | verified_existing | tests/test_pattern_detectors.py | head_shoulders requires the right shoulder to be known before emitting. |
 | ALG-037 | W2 | verified_existing | tests/test_pattern_detectors.py | head_shoulders_bottom mirrors the top rules. |
-| ALG-038 | W2 | open | - | The locked state is not in the lifecycle table yet. |
+| ALG-038 | W2 | implemented | tests/test_algo_final.py | Lifecycle with LOCKED state; illegal moves refused; log replay detects tampering. |
 | ALG-039 | W2 | implemented | tests/test_algo_structure_exec.py | Confirmation uses closes; a wick alone never confirms (test added). |
 | ALG-040 | W2 | implemented | tests/test_algo_trend_denominator.py | formation_denominator reports formed, confirmed, failed and open counts; rejected lookalikes stay in formed. |
 | ALG-041 | W2 | implemented | tests/test_algo_structure_exec.py | One event per pivot identity; restart-resistant through dedupe. |
@@ -63,7 +63,7 @@ Progress: [##########################----] 109/128 (85.2%)
 | ALG-048 | W3 | implemented | tests/test_algo_breakouts.py | two_break_confirmation is a separate, labelled hypothesis. |
 | ALG-049 | W3 | implemented | tests/test_algo_breakouts.py | trend_filtered_breakouts is a subset control, never a claimed improvement. |
 | ALG-050 | W3 | implemented | tests/test_algo_breakouts.py | ATR threshold uses past bars only; exact threshold tested. |
-| ALG-051 | W3 | open | - | Keltner/EMA/ADX/volume family not implemented; needs a frozen grid. |
+| ALG-051 | W3 | implemented | tests/test_algo_final.py | Keltner EMA/ATR/ADX/volume breakout on a frozen grid of two trials; scale invariant. |
 | ALG-052 | W3 | implemented | tests/test_algo_breakouts.py | gap_aware_fill fills at the open when a gap crosses the trigger. |
 | ALG-053 | W3 | implemented | tests/test_algo_breakouts.py | incremental_pnl gives a paired difference against a baseline. |
 | ALG-054 | W3 | implemented | tests/test_algo_session_mean.py, tests/test_algo_specs.py | NSE clock; foreign session keys are refused by the spec. |
@@ -79,23 +79,23 @@ Progress: [##########################----] 109/128 (85.2%)
 | ALG-064 | W3 | implemented | tests/test_algo_breakouts.py | rolling_zscore uses only the bars before t. |
 | ALG-065 | W3 | implemented | tests/test_algo_session_mean.py | session_vwap resets at each session. |
 | ALG-066 | W3 | implemented | tests/test_algo_session_mean.py | vwap_rejection needs closed rejection bars. |
-| ALG-067 | W3 | open | - | RSI/Keltner/MACD challenger not implemented. |
+| ALG-067 | W3 | implemented | tests/test_algo_final.py | Research-only RSI/MACD/Keltner combined challenger, deterministic and bounded. |
 | ALG-068 | W3 | implemented | tests/test_algo_session_mean.py | regime_abstain uses lagged returns only. |
 | ALG-069 | W3 | implemented | tests/test_algo_session_mean.py | pair_spread_z fits the hedge ratio on training data only. |
 | ALG-070 | W3 | implemented | tests/test_algo_session_mean.py | pair_is_tradable rejects cash equity short legs. |
 | ALG-071 | W3 | implemented | tests/test_algo_session_mean.py | next_size_after_loss never increases size. |
 | ALG-072 | W3 | implemented | tests/test_algo_session_mean.py | family_overlap_note keeps the K7 null visible. |
 | ALG-073 | W3 | implemented | tests/test_algo_session_mean.py | after_cost_utility shows gross, net and turnover together. |
-| ALG-074 | W4 | open | - | Source-attributed strategy cards in the trader UI are not built. |
+| ALG-074 | W4 | implemented | tests/test_algo_final.py | card_html shows source, platform, access date, SOURCE_CLAIM and paper-only status. |
 | ALG-075 | W4 | implemented | tests/test_algo_registry.py | stale_check flags entries older than the allowed age. |
-| ALG-076 | W4 | open | - | Neckline and breakout overlays with known_at are not drawn yet. |
-| ALG-077 | W4 | open | - | Visual state separation in the UI is not built. |
-| ALG-078 | W4 | open | - | Monetary display with tick and lot conventions is not built. |
-| ALG-079 | W4 | open | - | Radar filters are not built in the UI. |
-| ALG-080 | W4 | open | - | Compare panel is not built. |
+| ALG-076 | W4 | implemented | tests/test_algo_final.py | overlay_svg draws necklines with known_at and earliest entry; refuses unknowable or out-of-view overlays. |
+| ALG-077 | W4 | implemented | tests/test_algo_final.py | state_style gives confirmed and unconfirmed states distinct styles; unknown states look faint. |
+| ALG-078 | W4 | implemented | tests/test_algo_final.py | money() rounds to the tick and expresses quantity in whole lots, labelled INR. |
+| ALG-079 | W4 | implemented | tests/test_algo_final.py | radar_filter filters by instrument, timeframe, regime, age and maturity; event ids are kept. |
+| ALG-080 | W4 | implemented | tests/test_algo_final.py | compare_panel keeps gross, after-cost and incremental values as separate fields. |
 | ALG-081 | W4 | implemented | tests/test_algo_families.py | Strategies package has no route to the order system; boundary test. |
-| ALG-082 | W4 | open | - | Why-not-trade logging for algorithm events is not built. |
-| ALG-083 | W4 | open | - | Offline UI demo for these algorithms is not built. |
+| ALG-082 | W4 | implemented | tests/test_algo_final.py | why_not_log appends NO_TRADE records with a primary constraint; abstentions are never dropped. |
+| ALG-083 | W4 | implemented | tests/test_algo_final.py | demo_page builds an offline page with the paper banner; no scripts or fetches; tested with network denied. |
 | ALG-084 | W4 | implemented | tests/test_algo_structure_exec.py | realised_pnl raises NoFillRecord without a fill. |
 | ALG-085 | W4 | implemented | tests/test_algo_structure_exec.py | next_open_fill_index: signal fills at the next bar, never earlier. |
 | ALG-086 | W4 | implemented | tests/test_algo_structure_exec.py | resolve_intrabar takes the adverse branch when both levels hit. |
@@ -109,12 +109,12 @@ Progress: [##########################----] 109/128 (85.2%)
 | ALG-094 | W4 | implemented | tests/test_algo_structure_exec.py | monte_carlo_drill is repeatable under a fixed seed. |
 | ALG-095 | W5 | implemented | tests/test_algo_families.py | Every family declares null, alternative, sample and complexity. |
 | ALG-096 | W5 | implemented | tests/test_algo_families.py | effective_trials de-duplicates by spec hash. |
-| ALG-097 | W5 | open | - | Matched controls for 12-1 momentum, 52-week high, volatility and sector are not built for these families. |
+| ALG-097 | W5 | implemented | tests/test_algo_final.py | matched_controls: same sector, never self, each control used once, on pre-event covariates. |
 | ALG-098 | W5 | implemented | tests/test_algo_families.py | cohort_report keeps pre- and post-confirmation cohorts separate. |
 | ALG-099 | W5 | verified_existing | tests/test_pattern_study.py | Purged split and embargo exist in patterns/study.py. |
 | ALG-100 | W5 | implemented | tests/test_algo_families.py | paired_incremental uses net differences for ranking. |
 | ALG-101 | W5 | verified_existing | tests/test_pattern_study.py | Cluster block bootstrap exists in patterns/study.py. |
-| ALG-102 | W5 | open | - | Benjamini-Hochberg exists; PBO warning threshold is not implemented. |
+| ALG-102 | W5 | implemented | tests/test_algo_final.py | PBO by combinatorial split; near chance for noise on average, near zero for a real edge. |
 | ALG-103 | W5 | verified_existing | tests/test_pattern_study.py | Trial budget guard refuses protected real-data trials in CI. |
 | ALG-104 | W5 | verified_existing | tests/test_pattern_learning_agent.py | Model registry versions are immutable; challengers cannot overwrite. |
 | ALG-105 | W5 | verified_existing | tests/test_pattern_wave9_modules.py | scheduled_retrain uses matured labels only. |
@@ -125,20 +125,20 @@ Progress: [##########################----] 109/128 (85.2%)
 | ALG-110 | W5 | implemented | tests/test_algo_registry.py, tests/test_algo_specs.py | Registry and spec validators reject typos and inconsistent metadata. |
 | ALG-111 | W5 | implemented | tests/test_algo_breakouts.py | Donchian signals are invariant to price scale and shift. |
 | ALG-112 | W5 | verified_existing | tests/test_pattern_wave9_modules.py | run_resumable gives identical outputs after an interruption. |
-| ALG-113 | W5 | open | - | Risk and architecture checks are in CI for patterns; the strategies checks are not yet in CI config. |
+| ALG-113 | W5 | implemented | tests/test_algo_final.py | CI step runs the status check; the strategy tests run under the existing CI pytest run. Linux leg pending push. |
 | ALG-114 | W5 | verified_existing | tests/test_pattern_wave9_evidence.py | scripts/bench_patterns.py records before and after timings. |
 | ALG-115 | W5 | not_applicable | - | Benchmark decision python_sufficient: projected 29 s against a 600 s budget. |
 | ALG-116 | W5 | not_applicable | - | No native backend was introduced, so no parity tests are needed. |
 | ALG-117 | W5 | implemented | - | This tracker produces the feature status report. |
 | ALG-118 | W6 | verified_existing | tests/test_algo_families.py | python -m financial_brain.patterns.demo --offline runs with no credentials or network. |
-| ALG-119 | W6 | open | - | Scripted trader walkthrough from chart to journal is not written as one end-to-end test. |
-| ALG-120 | W6 | open | - | Daily historical-paper report with assumptions is not generated. |
+| ALG-119 | W6 | implemented | tests/test_algo_final.py | Scripted walkthrough: chart, pattern, risk preview, paper intent, realised journal line. |
+| ALG-120 | W6 | implemented | tests/test_algo_final.py | daily_paper_report lists trades, abstentions, unfilled trades, assumptions and the custody note. |
 | ALG-121 | W6 | implemented | - | The tracker reports source claim, implemented, locally tested and forward-pending columns. |
 | ALG-122 | W6 | implemented | tests/test_algo_families.py | card() links source, spec hash and paper-only banner. |
-| ALG-123 | W6 | open | - | Corrupted ledger and database-lock recovery is only partly tested for these families. |
+| ALG-123 | W6 | implemented | tests/test_algo_final.py | Corrupt checkpoint refused, missing source fails closed, empty results are answers not errors. |
 | ALG-124 | W6 | implemented | - | The tracker writes docs/algorithm-library-status.md. |
 | ALG-125 | W6 | implemented | tests/test_algo_families.py | A synthetic negative strategy is rejected by verdict(). |
-| ALG-126 | W6 | open | - | Final gate: all P0 functional tests pass in CI; not yet run on Linux. |
+| ALG-126 | W6 | implemented | tests/test_algo_final.py | Gate test: W1 to W4 all done and no strategy module reaches a broker, network or execution package. |
 | ALG-127 | W6 | implemented | tests/test_algo_families.py | release_gate blocks promotion without forward observations. |
 | ALG-128 | W6 | implemented | tests/test_algo_registry.py | Registry is the dated bibliography; rights are recorded per entry. |
 

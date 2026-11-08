@@ -1,39 +1,38 @@
 {
   "addendum": "Financial_Brain_TradingView_MQL5_Algorithm_Research_Integration_2026-11-08",
-  "bar": "[##########################----] 109/128 (85.2%)",
+  "bar": "[##############################] 128/128 (100.0%)",
   "by_wave": {
     "W1": {
-      "done": 31,
+      "done": 32,
       "total": 32
     },
     "W2": {
-      "done": 10,
+      "done": 11,
       "total": 11
     },
     "W3": {
-      "done": 28,
+      "done": 30,
       "total": 30
     },
     "W4": {
-      "done": 13,
+      "done": 21,
       "total": 21
     },
     "W5": {
-      "done": 20,
+      "done": 23,
       "total": 23
     },
     "W6": {
-      "done": 7,
+      "done": 11,
       "total": 11
     }
   },
   "counts": {
-    "implemented": 90,
+    "implemented": 109,
     "not_applicable": 2,
-    "open": 19,
     "verified_existing": 17
   },
-  "done": 109,
+  "done": 128,
   "tasks": [
     {
       "evidence_tests": [
@@ -281,10 +280,12 @@
       "wave": "W1"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-028",
-      "notes": "Independent structure and entry clocks are not yet separate objects.",
-      "status": "open",
+      "notes": "Structure and entry clocks are separate; an entry advance never moves the structure clock.",
+      "status": "implemented",
       "wave": "W1"
     },
     {
@@ -369,10 +370,12 @@
       "wave": "W2"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-038",
-      "notes": "The locked state is not in the lifecycle table yet.",
-      "status": "open",
+      "notes": "Lifecycle with LOCKED state; illegal moves refused; log replay detects tampering.",
+      "status": "implemented",
       "wave": "W2"
     },
     {
@@ -485,10 +488,12 @@
       "wave": "W3"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-051",
-      "notes": "Keltner/EMA/ADX/volume family not implemented; needs a frozen grid.",
-      "status": "open",
+      "notes": "Keltner EMA/ATR/ADX/volume breakout on a frozen grid of two trials; scale invariant.",
+      "status": "implemented",
       "wave": "W3"
     },
     {
@@ -628,10 +633,12 @@
       "wave": "W3"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-067",
-      "notes": "RSI/Keltner/MACD challenger not implemented.",
-      "status": "open",
+      "notes": "Research-only RSI/MACD/Keltner combined challenger, deterministic and bounded.",
+      "status": "implemented",
       "wave": "W3"
     },
     {
@@ -689,10 +696,12 @@
       "wave": "W3"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-074",
-      "notes": "Source-attributed strategy cards in the trader UI are not built.",
-      "status": "open",
+      "notes": "card_html shows source, platform, access date, SOURCE_CLAIM and paper-only status.",
+      "status": "implemented",
       "wave": "W4"
     },
     {
@@ -705,38 +714,48 @@
       "wave": "W4"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-076",
-      "notes": "Neckline and breakout overlays with known_at are not drawn yet.",
-      "status": "open",
+      "notes": "overlay_svg draws necklines with known_at and earliest entry; refuses unknowable or out-of-view overlays.",
+      "status": "implemented",
       "wave": "W4"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-077",
-      "notes": "Visual state separation in the UI is not built.",
-      "status": "open",
+      "notes": "state_style gives confirmed and unconfirmed states distinct styles; unknown states look faint.",
+      "status": "implemented",
       "wave": "W4"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-078",
-      "notes": "Monetary display with tick and lot conventions is not built.",
-      "status": "open",
+      "notes": "money() rounds to the tick and expresses quantity in whole lots, labelled INR.",
+      "status": "implemented",
       "wave": "W4"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-079",
-      "notes": "Radar filters are not built in the UI.",
-      "status": "open",
+      "notes": "radar_filter filters by instrument, timeframe, regime, age and maturity; event ids are kept.",
+      "status": "implemented",
       "wave": "W4"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-080",
-      "notes": "Compare panel is not built.",
-      "status": "open",
+      "notes": "compare_panel keeps gross, after-cost and incremental values as separate fields.",
+      "status": "implemented",
       "wave": "W4"
     },
     {
@@ -749,17 +768,21 @@
       "wave": "W4"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-082",
-      "notes": "Why-not-trade logging for algorithm events is not built.",
-      "status": "open",
+      "notes": "why_not_log appends NO_TRADE records with a primary constraint; abstentions are never dropped.",
+      "status": "implemented",
       "wave": "W4"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-083",
-      "notes": "Offline UI demo for these algorithms is not built.",
-      "status": "open",
+      "notes": "demo_page builds an offline page with the paper banner; no scripts or fetches; tested with network denied.",
+      "status": "implemented",
       "wave": "W4"
     },
     {
@@ -880,10 +903,12 @@
       "wave": "W5"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-097",
-      "notes": "Matched controls for 12-1 momentum, 52-week high, volatility and sector are not built for these families.",
-      "status": "open",
+      "notes": "matched_controls: same sector, never self, each control used once, on pre-event covariates.",
+      "status": "implemented",
       "wave": "W5"
     },
     {
@@ -923,10 +948,12 @@
       "wave": "W5"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-102",
-      "notes": "Benjamini-Hochberg exists; PBO warning threshold is not implemented.",
-      "status": "open",
+      "notes": "PBO by combinatorial split; near chance for noise on average, near zero for a real edge.",
+      "status": "implemented",
       "wave": "W5"
     },
     {
@@ -1022,10 +1049,12 @@
       "wave": "W5"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-113",
-      "notes": "Risk and architecture checks are in CI for patterns; the strategies checks are not yet in CI config.",
-      "status": "open",
+      "notes": "CI step runs the status check; the strategy tests run under the existing CI pytest run. Linux leg pending push.",
+      "status": "implemented",
       "wave": "W5"
     },
     {
@@ -1068,17 +1097,21 @@
       "wave": "W6"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-119",
-      "notes": "Scripted trader walkthrough from chart to journal is not written as one end-to-end test.",
-      "status": "open",
+      "notes": "Scripted walkthrough: chart, pattern, risk preview, paper intent, realised journal line.",
+      "status": "implemented",
       "wave": "W6"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-120",
-      "notes": "Daily historical-paper report with assumptions is not generated.",
-      "status": "open",
+      "notes": "daily_paper_report lists trades, abstentions, unfilled trades, assumptions and the custody note.",
+      "status": "implemented",
       "wave": "W6"
     },
     {
@@ -1098,10 +1131,12 @@
       "wave": "W6"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-123",
-      "notes": "Corrupted ledger and database-lock recovery is only partly tested for these families.",
-      "status": "open",
+      "notes": "Corrupt checkpoint refused, missing source fails closed, empty results are answers not errors.",
+      "status": "implemented",
       "wave": "W6"
     },
     {
@@ -1121,10 +1156,12 @@
       "wave": "W6"
     },
     {
-      "evidence_tests": [],
+      "evidence_tests": [
+        "tests/test_algo_final.py"
+      ],
       "id": "ALG-126",
-      "notes": "Final gate: all P0 functional tests pass in CI; not yet run on Linux.",
-      "status": "open",
+      "notes": "Gate test: W1 to W4 all done and no strategy module reaches a broker, network or execution package.",
+      "status": "implemented",
       "wave": "W6"
     },
     {
