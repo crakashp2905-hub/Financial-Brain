@@ -3179,8 +3179,20 @@ def main(argv: list[str] | None = None) -> int:
     from . import commands as _commands
     _commands.register_all(sub)
 
+    # Chart-pattern research is offline and paper-only; it has its own parser (CP-0365).
+    g = sub.add_parser("patterns", help="chart-pattern research: offline, paper-only, no orders")
+    g.add_argument("pattern_args", nargs=argparse.REMAINDER)
+    g.set_defaults(fn=_cmd_patterns)
+
     args = p.parse_args(argv)
     return args.fn(args)
+
+
+def _cmd_patterns(args: argparse.Namespace) -> int:
+    from financial_brain.patterns.cli import main as patterns_main
+
+    rest = [a for a in args.pattern_args if a != "--"]
+    return patterns_main(rest)
 
 
 if __name__ == "__main__":

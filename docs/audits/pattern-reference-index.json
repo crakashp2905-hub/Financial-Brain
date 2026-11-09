@@ -1,0 +1,944 @@
+{
+  "entries": {
+    "B01": {
+      "claim_kind": "historical_conditional",
+      "evidence": "broadening bottom not modelled",
+      "name": "Broadening bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B02": {
+      "claim_kind": "historical_conditional",
+      "evidence": "right-angled ascending broadening not modelled",
+      "name": "Right-angled ascending broadening",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B03": {
+      "claim_kind": "historical_conditional",
+      "evidence": "right-angled descending broadening not modelled",
+      "name": "Right-angled descending broadening",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B04": {
+      "claim_kind": "historical_conditional",
+      "evidence": "broadening top not modelled",
+      "name": "Broadening top",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B05": {
+      "claim_kind": "historical_conditional",
+      "evidence": "broadening wedge ascending not modelled",
+      "name": "Broadening wedge, ascending",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B06": {
+      "claim_kind": "historical_conditional",
+      "evidence": "broadening wedge descending not modelled",
+      "name": "Broadening wedge, descending",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B07": {
+      "claim_kind": "historical_conditional",
+      "evidence": "bump-and-run reversal bottom not modelled",
+      "name": "Bump-and-run reversal bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B08": {
+      "claim_kind": "historical_conditional",
+      "evidence": "bump-and-run reversal top not modelled",
+      "name": "Bump-and-run reversal top",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B09": {
+      "claim_kind": "historical_conditional",
+      "evidence": "cup with handle not modelled",
+      "name": "Cup with handle",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B10": {
+      "claim_kind": "historical_conditional",
+      "evidence": "dead-cat bounce not modelled",
+      "name": "Dead-cat bounce",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B11": {
+      "claim_kind": "historical_conditional",
+      "evidence": "diamond not modelled",
+      "name": "Diamond top/bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B12": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.double_extrema (double_bottom)",
+      "name": "Double bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B13": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.double_extrema (double_top)",
+      "name": "Double top",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B14": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.flags; pennants not separated from triangles",
+      "name": "Flags and pennants",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "partial"
+    },
+    "B15": {
+      "claim_kind": "historical_conditional",
+      "evidence": "high and tight flag not modelled",
+      "name": "High and tight flag",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B16": {
+      "claim_kind": "historical_conditional",
+      "evidence": "candles.gap_kind; area, breakaway, exhaustion not classified",
+      "name": "Gaps (area, breakaway, continuation, exhaustion)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "partial"
+    },
+    "B17": {
+      "claim_kind": "historical_conditional",
+      "evidence": "c_hammer context; hanging man not a separate rule",
+      "name": "Hanging man (open=high=close, low >=5% below)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "partial"
+    },
+    "B18": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.head_shoulders (bottom)",
+      "name": "Head-and-shoulders bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B19": {
+      "claim_kind": "historical_conditional",
+      "evidence": "complex head-and-shoulders bottom not modelled",
+      "name": "Head-and-shoulders bottom, complex",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B20": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.head_shoulders (top)",
+      "name": "Head-and-shoulders top",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B21": {
+      "claim_kind": "historical_conditional",
+      "evidence": "complex head-and-shoulders top not modelled",
+      "name": "Head-and-shoulders top, complex",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B22": {
+      "claim_kind": "historical_conditional",
+      "evidence": "weekly horn bottom not modelled",
+      "name": "Horn bottom (weekly)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B23": {
+      "claim_kind": "historical_conditional",
+      "evidence": "weekly horn top not modelled",
+      "name": "Horn top (weekly)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B24": {
+      "claim_kind": "historical_conditional",
+      "evidence": "library inside_bar feature; not a catalogue detector",
+      "name": "Inside day",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "partial"
+    },
+    "B25": {
+      "claim_kind": "historical_conditional",
+      "evidence": "island reversal not modelled",
+      "name": "Island reversal",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B26": {
+      "claim_kind": "historical_conditional",
+      "evidence": "measured move down not modelled",
+      "name": "Measured move down",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B27": {
+      "claim_kind": "historical_conditional",
+      "evidence": "measured move up not modelled",
+      "name": "Measured move up",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B28": {
+      "claim_kind": "historical_conditional",
+      "evidence": "one-day reversal not modelled",
+      "name": "One-day reversal",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B29": {
+      "claim_kind": "historical_conditional",
+      "evidence": "library outside_bar feature; not a catalogue detector",
+      "name": "Outside day",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "partial"
+    },
+    "B30": {
+      "claim_kind": "historical_conditional",
+      "evidence": "weekly pipe bottom not modelled",
+      "name": "Pipe bottom (weekly)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B31": {
+      "claim_kind": "historical_conditional",
+      "evidence": "weekly pipe top not modelled",
+      "name": "Pipe top (weekly)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B32": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.rectangle (both breakout directions)",
+      "name": "Rectangle bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B33": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.rectangle (both breakout directions)",
+      "name": "Rectangle top",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B34": {
+      "claim_kind": "historical_conditional",
+      "evidence": "rounding bottom not modelled",
+      "name": "Rounding bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B35": {
+      "claim_kind": "historical_conditional",
+      "evidence": "rounding top not modelled",
+      "name": "Rounding top (dome)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B36": {
+      "claim_kind": "historical_conditional",
+      "evidence": "scallops not modelled",
+      "name": "Scallops (ascending/descending)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B37": {
+      "claim_kind": "historical_conditional",
+      "evidence": "shark-32 not modelled",
+      "name": "Shark-32",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B38": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.triangles (triangle_ascending)",
+      "name": "Ascending triangle",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B39": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.triangles (triangle_descending)",
+      "name": "Descending triangle",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B40": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.triangles (triangle_symmetric)",
+      "name": "Symmetrical triangle bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B41": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.triangles (triangle_symmetric)",
+      "name": "Symmetrical triangle top",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B42": {
+      "claim_kind": "historical_conditional",
+      "evidence": "triple bottom not modelled",
+      "name": "Triple bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B43": {
+      "claim_kind": "historical_conditional",
+      "evidence": "triple top not modelled",
+      "name": "Triple top",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B44": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.triangles (wedge_falling)",
+      "name": "Falling wedge",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B45": {
+      "claim_kind": "historical_conditional",
+      "evidence": "detectors.triangles (wedge_rising)",
+      "name": "Rising wedge",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "implemented"
+    },
+    "B46": {
+      "claim_kind": "historical_conditional",
+      "evidence": "weekly reversal downside not modelled",
+      "name": "Weekly reversal, downside",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "B47": {
+      "claim_kind": "historical_conditional",
+      "evidence": "weekly reversal upside not modelled",
+      "name": "Weekly reversal, upside",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "bulkowski"
+      },
+      "source": "bulkowski",
+      "status": "missing"
+    },
+    "N01": {
+      "claim_kind": "none",
+      "evidence": "candles.CANDLE_MAP c_hammer (downtrend context)",
+      "name": "Hammer / hanging man",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "implemented"
+    },
+    "N02": {
+      "claim_kind": "none",
+      "evidence": "candles.CANDLE_MAP c_shooting_star (uptrend context)",
+      "name": "Shooting star / inverted hammer",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "implemented"
+    },
+    "N03": {
+      "claim_kind": "none",
+      "evidence": "candles.CANDLE_MAP c_bull_engulf, c_bear_engulf",
+      "name": "Engulfing (bullish/bearish)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "implemented"
+    },
+    "N04": {
+      "claim_kind": "none",
+      "evidence": "candles.CANDLE_MAP c_dark_cloud",
+      "name": "Dark-cloud cover",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "implemented"
+    },
+    "N05": {
+      "claim_kind": "none",
+      "evidence": "candles.CANDLE_MAP c_piercing",
+      "name": "Piercing pattern",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "implemented"
+    },
+    "N06": {
+      "claim_kind": "none",
+      "evidence": "candles.CANDLE_MAP c_morning_star, c_evening_star",
+      "name": "Morning star / evening star",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "implemented"
+    },
+    "N07": {
+      "claim_kind": "none",
+      "evidence": "doji star / abandoned baby not modelled",
+      "name": "Doji star / abandoned baby",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "missing"
+    },
+    "N08": {
+      "claim_kind": "none",
+      "evidence": "c_bull_harami only; bearish harami and cross variants missing",
+      "name": "Harami / harami cross",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "partial"
+    },
+    "N09": {
+      "claim_kind": "none",
+      "evidence": "tweezers not modelled",
+      "name": "Tweezers top/bottom",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "missing"
+    },
+    "N10": {
+      "claim_kind": "none",
+      "evidence": "c_marubozu approximates belt hold; not the same shape",
+      "name": "Belt hold",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "partial"
+    },
+    "N11": {
+      "claim_kind": "none",
+      "evidence": "counterattack lines not modelled",
+      "name": "Counterattack lines",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "missing"
+    },
+    "N12": {
+      "claim_kind": "none",
+      "evidence": "upside-gap two crows / mat hold not modelled",
+      "name": "Upside-gap two crows / mat hold",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "missing"
+    },
+    "N13": {
+      "claim_kind": "none",
+      "evidence": "candles.CANDLE_MAP c_three_soldiers, c_three_crows",
+      "name": "Three black crows / three white soldiers",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "implemented"
+    },
+    "N14": {
+      "claim_kind": "none",
+      "evidence": "three mountain / Buddha / river not modelled",
+      "name": "Three mountain / three Buddha / three river",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "missing"
+    },
+    "N15": {
+      "claim_kind": "none",
+      "evidence": "dumpling / fry-pan / tower not modelled",
+      "name": "Dumpling top / fry-pan bottom / tower",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "missing"
+    },
+    "N16": {
+      "claim_kind": "none",
+      "evidence": "candles.gap_kind range gap primitive; window event not emitted",
+      "name": "Windows (range gaps)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "partial"
+    },
+    "N17": {
+      "claim_kind": "none",
+      "evidence": "pending definitions excluded from inference (candles.PENDING_DEFINITIONS)",
+      "name": "Tasuki gaps, gapping plays, side-by-side white lines, separating lines, rising/falling three methods",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "missing"
+    },
+    "N18": {
+      "claim_kind": "none",
+      "evidence": "c_doji only; long-legged, gravestone, tri-star and high-wave not separated",
+      "name": "Doji family (long-legged, rickshaw, gravestone, tri-star, high wave)",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "partial"
+    },
+    "N19": {
+      "claim_kind": "none",
+      "evidence": "springs and upthrusts not modelled",
+      "name": "Springs and upthrusts",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "missing"
+    },
+    "N20": {
+      "claim_kind": "none",
+      "evidence": "change of polarity: descriptive, not formalised",
+      "name": "Change of polarity",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "research_only"
+    },
+    "N21": {
+      "claim_kind": "none",
+      "evidence": "retracement levels: fraction primitive exists; no pattern rule",
+      "name": "Retracements 38/50/62%",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "research_only"
+    },
+    "N22": {
+      "claim_kind": "none",
+      "evidence": "indicator combinations: not formalised as a shape",
+      "name": "Moving averages / MACD / RSI / stochastics / momentum with candles",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "research_only"
+    },
+    "N23": {
+      "claim_kind": "none",
+      "evidence": "volume and open interest combinations: not formalised",
+      "name": "Volume and open interest with candles",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "research_only"
+    },
+    "N24": {
+      "claim_kind": "none",
+      "evidence": "Elliott wave counts: not formalisable without subjective labels",
+      "name": "Elliott wave with candles",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "research_only"
+    },
+    "N25": {
+      "claim_kind": "none",
+      "evidence": "market profile: not formalised",
+      "name": "Market Profile with candles",
+      "reference": {
+        "chapter": null,
+        "edition": null,
+        "page_unverified": true,
+        "source_title": "nison"
+      },
+      "source": "nison",
+      "status": "research_only"
+    }
+  },
+  "source_notes": [
+    "brain/07-Research/Source notes - Nison Japanese Candlestick Charting Techniques.md",
+    "brain/07-Research/Source notes - Bulkowski Encyclopedia of Chart Patterns.md"
+  ]
+}
