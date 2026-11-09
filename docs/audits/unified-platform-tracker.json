@@ -334,9 +334,9 @@
       "workstream": "G1",
       "title": "Define keyboard shortcuts and accessible interactions.",
       "acceptance": "Keyboard-only smoke tests cover primary workflows.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0038",
@@ -626,9 +626,9 @@
       "workstream": "G3",
       "title": "Create dataset quality dashboard and contract registry.",
       "acceptance": "Invalid, late and incomplete fields appear separately.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0066",
@@ -986,9 +986,9 @@
       "workstream": "G4",
       "title": "Create security master browser and inspector.",
       "acceptance": "Trader can see tradability, multiplier and data coverage.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0102",
@@ -1355,9 +1355,9 @@
       "workstream": "G6",
       "title": "Implement optional Rust strategy trait compatible with the core event model.",
       "acceptance": "Python/Rust differential tests compare order intents.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a Rust or OCaml toolchain and profiling evidence; not available in this environment"
     },
     {
       "id": "FB-0139",
@@ -1395,18 +1395,18 @@
       "workstream": "G6",
       "title": "Create one-click dry-run strategy validation in trader UI.",
       "acceptance": "Validation summary displays dataset, warnings and no-live permission.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0143",
       "workstream": "G7",
       "title": "Build local research notebook templates with no hosted dependencies.",
       "acceptance": "Researcher can run first notebook fully offline.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a notebook runtime and hosted or local notebook environment; not available here"
     },
     {
       "id": "FB-0144",
@@ -3394,11 +3394,12 @@
       "workstream": "G15",
       "title": "Implement breakout and mean-reversion futures baselines.",
       "acceptance": "Costs applied each time legs turn over.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20i.py"
+        "tests/test_kernel_batch20i.py",
+        "tests/test_kernel_closures_l.py"
       ],
-      "note": "futures breakout baseline using prior-bar Donchian; mean-reversion baseline not built"
+      "note": "futures breakout (Donchian) and mean-reversion (z-score) baselines, applied from next bar"
     },
     {
       "id": "FB-0327",
@@ -3480,11 +3481,12 @@
       "workstream": "G16",
       "title": "Implement pip, pipette, tick and contract notional rules.",
       "acceptance": "JPY and non-JPY examples accurate.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_l.py"
       ],
-      "note": "pip, pipette and notional rules; tick rules per venue not built"
+      "note": "pip size, pipette, venue tick tiers and contract notional rules"
     },
     {
       "id": "FB-0335",
@@ -4048,9 +4050,9 @@
       "workstream": "G18",
       "title": "Implement session journal, screenshot export and performance dashboard.",
       "acceptance": "All trades link to their decisions and costs.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0387",
@@ -4077,9 +4079,9 @@
       "workstream": "G19",
       "title": "Build local-first web or desktop trader terminal with no external server dependency.",
       "acceptance": "Fresh offline startup launches all screens.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0390",
@@ -4155,9 +4157,9 @@
       "workstream": "G19",
       "title": "Implement live/replay pattern annotations with confidence and state.",
       "acceptance": "Unconfirmed patterns never rendered as confirmed history.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0398",
@@ -4191,9 +4193,9 @@
       "workstream": "G19",
       "title": "Implement portfolio dashboard: holdings, exposure, equity and risk.",
       "acceptance": "Cash and open P&L reconcile to backend.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0402",
@@ -4281,18 +4283,18 @@
       "workstream": "G19",
       "title": "Implement error states for disconnected feed, incomplete curve and expired data.",
       "acceptance": "UI remains usable and refuses unsupported actions.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0412",
       "workstream": "G19",
       "title": "Implement keyboard-driven navigation, accessibility labels and dark/light themes.",
       "acceptance": "UI passes keyboard smoke and contrast checks.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0413",
@@ -4308,18 +4310,18 @@
       "workstream": "G19",
       "title": "Implement status bar for clock, feed, broker, portfolio, mode and risk status.",
       "acceptance": "Simulated mode cannot be mistaken for live.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0415",
       "workstream": "G19",
       "title": "Implement reproducible screenshot and end-to-end interaction tests.",
       "acceptance": "Critical workflows runnable from test runner.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0416",
@@ -4357,9 +4359,9 @@
       "workstream": "G20",
       "title": "Build notebook templates for factors, technical patterns, options and FX.",
       "acceptance": "Notebooks run from bundled test data.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a notebook runtime and hosted or local notebook environment; not available here"
     },
     {
       "id": "FB-0420",
@@ -4586,11 +4588,12 @@
       "workstream": "G21",
       "title": "Implement Donchian breakout and channel trend baseline.",
       "acceptance": "Rules include exit, sizing and costs.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20c.py"
+        "tests/test_kernel_batch20c.py",
+        "tests/test_kernel_closures_l.py"
       ],
-      "note": "Donchian channel signal from prior bars; trend baseline set not built"
+      "note": "Donchian channel trend baseline and moving-average crossover baseline side by side"
     },
     {
       "id": "FB-0441",
@@ -4903,9 +4906,10 @@
       "acceptance": "Calibration checked on unseen matured outcomes only.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20c.py"
+        "tests/test_kernel_batch20c.py",
+        "tests/test_kernel_closures_l.py"
       ],
-      "note": "quantile coverage of forecasts; calibration curves not built"
+      "note": "calibration curve per bin added; quantile-forecast calibration not built"
     },
     {
       "id": "FB-0470",
@@ -5671,9 +5675,9 @@
       "workstream": "G25",
       "title": "Implement local automation scheduler UI.",
       "acceptance": "User can see next run and last outcome before enabling a job.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0540",
@@ -5942,9 +5946,9 @@
       "workstream": "G27",
       "title": "Implement secret vault abstraction with environment and OS keychain adapters.",
       "acceptance": "No secret appears in persisted strategy artifacts.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a live broker, OS keychain, hosted CI or a multi-machine setup that is not available here"
     },
     {
       "id": "FB-0565",
@@ -6034,18 +6038,18 @@
       "workstream": "G27",
       "title": "Implement explicit paper/live UI separation, color, and order path.",
       "acceptance": "Paper sessions cannot call live order service.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0575",
       "workstream": "G27",
       "title": "Implement manual authorization boundary for any future broker enablement.",
       "acceptance": "A coding agent cannot produce authorization token.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs an owner decision and authorization policy for any broker enablement; no broker in scope here"
     },
     {
       "id": "FB-0576",
@@ -6063,9 +6067,9 @@
       "workstream": "G27",
       "title": "Implement code security CI with dependency audit and fuzz targets.",
       "acceptance": "Release blocks on critical reproducible failures.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a live broker, OS keychain, hosted CI or a multi-machine setup that is not available here"
     },
     {
       "id": "FB-0578",
@@ -6128,18 +6132,18 @@
       "workstream": "G28",
       "title": "Define Rust crate layout for `domain`, `events`, `matching`, `pricing` and `risk`.",
       "acceptance": "Crate boundaries align with typed Python schemas.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a Rust or OCaml toolchain and profiling evidence; not available in this environment"
     },
     {
       "id": "FB-0585",
       "workstream": "G28",
       "title": "Implement Rust newtypes for price, quantity, money, tick and venue.",
       "acceptance": "Compile-time tests prevent unit confusion.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a Rust or OCaml toolchain and profiling evidence; not available in this environment"
     },
     {
       "id": "FB-0586",
@@ -6179,27 +6183,27 @@
       "workstream": "G28",
       "title": "Implement Rust order matching kernel if profiling supports it.",
       "acceptance": "Differential tests match Python across thousands of randomized cases.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a Rust or OCaml toolchain and profiling evidence; not available in this environment"
     },
     {
       "id": "FB-0590",
       "workstream": "G28",
       "title": "Implement Rust Greeks/IV vector operations if profiling supports it.",
       "acceptance": "Numerical tolerances stated for boundary conditions.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a Rust or OCaml toolchain and profiling evidence; not available in this environment"
     },
     {
       "id": "FB-0591",
       "workstream": "G28",
       "title": "Implement Rust risk arithmetic for capacity/exposure if profiling supports it.",
       "acceptance": "Differential tests show no permissive risk divergence.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a Rust or OCaml toolchain and profiling evidence; not available in this environment"
     },
     {
       "id": "FB-0592",
@@ -6250,27 +6254,27 @@
       "workstream": "G28",
       "title": "Implement reproducible build for Rust wheels and artifacts.",
       "acceptance": "Locked dependencies and SHA manifest included.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a Rust or OCaml toolchain and profiling evidence; not available in this environment"
     },
     {
       "id": "FB-0597",
       "workstream": "G28",
       "title": "Implement OCaml-inspired immutable domain and algebraic error patterns in Python/Rust.",
       "acceptance": "No hard dependency on OCaml compiler for core platform.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a Rust or OCaml toolchain and profiling evidence; not available in this environment"
     },
     {
       "id": "FB-0598",
       "workstream": "G28",
       "title": "Implement optional OCaml experimental plugin ABI only if justified.",
       "acceptance": "Optional module cannot break base Python/Rust install.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a Rust or OCaml toolchain and profiling evidence; not available in this environment"
     },
     {
       "id": "FB-0599",
@@ -6671,18 +6675,18 @@
       "workstream": "G30",
       "title": "Establish terminal browser interaction tests for all user roles.",
       "acceptance": "Each persona completes primary workflow offline.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0638",
       "workstream": "G30",
       "title": "Establish accessibility, localization and keyboard navigation checks.",
       "acceptance": "Essential trading actions work without mouse.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0639",
@@ -6709,9 +6713,9 @@
       "workstream": "G30",
       "title": "Establish reproducible clean-install and cold-start test on Linux and Windows.",
       "acceptance": "Same fixture reference outputs or explained platform delta.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a live broker, OS keychain, hosted CI or a multi-machine setup that is not available here"
     },
     {
       "id": "FB-0642",
@@ -6782,9 +6786,9 @@
       "workstream": "G31",
       "title": "Provide one-command local bootstrap for Windows and macOS/Linux.",
       "acceptance": "Fresh machine with permitted local package cache reaches running demo.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a live broker, OS keychain, hosted CI or a multi-machine setup that is not available here"
     },
     {
       "id": "FB-0649",
@@ -6820,9 +6824,9 @@
       "workstream": "G31",
       "title": "Provide app launcher and database initialization migration.",
       "acceptance": "First start produces a healthy status.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0653",
@@ -6901,18 +6905,18 @@
       "workstream": "G31",
       "title": "Provide local example workspace and notebook pack.",
       "acceptance": "Samples distinguish synthetic data from investment advice.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a notebook runtime and hosted or local notebook environment; not available here"
     },
     {
       "id": "FB-0662",
       "workstream": "G31",
       "title": "Provide ready-to-run single-user desktop profile and multi-user laboratory profile.",
       "acceptance": "Both have documented security assumptions.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0663",
@@ -7184,9 +7188,9 @@
       "workstream": "G32",
       "title": "Demo Y: all personas complete rehearsed full workflow via UI.",
       "acceptance": "Screenshot, logs and reconciliation report for each role.",
-      "status": "open",
+      "status": "external_blocked",
       "evidence": [],
-      "note": ""
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0692",
