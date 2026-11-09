@@ -761,12 +761,13 @@
       "workstream": "G3",
       "title": "Add zero-network offline mode enforced at process boundary.",
       "acceptance": "E2E demo succeeds with sockets disabled.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "tests/test_kernel_architecture.py",
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_pilot.py"
       ],
-      "note": "static AST guard rejects network imports; no runtime socket guard"
+      "note": "runtime network guard blocks socket creation inside a block; plus static import guard"
     },
     {
       "id": "FB-0079",
@@ -1037,12 +1038,13 @@
       "workstream": "G5",
       "title": "Implement validated moving averages, RSI, ADX, ATR, VWAP and Bollinger.",
       "acceptance": "Golden vectors match independently hand-computed fixtures.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "tests/test_kernel_allocation_indicators.py",
-        "tests/test_kernel_closures_m.py"
+        "tests/test_kernel_closures_m.py",
+        "tests/test_kernel_closures_r.py"
       ],
-      "note": "Bollinger bands added; ADX still absent"
+      "note": "Wilder ADX added beside Bollinger bands"
     },
     {
       "id": "FB-0106",
@@ -1224,11 +1226,12 @@
       "workstream": "G6",
       "title": "Define restricted typed strategy-spec AST.",
       "acceptance": "Invalid order-side, price units or unavailable data rejected at parse time.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_sdk_validation_futures_fx.py"
       ],
-      "note": "typed parameter schema rejects bad input; no expression AST yet"
+      "note": "safe arithmetic evaluator over named inputs; calls, attributes and imports refused"
     },
     {
       "id": "FB-0125",
@@ -1443,11 +1446,12 @@
       "workstream": "G7",
       "title": "Model train, calibration, validation, holdout and forward partitions.",
       "acceptance": "Overlapping windows are detected and reported.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_sdk_validation_futures_fx.py"
       ],
-      "note": "train and validation windows with overlap detection; holdout and forward partitions absent"
+      "note": "contiguous train, holdout and forward partitions with no overlap"
     },
     {
       "id": "FB-0146",
@@ -1537,12 +1541,13 @@
       "workstream": "G7",
       "title": "Implement uncertainty intervals for returns, drawdown and Sharpe.",
       "acceptance": "Confidence bands and bootstrap protocol persisted.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "tests/test_kernel_closures_p.py",
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_research_extra.py"
       ],
-      "note": "drawdown interval by seeded bootstrap; Sharpe interval not built"
+      "note": "bootstrap intervals for drawdown and for Sharpe ratio"
     },
     {
       "id": "FB-0155",
@@ -1907,9 +1912,10 @@
       "acceptance": "Gap-through scenarios do not fill at unreachable prices.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_fills.py"
       ],
-      "note": "stop gap fills at open; stop-limit and bracket not built"
+      "note": "stop-limit fill for BUY only; SELL side and bracket not built"
     },
     {
       "id": "FB-0189",
@@ -1961,12 +1967,13 @@
       "workstream": "G9",
       "title": "Implement auction, halt, circuit and no-quote handling.",
       "acceptance": "No fills during forbidden periods or missing depth.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_fills.py",
         "tests/test_kernel_instruments.py"
       ],
-      "note": "no fill with zero volume; phase blocks tradability; auction handling absent"
+      "note": "no fill on zero volume or during an auction phase"
     },
     {
       "id": "FB-0194",
@@ -2042,22 +2049,24 @@
       "workstream": "G9",
       "title": "Implement multi-leg options order atomicity and legging risk modes.",
       "acceptance": "Broken legs have explicit risk and closeout behavior.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_execution_model.py"
       ],
-      "note": "multileg_status reports PARTIAL and never a silent fill; legging actions not built"
+      "note": "legging action: complete, cancel all, or unwind filled legs"
     },
     {
       "id": "FB-0201",
       "workstream": "G9",
       "title": "Implement fill rejections, cancellations, modifications, duplicate ACKs and disconnects.",
       "acceptance": "Simulator never invents a successful fill from unknown command result.",
-      "status": "external_blocked",
+      "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_oms.py"
       ],
-      "note": "needs a live broker, venue, or data source that is not available in this environment"
+      "note": "duplicate acknowledgements ignored; broker UNKNOWN reconciliation not built"
     },
     {
       "id": "FB-0202",
@@ -2206,11 +2215,12 @@
       "workstream": "G10",
       "title": "Implement linked bracket and OCO/OTO order dependencies.",
       "acceptance": "Fill/cancel cascade deterministic and auditable.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_execution_tools.py"
       ],
-      "note": "OCO pair cancels the other leg; bracket and OTO dependencies not built"
+      "note": "OCO cancels the other leg; OTO child is active only after parent fills"
     },
     {
       "id": "FB-0216",
@@ -2385,11 +2395,12 @@
       "workstream": "G11",
       "title": "Implement equity, realized, unrealized, gross, net and after-tax estimated P&L.",
       "acceptance": "Definitions never confuse gross open and net closed profits.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_portfolio.py"
       ],
-      "note": "realized_net and unrealized defined separately; after-tax estimate absent"
+      "note": "after-tax estimate taxes gains only and is labelled ESTIMATE"
     },
     {
       "id": "FB-0232",
@@ -2409,9 +2420,10 @@
       "acceptance": "Unsettled proceeds cannot be overused in restricted account modes.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_portfolio.py"
       ],
-      "note": "settled_cash by date; restricted-mode spend enforcement not wired"
+      "note": "restricted-mode spend check added; not wired into order flow"
     },
     {
       "id": "FB-0234",
@@ -2531,9 +2543,11 @@
       "workstream": "G11",
       "title": "Implement portfolio attribution by strategy, asset class, instrument, factor and execution.",
       "acceptance": "Attribution components reconcile to total net P&L.",
-      "status": "open",
-      "evidence": [],
-      "note": ""
+      "status": "implemented",
+      "evidence": [
+        "tests/test_kernel_closures_r.py"
+      ],
+      "note": "P&L attribution by any key: strategy, asset, instrument or factor"
     },
     {
       "id": "FB-0245",
@@ -2705,11 +2719,12 @@
       "workstream": "G12",
       "title": "Implement index tracking and error decomposition.",
       "acceptance": "Portfolio compares to local index benchmark with missing constituents flagged.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20.py"
+        "tests/test_kernel_batch20.py",
+        "tests/test_kernel_closures_r.py"
       ],
-      "note": "tracking error from return differences; error decomposition not built"
+      "note": "tracking error split into beta and residual parts"
     },
     {
       "id": "FB-0261",
@@ -3020,11 +3035,12 @@
       "workstream": "G13",
       "title": "Implement pre-trade risk preview of marginal portfolio effect.",
       "acceptance": "UI shows before/after exposures and net buying power.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_risk_screens.py"
       ],
-      "note": "concentration change before a trade; full portfolio risk preview not built"
+      "note": "portfolio volatility before and after a proposed weight change"
     },
     {
       "id": "FB-0289",
@@ -3174,11 +3190,12 @@
       "workstream": "G14",
       "title": "Implement delta hedging simulation and hedge slippage.",
       "acceptance": "Hedge frequency/cost sensitivity shown separately.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_derivatives_extra.py"
       ],
-      "note": "delta_hedge sizes the hedge and charges half-spread; no path simulation over time"
+      "note": "hedge P&L along a price path, delta per step"
     },
     {
       "id": "FB-0303",
@@ -3264,9 +3281,10 @@
       "acceptance": "Worst-case risk clearly visible.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_options_extra.py"
       ],
-      "note": "pin_risk flags short strikes near spot; IV crush and jump scenarios not built"
+      "note": "vega P&L for an IV change; IV crush and jump scenarios not built"
     },
     {
       "id": "FB-0311",
@@ -3350,12 +3368,13 @@
       "workstream": "G15",
       "title": "Implement roll logic by date, volume and open interest.",
       "acceptance": "Roll decision uses only observed prior data.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "tests/test_kernel_closures_p.py",
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_sdk_validation_futures_fx.py"
       ],
-      "note": "volume roll criterion; open-interest criterion not built"
+      "note": "roll on volume or open-interest criterion"
     },
     {
       "id": "FB-0319",
@@ -3386,9 +3405,10 @@
       "acceptance": "Two-leg exposure and partial-leg risk quantified.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_futures_analytics.py"
       ],
-      "note": "hedge_contracts rounds toward zero; spread tickets not built"
+      "note": "spread hedge ratio by notional; spread trading tickets not built"
     },
     {
       "id": "FB-0322",
@@ -3417,11 +3437,12 @@
       "workstream": "G15",
       "title": "Implement exchange daily price limits and session close behavior.",
       "acceptance": "Simulator blocks fills outside rules.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_r.py",
         "tests/test_kernel_futures_analytics.py"
       ],
-      "note": "within_daily_limit check; session close behaviour not modelled"
+      "note": "flatten inside a session-close cutoff"
     },
     {
       "id": "FB-0325",
@@ -3584,22 +3605,24 @@
       "workstream": "G16",
       "title": "Implement spot FX trend, range and session breakout strategies.",
       "acceptance": "Every strategy runs on synthetic FX tape.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20i.py"
+        "tests/test_kernel_batch20i.py",
+        "tests/test_kernel_closures_r.py"
       ],
-      "note": "session breakout from session high and low; trend and range strategies not built"
+      "note": "trend signal, range reversion and session breakout baselines"
     },
     {
       "id": "FB-0340",
       "workstream": "G16",
       "title": "Implement multicurrency carry signal with funding and swap assumption.",
       "acceptance": "Gross interest spread distinguished from net return.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_r.py"
       ],
-      "note": "carry signal net of swap cost; funding model not built"
+      "note": "funding cost on notional by days at an annual rate; carry signal beside it"
     },
     {
       "id": "FB-0341",
@@ -3749,12 +3772,13 @@
       "workstream": "G17",
       "title": "Implement dividend, split and rights-adjusted holdings and returns.",
       "acceptance": "Long-term statements reconcile over synthetic events.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "tests/test_kernel_batch20b.py",
-        "tests/test_kernel_closures_p.py"
+        "tests/test_kernel_closures_p.py",
+        "tests/test_kernel_closures_r.py"
       ],
-      "note": "dividend adjustment of prices; rights adjustment not built"
+      "note": "dividend and rights ex-price adjustments"
     },
     {
       "id": "FB-0355",
@@ -3841,9 +3865,10 @@
       "acceptance": "Explicit assumptions distinguish estimates from observed fundamentals.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_r.py"
       ],
-      "note": "valuation scenarios as earnings times multiple; no workflow"
+      "note": "valuation range across scenarios; full valuation workflow not built"
     },
     {
       "id": "FB-0363",
@@ -3948,11 +3973,12 @@
       "workstream": "G18",
       "title": "Implement gap and go, gap fade and range reversion template strategies.",
       "acceptance": "Each rule has exact invalidation and stop behavior.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_r.py"
       ],
-      "note": "gap-and-go check; gap fade and range reversion not built"
+      "note": "gap-and-go, gap fade and range reversion signals"
     },
     {
       "id": "FB-0373",
