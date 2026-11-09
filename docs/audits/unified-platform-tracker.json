@@ -405,11 +405,12 @@
       "workstream": "G2",
       "title": "Define ExchangeSession and TradingCalendar interfaces.",
       "acceptance": "Same strategy receives validated session context across modes.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_n.py",
         "tests/test_kernel_pilot.py"
       ],
-      "note": "IST session window used by the pilot; no general calendar object yet"
+      "note": "MarketCalendar with weekday and holiday sessions and next-session lookup; exchange-specific calendars not loaded"
     },
     {
       "id": "FB-0045",
@@ -471,11 +472,12 @@
       "workstream": "G2",
       "title": "Define asset-class plugin interface.",
       "acceptance": "Equity, futures, options and FX share core but implement specific rules.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_n.py",
         "tests/test_kernel_instruments.py"
       ],
-      "note": "asset-class validation exists; per-class rule plugins not yet built"
+      "note": "required fields per asset class checked; unknown classes refused"
     },
     {
       "id": "FB-0051",
@@ -505,33 +507,36 @@
       "workstream": "G2",
       "title": "Define status lifecycle for data source and broker adapter.",
       "acceptance": "`UNAVAILABLE` is distinct from `EMPTY` and `HEALTHY`.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_n.py",
         "tests/test_kernel_oms.py"
       ],
-      "note": "order states are explicit; data-source status enum not built"
+      "note": "DataStatus LIVE, STALE or DOWN from feed age"
     },
     {
       "id": "FB-0054",
       "workstream": "G2",
       "title": "Define monotonic event sequence and causal parent IDs.",
       "acceptance": "Event trace reconstructs source to order decision.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_n.py",
         "tests/test_kernel_events.py"
       ],
-      "note": "monotonic sequence on events; causal parent ids not built"
+      "note": "causal parent check: a parent must appear before its child"
     },
     {
       "id": "FB-0055",
       "workstream": "G2",
       "title": "Define append-only operational event ledger with dedupe keys.",
       "acceptance": "Replay twice creates one logical event per identifier.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_n.py",
         "tests/test_kernel_events.py"
       ],
-      "note": "event journal with checksum; dedupe-key ledger not built"
+      "note": "dedupe ledger refuses a repeated key; event journal checksum already exists"
     },
     {
       "id": "FB-0056",
@@ -561,11 +566,12 @@
       "workstream": "G2",
       "title": "Define immutable decision snapshot value object.",
       "acceptance": "Snapshot binds time, data, universe, signal, risk, costs and intended orders.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_n.py",
         "tests/test_kernel_pilot.py"
       ],
-      "note": "pilot trace binds signal, risk, fill and ledger; no frozen snapshot object"
+      "note": "frozen snapshot object with stable digest and immutability"
     },
     {
       "id": "FB-0059",
