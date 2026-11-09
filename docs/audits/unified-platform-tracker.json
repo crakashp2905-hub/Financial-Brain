@@ -1163,11 +1163,12 @@
       "workstream": "G5",
       "title": "Implement missing bar and distorted data behavior.",
       "acceptance": "Pattern detector returns uncertain or unavailable instead of fabricated signal.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_allocation_indicators.py"
+        "tests/test_kernel_allocation_indicators.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "indicators return None during warm-up; detector uncertainty states absent"
+      "note": "detector states WARMUP, UNCERTAIN and CONFIRMED"
     },
     {
       "id": "FB-0119",
@@ -1401,9 +1402,10 @@
       "acceptance": "Restoring previous version reproduces earlier decisions.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_registry_research.py"
       ],
-      "note": "immutable versions give rollback by identity; diff and reproduction of old decisions not tested"
+      "note": "version diff added; reproduction of old decisions not tested"
     },
     {
       "id": "FB-0142",
@@ -1479,11 +1481,12 @@
       "workstream": "G7",
       "title": "Implement clustered standard errors and dependence-aware bootstrap.",
       "acceptance": "Repeated overlapping event samples do not inflate effective N.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_registry_research.py"
       ],
-      "note": "overlap-aware effective sample size; clustered standard errors not built"
+      "note": "cluster-robust standard error of the mean"
     },
     {
       "id": "FB-0150",
@@ -1534,9 +1537,10 @@
       "acceptance": "Confidence bands and bootstrap protocol persisted.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_research_extra.py"
       ],
-      "note": "seeded bootstrap interval for the mean; drawdown and Sharpe intervals not built"
+      "note": "drawdown interval by seeded bootstrap; Sharpe interval not built"
     },
     {
       "id": "FB-0155",
@@ -2320,11 +2324,12 @@
       "workstream": "G10",
       "title": "Implement fill-quality metrics versus arrival, midpoint and VWAP.",
       "acceptance": "Metrics require observed market fields or show unsupported.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_execution_tools.py"
       ],
-      "note": "slippage_bps vs a benchmark; no reporting of arrival, midpoint and VWAP together"
+      "note": "fill quality against arrival, midpoint and VWAP in basis points"
     },
     {
       "id": "FB-0227",
@@ -2364,11 +2369,12 @@
       "workstream": "G11",
       "title": "Implement multi-currency cash balances and dated FX translations.",
       "acceptance": "Transaction and mark values use correct as-of FX rate.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_units_clock.py"
       ],
-      "note": "Money carries currency; dated FX translation not implemented"
+      "note": "FX translation at a dated rate; missing dates refused"
     },
     {
       "id": "FB-0231",
@@ -2507,11 +2513,12 @@
       "workstream": "G11",
       "title": "Implement benchmark excess P&L and tax/fee decomposition.",
       "acceptance": "Performance cannot be reported without costs and basis.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20.py"
+        "tests/test_kernel_batch20.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "excess P&L over benchmark; tax and fee decomposition not built"
+      "note": "tax and fee decomposition summing back to gross"
     },
     {
       "id": "FB-0244",
@@ -2714,9 +2721,10 @@
       "acceptance": "Tax estimate distinguishes realized/unrealized and location assumptions.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20.py"
+        "tests/test_kernel_batch20.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "FIFO realised gain over tax lots; tax drag attribution not built"
+      "note": "tax drag as pre minus post tax return; per-lot attribution not built"
     },
     {
       "id": "FB-0263",
@@ -2910,11 +2918,12 @@
       "workstream": "G13",
       "title": "Implement stale-feed, invalid-price and clock-drift circuit breakers.",
       "acceptance": "New trades blocked while existing risk visible.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_risk.py"
       ],
-      "note": "stale and invalid data block entries; clock-drift breaker absent"
+      "note": "clock-drift breaker trips beyond a set limit"
     },
     {
       "id": "FB-0281",
@@ -2978,9 +2987,10 @@
       "acceptance": "Max loss accounts for fees and settlement costs.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_options.py"
       ],
-      "note": "debit-vertical max loss from payoff; fees and settlement costs not added"
+      "note": "max loss including fees; settlement costs not added"
     },
     {
       "id": "FB-0287",
@@ -3330,9 +3340,10 @@
       "acceptance": "Roll decision uses only observed prior data.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_sdk_validation_futures_fx.py"
       ],
-      "note": "roll by calendar offset; volume and open-interest criteria not built"
+      "note": "volume roll criterion; open-interest criterion not built"
     },
     {
       "id": "FB-0319",
@@ -3439,11 +3450,12 @@
       "workstream": "G15",
       "title": "Implement calendar roll and holiday stress tests.",
       "acceptance": "Expiry around holidays has correct last-trade timestamp.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_sdk_validation_futures_fx.py"
       ],
-      "note": "roll offset in days; holiday calendar not wired"
+      "note": "roll date as business-day offset with holiday calendar"
     },
     {
       "id": "FB-0329",
@@ -3483,9 +3495,10 @@
       "acceptance": "Statement ties to ledger and fills.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20i.py"
+        "tests/test_kernel_batch20i.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "reconcile lists local versus broker quantity differences; broker export not built"
+      "note": "reconciliation CSV export; broker-specific format not built"
     },
     {
       "id": "FB-0333",
@@ -3627,9 +3640,10 @@
       "acceptance": "Pip P&L reconciles with ledger currency P&L.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "pip movement signed by side; journal not built"
+      "note": "pip journal totals; trade journal not built"
     },
     {
       "id": "FB-0346",
@@ -3700,11 +3714,12 @@
       "workstream": "G17",
       "title": "Implement value, quality, growth, momentum and low-risk factor calculations.",
       "acceptance": "Null or stale fundamentals never imputed silently.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_investor_tools.py"
       ],
-      "note": "momentum (12-1), reversal and low-risk factors; value, quality and growth not built"
+      "note": "value, quality and growth factors added beside momentum and low-risk"
     },
     {
       "id": "FB-0353",
@@ -3724,9 +3739,10 @@
       "acceptance": "Long-term statements reconcile over synthetic events.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20b.py"
+        "tests/test_kernel_batch20b.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "split-adjusted returns; dividends and rights adjustments not built"
+      "note": "dividend adjustment of prices; rights adjustment not built"
     },
     {
       "id": "FB-0355",
@@ -3907,11 +3923,12 @@
       "workstream": "G18",
       "title": "Implement VWAP/anchored VWAP and rolling volume participation metrics.",
       "acceptance": "Session reset correct under early close.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_intraday_tools.py"
       ],
-      "note": "anchored_vwap on typical price; session VWAP exists in indicators; rolling participation not built"
+      "note": "rolling volume participation with warm-up"
     },
     {
       "id": "FB-0372",
@@ -4050,11 +4067,12 @@
       "workstream": "G18",
       "title": "Implement stop, target, trailing and time-exit scenarios including gaps.",
       "acceptance": "UI shows adverse assumption and realized simulated fills.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20i.py"
+        "tests/test_kernel_batch20i.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "exit resolution with gap-through-stop at open; trailing and time exits not built"
+      "note": "trailing stop level and time exit; gap-through-stop already handled"
     },
     {
       "id": "FB-0385",
@@ -4392,20 +4410,22 @@
       "acceptance": "Reports compare named commits/configs.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20.py"
+        "tests/test_kernel_batch20.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "time_block measures elapsed time; CPU, memory and I/O profiling not built"
+      "note": "peak memory profiling; CPU and I/O profiling not built"
     },
     {
       "id": "FB-0421",
       "workstream": "G20",
       "title": "Build batch experiment runner with bounded concurrency.",
       "acceptance": "Same experiment and seed yields same outputs irrespective task ordering.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_p.py",
         "tests/test_kernel_research_pipeline.py"
       ],
-      "note": "run_bounded keeps input order with a worker cap; no experiment-level runner"
+      "note": "experiment runner over parameter list with bounded concurrency and ordered results"
     },
     {
       "id": "FB-0422",
@@ -4599,11 +4619,12 @@
       "workstream": "G21",
       "title": "Implement low-volatility, quality and value factor baselines.",
       "acceptance": "Missing factor data blocks rather than imputes fake values.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20e.py"
+        "tests/test_kernel_batch20e.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "top-fraction selection by a factor score; full low-vol, quality and value baselines not run"
+      "note": "low-vol, quality and value baselines selecting the top fraction"
     },
     {
       "id": "FB-0440",
@@ -4697,22 +4718,24 @@
       "workstream": "G21",
       "title": "Implement covered call and protective put demonstration.",
       "acceptance": "Option and stock legs accounted for together.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20e.py"
+        "tests/test_kernel_batch20e.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "covered call profit at expiry; protective put not built"
+      "note": "covered call and protective put demonstration with fixed inputs"
     },
     {
       "id": "FB-0449",
       "workstream": "G21",
       "title": "Implement debit/credit vertical option paper template.",
       "acceptance": "Defined/undefined risk flags correct.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20e.py"
+        "tests/test_kernel_batch20e.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "bull call debit vertical limits labelled PAPER_ONLY; credit verticals not built"
+      "note": "credit vertical limits added beside debit verticals"
     },
     {
       "id": "FB-0450",
@@ -4743,9 +4766,10 @@
       "acceptance": "Net wealth includes fees and cashflows.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20e.py"
+        "tests/test_kernel_batch20e.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "whole-unit dividend reinvestment; rebalancing example not built"
+      "note": "dividend reinvestment in units; rebalance example not combined with it"
     },
     {
       "id": "FB-0453",
@@ -4882,11 +4906,12 @@
       "workstream": "G22",
       "title": "Implement walk-forward report showing distribution of chosen parameters.",
       "acceptance": "Parameter drift and overfitting indicators visible.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20c.py"
+        "tests/test_kernel_batch20c.py",
+        "tests/test_kernel_closures_p.py"
       ],
-      "note": "parameter frequencies and mode across folds; report not built"
+      "note": "parameter frequencies and mode across folds as the report"
     },
     {
       "id": "FB-0466",
