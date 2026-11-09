@@ -343,11 +343,11 @@
       "workstream": "G1",
       "title": "Define error, stale-data, missing-data and no-trade visual language.",
       "acceptance": "Screens never show an absent quote as price zero.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_ledger_guards_ticks.py"
       ],
-      "note": "display_quote shows NO QUOTE for None; no screen wired"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0039",
@@ -809,11 +809,11 @@
       "workstream": "G4",
       "title": "Implement venue metadata for NSE, BSE, generic FX and generic futures.",
       "acceptance": "Tests load each with correct calendar and currency.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_instruments.py"
       ],
-      "note": "instrument rule versions exist; NSE venue calendar not built"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0084",
@@ -1580,11 +1580,11 @@
       "workstream": "G7",
       "title": "Implement historical OOS and genuinely prospective evidence tiers.",
       "acceptance": "Old experiments cannot become future proof retroactively.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_research_registry.py"
       ],
-      "note": "evidence_label ranks prospective, OOS and in-sample; no prospective evidence gathered"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0159",
@@ -1697,22 +1697,22 @@
       "workstream": "G8",
       "title": "Implement subscription routing by venue, symbol, event class and timeframe.",
       "acceptance": "Cross-asset signals receive only authorized inputs.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20b.py"
       ],
-      "note": "subscription routing with wildcards; no transport or delivery"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0170",
       "workstream": "G8",
       "title": "Implement independent market-data, strategy, risk, OMS and accounting stages.",
       "acceptance": "Kernel trace shows each stage for each intent.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20b.py"
       ],
-      "note": "stages run independently and failures are isolated; no live pipeline"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0171",
@@ -1883,11 +1883,11 @@
       "workstream": "G9",
       "title": "Implement venue order book snapshots and incremental levels.",
       "acceptance": "Reconstructed depth agrees with fixtures.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20b.py"
       ],
-      "note": "incremental book updates with zero-size removal; no venue feed"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0187",
@@ -1939,11 +1939,11 @@
       "workstream": "G9",
       "title": "Implement probabilistic queue-position model labelled estimated.",
       "acceptance": "Calibration status displayed and synthetic assumptions recorded.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_execution_model.py"
       ],
-      "note": "queue-position fill estimate labelled ESTIMATED; not calibrated to venue data"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0192",
@@ -2053,11 +2053,11 @@
       "workstream": "G9",
       "title": "Implement fill rejections, cancellations, modifications, duplicate ACKs and disconnects.",
       "acceptance": "Simulator never invents a successful fill from unknown command result.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_oms.py"
       ],
-      "note": "UNKNOWN state blocks resend; broker ACK and duplicate ACK handling absent"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0202",
@@ -2075,11 +2075,11 @@
       "workstream": "G9",
       "title": "Implement trading cost attribution by spread, impact, fee, delay, opportunity cost.",
       "acceptance": "Per-trade total sums to reconciled cost.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_research_extra.py"
       ],
-      "note": "attribution sums supplied components to total; no measurement feed yet"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0204",
@@ -2117,11 +2117,11 @@
       "workstream": "G10",
       "title": "Build universal order ticket with asset-aware fields.",
       "acceptance": "All instrument types round-trip to typed order intent.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20b.py"
       ],
-      "note": "asset-class required fields for the ticket; no order UI"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0208",
@@ -2184,11 +2184,11 @@
       "workstream": "G10",
       "title": "Implement per-venue adapter capability negotiation.",
       "acceptance": "Unsupported order type rejected before risk approval.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20b.py"
       ],
-      "note": "capability negotiation returns missing capabilities; no live adapter"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0214",
@@ -2217,11 +2217,11 @@
       "workstream": "G10",
       "title": "Implement multi-leg strategy order planning and partial-leg failover.",
       "acceptance": "Partial hedge exposes risk banner and contingency plan.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20b.py"
       ],
-      "note": "partial multi-leg failover cancels then unwinds in reverse; no live execution"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0217",
@@ -2250,22 +2250,22 @@
       "workstream": "G10",
       "title": "Implement normalized broker ACK, reject, trade, fill and position events.",
       "acceptance": "Venue-specific statuses map losslessly to canonical model.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20b.py"
       ],
-      "note": "broker code normalisation; unknown codes refused; no live broker"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0220",
       "workstream": "G10",
       "title": "Implement idempotent order reconciliation across disconnect/restart.",
       "acceptance": "Broker state and OMS state converge in adversarial fixtures.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_oms.py"
       ],
-      "note": "reconciliation of UNKNOWN to ACCEPTED or FILLED transitions; no broker state feed"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0221",
@@ -2306,11 +2306,11 @@
       "workstream": "G10",
       "title": "Implement human-readable pre-trade decision record including alternatives.",
       "acceptance": "Ticket shows why risk allowed or denied it.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20b.py"
       ],
-      "note": "decision record refuses empty alternatives; no UI"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0225",
@@ -2807,11 +2807,11 @@
       "workstream": "G12",
       "title": "Implement cross-asset allocation dashboard and rebalance preview.",
       "acceptance": "Traders can review exposures and outcomes before paper ticket.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_portfolio_planning.py"
       ],
-      "note": "rebalance_preview gives units to targets; no dashboard"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0270",
@@ -2886,11 +2886,11 @@
       "workstream": "G13",
       "title": "Implement Greeks-based option risk aggregation at account level.",
       "acceptance": "Delta, gamma, vega, theta aggregated in correct units.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20j.py"
       ],
-      "note": "quantity-weighted delta, gamma and vega aggregation; account-level feed not built"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0277",
@@ -2942,11 +2942,11 @@
       "workstream": "G13",
       "title": "Implement unhedged-leg and legging-exposure emergency policy.",
       "acceptance": "Failed spread leg triggers deterministic response.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20j.py"
       ],
-      "note": "emergency unwind of excess unhedged units; live legging not built"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0282",
@@ -3251,11 +3251,11 @@
       "workstream": "G14",
       "title": "Implement theta/gamma trade-off educational diagnostics.",
       "acceptance": "No false claim that theta income is risk-free.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20g.py"
       ],
-      "note": "theta/gamma ratio labelled EDUCATIONAL; no diagnostics UI"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0310",
@@ -3306,11 +3306,11 @@
       "workstream": "G15",
       "title": "Build futures contract browser with symbol, multiplier, expiry and currency.",
       "acceptance": "Metadata reflects actual fixture effective dates.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20b.py"
       ],
-      "note": "contract browser filters by symbol, expiry and currency; no UI"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0315",
@@ -3474,11 +3474,11 @@
       "workstream": "G15",
       "title": "Implement contract liquidity dashboard.",
       "acceptance": "Missing OI/volume displays unknown not zero.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_ops_extra.py"
       ],
-      "note": "liquidity_score ranks contracts from ADV and spread; no dashboard"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0330",
@@ -3505,12 +3505,12 @@
       "workstream": "G15",
       "title": "Implement futures P&L and broker reconciliation export.",
       "acceptance": "Statement ties to ledger and fills.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20i.py",
         "tests/test_kernel_closures_p.py"
       ],
-      "note": "reconciliation CSV export; broker-specific format not built"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0333",
@@ -3551,11 +3551,11 @@
       "workstream": "G16",
       "title": "Implement bid/ask execution and spread stress.",
       "acceptance": "Never assume midprice tradable.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20h.py"
       ],
-      "note": "spread stress fill adverse to side by a multiplier; no venue spread model"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0337",
@@ -3573,11 +3573,11 @@
       "workstream": "G16",
       "title": "Implement weekend-gap and broker maintenance-hour simulation.",
       "acceptance": "Weekend orders trigger deferred execution rather than impossible fills.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20h.py"
       ],
-      "note": "weekend gap flag over 1%; broker maintenance hours not simulated"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0339",
@@ -3617,11 +3617,11 @@
       "workstream": "G16",
       "title": "Implement economic-calendar placeholder with offline event fixtures.",
       "acceptance": "No phantom real news in demo.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20h.py"
       ],
-      "note": "offline economic-calendar fixtures filtered by time; no calendar source"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0343",
@@ -3738,11 +3738,11 @@
       "workstream": "G17",
       "title": "Implement earnings/event calendar from available local filings.",
       "acceptance": "Missing feed gets coverage warning.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20i.py"
       ],
-      "note": "earnings fixtures from SYMBOL,DATE lines with date validation; no filing source"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0354",
@@ -3761,11 +3761,11 @@
       "workstream": "G17",
       "title": "Implement index-level chart and breadth panel.",
       "acceptance": "Constituent coverage explicitly reported.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20h.py"
       ],
-      "note": "breadth as net and advancing share; index chart not built"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0356",
@@ -3970,11 +3970,11 @@
       "workstream": "G18",
       "title": "Implement market depth imbalance and order-flow feature APIs.",
       "acceptance": "Missing depth disables feature, not invents it.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_features_and_filters.py"
       ],
-      "note": "imbalance from bid and ask depth; no live order-flow feed"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0375",
@@ -4058,11 +4058,11 @@
       "workstream": "G18",
       "title": "Implement intraday volume and liquidity heatmaps.",
       "acceptance": "Heatmap clearly marks synthetic demonstration data.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20i.py"
       ],
-      "note": "volume heatmap by time bucket and day; no rendering"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0383",
@@ -4092,11 +4092,11 @@
       "workstream": "G18",
       "title": "Implement intraday watchlist scanner and priority queue.",
       "acceptance": "No duplicate symbol notifications during replay.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20i.py"
       ],
-      "note": "top-k watchlist with name tie-break; no live scanner"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0386",
@@ -4164,11 +4164,11 @@
       "workstream": "G19",
       "title": "Implement professional market overview and heatmap.",
       "acceptance": "Heatmap derived from local fixtures with source label.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20i.py"
       ],
-      "note": "market overview ranked by change; no heatmap rendering"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0393",
@@ -4446,11 +4446,11 @@
       "workstream": "G20",
       "title": "Build parameter sweep UI and API with budget guard.",
       "acceptance": "Unauthorized extra research hypothesis not recorded as validated.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20.py"
       ],
-      "note": "sweep with budget guard; parameter sweep UI and API not built"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0423",
@@ -4468,33 +4468,33 @@
       "workstream": "G20",
       "title": "Implement research result diff, visual comparison and export.",
       "acceptance": "Reproducing previous run shows zero drift or detailed delta.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_research_assets.py"
       ],
-      "note": "result_diff lists added, removed and changed keys; no visual comparison or export"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0425",
       "workstream": "G20",
       "title": "Build synthetic-data scenario designer with editable market regimes.",
       "acceptance": "User can inject jump/stop gaps without touching real data.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20.py"
       ],
-      "note": "scenario validation with unique names and bounded shocks; editable designer UI not built"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0426",
       "workstream": "G20",
       "title": "Build research graph linking hypotheses, datasets, models, runs and papers.",
       "acceptance": "No dangling references in generated graph.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_research_assets.py"
       ],
-      "note": "ResearchGraph with typed nodes and checked edges; no UI"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0427",
@@ -4513,22 +4513,22 @@
       "workstream": "G20",
       "title": "Implement notebook-to-strategy packaging workflow.",
       "acceptance": "Static validation checks data rules before paper mode.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_research_assets.py"
       ],
-      "note": "package_strategy builds a hashed manifest; no notebook-to-strategy conversion"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0429",
       "workstream": "G20",
       "title": "Implement local API documentation with typed request/response examples.",
       "acceptance": "No internet required to use docs.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20i.py"
       ],
-      "note": "Markdown API section per route from typed examples; no served docs"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0430",
@@ -4568,11 +4568,11 @@
       "workstream": "G20",
       "title": "Implement complete observability of research asset lineage.",
       "acceptance": "Click run ID → input hashes → code → result.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20.py"
       ],
-      "note": "ancestors walks lineage and refuses cycles; observability view not built"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0434",
@@ -5254,22 +5254,22 @@
       "workstream": "G23",
       "title": "Implement explainer showing prediction/uncertainty/cost/risk breakdown.",
       "acceptance": "User can inspect why a trade was proposed.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20j.py"
       ],
-      "note": "explanation requires prediction, uncertainty, cost and risk; no UI"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0496",
       "workstream": "G23",
       "title": "Implement retraining shadow mode and A/B paper comparison without changing legacy books.",
       "acceptance": "Observations partitioned cleanly with paired IDs.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20k.py"
       ],
-      "note": "shadow versus live agreement with shadow records never sent; A/B paper comparison not built"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0497",
@@ -5298,11 +5298,11 @@
       "workstream": "G23",
       "title": "Implement self-learning dashboard with lineage from data to decision to P&L.",
       "acceptance": "Every model update documented and reversible.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20k.py"
       ],
-      "note": "lineage report of decision dependencies; data-to-decision dashboard not built"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0500",
@@ -5606,11 +5606,11 @@
       "workstream": "G25",
       "title": "Implement offline desktop notifications and local inbox.",
       "acceptance": "Notification test works without SMTP or third-party services.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20k.py"
       ],
-      "note": "local inbox with unread tracking; desktop notifications not built"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0528",
@@ -5639,11 +5639,11 @@
       "workstream": "G25",
       "title": "Implement paper order automation under caps and risk veto.",
       "acceptance": "Strategy never submits to live adapter.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20j.py"
       ],
-      "note": "paper submit under notional cap and risk veto; no live path, no broker"
+      "note": "needs a live broker, venue, or data source that is not available in this environment"
     },
     {
       "id": "FB-0531",
@@ -5769,11 +5769,11 @@
       "workstream": "G26",
       "title": "Implement database migration and downgrade plan.",
       "acceptance": "Migration verified on copy and restores if failed.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20f.py"
       ],
-      "note": "migration plan up and reverse; no database"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0543",
@@ -5813,33 +5813,33 @@
       "workstream": "G26",
       "title": "Implement process supervision and watchdog for paper feeds.",
       "acceptance": "Inactive runner detected, not silently assumed active.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20f.py"
       ],
-      "note": "watchdog restart decision; no supervisor process"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0547",
       "workstream": "G26",
       "title": "Implement health checks for research, data, risk, OMS, UI and jobs.",
       "acceptance": "Health API reports precise degraded component.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20f.py"
       ],
-      "note": "component health roll-up; no live probes"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0548",
       "workstream": "G26",
       "title": "Implement structured logs, traces and correlation IDs.",
       "acceptance": "All events for one trade queryable by decision ID.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20f.py"
       ],
-      "note": "correlation-id structured entries; no trace backend"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0549",
@@ -5890,11 +5890,11 @@
       "workstream": "G26",
       "title": "Implement system startup and shutdown sequencing.",
       "acceptance": "No torn journals after forced termination tests.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20f.py"
       ],
-      "note": "startup order with reverse shutdown; no process control"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0554",
@@ -6224,11 +6224,11 @@
       "workstream": "G28",
       "title": "Implement Rust event queue prototype with deterministic ordering.",
       "acceptance": "Identical stream produces identical event IDs.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20d.py"
       ],
-      "note": "Python event queue with deterministic (time, arrival) ordering; no Rust prototype"
+      "note": "needs a Rust, PyO3, or other toolchain or library that is not installed in this environment"
     },
     {
       "id": "FB-0588",
@@ -6273,11 +6273,11 @@
       "workstream": "G28",
       "title": "Implement PyO3 or FFI bridge with versioned ABI.",
       "acceptance": "Works on Windows/macOS/Linux or explicit platform support matrix.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20d.py"
       ],
-      "note": "ABI compatibility check; no PyO3 or FFI bridge"
+      "note": "needs a Rust, PyO3, or other toolchain or library that is not installed in this environment"
     },
     {
       "id": "FB-0593",
@@ -6375,22 +6375,22 @@
       "workstream": "G29",
       "title": "Define versioned local REST API for instruments, bars, portfolio, orders and risk.",
       "acceptance": "OpenAPI schema and contract fixtures pass.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20d.py"
       ],
-      "note": "versioned route table; endpoints not served"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0603",
       "workstream": "G29",
       "title": "Define typed streaming event protocol for quotes, alerts and fills.",
       "acceptance": "Schema includes sequence and resync strategy.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20d.py"
       ],
-      "note": "typed stream event kinds QUOTE, ALERT, FILL; no protocol transport"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0604",
@@ -6479,11 +6479,11 @@
       "workstream": "G29",
       "title": "Implement export to CSV, Parquet, JSON and Markdown reports.",
       "acceptance": "Exports carry data version and market mode metadata.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20d.py"
       ],
-      "note": "CSV, JSON and Markdown export; Parquet not built"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0613",
@@ -6796,11 +6796,11 @@
       "workstream": "G30",
       "title": "Establish full coverage gates prioritizing OMS evidence, risk exposure, stress and APIs.",
       "acceptance": "Per-module gate cannot be hidden by aggregate 82%.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_batch20g.py"
       ],
-      "note": "coverage gate returns areas below threshold; gate not wired into CI"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0644",
@@ -6876,11 +6876,11 @@
       "workstream": "G31",
       "title": "Provide safe runtime config with `RESEARCH`, `REPLAY`, `PAPER` and `LIVE_DISABLED` modes.",
       "acceptance": "Mode persists and is visible in header.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_ledger_guards_ticks.py"
       ],
-      "note": "Mode enum with LIVE_DISABLED terminal; no persisted or header display"
+      "note": "needs a front-end UI and visual or interaction verification; not built or testable in this environment"
     },
     {
       "id": "FB-0652",
@@ -7370,22 +7370,22 @@
       "workstream": "G33",
       "title": "Define `GATE-REPRODUCIBLE` as deterministic snapshot/replay and build.",
       "acceptance": "Same fixture run produces matching result hashes.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_pilot.py"
       ],
-      "note": "pilot trace is reproducible across runs; cross-OS hash not checked"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0705",
       "workstream": "G33",
       "title": "Define `GATE-EXTERNAL-TRADE` as always disabled absent owner credentials, regulatory/venue requirements and approval.",
       "acceptance": "CI refuses accidental live authority.",
-      "status": "partial",
+      "status": "external_blocked",
       "evidence": [
         "tests/test_kernel_ledger_guards_ticks.py"
       ],
-      "note": "external orders cannot be armed; CI refusal not wired"
+      "note": "needs a database, OS process, trace backend, served API, CI, or a second machine; not available in this environment"
     },
     {
       "id": "FB-0706",
