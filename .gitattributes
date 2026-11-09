@@ -1,6 +1,6 @@
 # Protected records are checked out with the line endings their baseline was computed from
 # (docs/audits/protected-baseline.json). Git stores LF; these rules control the working-copy bytes.
 brain/07-Research/*.md text eol=crlf
-brain/07-Research/Chart patterns and candles - what is testable and how.md text eol=lf
+"brain/07-Research/Chart patterns and candles - what is testable and how.md" text eol=lf
 docs/sources/pattern-catalogue.v1.json text eol=crlf
 docs/trials/manifests/*.json text eol=crlf
