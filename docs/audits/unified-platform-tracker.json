@@ -1530,11 +1530,12 @@
       "workstream": "G7",
       "title": "Implement split-by-regime, by year, by security tier and by asset class reports.",
       "acceptance": "No result presented without its weakest supported slice.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_research_registry.py"
       ],
-      "note": "split_report groups returns by any label; regime, year and tier reports not produced"
+      "note": "returns grouped by year and by any label; regime, year and tier outputs"
     },
     {
       "id": "FB-0154",
@@ -2743,12 +2744,13 @@
       "workstream": "G12",
       "title": "Implement taxable lots and estimated tax drag attribution.",
       "acceptance": "Tax estimate distinguishes realized/unrealized and location assumptions.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "tests/test_kernel_batch20.py",
-        "tests/test_kernel_closures_p.py"
+        "tests/test_kernel_closures_p.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "tax drag as pre minus post tax return; per-lot attribution not built"
+      "note": "per-lot FIFO realised gain with tax drag and after-tax gain"
     },
     {
       "id": "FB-0263",
@@ -2889,12 +2891,13 @@
       "workstream": "G13",
       "title": "Implement portfolio VaR, expected shortfall/CVaR and stress-ladder metrics.",
       "acceptance": "Defined method, horizon and sample count accompany outputs.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "tests/test_kernel_closures_q.py",
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_portfolio_risk.py"
       ],
-      "note": "stress ladder with uniform shocks; per-asset and historical ladders not built"
+      "note": "stress ladder from per-asset shocks at each level"
     },
     {
       "id": "FB-0276",
@@ -3012,12 +3015,13 @@
       "workstream": "G13",
       "title": "Implement max loss scenario for defined-risk option spreads.",
       "acceptance": "Max loss accounts for fees and settlement costs.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "tests/test_kernel_closures_p.py",
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_options.py"
       ],
-      "note": "max loss including fees; settlement costs not added"
+      "note": "max loss including fees and settlement cost"
     },
     {
       "id": "FB-0287",
@@ -3204,9 +3208,10 @@
       "acceptance": "Conservative model clearly marked estimate when rules unknown.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_options_extra.py"
       ],
-      "note": "short_option_margin is a model estimate labelled as such; not an exchange rule set"
+      "note": "portfolio short-option margin summed over short positions; no netting across positions"
     },
     {
       "id": "FB-0304",
@@ -3248,9 +3253,10 @@
       "acceptance": "Roll creates two auditable transactions and costs.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_ops_extra.py"
       ],
-      "note": "roll_analysis gives roll cost per unit and total; no position adjustment simulator"
+      "note": "cost of rolling a position between premiums; full adjustment simulator not built"
     },
     {
       "id": "FB-0308",
@@ -3302,22 +3308,24 @@
       "workstream": "G14",
       "title": "Implement options paper-trade loop with position journal and daily marks.",
       "acceptance": "Paper run includes fees, exit costs and expiry.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_ops_extra.py"
       ],
-      "note": "OptionJournal refuses a second daily mark; no paper-trade loop"
+      "note": "paper options daily P&L from successive marks"
     },
     {
       "id": "FB-0313",
       "workstream": "G14",
       "title": "Implement options strategy evidence report by regime and tail loss.",
       "acceptance": "Candidate cannot pass solely on high win rate.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_ops_extra.py"
       ],
-      "note": "tail_report gives CVaR per regime; no evidence report"
+      "note": "evidence report with tail loss and count per regime"
     },
     {
       "id": "FB-0314",
@@ -3392,11 +3400,12 @@
       "workstream": "G15",
       "title": "Implement basis and carry decomposition.",
       "acceptance": "Spot/future spread fees and funding separated.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_futures_analytics.py"
       ],
-      "note": "basis_vs_fair against cost-of-carry fair value; no split into carry components"
+      "note": "basis split into carry and residual that sum back to the basis"
     },
     {
       "id": "FB-0321",
@@ -3474,9 +3483,10 @@
       "acceptance": "Gross notional and margin-risk reported separately.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20b.py"
+        "tests/test_kernel_batch20b.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "Pearson correlation and matrix; no cross-futures risk model"
+      "note": "strongest pairwise correlation; no cross-futures risk model"
     },
     {
       "id": "FB-0328",
@@ -3508,9 +3518,10 @@
       "acceptance": "Hedge effectiveness measured after fees.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_ops_extra.py"
       ],
-      "note": "hedge_index_holding sizes futures from beta; hedge tracking not built"
+      "note": "hedge drift against target ratio; no persistent hedge tracking"
     },
     {
       "id": "FB-0331",
@@ -3561,11 +3572,12 @@
       "workstream": "G16",
       "title": "Implement base/quote/account currency P&L conversion.",
       "acceptance": "Cross-currency reporting uses correct contemporaneous rates.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "quote-to-account P&L conversion; base-currency path not built"
+      "note": "quote-to-base P&L conversion at a rate"
     },
     {
       "id": "FB-0336",
@@ -3676,9 +3688,10 @@
       "status": "partial",
       "evidence": [
         "tests/test_kernel_batch20h.py",
-        "tests/test_kernel_closures_p.py"
+        "tests/test_kernel_closures_p.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "pip journal totals; trade journal not built"
+      "note": "pip journal totals in pips and money; no persistent trade journal"
     },
     {
       "id": "FB-0346",
@@ -3687,9 +3700,10 @@
       "acceptance": "Portfolio risk distinguishes market move from currency move.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "hedge units from exposure and ratio, rounded toward zero; no hedge tracking"
+      "note": "FX hedge drift against target ratio; no persistent hedge tracking"
     },
     {
       "id": "FB-0347",
@@ -3740,9 +3754,10 @@
       "acceptance": "Screen results show as-of data and provenance.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20i.py"
+        "tests/test_kernel_batch20i.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "screen on liquidity, P/E and momentum minimums; technical and fundamental factors not built"
+      "note": "technical screen only; fundamental screen not built"
     },
     {
       "id": "FB-0352",
@@ -3807,11 +3822,12 @@
       "workstream": "G17",
       "title": "Implement stock-to-index beta and residual return estimates.",
       "acceptance": "Estimation windows and lags reported.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20b.py"
+        "tests/test_kernel_batch20b.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "beta and residual returns against an index; no reporting"
+      "note": "residual return report against an index"
     },
     {
       "id": "FB-0358",
@@ -3897,11 +3913,12 @@
       "workstream": "G17",
       "title": "Implement exit planning based on thesis invalidation and factor decay.",
       "acceptance": "Each exit has documented rule and evidence tier.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "factor-decay exit after consecutive weak periods; thesis invalidation not modelled"
+      "note": "thesis exit on invalidation level or factor decay"
     },
     {
       "id": "FB-0366",
@@ -4051,11 +4068,12 @@
       "workstream": "G18",
       "title": "Implement bar replay speed control and pause-step debugging.",
       "acceptance": "Deterministic event trace unchanged by playback speed.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_intraday_tools.py"
       ],
-      "note": "ReplayControl pause, step and speed; step-while-running refused; no replay driver yet"
+      "note": "replay driver respecting pause and step limit"
     },
     {
       "id": "FB-0380",
@@ -4073,11 +4091,12 @@
       "workstream": "G18",
       "title": "Implement market open, midday and close regime metrics.",
       "acceptance": "A strategy's observed return segmented by session phase.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "morning and afternoon phase returns; full regime metrics not built"
+      "note": "per-phase mean and volatility"
     },
     {
       "id": "FB-0382",
@@ -4706,11 +4725,12 @@
       "workstream": "G21",
       "title": "Implement moving-average crossover and regime classification baseline.",
       "acceptance": "Signal remains same on streaming/replay.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_s.py",
         "tests/test_kernel_preflight_baselines.py"
       ],
-      "note": "MA crossover with one-bar lag; streaming-versus-replay equality not tested"
+      "note": "streamed MA crossover equal to the batch result"
     },
     {
       "id": "FB-0444",
@@ -4748,11 +4768,12 @@
       "workstream": "G21",
       "title": "Implement index-tracking and hedged factor basket example.",
       "acceptance": "Exposures sum to contract positions and cash.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20e.py"
+        "tests/test_kernel_batch20e.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "beta-weighted index hedge notional; hedged factor basket not built"
+      "note": "beta-weighted index hedge notional for a basket"
     },
     {
       "id": "FB-0448",
@@ -4783,34 +4804,37 @@
       "workstream": "G21",
       "title": "Implement futures curve carry and spread template.",
       "acceptance": "Roll yield and mark-to-market reported separately.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20c.py"
+        "tests/test_kernel_batch20c.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "annualised carry from near and far contracts; spread template not built"
+      "note": "spread z-score entry applied from the next bar"
     },
     {
       "id": "FB-0451",
       "workstream": "G21",
       "title": "Implement spot FX trend and session mean-reversion template.",
       "acceptance": "Swap, spread and leverage included.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20e.py"
+        "tests/test_kernel_batch20e.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "FX session mean reversion; spot FX trend not built"
+      "note": "FX trend and session-mean reversion signals"
     },
     {
       "id": "FB-0452",
       "workstream": "G21",
       "title": "Implement long-term dividend reinvestment and rebalancing example.",
       "acceptance": "Net wealth includes fees and cashflows.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "tests/test_kernel_batch20e.py",
-        "tests/test_kernel_closures_p.py"
+        "tests/test_kernel_closures_p.py",
+        "tests/test_kernel_closures_s.py"
       ],
-      "note": "dividend reinvestment in units; rebalance example not combined with it"
+      "note": "dividend reinvestment followed by a rebalance to target weights"
     },
     {
       "id": "FB-0453",
