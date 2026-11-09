@@ -1,0 +1,3 @@
+# Protected research notes are checked out with CRLF on every platform: the protected baseline in
+# docs/audits/protected-baseline.json was computed from those bytes. Git still stores LF.
+brain/07-Research/*.md text eol=crlf
