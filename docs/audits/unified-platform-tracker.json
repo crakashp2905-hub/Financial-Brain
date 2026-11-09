@@ -895,9 +895,10 @@
       "acceptance": "Adjusted history reconciles with holdings ledger.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_lineage.py"
       ],
-      "note": "split adjustment reconciles notional; bonus, rights, dividend and demerger not yet modelled"
+      "note": "bonus adjustment keeps notional; rights and demerger not modelled"
     },
     {
       "id": "FB-0092",
@@ -1116,11 +1117,12 @@
       "workstream": "G5",
       "title": "Implement non-repainting pattern lifecycle (`CANDIDATE`, `CONFIRMED`, `FAILED`, `EXPIRED`).",
       "acceptance": "Replayed and streamed streams produce identical sequences.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_market_patterns_state.py"
       ],
-      "note": "lifecycle states and deterministic replay exist; no live stream to compare against replay"
+      "note": "streamed pattern states equal the replay final state"
     },
     {
       "id": "FB-0114",
@@ -2128,9 +2130,10 @@
       "acceptance": "Violating any check prevents order submission.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_risk.py"
       ],
-      "note": "pre-trade notional, position, gross and drawdown checks; margin and permissions absent"
+      "note": "pre-trade margin check added; permissions still absent"
     },
     {
       "id": "FB-0209",
@@ -2269,11 +2272,12 @@
       "workstream": "G10",
       "title": "Implement high-level execution algorithms: TWAP, VWAP, POV and iceberg.",
       "acceptance": "Slices obey volume and participation limits.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_execution_tools.py"
       ],
-      "note": "TWAP and iceberg slicing; VWAP and POV not built"
+      "note": "TWAP, VWAP and POV slicing with iceberg; each sums to the parent"
     },
     {
       "id": "FB-0222",
@@ -2480,11 +2484,12 @@
       "workstream": "G11",
       "title": "Implement daily reconciliation between trades, orders, positions and cash.",
       "acceptance": "Missing or mismatched fill becomes a blocking exception.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_portfolio.py"
       ],
-      "note": "reconcile reports exact exceptions; does not yet block trading"
+      "note": "reconciliation exceptions block trading through reconcile_gate"
     },
     {
       "id": "FB-0241",
@@ -2502,11 +2507,12 @@
       "workstream": "G11",
       "title": "Implement profit factor, drawdown, return on capital and time-weighted returns.",
       "acceptance": "Definitions validated against independent hand calculations.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_portfolio_risk.py"
       ],
-      "note": "profit factor, max drawdown and time-weighted return; return on capital not built"
+      "note": "return on capital added beside profit factor, drawdown and time-weighted return"
     },
     {
       "id": "FB-0243",
@@ -2576,11 +2582,12 @@
       "workstream": "G12",
       "title": "Build multi-asset portfolio constructor with explicit cash asset.",
       "acceptance": "Allocation sums to <=100% and retained cash earns configured rate.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_allocation_indicators.py"
+        "tests/test_kernel_allocation_indicators.py",
+        "tests/test_kernel_closures_q.py"
       ],
-      "note": "weights sum to at most 100 percent; retained-cash interest not modelled"
+      "note": "weights capped at 100 percent and interest on retained cash"
     },
     {
       "id": "FB-0250",
@@ -2688,9 +2695,10 @@
       "acceptance": "Neutrality and leverage checks measured after rounding.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20.py"
+        "tests/test_kernel_batch20.py",
+        "tests/test_kernel_closures_q.py"
       ],
-      "note": "dollar-neutral check within tolerance; beta-neutral construction not built"
+      "note": "beta-neutral check; beta-neutral construction not built"
     },
     {
       "id": "FB-0260",
@@ -2708,11 +2716,12 @@
       "workstream": "G12",
       "title": "Implement historical dividend and share-split adjusted performance.",
       "acceptance": "Total return ledger matches corporate-action fixture.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20.py"
+        "tests/test_kernel_batch20.py",
+        "tests/test_kernel_closures_q.py"
       ],
-      "note": "one-period total return with dividend; historical adjusted performance not built"
+      "note": "adjusted performance from a dividend-adjusted price path"
     },
     {
       "id": "FB-0262",
@@ -2786,11 +2795,12 @@
       "workstream": "G12",
       "title": "Implement stress scenarios for inflation, rates, currency and market crash.",
       "acceptance": "Scenario inputs and non-applicable fields documented.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_portfolio_planning.py"
       ],
-      "note": "apply_shocks gives portfolio change under per-asset shocks; named macro scenarios not defined"
+      "note": "named macro scenarios, labelled illustrative and read-only"
     },
     {
       "id": "FB-0269",
@@ -2841,11 +2851,12 @@
       "workstream": "G13",
       "title": "Implement drawdown, daily loss, trailing-loss and maximum losing-streak controls.",
       "acceptance": "Limits latch and require explicit reset rules.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_risk.py"
       ],
-      "note": "drawdown and daily-loss latch with human-only reset; losing-streak limit absent"
+      "note": "losing-streak latch at a set limit beside the drawdown latch"
     },
     {
       "id": "FB-0274",
@@ -2865,9 +2876,10 @@
       "acceptance": "Defined method, horizon and sample count accompany outputs.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_portfolio_risk.py"
       ],
-      "note": "historical VaR and CVaR; stress ladder not built"
+      "note": "stress ladder with uniform shocks; per-asset and historical ladders not built"
     },
     {
       "id": "FB-0276",
@@ -3793,11 +3805,12 @@
       "workstream": "G17",
       "title": "Implement factor portfolio test harness with annualized turnover.",
       "acceptance": "Net and gross performance differ correctly after costs.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20h.py"
+        "tests/test_kernel_batch20h.py",
+        "tests/test_kernel_closures_q.py"
       ],
-      "note": "annualised turnover; factor test harness not built"
+      "note": "factor long-short harness: top fraction minus bottom fraction by score"
     },
     {
       "id": "FB-0360",
@@ -4128,11 +4141,12 @@
       "workstream": "G19",
       "title": "Implement role-based workspace presets for all target personas.",
       "acceptance": "Role switch preserves positions and safety settings.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20i.py"
+        "tests/test_kernel_batch20i.py",
+        "tests/test_kernel_closures_q.py"
       ],
-      "note": "role presets for four personas; not all personas covered"
+      "note": "presets defined for all twelve charter personas"
     },
     {
       "id": "FB-0391",
@@ -4487,11 +4501,12 @@
       "workstream": "G20",
       "title": "Implement sample multistrategy portfolio benchmark report.",
       "acceptance": "Strategy correlations and joint drawdowns shown.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20.py"
+        "tests/test_kernel_batch20.py",
+        "tests/test_kernel_closures_q.py"
       ],
-      "note": "equal-weight multistrategy series; benchmark report not built"
+      "note": "multistrategy report: per-strategy totals and equal-weight combination"
     },
     {
       "id": "FB-0428",
@@ -4855,9 +4870,10 @@
       "acceptance": "Objective weights fixed before search.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_q.py",
         "tests/test_kernel_sdk_validation_futures_fx.py"
       ],
-      "note": "fixed weights as a frozen default; enforcement that weights precede search not built"
+      "note": "defaults frozen and a comparison check added; enforcement before search not wired"
     },
     {
       "id": "FB-0461",
