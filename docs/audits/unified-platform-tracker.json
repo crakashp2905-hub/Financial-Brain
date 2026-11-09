@@ -997,9 +997,10 @@
       "acceptance": "Unsupported rule is explicit preflight blocker.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_m.py",
         "tests/test_kernel_instruments.py"
       ],
-      "note": "tradable() returns explicit reasons; pre-paper rule report not generated"
+      "note": "rule_report summarises pass and fail groups; not yet wired to tradable() output"
     },
     {
       "id": "FB-0103",
@@ -1028,20 +1029,22 @@
       "acceptance": "Golden vectors match independently hand-computed fixtures.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_allocation_indicators.py"
+        "tests/test_kernel_allocation_indicators.py",
+        "tests/test_kernel_closures_m.py"
       ],
-      "note": "SMA, EMA, Wilder ATR, RSI, session VWAP tested; ADX and Bollinger absent"
+      "note": "Bollinger bands added; ADX still absent"
     },
     {
       "id": "FB-0106",
       "workstream": "G5",
       "title": "Implement Donchian, opening range, volume profile approximation and anchored VWAP.",
       "acceptance": "Session and anchor boundaries verified.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_allocation_indicators.py"
+        "tests/test_kernel_allocation_indicators.py",
+        "tests/test_kernel_closures_m.py"
       ],
-      "note": "prior-bar Donchian and session-reset VWAP; opening range and anchored VWAP absent"
+      "note": "opening_range and anchored_vwap exist in intraday_tools; rolling and session VWAP already tested"
     },
     {
       "id": "FB-0107",
@@ -1242,11 +1245,12 @@
       "workstream": "G6",
       "title": "Implement crossover, breakout, mean-reversion, spread and signal-combination primitives.",
       "acceptance": "Canonical fixtures produce known entries and exits.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_m.py",
         "tests/test_kernel_strategy_primitives.py"
       ],
-      "note": "crossover, breakout, mean-reversion z-score and spread exist; signal combination not built"
+      "note": "crossover, breakout, z-score, spread and AND/OR signal combination"
     },
     {
       "id": "FB-0128",
@@ -1275,11 +1279,12 @@
       "workstream": "G6",
       "title": "Implement strategy composition without hidden mutable global state.",
       "acceptance": "Interleaved multi-strategy tests stay isolated.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_m.py",
         "tests/test_kernel_sdk_validation_futures_fx.py"
       ],
-      "note": "fresh instance per run; interleaved multi-strategy isolation test not written"
+      "note": "each strategy instance keeps its own state; two instances do not share triggers"
     },
     {
       "id": "FB-0131",
@@ -1597,11 +1602,12 @@
       "workstream": "G7",
       "title": "Implement negative result preservation and publication.",
       "acceptance": "Failed strategies stay searchable and cannot be silently dropped.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_m.py",
         "tests/test_kernel_research_registry.py"
       ],
-      "note": "failed results kept and never overwritten; no publication step"
+      "note": "failed results preserved and every trial published with publish_trials"
     },
     {
       "id": "FB-0163",
@@ -1696,11 +1702,12 @@
       "workstream": "G8",
       "title": "Implement timer callbacks at market session boundaries.",
       "acceptance": "Timers obey holiday and DST changes.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_batch20b.py"
+        "tests/test_kernel_batch20b.py",
+        "tests/test_kernel_closures_m.py"
       ],
-      "note": "session timer times at open, step and close; no callback dispatch"
+      "note": "session timer times and callback dispatch in ascending order"
     },
     {
       "id": "FB-0172",
@@ -1797,9 +1804,10 @@
       "acceptance": "Granularity discrepancies are explicitly documented.",
       "status": "partial",
       "evidence": [
-        "tests/test_kernel_batch20b.py"
+        "tests/test_kernel_batch20b.py",
+        "tests/test_kernel_closures_m.py"
       ],
-      "note": "replay by granularity (tick, quote, bar); no benchmark runner"
+      "note": "granularity event counts added; no timed benchmark runner"
     },
     {
       "id": "FB-0181",
@@ -1892,9 +1900,10 @@
       "acceptance": "Expiry/cancel behavior checked across session boundaries.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_m.py",
         "tests/test_kernel_fills.py"
       ],
-      "note": "FOK all-or-nothing and IOC partial implemented; DAY, GTC, GTD expiry not built"
+      "note": "DAY, GTC and GTD expiry rules added; OMS wiring and auction handling not built"
     },
     {
       "id": "FB-0190",
@@ -1982,10 +1991,11 @@
       "acceptance": "Cash journal reconciles total charges and currency.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_closures_m.py",
         "tests/test_kernel_fills.py",
         "tests/test_kernel_pilot.py"
       ],
-      "note": "explicit commission on entry and exit, rounded to paise; taxes and stamp duty absent"
+      "note": "proportional stamp duty added; full tax table not built"
     },
     {
       "id": "FB-0198",
