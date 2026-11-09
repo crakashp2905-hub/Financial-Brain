@@ -1378,11 +1378,12 @@
       "workstream": "G6",
       "title": "Implement deterministic RNG injection for stochastic policies.",
       "acceptance": "Same seed and stream give identical intentions.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_o.py",
         "tests/test_kernel_sdk_validation_futures_fx.py"
       ],
-      "note": "seeded RNG injected; no stochastic policy uses it yet"
+      "note": "seeded stochastic policy reproducible from its seed; the injected RNG now drives a policy"
     },
     {
       "id": "FB-0140",
@@ -1864,11 +1865,12 @@
       "workstream": "G9",
       "title": "Implement separate best bid, best ask, last trade and mark price.",
       "acceptance": "Fill side always uses appropriate side of market.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_closures_o.py",
         "tests/test_kernel_fills.py"
       ],
-      "note": "half-spread fill side logic; separate mark and last not modelled"
+      "note": "mark is the mid of a two-sided quote, falling back to last; last is kept separate"
     },
     {
       "id": "FB-0186",
