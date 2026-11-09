@@ -484,12 +484,13 @@
       "workstream": "G2",
       "title": "Separate decision/policy/risk/OMS/venue responsibilities.",
       "acceptance": "Dependency graph forbids strategy writing fills or ledgers.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_risk.py",
-        "tests/test_kernel_oms.py"
+        "tests/test_kernel_architecture.py",
+        "tests/test_kernel_oms.py",
+        "tests/test_kernel_risk.py"
       ],
-      "note": "risk gate, OMS and ledger are separate modules; dependency rule not enforced by a test"
+      "note": "kernel imports only stdlib and kernel modules; enforced by an AST test"
     },
     {
       "id": "FB-0052",
@@ -554,12 +555,13 @@
       "workstream": "G2",
       "title": "Define pure calculation boundary with deterministic inputs.",
       "acceptance": "Domain math tests require no clock or network.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "tests/test_kernel_units_clock.py",
-        "tests/test_kernel_ledger_guards_ticks.py"
+        "tests/test_kernel_architecture.py",
+        "tests/test_kernel_ledger_guards_ticks.py",
+        "tests/test_kernel_units_clock.py"
       ],
-      "note": "domain math is deterministic and clock-free in kernel"
+      "note": "kernel reads no wall clock; enforced by an AST test"
     },
     {
       "id": "FB-0058",
@@ -761,9 +763,10 @@
       "acceptance": "E2E demo succeeds with sockets disabled.",
       "status": "partial",
       "evidence": [
+        "tests/test_kernel_architecture.py",
         "tests/test_kernel_pilot.py"
       ],
-      "note": "pilot uses no network code; no in-process socket guard yet"
+      "note": "static AST guard rejects network imports; no runtime socket guard"
     },
     {
       "id": "FB-0079",
@@ -1653,11 +1656,12 @@
       "workstream": "G8",
       "title": "Implement explicit simulation clock and live-clock interface.",
       "acceptance": "Strategies never call wall clock directly.",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
+        "tests/test_kernel_architecture.py",
         "tests/test_kernel_events.py"
       ],
-      "note": "kernel takes explicit event times; no wall-clock use in kernel"
+      "note": "kernel takes explicit event times; wall-clock calls rejected by an AST test"
     },
     {
       "id": "FB-0167",
