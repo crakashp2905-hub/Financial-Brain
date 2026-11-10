@@ -519,3 +519,29 @@ OVERRIDES.update({
     "FE-0103": Entry("PARTIAL", ("test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail",), (),
                      "Verdict logic for the six checks. The checks themselves are not implemented."),
 })
+
+
+# ---- F09 (portfolio risk) statuses, added in wave F09 ----
+OVERRIDES.update({
+    "FE-0104": Entry("DONE", ("test_allocation_must_sum_to_one_with_cash_and_has_a_stable_hash",
+                              "test_a_losing_book_stays_in_the_combined_result"), (), "Frozen allocation incl. explicit CASH."),
+    "FE-0105": Entry("DONE", ("test_two_intents_that_are_each_fine_cannot_jointly_breach_a_limit",
+                              "test_single_name_gross_and_net_limits_report_reasons"), (),
+                     "Cumulative batch check for gross, net, single-name and sector. Factor limits not built."),
+    "FE-0106": Entry("PARTIAL", ("test_vol_target_cvar_and_concentration_are_deterministic_and_bounded",), (),
+                     "Components exist; no combined deterministic allocator."),
+    "FE-0107": Entry("DONE", ("test_cash_and_margin_cannot_be_double_allocated",
+                              "test_worst_case_spread_loss_is_width_minus_credit_times_quantity"), (), "ExposureBook."),
+    "FE-0108": Entry("DONE", ("test_kill_switch_persists_across_restart_and_agents_cannot_reset_it",), (),
+                     "File-persisted latch; reset needs a valid human DISARM_RESET approval."),
+    "FE-0109": Entry("PARTIAL", ("test_equity_change_is_fully_explained_by_ledger_events",), (),
+                     "Attribution identity on supplied events; not wired to the ledger."),
+    "FE-0110": Entry("PARTIAL", ("test_throttle_is_versioned_and_changes_hash_when_edited",), (),
+                     "Versioned throttle policy; preregistration process not built."),
+    "FE-0111": Entry("PARTIAL", ("test_capacity_is_limited_by_adv_participation_and_visible_depth",), (BLK_DATA,),
+                     "Formula only; ADV and depth inputs need licensed data."),
+    "FE-0112": Entry("PARTIAL", ("test_disaster_shocks_keep_the_cash_and_equity_identity",), (),
+                     "Mark-to-market shocks keep the identity. Limit-down, spread blowout, expiry shock and partition not simulated."),
+    "FE-0113": Entry("PARTIAL", ("test_no_trade_decisions_are_explicit_with_reasons",), (),
+                     "Explicit NO_TRADE reasons; the trader terminal is not wired."),
+})
