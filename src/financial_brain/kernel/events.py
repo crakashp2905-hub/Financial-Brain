@@ -7,6 +7,16 @@
 * ``checkpoint`` / ``resume`` replay from an offset; an accepted side effect is recorded by key and is never
   dispatched twice, even after a crash-and-resume.
 * ``snapshot_checksum`` makes any change to a persisted journal detectable.
+
+Side-effect outbox semantics (FE-0011, FE-0013):
+
+* A key is marked DISPATCHED only **after** its action returns. Marking it before the action (the earlier
+  behaviour) turned an injected exception into a false acknowledgement.
+* If the action raises, the key becomes UNKNOWN: whether the external effect happened is not known. An UNKNOWN key
+  is never re-run automatically; ``side_effect`` raises ``UnknownOutcome`` until ``resolve_unknown`` records a
+  reconciliation (the effect happened, or it provably did not).
+
+The outbox is in-memory only. Durable write-ahead persistence (FE-0012) is not implemented here.
 """
 from __future__ import annotations
 
@@ -22,6 +32,10 @@ from financial_brain.kernel.clock import utc
 
 class Backpressure(RuntimeError):
     pass
+
+
+class UnknownOutcome(RuntimeError):
+    """An external action raised, or was left unresolved; it must be reconciled before any replay."""
 
 
 @dataclass(frozen=True, order=True)
@@ -48,7 +62,9 @@ class EventKernel:
         self.journal: list[Event] = []
         self.late: list[Event] = []
         self._dispatched_keys: set[str] = set()
+        self._unknown_keys: set[str] = set()
         self.side_effects: list[str] = []
+        self.reconciliations: list[tuple[str, bool, str]] = []
 
     def submit(self, event: Event) -> None:
         if len(self._queue) >= self._max:
@@ -72,19 +88,47 @@ class EventKernel:
         return processed
 
     def side_effect(self, key: str, action: Callable[[], None]) -> bool:
-        """Run an external-facing action at most once per key. Returns False if it was already dispatched."""
+        """Run an external-facing action at most once per key.
+
+        Returns False if the key was already dispatched (nothing runs). Raises ``UnknownOutcome`` if the key is
+        unresolved; the action is not re-run. If ``action`` raises, the key is marked UNKNOWN and the error is
+        raised as ``UnknownOutcome`` - it is never recorded as dispatched.
+        """
         if key in self._dispatched_keys:
             return False
+        if key in self._unknown_keys:
+            raise UnknownOutcome(f"{key}: outcome unknown; reconcile before replay")
+        try:
+            action()
+        except Exception as exc:  # noqa: BLE001 - any failure leaves the external effect undetermined
+            self._unknown_keys.add(key)
+            raise UnknownOutcome(f"{key}: action failed, outcome unknown") from exc
         self._dispatched_keys.add(key)
         self.side_effects.append(key)
-        action()
         return True
+
+    def resolve_unknown(self, key: str, *, took_effect: bool, reconciled_by: str) -> None:
+        """Record a reconciliation of an UNKNOWN key. ``took_effect=True`` closes it without a re-run."""
+        if key not in self._unknown_keys:
+            raise UnknownOutcome(f"{key}: not in UNKNOWN state")
+        if not reconciled_by or not reconciled_by.strip():
+            raise UnknownOutcome("reconciliation needs a named reconciler")
+        self._unknown_keys.discard(key)
+        self.reconciliations.append((key, bool(took_effect), reconciled_by))
+        if took_effect:
+            self._dispatched_keys.add(key)
+            self.side_effects.append(key)
+
+    @property
+    def unknown_keys(self) -> frozenset[str]:
+        return frozenset(self._unknown_keys)
 
     def checkpoint(self) -> dict[str, Any]:
         return {
             "offset": len(self.journal),
             "watermark": self.watermark.isoformat() if self.watermark else None,
             "dispatched": sorted(self._dispatched_keys),
+            "unknown": sorted(self._unknown_keys),
         }
 
     def resume(self, checkpoint: dict[str, Any], replay: Iterable[Event]) -> None:
@@ -92,6 +136,7 @@ class EventKernel:
         self.journal = []
         self.watermark = datetime.fromisoformat(checkpoint["watermark"]) if checkpoint["watermark"] else None
         self._dispatched_keys = set(checkpoint["dispatched"])
+        self._unknown_keys = set(checkpoint.get("unknown", []))
         skip = int(checkpoint["offset"])
         for i, event in enumerate(sorted(replay)):
             if i < skip:

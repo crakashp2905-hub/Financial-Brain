@@ -56,7 +56,9 @@ def test_full_lifecycle_releases_reservation() -> None:
     assert oms.order("c1").state is State.PARTIAL
     oms.record_fill("c1", 60, Decimal("498"))
     assert oms.order("c1").state is State.FILLED
-    assert oms.available("paper-inr") == Decimal("100000")
+    # buying power falls by the spent notional (40*499 + 60*498 = 49840); reservation fully released
+    assert oms.cash("paper-inr") == Decimal("50160")
+    assert oms.available("paper-inr") == Decimal("50160")
 
 
 def test_unknown_outcome_blocks_resend_until_reconciled() -> None:
@@ -88,7 +90,8 @@ def test_kill_all_cancels_working_orders_and_keeps_fills() -> None:
     assert oms.kill_all() == ["c1"]
     assert oms.order("c1").filled == 10
     oms.move("c1", State.CANCELED)
-    assert oms.available("paper-inr") == Decimal("100000")
+    # 10 shares were bought at 500 (5000 spent); the unfilled 90 shares' reservation is released
+    assert oms.available("paper-inr") == Decimal("95000")
 
 
 def test_fill_cannot_exceed_remaining() -> None:

@@ -60,7 +60,10 @@ def test_resume_does_not_resubmit_the_entry() -> None:
     second = run_pilot(bars, kernel=kernel)  # simulated restart reusing the dispatched-key ledger
     assert first.submissions == 1
     assert second.submissions == 0
-    assert second.outcome == first.outcome
+    # FE-0017: the repeated run neither re-fills nor posts a second ledger entry (no phantom trade)
+    assert second.outcome == "DUPLICATE_SUPPRESSED"
+    assert len(second.ledger) == 0
+    assert first.trace[-1]["oms_reconciled"] is True
 
 
 def test_synthetic_tape_is_labelled_and_deterministic() -> None:

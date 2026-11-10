@@ -15,7 +15,7 @@ from datetime import datetime, time, timedelta, timezone
 from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any
 
-from financial_brain.kernel.events import EventKernel
+from financial_brain.kernel.events import EventKernel, UnknownOutcome
 from financial_brain.kernel.fills import OhlcBar, resolve_stop_target
 from financial_brain.kernel.guards import prerequisite_gate
 from financial_brain.kernel.ledger import CREDIT, DEBIT, DoubleEntryLedger, Entry, Transaction
@@ -145,9 +145,20 @@ def run_pilot(
                           limit=None, reserve=notional)
         oms.move(entry_key, State.SUBMITTED)
         oms.move(entry_key, State.ACCEPTED)
-        oms.record_fill(entry_key, qty, entry_px)
+        oms.record_fill(entry_key, qty, entry_px, provider_fill_id=f"{entry_key}:f1")
 
-    kernel.side_effect(entry_key, _submit)  # at most once, even across a resume
+    try:
+        dispatched = kernel.side_effect(entry_key, _submit)  # at most once, even across a resume
+    except UnknownOutcome as exc:
+        trace({"stage": "fill", "order": entry_key, "decision": "UNKNOWN_OUTCOME", "reason": str(exc)})
+        res.outcome = "UNKNOWN_OUTCOME"
+        return res
+    if not dispatched:
+        # FE-0017: the entry was already dispatched by an earlier run. Do not post a second fill or ledger entry;
+        # the earlier run's ledger is the record of that fill.
+        trace({"stage": "fill", "order": entry_key, "decision": "DUPLICATE_SUPPRESSED", "mode": "PAPER_SIMULATED"})
+        res.outcome = "DUPLICATE_SUPPRESSED"
+        return res
     fees = _paise(notional * COMMISSION_BPS / Decimal(10_000))
     res.ledger.post(Transaction(f"{entry_key}:buy", (
         Entry("position:" + symbol, DEBIT, Money.of(notional, CURRENCY)),
@@ -190,13 +201,18 @@ def run_pilot(
                       reserve=Decimal(0))
     oms.move(oms_exit, State.SUBMITTED)
     oms.move(oms_exit, State.ACCEPTED)
-    oms.record_fill(oms_exit, qty, exit_px)
+    oms.record_fill(oms_exit, qty, exit_px, provider_fill_id=f"{oms_exit}:f1")
     trace({"stage": "exit", "reason": reason, "bar": bars[exit_bar].ts.isoformat(), "price": str(exit_px),
            "gross_pnl": str(pnl_gross), "fees": str(fees + exit_fees)})
     res.pnl = pnl_gross - fees - exit_fees
+    # FE-0015: the OMS settled-cash movement must equal the ledger cash after charges.
+    oms_delta = oms.cash("paper") - Decimal("10000000")
+    reconciled = oms_delta - (fees + exit_fees) == res.ledger.balance("cash", CURRENCY)
     res.outcome = "WIN" if res.pnl > 0 else "LOSS"
+    if not reconciled:
+        res.outcome = "RECONCILE_MISMATCH"
     trace({"stage": "ledger", "net_pnl": str(res.pnl), "balanced": res.ledger.trial_balance_ok(),
-           "cash_balance": str(res.ledger.balance("cash", CURRENCY))})
+           "cash_balance": str(res.ledger.balance("cash", CURRENCY)), "oms_reconciled": reconciled})
     return res
 
 
