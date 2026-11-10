@@ -586,3 +586,30 @@ OVERRIDES.update({
                               "test_benign_events_do_not_change_the_policy"), (),
                      _GOV_NOTE + " Flags and open-order count; no live order cancel because there is no broker."),
 })
+
+
+# ---- F12 (rehearsal) statuses, added in wave F12 ----
+_REH = "Mechanism tested against a mock in forward_edge/rehearsal.py; the real-world evidence cannot be produced offline."
+OVERRIDES.update({
+    "FE-0132": Entry("DONE", ("test_default_adapter_cannot_send_or_cancel_an_order",
+                              "test_mock_adapter_is_labelled_mock_and_still_cannot_place_orders"), (),
+                     "READ_ONLY adapter is the default; no staged order adapter exists in this repository."),
+    "FE-0133": Entry("BLOCKED", (), (BLK_COMPLIANCE, BLK_OWNER), "Regulatory and broker permissions audit needs the owner and broker; nothing to test offline."),
+    "FE-0134": Entry("BLOCKED", ("test_failed_compliance_check_blocks_the_stage_transition",), (BLK_COMPLIANCE,),
+                     "Gate coded and tested. Evidence (static IP, app authorization, key rotation, algo ID) must come from the broker."),
+    "FE-0135": Entry("BLOCKED", ("test_only_clean_real_market_hours_runs_count_and_any_dirt_resets_the_gate",
+                                 "test_off_hours_runs_do_not_count_toward_the_gate"), (BLK_MARKET, BLK_BROKER),
+                     _REH + " Mock and off-hours runs deliberately do not count."),
+    "FE-0136": Entry("BLOCKED", ("test_placed_is_not_filled_without_broker_confirmation",), (BLK_BROKER,), _REH),
+    "FE-0137": Entry("BLOCKED", ("test_no_real_trade_before_explicit_human_confirmation_of_the_exact_proposal",), (BLK_OWNER,),
+                     "Confirmation logic tested. The owner has to review and confirm an actual proposal."),
+    "FE-0138": Entry("BLOCKED", ("test_statement_reconciliation_reports_every_unexplained_difference",), (BLK_BROKER,),
+                     "Reconciliation logic tested on fixtures. Real tradebooks and contract notes need a broker."),
+    "FE-0139": Entry("BLOCKED", ("test_each_trigger_disarms_and_restore_needs_a_human",), (BLK_BROKER, BLK_OWNER),
+                     "Disarm latch tested. A micro-capital pilot needs a broker and the owner's approval."),
+    "FE-0140": Entry("BLOCKED", ("test_slippage_gap_is_reported_and_execution_models_are_versioned_not_edited",), (BLK_BROKER,),
+                     "Report and versioning tested. Observed broker slippage needs broker fills."),
+    "FE-0141": Entry("DONE", ("test_a_profitable_week_never_scales_capital_by_itself",), (), "Policy function; review and approval are both required."),
+    "FE-0142": Entry("DONE", ("test_each_trigger_disarms_and_restore_needs_a_human", "test_unrelated_events_do_not_disarm"), (),
+                     "Automatic disarm on five triggers; re-arm needs a valid human DISARM_RESET approval."),
+})
