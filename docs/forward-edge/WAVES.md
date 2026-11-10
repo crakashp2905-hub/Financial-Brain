@@ -101,3 +101,13 @@ power-loss artefact; any other invalid record raises `JournalCorrupt`.
 
 Tracker after this wave: DONE 75, PARTIAL 65, BLOCKED 12, NOT_STARTED 0. Forward-edge tests: 350 passed.
 The legacy in-memory `EventKernel` and the kernel pilot are not rewired to the durable journal.
+
+## Wave F15 - refinements of earlier partial items (branch `feature/forward-edge-f15`)
+
+`forward_edge/refinements.py` upgrades FE-0059 (inventory across slices), FE-0066 (counterfactual fill bounds), FE-0067
+(settlement, financing and margin identity), FE-0076 (immutable completeness file), FE-0093 (two-way clustering), FE-0094
+(White's Reality Check over every candidate), FE-0095 (drawdown interval, tail drawdown, turnover), FE-0101 (verdict withheld
+between checkpoints) and FE-0106 (deterministic vol-targeted allocator). FE-0062 gains legging loss and stays partial
+(expiry settlement missing). All tests use synthetic data and do not claim alpha.
+
+Tracker after this wave: DONE 84, PARTIAL 56, BLOCKED 12, NOT_STARTED 0. Forward-edge tests: 364 passed.

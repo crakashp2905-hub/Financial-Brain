@@ -686,6 +686,41 @@ OVERRIDES.update({
 })
 
 
+
+
+# ---- F15 (refinements of earlier partial items), added in wave F15 ----
+_REF = "forward_edge/refinements.py, synthetic-data tests."
+OVERRIDES.update({
+    "FE-0059": Entry("DONE", ("test_adverse_selection_moves_price_against_the_trader", "test_price_band_rejects_and_freeze_quantity_slices",
+                              "test_inventory_after_sliced_orders_is_the_sum_of_what_each_slice_filled"), (), _REF),
+    "FE-0062": Entry("PARTIAL", ("test_a_structure_with_one_unexecutable_leg_is_not_executable",
+                                 "test_margin_comes_from_the_exchange_or_the_trade_is_blocked",
+                                 "test_legging_loss_is_only_the_adverse_move_of_the_second_leg"), (BLK_DATA,),
+                     "Executable-leg gate, official-margin gate and legging loss. Assignment and expiry settlement not built."),
+    "FE-0066": Entry("DONE", ("test_fill_bounds_bracket_the_expected_price", "test_counterfactual_fills_bracket_the_realised_price"), (),
+                     _REF + " Bounds, not a statistical interval."),
+    "FE-0067": Entry("DONE", ("test_post_trade_identity_catches_a_cash_or_position_error",
+                              "test_settlement_identity_covers_cash_fees_financing_and_released_margin"), (), _REF),
+    "FE-0076": Entry("DONE", ("test_missing_segment_or_incident_downgrades_the_session",
+                              "test_completeness_report_is_written_once_and_never_overwritten"), (), _REF),
+    "FE-0093": Entry("DONE", ("test_clustering_by_date_prevents_counting_trades_as_independent",
+                              "test_two_way_clustering_reduces_to_one_way_when_one_dimension_is_unique",
+                              "test_two_way_clustering_exceeds_naive_when_both_dates_and_names_carry_shocks"), (), _REF),
+    "FE-0094": Entry("DONE", ("test_holm_adjustment_accounts_for_every_candidate_tested",
+                              "test_reality_check_does_not_reward_the_best_of_many_noise_candidates",
+                              "test_reality_check_detects_a_genuinely_strong_candidate_among_noise"), (),
+                     _REF + " White's Reality Check counts every candidate; the SPA variant is not implemented."),
+    "FE-0095": Entry("DONE", ("test_drawdown_profit_factor_and_worst_day", "test_drawdown_interval_tail_drawdown_and_turnover"), (), _REF),
+    "FE-0101": Entry("DONE", ("test_peeking_between_checkpoints_cannot_speed_promotion_but_harm_can_stop",
+                              "test_verdict_is_withheld_between_frozen_checkpoints"), (),
+                     _REF + " The report command does not use checkpoints yet because it runs on fixtures."),
+    "FE-0106": Entry("DONE", ("test_vol_target_cvar_and_concentration_are_deterministic_and_bounded",
+                              "test_allocator_is_deterministic_capped_bounded_and_keeps_cash",
+                              "test_a_higher_vol_target_never_lowers_the_invested_share"), (),
+                     _REF + " Uses a stated zero-correlation vol approximation."),
+})
+
+
 def capability_matrix() -> dict:
     """FE-0149: implemented, partial, blocked, not started, and independently evidenced (always empty offline)."""
     table = entries()
