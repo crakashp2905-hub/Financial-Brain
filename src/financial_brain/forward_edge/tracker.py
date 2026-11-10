@@ -398,3 +398,37 @@ OVERRIDES.update({
     "FE-0054": Entry("PARTIAL", ("test_bundle_verifies_and_detects_tampering", "test_bundle_copy_verifies_on_another_location"), (),
                      "Bundle with per-file and per-manifest digests verifies after copy. No signature; not verified on a second machine."),
 })
+
+
+# ---- F05 (execution) statuses, added in wave F05 ----
+OVERRIDES.update({
+    "FE-0055": Entry("PARTIAL", ("test_same_signal_from_two_engines_gives_the_same_intent",), (),
+                     "Canonical OrderIntent adapter. The legacy paper engine and kernel pilot are not rewired to it."),
+    "FE-0056": Entry("DONE", ("test_fill_never_uses_a_quote_before_decision_plus_latency",
+                              "test_no_quote_after_latency_is_a_recorded_miss"), (), "forward_edge/execution.py."),
+    "FE-0057": Entry("DONE", ("test_buy_pays_the_ask_and_sell_receives_the_bid_never_the_mid",
+                              "test_tick_rounding_goes_against_the_trader",
+                              "test_visible_size_caps_the_fill_and_limit_protects_the_buyer"), (), "No mid fills."),
+    "FE-0058": Entry("DONE", ("test_touching_the_limit_is_not_a_fill_and_queue_is_disclosed_unknown",
+                              "test_trade_through_fills_at_the_limit_not_the_better_print"), (),
+                     "Conservative trade-through rule; queue position disclosed unknown."),
+    "FE-0059": Entry("PARTIAL", ("test_adverse_selection_moves_price_against_the_trader",
+                                 "test_price_band_rejects_and_freeze_quantity_slices"), (),
+                     "Adverse shift, price band, freeze slicing, partials. Inventory across slices not simulated."),
+    "FE-0060": Entry("PARTIAL", ("test_cost_rule_is_selected_by_effective_date_and_side",
+                                 "test_total_is_rounded_once_from_unrounded_parts"), (BLK_OWNER,),
+                     "Effective-dated mechanism tested with FIXTURE rates. Real 2026 levy tables must be supplied and checked against the NSE sources."),
+    "FE-0061": Entry("DONE", ("test_stress_reports_which_scenarios_stay_positive",), (),
+                     "1x/1.5x/2x scenarios; positive set reported."),
+    "FE-0062": Entry("PARTIAL", ("test_a_structure_with_one_unexecutable_leg_is_not_executable",
+                                 "test_margin_comes_from_the_exchange_or_the_trade_is_blocked"), (BLK_DATA,),
+                     "Executable-leg and official-margin gates. Legging loss and expiry settlement not built."),
+    "FE-0064": Entry("PARTIAL", ("test_fx_execution_is_never_allowed",), (), "FX execution refused; no FX simulator."),
+    "FE-0065": Entry("DONE", ("test_fidelities_are_reported_separately_and_never_summed_together",), (),
+                     "Three fidelities; mixing raises."),
+    "FE-0066": Entry("PARTIAL", ("test_fill_bounds_bracket_the_expected_price",), (),
+                     "Best/expected/worst price only; no per-trade counterfactual set or confidence interval."),
+    "FE-0067": Entry("PARTIAL", ("test_post_trade_identity_catches_a_cash_or_position_error",), (),
+                     "Cash and position identity per fill. Settlement, financing and margin identities not built."),
+    "FE-0068": Entry("DONE", ("test_outage_is_a_no_trade_not_a_favourable_fill",), (), "NO_TRADE with reason codes."),
+})
