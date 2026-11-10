@@ -1,0 +1,10 @@
+{
+  "files": {
+    "docs/trials/ledger.jsonl": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+    "docs/trials/manifests/is_minute_family.json": "a345734510f51cbbf984acd0cd43690243d341d07b8c9ddc6b5cd8ed92437f26",
+    "docs/trials/manifests/mf.json": "20cf2ad9801db62e6a108014e39c27b75eac9a29b5abf485ece089d508f402de",
+    "docs/trials/manifests/x3.json": "234974220c510238dd16d1f1291efcb41ae60c06988be0bc454e0799396b2524"
+  },
+  "note": "SHA-256 of protected research records as committed. Changing one requires an ADR and a deliberate pin update in the same change.",
+  "schema": "fb.forward_edge.protected_pins.v1"
+}
