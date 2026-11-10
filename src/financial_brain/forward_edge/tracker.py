@@ -613,3 +613,54 @@ OVERRIDES.update({
     "FE-0142": Entry("DONE", ("test_each_trigger_disarms_and_restore_needs_a_human", "test_unrelated_events_do_not_disarm"), (),
                      "Automatic disarm on five triggers; re-arm needs a valid human DISARM_RESET approval."),
 })
+
+
+
+
+# ---- F13 (release gates) statuses, added in wave F13 ----
+_FX = "Offline fixture pack only (forward_edge/pipeline.py, cli.py); no real source adapter exists."
+OVERRIDES.update({
+    "FE-0143": Entry("PARTIAL", ("test_preflight_command_has_exact_exit_codes",), (), _FX + " Real-source preflight probes not built."),
+    "FE-0144": Entry("DONE", ("test_paper_run_is_dry_run_by_default_and_refuses_a_non_dry_run",
+                              "test_each_failure_class_has_a_complete_example_with_the_expected_outcome"), (), _FX),
+    "FE-0145": Entry("DONE", ("test_close_is_idempotent_and_local_only_is_never_verified",
+                              "test_incomplete_evidence_is_closed_as_incomplete",
+                              "test_close_command_exit_code_reflects_completeness"), (), _FX),
+    "FE-0146": Entry("PARTIAL", ("test_report_carries_coverage_benchmark_missing_data_and_never_promotes",
+                                 "test_cli_main_prints_json_and_returns_the_code"), (),
+                     "Report prints verdict, coverage, benchmark and missing data. Built on fixtures; no frozen real evaluation data."),
+    "FE-0147": Entry("DONE", ("test_each_failure_class_has_a_complete_example_with_the_expected_outcome",
+                              "test_non_trading_outcomes_post_nothing_to_the_ledger",
+                              "test_unknown_order_is_recorded_and_never_resent",
+                              "test_the_adverse_fill_is_worse_than_the_touch_price_and_loses_money"), (),
+                     "Win, loss, no-trade, rejection, late quote, unknown order, adverse fill and missed fill."),
+    "FE-0148": Entry("BLOCKED", ("test_golden_file_covers_every_fixture", "test_session_signatures_match_the_canonical_hashes"), (BLK_LINUX,),
+                     "Canonical hashes are committed and pass on Windows. They have not been run on Linux."),
+    "FE-0149": Entry("DONE", ("test_committed_capability_matrix_matches_the_tracker_and_claims_no_independent_evidence",), (),
+                     "docs/forward-edge/capability-matrix.json; independently evidenced is empty."),
+    "FE-0150": Entry("PARTIAL", ("test_protected_records_are_still_intact_and_legacy_kernel_entry_points_import",), (BLK_LINUX,),
+                     "Windows full-suite logs are in docs/forward-edge/logs. Linux CI not run; kernel behaviour changes are listed in WAVES.md."),
+    "FE-0151": Entry("PARTIAL", ("test_operations_guide_has_the_required_sections_and_commands",), (),
+                     "docs/forward-edge/OPERATIONS.md. Not yet reproduced by a second operator."),
+    "FE-0152": Entry("DONE", ("test_label_never_exceeds_the_evidence", "test_each_label_needs_everything_below_it",
+                              "test_this_repository_today_can_claim_at_most_paper_ready"), (),
+                     "forward_edge/release.py; today's evidence supports PAPER_READY at most."),
+})
+
+def capability_matrix() -> dict:
+    """FE-0149: implemented, partial, blocked, not started, and independently evidenced (always empty offline)."""
+    table = entries()
+    out: dict[str, list[str] | str] = {"implemented": [], "partial": [], "blocked": [], "not_started": []}
+    for fe_id, e in sorted(table.items()):
+        out[{"DONE": "implemented", "PARTIAL": "partial", "BLOCKED": "blocked", "NOT_STARTED": "not_started"}[e.status]].append(fe_id)
+    out["independently_evidenced"] = []
+    out["note"] = ("implemented means a passing executable test in the stated scope. Nothing is independently evidenced: "
+                   "no independent timestamp receipts, no observed broker fills and no live market sessions exist offline.")
+    return out
+
+
+def render_capability_matrix(path: Path | None = None) -> str:
+    text = json.dumps(capability_matrix(), indent=1, sort_keys=True) + "\n"
+    if path is not None:
+        path.write_text(text, encoding="utf-8")
+    return text
