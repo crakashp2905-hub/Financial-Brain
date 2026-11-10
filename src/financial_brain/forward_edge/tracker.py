@@ -458,3 +458,31 @@ OVERRIDES.update({
     "FE-0078": Entry("PARTIAL", ("test_runbooks_cover_each_phase_and_unknown_phase_is_refused",), (),
                      "Generated runbook text. No one-click operator UI."),
 })
+
+
+# ---- F07 (research tools) statuses, added in wave F07 ----
+OVERRIDES.update({
+    "FE-0079": Entry("PARTIAL", ("test_opportunities_are_sealed_before_outcomes_and_cannot_be_rewritten",), (BLK_MARKET,),
+                     "Sealed shadow log mechanism. No per-family signal producers wired; live logging needs observed sessions."),
+    "FE-0080": Entry("DONE", ("test_horizon_and_parameters_cannot_change_after_forward_data",), (),
+                     "Horizon frozen once forward data exists."),
+    "FE-0081": Entry("DONE", ("test_net_alpha_is_portfolio_level_after_costs_financing_and_cash_flows",), (),
+                     "Decimal net return and alpha with external cash flows."),
+    "FE-0082": Entry("PARTIAL", ("test_paired_comparison_isolates_value_over_the_control_not_market_direction",), (),
+                     "Paired differences. Size/risk/sector/liquidity-matched control construction not built."),
+    "FE-0083": Entry("PARTIAL", ("test_pattern_uplift_vanishes_when_a_known_factor_explains_it",
+                                 "test_uplift_needs_enough_observations"), (),
+                     "OLS uplift with controls on synthetic data; naive standard errors, no HAC, no real chart-pattern data run."),
+    "FE-0084": Entry("DONE", ("test_abstention_keeps_a_fixed_denominator_and_counts_missed_winners",), (),
+                     "Fixed denominator with missed-winner count."),
+    "FE-0085": Entry("PARTIAL", ("test_intraday_edge_is_measured_beyond_the_same_time_of_day_baseline",), (),
+                     "Excess over a same-time baseline. No ORB data run."),
+    "FE-0086": Entry("PARTIAL", ("test_futures_return_pays_spread_roll_and_funding",), (),
+                     "Net-of-drag formula. No matched-alternative comparison."),
+    "FE-0087": Entry("PARTIAL", ("test_option_spread_without_executable_quotes_is_ineligible_even_with_a_mid_return",), (BLK_DATA,),
+                     "Mid returns refused. Assignment and expiry stress not built."),
+    "FE-0089": Entry("DONE", ("test_negative_inconclusive_and_no_signal_cohorts_stay_discoverable",), (),
+                     "In-memory archive API; persistence follows the FE-0011/0012 gap."),
+    "FE-0090": Entry("DONE", ("test_parameter_tuning_after_prospective_start_is_a_new_trial",), (),
+                     "Frozen-parameter assertion; wiring into the runner is part of FE-0144."),
+})
