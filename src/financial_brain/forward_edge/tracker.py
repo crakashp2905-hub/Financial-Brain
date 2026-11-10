@@ -545,3 +545,23 @@ OVERRIDES.update({
     "FE-0113": Entry("PARTIAL", ("test_no_trade_decisions_are_explicit_with_reasons",), (),
                      "Explicit NO_TRADE reasons; the trader terminal is not wired."),
 })
+
+
+# ---- F10 (cockpit) statuses, added in wave F10 ----
+_COCKPIT_NOTE = "Static read-only HTML from caller-supplied data (forward_edge/cockpit.py); not wired to live sources and no server."
+OVERRIDES.update({
+    "FE-0114": Entry("PARTIAL", ("test_landing_page_says_at_once_whether_the_run_is_trustworthy",), (),
+                     _COCKPIT_NOTE + " Health values come from the caller; no live probes."),
+    "FE-0115": Entry("DONE", ("test_failed_strategies_are_visually_distinct_from_promotable_candidates",), (), _COCKPIT_NOTE),
+    "FE-0116": Entry("DONE", ("test_signal_panel_traces_to_the_snapshot_and_needs_every_field",), (), _COCKPIT_NOTE),
+    "FE-0117": Entry("DONE", ("test_unknown_and_unfilled_orders_never_appear_as_trades",), (), _COCKPIT_NOTE),
+    "FE-0118": Entry("DONE", ("test_pnl_table_reconciles_to_the_ledger_exactly_or_refuses",), (), _COCKPIT_NOTE),
+    "FE-0119": Entry("DONE", ("test_timeline_lists_every_scheduled_session_including_empty_ones",), (), _COCKPIT_NOTE),
+    "FE-0120": Entry("DONE", ("test_scorecard_refuses_to_rank_different_horizons",), (),
+                     _COCKPIT_NOTE + " Confidence interval column is a caller-supplied lower bound."),
+    "FE-0121": Entry("PARTIAL", ("test_evidence_links_show_hashes",), (),
+                     "Evidence bundle hashes are shown. No analyst notebook and no signed bundle download."),
+    "FE-0122": Entry("DONE", ("test_any_action_element_is_refused_so_viewing_never_submits",
+                              "test_every_page_generator_passes_the_read_only_check"), (), _COCKPIT_NOTE),
+    "FE-0123": Entry("DONE", ("test_operator_decisions_are_the_five_simple_options_and_explain_the_live_lock",), (), _COCKPIT_NOTE),
+})
