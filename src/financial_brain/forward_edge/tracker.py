@@ -317,3 +317,31 @@ def render_blockers(path: Path | None = None) -> str:
     if path is not None:
         path.write_text(text, encoding="utf-8")
     return text
+
+
+# ---- F02 (registry) statuses, added in wave F02 ----
+F02_TESTS = "test_forward_edge_f02.py"
+OVERRIDES.update({
+    "FE-0022": Entry("PARTIAL", ("test_inventory_lists_the_existing_strategy_modules_with_hashes",), (),
+                     "File-level inventory with hashes. Duplicate and adapter analysis not done; existing strategies/specs.py not reconciled."),
+    "FE-0023": Entry("DONE", ("test_missing_required_fields_fail_registration", "test_spec_validation_rules",
+                              "test_spec_is_immutable"), (), "StrategySpec in forward_edge/registry.py; frozen and validated."),
+    "FE-0024": Entry("DONE", ("test_failed_strategy_cannot_become_eligible_frozen_or_verified",
+                              "test_paper_enrolment_needs_a_human_and_has_a_benchmark",
+                              "test_verified_needs_custody"), (),
+                     "Seven statuses; FAILED only moves to RETIRED. All 13 ledger trials register as FAILED in a test."),
+    "FE-0025": Entry("PARTIAL", ("test_benchmark_must_be_frozen_before_first_forward_result",), (),
+                     "Freeze-before-result rule and kinds. Per-family benchmark definitions not built."),
+    "FE-0026": Entry("PARTIAL", ("test_failed_exploratory_and_shadow_families_never_get_order_intents",
+                                 "test_shadow_signal_has_no_quantity_and_rejects_unknown_values"), (),
+                     "Gate and signal type exist. No adapter yet for each registrable family."),
+    "FE-0028": Entry("NOT_STARTED", (), (), "Virtual paper subaccounts not built."),
+    "FE-0029": Entry("PARTIAL", ("test_transition_creates_a_new_version_and_keeps_the_old_one",), (),
+                     "Versioned transitions with history. Retirement handoff policy not written."),
+    "FE-0030": Entry("PARTIAL", ("test_null_portfolio_holds_nothing_every_day", "test_placebo_is_seeded_and_sized"), (),
+                     "Null and seeded placebo generators. Not yet enforced inside every study."),
+    "FE-0031": Entry("PARTIAL", ("test_correlated_candidates_are_deduplicated",), (),
+                     "Greedy correlation dedupe. Effective-trial count and family cap not wired into multiplicity control."),
+    "FE-0032": Entry("PARTIAL", ("test_selection_on_shadow_results_is_exploratory_unless_preregistered",), (),
+                     "Label function only; not enforced on evaluation paths."),
+})
