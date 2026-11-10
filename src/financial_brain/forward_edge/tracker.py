@@ -486,3 +486,36 @@ OVERRIDES.update({
     "FE-0090": Entry("DONE", ("test_parameter_tuning_after_prospective_start_is_a_new_trial",), (),
                      "Frozen-parameter assertion; wiring into the runner is part of FE-0144."),
 })
+
+
+# ---- F08 (statistics) statuses, added in wave F08 ----
+OVERRIDES.update({
+    "FE-0091": Entry("DONE", ("test_daily_returns_use_previous_close_and_remove_external_flows",), (),
+                     "Daily return on previous equity with flow adjustment; cash days included. Ledger wiring is FE-0146."),
+    "FE-0092": Entry("DONE", ("test_hac_standard_error_exceeds_the_naive_one_for_autocorrelated_returns",
+                              "test_stationary_bootstrap_interval_is_wider_under_dependence"), (),
+                     "Newey-West and stationary bootstrap."),
+    "FE-0093": Entry("PARTIAL", ("test_clustering_by_date_prevents_counting_trades_as_independent",), (),
+                     "Clustering by date only; instrument clustering and two-way not built."),
+    "FE-0094": Entry("PARTIAL", ("test_holm_adjustment_accounts_for_every_candidate_tested",), (),
+                     "Holm adjustment only. SPA / Reality Check not implemented."),
+    "FE-0095": Entry("PARTIAL", ("test_drawdown_profit_factor_and_worst_day",), (),
+                     "Point estimates of drawdown, worst day, profit factor. No uncertainty, tail drawdown or turnover."),
+    "FE-0096": Entry("PARTIAL", ("test_capacity_degrades_return_as_participation_grows",), (BLK_DATA,),
+                     "Square-root impact formula; calibration needs ADV and depth data."),
+    "FE-0097": Entry("DONE", ("test_required_sessions_scale_with_noise_and_target_precision",
+                              "test_each_gate_independently_blocks_promotion"), (),
+                     "60-session floor plus precision and predeclared design are all required by promotion_verdict."),
+    "FE-0098": Entry("DONE", ("test_positive_mean_with_interval_including_zero_is_not_promoted",
+                              "test_a_clear_effect_with_everything_in_order_is_promotion_grade"), (),
+                     "Positive HAC lower bound required. The positive case is a synthetic mechanics check, not alpha."),
+    "FE-0099": Entry("DONE", ("test_each_gate_independently_blocks_promotion",), (), "1x/1.5x/2x cost stress gate."),
+    "FE-0100": Entry("DONE", ("test_one_lucky_period_cannot_pass_regime_robustness",), (),
+                     "Best-block share gate; block count is a caller-frozen parameter."),
+    "FE-0101": Entry("PARTIAL", ("test_peeking_between_checkpoints_cannot_speed_promotion_but_harm_can_stop",), (),
+                     "StoppingPolicy exists; promotion_verdict does not yet consult it."),
+    "FE-0102": Entry("PARTIAL", ("test_every_reported_row_carries_exactly_one_claim_tier",), (),
+                     "Tier enum and row check; not yet applied to every real report."),
+    "FE-0103": Entry("PARTIAL", ("test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail",), (),
+                     "Verdict logic for the six checks. The checks themselves are not implemented."),
+})
