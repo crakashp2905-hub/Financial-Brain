@@ -432,3 +432,29 @@ OVERRIDES.update({
                      "Cash and position identity per fill. Settlement, financing and margin identities not built."),
     "FE-0068": Entry("DONE", ("test_outage_is_a_no_trade_not_a_favourable_fill",), (), "NO_TRADE with reason codes."),
 })
+
+
+# ---- F06 (session ops) statuses, added in wave F06 ----
+OVERRIDES.update({
+    "FE-0069": Entry("DONE", ("test_blocked_preflight_leaves_no_intents_but_writes_a_report",
+                              "test_a_missing_check_counts_as_failed_not_as_passed"), (),
+                     "Check results are supplied by the caller; live probes (feeds, credentials) are not implemented."),
+    "FE-0070": Entry("DONE", ("test_supervisor_states_follow_the_injected_clock_and_calendar",), (),
+                     "Startup, late start, closed, weekend and holiday states from an injected clock."),
+    "FE-0071": Entry("DONE", ("test_range_freezes_only_from_a_complete_window",
+                              "test_restart_cannot_turn_historical_data_into_live_knowledge"), (), "Freeze-on-complete only."),
+    "FE-0072": Entry("PARTIAL", ("test_journal_replay_reproduces_the_identical_hash_and_detects_edits",), (),
+                     "Hash-chained in-memory journal. Not yet persisted or wired to paper orders."),
+    "FE-0073": Entry("PARTIAL", ("test_network_flap_with_replays_and_disorder_yields_one_ordered_stream",), (BLK_DATA,),
+                     "Dedupe and ordering logic. No websocket client (needs a feed)."),
+    "FE-0074": Entry("PARTIAL", ("test_one_alert_per_root_cause_and_entries_halt",), (),
+                     "Once-per-cause and entry halt. No delivery channel; token-expiry detection needs a broker session."),
+    "FE-0075": Entry("PARTIAL", ("test_end_of_session_finds_forgotten_and_unapproved_inventory",), (),
+                     "Inventory check only. Valuation and expiry handling not built."),
+    "FE-0076": Entry("PARTIAL", ("test_missing_segment_or_incident_downgrades_the_session",), (),
+                     "Report and downgrade rule. Not written as an immutable file."),
+    "FE-0077": Entry("PARTIAL", ("test_backup_restores_to_recorded_hashes_and_detects_corruption",), (),
+                     "File-level backup and verify. Quote archive, OMS and ledger are not wired; no scheduled drill."),
+    "FE-0078": Entry("PARTIAL", ("test_runbooks_cover_each_phase_and_unknown_phase_is_refused",), (),
+                     "Generated runbook text. No one-click operator UI."),
+})
