@@ -345,3 +345,36 @@ OVERRIDES.update({
     "FE-0032": Entry("PARTIAL", ("test_selection_on_shadow_results_is_exploratory_unless_preregistered",), (),
                      "Label function only; not enforced on evaluation paths."),
 })
+
+
+# ---- F03 (market data) statuses, added in wave F03 ----
+OVERRIDES.update({
+    "FE-0033": Entry("DONE", ("test_event_keeps_all_four_clocks_in_utc_order",
+                              "test_impossible_clock_order_and_naive_times_are_rejected",
+                              "test_decision_sees_only_what_was_available_then",
+                              "test_content_hash_changes_when_any_field_changes"), (),
+                     "NormalizedEvent in forward_edge/market_data.py."),
+    "FE-0034": Entry("PARTIAL", ("test_next_session_skips_weekends_and_holidays",
+                                 "test_calendar_needs_a_version_and_holiday_list"), (),
+                     "Versioned calendar file drives next-session logic. The NSE holiday list is not bundled: owner must supply the source file."),
+    "FE-0035": Entry("BLOCKED", ("test_fixture_feed_replays_in_deterministic_order",), (BLK_DATA, BLK_BROKER),
+                     "Offline fixture replay works. The live Kite adapter is not implemented and cannot be without credentials and data rights."),
+    "FE-0036": Entry("PARTIAL", ("test_archive_is_hash_chained_and_detects_edits", "test_dropped_updates_are_counted_not_hidden"), (),
+                     "Hash-chained append-only archive of normalized events. Raw wire messages are not retained."),
+    "FE-0037": Entry("DONE", ("test_stale_gapped_or_disconnected_feed_abstains",), (),
+                     "Abstention decision on stale, gapped, disconnected or dropped feeds. Health inputs come from the caller."),
+    "FE-0038": Entry("PARTIAL", ("test_decision_snapshot_hash_covers_every_input",), (),
+                     "Input hashes captured. No reconstruction tool yet."),
+    "FE-0039": Entry("PARTIAL", ("test_instrument_gate_emits_reason_codes",), (),
+                     "Gate function with reason codes. Not yet wired into intent emission."),
+    "FE-0040": Entry("PARTIAL", ("test_option_mid_without_two_sided_quotes_is_not_executable",), (BLK_DATA,),
+                     "Executable-quote check function. Option intents and depth snapshots not built."),
+    "FE-0041": Entry("PARTIAL", ("test_close_divergence_is_recorded_not_corrected",), (),
+                     "Close divergence recorded. Minute OHLCV archive not built."),
+    "FE-0042": Entry("PARTIAL", ("test_data_gate_reason_codes_are_deterministic_and_complete",), (),
+                     "Deterministic reason codes. Not yet attached to rejected trades."),
+    "FE-0043": Entry("DONE", ("test_feature_is_prefix_invariant_and_ignores_the_future",), (),
+                     "Prefix invariance and future perturbation hold for the one feature implemented (feature_at)."),
+    "FE-0044": Entry("PARTIAL", ("test_coverage_is_reported_by_session_name_and_notional",), (),
+                     "Coverage calculation. Not yet included in P&L reports."),
+})
