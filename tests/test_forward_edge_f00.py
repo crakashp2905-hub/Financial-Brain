@@ -374,3 +374,17 @@ def test_audit_cli_exit_code_is_nonzero_while_blocked(capsys: pytest.CaptureFixt
     code = audit.main(["--repo", str(REPO)])
     assert code == 1
     assert "OVERALL RED" in capsys.readouterr().out
+
+
+def test_ledger_pin_is_stable_across_line_ending_conversion(tmp_path: Path) -> None:
+    """Regression: a Windows autocrlf checkout rewrites the ledger to CRLF; the pin must still verify (FE-0148)."""
+    (tmp_path / "docs/trials").mkdir(parents=True)
+    (tmp_path / "docs/forward-edge").mkdir(parents=True)
+    lf = (REPO / trials.LEDGER_REL).read_bytes().replace(b"\r\n", b"\n")
+    (tmp_path / trials.LEDGER_REL).write_bytes(lf.replace(b"\n", b"\r\n"))
+    pins = {"files": {trials.LEDGER_REL: trials.sha256_file(REPO / trials.LEDGER_REL, normalize_eol=True)},
+            "normalize_eol": [trials.LEDGER_REL]}
+    (tmp_path / trials.PINS_REL).write_text(json.dumps(pins), encoding="utf-8")
+    assert trials.verify_pins(tmp_path) == []
+    (tmp_path / trials.LEDGER_REL).write_bytes(lf.replace(b"FAIL", b"PASS", 1).replace(b"\n", b"\r\n"))
+    assert trials.verify_pins(tmp_path) == [f"changed: {trials.LEDGER_REL}"]
