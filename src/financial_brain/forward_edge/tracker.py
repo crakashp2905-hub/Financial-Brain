@@ -378,3 +378,23 @@ OVERRIDES.update({
     "FE-0044": Entry("PARTIAL", ("test_coverage_is_reported_by_session_name_and_notional",), (),
                      "Coverage calculation. Not yet included in P&L reports."),
 })
+
+
+# ---- F04 (decision custody) statuses, added in wave F04 ----
+OVERRIDES.update({
+    "FE-0045": Entry("DONE", ("test_schedule_rejects_overlapping_and_unsorted_cohorts",
+                              "test_schedule_hash_is_pinned_once_observations_begin"), (),
+                     "Nonoverlapping sorted schedule; hash pinned once observations begin. Calendar-aware cohorts need the holiday source (FE-0034)."),
+    "FE-0046": Entry("PARTIAL", ("test_manifest_canonical_bytes_are_stable_and_hash_matches_golden",
+                                 "test_manifest_rejects_floats_bad_hashes_and_late_decisions"), (),
+                     "Canonical ASCII JSON manifest with no floats. The golden hash is self-consistency only; the Linux digest match is not run here."),
+    "FE-0048": Entry("PARTIAL", ("test_manifest_must_be_recorded_before_entry_and_never_overwritten",
+                                 "test_receipt_cannot_be_attached_twice_or_to_unknown_sessions"), (BLK_TSA,),
+                     "Journal refuses recording at or after entry and never overwrites. No external receipt is obtainable offline."),
+    "FE-0049": Entry("PARTIAL", ("test_zero_signal_and_unsuccessful_sessions_stay_in_the_denominator",), (),
+                     "Outcomes and denominators in memory. Durable persistence is not built (FE-0011/0012 gap)."),
+    "FE-0051": Entry("PARTIAL", ("test_status_is_local_only_without_a_receipt_and_verified_only_with_a_pinned_one",), (BLK_TSA,),
+                     "verified_session_ids counts only VERIFIED custody. champion.verified_days is not rewired to it."),
+    "FE-0054": Entry("PARTIAL", ("test_bundle_verifies_and_detects_tampering", "test_bundle_copy_verifies_on_another_location"), (),
+                     "Bundle with per-file and per-manifest digests verifies after copy. No signature; not verified on a second machine."),
+})
