@@ -81,3 +81,23 @@ ledger itself was never modified.
 
 Linux was not run: WSL is not installed here. Golden session signatures are committed in
 `tests/fixtures/forward_edge/golden_signatures.json` so a Linux run can prove byte-identical output.
+
+## Wave F14 - durability and the remaining offline items (branch `feature/forward-edge-f14`)
+
+| Item | Change |
+|---|---|
+| FE-0011/0012/0013 | `forward_edge/durable.py`: fsynced, monotonic, hash-chained journal; PENDING written before the external action; any non-ACKED key is reconciled against the venue after a restart, never blindly resent |
+| FE-0020 | 25 injected power-loss cases (8 stages x before/torn/after, plus send-effect-only): same state hash as an uninterrupted run, exactly one send, exactly one fill |
+| FE-0021 | atomic rollover (temp file + replace), backup and restore reproduce the state hash |
+| FE-0072 | durable decision journal with replay-identical head hash |
+| FE-0009 | `forward_edge/disposable.py`: scratch DuckDB in a temp directory; real data paths refused |
+| FE-0003 | `forward_edge/eligibility.py` and `docs/forward-edge/strategy-eligibility.json` (13 failed trials, 12 strategy modules shadow-only) |
+| FE-0028 | `forward_edge/books.py`: one OMS per strategy book, no implicit transfers |
+| FE-0063 | `forward_edge/futures.py`: roll, basis, lot-size residual, variation margin, financing |
+
+A defect was found by the tests during this wave: journal recovery first treated a newline-terminated but invalid final
+record as a torn write and discarded it. That would have hidden tampering. Only an unterminated tail is now treated as a
+power-loss artefact; any other invalid record raises `JournalCorrupt`.
+
+Tracker after this wave: DONE 75, PARTIAL 65, BLOCKED 12, NOT_STARTED 0. Forward-edge tests: 350 passed.
+The legacy in-memory `EventKernel` and the kernel pilot are not rewired to the durable journal.

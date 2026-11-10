@@ -647,6 +647,45 @@ OVERRIDES.update({
                      "forward_edge/release.py; today's evidence supports PAPER_READY at most."),
 })
 
+
+
+# ---- F14 (durability and remaining offline items), added in wave F14 ----
+_DUR = "forward_edge/durable.py; the legacy in-memory EventKernel and pilot are not rewired to it."
+OVERRIDES.update({
+    "FE-0003": Entry("PARTIAL", ("test_every_known_strategy_has_one_status_lineage_and_reason",
+                                 "test_committed_eligibility_list_matches_the_generator_so_a_new_strategy_needs_a_decision",
+                                 "test_all_thirteen_recorded_trials_are_failed_in_the_list"), (),
+                     "docs/forward-edge/strategy-eligibility.json: 13 failed trials and the strategies/ modules. Families outside those paths (paper zoo, patterns) are not enumerated."),
+    "FE-0009": Entry("DONE", ("test_scratch_database_is_temporary_and_needs_no_credentials",
+                              "test_real_data_paths_are_refused"), (), "forward_edge/disposable.py."),
+    "FE-0011": Entry("DONE", ("test_outbox_is_written_before_the_action_and_an_unacked_key_is_never_blindly_resent",
+                              "test_failed_action_is_unknown_not_acknowledged"), (), "Durable outbox: PENDING is fsynced before the action. " + _DUR),
+    "FE-0012": Entry("DONE", ("test_sequence_is_monotonic_gap_free_and_survives_reopen",
+                              "test_a_torn_final_write_is_discarded_and_earlier_records_survive",
+                              "test_editing_or_dropping_a_middle_record_is_detected"), (), "Monotonic fsynced hash-chained journal. " + _DUR),
+    "FE-0013": Entry("DONE", ("test_outbox_is_written_before_the_action_and_an_unacked_key_is_never_blindly_resent",
+                              "test_unknown_is_never_replayed_without_reconciliation",
+                              "test_recovery_is_idempotent"), (BLK_BROKER,),
+                     "Reconciliation against a simulated venue. Real broker reconciliation is FE-0136 (blocked)."),
+    "FE-0020": Entry("DONE", ("test_after_restart_no_economic_event_is_lost_duplicated_or_invented",), (),
+                     "25 injected power-loss cases (8 stages x before/torn/after, plus send-effect-only). Simulated venue, not a real broker."),
+    "FE-0021": Entry("DONE", ("test_rollover_keeps_the_state_hash_and_restore_reproduces_it",
+                              "test_a_crash_between_compaction_steps_never_loses_the_old_segment"), (),
+                     "Atomic rollover and backup/restore reproduce the state hash. Covers the journal; the DuckDB research ledgers are not part of it."),
+    "FE-0028": Entry("DONE", ("test_books_never_share_cash_or_reservations", "test_comparison_shows_each_book_and_a_total"), (),
+                     "forward_edge/books.py: one OMS per book, no implicit transfers."),
+    "FE-0049": Entry("PARTIAL", ("test_zero_signal_and_unsuccessful_sessions_stay_in_the_denominator",
+                                 "test_decision_records_persist_and_replay_to_the_same_head_hash"), (),
+                     "Durable journal exists, but the custody ManifestJournal outcomes are still in memory."),
+    "FE-0063": Entry("DONE", ("test_contango_roll_costs_a_long_and_backwardation_pays_it",
+                              "test_a_lot_size_change_leaves_a_reported_residual",
+                              "test_variation_margin_sums_to_the_total_price_move_and_financing_scales_with_days"), (),
+                     "forward_edge/futures.py arithmetic on supplied prices; no contract calendar."),
+    "FE-0072": Entry("DONE", ("test_decision_records_persist_and_replay_to_the_same_head_hash",
+                              "test_journal_replay_reproduces_the_identical_hash_and_detects_edits"), (), "Durable decision journal. " + _DUR),
+})
+
+
 def capability_matrix() -> dict:
     """FE-0149: implemented, partial, blocked, not started, and independently evidenced (always empty offline)."""
     table = entries()
