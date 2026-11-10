@@ -565,3 +565,24 @@ OVERRIDES.update({
                               "test_every_page_generator_passes_the_read_only_check"), (), _COCKPIT_NOTE),
     "FE-0123": Entry("DONE", ("test_operator_decisions_are_the_five_simple_options_and_explain_the_live_lock",), (), _COCKPIT_NOTE),
 })
+
+
+# ---- F11 (governance) statuses, added in wave F11 ----
+_GOV_NOTE = "forward_edge/governance.py; policy objects only, not wired into the legacy champion resolver."
+OVERRIDES.update({
+    "FE-0124": Entry("DONE", ("test_labels_unlock_only_after_exit_plus_embargo",), (), _GOV_NOTE + " No training pipeline consumes it yet."),
+    "FE-0125": Entry("PARTIAL", ("test_model_id_reproduces_and_changes_with_any_input",), (),
+                     "Deterministic model lineage id. No training run is implemented here, so reproduced predictions are untested."),
+    "FE-0126": Entry("DONE", ("test_a_new_hyperparameter_search_cannot_touch_a_locked_cohort",), (), _GOV_NOTE),
+    "FE-0127": Entry("DONE", ("test_challenger_must_beat_the_champion_after_the_multiplicity_penalty",), (), _GOV_NOTE),
+    "FE-0128": Entry("PARTIAL", ("test_promotion_needs_preauthorization_status_and_trusted_receipt_coverage",
+                                 "test_independent_receipt_from_a_pinned_root_verifies"), (BLK_TSA,),
+                     "Gate function refuses without trusted receipt coverage. The legacy champion promotion path is not rewired."),
+    "FE-0129": Entry("PARTIAL", ("test_changing_capital_risk_or_leverage_needs_a_human_and_agents_cannot",
+                                 "test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass"), (BLK_OWNER,),
+                     "Agent actors rejected. No champion-change path exists to gate yet; real owner approvals are not recorded."),
+    "FE-0130": Entry("DONE", ("test_transitions_are_logged_and_never_deleted",), (), _GOV_NOTE + " In-memory log."),
+    "FE-0131": Entry("DONE", ("test_drift_outage_or_mismatch_reverts_to_the_frozen_safe_policy_with_no_new_orders",
+                              "test_benign_events_do_not_change_the_policy"), (),
+                     _GOV_NOTE + " Flags and open-order count; no live order cancel because there is no broker."),
+})
