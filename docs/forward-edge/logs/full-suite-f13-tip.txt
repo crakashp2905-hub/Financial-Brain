@@ -1,0 +1,151 @@
+........................................................................ [  2%]
+........................................................................ [  4%]
+........................................................................ [  6%]
+........................................................................ [  8%]
+........................................................................ [ 11%]
+........................................................................ [ 13%]
+........................................................................ [ 15%]
+........................................................................ [ 17%]
+........................................................................ [ 20%]
+........................................................................ [ 22%]
+........................................................................ [ 24%]
+........................................................................ [ 26%]
+........................................................................ [ 29%]
+........................................................................ [ 31%]
+........................................................................ [ 33%]
+........................................................................ [ 35%]
+........................................................................ [ 38%]
+........................................................................ [ 40%]
+........................................................................ [ 42%]
+........................................................................ [ 44%]
+........................................................................ [ 47%]
+........................................................................ [ 49%]
+........................................................................ [ 51%]
+........................................................................ [ 53%]
+........................................................................ [ 56%]
+........................................................................ [ 58%]
+........................................................................ [ 60%]
+........................................................................ [ 62%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 74%]
+........................................................................ [ 76%]
+........................................................................ [ 78%]
+........................................................................ [ 80%]
+........................................................................ [ 83%]
+........................................................................ [ 85%]
+........................................................................ [ 87%]
+........................................................................ [ 89%]
+........................................................................ [ 92%]
+........................................................................ [ 94%]
+........................................................................ [ 96%]
+..........................................s............................. [ 98%]
+...................................                                      [100%]
+============================== warnings summary ===============================
+tests/test_pattern_marketdata_candles.py: 6 warnings
+tests/test_phase5_feature_library.py: 4 warnings
+tests/test_phase5_signals.py: 1 warning
+  D:\fb-wt-f13\src\financial_brain\features\library.py:148: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+    f["adv20"] = value.rolling(20).mean()
+
+tests/test_pattern_marketdata_candles.py: 6 warnings
+tests/test_phase5_feature_library.py: 4 warnings
+tests/test_phase5_signals.py: 1 warning
+  D:\fb-wt-f13\src\financial_brain\features\library.py:154: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+    f["rsi_w14"] = 100 - 100 / (1 + W.clip(lower=0).mean(axis=1) / ((-W.clip(upper=0)).mean(axis=1) + EPS))
+
+tests/test_pattern_marketdata_candles.py: 6 warnings
+tests/test_phase5_feature_library.py: 4 warnings
+tests/test_phase5_signals.py: 1 warning
+  D:\fb-wt-f13\src\financial_brain\features\library.py:155: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+    f["dist_ma_10w"] = c / c.rolling(50).mean() - 1
+
+tests/test_pattern_marketdata_candles.py: 6 warnings
+tests/test_phase5_feature_library.py: 4 warnings
+tests/test_phase5_signals.py: 1 warning
+  D:\fb-wt-f13\src\financial_brain\features\library.py:156: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+    f["dist_ma_40w"] = c / c.rolling(200).mean() - 1
+
+tests/test_pattern_marketdata_candles.py: 6 warnings
+tests/test_phase5_feature_library.py: 4 warnings
+tests/test_phase5_signals.py: 1 warning
+  D:\fb-wt-f13\src\financial_brain\features\library.py:159: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+    f["fvg_w_bull_new"] = (wl[0] > wh[2]).astype(float)
+
+tests/test_pattern_marketdata_candles.py: 6 warnings
+tests/test_phase5_feature_library.py: 4 warnings
+tests/test_phase5_signals.py: 1 warning
+  D:\fb-wt-f13\src\financial_brain\features\library.py:160: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+    f["fvg_w_bear_new"] = (wh[0] < wl[2]).astype(float)
+
+tests/test_pattern_marketdata_candles.py: 330 warnings
+tests/test_phase5_feature_library.py: 220 warnings
+tests/test_phase5_signals.py: 55 warnings
+  D:\fb-wt-f13\src\financial_brain\features\library.py:171: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+    f[k] = arr
+
+tests/test_pattern_marketdata_candles.py: 6 warnings
+tests/test_phase5_feature_library.py: 4 warnings
+tests/test_phase5_signals.py: 1 warning
+  D:\fb-wt-f13\src\financial_brain\features\library.py:174: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+    f["fwd5"] = c.shift(-5) / c - 1
+
+tests/test_pattern_marketdata_candles.py: 6 warnings
+tests/test_phase5_feature_library.py: 4 warnings
+tests/test_phase5_signals.py: 1 warning
+  D:\fb-wt-f13\src\financial_brain\features\library.py:175: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+    f["fwd20"] = c.shift(-20) / c - 1
+
+tests/test_phase5_deep_library.py::test_a_planted_feature_counts_and_noise_does_not
+tests/test_phase5_deep_library.py::test_a_planted_feature_counts_and_noise_does_not
+tests/test_phase5_deep_library.py::test_a_planted_feature_counts_and_noise_does_not
+tests/test_phase5_deep_library.py::test_a_planted_feature_counts_and_noise_does_not
+  D:\fb-wt-f13\src\financial_brain\evaluation\deep_library.py:60: FutureWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+    ic = g.apply(lambda x: x[f].rank().corr(x[ycol].rank()) if x[f].nunique() > 1 else np.nan).dropna()  # noqa: B023
+
+tests/test_phase5_deep_library.py: 16 warnings
+  D:\fb-wt-f13\src\financial_brain\evaluation\deep_library.py:68: FutureWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+    ti = q.groupby("d").apply(lambda x: x[f].rank().corr(x[ycol].rank()) if x[f].nunique() > 1 else np.nan)  # noqa: B023
+
+tests/test_phase5_deep_library.py::test_a_planted_feature_counts_and_noise_does_not
+tests/test_phase5_deep_library.py::test_a_planted_feature_counts_and_noise_does_not
+tests/test_phase5_deep_library.py::test_a_planted_feature_counts_and_noise_does_not
+tests/test_phase5_deep_library.py::test_a_planted_feature_counts_and_noise_does_not
+  D:\fb-wt-f13\src\financial_brain\evaluation\deep_library.py:77: FutureWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+    ex = g.apply(top_excess)
+
+tests/test_phase5_learners.py::test_sklearn_learners_find_the_planted_feature_walk_forward[svm]
+tests/test_phase5_learners.py::test_sklearn_learners_find_the_planted_feature_walk_forward[mlp]
+  D:\fb-wt-f13\tests\test_phase5_learners.py:27: FutureWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+    ic = out.groupby("d").apply(lambda x: x["pred"].corr(x["fwd20"], method="spearman")).mean()
+
+tests/test_phase5_learners.py::test_sklearn_learners_find_the_planted_feature_walk_forward[mlp]
+  C:\Users\CR Ramesh\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:781: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (30) reached and the optimization hasn't converged yet.
+    warnings.warn(
+
+tests/test_phase5_signals.py::test_render_escapes_and_links_each_name_to_its_chart
+  D:\fb-wt-f13\src\financial_brain\paper\signals.py:214: FutureWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+    t = pd.DataFrame({"buy": g.apply(lambda x: (x["side"] == "buy").sum()), "sell": g.apply(lambda x: (x["side"] == "sell").sum()),
+
+tests/test_phase5_signals.py::test_render_escapes_and_links_each_name_to_its_chart
+  D:\fb-wt-f13\src\financial_brain\paper\signals.py:215: FutureWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+    "which": g.apply(lambda x: ", ".join(sorted({('+' if s == 'buy' else '-') + label(k) for k, s in zip(x['signal'], x['side'])})))})
+
+tests/test_phase5_swing.py::test_entry_is_one_day_after_the_signal
+tests/test_phase5_swing.py::test_without_an_edge_the_net_result_is_negative_by_about_the_cost
+tests/test_phase5_swing.py::test_the_stop_fires_on_a_fall_and_reports_its_share
+tests/test_phase5_swing.py::test_a_skewed_universe_makes_a_random_setup_look_good_against_the_median_but_not_the_mean
+  D:\fb-wt-f13\src\financial_brain\evaluation\swing.py:95: RuntimeWarning: All-NaN slice encountered
+    med = np.nanmedian(np.where(liquid, fwd, np.nan), axis=1)
+
+tests/test_phase5_swing.py::test_entry_is_one_day_after_the_signal
+tests/test_phase5_swing.py::test_without_an_edge_the_net_result_is_negative_by_about_the_cost
+tests/test_phase5_swing.py::test_the_stop_fires_on_a_fall_and_reports_its_share
+tests/test_phase5_swing.py::test_a_skewed_universe_makes_a_random_setup_look_good_against_the_median_but_not_the_mean
+  D:\fb-wt-f13\src\financial_brain\evaluation\swing.py:100: RuntimeWarning: Mean of empty slice
+    mean_u = np.nanmean(np.where(liquid, fwd, np.nan), axis=1)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+3202 passed, 1 skipped, 730 warnings in 773.91s (0:12:53)
