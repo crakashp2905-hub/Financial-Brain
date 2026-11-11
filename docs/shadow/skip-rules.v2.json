@@ -1,0 +1,6 @@
+{
+  "schema": "fb.shadow.skip_rules.v1",
+  "version": "live-v2-shadow",
+  "note": "Empty on purpose. A skip rule is added here only by the owner, after a loss pattern was CONFIRMED out of sample by `fb loss-mine` and a pre-registration note for the rule was committed (brain/07-Research/PRE-REGISTERED <name>.md). Each rule: {id, dimension, value, strategy (optional), prereg, active_from}. dimension is one of vs_market_today, vs_daily_trend, gap_size, range_width, entry_time, direction, strategy. The shadow evaluator refuses a rule whose pre-registration is missing or was written after its result. See docs/LEARNING-LOOP.md.",
+  "rules": []
+}

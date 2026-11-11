@@ -1302,8 +1302,8 @@ def cmd_lessons(args) -> int:
             return 0
         confirmed = [x for x in found if x.confirmed()]
         print(f"{len(confirmed)} confirmed lesson(s) of {len(found)} candidates "
-              f"(needs {postmortem.MIN_SUPPORT}+ trades and a "
-              f"{postmortem.MATERIAL:.0%} gap):")
+              f"(needs {postmortem.MIN_SUPPORT}+ trades, a {postmortem.MATERIAL:.0%} gap, and false-discovery "
+              f"q <= {postmortem.FDR_Q} across all {len(found)} groups examined):")
         for x in found[:12]:
             mark = "RULE " if x.confirmed() else "     "
             print(f"  {mark}{x.describe()}")
@@ -1635,6 +1635,77 @@ def cmd_loss_review(args) -> int:
         print(L.render(r))
         if args.propose:
             print(f"\n{L.propose(con, r)} hypothesis(es) written as PROPOSED - nothing changes until one is pre-registered and tested")
+    finally:
+        con.close()
+    return 0
+
+
+def cmd_loss_mine(args) -> int:
+    """The loss miner: a losing situation counts only if it repeats on sessions it was not found on."""
+    import datetime as _dt
+
+    import duckdb
+
+    from . import alerts as AL
+    from .paper import intraday_runner as IR
+    from .paper import loss_miner as LM
+    from .paper import loss_review as L
+    try:
+        con = IR.ledger()
+    except duckdb.IOException:
+        print("the paper ledger is open in the live run; try again after 15:20")
+        return 1
+    try:
+        try:
+            trades = L.frame(con, None if args.mode == "all" else args.mode)
+        except L.ReviewError as e:
+            print(e)
+            return 0
+        r = LM.mine(trades)
+        print(LM.render(r))
+        if args.apply:
+            newly = LM.apply(con, r)
+            found = LM.alerts(newly, _dt.date.today())
+            if found:
+                AL.send(found)
+                if AL.telegram_configured():
+                    AL.send(found, notify=AL.telegram, path=AL.TELEGRAM_SENT)
+            print(f"recorded; {len(newly)} hypothesis(es) newly CONFIRMED - nothing changes until one is pre-registered")
+    finally:
+        con.close()
+    return 0
+
+
+def cmd_shadow(args) -> int:
+    """Skip rules running beside the unchanged live-v1 rules, judged on the sessions after they were registered."""
+    import datetime as _dt
+
+    import duckdb
+
+    from . import alerts as AL
+    from .paper import intraday as I
+    from .paper import intraday_runner as IR
+    from .paper import shadow as SH
+    try:
+        rules = SH.load_rules()
+    except SH.ShadowError as e:
+        print(f"skip rules refused: {e}")
+        return 2
+    try:
+        con = IR.ledger()
+    except duckdb.IOException:
+        print("the paper ledger is open in the live run; try again after 15:20")
+        return 1
+    try:
+        results = SH.evaluate(con, rules, cap_inr=I.MAX_GROSS * I.ACCOUNT_INR)
+        print(SH.render(results))
+        if args.apply and rules:
+            changed = SH.persist(con, rules, results)
+            found = SH.alerts(results, changed, _dt.date.today())
+            if found:
+                AL.send(found)
+                if AL.telegram_configured():
+                    AL.send(found, notify=AL.telegram, path=AL.TELEGRAM_SENT)
     finally:
         con.close()
     return 0
@@ -2252,9 +2323,64 @@ def cmd_kite_history(args) -> int:
 def cmd_depth_archive(args) -> int:
     """Market hours: full quotes (5-level book, OI) for every F&O stock, near future and index options near the money,
     once a minute, into data/depth_archive.duckdb. Needs the day's Kite login; never places orders."""
+    import logging
     from .ingest import depth_archive as DA
-    print(DA.run(until=args.until))
-    return 0
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+    try:
+        out = DA.run(until=args.until, login_by=args.login_by)
+    except DA.AlreadyRunning as e:
+        print(f"not started: {e}")
+        return 3
+    print(out)
+    return 0 if out["status"] in ("complete", "closed") else 2
+
+
+def cmd_depth_status(args) -> int:
+    """How the intraday depth/OI archive is filling, session by session, and when there will be enough to test on."""
+    import datetime as _dt
+    from pathlib import Path as _P
+
+    import duckdb
+
+    from . import alerts as AL
+    from .ingest import archive_health as AH
+    from .ingest import depth_archive as DA
+    path = _P(args.db) if args.db else DA.PATH
+    if not path.exists():
+        print(f"no archive at {path} yet: the 09:10 task (scripts/depth_archive.cmd) has not run")
+        return 0
+    con = duckdb.connect(str(path), read_only=True)
+    try:
+        first = con.execute("SELECT MIN(CAST(ts AS DATE)) FROM quotes").fetchone()[0]
+        runs_first = None
+        try:
+            runs_first = con.execute("SELECT MIN(CAST(day AS DATE)) FROM runs").fetchone()[0]
+        except Exception:                               # noqa: BLE001 - an archive from before run logging
+            pass
+        start = min(x for x in (first, runs_first) if x) if (first or runs_first) else None
+        if start is None:
+            print("the archive is empty")
+            return 0
+        rcon = duckdb.connect(str(_P(load().db_path)), read_only=True)
+        try:
+            sessions = [r[0] for r in rcon.execute(
+                "SELECT DISTINCT business_date FROM eod_prices WHERE business_date >= ? ORDER BY 1", [start]).fetchall()]
+        finally:
+            rcon.close()
+        today = _dt.date.today()
+        if today not in sessions and today.weekday() < 5 and _dt.datetime.now().hour >= 16:
+            sessions.append(today)                      # tonight's bhavcopy may not be in yet when this runs
+        rows = AH.report(con, sessions)
+        ready = AH.readiness(rows)
+        print(AH.render(rows[-args.days:], ready))
+        found = AH.alerts(rows, today)
+        if found and args.alert:
+            AL.send(found)
+            if AL.telegram_configured():
+                AL.send(found, notify=AL.telegram, path=AL.TELEGRAM_SENT)
+        return 1 if found else 0
+    finally:
+        con.close()
 
 
 def cmd_rating_actions(args) -> int:
@@ -2935,6 +3061,15 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--propose", action="store_true", help="write losing patterns as PROPOSED hypotheses")
     g.set_defaults(fn=cmd_loss_review)
 
+    g = sub.add_parser("loss-mine", help="losing situations that repeat on sessions they were not found on (never applied)")
+    g.add_argument("--mode", choices=["live", "replay", "all"], default="live", help="which closed trades to mine (default live)")
+    g.add_argument("--apply", action="store_true", help="record the run and move hypotheses between PROPOSED/CONFIRMED/FAILED")
+    g.set_defaults(fn=cmd_loss_mine)
+
+    g = sub.add_parser("shadow", help="skip rules beside live-v1 as a counterfactual (no second runner, v1 untouched)")
+    g.add_argument("--apply", action="store_true", help="store the results and per-trade decisions")
+    g.set_defaults(fn=cmd_shadow)
+
     g = sub.add_parser("preregs", help="audit pre-registrations against git (before the result, unchanged after)")
     g.set_defaults(fn=cmd_preregs)
 
@@ -3060,7 +3195,14 @@ def main(argv: list[str] | None = None) -> int:
 
     g = sub.add_parser("depth-archive", help="market hours: 5-level book + OI for all F&O names each minute")
     g.add_argument("--until", default="15:31")
+    g.add_argument("--login-by", default="10:30", help="keep waiting for the day's Kite login until this time")
     g.set_defaults(fn=cmd_depth_archive)
+
+    g = sub.add_parser("depth-status", help="is the depth/OI archive filling, and when is there enough to test on")
+    g.add_argument("--days", type=int, default=15, help="sessions to show")
+    g.add_argument("--db", help="archive path (default data/depth_archive.duckdb)")
+    g.add_argument("--alert", action="store_true", help="raise an alert if the newest session was not collected")
+    g.set_defaults(fn=cmd_depth_status)
 
     g = sub.add_parser("rating-actions", help="rebuild credit-rating actions with their direction")
     g.set_defaults(fn=cmd_rating_actions)

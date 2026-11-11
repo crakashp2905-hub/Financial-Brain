@@ -10,6 +10,10 @@ rem     rating letters (300 a night, oldest backlog last), rating directions, mo
 rem 2. champion/challenger: record today's locked out-of-sample picks, resolve matured cohorts
 rem 3. F&O snapshot: futures basis and OI, option-chain statistics, day-over-day positioning (needs the Kite token)
 rem 4. loss review: situations that keep losing become PROPOSED hypotheses (never applied automatically)
+rem    4b. loss miner: a PROPOSED loss that repeats on later sessions it was not found on becomes CONFIRMED (a request for
+rem        a decision, never a rule); 4c. shadow: registered skip rules judged beside the unchanged live-v1 rules
+rem 4d. depth archive health: was today's 09:10 order-book/OI collection complete? (alert if not) - the archive itself is
+rem        its own weekday 09:10 task (scripts\depth_archive.cmd); see docs/RUNBOOK-OPS.md
 rem 5. the paper books (position, swing, learned model, momentum, ranking v2) and the zoo (every tested daily strategy), then fb oos (ADR-0004 trials against their backtest band)
 rem    both suggestion books (top-5 position, top-50 swing): sell what hit its stop or horizon, buy today's names at the next close
 rem 6. your Kite holdings, positions and today's trade book (read only, stored in data\my_portfolio.duckdb)
@@ -48,9 +52,12 @@ for /f %%i in ('powershell -NoProfile -Command "(Get-Date).AddDays(-31).ToString
 %PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['champion', '--record']))" >> %LOG% 2>&1
 %PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['fno-snapshot']))" >> %LOG% 2>&1
 %PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['loss-review', '--propose']))" >> %LOG% 2>&1
+%PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['loss-mine', '--apply']))" >> %LOG% 2>&1
+%PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['shadow', '--apply']))" >> %LOG% 2>&1
 %PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['book']))" >> %LOG% 2>&1
 %PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['zoo']))" >> %LOG% 2>&1
 %PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['oos']))" >> %LOG% 2>&1
+%PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['depth-status', '--alert']))" >> %LOG% 2>&1
 %PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['my-portfolio', '--sync']))" >> %LOG% 2>&1
 %PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['terminal']))" >> %LOG% 2>&1
 %PY% -c "from financial_brain import env; env.load(); from financial_brain.cli import main; import sys; sys.exit(main(['alerts']))" >> %LOG% 2>&1
