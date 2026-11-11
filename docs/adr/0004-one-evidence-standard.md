@@ -82,3 +82,18 @@ bars` (nine rules on the 2016-2026 minute history). The owner was given the choi
 surprise drift out of sample` (registered 2026-10-13; runnable now that the Integrated Filing results exist) and
 `PRE-REGISTERED multi-factor quality value low-risk book` (registered 2026-10-15 before computing). Offered "run them now
 (another amendment) or January", the owner answered "do it".
+
+## Amendment 5 (2026-11-11, owner decision)
+
+2026Q4's budget is raised from 13 to **14**, for one trial only: `PRE-REGISTERED intraday chart candle and indicator
+family` (forty candidate intraday strategies for a `live-v2`, tested once as one family on the 2016-2026 minute
+history; thirty-five are testable on data we hold and five are declared untestable inside the registration, all forty
+count toward the multiplicity). The owner was shown that the budget was spent (13 of 13), that shortlisting from forty
+tries is data-snooping, and that the only legal routes were exploration on one half or an amendment; asked how to run
+it, the owner chose "Full 2016-26 backtest, recorded as a trial" and, told that this needs this amendment, answered
+"yes, amend ADR-0004 and go ahead".
+
+The bars are not moved. Every candidate must clear G1-G4 on its own, the family is additionally judged by White's
+Reality Check / Hansen's SPA and the probability of backtest overfitting, and a candidate that clears only some gates is
+a lead for forward paper, not an edge. The registration is committed before any result exists. The ledger row, when
+written, is a deliberate pin update in `docs/forward-edge/protected-pins.json`.
