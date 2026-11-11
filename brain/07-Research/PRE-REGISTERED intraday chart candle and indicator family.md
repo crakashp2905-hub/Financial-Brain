@@ -136,3 +136,25 @@ Survivor-only universe; 5- and 15-minute bar aggregation hides intrabar order; s
 reaches both is conservative; the random-entry null uses the same exit rules but not the same intraday volatility
 state; gap-through exits at the open assume fills there. Pattern detectors were built and unit-tested for causality on
 other data and are not tuned here. Paper P&L never tunes a rule; a candidate that survives is frozen as written.
+
+## Clarifications written before any result (2026-11-11, after the code design, before any run)
+
+These fix wording the table left open; no result existed when they were written and none of them uses data.
+
+* `ATR5` / `ATR15` use all bars available when fewer than 14 exist, with a minimum of 8; a rule needing it skips
+  the session before that. (Resolves `L13` at 10:15, `P9`, `P20`.)
+* A name trades in a session only if it had a live near-month future that session (the basis-contract calendar),
+  because shorts are taken as stock futures.
+* Windows are by bar **start** time: "after 10:00" means bars starting 10:00 or later; a signal bar is allowed when it
+  completes between 09:30 and 14:30.
+* `P2` includes the ascending, descending and symmetrical triangles only; the wedge formations the same detector
+  returns are not traded. `P3` uses every `flag*` and `pennant*` formation.
+* `P20` items: (1) a confirmed `P1`-`P7` formation in that direction within the previous 12 five-minute bars; (2) a
+  bullish engulfing, hammer or morning star (short: bearish engulfing, dark-cloud cover, shooting star or evening star)
+  completing at that 15-minute bar, with no level condition; (3) close on the trend side of `VWAP` and EMA 21; (4) the
+  bar's low (high) within 0.2% of `PL` or `OR_lo` (`PH` or `OR_hi`); (5) volume at least 1.5 x the mean of the same
+  three five-minute slots over the previous 20 sessions; (6) Nifty's close above (below) its 09:15 open. If both
+  directions reach 3, nothing is traded.
+* `P17`: a pivot is a bar whose low (high) is strictly below (above) the two bars on each side, known two bars later;
+  the previous pivot of the same kind must lie within the previous 40 fifteen-minute bars.
+* `L5` trail: the stop is raised (lowered) each bar to the running extreme minus (plus) one opening-range width.
