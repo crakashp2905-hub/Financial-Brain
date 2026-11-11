@@ -57,9 +57,9 @@ def test_baseline_write_is_deterministic_for_fixed_clock(tmp_path: Path) -> None
 
 # ---------- FE-0002 trial exhaustion and append-only ledger ----------
 
-def test_q4_2026_protected_budget_is_exhausted_at_13_of_13() -> None:
+def test_q4_2026_protected_budget_is_exhausted_at_14_of_14() -> None:
     status = trials.budget_status(REPO / trials.LEDGER_REL)
-    assert (status.spent, status.budget, status.exhausted) == (13, 13, True)
+    assert (status.spent, status.budget, status.exhausted) == (14, 14, True)
 
 
 def test_protected_records_match_pinned_digests() -> None:
@@ -117,7 +117,7 @@ def test_trial_in_2027q1_needs_only_a_protected_trial_approval() -> None:
     ok = trials.assert_new_protected_trial_allowed(
         REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
         approvals=(_approval("PROTECTED_TRIAL", subject="M1-2027"),), now=NOW, scope_sha256=SHA)
-    assert ok.spent == 13  # the 2026Q4 count is not the 2027Q1 budget
+    assert ok.spent == 14  # the 2026Q4 count is not the 2027Q1 budget
 
 
 # ---------- FE-0004 hashable charter ----------
