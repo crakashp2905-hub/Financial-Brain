@@ -1,0 +1,75 @@
+{
+  "killed": 8,
+  "mutants": [
+    {
+      "file": "src/financial_brain/patterns/pivots.py",
+      "mutant": "pivot high: strict left becomes non-strict",
+      "status": "KILLED",
+      "tests": [
+        "tests/test_pattern_pivots.py"
+      ]
+    },
+    {
+      "file": "src/financial_brain/patterns/pivots.py",
+      "mutant": "pivot low: strict left becomes non-strict",
+      "status": "KILLED",
+      "tests": [
+        "tests/test_pattern_pivots.py"
+      ]
+    },
+    {
+      "file": "src/financial_brain/patterns/detectors.py",
+      "mutant": "breakout: close equal to the level now confirms",
+      "status": "KILLED",
+      "tests": [
+        "tests/test_pattern_detectors.py",
+        "tests/test_pattern_wave9_detectors.py",
+        "tests/test_pattern_wave9_final.py"
+      ]
+    },
+    {
+      "file": "src/financial_brain/patterns/detectors.py",
+      "mutant": "failure: close equal to the level now fails",
+      "status": "KILLED",
+      "tests": [
+        "tests/test_pattern_detectors.py",
+        "tests/test_pattern_wave9_detectors.py",
+        "tests/test_pattern_wave9_final.py"
+      ]
+    },
+    {
+      "file": "src/financial_brain/patterns/detectors.py",
+      "mutant": "causality: triangles emit before their last pivot is known",
+      "status": "KILLED",
+      "tests": [
+        "tests/test_pattern_detectors.py"
+      ]
+    },
+    {
+      "file": "src/financial_brain/patterns/detectors2.py",
+      "mutant": "causality: cup and handle drops the pivot-known guard",
+      "status": "KILLED",
+      "tests": [
+        "tests/test_pattern_wave9_detectors.py",
+        "tests/test_pattern_wave9_final.py"
+      ]
+    },
+    {
+      "file": "src/financial_brain/patterns/marketdata.py",
+      "mutant": "time: bar completing exactly at the query time is excluded",
+      "status": "KILLED",
+      "tests": [
+        "tests/test_pattern_wave9_realism.py"
+      ]
+    },
+    {
+      "file": "src/financial_brain/patterns/marketdata.py",
+      "mutant": "calendar: a session box accepts reversed dates",
+      "status": "KILLED",
+      "tests": [
+        "tests/test_pattern_wave9_realism.py"
+      ]
+    }
+  ],
+  "survived": 0
+}
