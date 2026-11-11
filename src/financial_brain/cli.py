@@ -2369,7 +2369,15 @@ def cmd_depth_status(args) -> int:
             rcon.close()
         today = _dt.date.today()
         if today not in sessions and today.weekday() < 5 and _dt.datetime.now().hour >= 16:
-            sessions.append(today)                      # tonight's bhavcopy may not be in yet when this runs
+            # Tonight's bhavcopy may not be in yet. Count today as a session only if the archive saw it (rows or a run
+            # row); a weekday holiday has neither, and a task that never ran is caught tomorrow, when the bhavcopy is in.
+            seen = con.execute("SELECT COUNT(*) FROM quotes WHERE CAST(ts AS DATE) = ?", [today]).fetchone()[0]
+            try:
+                seen += con.execute("SELECT COUNT(*) FROM runs WHERE day = ?", [str(today)]).fetchone()[0]
+            except Exception:                           # noqa: BLE001 - an archive from before run logging
+                pass
+            if seen:
+                sessions.append(today)
         rows = AH.report(con, sessions)
         ready = AH.readiness(rows)
         print(AH.render(rows[-args.days:], ready))

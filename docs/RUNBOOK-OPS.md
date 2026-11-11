@@ -7,7 +7,7 @@ Broker, OMS and kill-switch incidents are in `RUNBOOK-LIVE.md`. This covers the 
 | time (IST) | what | who |
 |---|---|---|
 | before 08:30 | `scripts\kite_login.cmd` (Zerodha login; tokens expire about 06:00) | owner |
-| 08:30 | `fb preflight`: network, Kite token, disk (50 GB), research DB opens read-only, every data contract met. A failure alerts once per distinct set of failures, by desktop toast and, if configured, Telegram | task |
+| 08:30 | `fb preflight`: network, Kite token, disk (50 GB), research DB opens read-only, every data contract met, and the depth archive task is registered (its own alert). A failure alerts once per distinct set of failures, by desktop toast and, if configured, Telegram | task |
 | 09:05 | live paper session (`scripts\paper_intraday.cmd`) | task |
 | 09:10 | depth and open-interest archive (`scripts\depth_archive.cmd`): waits for the login until 10:30, exits on a holiday and at 15:31 | task |
 | 18:45 | nightly refresh (project venv): loss review, loss miner, shadow, depth-archive health check, then `fb backup --with-lake` as the last step | task |
