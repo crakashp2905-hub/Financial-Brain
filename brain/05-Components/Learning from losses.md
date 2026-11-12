@@ -27,12 +27,16 @@ sample size is duller and checkable:
    surfaced the company, liquidity, whether a stated invalidation condition actually
    fired. This is where [[Situational awareness]] enters the record.
 3. **Count before concluding.** A feature becomes a lesson only with >= 5 trades sharing
-   it *and* a >= 2% gap in mean excess. Below that it is a story about two trades.
+   it *and* a >= 2% gap in mean excess *and* false-discovery control across every group looked
+   at (one-sided Welch test of the group against the rest, Benjamini-Hochberg q <= 0.10). Below
+   that it is a story about a few trades.
 4. **Gate.** A confirmed lesson blocks the next such trade and says why: "6 of 6 lost,
    mean -6.0% against +4.0% elsewhere", with the decision ids attached so it can be
    argued with.
 
 With the current record nothing is confirmed and the gate is inert. That is the honest
 default, and it is tested.
+
+The intraday paper record has its own, stricter loop: [[C29 Learning loop]].
 
 Related: [[Own-record scorecard]] · [[First measured record]] · [[The unanswered question]]
