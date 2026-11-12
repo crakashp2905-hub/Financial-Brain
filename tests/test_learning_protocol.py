@@ -178,3 +178,24 @@ def test_a_night_sees_only_what_had_happened_by_then():
     b = P.step(cut, cut_df, sessions[35], {})
     key = lambda ev: sorted((e["lesson_id"], e["payload"]["trades"], round(e["payload"]["p"], 12)) for e in ev)   # noqa: E731
     assert key(a) == key(b)
+
+
+def test_the_watch_list_shows_the_cells_closest_to_the_bar_even_when_none_clears_it():
+    df = C.synthetic_ledger(30, seed=12, plant=("vs_market_today", "against the market", 18.0))
+    sessions = sorted(df["day"].unique())
+    cm = P.CellMatrix(df, sessions)
+    w = P.watchlist(cm, sessions[-1], n=5)
+    assert 1 <= len(w) <= 5 and w["p"].is_monotonic_increasing and (w["mean_bp"] < 0).all() and (w["contrast_bp"] < 0).all()
+    assert CELL in set(w["cell"])
+
+
+def test_the_watch_list_is_stored_and_replaced_each_night():
+    df = C.synthetic_ledger(30, seed=12, plant=("vs_market_today", "against the market", 18.0))
+    sessions = sorted(df["day"].unique())
+    cm = P.CellMatrix(df, sessions)
+    with Store(":memory:") as st:
+        st.replace_watchlist("2027-02-01", P.watchlist(cm, sessions[-1]))
+        n1 = len(st.watchlist())
+        st.replace_watchlist("2027-02-02", P.watchlist(cm, sessions[-1], n=2))
+        w = st.watchlist()
+    assert n1 > 2 and len(w) == 2 and set(w["run_on"]) == {"2027-02-02"}

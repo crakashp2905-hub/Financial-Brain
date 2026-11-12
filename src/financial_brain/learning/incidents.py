@@ -56,6 +56,8 @@ GUARDS: dict[str, Guard] = {
     "DATA_STALE": Guard("data contracts, checked pre-open and nightly (fb preflight)", "2026-11-04", "FinanceBrain Preflight"),
     "DISK_LOW": Guard("pre-open free-space check (fb preflight)", "2026-11-04", "FinanceBrain Preflight"),
     "CONSOLE_KILLED": Guard("hidden-window launcher, no console to close (run_hidden.vbs)", "2026-10-07", None),
+    "NO_RUN": Guard("same-night alert that a session was not recorded (detects it, cannot prevent it; fb learn run)", "2026-11-12",
+                    "FinanceBrain Daily Refresh"),
     "UNSCHEDULED_COLLECTOR": Guard("pre-open check that the depth archive task exists (fb preflight)", "2026-11-12",
                                    "FinanceBrain Preflight"),
 }

@@ -78,7 +78,7 @@ def test_the_report_separates_before_and_after_the_guard_and_flags_an_unschedule
     assert nl["sessions_lost"] == 2 and nl["lost_before_guard"] == 2 and nl["lost_after_guard"] == 0
     assert nl["state"] == "GUARD NOT ACTIVE" and "Preflight" in nl["task"]
     assert by["CONSOLE_KILLED"]["state"] == "GUARDED"                  # always-on guard: no task needed
-    assert by["NO_RUN"]["state"] == "UNGUARDED"
+    assert by["NO_RUN"]["state"] == "GUARD NOT ACTIVE" and "Daily Refresh" in by["NO_RUN"]["task"]    # a detective guard, on the nightly task
     assert {c["cause"] for c in IN.open_lessons(rep)} == {"NO_LOGIN", "NETWORK", "NO_RUN"}
 
 
@@ -88,7 +88,7 @@ def test_once_the_task_is_registered_the_guard_is_active_and_recurrences_after_i
     rep = IN.report(inc, sessions=SESSIONS + ["2026-11-20"], today="2026-11-21", task_registered=lambda name: True)
     nl = {c["cause"]: c for c in rep["causes"]}["NO_LOGIN"]
     assert nl["state"] == "GUARDED" and nl["lost_before_guard"] == 2 and nl["lost_after_guard"] == 1
-    assert {c["cause"] for c in IN.open_lessons(rep)} == {"NO_RUN"}     # only the cause with no control at all stays open
+    assert IN.open_lessons(rep) == []                                   # every cause that cost a session now has an active control
     assert "GUARDED" in IN.render(rep)
 
 
@@ -104,3 +104,9 @@ def test_incidents_are_stored_once_however_often_the_collector_runs():
         assert st.add_incidents(rows) == len(rows)
         assert st.add_incidents(rows) == 0
         assert len(st.incidents()) == len(rows)
+
+
+def test_a_cause_with_no_control_at_all_stays_an_open_lesson():
+    inc = pd.DataFrame([IN._row("2026-11-02", "paper_runner", "CRASH", IN.SESSION_LOST, "boom")])
+    rep = IN.report(inc, sessions=["2026-11-02"], today="2026-11-12", task_registered=lambda n: True)
+    assert [c["cause"] for c in IN.open_lessons(rep)] == ["CRASH"] and rep["causes"][0]["state"] == "UNGUARDED"

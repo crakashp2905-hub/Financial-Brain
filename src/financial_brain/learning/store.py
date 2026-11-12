@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS autopsies (
 CREATE TABLE IF NOT EXISTS incidents (
     incident_id VARCHAR PRIMARY KEY, day VARCHAR, source VARCHAR, cause VARCHAR, severity VARCHAR, detail VARCHAR,
     detected_by VARCHAR, first_seen VARCHAR);
+CREATE TABLE IF NOT EXISTS watchlist (
+    run_on VARCHAR, cell VARCHAR, days INTEGER, trades INTEGER, mean_bp DOUBLE, contrast_bp DOUBLE, p DOUBLE, net_inr DOUBLE);
 CREATE TABLE IF NOT EXISTS loop_runs (
     run_on VARCHAR PRIMARY KEY, session VARCHAR, sessions INTEGER, trades INTEGER, nominated INTEGER, confirmed INTEGER,
     refuted INTEGER, decaying INTEGER, status VARCHAR, note VARCHAR);
@@ -156,6 +158,16 @@ class Store:
                          [kw["run_on"], kw.get("session", ""), kw.get("sessions", 0), kw.get("trades", 0),
                           kw.get("nominated", 0), kw.get("confirmed", 0), kw.get("refuted", 0), kw.get("decaying", 0),
                           kw.get("status", ""), kw.get("note", "")])
+
+    def replace_watchlist(self, run_on: str, df: pd.DataFrame) -> None:
+        self.con.execute("DELETE FROM watchlist")
+        if len(df):
+            rows = [(run_on, r.cell, int(r.days), int(r.trades), float(r.mean_bp), float(r.contrast_bp), float(r.p), float(r.net_inr))
+                    for r in df.itertuples()]
+            self.con.executemany("INSERT INTO watchlist VALUES (?,?,?,?,?,?,?,?)", rows)
+
+    def watchlist(self) -> pd.DataFrame:
+        return self.con.execute("SELECT * FROM watchlist ORDER BY p").df()
 
     def runs(self) -> pd.DataFrame:
         return self.con.execute("SELECT * FROM loop_runs ORDER BY run_on").df()

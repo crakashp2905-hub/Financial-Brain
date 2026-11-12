@@ -225,3 +225,31 @@ def test_the_pipeline_carries_the_personal_review_and_alerts_on_a_new_habit():
         rep = PL.process(st, inp, today="2027-03-01", audit=[], task_registered=lambda n: True)
     assert rep["stages"]["personal"]["ok"] and rep["stages"]["personal"]["habits_to_avoid"] == 1
     assert any(a["key"] == "learn-habit:event_chasing" for a in rep["alerts"])
+
+
+def test_unregistered_owner_tasks_are_listed_with_the_command_and_not_repeated_when_a_guard_line_already_says_so():
+    with Store(":memory:") as st:
+        ops = {"availability": {"sessions": 5, "completed": 3, "lost": 2, "rate": .6},
+               "causes": [{"cause": "NO_LOGIN", "sessions_lost": 2, "state": "GUARD NOT ACTIVE", "guard": "pre-open check",
+                           "task": "FinanceBrain Preflight"}]}
+        ask = RP.needs_you(st.lessons(), None, ops, check_tasks=True, task_registered=lambda n: False)
+    text = " | ".join(ask)
+    assert text.count("FinanceBrain Preflight") == 1                    # named once, in the guard line
+    assert "'FinanceBrain Depth Archive' task is not registered" in text and "register_depth_archive_task.ps1" in text
+    with Store(":memory:") as st:
+        assert RP.needs_you(st.lessons(), None, None, check_tasks=True, task_registered=lambda n: True) == []
+        assert RP.needs_you(st.lessons(), None, None) == []             # not checked unless asked (tests and the panel)
+
+
+def test_the_status_shows_what_it_is_watching():
+    import numpy as np
+
+    from financial_brain.learning import calibrate as C
+    from financial_brain.learning import protocol as P
+    df = C.synthetic_ledger(30, seed=12, plant=("vs_market_today", "against the market", 18.0))
+    sessions = sorted(df["day"].unique())
+    with Store(":memory:") as st:
+        st.replace_watchlist("2027-02-01", P.watchlist(P.CellMatrix(df, sessions), sessions[-1]))
+        st.record_run(run_on="2027-02-01", session=sessions[-1], sessions=30, trades=len(df), status="ok")
+        text = RP.status_text(st, today="2027-02-02")
+    assert "watching (closest to being nominated" in text and np.isfinite(len(text))

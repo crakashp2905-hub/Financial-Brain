@@ -1695,7 +1695,8 @@ def cmd_learn(args) -> int:
 
     if what == "run":
         try:
-            inp = PL.collect(ledger=_P(args.ledger) if args.ledger else PL.LEDGER, research_db=research)
+            inp = PL.collect(ledger=_P(args.ledger) if args.ledger else PL.LEDGER,
+                             archive=_P(args.archive) if args.archive else PL.ARCHIVE, research_db=research)
         except PL.LedgerBusy as e:
             print(e)
             return 1
@@ -1746,7 +1747,7 @@ def cmd_learn(args) -> int:
                     cal = _json.loads(cal_path.read_text(encoding="utf-8"))
                 print(RP.status_text(st, today=today, shadow=RP.latest_shadow(st), ops=RP.ops_report(st, rcon, today=today),
                                      depth=RP.depth_summary(), ab=ab, problems=problems, calibration=cal,
-                                     personal=PS.summary(research_db=research)))
+                                     personal=PS.summary(research_db=research), check_tasks=True))
         finally:
             if rcon is not None:
                 rcon.close()
@@ -1770,7 +1771,8 @@ def cmd_learn(args) -> int:
     if what == "calibrate":
         lab, source = pd.DataFrame(columns=["day"]), "none"
         try:
-            inp = PL.collect(ledger=_P(args.ledger) if args.ledger else PL.LEDGER, research_db=research)
+            inp = PL.collect(ledger=_P(args.ledger) if args.ledger else PL.LEDGER,
+                             archive=_P(args.archive) if args.archive else PL.ARCHIVE, research_db=research)
             if inp.archive is not None:
                 inp.archive.close()
             if len(inp.trades):
@@ -3216,6 +3218,7 @@ def main(argv: list[str] | None = None) -> int:
         sp.add_argument("--store", help="lessons ledger (default data/lessons.duckdb)")
         if name in ("run", "calibrate"):
             sp.add_argument("--ledger", help="paper ledger (default data/paper_live.duckdb)")
+            sp.add_argument("--archive", help="quote archive (default data/quote_archive.duckdb)")
         if name == "run":
             sp.add_argument("--no-alert", action="store_true")
             sp.add_argument("--digest", action="store_true", help="send the weekly digest now, not only on Fridays")

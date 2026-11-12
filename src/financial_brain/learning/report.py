@@ -22,6 +22,20 @@ from . import personal as PS
 from . import protocol as P
 from .store import Store
 
+#: tasks the owner registers once (Claude cannot: the harness blocks creating scheduled tasks) and what each is for
+OWNER_TASKS = {
+    "FinanceBrain Preflight": "the 08:30 pre-open check (login, network, disk, database, data): powershell -ExecutionPolicy Bypass -File "
+                              "scripts\\register_preflight_task.ps1",
+    "FinanceBrain Depth Archive": "the 09:10 order-book and open-interest archive, the only route to an intraday edge: powershell "
+                                  "-ExecutionPolicy Bypass -File scripts\\register_depth_archive_task.ps1",
+}
+
+
+def tasks_missing(task_registered=None) -> list[str]:
+    fn = task_registered or IN._task_registered
+    return [name for name in OWNER_TASKS if not fn(name)]
+
+
 STAGES = ("NOMINATED", "CONFIRMED", "REGISTERED", "SHADOW", "ACTIVE", "REFUTED", "EXPIRED", "RETIRED")
 
 
@@ -34,7 +48,7 @@ def stage_counts(lessons: dict[str, dict]) -> dict[str, int]:
 
 
 def needs_you(lessons: dict[str, dict], shadow: list[dict] | None, ops: dict | None, *, problems: list[str] | None = None,
-              personal: dict | None = None) -> list[str]:
+              personal: dict | None = None, check_tasks: bool = False, task_registered=None) -> list[str]:
     items = []
     registered = {x["cell"] for x in lessons.values() if x["stage"] in ("REGISTERED", "SHADOW", "APPROVED", "ACTIVE") and x.get("cell")}
     for lid, x in lessons.items():
@@ -57,6 +71,10 @@ def needs_you(lessons: dict[str, dict], shadow: list[dict] | None, ops: dict | N
         elif c["state"] == "UNGUARDED":
             items.append(f"{c['cause']} cost {c['sessions_lost']} session(s) and nothing guards against it yet.")
     items += PS.needs_you(personal or {})
+    named = " ".join(items)
+    for name in tasks_missing(task_registered) if check_tasks else []:
+        if name not in named:                            # a guard line above may already say it
+            items.append(f"The '{name}' task is not registered: {OWNER_TASKS[name]}")
     items += problems or []
     return items
 
@@ -76,12 +94,12 @@ def _lessons_table(lessons: dict[str, dict]) -> list[str]:
 
 def status_text(store: Store, *, today: str, shadow: list[dict] | None = None, ops: dict | None = None, depth: dict | None = None,
                 ab: dict | None = None, problems: list[str] | None = None, calibration: dict | None = None,
-                params: P.Params = P.DEFAULT, personal: dict | None = None) -> str:
+                params: P.Params = P.DEFAULT, personal: dict | None = None, check_tasks: bool = False) -> str:
     lessons = store.lessons()
     runs = store.runs()
     auto = store.autopsies()
     lines = [f"LEARNING LOOP  ({today})", ""]
-    ask = needs_you(lessons, shadow, ops, problems=problems, personal=personal)
+    ask = needs_you(lessons, shadow, ops, problems=problems, personal=personal, check_tasks=check_tasks)
     lines.append("Needs you:" if ask else "Needs you: nothing.")
     lines += [f"  - {a}" for a in ask]
     last = runs.iloc[-1] if len(runs) else None
@@ -96,6 +114,12 @@ def status_text(store: Store, *, today: str, shadow: list[dict] | None = None, o
     lines.append("  lessons: " + ", ".join(f"{k} {v}" for k, v in c.items() if v) if any(c.values()) else "  lessons: none yet "
                  "(a pattern must be found, then confirmed on sessions it had not seen)")
     lines += _lessons_table(lessons)
+    watch = store.watchlist()
+    if len(watch):
+        lines.append(f"  watching (closest to being nominated; the bar is p <= {params.p_nominate} across {params.min_days}+ sessions):")
+        for w in watch.head(5).itertuples():
+            lines.append(f"    {w.cell:46s} {w.trades:4d} trades / {w.days:3d} days  {w.mean_bp:+7.1f} bp, {w.contrast_bp:+7.1f} bp worse "
+                         f"than the rest, p {w.p:.3f}")
     if calibration:
         nl = calibration["null"]
         lines.append(f"  measured on simulated no-effect histories: false confirmation {nl['false_confirmation_rate']:.1%} "

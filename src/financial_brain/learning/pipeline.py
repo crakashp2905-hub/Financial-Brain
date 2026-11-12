@@ -163,6 +163,7 @@ def process(store: Store, inp: Inputs, *, today: str | None = None, rules_path: 
         if len(sessions) < params.min_days or trades.empty:
             return {"status": "COLLECTING", "need": params.min_days, "have": len(sessions)}
         cm = P.CellMatrix(trades, sessions)
+        store.replace_watchlist(today, P.watchlist(cm, sessions[-1]))
         events = P.step(cm, trades, sessions[-1], store.lessons(), params)
         added = {"NOMINATED": 0, "CONFIRMED": 0, "REFUTED": 0, "EXPIRED": 0, "DECAYING": 0}
         lessons_before = store.lessons()

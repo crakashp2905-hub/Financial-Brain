@@ -272,6 +272,22 @@ def decay(cm: CellMatrix, cell: str, session: str, params: Params = DEFAULT) -> 
     return None
 
 
+def watchlist(cm: CellMatrix, session: str, n: int = 8, *, min_days: int = 8, min_trades: int = 20) -> pd.DataFrame:
+    """The cells closest to being nominated: the strongest evidence of being worse than the rest and losing, whether or not it clears
+    the bar. The loop shows these so that "nothing nominated" can be seen to mean "nothing yet", not "nothing looked at"."""
+    if not cm.cells:
+        return pd.DataFrame()
+    a = cm.stats_arrays(cm.pos[session])
+    ok = (a["cdays"] >= min_days) & (a["trades"] >= min_trades) & (a["mean"] < 0) & (a["contrast"] < 0)
+    idx = np.flatnonzero(ok)
+    if len(idx) == 0:
+        return pd.DataFrame()
+    order = idx[np.argsort(a["p"][idx])][:n]
+    return pd.DataFrame({"cell": np.array(cm.cells)[order], "days": a["days"][order], "trades": a["trades"][order],
+                         "mean_bp": a["mean"][order], "contrast_bp": a["contrast"][order], "p": a["p"][order],
+                         "net_inr": a["pnl"][order]})
+
+
 IN_FORCE = ("NOMINATED", "CONFIRMED", "REGISTERED", "SHADOW", "APPROVED", "ACTIVE")
 STANDING = ("CONFIRMED", "REGISTERED", "SHADOW", "APPROVED", "ACTIVE")
 
