@@ -211,7 +211,7 @@ class ForwardSessionRunner:
                   "mode": config.mode.value, "physical_orders": False}
         if not risk["approved"]:
             self._ensure_state(journal, config.session_id, "REJECTED")
-            result.update({"status": "NO_TRADE", "reason": str(risk.get("reason", "RISK_REJECTED"))})
+            result.update({"status": "REJECTED", "reason": str(risk.get("reason", "RISK_REJECTED"))})
         elif decision["side"] in ("NONE", "NO_TRADE"):
             result.update({"status": "NO_TRADE", "reason": str(decision.get("reason", "NO_SIGNAL"))})
         else:

@@ -140,6 +140,19 @@ def test_non_boolean_risk_approval_is_rejected_without_execution(tmp_path):
     assert all(r["t"] != "RISK_VERDICT" for r in DurableJournal(journal_path).records())
 
 
+def test_risk_rejection_is_terminal_and_never_executes(tmp_path):
+    journal_path = tmp_path / "rejected.jsonl"
+    calls = []
+    result = ForwardSessionRunner(journal_path).run(
+        _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+        risk_fn=lambda _: {"approved": False, "reason": "MAX_EXPOSURE"},
+        execution_fn=lambda *args: calls.append(args) or {"state": "FILLED"})
+    assert result["status"] == "REJECTED" and result["reason"] == "MAX_EXPOSURE"
+    assert calls == []
+    states = [r["state"] for r in DurableJournal(journal_path).records() if r["t"] == "SESSION_STATE"]
+    assert states[-1] == "REJECTED"
+
+
 def test_session_restart_rejects_changed_decision_timestamp(tmp_path):
     runner = ForwardSessionRunner(tmp_path / "clock.jsonl")
     kwargs = dict(decision_fn=lambda _: {"side": "NONE"}, risk_fn=lambda _: {"approved": True},
