@@ -79,10 +79,10 @@
       "id": "PE-0023",
       "status": "PARTIAL",
       "sources": ["src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_session_runner.py"],
-      "tests": ["test_data_rejections_are_immutable_idempotent_and_persisted", "test_preflight_is_immutable_and_blocks_actionable_decisions", "test_actionable_decision_without_preflight_is_rejected_and_not_executed", "test_runner_persists_visible_events_decision_risk_and_paper_execution"],
-      "test_result": "Preflight verdicts, source rejection hashes/reasons, decisions, risk, stable paper intents, execution receipts, and outbox acknowledgements persist in the append-only journal; missing/failed preflight blocks actionable sessions",
+      "tests": ["test_data_rejections_are_immutable_idempotent_and_persisted", "test_preflight_is_immutable_and_blocks_actionable_decisions", "test_actionable_decision_without_preflight_is_rejected_and_not_executed", "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink", "test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows"],
+      "test_result": "Preflight verdicts, Kite source rejection hashes/reasons, decisions, risk, stable paper intents, execution receipts, and outbox acknowledgements persist in the append-only journal; 48 focused integration tests pass",
       "evidence_sha256": null,
-      "blockers": ["the live polling integration does not yet supply its preflight and per-row rejection evidence through these APIs; portfolio ledger is not yet folded into the session journal"]
+      "blockers": ["production runner invocation still needs an approved preflight callback and account-ledger integration; no actual authorized market session has been captured"]
     },
     {
       "id": "PE-0030",
