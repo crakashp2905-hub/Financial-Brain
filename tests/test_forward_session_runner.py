@@ -48,6 +48,21 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     assert states == ["PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED"]
 
 
+def test_market_polls_can_be_durably_appended_before_session_finalization(tmp_path):
+    path = tmp_path / "stream.jsonl"
+    config = _config()
+    live = ForwardSessionRunner(path)
+    live.begin(config)
+    assert live.append_events(config, [_event(), _event()]) == 1
+    restarted = ForwardSessionRunner(path)
+    decision_counts = []
+    result = restarted.run(config, [], decision_at=NOW,
+                           decision_fn=lambda visible: decision_counts.append(len(visible)) or {"side": "NONE"},
+                           risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
+    assert result["event_count"] == 1
+    assert decision_counts == [1]
+
+
 def test_closed_session_is_replayed_without_reexecuting(tmp_path):
     journal_path = tmp_path / "session.jsonl"
     runner = ForwardSessionRunner(journal_path)

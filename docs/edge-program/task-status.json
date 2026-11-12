@@ -61,8 +61,8 @@
       "id": "PE-0021",
       "status": "PARTIAL",
       "sources": ["src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/forward_edge/durable.py"],
-      "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution", "test_pending_outbox_retries_with_same_idempotency_key_after_restart"],
-      "test_result": "Session records and pending/acknowledged paper outbox are written to the fsynced hash-chained journal",
+      "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution", "test_pending_outbox_retries_with_same_idempotency_key_after_restart", "test_market_polls_can_be_durably_appended_before_session_finalization", "test_batch_append_preserves_record_sequence_and_hash_chain"],
+      "test_result": "Session records and pending/acknowledged paper outbox are written to the fsynced hash-chained journal; polled events batch-append before session finalization",
       "evidence_sha256": null,
       "blockers": ["full lifecycle boundary crash-injection matrix and venue reconciliation remain incomplete"]
     },

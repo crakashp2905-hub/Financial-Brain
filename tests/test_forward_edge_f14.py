@@ -23,6 +23,15 @@ def test_sequence_is_monotonic_gap_free_and_survives_reopen(tmp_path: Path) -> N
     assert again.seq == 2 and again.head == j.head and again.append({"t": "RISK", "decision": "ALLOW"}) == 3
 
 
+def test_batch_append_preserves_record_sequence_and_hash_chain(tmp_path: Path) -> None:
+    path = tmp_path / "batch.log"
+    journal = U.DurableJournal(path)
+    assert journal.append_many([{"t": "A"}, {"t": "B"}, {"t": "C"}]) == [1, 2, 3]
+    recovered = U.DurableJournal(path)
+    assert recovered.records() == [{"t": "A"}, {"t": "B"}, {"t": "C"}]
+    assert recovered.head == journal.head and recovered.seq == 3
+
+
 def test_a_torn_final_write_is_discarded_and_earlier_records_survive(tmp_path: Path) -> None:
     j = U.DurableJournal(tmp_path / "j.log")
     j.append({"t": "RECEIPT"})

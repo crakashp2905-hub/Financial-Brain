@@ -131,15 +131,9 @@ class ForwardSessionRunner:
         journal.append({"t": "SESSION_STATE", "session_id": session_id,
                         "state_machine_version": STATE_MACHINE_VERSION, "state": target})
 
-    def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
-            decision_at: datetime,
-            decision_fn: Callable[[list[NormalizedEvent]], dict],
-            risk_fn: Callable[[dict], dict],
-            execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict]) -> dict:
-        from financial_brain.forward_edge.market_data import decision_visible
-
+    def begin(self, config: ForwardRunConfig) -> None:
+        """Create or resume the durable session before market polling starts."""
         plan = config.canonical()
-        visible_at = self._utc(decision_at)
         journal = DurableJournal(self.journal_path)
         records = journal.records()
         existing = [r for r in records if r.get("session_id") == config.session_id]
@@ -147,23 +141,75 @@ class ForwardSessionRunner:
             planned = next((r for r in existing if r.get("t") == "SESSION_PLAN"), None)
             if planned is None or planned.get("config_sha256") != config.sha256:
                 raise RunnerError("session id already exists with different or incomplete configuration")
-            prior_decision = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
-            if prior_decision is not None and prior_decision.get("decision_at_utc") != visible_at.isoformat():
-                raise RunnerError("session id already has a different decision timestamp")
-            closed = next((r for r in reversed(existing) if r.get("t") == "SESSION_CLOSED"), None)
-            if closed is not None:
-                return closed["result"]
+            if any(r.get("t") == "SESSION_CLOSED" for r in existing):
+                return
             if any(r.get("t") == "SESSION_STATE" and r.get("state") == "INCOMPLETE" for r in existing):
                 raise RunnerError("incomplete session is terminal; use a new session id for another attempt")
         else:
             journal.append({"t": "SESSION_PLAN", "session_id": config.session_id,
                             "config": plan, "config_sha256": config.sha256})
-        if not any(r.get("t") == "SESSION_STATE" for r in existing):
+        state_records = [r for r in existing if r.get("t") == "SESSION_STATE"]
+        if not state_records:
             self._ensure_state(journal, config.session_id, "PLANNED")
         self._ensure_state(journal, config.session_id, "PREFLIGHT")
+        self._ensure_state(journal, config.session_id, "OPEN")
 
+    def append_events(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent]) -> int:
+        """Durably batch normalized source events during polling; returns the number newly stored."""
+        self.begin(config)
+        journal = DurableJournal(self.journal_path)
+        records = journal.records()
+        session_records = [r for r in records if r.get("session_id") == config.session_id]
+        if any(r.get("t") == "SESSION_CLOSED" for r in session_records):
+            raise RunnerError("cannot append market events to a closed session")
+        state = next((r["state"] for r in reversed(session_records) if r.get("t") == "SESSION_STATE"), None)
+        if state not in ("OPEN", "DRAINING"):
+            raise RunnerError(f"market events require OPEN session state; got {state}")
+        known = {r.get("event_sha256") for r in session_records if r.get("t") == "MARKET_EVENT"}
+        allowed = set(config.canonical()["instruments"])
+        additions = []
+        for event in events:
+            if event.instrument not in allowed:
+                raise RunnerError(f"event instrument is outside the frozen universe: {event.instrument}")
+            digest = event.content_sha256()
+            if digest in known:
+                continue
+            if state != "OPEN":
+                raise RunnerError("new events cannot be appended after a session starts draining")
+            additions.append({"t": "MARKET_EVENT", "session_id": config.session_id,
+                              "event_sha256": digest, "event": self._event_dict(event)})
+            known.add(digest)
+        journal.append_many(additions)
+        return len(additions)
+
+    def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
+            decision_at: datetime,
+            decision_fn: Callable[[list[NormalizedEvent]], dict],
+            risk_fn: Callable[[dict], dict],
+            execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict]) -> dict:
+        from financial_brain.forward_edge.market_data import decision_visible
+
+        visible_at = self._utc(decision_at)
+        self.begin(config)
+        records = DurableJournal(self.journal_path).records()
+        existing = [r for r in records if r.get("session_id") == config.session_id]
+        prior_decision = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
+        if prior_decision is not None and prior_decision.get("decision_at_utc") != visible_at.isoformat():
+            raise RunnerError("session id already has a different decision timestamp")
+        closed = next((r for r in reversed(existing) if r.get("t") == "SESSION_CLOSED"), None)
+        if closed is not None:
+            return closed["result"]
+        self.append_events(config, events)
+        journal = DurableJournal(self.journal_path)
+        records = journal.records()
+        existing = [r for r in records if r.get("session_id") == config.session_id]
+        if existing:
+            planned = next((r for r in existing if r.get("t") == "SESSION_PLAN"), None)
+            if planned is None or planned.get("config_sha256") != config.sha256:
+                raise RunnerError("session id already exists with different or incomplete configuration")
+            if any(r.get("t") == "SESSION_STATE" and r.get("state") == "INCOMPLETE" for r in existing):
+                raise RunnerError("incomplete session is terminal; use a new session id for another attempt")
         old_events = [r["event"] for r in existing if r.get("t") == "MARKET_EVENT"]
-        prior_hashes = {r.get("event_sha256") for r in existing if r.get("t") == "MARKET_EVENT"}
         observed: list[NormalizedEvent] = [NormalizedEvent(
             kind=row["kind"], instrument=row["instrument"],
             event_utc=datetime.fromisoformat(row["event_utc"]),
@@ -172,17 +218,7 @@ class ForwardSessionRunner:
             payload=tuple(tuple(item) for item in row["payload"])) for row in old_events]
         last_available = max((self._utc(e.available_utc) for e in observed), default=None)
         self._ensure_state(journal, config.session_id, "OPEN")
-        for event in sorted(events, key=lambda e: (self._utc(e.available_utc), e.content_sha256())):
-            if event.instrument not in plan["instruments"]:
-                continue
-            digest = event.content_sha256()
-            if digest in prior_hashes:
-                continue
-            journal.append({"t": "MARKET_EVENT", "session_id": config.session_id,
-                            "event_sha256": digest, "event": self._event_dict(event)})
-            prior_hashes.add(digest)
-            observed.append(event)
-            last_available = self._utc(event.available_utc)
+        observed.sort(key=lambda e: (self._utc(e.available_utc), e.content_sha256()))
         decision_events = [event for event in observed if decision_visible(event, visible_at)]
 
         decision_record = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
