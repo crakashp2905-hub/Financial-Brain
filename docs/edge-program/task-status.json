@@ -37,7 +37,7 @@
       "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution"],
       "test_result": "Normalized event stream, decision visibility, risk adapter, and paper execution callback are exercised",
       "evidence_sha256": null,
-      "blockers": ["fixture and actual-market adapters are not yet wired through the same runner"]
+      "blockers": ["fixture adapter and replay parity are not yet wired through the same runner"]
     },
     {
       "id": "PE-0018",
@@ -53,9 +53,9 @@
       "status": "PARTIAL",
       "sources": ["src/financial_brain/paper/intraday_runner.py", "src/financial_brain/ingest/kite_live.py", "tests/test_phase5_intraday_runner.py"],
       "tests": ["test_live_runner_can_send_existing_kite_polls_to_forward_event_sink"],
-      "test_result": "The existing read-only Kite polling loop emits normalized full-quote events to an injected sink; mocked path passes",
+      "test_result": "The existing read-only Kite polling loop writes each normalized full-quote batch into the forward session journal; a restarted runner consumes and finalizes the persisted events in a mocked market session",
       "evidence_sha256": null,
-      "blockers": ["actual authorized market-session capture is not yet evidenced", "the sink is not yet wired to a persistent ForwardSessionRunner instance"]
+      "blockers": ["actual authorized market-session capture is not yet evidenced"]
     },
     {
       "id": "PE-0021",
