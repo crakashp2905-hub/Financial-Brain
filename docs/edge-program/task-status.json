@@ -2,15 +2,15 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 14,
-  "unrecorded_tasks": 204,
+  "recorded_tasks": 16,
+  "unrecorded_tasks": 202,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "0d8fc7f682ff417a86b0b02c25779bae0601ae39",
+  "reviewed_main_sha": "89b300e2d0a532a1f9bab7c2ad6bbffe95ce4771",
   "items": [
     {
       "id": "PE-0015",
@@ -182,6 +182,24 @@
         "test_effective_fee_schedule_uses_filled_notional_and_reconciles_nav"
       ],
       "test_result": "Effective-dated owner-supplied buy/sell rates are charged against each actual fill notional in the same balanced transaction as cash and inventory; a full entry/exit NAV bridge reconciles cash, fee expense, and net P&L to paise. 33 focused tests pass; Ruff and mypy pass.",
+      "evidence_sha256": null,
+      "blockers": []
+    },
+    {
+      "id": "PE-0112",
+      "status": "DONE",
+      "sources": ["src/financial_brain/forward_edge/charter.py", "src/financial_brain/forward_edge/trials.py", "docs/edge-program/evaluation-identity-contract.md"],
+      "tests": ["test_every_source_cost_calendar_and_benchmark_digest_changes_identity_hash", "test_protected_charter_requires_all_evaluation_identity_components", "test_trial_in_2027q1_needs_only_a_protected_trial_approval", "test_protected_trial_cannot_register_without_full_identity_registry"],
+      "test_result": "Protected registrations now require hashed strategy/model/data/rights/calendar/universe/cost/benchmark identity, a frozen schedule, and an approval scope equal to the charter hash. The durable registry refuses same-version identity changes and replays its chain after restart; changing an identity component changes the charter digest.",
+      "evidence_sha256": null,
+      "blockers": []
+    },
+    {
+      "id": "PE-0113",
+      "status": "DONE",
+      "sources": ["src/financial_brain/forward_edge/charter.py", "src/financial_brain/forward_edge/decision_custody.py"],
+      "tests": ["test_durable_registry_rejects_retroactive_benchmark_and_endpoint_edits"],
+      "test_result": "A closed cohort's outcome is immutable; changing its benchmark or endpoint under the same charter version is rejected. A later version must link the previous charter hash and move the prospective start forward.",
       "evidence_sha256": null,
       "blockers": []
     }
