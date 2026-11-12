@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 21,
-  "unrecorded_tasks": 197,
+  "recorded_tasks": 22,
+  "unrecorded_tasks": 196,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -386,6 +386,21 @@
       "test_result": "A durable append-only log allows only source/timestamp/schema corruption reasons, requires a second distinct human approval scoped to the exact request, revalidates on restart, and refuses outcome edits. Sensitivity reports retain every scheduled day, show approved exclusions and unresolved missing days, include fixed-denominator zero-fill and -100% adverse cases, and disable promotion when exclusions or missing dates exist. Eight focused tests pass.",
       "evidence_sha256": null,
       "blockers": ["Reviewer actor IDs and human status are supplied by the caller; production identity/authentication must independently verify the reviewer before this can be treated as externally independent review"]
+    },
+    {
+      "id": "PE-0117",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "docs/edge-program/nav-return-contract.md"
+      ],
+      "tests": [
+        "test_daily_nav_returns_reconcile_cash_days_flows_open_positions_and_late_fills",
+        "test_daily_nav_snapshot_rejects_future_marks_late_flows_and_rewrites"
+      ],
+      "test_result": "Persisted daily NAV reconciles cash plus marked open positions and external flows. Flow-adjusted returns account for cash days and later fills/marks; snapshots reject future marks, late flows, duplicate dates and rewrites. Restart reproduces snapshots and returns. Focused account suite: 9 passed; Ruff and mypy passed.",
+      "evidence_sha256": null,
+      "blockers": []
     }
   ]
 }

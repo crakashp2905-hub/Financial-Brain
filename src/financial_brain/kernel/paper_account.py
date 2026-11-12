@@ -9,6 +9,7 @@ does not model taxes, settlement cycles, margin, derivatives, or exchange execut
 """
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
@@ -140,6 +141,22 @@ class PaperAccount:
     def net_pnl(self) -> Decimal:
         return self.equity - self._initial_cash
 
+    @property
+    def nav_snapshots(self) -> list[dict]:
+        return deepcopy(self._nav_snapshots)
+
+    @property
+    def daily_nav_returns(self) -> list[Decimal]:
+        """Portfolio returns from consecutive persisted NAVs, net of flows between snapshots."""
+        rows = self._nav_snapshots
+        out = []
+        for previous, current in zip(rows, rows[1:]):
+            opening_nav = Decimal(previous["nav"])
+            if opening_nav <= 0:
+                raise PaperAccountError("previous NAV must be positive")
+            out.append((Decimal(current["nav"]) - opening_nav - Decimal(current["external_flow"])) / opening_nav)
+        return out
+
     def position(self, symbol: str) -> Position:
         quantity, basis = self._positions.get(symbol, (0, Decimal(0)))
         return Position(symbol, quantity, basis / quantity if quantity else Decimal(0))
@@ -163,6 +180,13 @@ class PaperAccount:
             self._fee_ids: dict[str, Decimal] = {}
             self._marks: dict[str, tuple[Decimal, datetime, str]] = {}
             self._mark_ids: dict[str, tuple] = {}
+            self._external_flows: list[dict] = []
+            self._flow_ids: set[str] = set()
+            self._flow_content: dict[str, tuple] = {}
+            self._flow_since_snapshot = Decimal(0)
+            self._last_flow_at: datetime | None = None
+            self._nav_snapshots: list[dict] = []
+            self._nav_snapshot_ids: dict[str, tuple] = {}
             for r in records[1:]:
                 t = r["t"]
                 if t == "INTENT":
@@ -187,6 +211,10 @@ class PaperAccount:
                     self._apply_fee(r, post_to_oms=True)
                 elif t == "MARK":
                     self._apply_mark(r)
+                elif t == "EXTERNAL_FLOW":
+                    self._apply_external_flow(r, post_to_oms=True)
+                elif t == "NAV_SNAPSHOT":
+                    self._apply_nav_snapshot(r)
                 else:
                     raise PaperAccountError(f"unknown paper account journal event: {t}")
             if not self.ledger.trial_balance_ok():
@@ -308,6 +336,55 @@ class PaperAccount:
             return
         self._validate_and_commit({"t": "MARK", "mark_id": mark_id, **row})
 
+    def record_external_cash_flow(self, flow_id: str, amount: Decimal, *, occurred_at: datetime,
+                                  reference: str) -> None:
+        """Record a deposit/withdrawal with its effective time before the next NAV snapshot."""
+        amount = Decimal(amount)
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", flow_id or ""):
+            raise PaperAccountError("external flow needs a stable id")
+        if not amount.is_finite() or amount == 0 or not isinstance(reference, str) or not reference.strip():
+            raise PaperAccountError("external cash flow needs a finite nonzero amount and reference")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise PaperAccountError("external flow time must be timezone-aware")
+        occurred_at = occurred_at.astimezone(timezone.utc)
+        content = (str(amount), occurred_at.isoformat(), reference)
+        prior = self._flow_content.get(flow_id)
+        if prior is not None:
+            if prior != content:
+                raise PaperAccountError(f"external flow id {flow_id} reused with different content")
+            return
+        if self._nav_snapshots and occurred_at <= datetime.fromisoformat(self._nav_snapshots[-1]["captured_at"]):
+            raise PaperAccountError("late external flow cannot rewrite an already captured NAV date")
+        self._validate_and_commit({"t": "EXTERNAL_FLOW", "flow_id": flow_id, "amount": str(amount),
+                                   "occurred_at": occurred_at.isoformat(), "reference": reference})
+
+    def record_nav_snapshot(self, session_date: date, *, snapshot_id: str, captured_at: datetime) -> dict:
+        """Persist authoritative marked equity and the flows since the previous snapshot, once per exchange date."""
+        if not isinstance(session_date, date) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", snapshot_id or ""):
+            raise PaperAccountError("NAV snapshot needs a session date and stable id")
+        if captured_at.tzinfo is None or captured_at.utcoffset() is None:
+            raise PaperAccountError("NAV capture time must be timezone-aware")
+        capture = captured_at.astimezone(timezone.utc)
+        if isinstance(session_date, datetime):
+            raise PaperAccountError("NAV session date must be a calendar date")
+        prior = self._nav_snapshot_ids.get(snapshot_id)
+        if prior is not None:
+            existing = next(row for row in self._nav_snapshots if row["snapshot_id"] == snapshot_id)
+            if existing["session_date"] != session_date.isoformat() or existing["captured_at"] != capture.isoformat():
+                raise PaperAccountError(f"NAV snapshot id {snapshot_id} reused with different content")
+            return deepcopy(existing)
+        if any(row["session_date"] == session_date.isoformat() for row in self._nav_snapshots):
+            raise PaperAccountError("a session already has an immutable NAV snapshot")
+        future_marks = [symbol for symbol, (_, marked_at, _) in self._marks.items() if marked_at > capture]
+        if future_marks or self._last_flow_at is not None and self._last_flow_at > capture:
+            raise PaperAccountError("NAV snapshot cannot include marks or cash flows after its capture time")
+        nav = self.equity
+        flow = self._flow_since_snapshot
+        record = {"t": "NAV_SNAPSHOT", "snapshot_id": snapshot_id, "session_date": session_date.isoformat(),
+                  "captured_at": capture.isoformat(), "nav": str(nav), "external_flow": str(flow)}
+        self._validate_and_commit(record)
+        return next(row for row in self._nav_snapshots if row["snapshot_id"] == snapshot_id)
+
     def record_fee(self, fee_id: str, amount: Decimal) -> None:
         fee = Decimal(amount)
         if not fee_id or not fee.is_finite() or fee <= 0:
@@ -405,6 +482,74 @@ class PaperAccount:
         if current is None or observed_at >= current[1]:
             self._marks[r["symbol"]] = (price, observed_at, mark_id)
         self._mark_ids[mark_id] = content
+
+    def _apply_external_flow(self, r: dict, *, post_to_oms: bool) -> None:
+        flow_id, amount = r["flow_id"], Decimal(r["amount"])
+        occurred_at = datetime.fromisoformat(r["occurred_at"])
+        if (not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", flow_id or "") or not isinstance(r.get("reference"), str)
+                or not amount.is_finite() or amount == 0 or occurred_at.tzinfo is None
+                or occurred_at.utcoffset() is None or not r["reference"].strip()):
+            raise PaperAccountError("durable external flow is invalid")
+        occurred_at = occurred_at.astimezone(timezone.utc)
+        content = (str(amount), occurred_at.isoformat(), r["reference"])
+        if flow_id in self._flow_ids:
+            if self._flow_content[flow_id] != content:
+                raise PaperAccountError(f"external flow id {flow_id} reused with different content")
+            return
+        if self._nav_snapshots and occurred_at <= datetime.fromisoformat(self._nav_snapshots[-1]["captured_at"]):
+            raise PaperAccountError("late external flow cannot rewrite an already captured NAV date")
+        if self._last_flow_at is not None and occurred_at < self._last_flow_at:
+            raise PaperAccountError("external flows must be recorded in effective-time order")
+        magnitude = Money.of(abs(amount), self.currency)
+        if amount > 0:
+            entries = (Entry(f"cash:{self.account_id}", DEBIT, magnitude),
+                       Entry(f"external_flows:{self.account_id}", CREDIT, magnitude))
+        else:
+            entries = (Entry(f"external_flows:{self.account_id}", DEBIT, magnitude),
+                       Entry(f"cash:{self.account_id}", CREDIT, magnitude))
+        self.ledger.post(Transaction(f"external-flow:{flow_id}", entries))
+        if post_to_oms:
+            self.oms.apply_cash_adjustment(self.account_id, amount, adjustment_id=f"external-flow:{flow_id}")
+        self._flow_ids.add(flow_id)
+        self._flow_content[flow_id] = content
+        self._external_flows.append({"flow_id": flow_id, "amount": str(amount), "occurred_at": occurred_at.isoformat(),
+                                     "reference": r["reference"]})
+        self._flow_since_snapshot += amount
+        self._last_flow_at = occurred_at
+
+    def _apply_nav_snapshot(self, r: dict) -> None:
+        session_day = date.fromisoformat(r["session_date"])
+        captured_at = datetime.fromisoformat(r["captured_at"])
+        nav, external_flow = Decimal(r["nav"]), Decimal(r["external_flow"])
+        if (captured_at.tzinfo is None or captured_at.utcoffset() is None
+                or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", r["snapshot_id"])
+                or not nav.is_finite() or nav <= 0 or not external_flow.is_finite()
+                or session_day.isoformat() != r["session_date"]):
+            raise PaperAccountError("durable NAV snapshot is invalid")
+        capture_utc = captured_at.astimezone(timezone.utc)
+        content = (r["session_date"], capture_utc.isoformat(), str(nav), str(external_flow))
+        prior = self._nav_snapshot_ids.get(r["snapshot_id"])
+        if prior is not None:
+            if prior != content:
+                raise PaperAccountError(f"NAV snapshot id {r['snapshot_id']} reused with different content")
+            return
+        if self._nav_snapshots:
+            previous = self._nav_snapshots[-1]
+            if (session_day.isoformat() <= previous["session_date"]
+                    or capture_utc <= datetime.fromisoformat(previous["captured_at"])):
+                raise PaperAccountError("NAV snapshots must advance by session date and capture time")
+        if (any(marked_at > capture_utc for _, marked_at, _ in self._marks.values())
+                or self._last_flow_at is not None and self._last_flow_at > capture_utc):
+            raise PaperAccountError("NAV snapshot includes a future mark or external flow")
+        if nav != self.equity:
+            raise PaperAccountError("NAV snapshot does not match account cash and marked positions")
+        if external_flow != self._flow_since_snapshot:
+            raise PaperAccountError("NAV snapshot external flow does not reconcile since prior snapshot")
+        row = {"snapshot_id": r["snapshot_id"], "session_date": session_day.isoformat(),
+               "captured_at": capture_utc.isoformat(), "nav": str(nav), "external_flow": str(external_flow)}
+        self._nav_snapshots.append(row)
+        self._nav_snapshot_ids[r["snapshot_id"]] = content
+        self._flow_since_snapshot = Decimal(0)
 
     def _apply_fee(self, r: dict, *, post_to_oms: bool) -> None:
         fee_id, amount = r["fee_id"], Decimal(r["amount"])
