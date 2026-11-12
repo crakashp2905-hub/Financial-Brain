@@ -18,7 +18,7 @@ OUT_REL = "docs/forward-edge/strategy-eligibility.json"
 def build(repo_root: Path) -> dict:
     root = Path(repo_root)
     entries = []
-    for i, line in enumerate(l for l in (root / LEDGER_REL).read_text(encoding="utf-8").splitlines() if l.strip()):
+    for line in (l for l in (root / LEDGER_REL).read_text(encoding="utf-8").splitlines() if l.strip()):
         row = json.loads(line)
         if row.get("kind") != "trial":
             continue
