@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from datetime import date, datetime, timezone
 
 import pytest
 
 from financial_brain.kernel.oms import InsufficientCash, OmsError, State
-from financial_brain.kernel.paper_account import PaperAccount, PaperAccountError
+from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount, PaperAccountError
 
 
 def _buy(book: PaperAccount, client_id: str = "buy-1", quantity: int = 10) -> None:
@@ -111,4 +112,59 @@ def test_conflicting_client_fill_and_fee_ids_are_refused(tmp_path) -> None:
     book.record_fee("fee", Decimal("1"))
     with pytest.raises(PaperAccountError, match="fee id"):
         book.record_fee("fee", Decimal("2"))
+
+
+def test_effective_fee_schedule_uses_filled_notional_and_reconciles_nav(tmp_path) -> None:
+    path = tmp_path / "fee-nav.jsonl"
+    schedule = FeeSchedule(
+        "owner-rate-v1", date(2026, 11, 12), Decimal("10"), Decimal("20"),
+    )
+    book = PaperAccount(path, account_id="nav", initial_cash=Decimal("10000"), fee_schedule=schedule)
+    book.submit_intent(
+        client_id="buy", symbol="NSE:ABC", side="BUY", quantity=10,
+        limit=Decimal("100"), reserve=Decimal("1001"),
+    )
+    book.move("buy", State.SUBMITTED)
+    book.move("buy", State.ACCEPTED)
+    before = book.journal.seq
+    with pytest.raises(PaperAccountError, match="not yet effective"):
+        book.record_fill("buy", fill_id="too-early", quantity=10, price=Decimal("90"),
+                         filled_on=date(2026, 11, 11))
+    assert book.journal.seq == before
+
+    book.record_fill("buy", fill_id="buy-fill", quantity=10, price=Decimal("90"),
+                     filled_on=date(2026, 11, 12))
+    assert book.cash == Decimal("9099.10")  # 900 notional + 0.90 fee
+    book.record_mark("NSE:ABC", mark_id="mark-new", price=Decimal("100"),
+                     observed_at=datetime(2026, 11, 12, 10, tzinfo=timezone.utc))
+    book.record_mark("NSE:ABC", mark_id="mark-old", price=Decimal("1"),
+                     observed_at=datetime(2026, 11, 12, 9, tzinfo=timezone.utc))
+    assert book.equity == Decimal("10099.10")
+    assert book.net_pnl == Decimal("99.10")
+
+    book.submit_intent(
+        client_id="sell", symbol="NSE:ABC", side="SELL", quantity=10,
+        limit=Decimal("110"), reserve=Decimal("0"),
+    )
+    book.move("sell", State.SUBMITTED)
+    book.move("sell", State.ACCEPTED)
+    book.record_fill("sell", fill_id="sell-fill", quantity=10, price=Decimal("110"),
+                     filled_on=date(2026, 11, 12))
+    assert book.cash == Decimal("10196.90")  # 1100 proceeds less 2.20 fee
+    assert book.realized_pnl == Decimal("200")
+    assert book.fees == Decimal("3.10")
+    assert book.net_realized_pnl == Decimal("196.90")
+    assert book.equity == Decimal("10196.90")
+    assert book.net_pnl == Decimal("196.90")
+    assert book.ledger.balance("cash:nav", "INR") == book.cash
+    assert book.ledger.trial_balance_ok()
+
+    reopened = PaperAccount(path, account_id="nav", initial_cash=Decimal("10000"))
+    assert reopened.fee_schedule == schedule
+    assert reopened.cash == book.cash
+    assert reopened.fees == book.fees
+    assert reopened.equity == book.equity
+    with pytest.raises(PaperAccountError, match="fee schedule"):
+        PaperAccount(path, account_id="nav", initial_cash=Decimal("10000"),
+                     fee_schedule=FeeSchedule("other", date(2026, 11, 12), Decimal("10"), Decimal("20")))
 
