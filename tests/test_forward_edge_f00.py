@@ -15,6 +15,7 @@ import pytest
 
 from financial_brain.forward_edge import approvals as A
 from financial_brain.forward_edge import audit, baseline, charter, custody, modes, trials
+from financial_brain.forward_edge.decision_custody import Cohort, CohortSchedule
 from financial_brain.forward_edge.modes import ComplianceRecord, Mode, ModeError, SessionMode
 
 REPO = Path(__file__).resolve().parents[1]
@@ -28,6 +29,24 @@ def _approval(kind: str = "PROTECTED_TRIAL", *, actor_id: str = "owner:akash", a
     return A.Approval(kind=kind, subject=subject, scope_sha256=scope, actor_id=actor_id, actor_type=actor_type,
                       approved_at_utc=valid_from or NOW - timedelta(hours=1),
                       expires_at_utc=valid_to or NOW + timedelta(days=1), adr_ref=adr)
+
+
+def _protected_charter(name: str, start: date) -> tuple[charter.ExperimentCharter, CohortSchedule]:
+    identity = charter.EvaluationIdentity(
+        strategy_code_sha256=SHA, model_code_sha256="b" * 64, data_snapshot_sha256="c" * 64,
+        data_rights_id="owner-kite-api", data_rights_sha256="d" * 64,
+        market_calendar_id="NSE-CASH-v1", market_calendar_sha256="e" * 64,
+        universe_sha256="f" * 64, execution_cost_id="owner-costs-v1", execution_cost_sha256="1" * 64,
+        benchmarks=(("NIFTY50_CASH", "2" * 64),),
+    )
+    charter_value = charter.ExperimentCharter(
+        charter_id=name, version=1, strategy_id=name, code_sha256=SHA, capital_inr="1000000",
+        start_on=start.isoformat(), end_on=(start + timedelta(days=30)).isoformat(),
+        universe=("INFY", "TCS"), benchmarks=("NIFTY50_CASH",), horizon_sessions=5,
+        evaluation_identity=identity,
+    )
+    cohort = Cohort("C1", start.isoformat(), (start + timedelta(days=4)).isoformat())
+    return charter_value, CohortSchedule(charter_value.sha256(), (cohort,))
 
 
 # ---------- FE-0001 baseline ----------
@@ -94,14 +113,18 @@ def test_new_protected_trial_refused_when_budget_is_spent() -> None:
                                                   approvals=(), now=NOW, scope_sha256=SHA)
 
 
-def test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval() -> None:
+def test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval(tmp_path) -> None:
     only_trial = (_approval("PROTECTED_TRIAL", subject="M9"),)
     with pytest.raises(trials.TrialGovernanceError, match="TRIAL_BUDGET_AMENDMENT"):
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
                                                   approvals=only_trial, now=NOW, scope_sha256=SHA)
     both = only_trial + (_approval("TRIAL_BUDGET_AMENDMENT", subject="M9"),)
+    spec, cohort_schedule = _protected_charter("M9", date(2026, 11, 10))
+    both = tuple(_approval(a.kind, subject="M9", scope=spec.sha256()) for a in both)
     status = trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
-                                                       approvals=both, now=NOW, scope_sha256=SHA)
+                                                       approvals=both, now=NOW, scope_sha256=spec.sha256(), charter=spec,
+                                                       cohort_schedule=cohort_schedule,
+                                                       charter_registry=charter.CharterRegistry(tmp_path / "m9.jsonl"))
     assert status.exhausted
 
 
@@ -113,11 +136,25 @@ def test_agent_cannot_authorize_a_protected_trial() -> None:
                                                   approvals=agent, now=NOW, scope_sha256=SHA)
 
 
-def test_trial_in_2027q1_needs_only_a_protected_trial_approval() -> None:
+def test_trial_in_2027q1_needs_only_a_protected_trial_approval(tmp_path) -> None:
+    spec, cohort_schedule = _protected_charter("M1-2027", date(2027, 1, 15))
     ok = trials.assert_new_protected_trial_allowed(
         REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
-        approvals=(_approval("PROTECTED_TRIAL", subject="M1-2027"),), now=NOW, scope_sha256=SHA)
+        approvals=(_approval("PROTECTED_TRIAL", subject="M1-2027", scope=spec.sha256()),), now=NOW,
+        scope_sha256=spec.sha256(), charter=spec, cohort_schedule=cohort_schedule,
+        charter_registry=charter.CharterRegistry(tmp_path / "m1.jsonl"))
     assert ok.spent == 13  # the 2026Q4 count is not the 2027Q1 budget
+
+
+def test_protected_trial_cannot_register_without_full_identity_registry(tmp_path) -> None:
+    spec, cohort_schedule = _protected_charter("M9", date(2026, 11, 10))
+    with pytest.raises(trials.TrialGovernanceError, match="durable registry"):
+        trials.assert_new_protected_trial_allowed(
+            REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
+            approvals=(_approval("PROTECTED_TRIAL", subject="M9", scope=spec.sha256()),
+                       _approval("TRIAL_BUDGET_AMENDMENT", subject="M9", scope=spec.sha256())),
+            now=NOW, scope_sha256=spec.sha256(), charter=spec, cohort_schedule=cohort_schedule,
+        )
 
 
 # ---------- FE-0004 hashable charter ----------

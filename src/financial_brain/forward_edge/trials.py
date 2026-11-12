@@ -14,6 +14,8 @@ from datetime import date, datetime
 from pathlib import Path
 
 from financial_brain.forward_edge.approvals import Approval, ApprovalError, validate_approval
+from financial_brain.forward_edge.charter import CharterError, CharterRegistry, ExperimentCharter
+from financial_brain.forward_edge.decision_custody import CohortSchedule
 
 LEDGER_REL = "docs/trials/ledger.jsonl"
 PINS_REL = "docs/forward-edge/protected-pins.json"
@@ -76,6 +78,9 @@ def assert_new_protected_trial_allowed(
     approvals: tuple[Approval, ...] = (),
     now: datetime,
     scope_sha256: str,
+    charter: ExperimentCharter | None = None,
+    cohort_schedule: CohortSchedule | None = None,
+    charter_registry: CharterRegistry | None = None,
 ) -> BudgetStatus:
     """Raise :class:`TrialGovernanceError` unless a new protected trial has explicit, valid, human authority."""
     if not trial_name.strip():
@@ -95,6 +100,15 @@ def assert_new_protected_trial_allowed(
             raise TrialGovernanceError(f"{kind} rejected: {exc}") from exc
         if not matches[-1].adr_ref:
             raise TrialGovernanceError(f"{kind} must reference the governing ADR")
+    if charter is None or cohort_schedule is None or charter_registry is None:
+        raise TrialGovernanceError("protected trial needs a complete charter, frozen cohort schedule and durable registry")
+    if charter.charter_id != trial_name or charter.sha256() != scope_sha256:
+        raise TrialGovernanceError("approval scope must be the exact content hash of the named evaluation charter")
+    try:
+        charter.require_evaluation_identity()
+        charter_registry.register(charter, cohort_schedule)
+    except CharterError as exc:
+        raise TrialGovernanceError(f"evaluation identity rejected: {exc}") from exc
     return status
 
 
