@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from decimal import Decimal
 
 import pytest
@@ -111,4 +112,47 @@ def test_conflicting_client_fill_and_fee_ids_are_refused(tmp_path) -> None:
     book.record_fee("fee", Decimal("1"))
     with pytest.raises(PaperAccountError, match="fee id"):
         book.record_fee("fee", Decimal("2"))
+
+
+def test_randomized_partial_fill_cancel_sequences_preserve_buying_power(tmp_path) -> None:
+    for seed in range(12):
+        rng = random.Random(seed)
+        cash = Decimal("100000")
+        quantity = rng.randint(3, 18)
+        limit = Decimal(rng.randint(30, 250))
+        path = tmp_path / f"random-{seed}.jsonl"
+        book = PaperAccount(path, account_id=f"seed-{seed}", initial_cash=cash)
+        book.submit_intent(
+            client_id="buy", symbol="NSE:ABC", side="BUY", quantity=quantity,
+            limit=limit, reserve=limit * quantity,
+        )
+        book.move("buy", State.SUBMITTED)
+        book.move("buy", State.ACCEPTED)
+        remaining = quantity
+        fill_no = 0
+        while remaining:
+            fill_qty = rng.randint(1, remaining)
+            price = limit - Decimal(rng.randint(0, 5))
+            book.record_fill(
+                "buy", fill_id=f"fill-{fill_no}", quantity=fill_qty, price=price,
+            )
+            remaining -= fill_qty
+            fill_no += 1
+            assert book.cash >= 0
+            assert book.oms.reserved(book.account_id) >= 0
+            assert book.available_cash >= 0
+            assert book.cash <= cash
+            if remaining and rng.random() < 0.4:
+                book.move("buy", State.CANCEL_PENDING)
+                book.move("buy", State.CANCELED)
+                remaining = 0
+            assert book.ledger.balance(f"cash:{book.account_id}", "INR") == book.cash
+        assert book.oms.order("buy").reserved == 0
+        assert book.oms.reserved(book.account_id) == 0
+        assert book.ledger.trial_balance_ok()
+
+        reopened = PaperAccount(path, account_id=f"seed-{seed}", initial_cash=cash)
+        assert reopened.cash == book.cash
+        assert reopened.available_cash >= 0
+        assert reopened.oms.order("buy").state == book.oms.order("buy").state
 
