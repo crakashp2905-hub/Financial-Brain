@@ -65,6 +65,21 @@ def decision_visible(event: NormalizedEvent, decision_utc: datetime) -> bool:
     return _aware(event.available_utc, "a") <= _aware(decision_utc, "decision")
 
 
+def executable_quote(event: NormalizedEvent) -> tuple[bool, str]:
+    """Return whether normalized quote evidence contains a valid two-sided displayed market."""
+    payload = dict(event.payload)
+    if event.kind != "QUOTE":
+        return False, "NOT_A_QUOTE"
+    try:
+        bid, ask = float(payload["bid_price"]), float(payload["ask_price"])
+        bid_qty, ask_qty = int(payload["bid_qty"]), int(payload["ask_qty"])
+    except (KeyError, TypeError, ValueError):
+        return False, "LTP_ONLY_OR_MISSING_DEPTH"
+    if bid <= 0 or ask < bid or ask_qty <= 0 or bid_qty <= 0:
+        return False, "INVALID_OR_EMPTY_BOOK"
+    return True, "EXECUTABLE_TOP_OF_BOOK"
+
+
 # ---- calendar (FE-0034) ----
 
 @dataclass(frozen=True)

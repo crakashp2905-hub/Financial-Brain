@@ -14,6 +14,8 @@ does not mistake it for confirmation.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime, time, timedelta, timezone
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -88,13 +90,41 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
         if stamp.tzinfo is None:
             stamp = stamp.replace(tzinfo=IST)
         payload = [("exchange", "NSE"), ("source", "kite_connect")]
+        raw_hash = hashlib.sha256(json.dumps(quote, sort_keys=True, separators=(",", ":"),
+                                          default=str).encode("utf-8")).hexdigest()
+        payload.append(("raw_sha256", raw_hash))
         if quote.get("last_price") is not None:
             payload.append(("last_price", str(quote["last_price"])))
+        depth = quote.get("depth")
+        buys = depth.get("buy", []) if isinstance(depth, dict) else []
+        sells = depth.get("sell", []) if isinstance(depth, dict) else []
+        best_bid = buys[0] if buys and isinstance(buys[0], dict) else {}
+        best_ask = sells[0] if sells and isinstance(sells[0], dict) else {}
+        payload.append(("quote_fidelity", "EXECUTABLE" if _valid_level(best_bid) and _valid_level(best_ask)
+                        else "LTP_ONLY"))
+        for side, level in (("bid", best_bid), ("ask", best_ask)):
+            if _valid_level(level):
+                payload.extend(((f"{side}_price", str(level["price"])),
+                                (f"{side}_qty", str(level["quantity"]))))
+        for key_name, source in (("volume", "volume"), ("session_high", "ohlc.high"),
+                                 ("session_low", "ohlc.low"), ("exchange_status", "mode")):
+            ohlc = quote.get("ohlc")
+            value = quote.get(source) if "." not in source else (
+                ohlc.get(source.split(".")[1]) if isinstance(ohlc, dict) else None)
+            if value is not None:
+                payload.append((key_name, str(value)))
         events.append(NormalizedEvent(
             kind="QUOTE", instrument=key, event_utc=stamp.astimezone(timezone.utc),
             received_utc=receipt, available_utc=receipt, payload=tuple(sorted(payload)),
         ))
     return events
+
+
+def _valid_level(level: dict) -> bool:
+    try:
+        return float(level["price"]) > 0 and int(level["quantity"]) > 0
+    except (KeyError, TypeError, ValueError):
+        return False
 
 
 def divergence(con, *, tolerance: float = 0.03) -> list[dict]:
