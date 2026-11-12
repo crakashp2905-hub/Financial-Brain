@@ -59,7 +59,7 @@ class Params:
     look_every: int = 5                  # nominate only at fixed looks (session 12, 17, 22, ...), not every night
     confirm_sessions: int = 20
     confirm_trades: int = 30
-    alpha_confirm: float = 0.05
+    alpha_confirm: float = 0.025         # set from the calibration null (docs/LEARNING-LOOP.md): 0 of 150 false confirmations
     expire_sessions: int = 60
     decay_window: int = 30
     decay_min_days: int = 10

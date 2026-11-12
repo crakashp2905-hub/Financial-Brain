@@ -50,12 +50,12 @@ A lesson claims: *"ORB trades taken against the market are worse than the other 
 "Worse than the rest of that day" makes it a cause and not a bystander: when one real effect exists every cell that overlaps it inherits a
 loss, and without this the first calibration run confirmed 29 lessons from one planted effect. "And loses" makes skipping it worth anything.
 
-1. **Nominate.** Each night every cell (strategy x dimension x value) with at least 12 sessions and 30 trades is examined on all sessions so
-   far: per-day contrast against the strategy's other trades that day, one-sided t, Benjamini-Hochberg across the cells of its family
+1. **Nominate.** At fixed looks (the 12th session, then every fifth) every cell (strategy x dimension x value) with at least 12 sessions
+   and 30 trades is examined on all sessions so far: per-day contrast against the strategy's other trades that day, one-sided t, Benjamini-Hochberg across the cells of its family
    (execution, market, setup, calendar), p <= 0.01, own loss of at least 10 bp. Overlapping candidates are pruned to the strongest. A
    nomination **freezes** the cell's definition and its discovery window.
 2. **Confirm, once, on fresh sessions.** Only sessions *after* the nomination count. After 20 of them and 30 trades in the cell it is decided
-   exactly once: CONFIRMED if the new contrast is negative with p <= 0.05 / (nominations at the same look) and the cell's own net is
+   exactly once: CONFIRMED if the new contrast is negative with p <= 0.025 / (nominations at the same look) and the cell's own net is
    negative, else REFUTED. The sample size that triggers the decision depends on how many trades arrived, never on how they came out, so
    the p-value means what it says. A cell that never collects the trades EXPIRES after 60 sessions.
 3. **Terminal.** Confirmed, refuted and expired are final. A refuted cell can only be nominated again from data after its decision: the same
@@ -63,16 +63,32 @@ loss, and without this the first calibration run confirmed 29 lessons from one p
 4. **Decay.** A standing lesson keeps being watched; if its last 30 sessions no longer show the loss it is marked DECAYING (an alert; nothing
    is retired by machine).
 
+A cell whose value is constant for a whole session (weekday, regime, VIX) cannot be compared with the rest of its own day, so it is
+   compared with the *other days* (Welch's one-sided t on day means).
+
 The first version re-split all sessions every night, so yesterday's confirmation data became tomorrow's discovery data and every night was
 another look at the same numbers. That design had no error rate anyone could state. This one does, and **measures it**.
 
 ### Calibration (`fb learn calibrate`)
 
-A loop that cannot state its own error rate is a story generator. Calibration runs the *same* protocol code over simulated histories built
-by resampling the real ledger's days (so cell sizes and trades per day are realistic) and reports: the **false-confirmation rate** with the
-outcomes replaced by noise with no relation to any context (demeaned, shuffled within each day, sign-flipped by day), and the **power** and
-time-to-confirm with a loss of 20, 40 and 60 bp planted in one cell. The thresholds in `Params` were set from the null, which carries no
-effects and so cannot overfit one. The latest result is in `fb learn status`.
+A loop that cannot state its own error rate is a story generator. Calibration runs the *same* protocol code over simulated 80-session histories
+built by resampling the real ledger's days (so cell sizes and trades per day are realistic) and reports the **false-confirmation rate** with
+the outcomes replaced by noise with no relation to any context (demeaned, shuffled within each day, sign-flipped by day), and the **power**
+with a loss of 30 and 40 bp planted in one cell. The thresholds in `Params` were set from the null, which carries no effects and so cannot
+overfit one. The first audit of the first design is why the thresholds are what they are:
+
+| design (real ledger of 13 sessions, 100-150 histories) | false confirmation | nominations per history | confirmed when -30 bp | when -40 bp |
+|---|---|---|---|---|
+| nominate every night, p <= 0.01, confirm at 0.05 | 6.0% | 1.38 | 60% | 83% |
+| nominate every night, confirm at 0.025 | 1.0% | 1.38 | 50% | 78% |
+| nominate at fixed looks, p <= 0.01, confirm at 0.05 | 2.7% | 1.06 | 60% | 84% |
+| nominate at fixed looks, p <= 0.005, confirm at 0.05 | 0.7% | 0.69 | 53% | 79% |
+| **nominate at fixed looks, p <= 0.01, confirm at 0.025 (chosen)** | **0.0% (0 of 150)** | 1.06 | 52% | 77% |
+
+Fixed looks alone cut the false-confirmation rate from 6% to 2.7% at no cost in power: the same data is examined a counted number of times
+instead of once a night. The audit also measured the limit of what 80 sessions can see: a loss of 20 bp a trade is found about a fifth of the
+time, 40 bp about three times in four. Re-run it as the ledger grows (the real ledger has only 13 distinct days to resample today, so the noise
+in these estimates is itself an estimate). The latest result is in `fb learn status`.
 
 ## 4. Decide: a person, and only a person
 
