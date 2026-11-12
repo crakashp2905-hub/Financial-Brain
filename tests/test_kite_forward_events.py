@@ -70,3 +70,21 @@ def test_crossed_or_empty_depth_is_not_executable():
             "buy": [{"price": 101, "quantity": 5}], "sell": [{"price": 100, "quantity": 5}]}}
     }, received_at=RECEIPT)
     assert executable_quote(event) == (False, "INVALID_OR_EMPTY_BOOK")
+
+
+def test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows():
+    rejected = []
+    events = forward_events(
+        ["INFY", "TCS"],
+        quote_fn=lambda *_: {
+            "NSE:INFY": {"timestamp": "2026-11-12 09:29:59", "last_price": 1500},
+            "NSE:TCS": {"timestamp": "invalid", "last_price": 3500},
+        },
+        received_at=RECEIPT,
+        rejections_out=rejected,
+    )
+    assert [event.instrument for event in events] == ["NSE:INFY"]
+    assert len(rejected) == 1
+    assert rejected[0]["instrument"] == "NSE:TCS"
+    assert rejected[0]["reason"] == "INVALID_EXCHANGE_TIMESTAMP"
+    assert len(rejected[0]["event_sha256"]) == 64
