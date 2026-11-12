@@ -23,6 +23,10 @@ class RunnerError(ValueError):
     """Invalid session identity, transition, event order, or adapter result."""
 
 
+class ExecutionOutcomeUnknown(RunnerError):
+    """A durable outbox intent has no execution receipt and needs explicit reconciliation."""
+
+
 STATE_MACHINE_VERSION = "forward-session-v1"
 STATE_ORDER = ("PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED")
 TERMINAL_STATES = frozenset({"CLOSED", "INCOMPLETE", "REJECTED"})
@@ -186,7 +190,8 @@ class ForwardSessionRunner:
             decision_at: datetime,
             decision_fn: Callable[[list[NormalizedEvent]], dict],
             risk_fn: Callable[[dict], dict],
-            execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict]) -> dict:
+            execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
+            reconcile_execution_fn: Callable[[str], dict] | None = None) -> dict:
         from financial_brain.forward_edge.market_data import decision_visible
 
         visible_at = self._utc(decision_at)
@@ -253,29 +258,120 @@ class ForwardSessionRunner:
         else:
             intent_id = hashlib.sha256(f"{config.session_id}:{config.sha256}".encode()).hexdigest()
             prior_execution = next((r["execution"] for r in reversed(existing)
-                                    if r.get("t") == "PAPER_EXECUTION"), None)
+                                    if r.get("t") == "PAPER_EXECUTION" and r.get("intent_id") == intent_id), None)
+            has_prior_attempt = any(r.get("t") in {"OUTBOX_PENDING", "OUTBOX_UNKNOWN", "OUTBOX_RECONCILED"}
+                                    and r.get("intent_id") == intent_id for r in existing)
             if prior_execution is None:
-                if not any(r.get("t") == "OUTBOX_PENDING" and r.get("intent_id") == intent_id
-                           for r in existing):
+                if not has_prior_attempt:
                     journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
                                     "intent_id": intent_id})
-                execution = execution_fn(decision, intent_id, observed)
+                    execution = self._execute_with_receipt(journal, config.session_id, decision,
+                                                           intent_id, observed, execution_fn)
+                else:
+                    if reconcile_execution_fn is None:
+                        journal.append({"t": "OUTBOX_UNKNOWN", "session_id": config.session_id,
+                                        "intent_id": intent_id, "reason": "RESTART_REQUIRES_RECONCILIATION"})
+                        raise ExecutionOutcomeUnknown(
+                            f"execution {intent_id} has no durable receipt; reconcile before retry or close")
+                    reconciliation = reconcile_execution_fn(intent_id)
+                    if not isinstance(reconciliation, dict) or reconciliation.get("status") not in {
+                        "APPLIED", "NOT_APPLIED"
+                    } or not reconciliation.get("reconciliation_id"):
+                        raise RunnerError("execution reconciliation must identify APPLIED/NOT_APPLIED and a receipt")
+                    state = reconciliation["status"]
+                    journal.append({"t": "OUTBOX_RECONCILED", "session_id": config.session_id,
+                                    "intent_id": intent_id, "status": state,
+                                    "reconciliation_id": str(reconciliation["reconciliation_id"])})
+                    if state == "APPLIED":
+                        reconciled_execution = reconciliation.get("execution")
+                        if not isinstance(reconciled_execution, dict):
+                            raise RunnerError("APPLIED reconciliation must include a simulation receipt")
+                        execution = reconciled_execution
+                        self._validate_execution_receipt(execution)
+                        self._persist_execution_and_ack(journal, config.session_id, intent_id, execution)
+                    else:
+                        execution = self._execute_with_receipt(journal, config.session_id, decision,
+                                                               intent_id, observed, execution_fn)
             else:
                 execution = prior_execution
-            if not isinstance(execution, dict):
-                raise RunnerError("paper execution adapter must return a dictionary")
-            if prior_execution is None:
-                journal.append({"t": "PAPER_EXECUTION", "session_id": config.session_id,
-                                "intent_id": intent_id, "execution": execution})
-                journal.append({"t": "OUTBOX_ACK", "session_id": config.session_id,
-                                "intent_id": intent_id, "execution_sha256": hashlib.sha256(
-                                    json.dumps(execution, sort_keys=True, separators=(",", ":")).encode()).hexdigest()})
+                self._validate_execution_receipt(execution)
+                if not any(r.get("t") == "OUTBOX_ACK" and r.get("intent_id") == intent_id for r in existing):
+                    self._persist_ack(journal, config.session_id, intent_id, execution)
             result.update({"status": "PAPER_COMPLETE", "intent_id": intent_id, "execution": execution})
         result["closed_at_utc"] = datetime.now(timezone.utc).isoformat()
         if risk["approved"]:
             self._ensure_state(journal, config.session_id, "CLOSED")
         journal.append({"t": "SESSION_CLOSED", "session_id": config.session_id, "result": result})
         return result
+
+    @classmethod
+    def _execute_with_receipt(cls, journal: DurableJournal, session_id: str, decision: dict,
+                              intent_id: str, events: list[NormalizedEvent],
+                              execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict]) -> dict:
+        try:
+            execution = execution_fn(decision, intent_id, events)
+            cls._validate_execution_receipt(execution)
+        except Exception as exc:
+            journal.append({"t": "OUTBOX_UNKNOWN", "session_id": session_id,
+                            "intent_id": intent_id, "reason": type(exc).__name__})
+            raise
+        cls._persist_execution_and_ack(journal, session_id, intent_id, execution)
+        return execution
+
+    @staticmethod
+    def _validate_execution_receipt(execution: object) -> None:
+        if not isinstance(execution, dict):
+            raise RunnerError("paper execution adapter must return a dictionary receipt")
+        if not isinstance(execution.get("receipt_id"), str) or not execution["receipt_id"].strip():
+            raise RunnerError("paper execution result needs a non-empty simulated receipt_id")
+        if execution.get("fidelity") not in {"SIMULATED_QUOTE", "SIMULATED_BAR"}:
+            raise RunnerError("paper execution receipt must declare simulated quote or bar fidelity")
+        status = execution.get("status", execution.get("state"))
+        if status not in {"FILLED", "PARTIAL", "MISSED", "REJECTED", "NO_TRADE"}:
+            raise RunnerError("paper execution receipt needs a recognized outcome status")
+        fills = execution.get("fills", [])
+        if status in {"FILLED", "PARTIAL"}:
+            if not isinstance(fills, list) or not fills:
+                raise RunnerError("filled execution receipt needs one or more observed fills")
+            for fill in fills:
+                if not isinstance(fill, dict) or not isinstance(fill.get("fill_id"), str) or not fill["fill_id"].strip():
+                    raise RunnerError("each simulated fill needs a stable fill_id")
+                quantity = fill.get("quantity")
+                if type(quantity) is not int or quantity <= 0:
+                    raise RunnerError("simulated fill quantity must be a positive integer")
+                try:
+                    price = Decimal(str(fill.get("price")))
+                except (InvalidOperation, ValueError) as exc:
+                    raise RunnerError("simulated fill price must be positive and finite") from exc
+                if not price.is_finite() or price <= 0:
+                    raise RunnerError("simulated fill price must be positive and finite")
+        elif fills not in (None, []):
+            raise RunnerError("non-filled execution outcome cannot contain fills")
+        try:
+            json.dumps(execution, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise RunnerError("paper execution receipt must be finite JSON data") from exc
+
+    @classmethod
+    def _persist_execution_and_ack(cls, journal: DurableJournal, session_id: str,
+                                   intent_id: str, execution: dict) -> None:
+        cls._validate_execution_receipt(execution)
+        if not any(r.get("t") == "PAPER_EXECUTION" and r.get("intent_id") == intent_id
+                   for r in journal.records()):
+            journal.append({"t": "PAPER_EXECUTION", "session_id": session_id,
+                            "intent_id": intent_id, "execution": execution})
+        cls._persist_ack(journal, session_id, intent_id, execution)
+
+    @staticmethod
+    def _persist_ack(journal: DurableJournal, session_id: str, intent_id: str, execution: dict) -> None:
+        records = journal.records()
+        if any(r.get("t") == "OUTBOX_ACK" and r.get("intent_id") == intent_id for r in records):
+            return
+        digest = hashlib.sha256(json.dumps(
+            execution, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+        journal.append({"t": "OUTBOX_ACK", "session_id": session_id,
+                        "intent_id": intent_id, "execution_sha256": digest,
+                        "receipt_id": execution["receipt_id"]})
 
     @staticmethod
     def _utc(value: datetime) -> datetime:
