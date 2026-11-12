@@ -149,14 +149,15 @@
         "tests/test_kernel_oms.py"
       ],
       "tests": [
+        "test_randomized_partial_fill_cancel_sequences_preserve_buying_power",
         "test_sell_reservations_prevent_overselling_and_release_on_cancel",
         "test_cash_adjustment_is_idempotent_and_preserves_reservations",
         "test_two_orders_cannot_spend_the_same_cash",
         "test_full_lifecycle_releases_reservation"
       ],
-      "test_result": "32 focused account, OMS, and ledger tests passed; full Windows suite: 3278 passed, 1 skipped; Ruff and mypy passed",
+      "test_result": "16 focused account and OMS tests pass, including deterministic randomized partial-fill/cancel sequences across 12 seeds; Ruff and mypy pass. The preceding Windows baseline suite passed 3278 tests with 1 skipped.",
       "evidence_sha256": null,
-      "blockers": ["randomized partial-fill/cancel sequence acceptance test and cross-asset margin reservations remain"]
+      "blockers": ["cross-asset margin reservations, multi-book allocation, and full fee-buffer calibration remain"]
     },
     {
       "id": "PE-0092",
