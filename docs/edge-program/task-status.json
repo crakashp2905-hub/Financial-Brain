@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 20,
-  "unrecorded_tasks": 198,
+  "recorded_tasks": 21,
+  "unrecorded_tasks": 197,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -377,6 +377,15 @@
       "test_result": "The Q4 2026 13/13 budget refuses a protected cohort without both a human trial approval and governance amendment. Prospective cohorts require exact charter-hash approval and full identity/schedule/durable registry; a direct regression confirms no unapproved cohort is appended. The next research window still requires human approval.",
       "evidence_sha256": null,
       "blockers": []
+    },
+    {
+      "id": "PE-0116",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/forward_edge/exclusions.py", "src/financial_brain/forward_edge/approvals.py", "docs/edge-program/exclusion-review-contract.md"],
+      "tests": ["test_exclusion_requires_a_distinct_scoped_human_reviewer_and_recovers", "test_discretionary_exclusion_or_nonindependent_review_is_rejected", "test_excluded_date_stays_in_fixed_denominator_and_adverse_sensitivity", "test_unreviewed_missing_dates_remain_in_denominator_and_get_adverse_sensitivity", "test_observed_and_excluded_same_date_is_rejected"],
+      "test_result": "A durable append-only log allows only source/timestamp/schema corruption reasons, requires a second distinct human approval scoped to the exact request, revalidates on restart, and refuses outcome edits. Sensitivity reports retain every scheduled day, show approved exclusions and unresolved missing days, include fixed-denominator zero-fill and -100% adverse cases, and disable promotion when exclusions or missing dates exist. Eight focused tests pass.",
+      "evidence_sha256": null,
+      "blockers": ["Reviewer actor IDs and human status are supplied by the caller; production identity/authentication must independently verify the reviewer before this can be treated as externally independent review"]
     }
   ]
 }
