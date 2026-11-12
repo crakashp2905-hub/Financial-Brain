@@ -29,6 +29,9 @@ class ForwardRunConfig:
     exchange_date: str
     cohort_id: str
     strategy_sha256: str
+    risk_policy_sha256: str
+    constraints_sha256: str
+    ledger_id: str
     benchmark_id: str
     instruments: tuple[str, ...]
     capital_inr: str
@@ -36,8 +39,10 @@ class ForwardRunConfig:
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
-                    self.capital_inr, self.instruments)):
+                    self.capital_inr, self.instruments, self.ledger_id)):
             raise RunnerError("run identity, instruments, benchmark and capital are required")
+        if len(set(self.instruments)) != len(self.instruments) or any(not i for i in self.instruments):
+            raise RunnerError("instruments must be nonempty and unique")
         if self.mode not in (Mode.LIVE_PAPER, Mode.SHADOW, Mode.RESEARCH_REPLAY):
             raise RunnerError("forward runner only accepts replay, shadow, or paper mode")
         try:
@@ -48,15 +53,20 @@ class ForwardRunConfig:
                 raise ValueError
         except (ValueError, InvalidOperation) as exc:
             raise RunnerError("exchange_date and capital must be canonical date and positive finite amount") from exc
-        try:
-            if len(self.strategy_sha256) != 64 or int(self.strategy_sha256, 16) < 0:
-                raise ValueError
-        except ValueError as exc:
-            raise RunnerError("strategy_sha256 must be a SHA-256 hex digest") from exc
+        for name, value in (("strategy_sha256", self.strategy_sha256),
+                            ("risk_policy_sha256", self.risk_policy_sha256),
+                            ("constraints_sha256", self.constraints_sha256)):
+            try:
+                if len(value) != 64 or int(value, 16) < 0:
+                    raise ValueError
+            except ValueError as exc:
+                raise RunnerError(f"{name} must be a SHA-256 hex digest") from exc
         return {"session_id": self.session_id, "exchange_date": self.exchange_date,
                 "cohort_id": self.cohort_id, "strategy_sha256": self.strategy_sha256,
+                "risk_policy_sha256": self.risk_policy_sha256,
+                "constraints_sha256": self.constraints_sha256, "ledger_id": self.ledger_id,
                 "benchmark_id": self.benchmark_id, "instruments": sorted(set(self.instruments)),
-                "capital_inr": self.capital_inr, "mode": self.mode.value}
+                "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value}
 
     @property
     def sha256(self) -> str:
@@ -83,6 +93,7 @@ class ForwardSessionRunner:
         from financial_brain.forward_edge.market_data import decision_visible
 
         plan = config.canonical()
+        visible_at = self._utc(decision_at)
         journal = DurableJournal(self.journal_path)
         records = journal.records()
         existing = [r for r in records if r.get("session_id") == config.session_id]
@@ -90,6 +101,9 @@ class ForwardSessionRunner:
             planned = next((r for r in existing if r.get("t") == "SESSION_PLAN"), None)
             if planned is None or planned.get("config_sha256") != config.sha256:
                 raise RunnerError("session id already exists with different or incomplete configuration")
+            prior_decision = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
+            if prior_decision is not None and prior_decision.get("decision_at_utc") != visible_at.isoformat():
+                raise RunnerError("session id already has a different decision timestamp")
             closed = next((r for r in reversed(existing) if r.get("t") == "SESSION_CLOSED"), None)
             if closed is not None:
                 return closed["result"]
@@ -97,7 +111,6 @@ class ForwardSessionRunner:
             journal.append({"t": "SESSION_PLAN", "session_id": config.session_id,
                             "config": plan, "config_sha256": config.sha256})
 
-        visible_at = self._utc(decision_at)
         old_events = [r["event"] for r in existing if r.get("t") == "MARKET_EVENT"]
         prior_hashes = {r.get("event_sha256") for r in existing if r.get("t") == "MARKET_EVENT"}
         observed: list[NormalizedEvent] = [NormalizedEvent(
@@ -120,25 +133,32 @@ class ForwardSessionRunner:
             last_available = self._utc(event.available_utc)
         decision_events = [event for event in observed if decision_visible(event, visible_at)]
 
-        decision = next((r["decision"] for r in reversed(existing) if r.get("t") == "DECISION"), None)
+        decision_record = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
+        decision = decision_record["decision"] if decision_record is not None else None
+        if decision_record is not None and decision_record.get("decision_at_utc") != visible_at.isoformat():
+            raise RunnerError("session id already has a different decision timestamp")
         if decision is None:
             decision = decision_fn(decision_events)
-            if not isinstance(decision, dict):
-                raise RunnerError("decision adapter must return a dictionary")
+            if not isinstance(decision, dict) or decision.get("side") not in ("BUY", "SELL", "NONE", "NO_TRADE"):
+                raise RunnerError("decision adapter must return a dictionary with BUY, SELL, or NONE side")
             journal.append({"t": "DECISION", "session_id": config.session_id,
                             "decision_at_utc": visible_at.isoformat(), "decision": decision})
         risk = next((r["risk"] for r in reversed(existing) if r.get("t") == "RISK_VERDICT"), None)
         if risk is None:
             risk = risk_fn(decision)
-            if not isinstance(risk, dict) or "approved" not in risk:
-                raise RunnerError("risk adapter must return a dictionary with approved")
+            if not isinstance(risk, dict) or type(risk.get("approved")) is not bool:
+                raise RunnerError("risk adapter must return a dictionary with boolean approved")
             journal.append({"t": "RISK_VERDICT", "session_id": config.session_id, "risk": risk})
+        if type(risk.get("approved")) is not bool:
+            raise RunnerError("risk adapter must return a dictionary with boolean approved")
         result = {"session_id": config.session_id, "config_sha256": config.sha256,
                   "event_count": len(observed), "decision_event_count": len(decision_events),
                   "last_available_utc": last_available.isoformat()
                   if last_available else None, "decision": decision, "risk": risk,
                   "mode": config.mode.value, "physical_orders": False}
-        if not risk["approved"]:
+        if decision["side"] in ("NONE", "NO_TRADE"):
+            result.update({"status": "NO_TRADE", "reason": str(decision.get("reason", "NO_SIGNAL"))})
+        elif not risk["approved"]:
             result.update({"status": "NO_TRADE", "reason": str(risk.get("reason", "RISK_REJECTED"))})
         else:
             intent_id = hashlib.sha256(f"{config.session_id}:{config.sha256}".encode()).hexdigest()

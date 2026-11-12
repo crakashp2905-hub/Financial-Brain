@@ -23,12 +23,12 @@
     },
     {
       "id": "PE-0016",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": ["src/financial_brain/forward_edge/session_runner.py"],
-      "tests": ["test_session_id_cannot_be_reused_for_different_configuration"],
-      "test_result": "Canonical run config hash and session metadata conflict rejection are tested",
+      "tests": ["test_session_id_cannot_be_reused_for_different_configuration", "test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments"],
+      "test_result": "Canonical config includes exchange date, cohort, strategy/risk/constraint hashes, benchmark, universe, capital and ledger id; golden hash and conflict rejection are tested",
       "evidence_sha256": null,
-      "blockers": ["constraints and ledger identifiers are not yet part of ForwardRunConfig"]
+      "blockers": []
     },
     {
       "id": "PE-0017",

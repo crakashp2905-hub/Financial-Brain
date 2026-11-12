@@ -13,7 +13,9 @@ NOW = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
 
 def _config(**changes):
     values = dict(session_id="S-1", exchange_date="2026-11-12", cohort_id="C1",
-                  strategy_sha256="a" * 64, benchmark_id="NIFTY50", instruments=("NSE:INFY",),
+                  strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
+                  constraints_sha256="c" * 64, ledger_id="LEDGER-1",
+                  benchmark_id="NIFTY50", instruments=("NSE:INFY",),
                   capital_inr="1000000", mode=Mode.LIVE_PAPER)
     values.update(changes)
     return ForwardRunConfig(**values)
@@ -52,7 +54,29 @@ def test_closed_session_is_replayed_without_reexecuting(tmp_path):
     first = runner.run(_config(), [_event()], **kwargs)
     second = runner.run(_config(), [_event()], **kwargs)
     assert first == second
-    assert len(calls) == 1
+    assert first["status"] == "NO_TRADE" and first["reason"] == "NO_SIGNAL"
+    assert len(calls) == 0
+
+
+def test_no_trade_signal_never_reaches_execution_adapter(tmp_path):
+    runner = ForwardSessionRunner(tmp_path / "no-trade.jsonl")
+    calls = []
+    result = runner.run(_config(), [_event()], decision_at=NOW,
+                        decision_fn=lambda _: {"side": "NONE", "reason": "EDGE_BELOW_COST"},
+                        risk_fn=lambda _: {"approved": True},
+                        execution_fn=lambda *args: calls.append(args) or {"state": "FILLED"})
+    assert result["status"] == "NO_TRADE"
+    assert result["reason"] == "EDGE_BELOW_COST"
+    assert calls == []
+
+
+def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
+    assert _config().sha256 == "99aae10b3c9a27e3c34bddaa20134655d50f2611a17bfcf8ecaebd59eb185677"
+    assert _config(capital_inr="1000000.00").sha256 == _config(capital_inr="1000000").sha256
+    assert _config(ledger_id="LEDGER-2").sha256 != _config().sha256
+    assert _config(risk_policy_sha256="d" * 64).sha256 != _config().sha256
+    with pytest.raises(RunnerError, match="unique"):
+        _config(instruments=("NSE:INFY", "NSE:INFY")).canonical()
 
 
 def test_pending_outbox_retries_with_same_idempotency_key_after_restart(tmp_path):
@@ -93,7 +117,29 @@ def test_session_id_cannot_be_reused_for_different_configuration(tmp_path):
 def test_runner_rejects_physical_or_naive_clock_modes(tmp_path):
     with pytest.raises(RunnerError, match="only accepts"):
         _config(mode=Mode.LIVE_CASH).canonical()
+    journal_path = tmp_path / "j"
     with pytest.raises(RunnerError, match="timezone-aware"):
-        ForwardSessionRunner(tmp_path / "j").run(
+        ForwardSessionRunner(journal_path).run(
             _config(), [], decision_at=datetime(2026, 11, 12), decision_fn=lambda _: {},
             risk_fn=lambda _: {"approved": False}, execution_fn=lambda *_: {})
+    assert DurableJournal(journal_path).records() == []
+
+
+def test_non_boolean_risk_approval_is_rejected_without_execution(tmp_path):
+    journal_path = tmp_path / "risk.jsonl"
+    calls = []
+    with pytest.raises(RunnerError, match="boolean approved"):
+        ForwardSessionRunner(journal_path).run(
+            _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+            risk_fn=lambda _: {"approved": "false"}, execution_fn=lambda *args: calls.append(args) or {})
+    assert calls == []
+    assert all(r["t"] != "RISK_VERDICT" for r in DurableJournal(journal_path).records())
+
+
+def test_session_restart_rejects_changed_decision_timestamp(tmp_path):
+    runner = ForwardSessionRunner(tmp_path / "clock.jsonl")
+    kwargs = dict(decision_fn=lambda _: {"side": "NONE"}, risk_fn=lambda _: {"approved": True},
+                  execution_fn=lambda *_: {})
+    runner.run(_config(), [_event()], decision_at=NOW, **kwargs)
+    with pytest.raises(RunnerError, match="different decision timestamp"):
+        runner.run(_config(), [_event()], decision_at=NOW + timedelta(seconds=1), **kwargs)
