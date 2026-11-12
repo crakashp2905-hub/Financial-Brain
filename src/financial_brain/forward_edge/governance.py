@@ -5,7 +5,6 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from math import sqrt
 
 from financial_brain.forward_edge.approvals import Approval, ApprovalError, validate_approval
 
