@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from collections import Counter
 
 from .options import OptionPaperError, Quote, cost_hurdle, long_round_trip
+from financial_brain.forward_edge.evidence_labels import metadata
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,7 @@ def run_intent(intent: Intent, quotes: list[Quote]) -> dict:
     """No fill is synthesized when a quote, liquidity or exit is missing."""
     intent.validate()
     base = {"signal_id": intent.signal_id, "cohort": intent.cohort,
-            "rule_version": intent.rule_version, "mode": "replay"}
+            "rule_version": intent.rule_version, "mode": "replay", **metadata("replay")}
     ordered = sorted((q for q in quotes if q.token == intent.token), key=lambda q: q.observed_at)
     entry = next((q for q in ordered if intent.decided_at < q.observed_at <=
                   intent.decided_at + intent.max_entry_delay and _valid(q)), None)
@@ -94,7 +95,7 @@ def replay_cohort(con, intents: list[Intent]) -> dict:
     results = [run_intent(i, archive_quotes(con, i)) for i in intents]
     closed = [r for r in results if r["status"] == "CLOSED"]
     counts = Counter(r["status"] for r in results)
-    return {"mode": "replay", "intents": len(intents), "closed": len(closed),
+    return {"mode": "replay", **metadata("replay"), "intents": len(intents), "closed": len(closed),
             "coverage": len(closed) / len(intents) if intents else 0.0,
             "status_counts": dict(counts),
             "gross_pnl_inr": sum(r["gross_pnl_inr"] for r in closed),

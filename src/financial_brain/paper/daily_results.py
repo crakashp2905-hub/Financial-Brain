@@ -14,7 +14,12 @@ REPORTS = Path("data") / "paper_reports"
 
 def build(ledger, day: str, *, book=None) -> str:
     from . import execution as XA
-    lines = [f"# Financial-Brain paper results - {day}", "", "Paper only: no order exists in this system. Information, not advice.", ""]
+    from financial_brain.forward_edge.evidence_labels import classify
+
+    lines = [f"# Financial-Brain paper results - {day}", "",
+             "Paper only: no order exists in this system. Information, not advice.",
+             "Evidence class: LOCAL_PAPER for observed-market runs; HISTORICAL_REPLAY for replay runs. "
+             "Neither label means independently attested.", ""]
     run = ledger.execute("SELECT mode, status, polls, started, finished, note FROM runs WHERE day = ? ORDER BY mode", [day]).fetchall()
     if run:
         for mode, status, polls, st, fin, note in run:  # noqa: B007
@@ -29,8 +34,11 @@ def build(ledger, day: str, *, book=None) -> str:
         x = t[t["mode"] == mode]
         if x.empty:
             continue
-        label = "LIVE (the evidence)" if mode == "live" else "REPLAY (rebuilt from minute bars after the day - not evidence)"
+        evidence_class = classify(mode).value
+        label = ("LOCAL PAPER (observed-market paper; not independently attested)" if mode == "live"
+                 else "HISTORICAL REPLAY (rebuilt from minute bars after the day; not forward evidence)")
         lines += ["", f"## {label}", "",
+                  f"Evidence class: `{evidence_class}`; independently attested: `false`.",
                   f"**{len(x)} trades · net Rs {x['net_pnl'].sum():,.0f}** (gross Rs {x['gross_pnl'].sum():,.0f}, charges Rs {x['costs'].sum():,.0f}) · "
                   f"{(x['net_pnl'] > 0).mean():.0%} won · {x['net_pnl'].sum() / x['notional'].sum() * 1e4:+.1f} bp of the money traded", "",
                   "| strategy | trades | won | gross Rs | charges Rs | net Rs | net bp/trade |", "|---|---|---|---|---|---|---|"]

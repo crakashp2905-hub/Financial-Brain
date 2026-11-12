@@ -11,6 +11,8 @@ from math import sqrt
 
 import numpy as np
 
+from financial_brain.forward_edge.evidence_labels import EvidenceLabelError, classify
+
 
 class StatsError(ValueError):
     pass
@@ -170,11 +172,42 @@ class ClaimTier(str, Enum):
 
 
 def label_rows(rows: list[dict]) -> list[dict]:
-    """Every chart or table row carries exactly one claim tier."""
+    """Every chart/export row has a tier consistent with its source mode and evidence facts."""
+    labelled = []
     for r in rows:
         if not isinstance(r.get("tier"), ClaimTier):
             raise StatsError("every row needs exactly one ClaimTier")
-    return rows
+        mode = r.get("mode")
+        if not isinstance(mode, str):
+            raise StatsError("every row needs a declared evidence mode")
+        try:
+            evidence = classify(
+                mode, market_observed=r.get("market_observed", False),
+                pre_entry_sealed=r.get("pre_entry_sealed", False),
+                session_complete=r.get("session_complete", False),
+                custody_status=r.get("custody_status"),
+            )
+        except EvidenceLabelError as exc:
+            raise StatsError(f"row evidence mode is invalid: {exc}") from exc
+        expected: dict[ClaimTier, str] = {
+            ClaimTier.HISTORICAL: "HISTORICAL_REPLAY",
+            ClaimTier.SHADOW: "EXPLORATORY_SHADOW",
+            ClaimTier.LOCAL_PAPER: "LOCAL_PAPER",
+            ClaimTier.INDEPENDENT_FORWARD: "INDEPENDENTLY_ATTESTED_FORWARD",
+        }
+        if r["tier"] is ClaimTier.DEPLOYMENT_VALIDATED:
+            raise StatsError("deployment validation cannot be asserted by the generic evidence-row exporter")
+        expected_class = expected[r["tier"]]
+        if evidence.value != expected_class:
+            raise StatsError(f"tier {r['tier'].value} conflicts with evidence mode {evidence.value}")
+        row = dict(r)
+        existing = row.get("evidence_class")
+        if existing is not None and existing != evidence.value:
+            raise StatsError("caller evidence label conflicts with derived evidence mode")
+        row["evidence_class"] = evidence.value
+        row["independently_attested"] = evidence.value == "INDEPENDENTLY_ATTESTED_FORWARD"
+        labelled.append(row)
+    return labelled
 
 
 # ---- FE-0103 falsification ----

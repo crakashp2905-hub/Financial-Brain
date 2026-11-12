@@ -29,6 +29,7 @@ def test_options_runner_requires_later_entry_and_real_exit():
     done = run_intent(i, [entry, quote(D + timedelta(minutes=5), bid=115, ask=116)])
     assert done["status"] == "CLOSED" and done["net_pnl_inr"] > 0
     assert done["mode"] == "replay" and done["rule_version"] == "v1"
+    assert done["evidence_class"] == "HISTORICAL_REPLAY" and done["independently_attested"] is False
 
 
 def test_options_runner_skips_cost_dominated_or_thin_entry():
@@ -53,5 +54,6 @@ def test_archive_requires_fresh_broker_timestamp():
     assert len(got) == 1 and got[0].observed_at == fresh
     assert run_intent(intent(), got)["status"] == "NO_EXIT_QUOTE"
     report = replay_cohort(con, [intent()])
+    assert report["evidence_class"] == "HISTORICAL_REPLAY" and report["independently_attested"] is False
     assert report["coverage"] == 0 and report["status_counts"] == {"NO_EXIT_QUOTE": 1}
     assert report["net_pnl_inr"] == 0

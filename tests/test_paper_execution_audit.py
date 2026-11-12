@@ -15,3 +15,5 @@ def test_execution_audit_preserves_simulated_and_unfilled_facts():
     assert result["unfilled_shares"] == 20
     assert result["fill_ratio"] == 130 / 150
     assert result["paper_only"] is True
+    assert result["evidence_class"] == "HISTORICAL_REPLAY"
+    assert result["independently_attested"] is False

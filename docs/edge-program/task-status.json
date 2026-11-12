@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 16,
-  "unrecorded_tasks": 202,
+  "recorded_tasks": 17,
+  "unrecorded_tasks": 201,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -200,6 +200,15 @@
       "sources": ["src/financial_brain/forward_edge/charter.py", "src/financial_brain/forward_edge/decision_custody.py"],
       "tests": ["test_durable_registry_rejects_retroactive_benchmark_and_endpoint_edits", "test_registry_revalidates_cohort_closure_events_during_recovery"],
       "test_result": "A closed cohort's outcome is immutable; changing its benchmark or endpoint under the same charter version is rejected. Registry recovery revalidates cohort membership, frozen endpoint and content-addressed outcome before accepting a closure. A later version must link the previous charter hash and move the prospective start forward.",
+      "evidence_sha256": null,
+      "blockers": []
+    },
+    {
+      "id": "PE-0114",
+      "status": "DONE",
+      "sources": ["src/financial_brain/forward_edge/evidence_labels.py", "src/financial_brain/forward_edge/evidence_stats.py", "src/financial_brain/forward_edge/cli.py", "src/financial_brain/paper/daily_results.py", "src/financial_brain/paper/intraday_runner.py", "src/financial_brain/paper/execution_audit.py", "src/financial_brain/paper/options_runner.py", "src/financial_brain/paper/options_forward.py", "src/financial_brain/evaluation/evidence_tiers.py", "docs/edge-program/evidence-label-contract.md"],
+      "tests": ["test_modes_have_distinct_fail_closed_evidence_classes", "test_local_paper_requires_every_independent_evidence_fact_for_higher_label", "test_replay_cannot_be_upgraded_by_attestation_fields", "test_report_stamping_rejects_caller_claimed_independent_forward_label", "test_export_rows_cannot_label_replay_or_local_paper_as_independent_forward", "test_export_independent_forward_requires_each_source_fact", "test_generic_exporter_cannot_assert_deployment_validation", "test_every_reported_row_carries_exactly_one_claim_tier", "test_report_carries_coverage_benchmark_missing_data_and_never_promotes", "test_the_report_separates_live_from_replay_and_states_the_run", "test_intraday_export_distinguishes_observed_paper_from_historical_replay", "test_execution_audit_preserves_simulated_and_unfilled_facts", "test_paper_tier_ledger_labels_observed_paper_as_local_not_attested", "test_claims_are_monotone", "test_options_runner_requires_later_entry_and_real_exit", "test_archive_requires_fresh_broker_timestamp", "test_forward_outcome_preserves_missing_quote_and_is_immutable", "test_forward_fill_needs_observed_fresh_quotes_after_registration"],
+      "test_result": "Shared evidence classification labels shadow, fixture/historical replay, local paper, and independently attested forward separately. Fixture CLI summaries, daily and intraday reports, option replay/forward results, execution audits, statistical export rows, and live-paper evidence tiers carry derived labels; replay and local paper cannot be upgraded without observed data, a sealed pre-entry decision, a complete session, and verified custody where independent claims are made. The generic exporter cannot assert deployment validation. Focused suite: 85 passed; Ruff and mypy pass.",
       "evidence_sha256": null,
       "blockers": []
     }
