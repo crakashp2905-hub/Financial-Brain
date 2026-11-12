@@ -10,7 +10,7 @@
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "8dda5ace8aed248a8a2f45b0b96214a7547deec4",
+  "reviewed_main_sha": "89b300e2d0a532a1f9bab7c2ad6bbffe95ce4771",
   "items": [
     {
       "id": "PE-0015",
@@ -170,7 +170,7 @@
     },
     {
       "id": "PE-0092",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": [
         "src/financial_brain/kernel/paper_account.py",
         "src/financial_brain/kernel/oms.py",
@@ -178,11 +178,12 @@
       ],
       "tests": [
         "test_buy_sell_fees_and_restart_reconcile",
-        "test_replayed_intent_fill_and_fee_have_one_economic_effect"
+        "test_replayed_intent_fill_and_fee_have_one_economic_effect",
+        "test_effective_fee_schedule_uses_filled_notional_and_reconciles_nav"
       ],
-      "test_result": "Fees are idempotently posted to expense and cash accounts; full Windows suite: 3278 passed, 1 skipped; Ruff and mypy passed",
+      "test_result": "Effective-dated owner-supplied buy/sell rates are charged against each actual fill notional in the same balanced transaction as cash and inventory; a full entry/exit NAV bridge reconciles cash, fee expense, and net P&L to paise. 33 focused tests pass; Ruff and mypy pass.",
       "evidence_sha256": null,
-      "blockers": ["automatic fee schedule calculation and complete equity/NAV-to-cent bridge remain"]
+      "blockers": []
     },
     {
       "id": "PE-0110",
