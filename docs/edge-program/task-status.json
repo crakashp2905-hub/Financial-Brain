@@ -198,8 +198,8 @@
       "id": "PE-0113",
       "status": "DONE",
       "sources": ["src/financial_brain/forward_edge/charter.py", "src/financial_brain/forward_edge/decision_custody.py"],
-      "tests": ["test_durable_registry_rejects_retroactive_benchmark_and_endpoint_edits"],
-      "test_result": "A closed cohort's outcome is immutable; changing its benchmark or endpoint under the same charter version is rejected. A later version must link the previous charter hash and move the prospective start forward.",
+      "tests": ["test_durable_registry_rejects_retroactive_benchmark_and_endpoint_edits", "test_registry_revalidates_cohort_closure_events_during_recovery"],
+      "test_result": "A closed cohort's outcome is immutable; changing its benchmark or endpoint under the same charter version is rejected. Registry recovery revalidates cohort membership, frozen endpoint and content-addressed outcome before accepting a closure. A later version must link the previous charter hash and move the prospective start forward.",
       "evidence_sha256": null,
       "blockers": []
     }

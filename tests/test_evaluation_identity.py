@@ -102,3 +102,30 @@ def test_protected_charter_requires_all_evaluation_identity_components():
     with pytest.raises(charter.CharterError, match="identifiers"):
         identity(data_rights_id=" ")
 
+
+@pytest.mark.parametrize(
+    ("close_fields", "message"),
+    [
+        ({"closed_on": "2026-10-07", "outcome_sha256": "9" * 64}, "frozen endpoint"),
+        ({"closed_on": "2026-10-09", "outcome_sha256": "bad"}, "content-addressed"),
+        ({"closed_on": "2026-10-09", "outcome_sha256": "9" * 64, "cohort_id": "UNKNOWN"},
+         "frozen endpoint"),
+    ],
+)
+def test_registry_revalidates_cohort_closure_events_during_recovery(tmp_path, close_fields, message):
+    path = tmp_path / "charters.jsonl"
+    registry = charter.CharterRegistry(path)
+    spec = experiment()
+    frozen_schedule = schedule(spec)
+    registry.register(spec, frozen_schedule)
+    registry.journal.append({
+        "t": "COHORT_CLOSED",
+        "charter_id": "strategy-A",
+        "charter_sha256": spec.sha256(),
+        "cohort_id": "C1",
+        "closed_on": "2026-10-09",
+        "outcome_sha256": "9" * 64,
+        **close_fields,
+    })
+    with pytest.raises(charter.CharterError, match=message):
+        charter.CharterRegistry(path)

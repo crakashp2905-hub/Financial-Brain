@@ -221,7 +221,7 @@ class CharterRegistry:
                 self._accept(charter, schedule, row["charter_sha256"], replay=True)
             elif row.get("t") == "COHORT_CLOSED":
                 key = (row["charter_id"], row["charter_sha256"], row["cohort_id"])
-                self._closed[key] = (row["closed_on"], row["outcome_sha256"])
+                self._accept_close(*key, closed_on=row["closed_on"], outcome_sha256=row["outcome_sha256"])
             else:
                 raise CharterError("unknown charter registry event")
 
@@ -271,24 +271,39 @@ class CharterRegistry:
         except KeyError as exc:
             raise CharterError(f"unknown charter: {charter_id}") from exc
 
-    def record_cohort_close(self, charter_id: str, cohort_id: str, *, closed_on: str,
-                            outcome_sha256: str) -> None:
+    def _accept_close(self, charter_id: str, charter_sha256: str, cohort_id: str, *, closed_on: str,
+                      outcome_sha256: str) -> None:
         if not _SHA.fullmatch(outcome_sha256):
             raise CharterError("cohort outcome must be content-addressed")
-        date.fromisoformat(closed_on)
-        if charter_id not in self._latest:
-            raise CharterError("unknown charter")
-        charter, schedule, digest = self._latest[charter_id]
+        try:
+            closed_date = date.fromisoformat(closed_on)
+            charter, schedule, digest = self._latest[charter_id]
+        except (ValueError, KeyError) as exc:
+            raise CharterError("cohort close has an invalid date or unknown charter") from exc
+        if digest != charter_sha256:
+            raise CharterError("cohort close must bind to the latest registered charter")
         cohort = next((item for item in schedule.cohorts if item.cohort_id == cohort_id), None)
-        if cohort is None or date.fromisoformat(closed_on) < date.fromisoformat(cohort.end):
+        if cohort is None or closed_date < date.fromisoformat(cohort.end):
             raise CharterError("cohort cannot close before its frozen endpoint")
+        key = (charter_id, charter_sha256, cohort_id)
+        value = (closed_on, outcome_sha256)
+        if key in self._closed and self._closed[key] != value:
+            raise CharterError("closed cohort outcome is immutable")
+        self._closed[key] = value
+
+    def record_cohort_close(self, charter_id: str, cohort_id: str, *, closed_on: str,
+                            outcome_sha256: str) -> None:
+        try:
+            _, _, digest = self._latest[charter_id]
+        except KeyError as exc:
+            raise CharterError("unknown charter") from exc
         key = (charter_id, digest, cohort_id)
         value = (closed_on, outcome_sha256)
         if key in self._closed:
             if self._closed[key] != value:
                 raise CharterError("closed cohort outcome is immutable")
             return
+        self._accept_close(charter_id, digest, cohort_id, closed_on=closed_on, outcome_sha256=outcome_sha256)
         self.journal.append({"t": "COHORT_CLOSED", "charter_id": charter_id, "charter_sha256": digest,
                              "cohort_id": cohort_id, "closed_on": closed_on,
                              "outcome_sha256": outcome_sha256})
-        self._closed[key] = value
