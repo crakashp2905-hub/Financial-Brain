@@ -135,3 +135,15 @@ def test_replay_accepts_the_same_cohort_arguments(setup):
                        **AC.cohort_args([_rule("direction", "long")]))
     assert out["status"] in ("complete", "replayed", "ok") or "day" in out
     assert len(AC.v2_ledgers(setup)) == 1
+
+
+def test_a_failed_day_context_lookup_fails_open_and_the_cohort_trades_like_v1(setup):
+    def broken(day):
+        raise RuntimeError("research database is locked")
+
+    _run(setup, None)
+    v1 = _trades(setup / "paper_live.duckdb")
+    out = _run(setup, [_rule("regime_prev", "regime RISK_OFF")], day_context_fn=broken)
+    assert out["status"] == "complete"
+    (v2_path,) = AC.v2_ledgers(setup)
+    assert _trades(v2_path) == v1

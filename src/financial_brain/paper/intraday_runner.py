@@ -62,6 +62,18 @@ EXTRA_COLUMNS = (("entry_decision_px", "DOUBLE"), ("exit_decision_px", "DOUBLE")
                  ("entry_walk_bp", "DOUBLE"))
 
 
+def _day_context(fn, day: str) -> dict:
+    """The regime and VIX a live-v2 entry filter may use. Fails open: if it cannot be read, those filters do not apply today and the
+    cohort trades as live-v1 would (a skip rule can only ever remove trades, so not applying it is the safe direction)."""
+    if fn is None:
+        return {}
+    try:
+        return dict(fn(day) or {})
+    except Exception as e:                              # noqa: BLE001 - a lookup failure must not cost the session
+        log.warning("day context unavailable (%s): entry filters that need it do not apply today", str(e)[:120])
+        return {}
+
+
 def cohort_path(base: Path, cohort: str | None, strategies, rules: dict[str, I.StrategyRule] | None) -> tuple[Path, str]:
     """Keep strategy variants in separate ledgers instead of overwriting `(day, mode)`.
 
@@ -228,7 +240,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
     eng = I.DayEngine(day, strategies=strategies, rules=rules)
     eng.daily_up = daily_up(date.fromisoformat(day))
-    eng.day_context = dict(day_context_fn(day) or {}) if day_context_fn else {}     # only a live-v2 cohort's filters read it
+    eng.day_context = _day_context(day_context_fn, day)
     started = now.isoformat()
     daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
     if rcon is not None:
@@ -411,7 +423,7 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
     uni = universe(n)
     eng = I.DayEngine(day.isoformat(), strategies=strategies, rules=rules)
     eng.daily_up = daily_up(day)
-    eng.day_context = dict(day_context_fn(day.isoformat()) or {}) if day_context_fn else {}
+    eng.day_context = _day_context(day_context_fn, day.isoformat())
     stream = []
     vwap_at: dict = {}
     used = 0
