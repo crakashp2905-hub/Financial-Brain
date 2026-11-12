@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from financial_brain.forward_edge.market_data import DataError, decision_visible
+from financial_brain.forward_edge.market_data import DataError, decision_visible, executable_quote
 from financial_brain.ingest.kite_live import forward_events
 
 
@@ -15,14 +15,26 @@ def test_full_quote_becomes_timestamped_forward_event():
 
     def quote(keys, kind):
         calls.append((keys, kind))
-        return {"NSE:INFY": {"timestamp": "2026-11-12 09:29:59", "last_price": 1500.5}}
+        return {"NSE:INFY": {"timestamp": "2026-11-12 09:29:59", "last_price": 1500.5,
+                              "volume": 1000, "mode": "continuous", "ohlc": {"high": 1510, "low": 1490},
+                              "depth": {"buy": [{"price": 1500.4, "quantity": 50}],
+                                        "sell": [{"price": 1500.6, "quantity": 40}]}}}
 
     event, = forward_events(["INFY"], quote_fn=quote, received_at=RECEIPT)
     assert calls == [(["NSE:INFY"], "full")]
     assert event.instrument == "NSE:INFY"
     assert event.event_utc == datetime(2026, 11, 12, 3, 59, 59, tzinfo=timezone.utc)
     assert event.received_utc == event.available_utc == RECEIPT
-    assert dict(event.payload) == {"exchange": "NSE", "last_price": "1500.5", "source": "kite_connect"}
+    payload = dict(event.payload)
+    assert payload["exchange"] == "NSE"
+    assert payload["source"] == "kite_connect"
+    assert payload["last_price"] == "1500.5"
+    assert payload["quote_fidelity"] == "EXECUTABLE"
+    assert payload["bid_price"] == "1500.4" and payload["ask_price"] == "1500.6"
+    assert payload["bid_qty"] == "50" and payload["ask_qty"] == "40"
+    assert payload["volume"] == "1000" and payload["session_high"] == "1510"
+    assert len(payload["raw_sha256"]) == 64
+    assert executable_quote(event) == (True, "EXECUTABLE_TOP_OF_BOOK")
     assert not decision_visible(event, datetime(2026, 11, 12, 3, 59, 59, tzinfo=timezone.utc))
 
 
@@ -42,3 +54,19 @@ def test_duplicate_symbols_and_naive_receipt_rejected():
         forward_events(["INFY", "INFY"], quote_fn=lambda *_: {})
     with pytest.raises(DataError, match="timezone-aware"):
         forward_events(["INFY"], quote_fn=lambda *_: {}, received_at=datetime(2026, 11, 12))
+
+
+def test_ltp_only_is_analyzable_but_not_fill_capable():
+    event, = forward_events(["INFY"], quote_fn=lambda *_: {
+        "NSE:INFY": {"timestamp": "2026-11-12 09:29:59", "last_price": 1500.5}
+    }, received_at=RECEIPT)
+    assert dict(event.payload)["quote_fidelity"] == "LTP_ONLY"
+    assert executable_quote(event) == (False, "LTP_ONLY_OR_MISSING_DEPTH")
+
+
+def test_crossed_or_empty_depth_is_not_executable():
+    event, = forward_events(["INFY"], quote_fn=lambda *_: {
+        "NSE:INFY": {"timestamp": "2026-11-12 09:29:59", "depth": {
+            "buy": [{"price": 101, "quantity": 5}], "sell": [{"price": 100, "quantity": 5}]}}
+    }, received_at=RECEIPT)
+    assert executable_quote(event) == (False, "INVALID_OR_EMPTY_BOOK")
