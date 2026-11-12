@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 10,
-  "unrecorded_tasks": 208,
+  "recorded_tasks": 14,
+  "unrecorded_tasks": 204,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -62,7 +62,7 @@
       "status": "PARTIAL",
       "sources": ["src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/forward_edge/durable.py"],
       "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution", "test_pending_outbox_requires_reconciliation_after_unknown_side_effect", "test_outbox_retries_only_after_reconciliation_proves_no_effect", "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution", "test_market_polls_can_be_durably_appended_before_session_finalization", "test_batch_append_preserves_record_sequence_and_hash_chain"],
-      "test_result": "Session records and pending/unknown/reconciled/acknowledged paper outbox outcomes are written to the fsynced hash-chained journal; 31 focused runner/market-poll integration tests pass",
+      "test_result": "Session records and pending/unknown/reconciled/acknowledged paper outbox outcomes are written to the fsynced hash-chained journal; 33 focused runner/market-poll integration tests pass",
       "evidence_sha256": null,
       "blockers": ["full lifecycle boundary crash-injection matrix and venue reconciliation remain incomplete"]
     },
@@ -71,9 +71,18 @@
       "status": "PARTIAL",
       "sources": ["src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_session_runner.py"],
       "tests": ["test_pending_outbox_requires_reconciliation_after_unknown_side_effect", "test_outbox_retries_only_after_reconciliation_proves_no_effect", "test_execution_without_simulation_receipt_cannot_close_paper_session", "test_filled_status_without_fill_facts_cannot_be_acknowledged", "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution"],
-      "test_result": "16 focused runner tests pass; unknown outcomes require explicit APPLIED/NOT_APPLIED reconciliation; FILLED/PARTIAL requires finite priced fill facts and a simulated receipt; Ruff and mypy pass",
+      "test_result": "18 focused runner tests pass; unknown outcomes require explicit APPLIED/NOT_APPLIED reconciliation; FILLED/PARTIAL requires finite priced fill facts and a simulated receipt; Ruff and mypy pass",
       "evidence_sha256": null,
       "blockers": ["the production simulated execution adapter and its receipt provenance are not connected to the runner"]
+    },
+    {
+      "id": "PE-0023",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_session_runner.py"],
+      "tests": ["test_data_rejections_are_immutable_idempotent_and_persisted", "test_preflight_is_immutable_and_blocks_actionable_decisions", "test_actionable_decision_without_preflight_is_rejected_and_not_executed", "test_runner_persists_visible_events_decision_risk_and_paper_execution"],
+      "test_result": "Preflight verdicts, source rejection hashes/reasons, decisions, risk, stable paper intents, execution receipts, and outbox acknowledgements persist in the append-only journal; missing/failed preflight blocks actionable sessions",
+      "evidence_sha256": null,
+      "blockers": ["the live polling integration does not yet supply its preflight and per-row rejection evidence through these APIs; portfolio ledger is not yet folded into the session journal"]
     },
     {
       "id": "PE-0030",

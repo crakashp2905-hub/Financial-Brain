@@ -186,6 +186,63 @@ class ForwardSessionRunner:
         journal.append_many(additions)
         return len(additions)
 
+    def record_preflight(self, config: ForwardRunConfig, result: dict) -> None:
+        """Persist one immutable, fail-closed preflight verdict before session decisions."""
+        if not isinstance(result, dict) or type(result.get("approved")) is not bool:
+            raise RunnerError("preflight result must contain a boolean approved field")
+        try:
+            json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise RunnerError("preflight result must be finite JSON data") from exc
+        self.begin(config)
+        journal = DurableJournal(self.journal_path)
+        rows = [r for r in journal.records() if r.get("session_id") == config.session_id]
+        if any(r.get("t") in {"DECISION", "SESSION_CLOSED"} for r in rows):
+            raise RunnerError("preflight must be recorded before the session decision")
+        prior = next((r.get("result") for r in rows if r.get("t") == "PREFLIGHT_RESULT"), None)
+        if prior is not None:
+            if prior != result:
+                raise RunnerError("session preflight is immutable")
+            return
+        journal.append({"t": "PREFLIGHT_RESULT", "session_id": config.session_id, "result": result})
+
+    def record_data_rejections(self, config: ForwardRunConfig, rejections: Iterable[dict]) -> int:
+        """Durably record source rows rejected before a decision, preserving their reason and source hash."""
+        self.begin(config)
+        journal = DurableJournal(self.journal_path)
+        rows = [r for r in journal.records() if r.get("session_id") == config.session_id]
+        if any(r.get("t") in {"DECISION", "SESSION_CLOSED"} for r in rows):
+            raise RunnerError("data rejections must be recorded before the session decision")
+        known = {r.get("event_sha256"): r for r in rows if r.get("t") == "DATA_REJECTION"}
+        additions = []
+        for rejected in rejections:
+            if not isinstance(rejected, dict):
+                raise RunnerError("each rejected-data record must be a dictionary")
+            digest, reason = rejected.get("event_sha256"), rejected.get("reason")
+            try:
+                if not isinstance(digest, str) or len(digest) != 64 or len(bytes.fromhex(digest)) != 32:
+                    raise ValueError
+            except ValueError as exc:
+                raise RunnerError("rejected-data event_sha256 must be a SHA-256 digest") from exc
+            if not isinstance(reason, str) or not reason.strip():
+                raise RunnerError("rejected-data reason is required")
+            row = {"t": "DATA_REJECTION", "session_id": config.session_id,
+                   "event_sha256": digest.lower(), "reason": reason.strip(),
+                   "instrument": rejected.get("instrument")}
+            try:
+                json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False)
+            except (TypeError, ValueError) as exc:
+                raise RunnerError("rejected-data record must be finite JSON data") from exc
+            prior = known.get(row["event_sha256"])
+            if prior is not None:
+                if prior != row:
+                    raise RunnerError("rejected event hash was reused with a different reason or instrument")
+                continue
+            known[row["event_sha256"]] = row
+            additions.append(row)
+        journal.append_many(additions)
+        return len(additions)
+
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
             decision_at: datetime,
             decision_fn: Callable[[list[NormalizedEvent]], dict],
@@ -226,6 +283,15 @@ class ForwardSessionRunner:
         observed.sort(key=lambda e: (self._utc(e.available_utc), e.content_sha256()))
         decision_events = [event for event in observed if decision_visible(event, visible_at)]
 
+        preflight_record = next((r for r in existing if r.get("t") == "PREFLIGHT_RESULT"), None)
+        if preflight_record is None:
+            preflight = {"approved": False, "status": "MISSING", "reason": "PREFLIGHT_NOT_RECORDED"}
+            journal.append({"t": "PREFLIGHT_RESULT", "session_id": config.session_id, "result": preflight})
+        else:
+            preflight = preflight_record["result"]
+        if not isinstance(preflight, dict) or type(preflight.get("approved")) is not bool:
+            raise RunnerError("persisted preflight must contain a boolean approved field")
+
         decision_record = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
         decision = decision_record["decision"] if decision_record is not None else None
         if decision_record is not None and decision_record.get("decision_at_utc") != visible_at.isoformat():
@@ -249,14 +315,28 @@ class ForwardSessionRunner:
                   "event_count": len(observed), "decision_event_count": len(decision_events),
                   "last_available_utc": last_available.isoformat()
                   if last_available else None, "decision": decision, "risk": risk,
+                  "preflight": preflight,
                   "mode": config.mode.value, "physical_orders": False}
         if not risk["approved"]:
             self._ensure_state(journal, config.session_id, "REJECTED")
             result.update({"status": "REJECTED", "reason": str(risk.get("reason", "RISK_REJECTED"))})
+        elif decision["side"] in ("BUY", "SELL") and not preflight["approved"]:
+            self._ensure_state(journal, config.session_id, "REJECTED")
+            result.update({"status": "REJECTED", "reason": str(preflight.get("reason", "PREFLIGHT_REJECTED"))})
         elif decision["side"] in ("NONE", "NO_TRADE"):
             result.update({"status": "NO_TRADE", "reason": str(decision.get("reason", "NO_SIGNAL"))})
         else:
             intent_id = hashlib.sha256(f"{config.session_id}:{config.sha256}".encode()).hexdigest()
+            paper_intent = {"t": "PAPER_INTENT", "session_id": config.session_id,
+                            "intent_id": intent_id, "config_sha256": config.sha256,
+                            "decision": decision, "risk": risk,
+                            "preflight": preflight}
+            prior_intent = next((r for r in existing if r.get("t") == "PAPER_INTENT"
+                                 and r.get("intent_id") == intent_id), None)
+            if prior_intent is None:
+                journal.append(paper_intent)
+            elif prior_intent != paper_intent:
+                raise RunnerError("stable intent id was reused with different decision or risk content")
             prior_execution = next((r["execution"] for r in reversed(existing)
                                     if r.get("t") == "PAPER_EXECUTION" and r.get("intent_id") == intent_id), None)
             has_prior_attempt = any(r.get("t") in {"OUTBOX_PENDING", "OUTBOX_UNKNOWN", "OUTBOX_RECONCILED"}

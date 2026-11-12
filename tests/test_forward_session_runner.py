@@ -32,8 +32,15 @@ def _event(available=NOW - timedelta(seconds=1)):
                            (("last_price", "1500"),))
 
 
+def _approve_preflight(runner):
+    runner.record_preflight(
+        _config(), {"approved": True, "status": "PASS", "checks": {"clock": True, "market_feed": True}}
+    )
+
+
 def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_path):
     runner = ForwardSessionRunner(tmp_path / "session.jsonl")
+    _approve_preflight(runner)
     calls = []
     result = runner.run(_config(), [_event(), _event(NOW + timedelta(seconds=1))], decision_at=NOW,
                         decision_fn=lambda events: {"side": "BUY", "count": len(events)},
@@ -48,8 +55,9 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     assert len(calls) == 1 and len(calls[0][1]) == 2
     record_types = [r["t"] for r in DurableJournal(tmp_path / "session.jsonl").records()]
     assert record_types == ["SESSION_PLAN", "SESSION_STATE", "SESSION_STATE", "SESSION_STATE",
-                            "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT", "SESSION_STATE",
-                            "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK", "SESSION_STATE", "SESSION_CLOSED"]
+                            "PREFLIGHT_RESULT", "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT", "SESSION_STATE",
+                            "PAPER_INTENT", "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK",
+                            "SESSION_STATE", "SESSION_CLOSED"]
     states = [r["state"] for r in DurableJournal(tmp_path / "session.jsonl").records()
               if r["t"] == "SESSION_STATE"]
     assert states == ["PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED"]
@@ -108,6 +116,7 @@ def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
 def test_pending_outbox_requires_reconciliation_after_unknown_side_effect(tmp_path):
     journal_path = tmp_path / "session.jsonl"
     runner = ForwardSessionRunner(journal_path)
+    _approve_preflight(runner)
     executions = {}
     attempts = []
 
@@ -145,6 +154,7 @@ def test_pending_outbox_requires_reconciliation_after_unknown_side_effect(tmp_pa
 def test_outbox_retries_only_after_reconciliation_proves_no_effect(tmp_path):
     path = tmp_path / "retry.jsonl"
     runner = ForwardSessionRunner(path)
+    _approve_preflight(runner)
     attempts = []
 
     def execution(_decision, intent_id, _events):
@@ -172,6 +182,7 @@ def test_outbox_retries_only_after_reconciliation_proves_no_effect(tmp_path):
 def test_execution_without_simulation_receipt_cannot_close_paper_session(tmp_path):
     path = tmp_path / "missing-receipt.jsonl"
     runner = ForwardSessionRunner(path)
+    _approve_preflight(runner)
     with pytest.raises(RunnerError, match="receipt_id"):
         runner.run(
             _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
@@ -186,6 +197,7 @@ def test_execution_without_simulation_receipt_cannot_close_paper_session(tmp_pat
 def test_filled_status_without_fill_facts_cannot_be_acknowledged(tmp_path):
     path = tmp_path / "empty-fill.jsonl"
     runner = ForwardSessionRunner(path)
+    _approve_preflight(runner)
     with pytest.raises(RunnerError, match="observed fills"):
         runner.run(
             _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
@@ -203,6 +215,7 @@ def test_restart_after_execution_receipt_before_ack_does_not_repeat_execution(tm
 
     path = tmp_path / "receipt-before-ack.jsonl"
     runner = ForwardSessionRunner(path)
+    _approve_preflight(runner)
     calls = []
     receipt = {"status": "FILLED", "receipt_id": "sim-fill-crash", "fidelity": "SIMULATED_QUOTE",
                "fills": [{"fill_id": "F-3", "quantity": 1, "price": "123.45"}]}
@@ -274,6 +287,51 @@ def test_risk_rejection_is_terminal_and_never_executes(tmp_path):
     assert calls == []
     states = [r["state"] for r in DurableJournal(journal_path).records() if r["t"] == "SESSION_STATE"]
     assert states[-1] == "REJECTED"
+
+
+def test_actionable_decision_without_preflight_is_rejected_and_not_executed(tmp_path):
+    path = tmp_path / "missing-preflight.jsonl"
+    calls = []
+    result = ForwardSessionRunner(path).run(
+        _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *args: calls.append(args) or {},
+    )
+    records = DurableJournal(path).records()
+    assert result["status"] == "REJECTED" and result["reason"] == "PREFLIGHT_NOT_RECORDED"
+    assert result["preflight"]["status"] == "MISSING"
+    assert calls == []
+    assert not any(r["t"] == "OUTBOX_PENDING" for r in records)
+
+
+def test_data_rejections_are_immutable_idempotent_and_persisted(tmp_path):
+    path = tmp_path / "rejections.jsonl"
+    runner = ForwardSessionRunner(path)
+    rejection = {"event_sha256": "e" * 64, "instrument": "NSE:INFY", "reason": "STALE_QUOTE"}
+    assert runner.record_data_rejections(_config(), [rejection, rejection]) == 1
+    assert runner.record_data_rejections(_config(), [rejection]) == 0
+    with pytest.raises(RunnerError, match="different reason"):
+        runner.record_data_rejections(_config(), [{**rejection, "reason": "BAD_BOOK"}])
+    persisted = [r for r in DurableJournal(path).records() if r["t"] == "DATA_REJECTION"]
+    assert persisted == [{"t": "DATA_REJECTION", "session_id": "S-1", **rejection}]
+
+
+def test_preflight_is_immutable_and_blocks_actionable_decisions(tmp_path):
+    path = tmp_path / "failed-preflight.jsonl"
+    runner = ForwardSessionRunner(path)
+    result = {"approved": False, "status": "FAIL", "reason": "STALE_FEED"}
+    runner.record_preflight(_config(), result)
+    runner.record_preflight(_config(), result)
+    with pytest.raises(RunnerError, match="immutable"):
+        runner.record_preflight(_config(), {"approved": True, "status": "PASS"})
+    calls = []
+    outcome = runner.run(
+        _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *args: calls.append(args) or {},
+    )
+    assert outcome["status"] == "REJECTED" and outcome["reason"] == "STALE_FEED"
+    assert calls == []
 
 
 def test_session_restart_rejects_changed_decision_timestamp(tmp_path):
