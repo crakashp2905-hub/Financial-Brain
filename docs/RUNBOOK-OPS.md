@@ -52,9 +52,23 @@ fb depth-status --alert     # the nightly refresh runs this: an alert if the new
 
 ## Learning from mistakes
 
-The loop and its limits are in `docs/LEARNING-LOOP.md`. Day to day: `fb loss-review` and `fb loss-mine` run every night and
-write hypotheses (nothing changes); the terminal page has a panel with where it stands; an alert fires when a loss pattern
-repeats on sessions it was not found on. What to do with that alert is the owner's decision.
+The loop is described in `docs/LEARNING-LOOP.md`. Day to day:
+
+```
+fb learn run        # the nightly refresh runs this after the close (it reads the paper ledger, so never during 09:05-15:30)
+fb learn status     # what it learned, what it is waiting for, and what needs you - read this first
+fb learn autopsy    # how each losing trade lost, in rupees by cause
+fb learn incidents  # lost sessions by cause, and whether each cause has an active guard
+fb learn calibrate  # measure the loop's own false-confirmation rate and power on your ledger (a few minutes; run it once in a while)
+```
+
+* An alert "a loss pattern repeated on new sessions" is a **request for a decision**, never a change: `fb learn status`, then `fb learn draft
+  <lesson>`, commit the draft as a pre-registration, `fb learn register`. After 60 sessions the shadow says PASSING or not; only you can
+  `fb learn approve` it, at a terminal.
+* The paper `live-v2` cohort (`scripts\paper_intraday_v2.cmd`, task registered once with `scripts\register_paper_v2_task.ps1`) is for
+  approved rules only; with none active it exits at once. Compare it with live-v1 using `fb learn ab`.
+* An operational cause marked GUARD NOT ACTIVE means a control exists in code but is not running: register the task it names.
+* `fb learn run` skips itself politely while the live run holds the ledger; run it again after 15:30.
 
 ## A paper session aborted (`runs.status = 'aborted'`)
 

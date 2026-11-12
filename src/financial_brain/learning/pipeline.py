@@ -26,6 +26,7 @@ from ..paper import intraday as I
 from . import autopsy as AU
 from . import features as F
 from . import incidents as IN
+from . import personal as PS
 from . import protocol as P
 from . import shadow as SH
 from .store import Store
@@ -45,6 +46,7 @@ class Inputs:
     refresh_dir: Path | None = None
     depth_runs: pd.DataFrame = field(default_factory=pd.DataFrame)
     problems: list[str] = field(default_factory=list)
+    personal: dict | None = None                      # the owner's own habit review (``personal.summary``)
 
 
 class LedgerBusy(RuntimeError):
@@ -96,7 +98,8 @@ def collect(*, ledger: Path = LEDGER, archive: Path = ARCHIVE, research_db: Path
                 d.close()
         except Exception:                               # noqa: BLE001 - an archive from before run logging, or a locked one
             pass
-    return Inputs(trades, runs, regimes, sessions, arch, reports, depth_runs, problems)
+    return Inputs(trades, runs, regimes, sessions, arch, reports, depth_runs, problems,
+                  personal=PS.summary(research_db=research_db))
 
 
 def day_context(regimes: pd.DataFrame) -> dict[str, dict]:
@@ -190,9 +193,16 @@ def process(store: Store, inp: Inputs, *, today: str | None = None, rules_path: 
         report["problems"] += problems
         return {"rules": len(rules), "changed": len(changed), "problems": problems}
 
+    def personal():
+        s = inp.personal if inp.personal is not None else PS.EMPTY
+        report["personal"] = s
+        report["alerts"] += PS.alerts(s)
+        return {"trips": s.get("trips", 0), "habits_to_avoid": len(s.get("avoid", []))}
+
     _stage(report, "label", label)
     if report["stages"]["label"]["ok"]:
         _stage(report, "autopsy", autopsy)
+    _stage(report, "personal", personal)
     _stage(report, "incidents", incidents)
     if report["stages"]["label"]["ok"]:
         _stage(report, "protocol", protocol)

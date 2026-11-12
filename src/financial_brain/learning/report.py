@@ -18,6 +18,7 @@ import pandas as pd
 
 from . import autopsy as AU
 from . import incidents as IN
+from . import personal as PS
 from . import protocol as P
 from .store import Store
 
@@ -32,7 +33,8 @@ def stage_counts(lessons: dict[str, dict]) -> dict[str, int]:
     return out
 
 
-def needs_you(lessons: dict[str, dict], shadow: list[dict] | None, ops: dict | None, *, problems: list[str] | None = None) -> list[str]:
+def needs_you(lessons: dict[str, dict], shadow: list[dict] | None, ops: dict | None, *, problems: list[str] | None = None,
+              personal: dict | None = None) -> list[str]:
     items = []
     registered = {x["cell"] for x in lessons.values() if x["stage"] in ("REGISTERED", "SHADOW", "APPROVED", "ACTIVE") and x.get("cell")}
     for lid, x in lessons.items():
@@ -54,6 +56,7 @@ def needs_you(lessons: dict[str, dict], shadow: list[dict] | None, ops: dict | N
                          f"register the '{c.get('task')}' task.")
         elif c["state"] == "UNGUARDED":
             items.append(f"{c['cause']} cost {c['sessions_lost']} session(s) and nothing guards against it yet.")
+    items += PS.needs_you(personal or {})
     items += problems or []
     return items
 
@@ -73,12 +76,12 @@ def _lessons_table(lessons: dict[str, dict]) -> list[str]:
 
 def status_text(store: Store, *, today: str, shadow: list[dict] | None = None, ops: dict | None = None, depth: dict | None = None,
                 ab: dict | None = None, problems: list[str] | None = None, calibration: dict | None = None,
-                params: P.Params = P.DEFAULT) -> str:
+                params: P.Params = P.DEFAULT, personal: dict | None = None) -> str:
     lessons = store.lessons()
     runs = store.runs()
     auto = store.autopsies()
     lines = [f"LEARNING LOOP  ({today})", ""]
-    ask = needs_you(lessons, shadow, ops, problems=problems)
+    ask = needs_you(lessons, shadow, ops, problems=problems, personal=personal)
     lines.append("Needs you:" if ask else "Needs you: nothing.")
     lines += [f"  - {a}" for a in ask]
     last = runs.iloc[-1] if len(runs) else None
@@ -101,6 +104,8 @@ def status_text(store: Store, *, today: str, shadow: list[dict] | None = None, o
     lines.append(AU.render(auto).replace("\n", "\n  ").join(["  ", ""]) if len(auto) else "  no closed trades yet")
     if ops is not None:
         lines += ["", "Operations (lost sessions by cause, and the guard each has)", "  " + IN.render(ops).replace("\n", "\n  ")]
+    if personal is not None:
+        lines += ["", "Your own trading (habits read from your Kite trades)"] + PS.lines(personal)
     if shadow:
         from . import shadow as SH
         lines += ["", "Skip rules", "  " + SH.render(shadow).replace("\n", "\n  ")]
@@ -114,13 +119,13 @@ def status_text(store: Store, *, today: str, shadow: list[dict] | None = None, o
 
 
 def panel_html(store: Store, *, today: str, shadow: list[dict] | None = None, ops: dict | None = None, depth: dict | None = None,
-               problems: list[str] | None = None) -> str:
+               problems: list[str] | None = None, personal: dict | None = None) -> str:
     """The same story for the terminal page. Every value is escaped; every part degrades to a sentence."""
     lessons = store.lessons()
     out = ["<h2>Learning from mistakes</h2>",
            "<div class='note'>A loss pattern becomes a rule only if it is found, then confirmed once on sessions it had not seen, "
            "then pre-registered, then holds in shadow, then a person approves it. Nothing here changes a live rule.</div>"]
-    ask = needs_you(lessons, shadow, ops, problems=problems)
+    ask = needs_you(lessons, shadow, ops, problems=problems, personal=personal)
     out.append("<p><b>Needs you:</b></p><ul>" + "".join(f"<li>{_e(a)}</li>" for a in ask) + "</ul>" if ask
                else "<p><b>Needs you:</b> nothing.</p>")
     runs = store.runs()
@@ -149,7 +154,7 @@ def panel_html(store: Store, *, today: str, shadow: list[dict] | None = None, op
 
 
 def digest(store: Store, *, week: str, today: str, shadow: list[dict] | None = None, ops: dict | None = None,
-           problems: list[str] | None = None) -> dict:
+           problems: list[str] | None = None, personal: dict | None = None) -> dict:
     """A short weekly message: what happened, what leaked, what needs a decision. One alert per ISO week."""
     auto = store.autopsies()
     lessons = store.lessons()
@@ -168,7 +173,7 @@ def digest(store: Store, *, week: str, today: str, shadow: list[dict] | None = N
         a = ops["availability"]
         if a["sessions"]:
             parts.append(f"Sessions recorded {a['completed']}/{a['sessions']}.")
-    ask = needs_you(lessons, shadow, ops, problems=problems)
+    ask = needs_you(lessons, shadow, ops, problems=problems, personal=personal)
     parts.append(f"{len(ask)} item(s) need you: " + " | ".join(a.split(".")[0][:90] for a in ask[:3]) if ask else "Nothing needs you.")
     return {"key": f"learn-digest:{week}", "title": f"Learning loop, week {week}", "body": " ".join(parts)[:900]}
 

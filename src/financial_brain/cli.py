@@ -1682,6 +1682,7 @@ def cmd_learn(args) -> int:
     from .learning import calibrate as CA
     from .learning import governance as GV
     from .learning import incidents as IN
+    from .learning import personal as PS
     from .learning import pipeline as PL
     from .learning import report as RP
     from .learning import shadow as SH
@@ -1709,7 +1710,7 @@ def cmd_learn(args) -> int:
                 alerts = list(rep["alerts"])
                 if PL.weekly(today) or args.digest:
                     alerts.append(RP.digest(st, week=PL.iso_week(today), today=today, shadow=RP.latest_shadow(st),
-                                            ops=rep.get("ops"), problems=rep["problems"]))
+                                            ops=rep.get("ops"), problems=rep["problems"], personal=rep.get("personal")))
                 if not args.no_alert:
                     _learn_send(alerts)
                 print(f"{len(alerts)} alert(s){' (not sent)' if args.no_alert else ''}")
@@ -1744,7 +1745,8 @@ def cmd_learn(args) -> int:
                 if cal_path.exists():
                     cal = _json.loads(cal_path.read_text(encoding="utf-8"))
                 print(RP.status_text(st, today=today, shadow=RP.latest_shadow(st), ops=RP.ops_report(st, rcon, today=today),
-                                     depth=RP.depth_summary(), ab=ab, problems=problems, calibration=cal))
+                                     depth=RP.depth_summary(), ab=ab, problems=problems, calibration=cal,
+                                     personal=PS.summary(research_db=research)))
         finally:
             if rcon is not None:
                 rcon.close()

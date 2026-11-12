@@ -178,3 +178,50 @@ def test_autopsy_render_uses_the_stored_rows():
     with Store(":memory:") as st:
         st.replace_autopsies(_auto())
         assert "NOISE_STOP" in AU.render(st.autopsies())
+
+
+# ------------------------------------------------------------------------------------------------ the owner's own habits
+
+def test_the_personal_summary_is_an_honest_sentence_when_there_is_nothing_to_review(tmp_path):
+    import duckdb
+
+    from financial_brain.learning import personal as PS
+    assert "no journal yet" in PS.summary(tmp_path / "none.duckdb")["note"]
+    p = tmp_path / "my.duckdb"
+    con = duckdb.connect(str(p))
+    con.execute("CREATE TABLE my_trades (trade_id VARCHAR, ts VARCHAR, day VARCHAR, tradingsymbol VARCHAR, product VARCHAR, side VARCHAR, "
+                "quantity INTEGER, price DOUBLE)")
+    con.close()
+    s = PS.summary(p)
+    assert s["trades"] == 0 and "journal is empty" in s["note"] and "fb journal --import" in s["note"]
+    assert "journal is empty" in PS.lines(s)[0]
+
+
+def test_a_habit_in_the_anti_playbook_is_a_warning_in_every_surface_and_one_alert():
+    from financial_brain.learning import personal as PS
+    s = {"trades": 40, "trips": 12, "habits": {"averaging_down": 9}, "overtrading_days": ["2026-11-03"], "averaging_down": 9,
+         "avoid": [{"tag": "averaging_down", "trips": 9, "mean_net": -0.034, "t": -2.6}], "examined": 5,
+         "note": "5 tags examined: at t <= -2 about 0.1 would flag by chance"}
+    assert PS.alerts(s)[0]["key"] == "learn-habit:averaging_down" and "Warning only" in PS.alerts(s)[0]["body"]
+    with Store(":memory:") as st:
+        text = RP.status_text(st, today="2027-01-07", personal=s)
+        d = RP.digest(st, week="2027-W01", today="2027-01-08", personal=s)
+        html = RP.panel_html(st, today="2027-01-07", personal=s)
+    assert "AVOID averaging_down" in text and "Your own habit 'averaging_down'" in text
+    assert "need you" in d["body"] and "averaging_down" in html
+
+
+def test_the_pipeline_carries_the_personal_review_and_alerts_on_a_new_habit():
+    import pandas as pd
+
+    from financial_brain.learning import calibrate as C
+    from financial_brain.learning import pipeline as PL
+    led = C.synthetic_ledger(8, seed=1)
+    runs = pd.DataFrame([{"day": d, "mode": "live", "status": "complete", "symbols": 1, "polls": 1, "note": ""} for d in sorted(led["day"].unique())])
+    inp = PL.Inputs(trades=pd.DataFrame(), runs=runs, regimes=pd.DataFrame(columns=["business_date", "regime", "vix"]), sessions=[],
+                    personal={"trades": 20, "trips": 9, "habits": {}, "overtrading_days": [], "averaging_down": 0, "examined": 5, "note": "",
+                              "avoid": [{"tag": "event_chasing", "trips": 8, "mean_net": -0.05, "t": -2.4}]})
+    with Store(":memory:") as st:
+        rep = PL.process(st, inp, today="2027-03-01", audit=[], task_registered=lambda n: True)
+    assert rep["stages"]["personal"]["ok"] and rep["stages"]["personal"]["habits_to_avoid"] == 1
+    assert any(a["key"] == "learn-habit:event_chasing" for a in rep["alerts"])
