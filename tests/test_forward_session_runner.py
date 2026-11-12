@@ -31,13 +31,14 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     result = runner.run(_config(), [_event(), _event(NOW + timedelta(seconds=1))], decision_at=NOW,
                         decision_fn=lambda events: {"side": "BUY", "count": len(events)},
                         risk_fn=lambda decision: {"approved": True},
-                        execution_fn=lambda decision, intent: calls.append(intent) or {"state": "NO_TRADE"})
+                        execution_fn=lambda decision, intent, events: calls.append((intent, events)) or {"state": "NO_TRADE"})
     assert result["status"] == "PAPER_COMPLETE"
-    assert result["event_count"] == 1
+    assert result["event_count"] == 2
+    assert result["decision_event_count"] == 1
     assert result["physical_orders"] is False
-    assert len(calls) == 1
+    assert len(calls) == 1 and len(calls[0][1]) == 2
     record_types = [r["t"] for r in DurableJournal(tmp_path / "session.jsonl").records()]
-    assert record_types == ["SESSION_PLAN", "MARKET_EVENT", "DECISION", "RISK_VERDICT",
+    assert record_types == ["SESSION_PLAN", "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT",
                             "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK", "SESSION_CLOSED"]
 
 
@@ -47,7 +48,7 @@ def test_closed_session_is_replayed_without_reexecuting(tmp_path):
     calls = []
     kwargs = dict(decision_at=NOW, decision_fn=lambda _: {"side": "NONE"},
                   risk_fn=lambda _: {"approved": True},
-                  execution_fn=lambda _, intent: calls.append(intent) or {"state": "NO_TRADE"})
+                  execution_fn=lambda _, intent, events: calls.append(intent) or {"state": "NO_TRADE"})
     first = runner.run(_config(), [_event()], **kwargs)
     second = runner.run(_config(), [_event()], **kwargs)
     assert first == second
@@ -57,7 +58,7 @@ def test_closed_session_is_replayed_without_reexecuting(tmp_path):
 def test_session_id_cannot_be_reused_for_different_configuration(tmp_path):
     runner = ForwardSessionRunner(tmp_path / "session.jsonl")
     runner.run(_config(), [], decision_at=NOW, decision_fn=lambda _: {"side": "NONE"},
-               risk_fn=lambda _: {"approved": False}, execution_fn=lambda *_: {})
+                   risk_fn=lambda _: {"approved": False}, execution_fn=lambda *_: {})
     with pytest.raises(RunnerError, match="different"):
         runner.run(_config(cohort_id="C2"), [], decision_at=NOW,
                    decision_fn=lambda _: {}, risk_fn=lambda _: {"approved": False}, execution_fn=lambda *_: {})

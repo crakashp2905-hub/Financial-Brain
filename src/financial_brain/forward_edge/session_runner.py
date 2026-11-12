@@ -67,9 +67,9 @@ class ForwardRunConfig:
 class ForwardSessionRunner:
     """Journal normalized events and adapter outcomes in a restartable session stream.
 
-    ``decision_fn`` receives only events available by ``decision_at``. ``risk_fn`` receives
-    the frozen decision. ``execution_fn`` must be an idempotent paper adapter keyed by the
-    returned intent id. Results are journaled before they are returned to the caller.
+    ``decision_fn`` receives only events available by ``decision_at``. The execution adapter
+    receives the complete archived session stream and a stable intent id; it must use only
+    post-decision observations and be idempotent by that id. Results are journaled before return.
     """
 
     def __init__(self, journal_path: Path) -> None:
@@ -79,7 +79,7 @@ class ForwardSessionRunner:
             decision_at: datetime,
             decision_fn: Callable[[list[NormalizedEvent]], dict],
             risk_fn: Callable[[dict], dict],
-            execution_fn: Callable[[dict, str], dict]) -> dict:
+            execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict]) -> dict:
         from financial_brain.forward_edge.market_data import decision_visible
 
         plan = config.canonical()
@@ -100,17 +100,15 @@ class ForwardSessionRunner:
         visible_at = self._utc(decision_at)
         old_events = [r["event"] for r in existing if r.get("t") == "MARKET_EVENT"]
         prior_hashes = {r.get("event_sha256") for r in existing if r.get("t") == "MARKET_EVENT"}
-        accepted: list[NormalizedEvent] = [NormalizedEvent(
+        observed: list[NormalizedEvent] = [NormalizedEvent(
             kind=row["kind"], instrument=row["instrument"],
             event_utc=datetime.fromisoformat(row["event_utc"]),
             received_utc=datetime.fromisoformat(row["received_utc"]),
             available_utc=datetime.fromisoformat(row["available_utc"]),
             payload=tuple(tuple(item) for item in row["payload"])) for row in old_events]
-        last_available = max((self._utc(e.available_utc) for e in accepted), default=None)
+        last_available = max((self._utc(e.available_utc) for e in observed), default=None)
         for event in sorted(events, key=lambda e: (self._utc(e.available_utc), e.content_sha256())):
             if event.instrument not in plan["instruments"]:
-                continue
-            if not decision_visible(event, visible_at):
                 continue
             digest = event.content_sha256()
             if digest in prior_hashes:
@@ -118,12 +116,13 @@ class ForwardSessionRunner:
             journal.append({"t": "MARKET_EVENT", "session_id": config.session_id,
                             "event_sha256": digest, "event": self._event_dict(event)})
             prior_hashes.add(digest)
-            accepted.append(event)
+            observed.append(event)
             last_available = self._utc(event.available_utc)
+        decision_events = [event for event in observed if decision_visible(event, visible_at)]
 
         decision = next((r["decision"] for r in reversed(existing) if r.get("t") == "DECISION"), None)
         if decision is None:
-            decision = decision_fn(accepted)
+            decision = decision_fn(decision_events)
             if not isinstance(decision, dict):
                 raise RunnerError("decision adapter must return a dictionary")
             journal.append({"t": "DECISION", "session_id": config.session_id,
@@ -135,7 +134,8 @@ class ForwardSessionRunner:
                 raise RunnerError("risk adapter must return a dictionary with approved")
             journal.append({"t": "RISK_VERDICT", "session_id": config.session_id, "risk": risk})
         result = {"session_id": config.session_id, "config_sha256": config.sha256,
-                  "event_count": len(accepted), "last_available_utc": last_available.isoformat()
+                  "event_count": len(observed), "decision_event_count": len(decision_events),
+                  "last_available_utc": last_available.isoformat()
                   if last_available else None, "decision": decision, "risk": risk,
                   "mode": config.mode.value, "physical_orders": False}
         if not risk["approved"]:
@@ -149,7 +149,7 @@ class ForwardSessionRunner:
                            for r in existing):
                     journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
                                     "intent_id": intent_id})
-                execution = execution_fn(decision, intent_id)
+                execution = execution_fn(decision, intent_id, observed)
             else:
                 execution = prior_execution
             if not isinstance(execution, dict):
