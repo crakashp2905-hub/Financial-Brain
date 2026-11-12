@@ -2,21 +2,28 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 17,
-  "unrecorded_tasks": 201,
+  "recorded_tasks": 19,
+  "unrecorded_tasks": 199,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "89b300e2d0a532a1f9bab7c2ad6bbffe95ce4771",
+  "reviewed_main_sha": "3806fc3fcac91389c7fcd93bc989915b85f68d67",
   "items": [
     {
       "id": "PE-0015",
       "status": "DONE",
-      "sources": ["src/financial_brain/forward_edge/session_runner.py"],
-      "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution", "test_incomplete_session_is_preserved_and_cannot_be_reused", "test_invalid_state_transition_fails_closed", "test_session_id_cannot_be_reused_for_different_configuration"],
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py"
+      ],
+      "tests": [
+        "test_runner_persists_visible_events_decision_risk_and_paper_execution",
+        "test_incomplete_session_is_preserved_and_cannot_be_reused",
+        "test_invalid_state_transition_fails_closed",
+        "test_session_id_cannot_be_reused_for_different_configuration"
+      ],
       "test_result": "Versioned PLANNED/PREFLIGHT/OPEN/DRAINING/CLOSED/INCOMPLETE/REJECTED transitions, terminal handling, invalid transition refusal, and immutable session metadata are tested",
       "evidence_sha256": null,
       "blockers": []
@@ -24,8 +31,13 @@
     {
       "id": "PE-0016",
       "status": "DONE",
-      "sources": ["src/financial_brain/forward_edge/session_runner.py"],
-      "tests": ["test_session_id_cannot_be_reused_for_different_configuration", "test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments"],
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py"
+      ],
+      "tests": [
+        "test_session_id_cannot_be_reused_for_different_configuration",
+        "test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments"
+      ],
       "test_result": "Canonical config includes exchange date, cohort, strategy/risk/constraint hashes, benchmark, universe, capital and ledger id; golden hash and conflict rejection are tested",
       "evidence_sha256": null,
       "blockers": []
@@ -33,56 +45,110 @@
     {
       "id": "PE-0017",
       "status": "PARTIAL",
-      "sources": ["src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_session_runner.py"],
-      "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution"],
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_forward_session_runner.py"
+      ],
+      "tests": [
+        "test_runner_persists_visible_events_decision_risk_and_paper_execution"
+      ],
       "test_result": "Normalized event stream, decision visibility, risk adapter, and paper execution callback are exercised",
       "evidence_sha256": null,
-      "blockers": ["fixture adapter and replay parity are not yet wired through the same runner"]
+      "blockers": [
+        "fixture adapter and replay parity are not yet wired through the same runner"
+      ]
     },
     {
       "id": "PE-0018",
       "status": "NOT_STARTED",
-      "sources": ["src/financial_brain/forward_edge/pipeline.py", "src/financial_brain/forward_edge/session_runner.py"],
+      "sources": [
+        "src/financial_brain/forward_edge/pipeline.py",
+        "src/financial_brain/forward_edge/session_runner.py"
+      ],
       "tests": [],
       "test_result": "Existing fixture pipeline still runs independently",
       "evidence_sha256": null,
-      "blockers": ["fixture pipeline parity refactor is not implemented"]
+      "blockers": [
+        "fixture pipeline parity refactor is not implemented"
+      ]
     },
     {
       "id": "PE-0019",
       "status": "PARTIAL",
-      "sources": ["src/financial_brain/paper/intraday_runner.py", "src/financial_brain/ingest/kite_live.py", "tests/test_phase5_intraday_runner.py"],
-      "tests": ["test_live_runner_can_send_existing_kite_polls_to_forward_event_sink"],
+      "sources": [
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "tests/test_phase5_intraday_runner.py"
+      ],
+      "tests": [
+        "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink"
+      ],
       "test_result": "The existing read-only Kite polling loop writes each normalized full-quote batch into the forward session journal; a restarted runner consumes and finalizes the persisted events in a mocked market session",
       "evidence_sha256": null,
-      "blockers": ["actual authorized market-session capture is not yet evidenced"]
+      "blockers": [
+        "actual authorized market-session capture is not yet evidenced"
+      ]
     },
     {
       "id": "PE-0021",
       "status": "PARTIAL",
-      "sources": ["src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/forward_edge/durable.py"],
-      "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution", "test_pending_outbox_requires_reconciliation_after_unknown_side_effect", "test_outbox_retries_only_after_reconciliation_proves_no_effect", "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution", "test_market_polls_can_be_durably_appended_before_session_finalization", "test_batch_append_preserves_record_sequence_and_hash_chain"],
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/durable.py"
+      ],
+      "tests": [
+        "test_runner_persists_visible_events_decision_risk_and_paper_execution",
+        "test_pending_outbox_requires_reconciliation_after_unknown_side_effect",
+        "test_outbox_retries_only_after_reconciliation_proves_no_effect",
+        "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution",
+        "test_market_polls_can_be_durably_appended_before_session_finalization",
+        "test_batch_append_preserves_record_sequence_and_hash_chain"
+      ],
       "test_result": "Session records and pending/unknown/reconciled/acknowledged paper outbox outcomes are written to the fsynced hash-chained journal; 33 focused runner/market-poll integration tests pass",
       "evidence_sha256": null,
-      "blockers": ["full lifecycle boundary crash-injection matrix and venue reconciliation remain incomplete"]
+      "blockers": [
+        "full lifecycle boundary crash-injection matrix and venue reconciliation remain incomplete"
+      ]
     },
     {
       "id": "PE-0022",
       "status": "PARTIAL",
-      "sources": ["src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_session_runner.py"],
-      "tests": ["test_pending_outbox_requires_reconciliation_after_unknown_side_effect", "test_outbox_retries_only_after_reconciliation_proves_no_effect", "test_execution_without_simulation_receipt_cannot_close_paper_session", "test_filled_status_without_fill_facts_cannot_be_acknowledged", "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution"],
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_forward_session_runner.py"
+      ],
+      "tests": [
+        "test_pending_outbox_requires_reconciliation_after_unknown_side_effect",
+        "test_outbox_retries_only_after_reconciliation_proves_no_effect",
+        "test_execution_without_simulation_receipt_cannot_close_paper_session",
+        "test_filled_status_without_fill_facts_cannot_be_acknowledged",
+        "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution"
+      ],
       "test_result": "18 focused runner tests pass; unknown outcomes require explicit APPLIED/NOT_APPLIED reconciliation; FILLED/PARTIAL requires finite priced fill facts and a simulated receipt; Ruff and mypy pass",
       "evidence_sha256": null,
-      "blockers": ["the production simulated execution adapter and its receipt provenance are not connected to the runner"]
+      "blockers": [
+        "the production simulated execution adapter and its receipt provenance are not connected to the runner"
+      ]
     },
     {
       "id": "PE-0023",
       "status": "PARTIAL",
-      "sources": ["src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_session_runner.py"],
-      "tests": ["test_data_rejections_are_immutable_idempotent_and_persisted", "test_preflight_is_immutable_and_blocks_actionable_decisions", "test_actionable_decision_without_preflight_is_rejected_and_not_executed", "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink", "test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows"],
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_forward_session_runner.py"
+      ],
+      "tests": [
+        "test_data_rejections_are_immutable_idempotent_and_persisted",
+        "test_preflight_is_immutable_and_blocks_actionable_decisions",
+        "test_actionable_decision_without_preflight_is_rejected_and_not_executed",
+        "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink",
+        "test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows"
+      ],
       "test_result": "Preflight verdicts, Kite source rejection hashes/reasons, decisions, risk, stable paper intents, execution receipts, and outbox acknowledgements persist in the append-only journal; 48 focused integration tests pass",
       "evidence_sha256": null,
-      "blockers": ["production runner invocation still needs an approved preflight callback and account-ledger integration; no actual authorized market session has been captured"]
+      "blockers": [
+        "production runner invocation still needs an approved preflight callback and account-ledger integration; no actual authorized market session has been captured"
+      ]
     },
     {
       "id": "PE-0030",
@@ -99,7 +165,9 @@
       ],
       "test_result": "29 focused Kite and forward market-data tests passed; Ruff and mypy passed",
       "evidence_sha256": null,
-      "blockers": ["live Kite capture has not yet been observed"]
+      "blockers": [
+        "live Kite capture has not yet been observed"
+      ]
     },
     {
       "id": "PE-0031",
@@ -124,10 +192,14 @@
         "src/financial_brain/forward_edge/market_data.py",
         "tests/test_kite_forward_events.py"
       ],
-      "tests": ["test_full_quote_becomes_timestamped_forward_event"],
+      "tests": [
+        "test_full_quote_becomes_timestamped_forward_event"
+      ],
       "test_result": "Raw source payload hash and normalized source/exchange/receive/availability fields are tested",
       "evidence_sha256": null,
-      "blockers": ["separate ingest clock and durable raw-to-fill lineage are not implemented"]
+      "blockers": [
+        "separate ingest clock and durable raw-to-fill lineage are not implemented"
+      ]
     },
     {
       "id": "PE-0090",
@@ -146,7 +218,9 @@
       ],
       "test_result": "32 focused account, OMS, and ledger tests passed; full Windows suite: 3278 passed, 1 skipped; Ruff and mypy passed",
       "evidence_sha256": null,
-      "blockers": ["implementation currently covers one long-only single-currency paper book; aggregation across every strategy book, margin, settlement, and derivative accounting remain"]
+      "blockers": [
+        "implementation currently covers one long-only single-currency paper book; aggregation across every strategy book, margin, settlement, and derivative accounting remain"
+      ]
     },
     {
       "id": "PE-0091",
@@ -166,7 +240,9 @@
       ],
       "test_result": "16 focused account and OMS tests pass, including deterministic randomized partial-fill/cancel sequences across 12 seeds; Ruff and mypy pass. The preceding Windows baseline suite passed 3278 tests with 1 skipped.",
       "evidence_sha256": null,
-      "blockers": ["cross-asset margin reservations, multi-book allocation, and full fee-buffer calibration remain"]
+      "blockers": [
+        "cross-asset margin reservations, multi-book allocation, and full fee-buffer calibration remain"
+      ]
     },
     {
       "id": "PE-0092",
@@ -186,10 +262,55 @@
       "blockers": []
     },
     {
+      "id": "PE-0110",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/champion.py",
+        "docs/edge-program/executable-cohort-contract.md"
+      ],
+      "tests": [
+        "test_executable_cohort_uses_actual_partial_fill_fees_marks_and_cash_days",
+        "test_explicit_no_order_cash_cohort_resolves_to_zero_instead_of_disappearing",
+        "test_sell_fills_release_inventory_and_include_sell_fee_in_net_nav",
+        "test_missing_mark_or_unresolved_order_withholds_cohort_return",
+        "test_overlapping_frozen_cohorts_are_rejected"
+      ],
+      "test_result": "Five deterministic contract tests cover partial buy/sell fills, fees, marked NAV, cash days, missing marks, unresolved orders, and overlap rejection. Executable results are stored separately and take precedence over close-to-close diagnostics.",
+      "evidence_sha256": null,
+      "blockers": [
+        "ForwardSessionRunner and PaperAccount durable events are not yet exported into this resolver's normalized cohort inputs; live prospective cohorts have not elapsed"
+      ]
+    },
+    {
+      "id": "PE-0111",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/champion.py",
+        "tests/test_champion_executable.py"
+      ],
+      "tests": [
+        "test_full_universe_rejects_and_missing_paths_are_reported_with_action_sensitivity"
+      ],
+      "test_result": "Point-in-time NSE EQ listings, non-tradable and data-rejected symbols, missing lineages/price paths, recorded corporate-action IDs, and a -100% missing-path sensitivity are captured and tested.",
+      "evidence_sha256": null,
+      "blockers": [
+        "NSE universe snapshot and corporate-action feed completeness are external data-coverage dependencies; historical action adjustments and source completeness still require reconciliation"
+      ]
+    },
+    {
       "id": "PE-0112",
       "status": "DONE",
-      "sources": ["src/financial_brain/forward_edge/charter.py", "src/financial_brain/forward_edge/trials.py", "docs/edge-program/evaluation-identity-contract.md"],
-      "tests": ["test_every_source_cost_calendar_and_benchmark_digest_changes_identity_hash", "test_protected_charter_requires_all_evaluation_identity_components", "test_trial_in_2027q1_needs_only_a_protected_trial_approval", "test_protected_trial_cannot_register_without_full_identity_registry"],
+      "sources": [
+        "src/financial_brain/forward_edge/charter.py",
+        "src/financial_brain/forward_edge/trials.py",
+        "docs/edge-program/evaluation-identity-contract.md"
+      ],
+      "tests": [
+        "test_every_source_cost_calendar_and_benchmark_digest_changes_identity_hash",
+        "test_protected_charter_requires_all_evaluation_identity_components",
+        "test_trial_in_2027q1_needs_only_a_protected_trial_approval",
+        "test_protected_trial_cannot_register_without_full_identity_registry"
+      ],
       "test_result": "Protected registrations now require hashed strategy/model/data/rights/calendar/universe/cost/benchmark identity, a frozen schedule, and an approval scope equal to the charter hash. The durable registry refuses same-version identity changes and replays its chain after restart; changing an identity component changes the charter digest.",
       "evidence_sha256": null,
       "blockers": []
@@ -197,8 +318,14 @@
     {
       "id": "PE-0113",
       "status": "DONE",
-      "sources": ["src/financial_brain/forward_edge/charter.py", "src/financial_brain/forward_edge/decision_custody.py"],
-      "tests": ["test_durable_registry_rejects_retroactive_benchmark_and_endpoint_edits", "test_registry_revalidates_cohort_closure_events_during_recovery"],
+      "sources": [
+        "src/financial_brain/forward_edge/charter.py",
+        "src/financial_brain/forward_edge/decision_custody.py"
+      ],
+      "tests": [
+        "test_durable_registry_rejects_retroactive_benchmark_and_endpoint_edits",
+        "test_registry_revalidates_cohort_closure_events_during_recovery"
+      ],
       "test_result": "A closed cohort's outcome is immutable; changing its benchmark or endpoint under the same charter version is rejected. Registry recovery revalidates cohort membership, frozen endpoint and content-addressed outcome before accepting a closure. A later version must link the previous charter hash and move the prospective start forward.",
       "evidence_sha256": null,
       "blockers": []
@@ -206,8 +333,38 @@
     {
       "id": "PE-0114",
       "status": "DONE",
-      "sources": ["src/financial_brain/forward_edge/evidence_labels.py", "src/financial_brain/forward_edge/evidence_stats.py", "src/financial_brain/forward_edge/cli.py", "src/financial_brain/paper/daily_results.py", "src/financial_brain/paper/intraday_runner.py", "src/financial_brain/paper/execution_audit.py", "src/financial_brain/paper/options_runner.py", "src/financial_brain/paper/options_forward.py", "src/financial_brain/evaluation/evidence_tiers.py", "docs/edge-program/evidence-label-contract.md"],
-      "tests": ["test_modes_have_distinct_fail_closed_evidence_classes", "test_local_paper_requires_every_independent_evidence_fact_for_higher_label", "test_replay_cannot_be_upgraded_by_attestation_fields", "test_report_stamping_rejects_caller_claimed_independent_forward_label", "test_export_rows_cannot_label_replay_or_local_paper_as_independent_forward", "test_export_independent_forward_requires_each_source_fact", "test_generic_exporter_cannot_assert_deployment_validation", "test_every_reported_row_carries_exactly_one_claim_tier", "test_report_carries_coverage_benchmark_missing_data_and_never_promotes", "test_the_report_separates_live_from_replay_and_states_the_run", "test_intraday_export_distinguishes_observed_paper_from_historical_replay", "test_execution_audit_preserves_simulated_and_unfilled_facts", "test_paper_tier_ledger_labels_observed_paper_as_local_not_attested", "test_claims_are_monotone", "test_options_runner_requires_later_entry_and_real_exit", "test_archive_requires_fresh_broker_timestamp", "test_forward_outcome_preserves_missing_quote_and_is_immutable", "test_forward_fill_needs_observed_fresh_quotes_after_registration"],
+      "sources": [
+        "src/financial_brain/forward_edge/evidence_labels.py",
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "src/financial_brain/forward_edge/cli.py",
+        "src/financial_brain/paper/daily_results.py",
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/paper/execution_audit.py",
+        "src/financial_brain/paper/options_runner.py",
+        "src/financial_brain/paper/options_forward.py",
+        "src/financial_brain/evaluation/evidence_tiers.py",
+        "docs/edge-program/evidence-label-contract.md"
+      ],
+      "tests": [
+        "test_modes_have_distinct_fail_closed_evidence_classes",
+        "test_local_paper_requires_every_independent_evidence_fact_for_higher_label",
+        "test_replay_cannot_be_upgraded_by_attestation_fields",
+        "test_report_stamping_rejects_caller_claimed_independent_forward_label",
+        "test_export_rows_cannot_label_replay_or_local_paper_as_independent_forward",
+        "test_export_independent_forward_requires_each_source_fact",
+        "test_generic_exporter_cannot_assert_deployment_validation",
+        "test_every_reported_row_carries_exactly_one_claim_tier",
+        "test_report_carries_coverage_benchmark_missing_data_and_never_promotes",
+        "test_the_report_separates_live_from_replay_and_states_the_run",
+        "test_intraday_export_distinguishes_observed_paper_from_historical_replay",
+        "test_execution_audit_preserves_simulated_and_unfilled_facts",
+        "test_paper_tier_ledger_labels_observed_paper_as_local_not_attested",
+        "test_claims_are_monotone",
+        "test_options_runner_requires_later_entry_and_real_exit",
+        "test_archive_requires_fresh_broker_timestamp",
+        "test_forward_outcome_preserves_missing_quote_and_is_immutable",
+        "test_forward_fill_needs_observed_fresh_quotes_after_registration"
+      ],
       "test_result": "Shared evidence classification labels shadow, fixture/historical replay, local paper, and independently attested forward separately. Fixture CLI summaries, daily and intraday reports, option replay/forward results, execution audits, statistical export rows, and live-paper evidence tiers carry derived labels; replay and local paper cannot be upgraded without observed data, a sealed pre-entry decision, a complete session, and verified custody where independent claims are made. The generic exporter cannot assert deployment validation. Focused suite: 85 passed; Ruff and mypy pass.",
       "evidence_sha256": null,
       "blockers": []
