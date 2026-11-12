@@ -101,3 +101,15 @@ def test_fill_cannot_exceed_remaining() -> None:
     oms.move("c1", State.ACCEPTED)
     with pytest.raises(OmsError, match="out of range"):
         oms.record_fill("c1", 11, Decimal("1"))
+
+
+def test_cash_adjustment_is_idempotent_and_preserves_reservations() -> None:
+    oms = _oms()
+    _buy(oms, reserve="90000")
+    assert oms.apply_cash_adjustment("paper-inr", Decimal("-100"), adjustment_id="fee-1") is True
+    assert oms.apply_cash_adjustment("paper-inr", Decimal("-100"), adjustment_id="fee-1") is False
+    assert oms.available("paper-inr") == Decimal("9900")
+    with pytest.raises(OmsError, match="different content"):
+        oms.apply_cash_adjustment("paper-inr", Decimal("-101"), adjustment_id="fee-1")
+    with pytest.raises(InsufficientCash):
+        oms.apply_cash_adjustment("paper-inr", Decimal("-11000"), adjustment_id="fee-2")
