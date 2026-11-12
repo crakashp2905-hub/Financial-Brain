@@ -26,7 +26,9 @@ is what makes skipping it worth anything.
 4. **Decay.** A standing lesson keeps being watched: if the last ``decay_window`` sessions no longer show the loss it is marked
    DECAYING. Nothing is retired by machine.
 
-Everything is one observation per day (trades on a day share one market), equal-weighted across days. The cell-by-day matrix
+Everything is one observation per day (trades on a day share one market), equal-weighted across days. A cell whose value
+is constant for the whole session (weekday, regime, VIX) cannot be compared with the rest of its own day, so it is compared with the
+*other days* instead: Welch's one-sided t on the day means of its days against the strategy's other days. The cell-by-day matrix
 holds cumulative sums, so one night's work is a few array operations whatever the history length. Nothing here touches a
 database: ``step`` takes the matrix and the folded lessons and returns events.
 """
@@ -129,6 +131,9 @@ class CellMatrix:
         self.dimension = meta["dimension"].to_numpy() if len(meta) else np.array([])
         self.value = meta["value"].to_numpy() if len(meta) else np.array([])
         self.family = np.array([F.DIMENSIONS[d].family for d in self.dimension])
+        self.is_day = np.array([F.DIMENSIONS[d].level == "day" for d in self.dimension], dtype=bool)
+        strategies = sorted(set(self.strategy)) if len(self.strategy) else []
+        self.strat_row = np.array([strategies.index(x) for x in self.strategy], dtype=int) if len(self.strategy) else np.array([], dtype=int)
         shape = (len(self.cells), len(self.sessions))
         M, K, N, PNL = (np.full(shape, np.nan), np.full(shape, np.nan), np.zeros(shape), np.zeros(shape))
         if len(long):
@@ -138,6 +143,12 @@ class CellMatrix:
             r, c = r[ok], c[ok].astype(int)
             M[r, c], K[r, c] = long["mean"].to_numpy()[ok], long["contrast"].to_numpy()[ok]
             N[r, c], PNL[r, c] = long["n"].to_numpy()[ok], long["pnl"].to_numpy()[ok]
+        # each strategy's own day means over all its trades: the "other days" for a day-level cell are these minus the cell's days
+        A = np.full((len(strategies), len(self.sessions)), np.nan)
+        for r in day_tot.itertuples():
+            if r.strategy in strategies and r.day in self.pos:
+                A[strategies.index(r.strategy), self.pos[r.day]] = r.S / r.N
+        self.c_ad, self.c_as, self.c_ass = _cum(~np.isnan(A)), _cum(np.nan_to_num(A)), _cum(np.nan_to_num(A) ** 2)
         self.c_md, self.c_ms, self.c_mss = _cum(~np.isnan(M)), _cum(np.nan_to_num(M)), _cum(np.nan_to_num(M) ** 2)
         self.c_kd, self.c_ks, self.c_kss = _cum(~np.isnan(K)), _cum(np.nan_to_num(K)), _cum(np.nan_to_num(K) ** 2)
         self.c_n, self.c_pnl = _cum(N), _cum(PNL)
@@ -159,8 +170,31 @@ class CellMatrix:
             kmean = np.where(kd > 0, ks / kd, np.nan)
             var = np.where(kd > 1, (kss - ks * ks / kd) / (kd - 1), np.nan)
         ksd = np.sqrt(np.maximum(var, 0))
+        p = _p_less(kmean, ksd, kd.astype(float))
+        day = self.is_day[sel]
+        if day.any():                                    # a day-level cell: its days against the strategy's other days (Welch)
+            sr = self.strat_row[sel]
+            ad = (self.c_ad[:, hi + 1] - self.c_ad[:, lo + 1])[sr]
+            a_s = (self.c_as[:, hi + 1] - self.c_as[:, lo + 1])[sr]
+            ass = (self.c_ass[:, hi + 1] - self.c_ass[:, lo + 1])[sr]
+            mss = d(self.c_mss)
+            n_o, n_r = md, ad - md
+            with np.errstate(divide="ignore", invalid="ignore"):
+                m_o, m_r = ms / n_o, (a_s - ms) / n_r
+                v_o = np.where(n_o > 1, (mss - ms * ms / n_o) / (n_o - 1), np.nan)
+                v_r = np.where(n_r > 1, ((ass - mss) - (a_s - ms) ** 2 / n_r) / (n_r - 1), np.nan)
+                se2 = v_o / n_o + v_r / n_r
+                tstat = (m_o - m_r) / np.sqrt(se2)
+                dfw = se2 ** 2 / ((v_o / n_o) ** 2 / (n_o - 1) + (v_r / n_r) ** 2 / (n_r - 1))
+            pw = np.where((n_o >= 3) & (n_r >= 3) & np.isfinite(tstat), stats.t.cdf(tstat, np.maximum(np.nan_to_num(dfw, nan=1.0), 1.0)), 1.0)
+            flat = ((v_o == 0) & (v_r == 0)) & (n_o >= 3) & (n_r >= 3)
+            pw = np.where(flat, np.where(m_o < m_r, 0.0, 1.0), pw)
+            kmean = np.where(day, m_o - m_r, kmean)
+            ksd = np.where(day, np.sqrt(np.maximum(np.nan_to_num(v_o), 0)), ksd)
+            kd = np.where(day, np.where(n_r >= 3, n_o, 0), kd)
+            p = np.where(day, pw, p)
         return {"days": md.astype(int), "trades": d(self.c_n).astype(int), "mean": mean, "contrast": kmean, "csd": ksd,
-                "cdays": kd.astype(int), "pnl": d(self.c_pnl), "p": _p_less(kmean, ksd, kd.astype(float))}
+                "cdays": np.asarray(kd).astype(int), "pnl": d(self.c_pnl), "p": p}
 
     def stats(self, hi: int, lo: int = -1, rows: np.ndarray | None = None) -> pd.DataFrame:
         """``stats_arrays`` as a frame with the cell's identity (used for the few cells decided or watched each night)."""

@@ -38,6 +38,9 @@ class Dimension:
     values: tuple[str, ...]
     vector: Callable[[pd.DataFrame], pd.Series]
     scalar: Callable[[Mapping], str | None]
+    #: "trade": the value varies between trades on one day, so a cell can be compared with the other trades that day.
+    #: "day": one value for the whole session (weekday, regime, VIX): a cell can only be compared with *other days*.
+    level: str = "trade"
 
 
 def _where(mask_none: pd.Series, out: np.ndarray) -> pd.Series:
@@ -144,8 +147,8 @@ def _s_weekday(c):
 def _make() -> dict[str, Dimension]:
     d: dict[str, Dimension] = {}
 
-    def add(name, family, doc, values, vector, scalar):
-        d[name] = Dimension(name, family, doc, tuple(values), vector, scalar)
+    def add(name, family, doc, values, vector, scalar, level="trade"):
+        d[name] = Dimension(name, family, doc, tuple(values), vector, scalar, level)
 
     add("spread_bucket", "execution", "quoted bid-ask spread at the decision, bp of the mid", SPREAD_LABELS,
         lambda df: _bin(pd.to_numeric(df["spread_bp"], errors="coerce"), (2.4999999, 4.9999999), SPREAD_LABELS),
@@ -161,8 +164,8 @@ def _make() -> dict[str, Dimension]:
     add("vs_daily_trend", "market", "the trade's side against the market's position versus its 20-session average",
         ("with the trend", "against the trend"), _v_trend, _s_trend)
     add("regime_prev", "market", "the previous session's market regime label",
-        tuple(f"regime {r}" for r in ("RISK_ON", "NEUTRAL", "NARROW", "RISK_OFF", "CRISIS")), _v_regime, _s_regime)
-    add("vix_bucket", "market", "India VIX at the previous close", VIX_LABELS, _v_vix, _s_vix)
+        tuple(f"regime {r}" for r in ("RISK_ON", "NEUTRAL", "NARROW", "RISK_OFF", "CRISIS")), _v_regime, _s_regime, "day")
+    add("vix_bucket", "market", "India VIX at the previous close", VIX_LABELS, _v_vix, _s_vix, "day")
     add("gap_size", "setup", "the name's absolute gap at the open", GAP_LABELS,
         lambda df: _bin(df["gap"].abs(), (0.005, 0.015), GAP_LABELS),
         lambda c: _bin_scalar(None if _missing(c.get("gap")) else abs(float(c["gap"])), (0.005, 0.015), GAP_LABELS))
@@ -174,7 +177,7 @@ def _make() -> dict[str, Dimension]:
         lambda c: _bin_scalar(c.get("entry_minute"), (584, 629), TIME_LABELS))
     add("direction", "setup", "long or short", ("long", "short"), lambda df: df["side"].astype(object),
         lambda c: c.get("side"))
-    add("weekday", "calendar", "day of the week", WEEKDAYS[:5], _v_weekday, _s_weekday)
+    add("weekday", "calendar", "day of the week", WEEKDAYS[:5], _v_weekday, _s_weekday, "day")
     return d
 
 

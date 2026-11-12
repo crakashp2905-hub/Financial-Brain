@@ -199,3 +199,51 @@ def test_the_watch_list_is_stored_and_replaced_each_night():
         st.replace_watchlist("2027-02-02", P.watchlist(cm, sessions[-1], n=2))
         w = st.watchlist()
     assert n1 > 2 and len(w) == 2 and set(w["run_on"]) == {"2027-02-02"}
+
+
+# ----------------------------------------------------------------------------------------------- day-level cells
+
+REGIME_CELL = F.cell_id("ORB", "regime_prev", "regime RISK_OFF")
+
+
+def test_a_day_level_cell_is_compared_with_the_other_days_by_welchs_test():
+    from scipy import stats as sps
+    df = C.synthetic_ledger(60, seed=21, plant=("regime_prev", "regime RISK_OFF", 40.0))
+    sessions = sorted(df["day"].unique())
+    r = P.CellMatrix(df, sessions).stats(hi=len(sessions) - 1).set_index("cell").loc[REGIME_CELL]
+    o = df[df["strategy"] == "ORB"]
+    dm, reg = o.groupby("day")["net_bp"].mean(), o.groupby("day")["regime_prev"].first()
+    a, b = dm[reg == "regime RISK_OFF"], dm[reg != "regime RISK_OFF"]
+    assert r["days"] == len(a) and r["contrast_days"] == len(a)
+    assert r["contrast"] == pytest.approx(a.mean() - b.mean()) and r["p"] == pytest.approx(
+        sps.ttest_ind(a, b, equal_var=False, alternative="less").pvalue, rel=1e-6)
+
+
+def test_a_day_level_window_uses_only_the_sessions_in_the_window():
+    from scipy import stats as sps
+    df = C.synthetic_ledger(60, seed=22, plant=("weekday", "Wed", 50.0))
+    sessions = sorted(df["day"].unique())
+    cm = P.CellMatrix(df, sessions)
+    r = cm.stats(hi=59, lo=cm.lo_after(sessions[29])).set_index("cell").loc[F.cell_id("ORB", "weekday", "Wed")]
+    o = df[(df["strategy"] == "ORB") & (df["day"] > sessions[29])]
+    dm, wd = o.groupby("day")["net_bp"].mean(), o.groupby("day")["weekday"].first()
+    a, b = dm[wd == "Wed"], dm[wd != "Wed"]
+    assert r["days"] == len(a) and r["p"] == pytest.approx(sps.ttest_ind(a, b, equal_var=False, alternative="less").pvalue, rel=1e-6)
+
+
+def test_a_real_regime_effect_is_nominated_and_confirmed_like_any_other():
+    df = C.synthetic_ledger(90, seed=23, plant=("regime_prev", "regime RISK_OFF", 45.0))
+    events, lessons, *_ = _replay(df)
+    confirmed = {lessons[e["lesson_id"]]["cell"] for e in events if e["kind"] == "CONFIRMED"}
+    assert REGIME_CELL in confirmed, confirmed
+
+
+def test_no_dimension_is_silently_unreachable():
+    """Every dimension must be able to produce a nomination: a day-level one through the between-days test, the rest within a day."""
+    df = C.synthetic_ledger(60, seed=24)
+    sessions = sorted(df["day"].unique())
+    st = P.CellMatrix(df, sessions).stats(hi=59)
+    st = st[st["trades"] >= 30]
+    reach = st.groupby("dimension")["contrast_days"].max()
+    for name in F.DIMENSIONS:
+        assert reach.get(name, 0) >= 8, f"{name} can never be nominated: no comparison is defined for it"
