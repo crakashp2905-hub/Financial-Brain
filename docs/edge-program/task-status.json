@@ -2,15 +2,15 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 14,
-  "unrecorded_tasks": 204,
+  "recorded_tasks": 16,
+  "unrecorded_tasks": 202,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "0d8fc7f682ff417a86b0b02c25779bae0601ae39",
+  "reviewed_main_sha": "89b300e2d0a532a1f9bab7c2ad6bbffe95ce4771",
   "items": [
     {
       "id": "PE-0015",
@@ -184,6 +184,30 @@
       "test_result": "Effective-dated owner-supplied buy/sell rates are charged against each actual fill notional in the same balanced transaction as cash and inventory; a full entry/exit NAV bridge reconciles cash, fee expense, and net P&L to paise. 33 focused tests pass; Ruff and mypy pass.",
       "evidence_sha256": null,
       "blockers": []
+    },
+    {
+      "id": "PE-0110",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/evaluation/champion.py", "docs/edge-program/executable-cohort-contract.md"],
+      "tests": [
+        "test_executable_cohort_uses_actual_partial_fill_fees_marks_and_cash_days",
+        "test_explicit_no_order_cash_cohort_resolves_to_zero_instead_of_disappearing",
+        "test_sell_fills_release_inventory_and_include_sell_fee_in_net_nav",
+        "test_missing_mark_or_unresolved_order_withholds_cohort_return",
+        "test_overlapping_frozen_cohorts_are_rejected"
+      ],
+      "test_result": "Five deterministic contract tests cover partial buy/sell fills, fees, marked NAV, cash days, missing marks, unresolved orders, and overlap rejection. Executable results are stored separately and take precedence over close-to-close diagnostics.",
+      "evidence_sha256": null,
+      "blockers": ["ForwardSessionRunner and PaperAccount durable events are not yet exported into this resolver's normalized cohort inputs; live prospective cohorts have not elapsed"]
+    },
+    {
+      "id": "PE-0111",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/evaluation/champion.py", "tests/test_champion_executable.py"],
+      "tests": ["test_full_universe_rejects_and_missing_paths_are_reported_with_action_sensitivity"],
+      "test_result": "Point-in-time NSE EQ listings, non-tradable and data-rejected symbols, missing lineages/price paths, recorded corporate-action IDs, and a -100% missing-path sensitivity are captured and tested.",
+      "evidence_sha256": null,
+      "blockers": ["NSE universe snapshot and corporate-action feed completeness are external data-coverage dependencies; historical action adjustments and source completeness still require reconciliation"]
     }
   ]
 }
