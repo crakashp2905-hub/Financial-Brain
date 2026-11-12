@@ -119,6 +119,60 @@
       "test_result": "Raw source payload hash and normalized source/exchange/receive/availability fields are tested",
       "evidence_sha256": null,
       "blockers": ["separate ingest clock and durable raw-to-fill lineage are not implemented"]
+    },
+    {
+      "id": "PE-0090",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/ledger.py",
+        "src/financial_brain/kernel/oms.py",
+        "src/financial_brain/forward_edge/durable.py",
+        "tests/test_paper_account.py"
+      ],
+      "tests": [
+        "test_buy_sell_fees_and_restart_reconcile",
+        "test_replayed_intent_fill_and_fee_have_one_economic_effect",
+        "test_failed_fill_or_fee_does_not_change_journal"
+      ],
+      "test_result": "32 focused account, OMS, and ledger tests passed; full Windows suite: 3278 passed, 1 skipped; Ruff and mypy passed",
+      "evidence_sha256": null,
+      "blockers": ["implementation currently covers one long-only single-currency paper book; aggregation across every strategy book, margin, settlement, and derivative accounting remain"]
+    },
+    {
+      "id": "PE-0091",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/oms.py",
+        "tests/test_paper_account.py",
+        "tests/test_kernel_oms.py"
+      ],
+      "tests": [
+        "test_sell_reservations_prevent_overselling_and_release_on_cancel",
+        "test_cash_adjustment_is_idempotent_and_preserves_reservations",
+        "test_two_orders_cannot_spend_the_same_cash",
+        "test_full_lifecycle_releases_reservation"
+      ],
+      "test_result": "32 focused account, OMS, and ledger tests passed; full Windows suite: 3278 passed, 1 skipped; Ruff and mypy passed",
+      "evidence_sha256": null,
+      "blockers": ["randomized partial-fill/cancel sequence acceptance test and cross-asset margin reservations remain"]
+    },
+    {
+      "id": "PE-0092",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/oms.py",
+        "tests/test_paper_account.py"
+      ],
+      "tests": [
+        "test_buy_sell_fees_and_restart_reconcile",
+        "test_replayed_intent_fill_and_fee_have_one_economic_effect"
+      ],
+      "test_result": "Fees are idempotently posted to expense and cash accounts; full Windows suite: 3278 passed, 1 skipped; Ruff and mypy passed",
+      "evidence_sha256": null,
+      "blockers": ["automatic fee schedule calculation and complete equity/NAV-to-cent bridge remain"]
     }
   ]
 }

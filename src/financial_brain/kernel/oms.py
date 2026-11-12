@@ -92,6 +92,7 @@ class Oms:
         self._orders: dict[str, Order] = {}
         self._intents: dict[str, tuple] = {}
         self._provider_fills: dict[tuple[str, str], tuple[int, Decimal]] = {}
+        self._cash_adjustments: dict[tuple[str, str], Decimal] = {}
 
     # --- cash ---
     def cash(self, account: str) -> Decimal:
@@ -102,6 +103,28 @@ class Oms:
 
     def available(self, account: str) -> Decimal:
         return self._cash[account] - self._reserved[account]
+
+    def apply_cash_adjustment(self, account: str, amount: Decimal, *, adjustment_id: str) -> bool:
+        """Apply an idempotent paper cash adjustment (for example an exchange/broker fee).
+
+        The adjustment cannot consume cash reserved for other working orders. Returns False
+        for an identical replay and refuses conflicting reuse of an adjustment id.
+        """
+        if account not in self._cash or not adjustment_id:
+            raise OmsError("known account and adjustment id required")
+        if not isinstance(amount, Decimal) or not amount.is_finite():
+            raise OmsError("cash adjustment must be a finite Decimal")
+        key = (account, adjustment_id)
+        prior = self._cash_adjustments.get(key)
+        if prior is not None:
+            if prior != amount:
+                raise OmsError(f"cash adjustment id {adjustment_id} reused with different content")
+            return False
+        if self._cash[account] + amount < self._reserved[account]:
+            raise InsufficientCash("cash adjustment would consume reserved cash")
+        self._cash[account] += amount
+        self._cash_adjustments[key] = amount
+        return True
 
     # --- intents ---
     def submit_intent(
