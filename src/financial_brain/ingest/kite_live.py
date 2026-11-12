@@ -56,11 +56,14 @@ def snapshot(con, symbols: list[str], *, quote_fn=None, now: datetime | None = N
     return {"taken_at": now, "stored": len(rows), "missing": missing, "market_open": market_open(now)}
 
 
-def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime | None = None):
+def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime | None = None,
+                   rejections_out: list[dict] | None = None):
     """Capture read-only Kite full quotes as forward-edge events.
 
     An exchange timestamp is mandatory: receipt time is never substituted for it.
-    The entire batch fails if a requested quote is absent or its clocks are invalid.
+    By default the entire batch fails if a requested quote is absent or its clocks are invalid.
+    A caller may supply ``rejections_out`` to preserve bad rows by source hash and reason while
+    returning only valid normalized events; invalid rows are never repaired or forward-filled.
     """
     from ..forward_edge.market_data import DataError, NormalizedEvent
     from ..providers import kite_data as kd
@@ -74,18 +77,29 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
         raise DataError("received_at must be timezone-aware")
     receipt = receipt.astimezone(timezone.utc)
     events = []
+
+    def reject(key: str, raw_quote: object, reason: str) -> None:
+        if rejections_out is None:
+            raise DataError(f"{reason} for {key}")
+        raw_hash = hashlib.sha256(json.dumps(raw_quote, sort_keys=True, separators=(",", ":"),
+                                         default=str).encode("utf-8")).hexdigest()
+        rejections_out.append({"event_sha256": raw_hash, "instrument": key, "reason": reason})
+
     for key in keys:
         quote = raw.get(key)
         if not isinstance(quote, dict):
-            raise DataError(f"missing Kite quote for {key}")
+            reject(key, {"missing_quote": True}, "MISSING_KITE_QUOTE")
+            continue
         stamp = quote.get("timestamp")
         if isinstance(stamp, str):
             try:
                 stamp = datetime.fromisoformat(stamp)
-            except ValueError as exc:
-                raise DataError(f"invalid exchange timestamp for {key}") from exc
+            except ValueError:
+                reject(key, quote, "INVALID_EXCHANGE_TIMESTAMP")
+                continue
         if not isinstance(stamp, datetime):
-            raise DataError(f"missing exchange timestamp for {key}")
+            reject(key, quote, "MISSING_EXCHANGE_TIMESTAMP")
+            continue
         # Kite's exchange timestamps are India-local when the API omits a zone.
         if stamp.tzinfo is None:
             stamp = stamp.replace(tzinfo=IST)
@@ -113,10 +127,13 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
                 ohlc.get(source.split(".")[1]) if isinstance(ohlc, dict) else None)
             if value is not None:
                 payload.append((key_name, str(value)))
-        events.append(NormalizedEvent(
-            kind="QUOTE", instrument=key, event_utc=stamp.astimezone(timezone.utc),
-            received_utc=receipt, available_utc=receipt, payload=tuple(sorted(payload)),
-        ))
+        try:
+            events.append(NormalizedEvent(
+                kind="QUOTE", instrument=key, event_utc=stamp.astimezone(timezone.utc),
+                received_utc=receipt, available_utc=receipt, payload=tuple(sorted(payload)),
+            ))
+        except DataError:
+            reject(key, quote, "INVALID_EVENT_CLOCK_ORDER")
     return events
 
 

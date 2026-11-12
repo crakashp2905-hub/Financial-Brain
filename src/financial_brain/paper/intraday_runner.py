@@ -214,7 +214,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
              rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
-             event_sink=None) -> dict:
+             event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None) -> dict:
     from ..providers import kite_data as kd
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
@@ -257,6 +257,21 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     from .live_view import publish
     quote_at = None
     publish(path, eng, now=now, status="Starting paper session", polls=polls)
+    if event_sink is not None:
+        if preflight_sink is None or rejection_sink is None:
+            capture_failures += 1
+            capture_issue = "forward evidence requires preflight and rejection sinks"
+        if preflight_sink is not None:
+            try:
+                preflight = (preflight_fn() if preflight_fn is not None else
+                             {"approved": False, "status": "MISSING", "reason": "PREFLIGHT_NOT_CONFIGURED"})
+                if not isinstance(preflight, dict) or type(preflight.get("approved")) is not bool:
+                    preflight = {"approved": False, "status": "INVALID", "reason": "PREFLIGHT_INVALID"}
+                preflight_sink(preflight)
+            except Exception as e:                       # noqa: BLE001 - missing evidence downgrades the paper record
+                capture_failures += 1
+                capture_issue = f"preflight capture failed: {str(e)[:120]}"
+                log.warning("forward preflight capture failed: %s", capture_issue)
     while True:
         now = now_fn()
         clock = now.time()
@@ -273,9 +288,16 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             if event_sink is not None:
                 from ..ingest.kite_live import forward_events
                 try:
-                    event_sink(forward_events(syms, quote_fn=lambda *_args, snapshot=q: snapshot,
-                                              received_at=poll_received_at))
-                    capture_issue = None
+                    rejections = []
+                    events = forward_events(syms, quote_fn=lambda *_args, snapshot=q: snapshot,
+                                            received_at=poll_received_at, rejections_out=rejections)
+                    event_sink(events)
+                    if rejections:
+                        if rejection_sink is None:
+                            raise RuntimeError("data rejections were observed without a durable rejection sink")
+                        rejection_sink(rejections)
+                    if capture_failures == 0:
+                        capture_issue = None
                 except Exception as e:                   # noqa: BLE001 - capture gaps downgrade evidence, not quote provenance
                     capture_failures += 1
                     capture_issue = str(e)[:160]
