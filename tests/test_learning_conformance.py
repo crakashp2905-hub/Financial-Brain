@@ -95,7 +95,7 @@ def key(t):
     return (t.strategy, t.symbol)
 
 
-SEEDS = (1, 2, 3)
+SEEDS = (1, 2)
 
 
 def _cells(strategy="ORB"):

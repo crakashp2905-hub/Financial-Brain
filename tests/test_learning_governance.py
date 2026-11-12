@@ -2,6 +2,7 @@
 approval it was not given for exactly what it says."""
 from __future__ import annotations
 
+import functools
 import json
 from datetime import datetime, timedelta, timezone
 
@@ -32,6 +33,7 @@ def _file(tmp_path, *rules):
     return p
 
 
+@functools.lru_cache(maxsize=None)
 def _ledger(n, bp_against, *, seed=3, start="2027-01-04"):
     led = C.synthetic_ledger(n, seed=seed, start=start)
     led = led[led["strategy"] == "ORB"].copy()

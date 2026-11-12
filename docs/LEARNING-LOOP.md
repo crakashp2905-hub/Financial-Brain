@@ -133,6 +133,10 @@ identical in every field**. The engine refactor that made this possible was chec
   locks (ADR-0005) and nothing here touches them.
 * **Budget.** Whether a shadow evaluation spends the quarterly trial budget (ADR-0004) is the owner's call. The code requires only that a
   rule was registered before it was judged.
+* **What the approval guard can and cannot do.** It stops accidental and scripted activation: a scheduled job, a script or an agent calling
+  the command has no terminal to answer from, and software-looking names are refused. It cannot stop someone who is already you on your own
+  machine and impersonates a terminal. The defence behind it is the record: the approval, with its name and the hash of the rule, is in the
+  rules file (in git) and in the ledger, and activation changes only a paper cohort.
 * **Skip rules only.** A change to how a trade is entered or exited is a different strategy: it needs its own pre-registered cohort.
 
 ## Files
