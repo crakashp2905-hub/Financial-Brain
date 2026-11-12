@@ -55,6 +55,32 @@ def test_closed_session_is_replayed_without_reexecuting(tmp_path):
     assert len(calls) == 1
 
 
+def test_pending_outbox_retries_with_same_idempotency_key_after_restart(tmp_path):
+    journal_path = tmp_path / "session.jsonl"
+    runner = ForwardSessionRunner(journal_path)
+    executions = {}
+    attempts = []
+
+    def execution(_decision, intent_id, _events):
+        attempts.append(intent_id)
+        if intent_id not in executions:
+            executions[intent_id] = {"state": "FILLED", "fill_id": "F-1"}
+            if len(attempts) == 1:
+                raise RuntimeError("simulated process loss after paper side effect")
+        return executions[intent_id]
+
+    kwargs = dict(decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+                  risk_fn=lambda _: {"approved": True}, execution_fn=execution)
+    with pytest.raises(RuntimeError, match="process loss"):
+        runner.run(_config(), [_event()], **kwargs)
+    recovered = runner.run(_config(), [_event()], **kwargs)
+    assert recovered["execution"] == {"state": "FILLED", "fill_id": "F-1"}
+    assert attempts[0] == attempts[1]
+    records = DurableJournal(journal_path).records()
+    assert [r["t"] for r in records].count("PAPER_EXECUTION") == 1
+    assert [r["t"] for r in records].count("OUTBOX_ACK") == 1
+
+
 def test_session_id_cannot_be_reused_for_different_configuration(tmp_path):
     runner = ForwardSessionRunner(tmp_path / "session.jsonl")
     runner.run(_config(), [], decision_at=NOW, decision_fn=lambda _: {"side": "NONE"},
