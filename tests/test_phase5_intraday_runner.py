@@ -59,6 +59,29 @@ def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger
     assert (setup / "reports" / "2026-10-06-live.md").exists()
 
 
+def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup):
+    from financial_brain.forward_edge.market_data import NormalizedEvent
+
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    captured = []
+
+    def quote(symbols, kind):
+        assert kind == "full"
+        return {s: {"timestamp": c.now().strftime("%Y-%m-%d %H:%M:%S"), "last_price": 100.0,
+                    "last_trade_time": "2026-10-06 09:20:00", "volume": 100,
+                    "ohlc": {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0},
+                    "depth": {"buy": [{"price": 99.95, "quantity": 10}],
+                              "sell": [{"price": 100.05, "quantity": 12}]}}
+                for s in symbols}
+
+    out = R.run_live(quote_fn=quote, now_fn=c.now, sleep_fn=c.sleep, path=setup / "sink.duckdb",
+                     poll=300, event_sink=captured.extend)
+    assert out["status"] == "complete"
+    assert captured and all(isinstance(e, NormalizedEvent) for e in captured)
+    assert all(dict(e.payload)["quote_fidelity"] == "EXECUTABLE" for e in captured)
+    assert all(e.received_utc == e.available_utc for e in captured)
+
+
 def test_live_view_tracks_open_then_closed_trades_without_a_database_reader(setup):
     from financial_brain.paper.live_view import view_path
     c = Clock(datetime(2026, 10, 6, 9, 29, tzinfo=R.IST))
