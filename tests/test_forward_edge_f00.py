@@ -390,7 +390,8 @@ def test_audit_is_red_on_this_repository_and_never_green_without_custody() -> No
     names = {c["name"]: c["status"] for c in report["checks"]}
     assert names["protected_pins"] == "GREEN"
     assert names["independent_custody"] == "RED"
-    assert names["promotion_metric"] == "RED"
+    # The executable resolver now exists; formal claims still remain blocked by custody.
+    assert names["promotion_metric"] == "GREEN"
     assert names["live_cash"] == "GREEN"
     assert any("INDEPENDENT_TIMESTAMP" in b for b in report["blocking"])
 
