@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 19,
-  "unrecorded_tasks": 199,
+  "recorded_tasks": 20,
+  "unrecorded_tasks": 198,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -366,6 +366,15 @@
         "test_forward_fill_needs_observed_fresh_quotes_after_registration"
       ],
       "test_result": "Shared evidence classification labels shadow, fixture/historical replay, local paper, and independently attested forward separately. Fixture CLI summaries, daily and intraday reports, option replay/forward results, execution audits, statistical export rows, and live-paper evidence tiers carry derived labels; replay and local paper cannot be upgraded without observed data, a sealed pre-entry decision, a complete session, and verified custody where independent claims are made. The generic exporter cannot assert deployment validation. Focused suite: 85 passed; Ruff and mypy pass.",
+      "evidence_sha256": null,
+      "blockers": []
+    },
+    {
+      "id": "PE-0115",
+      "status": "DONE",
+      "sources": ["src/financial_brain/forward_edge/trials.py", "src/financial_brain/forward_edge/charter.py", "tests/test_forward_edge_f00.py"],
+      "tests": ["test_q4_2026_protected_budget_is_exhausted_at_13_of_13", "test_new_protected_trial_refused_when_budget_is_spent", "test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval", "test_protected_trial_cannot_register_without_full_identity_registry", "test_prospective_cohort_cannot_register_without_human_trial_approval", "test_trial_in_2027q1_needs_only_a_protected_trial_approval"],
+      "test_result": "The Q4 2026 13/13 budget refuses a protected cohort without both a human trial approval and governance amendment. Prospective cohorts require exact charter-hash approval and full identity/schedule/durable registry; a direct regression confirms no unapproved cohort is appended. The next research window still requires human approval.",
       "evidence_sha256": null,
       "blockers": []
     }
