@@ -29,7 +29,7 @@ from pathlib import Path
 DATA = Path("data")
 #: forward evidence and the owner's own records: small, irreplaceable
 TIER_A = ("paper_live.duckdb", "paper_book.duckdb", "paper_zoo.duckdb", "my_portfolio.duckdb", "oms.duckdb",
-          "knowledge.duckdb", "quote_archive.duckdb", "depth_archive.duckdb")
+          "knowledge.duckdb", "quote_archive.duckdb", "depth_archive.duckdb", "lessons.duckdb")
 SNAPSHOT = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 

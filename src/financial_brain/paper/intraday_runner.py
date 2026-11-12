@@ -213,7 +213,7 @@ def opening_from_candles(symbols, day: date, *, candles_fn, token_fn) -> dict[st
 def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None, now_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
-             rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
+             rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None, day_context_fn=None) -> dict:
     from ..providers import kite_data as kd
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
@@ -228,6 +228,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
     eng = I.DayEngine(day, strategies=strategies, rules=rules)
     eng.daily_up = daily_up(date.fromisoformat(day))
+    eng.day_context = dict(day_context_fn(day) or {}) if day_context_fn else {}     # only a live-v2 cohort's filters read it
     started = now.isoformat()
     daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
     if rcon is not None:
@@ -400,7 +401,7 @@ def path_of_bar(o, h, l, c):
 
 def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=None, path: Path = LEDGER,
                daily_fn=None, strategies=I.STRATEGIES,
-               rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
+               rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None, day_context_fn=None) -> dict:
     from ..providers import kite_data as kd
     candles_fn = candles_fn or kd.candles
     inst = kd.instruments("NSE") if token_fn is None else None
@@ -410,6 +411,7 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
     uni = universe(n)
     eng = I.DayEngine(day.isoformat(), strategies=strategies, rules=rules)
     eng.daily_up = daily_up(day)
+    eng.day_context = dict(day_context_fn(day.isoformat()) or {}) if day_context_fn else {}
     stream = []
     vwap_at: dict = {}
     used = 0

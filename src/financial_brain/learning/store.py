@@ -66,6 +66,8 @@ def fold(events) -> dict[str, dict]:
             x["cell"] = e["payload"].get("cell")
         elif e["kind"] in ("CONFIRMED", "REFUTED", "EXPIRED"):
             x["decision"] = {**e["payload"], "kind": e["kind"], "session": e["session"]}
+        elif e["kind"] == "REGISTERED":
+            x.setdefault("cell", e["payload"].get("cell"))
         elif e["kind"] == "SHADOW_RESULT":
             x["shadow"] = {**e["payload"], "session": e["session"]}
         elif e["kind"] == "APPROVED":

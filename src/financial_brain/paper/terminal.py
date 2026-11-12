@@ -774,8 +774,8 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
                      f"Rs {a['net_inr']:,.0f} ({a['bp']:+.1f} bp). {_e(wm['status'])}: on 2024-26 minute data the same filter doubled gross in the "
                      "first year and added nothing in the held-out year. This line keeps checking it live.</div>")
     try:
-        from . import learning_panel as LP
-        parts.append(LP.html(ledger))
+        from ..learning import report as LR2
+        parts.append(LR2.terminal_html(rcon))
     except Exception:                                   # noqa: BLE001 - the panel is extra; it must never break the page
         pass
     led_day = ledger.execute("SELECT MAX(day) FROM trades").fetchone()[0]

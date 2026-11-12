@@ -1468,10 +1468,24 @@ def cmd_paper_intraday(args) -> int:
                   f"{e['net_bp_per_trade']:+6.1f} bp/trade (se {e['se_bp']:4.1f})  win {e['win_rate']:.0%}  "
                   f"net Rs {e['net_inr']:>10,.0f}  backtest {e['backtest_bp']}  -> {e['status']}")
         return 0
+    kw: dict = {}
+    if getattr(args, "v2", False):
+        from .learning import activation as AC
+        from .learning import shadow as SH
+        try:
+            active = AC.active_rules()
+        except SH.ShadowError as e:
+            print(f"skip rules refused: {e}")
+            return 2
+        if not active:
+            print("no skip rule is ACTIVE (approved, current, pre-registered): live-v2 would equal live-v1, so nothing was started")
+            return 3
+        kw = AC.cohort_args(active)
+        print("live-v2 cohort:", ", ".join(f"{r.id} ({r.strategy}: {r.pattern})" for r in active))
     if args.replay:
-        out = IR.run_replay(_d(args.replay), n=args.names)
+        out = IR.run_replay(_d(args.replay), n=args.names, **kw)
     else:
-        out = IR.run_live(n=args.names)
+        out = IR.run_live(n=args.names, **kw)
     print(out)
     return 0
 
@@ -1640,75 +1654,194 @@ def cmd_loss_review(args) -> int:
     return 0
 
 
-def cmd_loss_mine(args) -> int:
-    """The loss miner: a losing situation counts only if it repeats on sessions it was not found on."""
+def _learn_send(found: list[dict]) -> None:
+    from . import alerts as AL
+    if found:
+        AL.send(found)
+        if AL.telegram_configured():
+            AL.send(found, notify=AL.telegram, path=AL.TELEGRAM_SENT)
+
+
+def _learn_label(trades, regimes):
+    from .learning import features as F
+    from .learning import pipeline as PL
+    return F.label(trades, PL.day_context(regimes))
+
+
+def cmd_learn(args) -> int:
+    """The learning loop: run it nightly, read what it learned, decide what it asks. Nothing here changes a live rule."""
     import datetime as _dt
+    import json as _json
+    from pathlib import Path as _P
 
     import duckdb
+    import pandas as pd
 
-    from . import alerts as AL
-    from .paper import intraday_runner as IR
-    from .paper import loss_miner as LM
-    from .paper import loss_review as L
-    try:
-        con = IR.ledger()
-    except duckdb.IOException:
-        print("the paper ledger is open in the live run; try again after 15:20")
-        return 1
-    try:
+    from .learning import activation as AC
+    from .learning import autopsy as AU
+    from .learning import calibrate as CA
+    from .learning import governance as GV
+    from .learning import incidents as IN
+    from .learning import pipeline as PL
+    from .learning import report as RP
+    from .learning import shadow as SH
+    from .learning.store import PATH as STORE_PATH
+    from .learning.store import Store
+    today = _dt.date.today().isoformat()
+    store_path = _P(args.store) if getattr(args, "store", None) else STORE_PATH
+    what = args.what
+    research = _P(load().db_path)
+
+    if what == "run":
         try:
-            trades = L.frame(con, None if args.mode == "all" else args.mode)
-        except L.ReviewError as e:
+            inp = PL.collect(ledger=_P(args.ledger) if args.ledger else PL.LEDGER, research_db=research)
+        except PL.LedgerBusy as e:
             print(e)
+            return 1
+        try:
+            with Store(store_path) as st:
+                rep = PL.process(st, inp, today=today)
+                for name, r in rep["stages"].items():
+                    print(f"{'ok  ' if r['ok'] else 'FAIL'} {name:10s} " + (r.get("error") or ", ".join(
+                        f"{k} {v}" for k, v in r.items() if k != "ok")))
+                for p in rep["problems"]:
+                    print("note:", p)
+                alerts = list(rep["alerts"])
+                if PL.weekly(today) or args.digest:
+                    alerts.append(RP.digest(st, week=PL.iso_week(today), today=today, shadow=RP.latest_shadow(st),
+                                            ops=rep.get("ops"), problems=rep["problems"]))
+                if not args.no_alert:
+                    _learn_send(alerts)
+                print(f"{len(alerts)} alert(s){' (not sent)' if args.no_alert else ''}")
+            return 0 if rep["ok"] else 1
+        finally:
+            if inp.archive is not None:
+                inp.archive.close()
+
+    if what == "status":
+        if not store_path.exists():
+            print("the loop has not run yet: fb learn run (after the close)")
             return 0
-        r = LM.mine(trades)
-        print(LM.render(r))
-        if args.apply:
-            newly = LM.apply(con, r)
-            found = LM.alerts(newly, _dt.date.today())
-            if found:
-                AL.send(found)
-                if AL.telegram_configured():
-                    AL.send(found, notify=AL.telegram, path=AL.TELEGRAM_SENT)
-            print(f"recorded; {len(newly)} hypothesis(es) newly CONFIRMED - nothing changes until one is pre-registered")
-    finally:
-        con.close()
-    return 0
+        rcon = None
+        try:
+            rcon = duckdb.connect(str(research), read_only=True)
+        except Exception:                               # noqa: BLE001 - no calendar: availability falls back to traded days
+            pass
+        try:
+            with Store(store_path, read_only=True) as st:
+                problems, ab = [], None
+                try:
+                    SH.load_rules()
+                except SH.ShadowError as e:
+                    problems.append(f"skip rules file: {e}")
+                try:
+                    if AC.v2_ledgers():
+                        ab = AC.ab(PL.LEDGER, AC.v2_ledgers())
+                except Exception:                       # noqa: BLE001 - the ledger is open in the live run
+                    pass
+                cal = None
+                cal_path = store_path.with_name("learning_calibration.json")
+                if cal_path.exists():
+                    cal = _json.loads(cal_path.read_text(encoding="utf-8"))
+                print(RP.status_text(st, today=today, shadow=RP.latest_shadow(st), ops=RP.ops_report(st, rcon, today=today),
+                                     depth=RP.depth_summary(), ab=ab, problems=problems, calibration=cal))
+        finally:
+            if rcon is not None:
+                rcon.close()
+        return 0
 
+    if what == "autopsy":
+        with Store(store_path) as st:
+            print(AU.render(st.autopsies()))
+        return 0
 
-def cmd_shadow(args) -> int:
-    """Skip rules running beside the unchanged live-v1 rules, judged on the sessions after they were registered."""
-    import datetime as _dt
+    if what == "incidents":
+        with Store(store_path) as st:
+            rcon = duckdb.connect(str(research), read_only=True)
+            try:
+                rep = RP.ops_report(st, rcon, today=today)
+            finally:
+                rcon.close()
+            print(IN.render(rep) if rep else "no incidents or sessions recorded yet")
+        return 0
 
-    import duckdb
+    if what == "calibrate":
+        lab, source = pd.DataFrame(columns=["day"]), "none"
+        try:
+            inp = PL.collect(ledger=_P(args.ledger) if args.ledger else PL.LEDGER, research_db=research)
+            if inp.archive is not None:
+                inp.archive.close()
+            if len(inp.trades):
+                lab, source = _learn_label(inp.trades, inp.regimes), "the live ledger"
+        except PL.LedgerBusy:
+            pass
+        if len(lab) < 100 or lab["day"].nunique() < 10:
+            print(f"the live ledger has too little to resample ({len(lab)} trades); using a synthetic ledger with no structure")
+            lab, source = CA.synthetic_ledger(60, seed=11), "synthetic"
+        print(f"calibrating on {source}: {args.draws} histories of {args.sessions} sessions "
+              f"(about {max(1, args.draws * 6 // 60)} minutes)...")
+        r = CA.calibrate(lab, draws=args.draws, n_sessions=args.sessions, seed=args.seed,
+                         progress=lambda i, n: print(f"  {i}/{n}", end="\r", flush=True))
+        r["source"] = source
+        print(CA.render(r))
+        store_path.with_name("learning_calibration.json").write_text(_json.dumps(r, default=str, indent=1), encoding="utf-8")
+        return 0
 
-    from . import alerts as AL
-    from .paper import intraday as I
-    from .paper import intraday_runner as IR
-    from .paper import shadow as SH
-    try:
-        rules = SH.load_rules()
-    except SH.ShadowError as e:
-        print(f"skip rules refused: {e}")
-        return 2
-    try:
-        con = IR.ledger()
-    except duckdb.IOException:
-        print("the paper ledger is open in the live run; try again after 15:20")
-        return 1
-    try:
-        results = SH.evaluate(con, rules, cap_inr=I.MAX_GROSS * I.ACCOUNT_INR)
-        print(SH.render(results))
-        if args.apply and rules:
-            changed = SH.persist(con, rules, results)
-            found = SH.alerts(results, changed, _dt.date.today())
-            if found:
-                AL.send(found)
-                if AL.telegram_configured():
-                    AL.send(found, notify=AL.telegram, path=AL.TELEGRAM_SENT)
-    finally:
-        con.close()
-    return 0
+    if what in ("draft", "register"):
+        with Store(store_path) as st:
+            lesson = st.lessons().get(args.lesson)
+            if lesson is None:
+                print(f"no lesson {args.lesson}; see fb learn status")
+                return 2
+            rid = args.id or GV.next_rule_id()
+            try:
+                if what == "draft":
+                    path = GV.write_draft(lesson, rid)
+                    st.append(args.lesson, "DRAFTED", session=rid, payload={"rule": rid, "file": str(path)})
+                    print(f"wrote {path}\nRead and edit it. To register it, commit it as "
+                          f"'brain/07-Research/PRE-REGISTERED skip rule {rid}.md' (rename the file, keep it unchanged afterwards), then:\n"
+                          f"  fb learn register {args.lesson} --id {rid} --prereg \"PRE-REGISTERED skip rule {rid}\" --from YYYY-MM-DD")
+                else:
+                    rule = GV.register(lesson, rid, args.prereg, args.start)
+                    st.append(args.lesson, "REGISTERED", session=rid, actor="owner",
+                              payload={"rule": rid, "prereg": args.prereg, "active_from": args.start, "cell": rule.cell})
+                    print(f"{rid} registered as SHADOW from {args.start}: judged on later trades, no effect on trading.")
+            except (GV.GovernanceError, SH.ShadowError) as e:
+                print(f"refused: {e}")
+                return 2
+        return 0
+
+    if what in ("approve", "retire"):
+        with Store(store_path) as st:
+            try:
+                if what == "approve":
+                    GV.approve(args.rule, args.actor, st, days=args.days)
+                    print(f"{args.rule} is ACTIVE for {args.days} days. Run the live-v2 cohort with `fb paper-intraday --v2` "
+                          "(scripts/paper_intraday_v2.cmd, registered once by you).")
+                else:
+                    GV.retire(args.rule, args.actor, args.reason, st)
+                    print(f"{args.rule} retired.")
+            except (GV.GovernanceError, SH.ShadowError) as e:
+                print(f"refused: {e}")
+                return 2
+        return 0
+
+    if what == "ab":
+        paths = AC.v2_ledgers()
+        if not paths:
+            print("no live-v2 ledger yet: nothing is active, or the cohort has not run")
+            return 0
+        print(AC.render_ab(AC.ab(PL.LEDGER, paths)))
+        return 0
+
+    if what == "digest":
+        with Store(store_path, read_only=True) as st:
+            d = RP.digest(st, week=PL.iso_week(today), today=today, shadow=RP.latest_shadow(st))
+        print(d["title"] + "\n" + d["body"])
+        if args.send:
+            _learn_send([d])
+        return 0
+    return 2
 
 
 def cmd_preregs(args) -> int:
@@ -3036,6 +3169,7 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--replay")
     g.add_argument("--report", action="store_true")
     g.add_argument("--names", type=int, default=200)
+    g.add_argument("--v2", action="store_true", help="the live-v2 cohort: live-v1 plus the ACTIVE skip rules, its own ledger")
     g.set_defaults(fn=cmd_paper_intraday)
 
     g = sub.add_parser("paper-compare", help="read-only exact-day live/replay reconciliation")
@@ -3069,14 +3203,46 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--propose", action="store_true", help="write losing patterns as PROPOSED hypotheses")
     g.set_defaults(fn=cmd_loss_review)
 
-    g = sub.add_parser("loss-mine", help="losing situations that repeat on sessions they were not found on (never applied)")
-    g.add_argument("--mode", choices=["live", "replay", "all"], default="live", help="which closed trades to mine (default live)")
-    g.add_argument("--apply", action="store_true", help="record the run and move hypotheses between PROPOSED/CONFIRMED/FAILED")
-    g.set_defaults(fn=cmd_loss_mine)
-
-    g = sub.add_parser("shadow", help="skip rules beside live-v1 as a counterfactual (no second runner, v1 untouched)")
-    g.add_argument("--apply", action="store_true", help="store the results and per-trade decisions")
-    g.set_defaults(fn=cmd_shadow)
+    g = sub.add_parser("learn", help="the learning loop: nominate, confirm, diagnose, decide - nothing changes a live rule")
+    ls = g.add_subparsers(dest="what", required=True)
+    for name, help_ in (("run", "one night: autopsy, incidents, protocol, shadow, alerts (after the close)"),
+                        ("status", "what it learned, what it is waiting for, what needs you"),
+                        ("autopsy", "why each losing trade lost"), ("incidents", "operational failures, causes and guards"),
+                        ("ab", "live-v1 against the live-v2 cohort on the same days"),
+                        ("digest", "the weekly message"), ("calibrate", "measure the loop's own false-confirmation rate and power")):
+        sp = ls.add_parser(name, help=help_)
+        sp.add_argument("--store", help="lessons ledger (default data/lessons.duckdb)")
+        if name in ("run", "calibrate"):
+            sp.add_argument("--ledger", help="paper ledger (default data/paper_live.duckdb)")
+        if name == "run":
+            sp.add_argument("--no-alert", action="store_true")
+            sp.add_argument("--digest", action="store_true", help="send the weekly digest now, not only on Fridays")
+        if name == "digest":
+            sp.add_argument("--send", action="store_true")
+        if name == "calibrate":
+            sp.add_argument("--draws", type=int, default=100)
+            sp.add_argument("--sessions", type=int, default=80)
+            sp.add_argument("--seed", type=int, default=20261112)
+    for name, help_ in (("draft", "write the pre-registration draft for a CONFIRMED lesson"),
+                        ("register", "add a skip rule (SHADOW) once its pre-registration is committed")):
+        sp = ls.add_parser(name, help=help_)
+        sp.add_argument("lesson")
+        sp.add_argument("--store")
+        sp.add_argument("--id", help="rule id (default: next SK-nnnn)")
+        if name == "register":
+            sp.add_argument("--prereg", required=True, help="the pre-registration note's name, without .md")
+            sp.add_argument("--from", dest="start", required=True, help="active_from, YYYY-MM-DD")
+    sp = ls.add_parser("approve", help="a person puts a PASSING rule in force in the paper live-v2 cohort (needs a terminal)")
+    sp.add_argument("rule")
+    sp.add_argument("--actor", required=True, help="your name")
+    sp.add_argument("--days", type=int, default=180)
+    sp.add_argument("--store")
+    sp = ls.add_parser("retire", help="a person retires a skip rule (needs a terminal)")
+    sp.add_argument("rule")
+    sp.add_argument("--actor", required=True)
+    sp.add_argument("--reason", required=True)
+    sp.add_argument("--store")
+    g.set_defaults(fn=cmd_learn)
 
     g = sub.add_parser("preregs", help="audit pre-registrations against git (before the result, unchanged after)")
     g.set_defaults(fn=cmd_preregs)
