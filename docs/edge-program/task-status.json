@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 15,
-  "unrecorded_tasks": 203,
+  "recorded_tasks": 16,
+  "unrecorded_tasks": 202,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -198,6 +198,15 @@
       "test_result": "Five deterministic contract tests cover partial buy/sell fills, fees, marked NAV, cash days, missing marks, unresolved orders, and overlap rejection. Executable results are stored separately and take precedence over close-to-close diagnostics.",
       "evidence_sha256": null,
       "blockers": ["ForwardSessionRunner and PaperAccount durable events are not yet exported into this resolver's normalized cohort inputs; live prospective cohorts have not elapsed"]
+    },
+    {
+      "id": "PE-0111",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/evaluation/champion.py", "tests/test_champion_executable.py"],
+      "tests": ["test_full_universe_rejects_and_missing_paths_are_reported_with_action_sensitivity"],
+      "test_result": "Point-in-time NSE EQ listings, non-tradable and data-rejected symbols, missing lineages/price paths, recorded corporate-action IDs, and a -100% missing-path sensitivity are captured and tested.",
+      "evidence_sha256": null,
+      "blockers": ["NSE universe snapshot and corporate-action feed completeness are external data-coverage dependencies; historical action adjustments and source completeness still require reconciliation"]
     }
   ]
 }

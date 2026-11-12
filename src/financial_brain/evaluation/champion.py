@@ -31,6 +31,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from collections import Counter
 from collections.abc import Sequence
+import json
 
 import duckdb
 import numpy as np
@@ -65,6 +66,17 @@ CREATE TABLE IF NOT EXISTS champion_executable_cohorts (
 );
 """
 
+UNIVERSE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS champion_universe_capture (
+    day VARCHAR PRIMARY KEY, attempted_n INTEGER, strategies_n INTEGER, capture_status VARCHAR, source VARCHAR
+);
+CREATE TABLE IF NOT EXISTS champion_universe_attempts (
+    day VARCHAR, strategy VARCHAR, isin VARCHAR, ticker VARCHAR, lineage VARCHAR, eligible BOOLEAN,
+    selected BOOLEAN, reason VARCHAR, forward_return DOUBLE, price_path_status VARCHAR,
+    corporate_action_ids VARCHAR, PRIMARY KEY (day, strategy, isin)
+);
+"""
+
 
 class ChampionError(ValueError):
     pass
@@ -79,6 +91,11 @@ def _cohort_columns(con) -> None:
     con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS universe_coverage DOUBLE")
     con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS universe_worst_case DOUBLE")
     con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS metric_version VARCHAR")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS attempted_n INTEGER")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS rejected_n INTEGER")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS missing_path_n INTEGER")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS corporate_action_n INTEGER")
+    con.execute("ALTER TABLE champion_cohorts ADD COLUMN IF NOT EXISTS corporate_action_table_available BOOLEAN")
 
 
 #: Value and quality cannot join yet: exchange XBRL results stop at the quarter ended Dec 2024 (later results moved
@@ -120,13 +137,93 @@ def picks(cs: pd.DataFrame, *, as_of: date, events: set | None = None, swing: pd
     return out
 
 
+def _record_attempted_universe(research_con, ledger_con, day: date, eligible: pd.DataFrame,
+                               books: dict[str, pd.DataFrame]) -> int:
+    """Persist the point-in-time NSE EQ snapshot, including data rejects and non-selected names."""
+    ledger_con.execute(UNIVERSE_SCHEMA)
+    try:
+        universe = research_con.execute("""
+            SELECT u.isin, u.ticker, u.tradable, u.close_price, l.lineage, p.close_adj,
+                   f.adv20, f.vol_60, f.mom_12_1, f.dist_52w_high, f.ret_20d
+            FROM universe_snapshots u
+            LEFT JOIN security_lineage l ON l.isin = u.isin
+            LEFT JOIN adjusted_prices p ON p.lineage = l.lineage AND p.business_date = u.business_date
+            LEFT JOIN features f ON f.lineage = l.lineage AND f.business_date = u.business_date
+            WHERE u.business_date = ? AND UPPER(u.exchange) = 'NSE' AND UPPER(COALESCE(u.series, 'EQ')) = 'EQ'
+              AND UPPER(COALESCE(u.instrument_type, 'STK')) = 'STK'
+            ORDER BY u.isin, u.ticker
+        """, [day]).df()
+    except duckdb.CatalogException:
+        ledger_con.execute("INSERT OR REPLACE INTO champion_universe_capture VALUES (?,?,?,?,?)",
+                           [day.isoformat(), 0, len(books), "MISSING_SNAPSHOT_SCHEMA", "universe_snapshots"])
+        return 0
+    if universe.empty:
+        ledger_con.execute("INSERT OR REPLACE INTO champion_universe_capture VALUES (?,?,?,?,?)",
+                           [day.isoformat(), 0, len(books), "NO_SNAPSHOT_ROWS", "universe_snapshots"])
+        return 0
+    eligible_lineages = set(eligible["lineage"].dropna().astype(str))
+    strategy_selections = {
+        name: set(zip(frame["lineage"].astype(str), frame["ticker"].astype(str)))
+        for name, frame in books.items()
+    }
+    rows = []
+    for name in books:
+        for item in universe.itertuples(index=False):
+            lineage = str(item.lineage) if pd.notna(item.lineage) else None
+            is_eligible = bool(lineage and lineage in eligible_lineages)
+            is_selected = bool(is_eligible and lineage and
+                               (lineage, str(item.ticker)) in strategy_selections[name])
+            if not bool(item.tradable):
+                reason = "NOT_TRADABLE"
+            elif lineage is None:
+                reason = "MISSING_LINEAGE"
+            elif item.close_adj is None or pd.isna(item.close_adj) or float(item.close_adj) <= 0:
+                reason = "MISSING_ADJUSTED_PRICE"
+            elif item.adv20 is None or pd.isna(item.adv20):
+                reason = "MISSING_ADV20"
+            elif float(item.adv20) < 1e7:
+                reason = "BELOW_MIN_ADV20"
+            elif any(pd.isna(value) for value in (item.vol_60, item.mom_12_1, item.dist_52w_high, item.ret_20d)):
+                reason = "MISSING_REQUIRED_FEATURE"
+            elif float(item.vol_60) <= 0:
+                reason = "NONPOSITIVE_VOLATILITY"
+            elif is_selected:
+                reason = "SELECTED"
+            elif is_eligible:
+                reason = "NOT_SELECTED_BY_STRATEGY"
+            else:
+                reason = "OUTSIDE_STRATEGY_CANDIDATE_SET"
+            rows.append((day.isoformat(), name, str(item.isin), str(item.ticker), lineage, is_eligible,
+                         is_selected, reason, None, "PENDING", "[]"))
+    ledger_con.executemany("INSERT OR REPLACE INTO champion_universe_attempts VALUES (?,?,?,?,?,?,?,?,?,?,?)", rows)
+    ledger_con.execute("INSERT OR REPLACE INTO champion_universe_capture VALUES (?,?,?,?,?)",
+                       [day.isoformat(), int(universe["isin"].nunique()), len(books), "CAPTURED",
+                        "universe_snapshots:NSE:EQ"])
+    return int(universe["isin"].nunique())
+
+
+def _filter_to_tradable_snapshot(research_con, day: date, cs: pd.DataFrame) -> pd.DataFrame:
+    """When available, prevent suspended/non-tradable point-in-time names from entering strategy books."""
+    try:
+        lineages = research_con.execute("""
+            SELECT DISTINCT l.lineage FROM universe_snapshots u
+            JOIN security_lineage l ON l.isin = u.isin
+            WHERE u.business_date = ? AND UPPER(u.exchange) = 'NSE'
+              AND UPPER(COALESCE(u.series, 'EQ')) = 'EQ'
+              AND UPPER(COALESCE(u.instrument_type, 'STK')) = 'STK' AND u.tradable = TRUE
+        """, [day]).fetchdf()["lineage"].dropna()
+    except duckdb.CatalogException:
+        return cs
+    return cs[cs["lineage"].isin(set(lineages.astype(str)))].reset_index(drop=True)
+
+
 def record(research_con, ledger_con, day: date, *, costs: CostModel | None = None) -> dict:
     """Write each strategy's picks for ``day`` before any outcome exists. Refuses days before the lock."""
     if day < LOCK_DATE:
         raise ChampionError(f"{day} is before the lock ({LOCK_DATE}); it cannot count as out of sample")
     ledger_con.execute(SCHEMA)
     costs = costs or CostModel()
-    cs = S.cross_section(research_con, day)
+    cs = _filter_to_tradable_snapshot(research_con, day, S.cross_section(research_con, day))
     try:
         events = {r[0] for r in research_con.execute("""
             SELECT DISTINCT l.lineage FROM announcements a JOIN security_lineage l ON l.isin = a.isin
@@ -157,7 +254,68 @@ def record(research_con, ledger_con, day: date, *, costs: CostModel | None = Non
         if rows:                                         # a challenger with nothing to hold that day records nothing
             ledger_con.executemany("INSERT OR REPLACE INTO champion_picks VALUES (?,?,?,?,?)", rows)
         n[name] = len(rows)
+    n["universe_attempts"] = _record_attempted_universe(research_con, ledger_con, day, cs, books)
     return n
+
+
+def _resolve_universe_attempts(ledger_con, research_con, day: str, end_day: date,
+                               fwd: dict[str, float]) -> dict[str, dict]:
+    """Attach observed path/action evidence and conservative missing-path bounds to attempts."""
+    attempts = ledger_con.execute("""
+        SELECT strategy, isin, lineage, selected FROM champion_universe_attempts WHERE day = ?
+    """, [day]).df()
+    if attempts.empty:
+        return {}
+    action_data_available = True
+    actions_by_lineage: dict[str, list[str]] = {}
+    try:
+        action_rows = research_con.execute("""
+            SELECT l.lineage, a.action_id FROM corporate_actions a
+            JOIN security_lineage l ON l.isin = a.isin
+            WHERE a.ex_date >= ? AND a.ex_date <= ? ORDER BY l.lineage, a.action_id
+        """, [date.fromisoformat(day), end_day]).fetchall()
+        for lineage, action_id in action_rows:
+            actions_by_lineage.setdefault(str(lineage), []).append(str(action_id))
+    except duckdb.CatalogException:
+        action_data_available = False
+    lineage_counts = attempts.dropna(subset=["lineage"]).groupby(["strategy", "lineage"]).size().to_dict()
+    metrics: dict[str, dict] = {}
+    for attempt in attempts.itertuples(index=False):
+        lineage = str(attempt.lineage) if pd.notna(attempt.lineage) else None
+        is_ambiguous = bool(lineage and lineage_counts.get((attempt.strategy, lineage), 0) > 1)
+        ret = fwd.get(lineage) if lineage and not is_ambiguous else None
+        status = "OBSERVED" if ret is not None else ("AMBIGUOUS_LINEAGE" if is_ambiguous else "MISSING_PRICE_PATH")
+        recorded_action_ids = actions_by_lineage.get(lineage, []) if lineage else []
+        ledger_con.execute("""UPDATE champion_universe_attempts
+            SET forward_return=?, price_path_status=?, corporate_action_ids=?
+            WHERE day=? AND strategy=? AND isin=?""",
+            [ret, status, json.dumps(recorded_action_ids, separators=(",", ":")), day,
+             attempt.strategy, attempt.isin])
+    for strategy, group in attempts.groupby("strategy"):
+        returns = []
+        missing = 0
+        unique_action_ids: set[str] = set()
+        for attempt in group.itertuples(index=False):
+            lineage = str(attempt.lineage) if pd.notna(attempt.lineage) else None
+            duplicate = bool(lineage and lineage_counts.get((strategy, lineage), 0) > 1)
+            ret = fwd.get(lineage) if lineage and not duplicate else None
+            if ret is None:
+                missing += 1
+            else:
+                returns.append(float(ret))
+            unique_action_ids.update(actions_by_lineage.get(lineage, []) if lineage else [])
+        attempted_n = len(group)
+        metrics[str(strategy)] = {
+            "attempted_n": attempted_n,
+            "rejected_n": int((~group["selected"].fillna(False).astype(bool)).sum()),
+            "missing_path_n": missing,
+            "corporate_action_n": len(unique_action_ids) if action_data_available else None,
+            "corporate_action_table_available": action_data_available,
+            "universe": float(np.mean(returns)) if returns else None,
+            "coverage": (attempted_n - missing) / attempted_n if attempted_n else None,
+            "worst_case": (sum(returns) - missing) / attempted_n if attempted_n else None,
+        }
+    return metrics
 
 
 def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
@@ -168,6 +326,7 @@ def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
     """
     ledger_con.execute(SCHEMA)
     _cohort_columns(ledger_con)
+    ledger_con.execute(UNIVERSE_SCHEMA)
     days = [r[0] for r in ledger_con.execute(
         """SELECT DISTINCT day FROM champion_picks WHERE day NOT IN (SELECT DISTINCT day FROM champion_cohorts)""").fetchall()]
     done = 0
@@ -191,6 +350,7 @@ def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
         universe_worst = ((sum(fwd.values()) - (start_n - len(fwd))) / start_n
                           if start_n else None)
         uni = float(np.mean(list(fwd.values()))) if fwd else None
+        attempt_metrics = _resolve_universe_attempts(ledger_con, research_con, str(day), cal[horizon], fwd)
         for strat, g in ledger_con.execute(
                 "SELECT strategy, lineage, cost FROM champion_picks WHERE day = ?", [day]).df().groupby("strategy"):
             observed = g["lineage"].map(fwd)
@@ -202,13 +362,17 @@ def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
             gross = float(valid.mean()) if len(valid) else None
             cost = float(g["cost"].mean())
             worst = float((valid.sum() - missing_n) / selected_n - cost)
+            m = attempt_metrics.get(str(strat), {})
             ledger_con.execute("""INSERT OR REPLACE INTO champion_cohorts
                 (day, strategy, n, gross, cost, net, universe, selected_n, missing_n, worst_case_net,
-                 complete, universe_coverage, universe_worst_case, metric_version)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                 complete, universe_coverage, universe_worst_case, metric_version, attempted_n, rejected_n,
+                 missing_path_n, corporate_action_n, corporate_action_table_available)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 [day, strat, int(len(valid)), gross, cost, gross - cost if gross is not None else None,
-                 uni, selected_n, missing_n, worst, missing_n == 0,
-                 universe_coverage, universe_worst, RANKING_METRIC])
+                 m.get("universe", uni), selected_n, missing_n, worst, missing_n == 0,
+                 m.get("coverage", universe_coverage), m.get("worst_case", universe_worst), RANKING_METRIC,
+                 m.get("attempted_n"), m.get("rejected_n"), m.get("missing_path_n"),
+                 m.get("corporate_action_n"), m.get("corporate_action_table_available")])
         done += 1
     return done
 

@@ -13,6 +13,12 @@
 
 The resolver rejects malformed identities and duplicate facts. Cohorts with missing session or corporate-action evidence, nonterminal orders, inconsistent fill quantities, insufficient cash, short inventory, or missing marks are recorded incomplete with a null return. No fill or mark is inferred. For complete cohorts, return is closing cash plus marked inventory over opening capital; gross excludes recorded fill fees and net includes them. Cash days, no-fill/canceled orders, rejected orders, partial fills, and attempted orders are counted separately.
 
+## Research universe capture
+
+When `universe_snapshots`, `security_lineage`, `features`, and `adjusted_prices` are available, champion recording captures each NSE EQ listing for the decision session in `champion_universe_attempts`. The row records whether it was tradable, eligible, selected by the strategy, or rejected for a specific data/liquidity/rule reason. If the snapshot schema or session rows are unavailable, `champion_universe_capture` records that absence instead of claiming a complete capture. Non-tradable names are excluded before books are constructed.
+
+When a close-to-close diagnostic cohort resolves, each captured listing receives an observed/missing path status and the IDs of recorded corporate actions between entry and endpoint. Cohort reports include attempted and rejected counts, path coverage, action counts, the mean observed attempted-universe return, and a conservative sensitivity assigning -100% to each missing path. This sensitivity is diagnostic and does not replace the selected-book return. The action count only describes records present in the local corporate-action table; it cannot establish that the feed contains every market action.
+
 ## Integration status
 
-The function and fixture tests establish the accounting and coverage contract. PE-0110 remains **PARTIAL** until durable `ForwardSessionRunner` / `PaperAccount` events are exported into these inputs and real prospective cohorts complete. Synthetic tests do not establish market profitability or production data provenance.
+The functions and fixture tests establish the accounting and coverage contracts. PE-0110 remains **PARTIAL** until durable `ForwardSessionRunner` / `PaperAccount` events are exported into these inputs and real prospective cohorts complete. PE-0111 remains **PARTIAL** until the historical universe and corporate-action feeds have demonstrated complete source coverage. Synthetic tests do not establish market profitability or production data provenance.

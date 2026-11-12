@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 import duckdb
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -44,6 +45,43 @@ def resolve(args, *, horizon=2):
                                  session_evidence=evidence, orders=orders, fills=fills, marks=marks,
                                  horizon=horizon)
     return ledger, count
+
+
+def research_with_universe(days=25, names=120):
+    con = duckdb.connect()
+    calendar = pd.bdate_range("2026-10-05", periods=days).date
+    con.execute("""CREATE TABLE adjusted_prices
+        (lineage VARCHAR, ticker VARCHAR, business_date DATE, close_adj DOUBLE, turnover DOUBLE, isin VARCHAR)""")
+    con.execute("""CREATE TABLE features
+        (lineage VARCHAR, business_date DATE, adv20 DOUBLE, vol_60 DOUBLE, mom_12_1 DOUBLE,
+         dist_52w_high DOUBLE, ret_20d DOUBLE, ret_1d DOUBLE, ret_5d DOUBLE, rsi_14 DOUBLE,
+         adx_14 DOUBLE, atr_pctile_250 DOUBLE, atr_14_pct DOUBLE)""")
+    con.execute("CREATE TABLE security_lineage (isin VARCHAR, lineage VARCHAR)")
+    con.execute("""CREATE TABLE universe_snapshots
+        (business_date DATE, isin VARCHAR, exchange VARCHAR, ticker VARCHAR, series VARCHAR,
+         instrument_type VARCHAR, traded_volume BIGINT, turnover DOUBLE, trades BIGINT,
+         close_price DOUBLE, tradable BOOLEAN)""")
+    prices, features, lineages, snapshots = [], [], [], []
+    for i in range(names):
+        isin, lineage, ticker = f"ISIN{i}", f"L{i}", f"T{i}"
+        lineages.append((isin, lineage))
+        for k, day in enumerate(calendar):
+            price = 100 * np.exp(0.0005 * k * (i / names))
+            prices.append((lineage, ticker, day, price, 2e8, isin))
+            features.append((lineage, day, 2e8, 0.25, 0.25 + 0.001 * i, -0.1, 0.0, 0.0,
+                             0.0, 50.0, 20.0, 0.5, 0.02))
+        snapshots.append((calendar[0], isin, "NSE", ticker, "EQ", "STK", 1000, 2e8, 100,
+                          100.0, i != 0))
+    lineages.extend([("MISSINGPX", "LMISSING"), ("ORPHAN", None)])
+    snapshots.extend([
+        (calendar[0], "MISSINGPX", "NSE", "MISSINGPX", "EQ", "STK", 0, 0.0, 0, None, True),
+        (calendar[0], "ORPHAN", "NSE", "ORPHAN", "EQ", "STK", 0, 0.0, 0, None, True),
+    ])
+    con.executemany("INSERT INTO adjusted_prices VALUES (?,?,?,?,?,?)", prices)
+    con.executemany("INSERT INTO features VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", features)
+    con.executemany("INSERT INTO security_lineage VALUES (?,?)", lineages)
+    con.executemany("INSERT INTO universe_snapshots VALUES (?,?,?,?,?,?,?,?,?,?,?)", snapshots)
+    return con, calendar
 
 
 def test_executable_cohort_uses_actual_partial_fill_fees_marks_and_cash_days():
@@ -118,4 +156,32 @@ def test_overlapping_frozen_cohorts_are_rejected():
     args[0] = pd.concat([args[0], pd.DataFrame([second])], ignore_index=True)
     with pytest.raises(C.ChampionError, match="overlapping"):
         resolve(tuple(args))
+
+
+def test_full_universe_rejects_and_missing_paths_are_reported_with_action_sensitivity():
+    research_con, calendar = research_with_universe()
+    ledger = duckdb.connect()
+    count = C.record(research_con, ledger, calendar[0])
+    assert count["universe_attempts"] == 122
+    assert ledger.execute("SELECT capture_status, attempted_n FROM champion_universe_capture").fetchone() == (
+        "CAPTURED", 122)
+    sample = ledger.execute("""SELECT reason, selected FROM champion_universe_attempts
+        WHERE strategy=? AND isin='ISIN0'""", [C.CHAMPION]).fetchone()
+    assert sample == ("NOT_TRADABLE", False)
+    assert ledger.execute("""SELECT reason FROM champion_universe_attempts
+        WHERE strategy=? AND isin='MISSINGPX'""", [C.CHAMPION]).fetchone()[0] == "MISSING_ADJUSTED_PRICE"
+    assert ledger.execute("""SELECT reason FROM champion_universe_attempts
+        WHERE strategy=? AND isin='ORPHAN'""", [C.CHAMPION]).fetchone()[0] == "MISSING_LINEAGE"
+
+    research_con.execute("CREATE TABLE corporate_actions (action_id VARCHAR, isin VARCHAR, ex_date DATE)")
+    research_con.execute("INSERT INTO corporate_actions VALUES ('ACT-1','ISIN1',?)", [calendar[10]])
+    assert C.resolve(ledger, research_con, horizon=20) == 1
+    row = ledger.execute("""SELECT attempted_n,rejected_n,missing_path_n,corporate_action_n,
+        corporate_action_table_available,universe_coverage,universe_worst_case
+        FROM champion_cohorts WHERE day=? AND strategy=?""", [calendar[0].isoformat(), C.CHAMPION]).fetchone()
+    assert row[:5] == (122, row[1], 2, 1, True)
+    assert row[1] >= 82 and row[5] < 1 and row[6] < 0
+    ids = ledger.execute("""SELECT corporate_action_ids FROM champion_universe_attempts
+        WHERE day=? AND strategy=? AND isin='ISIN1'""", [calendar[0].isoformat(), C.CHAMPION]).fetchone()[0]
+    assert ids == '["ACT-1"]'
 
