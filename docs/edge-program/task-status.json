@@ -14,12 +14,12 @@
   "items": [
     {
       "id": "PE-0015",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": ["src/financial_brain/forward_edge/session_runner.py"],
-      "tests": ["test_closed_session_is_replayed_without_reexecuting"],
-      "test_result": "Closed-session idempotency is tested; full PLANNED/PREFLIGHT/OPEN/DRAINING/CLOSED/INCOMPLETE/REJECTED state machine is not implemented",
+      "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution", "test_incomplete_session_is_preserved_and_cannot_be_reused", "test_invalid_state_transition_fails_closed", "test_session_id_cannot_be_reused_for_different_configuration"],
+      "test_result": "Versioned PLANNED/PREFLIGHT/OPEN/DRAINING/CLOSED/INCOMPLETE/REJECTED transitions, terminal handling, invalid transition refusal, and immutable session metadata are tested",
       "evidence_sha256": null,
-      "blockers": ["lifecycle states and transition validation are incomplete"]
+      "blockers": []
     },
     {
       "id": "PE-0016",

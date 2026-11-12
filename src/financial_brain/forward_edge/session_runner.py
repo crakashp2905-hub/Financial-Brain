@@ -23,6 +23,16 @@ class RunnerError(ValueError):
     """Invalid session identity, transition, event order, or adapter result."""
 
 
+STATE_MACHINE_VERSION = "forward-session-v1"
+STATE_ORDER = ("PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED")
+TERMINAL_STATES = frozenset({"CLOSED", "INCOMPLETE", "REJECTED"})
+STATE_TRANSITIONS = {("PLANNED", "PREFLIGHT"), ("PREFLIGHT", "OPEN"), ("OPEN", "DRAINING"),
+                     ("DRAINING", "CLOSED"), ("PREFLIGHT", "REJECTED"),
+                     ("OPEN", "REJECTED"), ("DRAINING", "REJECTED"),
+                     ("PLANNED", "INCOMPLETE"), ("PREFLIGHT", "INCOMPLETE"),
+                     ("OPEN", "INCOMPLETE"), ("DRAINING", "INCOMPLETE")}
+
+
 @dataclass(frozen=True)
 class ForwardRunConfig:
     session_id: str
@@ -85,6 +95,42 @@ class ForwardSessionRunner:
     def __init__(self, journal_path: Path) -> None:
         self.journal_path = Path(journal_path)
 
+    def mark_incomplete(self, session_id: str, reason: str) -> None:
+        """Close a nonterminal session as incomplete without fabricating an outcome."""
+        if not session_id or not reason.strip():
+            raise RunnerError("session id and incomplete reason are required")
+        journal = DurableJournal(self.journal_path)
+        records = [r for r in journal.records() if r.get("session_id") == session_id]
+        if not any(r.get("t") == "SESSION_PLAN" for r in records):
+            raise RunnerError("cannot mark an unplanned session incomplete")
+        if any(r.get("t") == "SESSION_CLOSED" for r in records):
+            raise RunnerError("closed session cannot become incomplete")
+        self._ensure_state(journal, session_id, "INCOMPLETE")
+        journal.append({"t": "SESSION_INCOMPLETE", "session_id": session_id, "reason": reason.strip()})
+
+    @staticmethod
+    def _ensure_state(journal: DurableJournal, session_id: str, target: str) -> None:
+        records = [r for r in journal.records() if r.get("session_id") == session_id]
+        current = next((r["state"] for r in reversed(records) if r.get("t") == "SESSION_STATE"), None)
+        if current is None:
+            if target != "PLANNED":
+                raise RunnerError("session state is missing its PLANNED record")
+        elif current == target:
+            return
+        elif current in TERMINAL_STATES:
+            # Recovery may finish writing the terminal result after a crash between the state
+            # record and SESSION_CLOSED; the state itself remains terminal and is not changed.
+            if target in STATE_ORDER:
+                return
+            raise RunnerError(f"cannot transition terminal session state {current}")
+        elif (current, target) not in STATE_TRANSITIONS:
+            # A replay after a crash may re-enter a phase already passed; never move state backward.
+            if current in STATE_ORDER and target in STATE_ORDER and STATE_ORDER.index(current) > STATE_ORDER.index(target):
+                return
+            raise RunnerError(f"invalid session transition {current} -> {target}")
+        journal.append({"t": "SESSION_STATE", "session_id": session_id,
+                        "state_machine_version": STATE_MACHINE_VERSION, "state": target})
+
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
             decision_at: datetime,
             decision_fn: Callable[[list[NormalizedEvent]], dict],
@@ -107,9 +153,14 @@ class ForwardSessionRunner:
             closed = next((r for r in reversed(existing) if r.get("t") == "SESSION_CLOSED"), None)
             if closed is not None:
                 return closed["result"]
+            if any(r.get("t") == "SESSION_STATE" and r.get("state") == "INCOMPLETE" for r in existing):
+                raise RunnerError("incomplete session is terminal; use a new session id for another attempt")
         else:
             journal.append({"t": "SESSION_PLAN", "session_id": config.session_id,
                             "config": plan, "config_sha256": config.sha256})
+        if not any(r.get("t") == "SESSION_STATE" for r in existing):
+            self._ensure_state(journal, config.session_id, "PLANNED")
+        self._ensure_state(journal, config.session_id, "PREFLIGHT")
 
         old_events = [r["event"] for r in existing if r.get("t") == "MARKET_EVENT"]
         prior_hashes = {r.get("event_sha256") for r in existing if r.get("t") == "MARKET_EVENT"}
@@ -120,6 +171,7 @@ class ForwardSessionRunner:
             available_utc=datetime.fromisoformat(row["available_utc"]),
             payload=tuple(tuple(item) for item in row["payload"])) for row in old_events]
         last_available = max((self._utc(e.available_utc) for e in observed), default=None)
+        self._ensure_state(journal, config.session_id, "OPEN")
         for event in sorted(events, key=lambda e: (self._utc(e.available_utc), e.content_sha256())):
             if event.instrument not in plan["instruments"]:
                 continue
@@ -151,15 +203,17 @@ class ForwardSessionRunner:
             journal.append({"t": "RISK_VERDICT", "session_id": config.session_id, "risk": risk})
         if type(risk.get("approved")) is not bool:
             raise RunnerError("risk adapter must return a dictionary with boolean approved")
+        self._ensure_state(journal, config.session_id, "DRAINING")
         result = {"session_id": config.session_id, "config_sha256": config.sha256,
                   "event_count": len(observed), "decision_event_count": len(decision_events),
                   "last_available_utc": last_available.isoformat()
                   if last_available else None, "decision": decision, "risk": risk,
                   "mode": config.mode.value, "physical_orders": False}
-        if decision["side"] in ("NONE", "NO_TRADE"):
-            result.update({"status": "NO_TRADE", "reason": str(decision.get("reason", "NO_SIGNAL"))})
-        elif not risk["approved"]:
+        if not risk["approved"]:
+            self._ensure_state(journal, config.session_id, "REJECTED")
             result.update({"status": "NO_TRADE", "reason": str(risk.get("reason", "RISK_REJECTED"))})
+        elif decision["side"] in ("NONE", "NO_TRADE"):
+            result.update({"status": "NO_TRADE", "reason": str(decision.get("reason", "NO_SIGNAL"))})
         else:
             intent_id = hashlib.sha256(f"{config.session_id}:{config.sha256}".encode()).hexdigest()
             prior_execution = next((r["execution"] for r in reversed(existing)
@@ -182,6 +236,8 @@ class ForwardSessionRunner:
                                     json.dumps(execution, sort_keys=True, separators=(",", ":")).encode()).hexdigest()})
             result.update({"status": "PAPER_COMPLETE", "intent_id": intent_id, "execution": execution})
         result["closed_at_utc"] = datetime.now(timezone.utc).isoformat()
+        if risk["approved"]:
+            self._ensure_state(journal, config.session_id, "CLOSED")
         journal.append({"t": "SESSION_CLOSED", "session_id": config.session_id, "result": result})
         return result
 

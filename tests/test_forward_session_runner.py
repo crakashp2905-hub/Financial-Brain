@@ -40,8 +40,12 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     assert result["physical_orders"] is False
     assert len(calls) == 1 and len(calls[0][1]) == 2
     record_types = [r["t"] for r in DurableJournal(tmp_path / "session.jsonl").records()]
-    assert record_types == ["SESSION_PLAN", "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT",
-                            "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK", "SESSION_CLOSED"]
+    assert record_types == ["SESSION_PLAN", "SESSION_STATE", "SESSION_STATE", "SESSION_STATE",
+                            "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT", "SESSION_STATE",
+                            "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK", "SESSION_STATE", "SESSION_CLOSED"]
+    states = [r["state"] for r in DurableJournal(tmp_path / "session.jsonl").records()
+              if r["t"] == "SESSION_STATE"]
+    assert states == ["PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED"]
 
 
 def test_closed_session_is_replayed_without_reexecuting(tmp_path):
@@ -143,3 +147,27 @@ def test_session_restart_rejects_changed_decision_timestamp(tmp_path):
     runner.run(_config(), [_event()], decision_at=NOW, **kwargs)
     with pytest.raises(RunnerError, match="different decision timestamp"):
         runner.run(_config(), [_event()], decision_at=NOW + timedelta(seconds=1), **kwargs)
+
+
+def test_incomplete_session_is_preserved_and_cannot_be_reused(tmp_path):
+    journal_path = tmp_path / "incomplete.jsonl"
+    runner = ForwardSessionRunner(journal_path)
+    with pytest.raises(RuntimeError, match="strategy outage"):
+        runner.run(_config(), [_event()], decision_at=NOW,
+                   decision_fn=lambda _: (_ for _ in ()).throw(RuntimeError("strategy outage")),
+                   risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
+    runner.mark_incomplete("S-1", "strategy outage")
+    records = DurableJournal(journal_path).records()
+    assert [r["state"] for r in records if r["t"] == "SESSION_STATE"][-1] == "INCOMPLETE"
+    with pytest.raises(RunnerError, match="terminal"):
+        runner.run(_config(), [_event()], decision_at=NOW,
+                   decision_fn=lambda _: {"side": "NONE"}, risk_fn=lambda _: {"approved": True},
+                   execution_fn=lambda *_: {})
+
+
+def test_invalid_state_transition_fails_closed(tmp_path):
+    journal = DurableJournal(tmp_path / "state.jsonl")
+    journal.append({"t": "SESSION_PLAN", "session_id": "S-1"})
+    ForwardSessionRunner._ensure_state(journal, "S-1", "PLANNED")
+    with pytest.raises(RunnerError, match="invalid session transition"):
+        ForwardSessionRunner._ensure_state(journal, "S-1", "OPEN")
