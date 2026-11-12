@@ -2,14 +2,70 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
+  "recorded_tasks": 9,
+  "unrecorded_tasks": 209,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "5b89e0b50c7177b5744a2a244d1cb0a7b1bc44a7",
+  "reviewed_main_sha": "64dd4575b58ea97ecb0611f697bc856cd6db3c43",
   "items": [
+    {
+      "id": "PE-0015",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/forward_edge/session_runner.py"],
+      "tests": ["test_closed_session_is_replayed_without_reexecuting"],
+      "test_result": "Closed-session idempotency is tested; full PLANNED/PREFLIGHT/OPEN/DRAINING/CLOSED/INCOMPLETE/REJECTED state machine is not implemented",
+      "evidence_sha256": null,
+      "blockers": ["lifecycle states and transition validation are incomplete"]
+    },
+    {
+      "id": "PE-0016",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/forward_edge/session_runner.py"],
+      "tests": ["test_session_id_cannot_be_reused_for_different_configuration"],
+      "test_result": "Canonical run config hash and session metadata conflict rejection are tested",
+      "evidence_sha256": null,
+      "blockers": ["constraints and ledger identifiers are not yet part of ForwardRunConfig"]
+    },
+    {
+      "id": "PE-0017",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_session_runner.py"],
+      "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution"],
+      "test_result": "Normalized event stream, decision visibility, risk adapter, and paper execution callback are exercised",
+      "evidence_sha256": null,
+      "blockers": ["fixture and actual-market adapters are not yet wired through the same runner"]
+    },
+    {
+      "id": "PE-0018",
+      "status": "NOT_STARTED",
+      "sources": ["src/financial_brain/forward_edge/pipeline.py", "src/financial_brain/forward_edge/session_runner.py"],
+      "tests": [],
+      "test_result": "Existing fixture pipeline still runs independently",
+      "evidence_sha256": null,
+      "blockers": ["fixture pipeline parity refactor is not implemented"]
+    },
+    {
+      "id": "PE-0021",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/forward_edge/durable.py"],
+      "tests": ["test_runner_persists_visible_events_decision_risk_and_paper_execution", "test_pending_outbox_retries_with_same_idempotency_key_after_restart"],
+      "test_result": "Session records and pending/acknowledged paper outbox are written to the fsynced hash-chained journal",
+      "evidence_sha256": null,
+      "blockers": ["full lifecycle boundary crash-injection matrix and venue reconciliation remain incomplete"]
+    },
+    {
+      "id": "PE-0022",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_session_runner.py"],
+      "tests": ["test_pending_outbox_retries_with_same_idempotency_key_after_restart"],
+      "test_result": "Stable intent ID, pending marker, execution receipt, and acknowledgement are tested with an idempotent adapter mock",
+      "evidence_sha256": null,
+      "blockers": ["real simulated execution receipt reconciliation is not yet connected"]
+    },
     {
       "id": "PE-0030",
       "status": "PARTIAL",
