@@ -54,6 +54,49 @@ def snapshot(con, symbols: list[str], *, quote_fn=None, now: datetime | None = N
     return {"taken_at": now, "stored": len(rows), "missing": missing, "market_open": market_open(now)}
 
 
+def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime | None = None):
+    """Capture read-only Kite full quotes as forward-edge events.
+
+    An exchange timestamp is mandatory: receipt time is never substituted for it.
+    The entire batch fails if a requested quote is absent or its clocks are invalid.
+    """
+    from ..forward_edge.market_data import DataError, NormalizedEvent
+    from ..providers import kite_data as kd
+
+    if not symbols or len(set(symbols)) != len(symbols):
+        raise DataError("symbols must be nonempty and unique")
+    keys = [f"NSE:{symbol}" for symbol in symbols]
+    raw = (quote_fn or kd.quote)(keys, "full")
+    receipt = received_at or datetime.now(timezone.utc)
+    if receipt.tzinfo is None or receipt.utcoffset() is None:
+        raise DataError("received_at must be timezone-aware")
+    receipt = receipt.astimezone(timezone.utc)
+    events = []
+    for key in keys:
+        quote = raw.get(key)
+        if not isinstance(quote, dict):
+            raise DataError(f"missing Kite quote for {key}")
+        stamp = quote.get("timestamp")
+        if isinstance(stamp, str):
+            try:
+                stamp = datetime.fromisoformat(stamp)
+            except ValueError as exc:
+                raise DataError(f"invalid exchange timestamp for {key}") from exc
+        if not isinstance(stamp, datetime):
+            raise DataError(f"missing exchange timestamp for {key}")
+        # Kite's exchange timestamps are India-local when the API omits a zone.
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=IST)
+        payload = [("exchange", "NSE"), ("source", "kite_connect")]
+        if quote.get("last_price") is not None:
+            payload.append(("last_price", str(quote["last_price"])))
+        events.append(NormalizedEvent(
+            kind="QUOTE", instrument=key, event_utc=stamp.astimezone(timezone.utc),
+            received_utc=receipt, available_utc=receipt, payload=tuple(sorted(payload)),
+        ))
+    return events
+
+
 def divergence(con, *, tolerance: float = 0.03) -> list[dict]:
     """Latest snapshot against the archive's latest adjusted close, largest gaps first."""
     rows = con.execute("""
