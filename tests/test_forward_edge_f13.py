@@ -8,7 +8,7 @@ import pytest
 
 from financial_brain.forward_edge import cli, pipeline, release, tracker, trials
 from financial_brain.forward_edge.fixtures import EXPECTED, fixture_pack
-from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.modes import Mode, ModeError
 from financial_brain.forward_edge.release import ReleaseLabel
 
 REPO = Path(__file__).resolve().parents[1]
@@ -65,7 +65,7 @@ def test_running_a_session_twice_gives_identical_bytes() -> None:
 
 @pytest.mark.parametrize("mode", [Mode.LIVE_CASH, Mode.BROKER_DRYRUN])
 def test_pipeline_refuses_cash_and_broker_modes(mode: Mode) -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(ModeError, match=mode.value):
         pipeline.run_session(fixture_pack()["win"], mode=mode)
 
 

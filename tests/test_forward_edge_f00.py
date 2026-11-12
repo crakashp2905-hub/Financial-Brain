@@ -7,7 +7,7 @@ from __future__ import annotations
 import base64
 import json
 import shutil
-from dataclasses import replace
+from dataclasses import FrozenInstanceError
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -215,7 +215,7 @@ def test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders() -
 
 def test_session_mode_is_immutable() -> None:
     session = SessionMode(Mode.SHADOW)
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError, match="cannot assign to field 'mode'"):
         session.mode = Mode.LIVE_CASH  # type: ignore[misc]
 
 

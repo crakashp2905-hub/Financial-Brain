@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from financial_brain.forward_edge import books, disposable, durable as U, eligibility, futures
-from financial_brain.kernel.oms import OmsError
+from financial_brain.kernel.oms import InsufficientCash, OmsError
 
 REPO = Path(__file__).resolve().parents[1]
 KEY = "entry:INFY:2027-01-04"
@@ -174,7 +174,7 @@ def test_all_thirteen_recorded_trials_are_failed_in_the_list() -> None:
 def test_books_never_share_cash_or_reservations() -> None:
     bs = books.BookSet({"M1": D("100000"), "ORB": D("50000")})
     bs.submit("ORB", client_id="o1", side="BUY", quantity=10, limit=None, reserve=D("40000"))
-    with pytest.raises(Exception):
+    with pytest.raises(InsufficientCash, match="needs 40000, available 10000"):
         bs.submit("ORB", client_id="o2", side="BUY", quantity=10, limit=None, reserve=D("40000"))   # ORB is out of cash...
     assert bs.oms("M1").available("M1") == D("100000")                                         # ...while M1 is untouched
     with pytest.raises(OmsError):

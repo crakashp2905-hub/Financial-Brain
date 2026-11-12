@@ -1,7 +1,7 @@
 """F06 - session automation and reliability (FE-0069 .. FE-0078). Offline, injected clock."""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest

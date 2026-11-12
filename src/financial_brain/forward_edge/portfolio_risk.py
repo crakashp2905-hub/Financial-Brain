@@ -6,7 +6,6 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from math import sqrt
 from pathlib import Path
 
 from financial_brain.forward_edge.approvals import Approval, ApprovalError, validate_approval
