@@ -2,15 +2,15 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 10,
-  "unrecorded_tasks": 208,
+  "recorded_tasks": 11,
+  "unrecorded_tasks": 207,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "64dd4575b58ea97ecb0611f697bc856cd6db3c43",
+  "reviewed_main_sha": "0d8fc7f682ff417a86b0b02c25779bae0601ae39",
   "items": [
     {
       "id": "PE-0015",
@@ -173,6 +173,21 @@
       "test_result": "Fees are idempotently posted to expense and cash accounts; full Windows suite: 3278 passed, 1 skipped; Ruff and mypy passed",
       "evidence_sha256": null,
       "blockers": ["automatic fee schedule calculation and complete equity/NAV-to-cent bridge remain"]
+    },
+    {
+      "id": "PE-0110",
+      "status": "PARTIAL",
+      "sources": ["src/financial_brain/evaluation/champion.py", "docs/edge-program/executable-cohort-contract.md"],
+      "tests": [
+        "test_executable_cohort_uses_actual_partial_fill_fees_marks_and_cash_days",
+        "test_explicit_no_order_cash_cohort_resolves_to_zero_instead_of_disappearing",
+        "test_sell_fills_release_inventory_and_include_sell_fee_in_net_nav",
+        "test_missing_mark_or_unresolved_order_withholds_cohort_return",
+        "test_overlapping_frozen_cohorts_are_rejected"
+      ],
+      "test_result": "Five deterministic contract tests cover partial buy/sell fills, fees, marked NAV, cash days, missing marks, unresolved orders, and overlap rejection. Executable results are stored separately and take precedence over close-to-close diagnostics.",
+      "evidence_sha256": null,
+      "blockers": ["ForwardSessionRunner and PaperAccount durable events are not yet exported into this resolver's normalized cohort inputs; live prospective cohorts have not elapsed"]
     }
   ]
 }

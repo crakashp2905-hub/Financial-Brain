@@ -28,7 +28,7 @@ metric exists, the status remains insufficient evidence.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from collections import Counter
 from collections.abc import Sequence
 
@@ -54,6 +54,15 @@ CREATE TABLE IF NOT EXISTS champion_picks (day VARCHAR, strategy VARCHAR, ticker
     cost DOUBLE, PRIMARY KEY (day, strategy, ticker));
 CREATE TABLE IF NOT EXISTS champion_cohorts (day VARCHAR, strategy VARCHAR, n INTEGER, gross DOUBLE, cost DOUBLE,
     net DOUBLE, universe DOUBLE, PRIMARY KEY (day, strategy));
+"""
+
+EXECUTABLE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS champion_executable_cohorts (
+    day VARCHAR, strategy VARCHAR, cohort_id VARCHAR, n INTEGER, gross DOUBLE, cost DOUBLE, net DOUBLE,
+    capital DOUBLE, selected_n INTEGER, missing_n INTEGER, complete BOOLEAN, metric_version VARCHAR,
+    cash_days INTEGER, no_fill_n INTEGER, rejected_n INTEGER, partial_n INTEGER, start_day VARCHAR, end_day VARCHAR,
+    PRIMARY KEY (day, strategy)
+);
 """
 
 
@@ -204,6 +213,264 @@ def resolve(ledger_con, research_con, horizon: int = HORIZON) -> int:
     return done
 
 
+def resolve_executable(
+    ledger_con,
+    *,
+    scheduled: pd.DataFrame,
+    exchange_sessions: Sequence[str | date],
+    session_evidence: pd.DataFrame,
+    orders: pd.DataFrame,
+    fills: pd.DataFrame,
+    marks: pd.DataFrame,
+    horizon: int = HORIZON,
+) -> int:
+    """Resolve frozen paper cohorts from observed order, fill, session, and mark evidence.
+
+    ``scheduled`` has ``cohort_id, day, strategy, capital``. ``session_evidence`` has one
+    ``(cohort_id, day)`` row for every exchange session in each cohort, including sessions
+    where the strategy stayed in cash; rows must have ``complete=True`` and
+    ``corporate_actions_checked=True``. ``orders`` records every attempt and terminal states
+    (FILLED, NO_FILL, REJECTED, CANCELED/CANCELLED, EXPIRED); ``fills`` records actual fills,
+    timestamps, and fees. Open PARTIAL orders do not resolve. ``marks`` contains daily marks with
+    source and UTC observation time. Values are
+    normalized to account return, and cash days therefore contribute zero instead of vanishing
+    from the scheduled denominator.
+
+    This function deliberately does not synthesize fills or marks. A missing fact makes that
+    cohort incomplete and ineligible for promotion. Production still needs to connect the
+    runner's durable journal to these normalized inputs.
+    """
+    if horizon < 1:
+        raise ChampionError("horizon must be positive")
+
+    def require_columns(frame: pd.DataFrame, required: set[str], name: str) -> None:
+        if not isinstance(frame, pd.DataFrame) or not required.issubset(frame.columns):
+            missing = sorted(required - set(frame.columns if isinstance(frame, pd.DataFrame) else ()))
+            raise ChampionError(f"{name} missing required columns: {missing}")
+
+    def session_day(value: str | date) -> str:
+        try:
+            return date.fromisoformat(str(value)).isoformat()
+        except (TypeError, ValueError) as exc:
+            raise ChampionError(f"invalid exchange session date: {value!r}") from exc
+
+    def utc_instant(value: object, label: str) -> datetime:
+        try:
+            instant = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (TypeError, ValueError) as exc:
+            raise ChampionError(f"{label} must be a timezone-aware UTC timestamp") from exc
+        if instant.tzinfo is None or instant.utcoffset() != timezone.utc.utcoffset(instant):
+            raise ChampionError(f"{label} must be a timezone-aware UTC timestamp")
+        return instant
+
+    require_columns(scheduled, {"cohort_id", "day", "strategy", "capital"}, "scheduled")
+    require_columns(session_evidence, {"cohort_id", "day", "complete", "corporate_actions_checked"},
+                    "session_evidence")
+    require_columns(orders, {"cohort_id", "order_id", "strategy", "day", "submitted_at_utc", "symbol", "side",
+                             "requested_quantity", "status"}, "orders")
+    require_columns(fills, {"order_id", "fill_id", "day", "filled_at_utc", "quantity", "price", "fees"}, "fills")
+    require_columns(marks, {"day", "symbol", "price", "source", "observed_at_utc"}, "marks")
+
+    calendar = [session_day(day) for day in exchange_sessions]
+    if calendar != sorted(set(calendar)) or not calendar:
+        raise ChampionError("exchange_sessions must be unique, ordered session dates")
+    calendar_index = {day: i for i, day in enumerate(calendar)}
+    frozen = scheduled.copy()
+    frozen["day"] = frozen["day"].map(session_day)
+    if frozen.empty or frozen["cohort_id"].isna().any() or frozen["cohort_id"].duplicated().any():
+        raise ChampionError("scheduled cohorts must have unique, non-empty cohort_id values")
+    if frozen["strategy"].isna().any() or (frozen["strategy"].astype(str).str.len() == 0).any():
+        raise ChampionError("scheduled strategy identifiers must be non-empty")
+    frozen = frozen.sort_values(["strategy", "day", "cohort_id"], kind="stable")
+    last_end: dict[str, int] = {}
+    for row in frozen.itertuples(index=False):
+        if row.day not in calendar_index or date.fromisoformat(row.day) < LOCK_DATE:
+            raise ChampionError("scheduled cohort day must be a calendar session on/after the lock")
+        start = calendar_index[row.day]
+        end = start + horizon
+        if end >= len(calendar):
+            raise ChampionError(f"cohort {row.cohort_id} has not reached its scheduled endpoint")
+        if start <= last_end.get(str(row.strategy), -1):
+            raise ChampionError(f"overlapping scheduled cohorts for strategy {row.strategy}")
+        last_end[str(row.strategy)] = end
+        try:
+            capital = float(row.capital)
+        except (TypeError, ValueError) as exc:
+            raise ChampionError("cohort capital must be a positive finite number") from exc
+        if not np.isfinite(capital) or capital <= 0:
+            raise ChampionError("cohort capital must be a positive finite number")
+
+    evidence = session_evidence.copy()
+    evidence["day"] = evidence["day"].map(session_day)
+    if evidence.duplicated(["cohort_id", "day"]).any():
+        raise ChampionError("session evidence contains duplicate cohort/day rows")
+    order_rows = orders.copy()
+    order_rows["day"] = order_rows["day"].map(session_day)
+    if order_rows["order_id"].isna().any() or order_rows["order_id"].duplicated().any():
+        raise ChampionError("order ids must be present and unique")
+    order_rows["submitted_at"] = order_rows["submitted_at_utc"].map(
+        lambda value: utc_instant(value, "submitted_at_utc"))
+    fill_rows = fills.copy()
+    fill_rows["day"] = fill_rows["day"].map(session_day)
+    if fill_rows["fill_id"].isna().any() or fill_rows["fill_id"].duplicated().any():
+        raise ChampionError("fill ids must be present and unique")
+    fill_rows["filled_at"] = fill_rows["filled_at_utc"].map(
+        lambda value: utc_instant(value, "filled_at_utc"))
+    mark_rows = marks.copy()
+    mark_rows["day"] = mark_rows["day"].map(session_day)
+    if mark_rows.duplicated(["day", "symbol"]).any():
+        raise ChampionError("marks contain duplicate day/symbol rows")
+    mark_prices: dict[tuple[str, str], float] = {}
+    for mark in mark_rows.itertuples(index=False):
+        try:
+            price = float(mark.price)
+            utc_instant(mark.observed_at_utc, "observed_at_utc")
+        except (TypeError, ValueError) as exc:
+            raise ChampionError("marks require a finite positive price and UTC observation time") from exc
+        if not np.isfinite(price) or price <= 0:
+            raise ChampionError("marks require a finite positive price and UTC observation time")
+        if not str(mark.source).strip():
+            raise ChampionError("marks require a source identifier")
+        mark_prices[(mark.day, str(mark.symbol))] = price
+
+    order_ids = set(order_rows["order_id"].astype(str))
+    if not set(fill_rows["order_id"].astype(str)).issubset(order_ids):
+        raise ChampionError("fill references an unknown order")
+    ledger_con.execute(SCHEMA)
+    _cohort_columns(ledger_con)
+    ledger_con.execute(EXECUTABLE_SCHEMA)
+    ledger_con.execute("ALTER TABLE champion_executable_cohorts ADD COLUMN IF NOT EXISTS no_fill_n INTEGER")
+    ledger_con.execute("ALTER TABLE champion_executable_cohorts ADD COLUMN IF NOT EXISTS rejected_n INTEGER")
+    ledger_con.execute("ALTER TABLE champion_executable_cohorts ADD COLUMN IF NOT EXISTS partial_n INTEGER")
+    scheduled_ids = set(frozen["cohort_id"].astype(str))
+    if not set(order_rows["cohort_id"].astype(str)).issubset(scheduled_ids):
+        raise ChampionError("order references an unscheduled cohort")
+    processed = 0
+    terminal = {"FILLED", "NO_FILL", "REJECTED", "CANCELED", "CANCELLED", "EXPIRED"}
+    for cohort in frozen.itertuples(index=False):
+        cid, strategy, start_day = str(cohort.cohort_id), str(cohort.strategy), cohort.day
+        start = calendar_index[start_day]
+        days = calendar[start:start + horizon + 1]
+        end_day = days[-1]
+        cap = float(cohort.capital)
+        ev = evidence[evidence["cohort_id"].astype(str) == cid].set_index("day")
+        day_rows = order_rows[order_rows["cohort_id"].astype(str) == cid]
+        cohort_fills = fill_rows[fill_rows["order_id"].astype(str).isin(set(day_rows["order_id"].astype(str)))]
+        invalid = len(ev) != len(days) or set(ev.index) != set(days)
+        if not invalid:
+            invalid = not bool(ev.loc[days, "complete"].eq(True).all()) or not bool(
+                ev.loc[days, "corporate_actions_checked"].eq(True).all())
+        invalid = invalid or (not day_rows.empty and not (day_rows["strategy"].astype(str) == strategy).all())
+        invalid = invalid or (not day_rows.empty and not day_rows["day"].isin(days).all())
+        invalid = invalid or (not cohort_fills.empty and not cohort_fills["day"].isin(days).all())
+        invalid = invalid or (not day_rows.empty and not day_rows["status"].astype(str).str.upper().isin(terminal).all())
+        fills_by_order = {str(k): v for k, v in cohort_fills.groupby(cohort_fills["order_id"].astype(str))}
+        cash = cap
+        gross_cash = cap
+        inventory: dict[str, int] = {}
+        gross_inventory: dict[str, int] = {}
+        inventory_by_day: dict[str, dict[str, int]] = {}
+        gross_inventory_by_day: dict[str, dict[str, int]] = {}
+        fees_total = 0.0
+        invalid_orders = False
+        fill_events = []
+        for order in day_rows.itertuples(index=False):
+            status = str(order.status).upper()
+            side = str(order.side).upper()
+            if side not in {"BUY", "SELL"} or int(order.requested_quantity) <= 0:
+                invalid_orders = True
+                continue
+            fs = fills_by_order.get(str(order.order_id))
+            quantity = 0
+            if fs is not None:
+                for fill in fs.itertuples(index=False):
+                    qty, price, fee = int(fill.quantity), float(fill.price), float(fill.fees)
+                    if qty <= 0 or not np.isfinite(price) or price <= 0 or not np.isfinite(fee) or fee < 0:
+                        invalid_orders = True
+                        continue
+                    if fill.day < order.day:
+                        invalid_orders = True
+                    if fill.filled_at < order.submitted_at:
+                        invalid_orders = True
+                    if fill.filled_at.date().isoformat() != fill.day:
+                        invalid_orders = True
+                    quantity += qty
+                    fill_events.append((fill.filled_at, fill.day, order, qty, price, fee, side))
+            if quantity > int(order.requested_quantity):
+                invalid_orders = True
+            if status == "FILLED" and quantity != int(order.requested_quantity):
+                invalid_orders = True
+            if status in {"NO_FILL", "REJECTED", "CANCELLED", "EXPIRED"} and quantity != 0:
+                if status in {"NO_FILL", "REJECTED"} or quantity > int(order.requested_quantity):
+                    invalid_orders = True
+            if status == "CANCELED" and quantity > int(order.requested_quantity):
+                invalid_orders = True
+        for _, fill_day, order, qty, price, fee, side in sorted(fill_events, key=lambda event: event[0]):
+            notional = qty * price
+            signed = -notional if side == "BUY" else notional
+            gross_cash += signed
+            cash += signed - fee
+            fees_total += fee
+            current = inventory.get(str(order.symbol), 0)
+            if side == "SELL" and qty > current:
+                invalid_orders = True
+            inventory[str(order.symbol)] = current + qty if side == "BUY" else current - qty
+            gross_current = gross_inventory.get(str(order.symbol), 0)
+            gross_inventory[str(order.symbol)] = gross_current + qty if side == "BUY" else gross_current - qty
+            inventory_by_day[fill_day] = dict(inventory)
+            gross_inventory_by_day[fill_day] = dict(gross_inventory)
+        invalid = invalid or invalid_orders or cash < -0.005
+        gross_equity, net_equity = gross_cash, cash
+        day_inventory: dict[str, int] = {}
+        day_gross_inventory: dict[str, int] = {}
+        for d in days:
+            day_inventory = inventory_by_day.get(d, day_inventory)
+            day_gross_inventory = gross_inventory_by_day.get(d, day_gross_inventory)
+            for symbol, quantity in day_inventory.items():
+                if quantity and (d, symbol) not in mark_prices:
+                    invalid = True
+            for symbol, quantity in day_gross_inventory.items():
+                if quantity and (d, symbol) not in mark_prices:
+                    invalid = True
+        for symbol, quantity in inventory.items():
+            if quantity:
+                net_equity += quantity * mark_prices.get((end_day, symbol), 0.0)
+        for symbol, quantity in gross_inventory.items():
+            if quantity:
+                gross_equity += quantity * mark_prices.get((end_day, symbol), 0.0)
+        prior = ledger_con.execute("SELECT cohort_id FROM champion_executable_cohorts WHERE day=? AND strategy=?",
+                                   [start_day, strategy]).fetchone()
+        if prior is not None:
+            raise ChampionError(f"cohort {cid} already has a resolved row; refusing to overwrite evidence")
+        cohort_orders = len(day_rows)
+        filled_orders = sum(1 for order_id in fills_by_order if len(fills_by_order[order_id]))
+        order_fill_qty = {str(order.order_id): sum(int(fill.quantity) for fill in fills_by_order.get(
+            str(order.order_id), pd.DataFrame(columns=["quantity"])).itertuples(index=False))
+            for order in day_rows.itertuples(index=False)}
+        no_fill_orders = sum(1 for order in day_rows.itertuples(index=False)
+                             if str(order.status).upper() in {"NO_FILL", "CANCELED", "CANCELLED", "EXPIRED"}
+                             and order_fill_qty[str(order.order_id)] == 0)
+        rejected_orders = sum(1 for order in day_rows.itertuples(index=False)
+                             if str(order.status).upper() == "REJECTED")
+        partial_orders = sum(1 for order in day_rows.itertuples(index=False)
+                             if 0 < order_fill_qty[str(order.order_id)] < int(order.requested_quantity))
+        filled_days = set(cohort_fills["day"].astype(str))
+        cash_days = sum(1 for d in days if d not in filled_days)
+        complete = not invalid
+        gross = gross_equity / cap - 1.0 if complete else None
+        cost = fees_total / cap if complete else None
+        net = net_equity / cap - 1.0 if complete else None
+        ledger_con.execute("""INSERT INTO champion_executable_cohorts
+            (day, strategy, cohort_id, n, gross, cost, net, capital, selected_n, missing_n,
+             complete, metric_version, cash_days, no_fill_n, rejected_n, partial_n, start_day, end_day)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            [start_day, strategy, cid, filled_orders, gross, cost, net, cap, cohort_orders,
+             int(invalid), complete, EXECUTABLE_METRIC, cash_days, no_fill_orders, rejected_orders,
+             partial_orders, start_day, end_day])
+        processed += 1
+    return processed
+
+
 def standings(ledger_con, horizon: int = HORIZON,
               eligible_days: set[str] | None = None,
               scheduled_days: Sequence[str | date] | None = None) -> list[dict]:
@@ -218,7 +485,15 @@ def standings(ledger_con, horizon: int = HORIZON,
         raise ChampionError("horizon must be positive")
     ledger_con.execute(SCHEMA)
     _cohort_columns(ledger_con)
-    df = ledger_con.execute("SELECT day, strategy, net, complete, metric_version FROM champion_cohorts").df()
+    ledger_con.execute(EXECUTABLE_SCHEMA)
+    df = ledger_con.execute("""
+        SELECT c.day, c.strategy, c.net, c.complete, c.metric_version
+        FROM champion_cohorts c
+        WHERE NOT EXISTS (SELECT 1 FROM champion_executable_cohorts e
+                          WHERE e.day=c.day AND e.strategy=c.strategy)
+        UNION ALL
+        SELECT day, strategy, net, complete, metric_version FROM champion_executable_cohorts
+    """).df()
     if df.empty:
         return [{"strategy": s, "status": "INSUFFICIENT_DATA", "cohorts": 0} for s in ("composite_top",)]
     strategies = sorted(set(df["strategy"]) - {CHAMPION}) or ["composite_top"]
