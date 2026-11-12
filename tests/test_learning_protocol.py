@@ -159,10 +159,10 @@ def test_the_step_is_idempotent_through_the_store():
     cm = P.CellMatrix(df, sessions)
     with Store(":memory:") as st:
         for _ in range(2):                                           # the same night run twice
-            for e in P.step(cm, df, sessions[25], st.lessons()):
+            for e in P.step(cm, df, sessions[26], st.lessons()):
                 st.append(e["lesson_id"], e["kind"], session=e["session"], payload=e["payload"])
         n1 = len(st.events())
-        for e in P.step(cm, df, sessions[25], st.lessons()):
+        for e in P.step(cm, df, sessions[26], st.lessons()):
             st.append(e["lesson_id"], e["kind"], session=e["session"], payload=e["payload"])
         assert len(st.events()) == n1 > 0
 
@@ -172,10 +172,10 @@ def test_a_night_sees_only_what_had_happened_by_then():
     df = _planted(60, seed=1, bp=45.0)
     sessions = sorted(df["day"].unique())
     full = P.CellMatrix(df, sessions)
-    cut_df = df[df["day"] <= sessions[35]]
-    cut = P.CellMatrix(cut_df, sessions[:36])
-    a = P.step(full, df, sessions[35], {})
-    b = P.step(cut, cut_df, sessions[35], {})
+    cut_df = df[df["day"] <= sessions[36]]
+    cut = P.CellMatrix(cut_df, sessions[:37])
+    a = P.step(full, df, sessions[36], {})
+    b = P.step(cut, cut_df, sessions[36], {})
     key = lambda ev: sorted((e["lesson_id"], e["payload"]["trades"], round(e["payload"]["p"], 12)) for e in ev)   # noqa: E731
     assert key(a) == key(b)
 
@@ -247,3 +247,15 @@ def test_no_dimension_is_silently_unreachable():
     reach = st.groupby("dimension")["contrast_days"].max()
     for name in F.DIMENSIONS:
         assert reach.get(name, 0) >= 8, f"{name} can never be nominated: no comparison is defined for it"
+
+
+def test_cells_are_nominated_only_at_the_fixed_looks_but_hypotheses_are_decided_every_night():
+    df = _planted(60, seed=1, bp=60.0)
+    sessions = sorted(df["day"].unique())
+    cm = P.CellMatrix(df, sessions)
+    looks = [i for i in range(11, 40) if any(e["kind"] == "NOMINATED" for e in P.step(cm, df, sessions[i], {}))]
+    assert looks and all((i + 1 - P.DEFAULT.min_days) % P.DEFAULT.look_every == 0 for i in looks)
+    off_look = sessions[12]                                              # 13 sessions: not a look
+    assert not [e for e in P.step(cm, df, off_look, {}) if e["kind"] == "NOMINATED"]
+    every_night = P.Params(look_every=1)
+    assert [e for e in P.step(cm, df, off_look, {}, every_night) if e["kind"] == "NOMINATED"]

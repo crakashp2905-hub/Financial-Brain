@@ -65,7 +65,7 @@ def test_every_stage_runs_and_the_run_is_recorded():
     raw = _planted(30)
     with Store(":memory:") as st:
         rep = PL.process(st, _inputs(raw), today="2027-03-01", audit=[], task_registered=lambda n: True)
-        assert rep["ok"] and set(rep["stages"]) == {"label", "autopsy", "incidents", "protocol", "shadow"}
+        assert rep["ok"] and set(rep["stages"]) == {"label", "autopsy", "personal", "incidents", "protocol", "shadow"}
         assert len(st.autopsies()) == len(raw) and st.runs().iloc[-1]["status"] == "ok"
         assert rep["stages"]["protocol"]["status"] == "RAN"
 

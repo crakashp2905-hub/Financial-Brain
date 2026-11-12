@@ -11,7 +11,8 @@ exists, every cell that overlaps it inherits a loss, and without this a single c
 (the first calibration run confirmed 29 from one planted effect). *And loses* (net below zero, by at least ``min_effect_bp``)
 is what makes skipping it worth anything.
 
-1. **Nominate.** Each night every cell (strategy x dimension x value) with enough trades is examined on all sessions so far:
+1. **Nominate.** At each look (every ``look_every`` sessions from the ``min_days``-th, so the number of times the same data is examined is
+   bounded and counted, not one per night) every cell (strategy x dimension x value) with enough trades is examined on all sessions so far:
    per-day contrast against the strategy's other trades that day, one-sided Student t over days, Benjamini-Hochberg across the
    cells of its family (``q_nominate``), p <= ``p_nominate``, own net <= ``-min_effect_bp``. Candidates that overlap a stronger
    nominee by more than ``max_overlap`` of their trades are dropped as redundant. A nomination freezes the cell's definition and
@@ -55,6 +56,7 @@ class Params:
     q_nominate: float = 0.10
     min_effect_bp: float = 10.0
     max_overlap: float = 0.5
+    look_every: int = 5                  # nominate only at fixed looks (session 12, 17, 22, ...), not every night
     confirm_sessions: int = 20
     confirm_trades: int = 30
     alpha_confirm: float = 0.05
@@ -349,6 +351,7 @@ def step(cm: CellMatrix, trades: pd.DataFrame, session: str, lessons: dict[str, 
             d = decay(cm, x["cell"], session, params)
             if d:
                 events.append({"lesson_id": lid, "kind": "DECAYING", "session": d["session"], "payload": d})
-    for n in screen(cm, trades, session, blocked=blocked, params=params):
-        events.append({"lesson_id": n["id"], "kind": "NOMINATED", "session": session, "payload": n})
+    if (cm.pos[session] + 1 - params.min_days) % max(1, params.look_every) == 0:     # a look: only now may a cell be nominated
+        for n in screen(cm, trades, session, blocked=blocked, params=params):
+            events.append({"lesson_id": n["id"], "kind": "NOMINATED", "session": session, "payload": n})
     return events
