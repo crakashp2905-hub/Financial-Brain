@@ -59,6 +59,49 @@ def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger
     assert (setup / "reports" / "2026-10-06-live.md").exists()
 
 
+def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup):
+    from financial_brain.forward_edge.market_data import NormalizedEvent
+    from financial_brain.forward_edge.durable import DurableJournal
+    from financial_brain.forward_edge.modes import Mode
+    from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
+
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    forward = ForwardSessionRunner(setup / "forward.jsonl")
+    config = ForwardRunConfig(session_id="PAPER-2026-10-06", exchange_date="2026-10-06", cohort_id="C1",
+                              strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
+                              constraints_sha256="c" * 64, ledger_id="PAPER-LEDGER-1",
+                              benchmark_id="NIFTY50", instruments=("NSE:X",), capital_inr="1000000",
+                              mode=Mode.LIVE_PAPER)
+    forward.begin(config)
+
+    def quote(symbols, kind):
+        assert kind == "full"
+        return {s: {"timestamp": c.now().strftime("%Y-%m-%d %H:%M:%S"), "last_price": 100.0,
+                    "last_trade_time": "2026-10-06 09:20:00", "volume": 100,
+                    "ohlc": {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0},
+                    "depth": {"buy": [{"price": 99.95, "quantity": 10}],
+                              "sell": [{"price": 100.05, "quantity": 12}]}}
+                for s in symbols}
+
+    out = R.run_live(quote_fn=quote, now_fn=c.now, sleep_fn=c.sleep, path=setup / "sink.duckdb",
+                     poll=300, event_sink=lambda events: forward.append_events(config, events))
+    assert out["status"] == "complete"
+    stored = [r["event"] for r in DurableJournal(setup / "forward.jsonl").records()
+              if r["t"] == "MARKET_EVENT"]
+    assert stored and all(r["kind"] == "QUOTE" for r in stored)
+    assert all(dict(tuple(pair) for pair in r["payload"])["quote_fidelity"] == "EXECUTABLE" for r in stored)
+    assert all(r["received_utc"] == r["available_utc"] for r in stored)
+    assert all(isinstance(e, NormalizedEvent) for e in [
+        NormalizedEvent(r["kind"], r["instrument"], datetime.fromisoformat(r["event_utc"]),
+                        datetime.fromisoformat(r["received_utc"]), datetime.fromisoformat(r["available_utc"]),
+                        tuple(tuple(p) for p in r["payload"])) for r in stored])
+    finished = forward.run(config, [], decision_at=datetime(2026, 10, 6, 9, 30, tzinfo=R.IST),
+                           decision_fn=lambda visible: {"side": "NONE", "observed": len(visible)},
+                           risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
+    assert finished["status"] == "NO_TRADE"
+    assert finished["event_count"] == len(stored)
+
+
 def test_live_view_tracks_open_then_closed_trades_without_a_database_reader(setup):
     from financial_brain.paper.live_view import view_path
     c = Clock(datetime(2026, 10, 6, 9, 29, tzinfo=R.IST))

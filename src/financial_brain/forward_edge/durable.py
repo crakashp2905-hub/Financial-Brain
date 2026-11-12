@@ -71,15 +71,27 @@ class DurableJournal:
                 os.fsync(fh.fileno())
 
     def append(self, rec: dict) -> int:
-        digest = _link(self.head, rec)
-        line = _canon({"seq": self.seq + 1, "prev": self.head, "hash": digest, "rec": rec}) + "\n"
+        return self.append_many([rec])[0]
+
+    def append_many(self, records: list[dict]) -> list[int]:
+        """Append a batch with one fsync while preserving the same per-record hash chain."""
+        if not records:
+            return []
+        seq, head = self.seq, self.head
+        lines = []
+        sequences = []
+        for rec in records:
+            seq += 1
+            digest = _link(head, rec)
+            lines.append(_canon({"seq": seq, "prev": head, "hash": digest, "rec": rec}) + "\n")
+            sequences.append(seq)
+            head = digest
         with self.path.open("ab") as fh:
-            fh.write(line.encode("utf-8"))
+            fh.write("".join(lines).encode("utf-8"))
             fh.flush()
             os.fsync(fh.fileno())
-        self.seq += 1
-        self.head = digest
-        return self.seq
+        self.seq, self.head = seq, head
+        return sequences
 
     def append_torn(self, rec: dict) -> None:
         """Test hook: simulate power loss in the middle of a write (half a line, no terminator)."""

@@ -213,7 +213,8 @@ def opening_from_candles(symbols, day: date, *, candles_fn, token_fn) -> dict[st
 def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None, now_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
-             rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
+             rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
+             event_sink=None) -> dict:
     from ..providers import kite_data as kd
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
@@ -247,7 +248,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     except Exception as e:                              # noqa: BLE001 - the archive must never stop a trading day
         log.warning("quote archive unavailable: %s", str(e)[:120])
         qcon = None
-    polls = failures = 0
+    polls = failures = capture_failures = 0
+    capture_issue = None
     session_issue = None
     seen_today = False
     last: dict[str, float] = {}
@@ -267,6 +269,17 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             q = {}
             for i in range(0, len(syms), 450):
                 q.update(quote_fn([f"NSE:{s}" for s in syms[i:i + 450]], "full"))   # full: includes the order book
+            poll_received_at = now_fn()
+            if event_sink is not None:
+                from ..ingest.kite_live import forward_events
+                try:
+                    event_sink(forward_events(syms, quote_fn=lambda *_args, snapshot=q: snapshot,
+                                              received_at=poll_received_at))
+                    capture_issue = None
+                except Exception as e:                   # noqa: BLE001 - capture gaps downgrade evidence, not quote provenance
+                    capture_failures += 1
+                    capture_issue = str(e)[:160]
+                    log.warning("forward-event capture failed (%s): %s", capture_failures, capture_issue)
             failures = 0
             if session_issue is not None:
                 log.info("Kite session recovered; paper polling resumed")
@@ -377,9 +390,12 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     if session_issue is None and not eng.closed_for_day:
         for t in eng.end_of_day(now_fn().replace(tzinfo=None), last):
             save(con, t, "live")
-    status = "session_unavailable" if session_issue is not None else "complete"
+    status = ("session_unavailable" if session_issue is not None else
+              "capture_incomplete" if capture_failures else "complete")
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,
-               symbols=len(syms), polls=polls, note=json.dumps({"skipped": len(eng.skipped)}),
+               symbols=len(syms), polls=polls, note=json.dumps({"skipped": len(eng.skipped),
+                                                               "forward_capture_failures": capture_failures,
+                                                               "forward_capture_last_error": capture_issue}),
                version=fingerprint)
     if qcon is not None:
         qcon.close()
