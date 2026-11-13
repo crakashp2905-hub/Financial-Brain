@@ -125,6 +125,15 @@ class Registry:
     def get(self, strategy_id: str) -> StrategySpec:
         return self._specs[strategy_id]
 
+    def effective_status(self, strategy_id: str) -> Status:
+        """Unregistered candidates default to observation-only status."""
+        spec = self._specs.get(strategy_id)
+        return spec.status if spec is not None else Status.SHADOW_ONLY
+
+    def can_place_paper_intents(self, strategy_id: str) -> bool:
+        spec = self._specs.get(strategy_id)
+        return spec is not None and spec.can_place_paper_intents
+
     def __len__(self) -> int:
         return len(self._specs)
 
@@ -193,9 +202,15 @@ def shadow_signal(spec: StrategySpec, as_of: str, raw_signal: str) -> ShadowSign
     return ShadowSignal(spec.strategy_id, as_of, raw_signal)
 
 
-def order_intent_allowed(spec: StrategySpec) -> bool:
-    """Shadow, exploratory and failed families never produce order intents, even simulated ones."""
-    return spec.can_place_paper_intents
+def order_intent_allowed(spec: StrategySpec | None, registry: Registry | None = None) -> bool:
+    """Only the exact registered paper-capable spec may produce a paper intent."""
+    if spec is None or registry is None:
+        return False
+    try:
+        registered = registry.get(spec.strategy_id)
+    except KeyError:
+        return False
+    return registered == spec and registered.can_place_paper_intents
 
 
 # ---- nulls and placebos (FE-0030) ----

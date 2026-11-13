@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 72,
-  "unrecorded_tasks": 146,
+  "recorded_tasks": 73,
+  "unrecorded_tasks": 145,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1491,11 +1491,33 @@
         "test_every_recorded_trial_maps_to_a_failed_registry_entry",
         "test_transition_creates_a_new_version_and_keeps_the_old_one"
       ],
-      "test_result": "25 F02 registry tests passed; Ruff and mypy passed. A failed parameter digest cannot be reused under another ID. Legacy ledger entries lack parameter hashes, so those historical variants cannot yet be exactly matched.",
-      "evidence_sha256": "7758a6f03cec212e87d83d939895398310c00721071fd2df37dc9438dbe546b1",
+      "test_result": "26 F02 registry tests passed; Ruff and mypy passed. A failed parameter digest cannot be reused under another ID. Legacy ledger entries lack parameter hashes, so those historical variants cannot yet be exactly matched.",
+      "evidence_sha256": "20e870d9c1ac9d769170e4ecb2f45264d18afb73fb0e0fa807c47a87670b020f",
       "blockers": [
         "Original canonical parameter artifacts/hashes are absent for the 13 failed ledger rows.",
         "Duplicate enforcement requires callers to provide parameter_sha256."
+      ]
+    },
+    {
+      "id": "PE-0047",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "docs/edge-program/unregistered-shadow-only-contract.md",
+        "docs/edge-program/pe-0047-unregistered-shadow-only-evidence.json",
+        "tests/test_forward_edge_f02.py"
+      ],
+      "tests": [
+        "test_unregistered_candidate_defaults_to_shadow_only_observation",
+        "test_only_paper_capable_statuses_get_order_intents",
+        "test_failed_exploratory_and_shadow_families_never_get_order_intents",
+        "test_paper_enrolment_needs_a_human_and_has_a_benchmark"
+      ],
+      "test_result": "26 F02 tests passed; Ruff and mypy passed. Unknown IDs default to SHADOW_ONLY and only the exact registered paper-capable spec can pass the intent gate. Legacy strategy engines remain to be wired through this gate.",
+      "evidence_sha256": "6fde5b29ff0bd547d67403e5d6f4b20157bde5209f12befa7e12e94cc40c5efd",
+      "blockers": [
+        "Not every existing strategy runner and historical paper-book writer consumes the registry status/intent gate.",
+        "The static eligibility inventory is not yet exhaustive for all source-linked candidates."
       ]
     }
   ]

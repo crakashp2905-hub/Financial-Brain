@@ -145,12 +145,25 @@ def test_benchmark_must_be_frozen_before_first_forward_result() -> None:
 @pytest.mark.parametrize("status", [Status.FAILED, Status.EXPLORATORY, Status.SHADOW_ONLY])
 def test_failed_exploratory_and_shadow_families_never_get_order_intents(status: Status) -> None:
     spec = _spec(status=status, exclusion_reason="r" if status is Status.FAILED else None)
-    assert R.order_intent_allowed(spec) is False
+    assert R.order_intent_allowed(spec, Registry()) is False
 
 
 def test_only_paper_capable_statuses_get_order_intents() -> None:
     spec = _spec(status=Status.PAPER_ELIGIBLE, benchmark_id="NIFTY_CASH")
-    assert R.order_intent_allowed(spec) is True
+    registry = Registry()
+    registry.register(spec)
+    assert R.order_intent_allowed(spec, registry) is True
+
+
+def test_unregistered_candidate_defaults_to_shadow_only_observation() -> None:
+    registry = Registry()
+    unregistered = _spec(strategy_id="unregistered", status=Status.PAPER_ELIGIBLE,
+                         benchmark_id="NIFTY_CASH")
+    assert registry.effective_status("unregistered") is Status.SHADOW_ONLY
+    assert registry.can_place_paper_intents("unregistered") is False
+    assert R.order_intent_allowed(unregistered, registry) is False
+    signal = R.shadow_signal(unregistered, "2027-01-04T09:15:00+05:30", "LONG")
+    assert signal.signal == "LONG" and not hasattr(signal, "quantity")
 
 
 def test_shadow_signal_has_no_quantity_and_rejects_unknown_values() -> None:

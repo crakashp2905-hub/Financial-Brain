@@ -11,7 +11,7 @@
   ],
   "tests": {
     "command": "python -m pytest tests/test_forward_edge_f02.py -q",
-    "result": "25 passed (exit code 0); Ruff and mypy passed for registry.py.",
+    "result": "26 passed (exit code 0); Ruff and mypy passed for registry.py.",
     "cases": [
       "test_registry_rejects_renamed_retry_of_failed_parameter_hash",
       "test_every_recorded_trial_maps_to_a_failed_registry_entry",
