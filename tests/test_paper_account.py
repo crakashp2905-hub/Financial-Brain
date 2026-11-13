@@ -90,6 +90,28 @@ def test_sell_reservations_prevent_overselling_and_release_on_cancel(tmp_path) -
     )
 
 
+def test_partial_fill_then_expiry_reconciles_filled_inventory_and_releases_rest(tmp_path) -> None:
+    path = tmp_path / "partial-expiry.jsonl"
+    book = PaperAccount(path, account_id="expiry", initial_cash=Decimal("5000"))
+    book.submit_intent(client_id="b", symbol="NSE:ABC", side="BUY", quantity=10,
+                       limit=Decimal("200"), reserve=Decimal("2000"))
+    book.move("b", State.SUBMITTED)
+    book.move("b", State.ACCEPTED)
+    book.record_fill("b", fill_id="partial", quantity=4, price=Decimal("100"))
+    book.move("b", State.EXPIRED)
+
+    assert book.position("NSE:ABC").quantity == 4
+    assert book.cash == Decimal("4600")
+    assert book.oms.order("b").reserved == 0
+    assert book.oms.order("b").remaining == 6
+    assert book.oms.order("b").state is State.EXPIRED
+    reopened = PaperAccount(path, account_id="expiry", initial_cash=Decimal("5000"))
+    assert reopened.position("NSE:ABC").quantity == 4
+    assert reopened.cash == Decimal("4600")
+    assert reopened.oms.order("b").reserved == 0
+    assert reopened.oms.order("b").state is State.EXPIRED
+
+
 def test_failed_fill_or_fee_does_not_change_journal(tmp_path) -> None:
     book = PaperAccount(tmp_path / "paper.jsonl", account_id="day", initial_cash=Decimal("1000"))
     _buy(book, "b", 5)

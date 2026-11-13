@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0075",
+  "status": "DONE",
+  "implemented": [
+    "Execution uses only quote availability at or after decision availability plus modeled latency.",
+    "The exact eligibility boundary is inclusive; earlier quotes cannot satisfy the order."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f05.py -q",
+    "result": "26 passed; exit code 0.",
+    "additional_checks": ["python -m ruff check tests/test_forward_edge_f05.py — All checks passed."],
+    "cases": [
+      "test_quote_at_latency_boundary_is_eligible_and_one_before_is_not",
+      "test_fill_never_uses_a_quote_before_decision_plus_latency"
+    ]
+  },
+  "limitations": [
+    "Latency examples are synthetic; real feed-to-order latency and broker behavior have not been measured."
+  ]
+}

@@ -37,6 +37,14 @@ def test_fill_never_uses_a_quote_before_decision_plus_latency() -> None:
     assert r.status == "FILLED" and r.avg_price == D("1500.05")   # the 300 ms quote, not the cheaper earlier ones
 
 
+def test_quote_at_latency_boundary_is_eligible_and_one_before_is_not() -> None:
+    at_boundary = [_q(200, "1500.00", "1500.05")]
+    one_ms_early = [_q(199, "1490.00", "1490.05")]
+    assert X.marketable_limit(_intent(), at_boundary, LAT).status == "FILLED"
+    result = X.marketable_limit(_intent(), one_ms_early, LAT)
+    assert (result.status, result.reason) == ("MISSED", "NO_QUOTE_AFTER_LATENCY")
+
+
 def test_no_quote_after_latency_is_a_recorded_miss() -> None:
     r = X.marketable_limit(_intent(), [_q(-5, "1400.00", "1400.05")], LAT)
     assert (r.status, r.reason, r.filled_qty) == ("MISSED", "NO_QUOTE_AFTER_LATENCY", 0)
@@ -48,6 +56,15 @@ def test_buy_pays_the_ask_and_sell_receives_the_bid_never_the_mid() -> None:
     qs = [_q(300, "1500.00", "1500.10")]
     assert X.marketable_limit(_intent("BUY"), qs, LAT).avg_price == D("1500.10")
     assert X.marketable_limit(_intent("SELL"), qs, LAT).avg_price == D("1500.00")
+
+
+def test_one_tick_worse_post_decision_quote_worsens_both_sides_of_fill_economics() -> None:
+    touch = [_q(300, "1500.00", "1500.05")]
+    adverse = [_q(300, "1499.95", "1500.10")]
+    assert X.marketable_limit(_intent("BUY"), adverse, LAT).avg_price - \
+        X.marketable_limit(_intent("BUY"), touch, LAT).avg_price == D("0.05")
+    assert X.marketable_limit(_intent("SELL"), touch, LAT).avg_price - \
+        X.marketable_limit(_intent("SELL"), adverse, LAT).avg_price == D("0.05")
 
 
 def test_tick_rounding_goes_against_the_trader() -> None:
