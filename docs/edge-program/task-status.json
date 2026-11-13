@@ -202,7 +202,7 @@
         "test_inventory_covers_all_python_sources_without_inventing_owners",
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
       ],
-      "test_result": "Committed inventory captures 541 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 534 unassessed modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
+      "test_result": "Committed source inventory now captures 547 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 540 unassessed modules and 298 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
       "evidence_sha256": "1b34f279de2e17a297690cccfbafb65edaf0fb67d5fa34f480f059ae8145d40c",
       "blockers": [
         "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state"
@@ -524,17 +524,27 @@
       "sources": [
         "src/financial_brain/ingest/kite_live.py",
         "src/financial_brain/forward_edge/market_data.py",
-        "tests/test_kite_forward_events.py"
+        "src/financial_brain/forward_edge/raw_quote_archive.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "src/financial_brain/paper/intraday_runner.py",
+        "tests/test_kite_forward_events.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_raw_quote_archive.py",
+        "tests/test_phase5_intraday_runner.py",
+        "docs/edge-program/pe-0030-market-data-evidence.json"
       ],
       "tests": [
         "test_full_quote_becomes_timestamped_forward_event",
         "test_ltp_only_is_analyzable_but_not_fill_capable",
-        "test_crossed_or_empty_depth_is_not_executable"
+        "test_crossed_or_empty_depth_is_not_executable",
+        "test_kite_event_links_durable_raw_quote_record_under_authorized_archive",
+        "test_simulated_fill_receipt_points_through_event_to_raw_quote_archive",
+        "test_live_runner_can_opt_in_to_authorized_raw_quote_archive"
       ],
-      "test_result": "29 focused Kite and forward market-data tests passed; Ruff and mypy passed",
-      "evidence_sha256": null,
+      "test_result": "The existing Kite adapter and read-only poll loop support normalized availability-timestamped quotes with optional durable raw-object lineage; conservative simulation requires valid visible two-sided depth and binds fills to quote event identity. Synthetic Kite/runner/archive suite: 54 passed; Ruff, mypy and diff checks passed. No live capture is claimed.",
+      "evidence_sha256": "d2aac733f3c4e3f419047b4aa2bf7289d9faff838e6bb49467c6fb8ee22a4cbf",
       "blockers": [
-        "live Kite capture has not yet been observed"
+        "No authorized live-market capture has been observed; observed feed freshness, request latency, depth coverage, and missed-fill rates still need measurement during owner-authorized market sessions."
       ]
     },
     {
