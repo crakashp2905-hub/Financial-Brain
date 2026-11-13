@@ -50,11 +50,17 @@ class ForwardRunConfig:
     instruments: tuple[str, ...]
     capital_inr: str
     mode: Mode = Mode.LIVE_PAPER
+    attempt_id: str = "attempt-1"
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
                     self.capital_inr, self.instruments, self.ledger_id)):
             raise RunnerError("run identity, instruments, benchmark and capital are required")
+        if (not isinstance(self.attempt_id, str) or not self.attempt_id
+                or not self.attempt_id.strip()
+                or any(ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+                       for ch in self.attempt_id)):
+            raise RunnerError("attempt_id must be a nonempty stable token")
         if len(set(self.instruments)) != len(self.instruments) or any(not i for i in self.instruments):
             raise RunnerError("instruments must be nonempty and unique")
         if self.mode not in (Mode.LIVE_PAPER, Mode.SHADOW, Mode.RESEARCH_REPLAY):
@@ -80,7 +86,16 @@ class ForwardRunConfig:
                 "risk_policy_sha256": self.risk_policy_sha256,
                 "constraints_sha256": self.constraints_sha256, "ledger_id": self.ledger_id,
                 "benchmark_id": self.benchmark_id, "instruments": sorted(set(self.instruments)),
-                "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value}
+                "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value,
+                "session_key": self.session_key, "attempt_id": self.attempt_id}
+
+    @property
+    def session_key(self) -> str:
+        """Stable identity for one strategy/cohort/date/mode, shared by its immutable attempts."""
+        body = json.dumps({"exchange_date": self.exchange_date, "cohort_id": self.cohort_id,
+                           "strategy_sha256": self.strategy_sha256, "mode": self.mode.value},
+                          sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(body.encode()).hexdigest()
 
     @property
     def sha256(self) -> str:
@@ -141,6 +156,13 @@ class ForwardSessionRunner:
         journal = DurableJournal(self.journal_path)
         records = journal.records()
         existing = [r for r in records if r.get("session_id") == config.session_id]
+        for row in records:
+            if row.get("t") != "SESSION_PLAN" or row.get("session_id") == config.session_id:
+                continue
+            prior_config = row.get("config")
+            if (isinstance(prior_config, dict) and prior_config.get("session_key") == config.session_key
+                    and prior_config.get("attempt_id") == config.attempt_id):
+                raise RunnerError("attempt_id already exists for this strategy session key")
         if existing:
             planned = next((r for r in existing if r.get("t") == "SESSION_PLAN"), None)
             if planned is None or planned.get("config_sha256") != config.sha256:

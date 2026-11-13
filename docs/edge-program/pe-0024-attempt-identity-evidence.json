@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0024",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T05:28:57Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/session_runner.py": "1932b9b6270256dfc3fbdd851c926a21b0e6f3c77dfcd0959fc1587468c9e9a0",
+    "tests/test_forward_session_runner.py": "424343b48059f3fad0ce6d01ffa113205033ba11dcfa4333b4b7aebc8acbbb33"
+  },
+  "acceptance_test": "test_attempts_append_under_one_session_key_without_overwriting_prior_result",
+  "result": "Attempts share a deterministic per-strategy/cohort/exchange-date/mode key and have unique stable attempt IDs. A second closed attempt appends a new session plan; the earlier attempt records and result remain byte-for-byte unchanged. Reusing an attempt ID for the same session key is rejected.",
+  "focused_tests": "36 passed",
+  "ruff": "passed",
+  "mypy": "passed"
+}

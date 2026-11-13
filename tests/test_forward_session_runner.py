@@ -126,12 +126,35 @@ def test_no_trade_signal_never_reaches_execution_adapter(tmp_path):
 
 
 def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
-    assert _config().sha256 == "99aae10b3c9a27e3c34bddaa20134655d50f2611a17bfcf8ecaebd59eb185677"
+    assert _config().sha256 == "657cb827a9e223c0ba7cb49cbb0b5ff114891979aaa53ff41649da7c1a9de363"
     assert _config(capital_inr="1000000.00").sha256 == _config(capital_inr="1000000").sha256
     assert _config(ledger_id="LEDGER-2").sha256 != _config().sha256
     assert _config(risk_policy_sha256="d" * 64).sha256 != _config().sha256
     with pytest.raises(RunnerError, match="unique"):
         _config(instruments=("NSE:INFY", "NSE:INFY")).canonical()
+
+
+def test_attempts_append_under_one_session_key_without_overwriting_prior_result(tmp_path):
+    path = tmp_path / "attempts.jsonl"
+    first = _config(session_id="S-ATTEMPT-1", attempt_id="attempt-1")
+    second = _config(session_id="S-ATTEMPT-2", attempt_id="attempt-2")
+    assert first.session_key == second.session_key
+    assert first.sha256 != second.sha256
+    runner = ForwardSessionRunner(path)
+    first_result = runner.run(first, [_event()], decision_at=NOW,
+                              decision_fn=lambda _: {"side": "NONE", "reason": "FIRST_ATTEMPT"},
+                              risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
+    before = [row for row in DurableJournal(path).records() if row.get("session_id") == first.session_id]
+    second_result = runner.run(second, [_event()], decision_at=NOW,
+                               decision_fn=lambda _: {"side": "NONE", "reason": "SECOND_ATTEMPT"},
+                               risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
+    after = [row for row in DurableJournal(path).records() if row.get("session_id") == first.session_id]
+    assert before == after
+    assert first_result["reason"] == "FIRST_ATTEMPT"
+    assert second_result["reason"] == "SECOND_ATTEMPT"
+    assert len([row for row in DurableJournal(path).records() if row.get("t") == "SESSION_PLAN"]) == 2
+    with pytest.raises(RunnerError, match="attempt_id already exists"):
+        runner.begin(_config(session_id="S-ATTEMPT-3", attempt_id="attempt-1"))
 
 
 def test_pending_outbox_requires_reconciliation_after_unknown_side_effect(tmp_path):
