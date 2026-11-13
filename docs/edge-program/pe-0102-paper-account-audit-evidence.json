@@ -14,7 +14,7 @@
   },
   "tests": {
     "command": "python -m pytest -q tests/test_paper_account_audit.py tests/test_paper_account.py",
-    "result": "11 passed; Ruff, mypy and diff checks passed."
+    "result": "11 passed (exit code 0); Ruff, mypy and diff checks passed."
   },
   "verified": [
     "Independent journal-only fold recomputes cash, positions and cost basis, gross/net realized P&L, fees and current marked NAV.",

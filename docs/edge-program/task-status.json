@@ -672,7 +672,7 @@
         "test_independent_audit_rejects_pre_fill_mark"
       ],
       "test_result": "Independent journal-only audit recomputes cash, positions/cost basis, realized P&L, fees, marked NAV, and persisted daily snapshots. It rejects inconsistent NAV, future cash flows, and pre-fill marks even when journal hash chains are valid. Eleven focused audit/account tests pass; Ruff, mypy, and diff checks pass.",
-      "evidence_sha256": "3156e4aeb2d37fa5958f548a1eaaa3d15d2ddcd7bf34e4ad8fbfb53eb7fa6db8",
+      "evidence_sha256": "04b1c38c8b50191dac2279d543f4991d88ae8def33659c9e73c04891444d842c",
       "blockers": []
     },
     {
