@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 110,
-  "unrecorded_tasks": 108,
+  "recorded_tasks": 111,
+  "unrecorded_tasks": 107,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2382,6 +2382,29 @@
       "test_result": "62 focused decision-custody tests passed; Ruff and mypy passed. Canonical manifest hash is now pinned, and decision/record/entry clocks are ordered strictly with overwrite refusal.",
       "evidence_sha256": "da260b40dea9175814ec5329de5064464d7bd14c2a7099e18efaf7505a600c0c",
       "blockers": []
+    },
+    {
+      "id": "PE-0105",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/decision_custody.py",
+        "tests/test_forward_edge_f04.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/session_ops.py",
+        "docs/edge-program/pe-0105-durable-manifest-outcome-ledger.md",
+        "docs/edge-program/pe-0105-durable-manifest-outcome-ledger-evidence.json"
+      ],
+      "tests": [
+        "test_durable_manifest_journal_replays_decisions_and_all_terminal_outcome_classes",
+        "test_manifest_must_be_recorded_before_entry_and_never_overwritten",
+        "test_zero_signal_and_unsuccessful_sessions_stay_in_the_denominator"
+      ],
+      "test_result": "118 focused decision custody, forward session and crash recovery tests passed; Ruff and mypy passed. Optional durable ManifestJournal now replays canonical manifests and all key outcome classes with explicit UNRECORDED denominator.",
+      "evidence_sha256": "59057c963051b4e21751f08fc39a36d4803b5b0a64c725585e02410d5c38e33c",
+      "blockers": [
+        "Canonical manifest/outcome ledger not yet wired as ForwardSessionRunner authority.",
+        "Cohort schedule and outcome journals are not cross-ledger atomic."
+      ]
     }
   ]
 }

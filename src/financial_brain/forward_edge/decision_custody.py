@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from financial_brain.forward_edge.custody import CustodyStatus, Receipt, TrustRoot, classify_custody
+from financial_brain.forward_edge.durable import DurableJournal
 
 _SHA = re.compile(r"^[0-9a-f]{64}$")
 
@@ -124,17 +125,48 @@ class DecisionManifest:
 
 # ---- FE-0048 record before entry, FE-0049 persist every session outcome ----
 
-SESSION_OUTCOMES = frozenset({"SUBMITTED", "WITHHELD", "ABSTAINED", "NO_SIGNAL", "UNSUCCESSFUL"})
+SESSION_OUTCOMES = frozenset({"SUBMITTED", "WITHHELD", "ABSTAINED", "NO_SIGNAL", "NO_TRADE", "REJECTED",
+                              "UNKNOWN_ORDER", "UNSUCCESSFUL"})
 
 
 class ManifestJournal:
-    """Append-only. A manifest must be recorded strictly before its earliest entry; no overwrite, no edit."""
+    """Append-only. Optionally persists manifests and outcomes in the hash-chained durable journal."""
 
-    def __init__(self) -> None:
+    def __init__(self, path: Path | None = None) -> None:
+        self._durable = DurableJournal(path) if path is not None else None
         self._manifests: dict[str, DecisionManifest] = {}
         self._recorded_at: dict[str, datetime] = {}
         self._receipts: dict[str, Receipt] = {}
         self._sessions: dict[str, str] = {}
+        if self._durable is not None:
+            self._recover()
+
+    def _recover(self) -> None:
+        assert self._durable is not None
+        for row in self._durable.records():
+            if row.get("t") == "DECISION_MANIFEST":
+                try:
+                    manifest = DecisionManifest(**row["manifest"])
+                    recorded = _utc(datetime.fromisoformat(row["recorded_at_utc"]), "recorded_at")
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise CustodyError("malformed durable decision manifest") from exc
+                if manifest.sha256() != row.get("manifest_sha256"):
+                    raise CustodyError("durable decision manifest hash mismatch")
+                if recorded < manifest.decision_utc or recorded >= manifest.entry_utc:
+                    raise CustodyError("durable manifest timestamp violates its decision/entry window")
+                if manifest.session_id in self._manifests:
+                    raise CustodyError("duplicate durable decision manifest")
+                self._manifests[manifest.session_id] = manifest
+                self._recorded_at[manifest.session_id] = recorded
+            elif row.get("t") == "SESSION_OUTCOME":
+                session_id, outcome = row.get("session_id"), row.get("outcome")
+                if not isinstance(session_id, str) or not session_id or outcome not in SESSION_OUTCOMES:
+                    raise CustodyError("malformed durable session outcome")
+                if session_id in self._sessions:
+                    raise CustodyError("duplicate durable session outcome")
+                self._sessions[session_id] = outcome
+            else:
+                raise CustodyError("unknown durable manifest journal event")
 
     def record(self, manifest: DecisionManifest, *, recorded_at_utc: datetime) -> str:
         recorded = _utc(recorded_at_utc, "recorded_at")
@@ -144,6 +176,10 @@ class ManifestJournal:
             raise CustodyError("manifest recorded at or after its earliest entry time")
         if recorded < manifest.decision_utc:
             raise CustodyError("manifest recorded before its decision time")
+        if self._durable is not None:
+            self._durable.append({"t": "DECISION_MANIFEST", "session_id": manifest.session_id,
+                                  "manifest": json.loads(manifest.canonical().decode("utf-8")),
+                                  "manifest_sha256": manifest.sha256(), "recorded_at_utc": recorded.isoformat()})
         self._manifests[manifest.session_id] = manifest
         self._recorded_at[manifest.session_id] = recorded
         return manifest.sha256()
@@ -160,6 +196,8 @@ class ManifestJournal:
             raise CustodyError("unknown session outcome")
         if session_id in self._sessions:
             raise CustodyError("session outcome already recorded")
+        if self._durable is not None:
+            self._durable.append({"t": "SESSION_OUTCOME", "session_id": session_id, "outcome": outcome})
         self._sessions[session_id] = outcome
 
     def status(self, session_id: str, trust_roots: dict[tuple[str, str], TrustRoot]) -> CustodyStatus:

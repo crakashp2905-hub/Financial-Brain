@@ -81,6 +81,31 @@ def test_manifest_must_be_recorded_before_entry_and_never_overwritten() -> None:
         j.record(_manifest(intended_quantity=99), recorded_at_utc=DECIDE + timedelta(seconds=6))
 
 
+def test_durable_manifest_journal_replays_decisions_and_all_terminal_outcome_classes(tmp_path: Path) -> None:
+    path = tmp_path / "decision-custody.jsonl"
+    journal = D.ManifestJournal(path)
+    manifest = _manifest()
+    journal.record(manifest, recorded_at_utc=DECIDE + timedelta(seconds=5))
+    outcomes = {
+        "2027-01-04": "SUBMITTED",
+        "2027-01-05": "NO_SIGNAL",
+        "2027-01-06": "NO_TRADE",
+        "2027-01-07": "REJECTED",
+        "2027-01-08": "UNKNOWN_ORDER",
+        "2027-01-09": "UNSUCCESSFUL",
+    }
+    for session_id, outcome in outcomes.items():
+        journal.outcome(session_id, outcome)
+
+    recovered = D.ManifestJournal(path)
+    assert recovered.manifests() == [manifest]
+    assert recovered._recorded_at[manifest.session_id] == DECIDE + timedelta(seconds=5)
+    counts = recovered.denominator(list(outcomes))
+    assert counts["SCHEDULED"] == 6
+    assert counts["UNRECORDED"] == 0
+    assert all(counts[name] == 1 for name in outcomes.values())
+
+
 def test_status_is_local_only_without_a_receipt_and_verified_only_with_a_pinned_one() -> None:
     j = D.ManifestJournal()
     m = _manifest()
