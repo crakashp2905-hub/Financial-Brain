@@ -195,6 +195,37 @@ def test_fidelities_are_reported_separately_and_never_summed_together() -> None:
         X.ExecutionReceipt("o3", "GUESSED", 1, D("1"))
 
 
+def test_quote_arrival_shortfall_measures_only_displayed_quote_depth_not_broker_fills() -> None:
+    arrival = X.Quote(T0 + timedelta(milliseconds=25), D("99.9"), D("100.2"), 20, 3)
+    row = X.quote_arrival_shortfall(
+        side="BUY", modeled_price=D("100.1"), requested_qty=5, decision_utc=T0,
+        latency=timedelta(milliseconds=20), quote=arrival, source_sha256="a" * 64,
+    )
+    assert row["benchmark_type"] == "SUBSEQUENT_EXECUTABLE_QUOTE"
+    assert row["fidelity"] == "SIMULATED_QUOTE" and row["broker_fill_observation"] is False
+    assert row["measured_qty"] == 3 and row["depth_coverage"] == pytest.approx(0.6)
+    assert D(row["shortfall_bp"]) == pytest.approx((D("100.2") / D("100.1") - 1) * D("10000"))
+    report = X.quote_arrival_shortfall_report([row])
+    assert report["broker_fill_observations"] == 0 and report["depth_coverage"] == pytest.approx(0.6)
+
+
+def test_quote_arrival_shortfall_fails_closed_on_early_quotes_missing_depth_and_broker_labels() -> None:
+    early = X.Quote(T0 + timedelta(milliseconds=10), D("99.9"), D("100.1"), 10, 10)
+    with pytest.raises(X.ExecutionError, match="order arrival"):
+        X.quote_arrival_shortfall(side="BUY", modeled_price=D("100"), requested_qty=1,
+                                  decision_utc=T0, latency=timedelta(milliseconds=20),
+                                  quote=early, source_sha256="a" * 64)
+    empty = X.Quote(T0 + timedelta(milliseconds=20), D("99.9"), D("100.1"), 0, 0)
+    with pytest.raises(X.ExecutionError, match="displayed quantity"):
+        X.quote_arrival_shortfall(side="SELL", modeled_price=D("100"), requested_qty=1,
+                                  decision_utc=T0, latency=timedelta(milliseconds=20),
+                                  quote=empty, source_sha256="a" * 64)
+    with pytest.raises(X.ExecutionError, match="cannot include broker-fill"):
+        X.quote_arrival_shortfall_report([{"benchmark_type": "OBSERVED_BROKER_FILL",
+                                           "fidelity": "OBSERVED_BROKER",
+                                           "broker_fill_observation": True}])
+
+
 # ---- FE-0066 uncertainty, FE-0067 identity, FE-0068 no-trade ----
 
 def test_fill_bounds_bracket_the_expected_price() -> None:

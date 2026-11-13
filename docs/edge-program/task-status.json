@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 51,
-  "unrecorded_tasks": 167,
+  "recorded_tasks": 52,
+  "unrecorded_tasks": 166,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -753,6 +753,26 @@
       "test_result": "Focused swing-book suite: 11 passed; Ruff and diff checks passed. Summary reports rupee costs, basis points of closed entry notional, and cost drag in fraction/basis points of starting NAV; gross minus costs reconciles to net.",
       "evidence_sha256": "ddbed9084a23a7463fa32fa868fa1f8d5bdca903a2d0180cab3150711ce3ef7c",
       "blockers": []
+    },
+    {
+      "id": "PE-0085",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/execution.py",
+        "tests/test_forward_edge_f05.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "docs/edge-program/pe-0085-quote-arrival-shortfall-evidence.json"
+      ],
+      "tests": [
+        "test_quote_arrival_shortfall_measures_only_displayed_quote_depth_not_broker_fills",
+        "test_quote_arrival_shortfall_fails_closed_on_early_quotes_missing_depth_and_broker_labels"
+      ],
+      "test_result": "Forward execution/adapter tests: 29 passed; Ruff, mypy and diff checks passed. Quote-at-arrival shortfall is latency-gated, depth-limited and explicitly labeled SIMULATED_QUOTE with zero broker-fill observations.",
+      "evidence_sha256": "275e0db1eb94dc3869649959e3bf43789a101c43c966c0afb9205efc3d357910",
+      "blockers": [
+        "Not wired into the durable session report.",
+        "No actual observed Kite quote-arrival sample is available; current test fixtures are synthetic."
+      ]
     },
     {
       "id": "PE-0088",

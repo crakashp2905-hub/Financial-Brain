@@ -93,6 +93,95 @@ def earliest_quote(quotes: list[Quote], decision_utc: datetime, latency: timedel
     return min(later, key=lambda q: _aware(q.available_utc)) if later else None
 
 
+def quote_arrival_shortfall(*, side: str, modeled_price: Decimal, requested_qty: int,
+                            decision_utc: datetime, latency: timedelta, quote: Quote,
+                            source_sha256: str) -> dict:
+    """Compare a frozen model price with the first executable quote at modeled order arrival.
+
+    This measures quote movement/availability, not a broker fill. Only displayed quantity is measured; no price is
+    extrapolated beyond top-of-book depth. The source event hash is retained for audit and replay.
+    """
+    if side not in {"BUY", "SELL"}:
+        raise ExecutionError("side must be BUY or SELL")
+    if not isinstance(modeled_price, Decimal) or not modeled_price.is_finite() or modeled_price <= 0:
+        raise ExecutionError("modeled price must be a positive finite Decimal")
+    if type(requested_qty) is not int or requested_qty <= 0:
+        raise ExecutionError("requested quantity must be a positive integer")
+    if not isinstance(latency, timedelta) or latency < timedelta(0):
+        raise ExecutionError("latency must be non-negative")
+    if not isinstance(source_sha256, str) or len(source_sha256) != 64 or any(
+        c not in "0123456789abcdef" for c in source_sha256
+    ):
+        raise ExecutionError("source quote SHA-256 is required")
+    cutoff = _aware(decision_utc) + latency
+    available = _aware(quote.available_utc)
+    if available < cutoff:
+        raise ExecutionError("quote is not available at modeled order arrival")
+    if (not isinstance(quote.bid, Decimal) or not isinstance(quote.ask, Decimal)
+            or not quote.bid.is_finite() or not quote.ask.is_finite() or quote.bid <= 0
+            or quote.ask < quote.bid or type(quote.bid_qty) is not int or type(quote.ask_qty) is not int
+            or quote.bid_qty < 0 or quote.ask_qty < 0):
+        raise ExecutionError("arrival quote is invalid")
+    executable_price = quote.ask if side == "BUY" else quote.bid
+    displayed_qty = quote.ask_qty if side == "BUY" else quote.bid_qty
+    measured_qty = min(requested_qty, displayed_qty)
+    if measured_qty <= 0:
+        raise ExecutionError("arrival quote has no executable displayed quantity")
+    sign = Decimal(1) if side == "BUY" else Decimal(-1)
+    shortfall_bp = sign * (executable_price / modeled_price - Decimal(1)) * Decimal(10_000)
+    return {
+        "benchmark_type": "SUBSEQUENT_EXECUTABLE_QUOTE",
+        "fidelity": "SIMULATED_QUOTE",
+        "broker_fill_observation": False,
+        "side": side,
+        "modeled_price": str(modeled_price),
+        "arrival_executable_price": str(executable_price),
+        "decision_available_utc": _aware(decision_utc).isoformat(),
+        "order_eligible_utc": cutoff.isoformat(),
+        "quote_available_utc": available.isoformat(),
+        "requested_qty": requested_qty,
+        "measured_qty": measured_qty,
+        "depth_coverage": measured_qty / requested_qty,
+        "source_quote_sha256": source_sha256,
+        "shortfall_bp": str(shortfall_bp),
+    }
+
+
+def quote_arrival_shortfall_report(rows: list[dict]) -> dict:
+    """Aggregate quote-arrival shortfall while explicitly excluding broker-fill claims."""
+    if not rows:
+        return {"benchmark_type": "SUBSEQUENT_EXECUTABLE_QUOTE", "fidelity": "SIMULATED_QUOTE",
+                "broker_fill_observations": 0, "samples": 0, "mean_shortfall_bp": None,
+                "depth_coverage": 0.0}
+    for row in rows:
+        if (row.get("benchmark_type") != "SUBSEQUENT_EXECUTABLE_QUOTE"
+                or row.get("fidelity") != "SIMULATED_QUOTE" or row.get("broker_fill_observation") is not False):
+            raise ExecutionError("quote-arrival report cannot include broker-fill or unlabeled rows")
+        digest = row.get("source_quote_sha256")
+        if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            raise ExecutionError("quote-arrival report requires source quote hashes")
+        if (type(row.get("requested_qty")) is not int or type(row.get("measured_qty")) is not int
+                or row["requested_qty"] <= 0 or not 0 < row["measured_qty"] <= row["requested_qty"]):
+            raise ExecutionError("quote-arrival report has invalid measured depth")
+    try:
+        values = [Decimal(str(row["shortfall_bp"])) for row in rows]
+    except (KeyError, ValueError) as exc:
+        raise ExecutionError("quote-arrival report has invalid shortfall values") from exc
+    if any(not value.is_finite() for value in values):
+        raise ExecutionError("shortfall values must be finite")
+    requested = sum(row["requested_qty"] for row in rows)
+    measured = sum(row["measured_qty"] for row in rows)
+    return {
+        "benchmark_type": "SUBSEQUENT_EXECUTABLE_QUOTE",
+        "fidelity": "SIMULATED_QUOTE",
+        "broker_fill_observations": 0,
+        "samples": len(rows),
+        "mean_shortfall_bp": str(sum(values, Decimal(0)) / len(values)),
+        "depth_coverage": measured / requested if requested else 0.0,
+        "source_quote_sha256s": sorted({str(row["source_quote_sha256"]) for row in rows}),
+    }
+
+
 def marketable_limit(intent: OrderIntent, quotes: list[Quote], latency: timedelta,
                      price_band: tuple[Decimal, Decimal] | None = None) -> ExecResult:
     q = earliest_quote(quotes, intent.decision_utc, latency)
