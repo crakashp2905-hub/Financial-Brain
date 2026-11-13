@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 41,
-  "unrecorded_tasks": 177,
+  "recorded_tasks": 42,
+  "unrecorded_tasks": 176,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -591,6 +591,30 @@
         "No independently verified data-provider retention-rights record is available; the archive checks only caller-supplied attestation fields.",
         "No authorized live-market capture has been observed; real session evidence requires owner login and an eligible market session."
       ]
+    },
+    {
+      "id": "PE-0088",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/execution.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "tests/test_execution_quote_perturbations.py",
+        "tests/test_forward_edge_f05.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "tests/test_kite_forward_events.py",
+        "docs/edge-program/pe-0088-execution-perturbation-evidence.json"
+      ],
+      "tests": [
+        "test_wider_spread_and_price_gap_never_improve_buy_fill_price",
+        "test_feed_gap_and_late_pre_cutoff_quote_remain_missed",
+        "test_missing_or_zero_depth_never_creates_a_fill",
+        "test_duplicate_quote_print_does_not_multiply_visible_size_or_fill",
+        "test_duplicate_trade_print_does_not_inflate_passive_order_fill_volume",
+        "test_feed_health_rejects_stale_or_late_batch_without_fill"
+      ],
+      "test_result": "Adversarial quote perturbation tests cover worse spreads, gaps, pre-latency and stale/late feed gating, missing depth, duplicate quote observations, and duplicate passive trade tuples. Exact duplicate trade tuples are collapsed conservatively; 41 focused execution/Kite tests pass. Ruff, mypy on execution.py, and diff checks pass.",
+      "evidence_sha256": "82f5b93ca2e2eed1099656c1442762f70a84ff0284a7345fb390facc9f693679",
+      "blockers": []
     },
     {
       "id": "PE-0090",

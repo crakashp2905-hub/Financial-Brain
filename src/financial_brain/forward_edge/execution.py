@@ -115,14 +115,32 @@ def marketable_limit(intent: OrderIntent, quotes: list[Quote], latency: timedelt
 
 def passive_limit(intent: OrderIntent, trades: list[tuple[datetime, Decimal, int]],
                   latency: timedelta) -> ExecResult:
-    """Conservative: fills only on a print strictly through the limit; touching is not a fill."""
+    """Conservative: only a unique, post-latency print strictly through the limit can fill.
+
+    Without provider trade IDs, exact duplicate (UTC timestamp, price, quantity)
+    tuples are collapsed to avoid granting duplicate feed prints extra queue volume.
+    Distinct prints sharing that exact tuple may therefore be undercounted.
+    """
     if intent.limit is None:
         raise ExecutionError("a passive order needs a limit")
     cutoff = _aware(intent.decision_utc) + latency
     remaining = intent.quantity
     cost = Decimal(0)
-    for ts, price, qty in sorted(trades, key=lambda t: _aware(t[0])):
-        if _aware(ts) < cutoff or remaining == 0:
+    unique_trades = []
+    seen: set[tuple[datetime, Decimal, int]] = set()
+    for ts, price, qty in trades:
+        instant = _aware(ts)
+        if not isinstance(price, Decimal) or not price.is_finite() or price <= 0:
+            raise ExecutionError("trade prints need a positive finite Decimal price")
+        if type(qty) is not int or qty <= 0:
+            raise ExecutionError("trade prints need a positive integer quantity")
+        identity = (instant, price, qty)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        unique_trades.append((instant, price, qty))
+    for instant, price, qty in sorted(unique_trades, key=lambda trade: trade[0]):
+        if instant < cutoff or remaining == 0:
             continue
         through = price < intent.limit if intent.side == "BUY" else price > intent.limit
         if through:
@@ -270,9 +288,9 @@ def fill_bounds(side: str, quotes: list[Quote]) -> tuple[Decimal, Decimal, Decim
         raise ExecutionError("no quotes in the window")
     if side == "BUY":
         prices = [q.ask for q in quotes]
-        return min(prices), sum(prices) / len(prices), max(prices)
+        return min(prices), sum(prices, Decimal(0)) / Decimal(len(prices)), max(prices)
     prices = [q.bid for q in quotes]
-    return max(prices), sum(prices) / len(prices), min(prices)
+    return max(prices), sum(prices, Decimal(0)) / Decimal(len(prices)), min(prices)
 
 
 # ---- FE-0067 post-trade identity ----
