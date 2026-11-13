@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 112,
-  "unrecorded_tasks": 106,
+  "recorded_tasks": 113,
+  "unrecorded_tasks": 105,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2426,6 +2426,25 @@
         "No owner-approved timestamp API or trust root is configured.",
         "No external receipt can be claimed from synthetic tests."
       ]
+    },
+    {
+      "id": "PE-0107",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/durable.py",
+        "src/financial_brain/forward_edge/decision_custody.py",
+        "tests/test_forward_edge_f04.py",
+        "tests/test_forward_edge_f14.py",
+        "docs/edge-program/pe-0107-local-hash-chain.md",
+        "docs/edge-program/pe-0107-local-hash-chain-evidence.json"
+      ],
+      "tests": [
+        "test_local_manifest_hash_chain_detects_mutation_without_promoting_local_evidence",
+        "test_hash_chain_rejects_edit_and_interior_corruption"
+      ],
+      "test_result": "62 focused manifest and durable-journal tests passed; Ruff and mypy passed. Reopening a mutated manifest journal fails integrity validation, while intact local-only evidence is not misclassified as independently attested.",
+      "evidence_sha256": "12d540dedb4d4201f2f8d2e0f13eac2190d1618edb87a435f59f9237d28b916f",
+      "blockers": []
     }
   ]
 }

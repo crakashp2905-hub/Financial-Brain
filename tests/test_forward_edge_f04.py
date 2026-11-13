@@ -9,6 +9,7 @@ import pytest
 
 from financial_brain.forward_edge import decision_custody as D
 from financial_brain.forward_edge.custody import CustodyStatus, Receipt, UnconfiguredProvider
+from financial_brain.forward_edge.durable import JournalCorrupt
 
 H = "d" * 64
 CHARTER = "c" * 64
@@ -120,6 +121,18 @@ def test_optional_timestamp_provider_keeps_local_fallback_and_persists_untrusted
     assert journal.anchor("2027-01-04", FixtureProvider(), {}) is CustodyStatus.UNVERIFIED
     recovered = D.ManifestJournal(path)
     assert recovered.status("2027-01-04", {}) is CustodyStatus.UNVERIFIED
+
+
+def test_local_manifest_hash_chain_detects_mutation_without_promoting_local_evidence(tmp_path: Path) -> None:
+    path = tmp_path / "local-evidence.jsonl"
+    journal = D.ManifestJournal(path)
+    journal.record(_manifest(), recorded_at_utc=DECIDE + timedelta(seconds=5))
+    assert journal.status("2027-01-04", {}) is CustodyStatus.LOCAL_ONLY
+    text = path.read_text(encoding="utf-8")
+    assert "NIFTY_CASH" in text
+    path.write_text(text.replace("NIFTY_CASH", "NIFTY_NASH"), encoding="utf-8")
+    with pytest.raises(JournalCorrupt):
+        D.ManifestJournal(path)
 
 
 def test_status_is_local_only_without_a_receipt_and_verified_only_with_a_pinned_one() -> None:
