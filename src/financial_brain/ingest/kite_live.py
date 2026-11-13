@@ -17,6 +17,10 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, time, timedelta, timezone
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..forward_edge.raw_quote_archive import RawQuoteArchive
 
 IST = timezone(timedelta(hours=5, minutes=30))
 OPEN, CLOSE = time(9, 15), time(15, 30)
@@ -58,7 +62,8 @@ def snapshot(con, symbols: list[str], *, quote_fn=None, now: datetime | None = N
 
 def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime | None = None,
                    ingested_at: datetime | None = None,
-                   rejections_out: list[dict] | None = None, clock_provider=None):
+                   rejections_out: list[dict] | None = None, clock_provider=None,
+                   raw_archive: RawQuoteArchive | None = None):
     """Capture read-only Kite full quotes as forward-edge events.
 
     An exchange timestamp is mandatory: receipt time is never substituted for it.
@@ -124,7 +129,8 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
             receipt = available = received_at
         payload = [("exchange", "NSE"), ("source", "kite_connect")]
         raw_hash = hashlib.sha256(json.dumps(quote, sort_keys=True, separators=(",", ":"),
-                                          default=str).encode("utf-8")).hexdigest()
+                                          ensure_ascii=False, default=str, allow_nan=False)
+                             .encode("utf-8")).hexdigest()
         payload.append(("raw_sha256", raw_hash))
         if quote.get("last_price") is not None:
             payload.append(("last_price", str(quote["last_price"])))
@@ -155,6 +161,13 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
                 raise DataError(str(exc)) from exc
             if ingested < available:
                 raise DataError("ingest clock cannot precede source availability")
+            if raw_archive is not None:
+                archive_ref = raw_archive.append_quote(key, quote, received_at=receipt,
+                                                      available_at=available)
+                if archive_ref.get("payload_sha256") != raw_hash:
+                    raise DataError("raw quote archive digest does not match normalized source digest")
+                payload.extend((("raw_archive_seq", str(archive_ref["archive_seq"])),
+                                ("raw_archive_sha256", str(archive_ref["archive_chain_sha256"]))))
             events.append(NormalizedEvent(
                 kind="QUOTE", instrument=key, event_utc=exchange_at,
                 received_utc=receipt, available_utc=available, payload=tuple(sorted(payload)),

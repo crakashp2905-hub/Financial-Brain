@@ -556,21 +556,30 @@
       "id": "PE-0032",
       "status": "PARTIAL",
       "sources": [
-        "src/financial_brain/ingest/kite_live.py",
         "src/financial_brain/forward_edge/market_data.py",
         "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/raw_quote_archive.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "src/financial_brain/paper/intraday_runner.py",
         "tests/test_kite_forward_events.py",
         "tests/test_forward_session_runner.py",
+        "tests/test_raw_quote_archive.py",
+        "tests/test_phase5_intraday_runner.py",
+        "docs/edge-program/raw-kite-quote-archive-contract.md",
         "docs/edge-program/pe-0032-ingest-lineage-evidence.json"
       ],
       "tests": [
-        "test_full_quote_becomes_timestamped_forward_event",
-        "test_ingest_clock_and_raw_source_hash_survive_durable_event_round_trip"
+        "test_raw_archive_requires_explicit_retention_attestation",
+        "test_kite_event_links_durable_raw_quote_record_under_authorized_archive",
+        "test_simulated_fill_receipt_points_through_event_to_raw_quote_archive",
+        "test_raw_archive_hash_chain_rejects_record_edits",
+        "test_live_runner_can_opt_in_to_authorized_raw_quote_archive"
       ],
-      "test_result": "Normalized Kite events now carry a distinct ingest timestamp in addition to source event, receive, and availability clocks. Ingest time and raw source hash are included in the content identity and survive durable journal restart/replay. Kite adapter and runner lineage tests pass.",
-      "evidence_sha256": "c17082682d8378dc2e5a12f9bab9b45845bdd631204c8ea27b6e25d64676d9f9",
+      "test_result": "Optional RawQuoteArchive persists canonical JSON of parsed Kite SDK quote objects (not HTTP wire bytes) under a hash chain. Normalized QUOTE events reference the archive sequence/chain digest and fill receipts bind to the event digest. Synthetic archive and existing poll-loop tests pass; Ruff, mypy and diff checks pass. No real payload or authorization is included.",
+      "evidence_sha256": "769e26463fbc60a7c58eeb3ecbbdb642db709ade06d5814d27924853a4b852a3",
       "blockers": [
-        "Raw source payload bytes are not archived and linked to fill receipts; data retention rights and an authorized market capture remain unverified"
+        "No independently verified data-provider retention-rights record is available; the archive checks only caller-supplied attestation fields.",
+        "No authorized live-market capture has been observed; real session evidence requires owner login and an eligible market session."
       ]
     },
     {
