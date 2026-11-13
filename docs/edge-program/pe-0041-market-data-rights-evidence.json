@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0041",
+  "status": "PARTIAL",
+  "scope": "In-process fail-closed permission gates for archive API usage; no legal interpretation or provider entitlement is claimed.",
+  "implemented": [
+    "Raw Kite quote and normalized market-event persistence require explicit persist action plus exact permitted source and event kind.",
+    "Local archive reads, availability-bounded replay, and redistribution are distinct permission actions; absent scope raises RawArchiveError before returning payloads.",
+    "Redistribution is denied unless separately attested, even where local persistence and replay are permitted.",
+    "Archive records continue to carry authorization identity and evidence digest for audit lineage."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_raw_quote_archive.py tests/test_kite_forward_events.py tests/test_phase5_intraday_runner.py tests/test_forward_session_runner.py -q",
+    "result": "64 passed (exit code 0); Ruff passed for changed modules; mypy passed for raw_quote_archive.py.",
+    "cases": [
+      "test_raw_quote_capture_requires_exact_source_kind_and_persistence_scope",
+      "test_local_replay_is_explicit_and_redistribution_is_separately_denied",
+      "test_market_archive_requires_kind_and_source_retention_scope",
+      "test_kite_event_links_durable_raw_quote_record_under_authorized_archive"
+    ]
+  },
+  "limitations": [
+    "The application can validate an operator-supplied attestation's shape and scope but cannot verify that provider terms legally grant the stated rights.",
+    "Direct filesystem or DurableJournal access can bypass Python API permission checks; operating-system access controls remain necessary.",
+    "No source has been cleared for redistribution; redistribution remains blocked unless explicitly attested."
+  ]
+}

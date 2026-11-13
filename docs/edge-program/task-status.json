@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 66,
-  "unrecorded_tasks": 152,
+  "recorded_tasks": 67,
+  "unrecorded_tasks": 151,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1370,6 +1370,29 @@
         "Feed-specific quote age policy must account for Kite timestamp semantics; the default threshold is not empirically attested.",
         "Effective-dated instrument freeze limits are configurable in the simulator but are not automatically resolved for every instrument.",
         "Simulated top-of-book fills do not model queue position or prove live execution quality."
+      ]
+    },
+    {
+      "id": "PE-0041",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/raw_quote_archive.py",
+        "docs/edge-program/market-capture-replay-contract.md",
+        "docs/edge-program/pe-0041-market-data-rights-evidence.json",
+        "tests/test_raw_quote_archive.py",
+        "tests/test_phase5_intraday_runner.py"
+      ],
+      "tests": [
+        "test_raw_quote_capture_requires_exact_source_kind_and_persistence_scope",
+        "test_local_replay_is_explicit_and_redistribution_is_separately_denied",
+        "test_market_archive_requires_kind_and_source_retention_scope",
+        "test_kite_event_links_durable_raw_quote_record_under_authorized_archive"
+      ],
+      "test_result": "64 focused tests passed; Ruff and mypy passed. Archive permission scopes are enforced per persisted source/event, with separate local read/replay/redistribution actions. Actual provider entitlements remain owner-verified.",
+      "evidence_sha256": "e3c2d1ca7d03ed6d80939b4dd8cef4bb70c31fab17115138ff3364df9288c9bf",
+      "blockers": [
+        "No provider or exchange license/terms have been legally adjudicated by the repository; the software can only enforce a scoped owner-supplied attestation.",
+        "Direct filesystem or underlying journal access can bypass application-level checks, so host filesystem permissions are still required."
       ]
     }
   ]

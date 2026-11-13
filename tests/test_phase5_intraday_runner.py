@@ -125,6 +125,8 @@ def test_live_runner_can_opt_in_to_authorized_raw_quote_archive(setup, monkeypat
         "approved": True, "authorization_id": "test-local-retention", "controller": "test-owner",
         "purpose": "LOCAL_PERSONAL_PAPER_RESEARCH", "evidence_sha256": "e" * 64,
         "approved_at_utc": datetime(2026, 10, 6, 9, 0, tzinfo=timezone.utc).isoformat(),
+        "permitted_actions": ["persist", "local_read"],
+        "permitted_event_kinds": ["QUOTE"], "permitted_sources": ["kite_connect"],
     })
     captured = []
 

@@ -42,7 +42,7 @@ class RawQuoteArchive:
             raise RawArchiveError("retention approval timestamp must be timezone-aware") from exc
         authorization = {key: retention_attestation[key] for key in required}
         authorization["approved"] = True
-        for scope_key in ("permitted_event_kinds", "permitted_sources"):
+        for scope_key in ("permitted_event_kinds", "permitted_sources", "permitted_actions"):
             if scope_key in retention_attestation:
                 values = retention_attestation[scope_key]
                 if not isinstance(values, list) or any(not isinstance(value, str) or not value.strip()
@@ -53,8 +53,23 @@ class RawQuoteArchive:
         self.journal = DurableJournal(self.path)
         self.authorization = authorization
 
+    def require_permission(self, *, action: str, event_kind: str, source: str) -> None:
+        """Fail closed unless the attestation names this exact use, kind, and source."""
+        actions = self.authorization.get("permitted_actions")
+        kinds = self.authorization.get("permitted_event_kinds")
+        sources = self.authorization.get("permitted_sources")
+        if not isinstance(actions, list) or action not in actions:
+            raise RawArchiveError(f"retention attestation does not permit {action}")
+        if (not isinstance(kinds, list) or not kinds
+                or (event_kind != "*" and event_kind not in kinds)):
+            raise RawArchiveError(f"retention attestation does not permit {event_kind} use")
+        if (not isinstance(sources, list) or not sources
+                or (source != "*" and source not in sources)):
+            raise RawArchiveError(f"retention attestation does not permit source {source!r}")
+
     def append_quote(self, instrument: str, quote: dict, *, received_at: datetime,
                      available_at: datetime) -> dict:
+        self.require_permission(action="persist", event_kind="QUOTE", source="kite_connect")
         if not instrument or not isinstance(quote, dict):
             raise RawArchiveError("instrument and parsed Kite quote object are required")
         if received_at.tzinfo is None or received_at.utcoffset() is None \
@@ -102,12 +117,7 @@ class RawQuoteArchive:
             raise RawArchiveError("only quote, depth, tick, and bar events may be archived here")
         if not isinstance(source, str) or not source.strip():
             raise RawArchiveError("market event source must be named")
-        permitted_kinds = self.authorization.get("permitted_event_kinds")
-        permitted_sources = self.authorization.get("permitted_sources")
-        if not isinstance(permitted_kinds, list) or event.kind not in permitted_kinds:
-            raise RawArchiveError(f"retention attestation does not permit {event.kind} persistence")
-        if not isinstance(permitted_sources, list) or source not in permitted_sources:
-            raise RawArchiveError(f"retention attestation does not permit source {source!r}")
+        self.require_permission(action="persist", event_kind=event.kind, source=source)
         payload = dict(event.payload)
         if len(payload) != len(event.payload):
             raise RawArchiveError("normalized market event payload keys must be unique")
@@ -139,21 +149,48 @@ class RawQuoteArchive:
                 "archive_id": f"{sequence}:{row['event_sha256']}"}
 
     def records(self) -> list[dict]:
-        return self.journal.records()
+        self.require_permission(action="local_read", event_kind="*", source="*")
+        rows = self.journal.records()
+        self._require_record_scopes(rows, action="local_read")
+        return rows
+
+    def export_records(self) -> list[dict]:
+        """Expose archived payloads to another system only under explicit redistribution scope."""
+        self.require_permission(action="redistribute", event_kind="*", source="*")
+        rows = self.journal.records()
+        self._require_record_scopes(rows, action="redistribute")
+        return rows
 
     def replay_events(self, *, as_of: datetime | None = None) -> list[NormalizedEvent]:
         """Reconstruct captured normalized events, optionally bounded by availability time."""
+        self.require_permission(action="replay", event_kind="*", source="*")
         if as_of is not None and (as_of.tzinfo is None or as_of.utcoffset() is None):
             raise RawArchiveError("replay as_of must be timezone-aware")
         cutoff = as_of.astimezone(timezone.utc) if as_of is not None else None
         events: list[tuple[int, NormalizedEvent]] = []
-        for row in self.journal.records():
+        rows = self.journal.records()
+        self._require_record_scopes(rows, action="replay", normalized_only=True)
+        for row in rows:
             if row.get("t") != "MARKET_EVENT_CAPTURE":
                 continue
             event = _event_from_record(row)
             if cutoff is None or event.available_utc <= cutoff:
                 events.append((int(row["archive_seq"]), event))
         return [event for _, event in sorted(events, key=lambda pair: (pair[1].available_utc, pair[0]))]
+
+    def _require_record_scopes(self, rows: list[dict], *, action: str,
+                               normalized_only: bool = False) -> None:
+        for row in rows:
+            record_type = row.get("t")
+            if normalized_only and record_type != "MARKET_EVENT_CAPTURE":
+                continue
+            if record_type == "MARKET_EVENT_CAPTURE":
+                kind, source = row.get("kind"), row.get("source")
+            elif record_type == "RAW_QUOTE_CAPTURE":
+                kind, source = "QUOTE", row.get("source")
+            else:
+                raise RawArchiveError("archive contains an unclassified record whose rights cannot be inferred")
+            self.require_permission(action=action, event_kind=str(kind), source=str(source))
 
     def verify(self) -> bool:
         verified = DurableJournal(self.path)

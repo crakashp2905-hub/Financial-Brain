@@ -22,17 +22,31 @@ QUOTE = {
 def _attestation(*, kinds=None, sources=None):
     attestation = {"approved": True, "authorization_id": "test-retention-auth",
                    "controller": "synthetic-test-owner", "purpose": "LOCAL_PERSONAL_PAPER_RESEARCH",
-                   "evidence_sha256": "d" * 64, "approved_at_utc": NOW.isoformat()}
-    if kinds is not None:
-        attestation["permitted_event_kinds"] = kinds
-    if sources is not None:
-        attestation["permitted_sources"] = sources
+                   "evidence_sha256": "d" * 64, "approved_at_utc": NOW.isoformat(),
+                   "permitted_actions": ["persist", "local_read", "replay"],
+                   "permitted_event_kinds": kinds or ["QUOTE"],
+                   "permitted_sources": sources or ["kite_connect"]}
     return attestation
 
 
 def test_raw_archive_requires_explicit_retention_attestation(tmp_path):
     with pytest.raises(RawArchiveError, match="explicit approved"):
         RawQuoteArchive(tmp_path / "raw.jsonl", retention_attestation={"approved": False})
+
+
+def test_raw_quote_capture_requires_exact_source_kind_and_persistence_scope(tmp_path):
+    archive = RawQuoteArchive(tmp_path / "raw.jsonl", retention_attestation={
+        **_attestation(), "permitted_event_kinds": ["BAR"],
+    })
+    with pytest.raises(RawArchiveError, match="does not permit QUOTE use"):
+        archive.append_quote("NSE:INFY", QUOTE, received_at=NOW, available_at=NOW)
+    assert archive.journal.records() == []
+
+    archive = RawQuoteArchive(tmp_path / "no-persist.jsonl", retention_attestation={
+        **_attestation(), "permitted_actions": ["local_read"],
+    })
+    with pytest.raises(RawArchiveError, match="does not permit persist"):
+        archive.append_quote("NSE:INFY", QUOTE, received_at=NOW, available_at=NOW)
 
 
 def test_kite_event_links_durable_raw_quote_record_under_authorized_archive(tmp_path):
@@ -124,6 +138,35 @@ def test_market_archive_requires_kind_and_source_retention_scope(tmp_path):
     with pytest.raises(RawArchiveError, match="does not permit TICK"):
         archive.append_market_event(event, source="exchange_trade_feed")
     assert archive.records() == []
+
+
+def test_local_replay_is_explicit_and_redistribution_is_separately_denied(tmp_path):
+    archive = RawQuoteArchive(tmp_path / "market.jsonl", retention_attestation={
+        **_attestation(), "permitted_actions": ["persist"],
+    })
+    with pytest.raises(RawArchiveError, match="does not permit local_read"):
+        archive.records()
+    with pytest.raises(RawArchiveError, match="does not permit replay"):
+        archive.replay_events()
+    with pytest.raises(RawArchiveError, match="does not permit redistribute"):
+        archive.export_records()
+
+
+def test_read_and_replay_permissions_are_checked_against_each_record_scope(tmp_path):
+    broad = _attestation(kinds=["QUOTE", "TICK"], sources=["kite_connect", "exchange_trade_feed"])
+    archive = RawQuoteArchive(tmp_path / "mixed.jsonl", retention_attestation=broad)
+    quote = NormalizedEvent("QUOTE", "NSE:INFY", NOW, NOW, NOW, (("price", "100"),))
+    archive.append_market_event(quote, source="kite_connect")
+    tick = NormalizedEvent("TICK", "NSE:INFY", NOW, NOW, NOW, (("price", "100"),))
+    archive.append_market_event(tick, source="exchange_trade_feed")
+
+    restricted = RawQuoteArchive(tmp_path / "mixed.jsonl", retention_attestation={
+        **_attestation(kinds=["QUOTE"], sources=["kite_connect"]),
+    })
+    with pytest.raises(RawArchiveError, match="does not permit TICK use"):
+        restricted.records()
+    with pytest.raises(RawArchiveError, match="does not permit TICK use"):
+        restricted.replay_events()
 
 
 def test_historical_kite_bars_are_available_only_after_retrieval_and_archive_with_rights(tmp_path):

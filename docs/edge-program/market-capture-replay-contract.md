@@ -8,4 +8,6 @@
 
 Quote-based paper receipts now include the exact quote input IDs, event digests, availability times, raw archive sequence/chain references where available, the selected quote ID for a fill, and the `SIMULATED_QUOTE` fidelity tier. Fixture replays likewise attach event IDs to their quote inputs and fills. These remain simulated fills, not broker observations.
 
-This contract records only the permissions the operator explicitly attests. It does not determine whether an exchange or provider agreement legally permits retention or redistribution.
+Every archive write now requires an attestation scoped to the source, event kind, and `persist` action. Local inspection, replay, and redistribution are separate actions; lack of a required action blocks that API call. The default test/operator profile permits local persistence and reads only for explicitly listed sources/kinds and does not permit redistribution. `export_records()` is guarded by a distinct `redistribute` action.
+
+This contract records only the permissions the operator explicitly attests. A hash and approval fields establish an auditable assertion, not the legal truth of the assertion. No provider or exchange terms have been adjudicated by this software. Keep redistribution disabled unless the owner has verified and recorded that right. Python callers with direct access to the underlying journal/file can bypass application-level checks; filesystem access controls are still required.
