@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "task_id": "PE-0025",
   "status": "DONE",
-  "captured_at_utc": "2026-11-13T06:09:21Z",
+  "captured_at_utc": "2026-11-13T06:27:51Z",
   "source_sha256": {
     "src/financial_brain/forward_edge/session_clock.py": "2eb9cdb1a918198c306d6f82a2551a018b2206572eae79533613b251182376d1",
-    "src/financial_brain/forward_edge/session_runner.py": "48f764697e8e88a11b5ab5c371ab4895d199a62e9a87aa828a490e40b2c82787",
+    "src/financial_brain/forward_edge/session_runner.py": "fbe1d063eb82fabea4879684060646eb82349713f9606a2f08d2340618da89af",
     "src/financial_brain/ingest/kite_live.py": "c0105c3343125dd588a7c2e575f2e0776cb0edf6c2ebdcaf0da215362013b6cf",
     "tests/test_forward_session_clock.py": "55509cbb547c74eec9c610810ce7cc746e8a3cf0dbc3eb936c6dc881daed614f",
     "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
@@ -19,7 +19,7 @@
     "test_event_clock_provider_rejects_exchange_skew_and_backwards_local_clock"
   ],
   "result": "One injectable SessionClockProvider now supplies receive, availability, ingest, decision and simulated execution times; exchange time is retained from the provider payload. Kite receive is captured after quote response and availability after normalization. The runner filters decision-visible events, persists an aware simulated execution timestamp, rejects backward time, and resumes from the original durable decision time.",
-  "focused_tests": "59 passed (session-date, clock, runner, Kite and intraday integration)",
+  "focused_tests": "86 passed (forward-session crash, runner, clock, Kite, intraday, session-date, and book integration)",
   "ruff": "passed",
   "mypy": "passed",
   "diff_check": "passed",

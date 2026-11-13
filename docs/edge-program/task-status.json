@@ -352,29 +352,32 @@
         "test_future_marks_and_horizon_corruption_are_rejected"
       ],
       "test_result": "Persisted swing/position/momentum book rows now adapt into normalized BOOK_POSITION events consumed by ForwardSessionRunner. The adapter is read-only and daily-session based; a 20-session position remains active across overnight sessions, an unfilled signal stays ENTRY_PENDING, and an open position at its horizon remains EXIT_DUE for close reconciliation. Focused adapter/book/runner suite: 40 passed; Ruff and mypy passed.",
-      "evidence_sha256": "1cc3acdb9c18b36a24c3829e28ca7ca1ceced69efb0e32827f98de022b246e70",
+      "evidence_sha256": "35b9731606de71b31761b2f732fe8ce2c41afc06ef715c9f6d0b87a1dc5fdb89",
       "blockers": []
     },
     {
       "id": "PE-0021",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": [
         "src/financial_brain/forward_edge/session_runner.py",
-        "src/financial_brain/forward_edge/durable.py"
+        "src/financial_brain/forward_edge/durable.py",
+        "tests/test_forward_session_crash_matrix.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/forward-session-crash-recovery-contract.md",
+        "docs/edge-program/pe-0021-crash-recovery-evidence.json"
       ],
       "tests": [
-        "test_runner_persists_visible_events_decision_risk_and_paper_execution",
+        "test_lifecycle_crash_at_each_durable_boundary_recovers_one_economic_event",
+        "test_crash_after_not_applied_reconciliation_does_not_repeat_reconciliation_or_fill",
         "test_pending_outbox_requires_reconciliation_after_unknown_side_effect",
         "test_outbox_retries_only_after_reconciliation_proves_no_effect",
         "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution",
-        "test_market_polls_can_be_durably_appended_before_session_finalization",
-        "test_batch_append_preserves_record_sequence_and_hash_chain"
+        "test_incomplete_session_is_preserved_and_cannot_be_reused",
+        "test_data_rejections_are_immutable_idempotent_and_persisted"
       ],
-      "test_result": "Session records and pending/unknown/reconciled/acknowledged paper outbox outcomes are written to the fsynced hash-chained journal; 33 focused runner/market-poll integration tests pass",
-      "evidence_sha256": null,
-      "blockers": [
-        "full lifecycle boundary crash-injection matrix and venue reconciliation remain incomplete"
-      ]
+      "test_result": "Injected crashes after session plan/state, preflight, market events, decision, risk verdict, paper intent, outbox pending, execution receipt, acknowledgement and close recover to one plan/decision/intent/receipt/ack/close and one fill. Outbox unknown requires reconciliation. A durable NOT_APPLIED reconciliation is reused after a crash without duplicate reconciliation or execution receipt. Combined forward-session crash/runner/clock/Kite/intraday/session-date/book suite: 86 passed; Ruff and mypy passed.",
+      "evidence_sha256": "6022ef04a8c6409ff31240c8aaafe4d1fe7fe13429d280d94a9d74ee25aa4934",
+      "blockers": []
     },
     {
       "id": "PE-0022",
@@ -451,7 +454,7 @@
         "test_event_clock_provider_rejects_exchange_skew_and_backwards_local_clock"
       ],
       "test_result": "One injected clock runs from Kite event capture through the forward runner. Clock skew/regression fail closed, future events cannot inform an earlier decision, and simulated execution time is durable. Combined session-date/clock/runner/Kite/intraday suite: 59 passed; Ruff and mypy passed.",
-      "evidence_sha256": "6a2378a51d385cfe25fdd3bf2856e3bef4299391e66ad799cde22cf4140ebaee",
+      "evidence_sha256": "f61d3837e60959b0f9c9f5dc0e6621c49205320d07a9ccca206ac72d0bfef596",
       "blockers": []
     },
     {
@@ -474,7 +477,7 @@
         "test_invalid_or_unplanned_outcomes_fail_closed"
       ],
       "test_result": "An append-only date ledger pins calendar version, tradability and settlement deadline. Holidays become immutable NO_TRADE; special-session overrides remain eligible; completed and no-trade runner outcomes are recorded; feed loss or premature stop records INCOMPLETE; overdue missing outcomes are swept to INCOMPLETE. Cross-journal recovery is idempotent. Combined session-date/clock/runner/Kite/intraday suite: 59 passed; Ruff and mypy passed.",
-      "evidence_sha256": "295a870d351fdb416ea69bd9af48fb53bcd92f2c052ff7a65c228fd63d5f9217",
+      "evidence_sha256": "c03e9bfa0d50cadfab68a0bdb675dc0aa63bc4e9438f09b9cc9e83514b3288e3",
       "blockers": []
     },
     {

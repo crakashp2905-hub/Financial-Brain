@@ -404,10 +404,21 @@ class ForwardSessionRunner:
                 raise RunnerError("stable intent id was reused with different decision or risk content")
             prior_execution = next((r["execution"] for r in reversed(existing)
                                     if r.get("t") == "PAPER_EXECUTION" and r.get("intent_id") == intent_id), None)
-            has_prior_attempt = any(r.get("t") in {"OUTBOX_PENDING", "OUTBOX_UNKNOWN", "OUTBOX_RECONCILED"}
-                                    and r.get("intent_id") == intent_id for r in existing)
+            outbox_history = [r for r in existing
+                              if r.get("t") in {"OUTBOX_PENDING", "OUTBOX_UNKNOWN", "OUTBOX_RECONCILED"}
+                              and r.get("intent_id") == intent_id]
             if prior_execution is None:
-                if not has_prior_attempt:
+                last_outbox = outbox_history[-1] if outbox_history else None
+                if last_outbox is None:
+                    journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
+                                    "intent_id": intent_id})
+                    execution = self._execute_with_receipt(journal, config.session_id, decision,
+                                                           intent_id, observed, execution_fn,
+                                                           self.clock_provider, visible_at)
+                elif last_outbox.get("t") == "OUTBOX_RECONCILED" \
+                        and last_outbox.get("status") == "NOT_APPLIED":
+                    # The prior attempt was proven absent. A new durable PENDING marker
+                    # lets recovery distinguish this retry from the prior reconciliation.
                     journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
                                     "intent_id": intent_id})
                     execution = self._execute_with_receipt(journal, config.session_id, decision,
@@ -425,9 +436,15 @@ class ForwardSessionRunner:
                     } or not reconciliation.get("reconciliation_id"):
                         raise RunnerError("execution reconciliation must identify APPLIED/NOT_APPLIED and a receipt")
                     state = reconciliation["status"]
-                    journal.append({"t": "OUTBOX_RECONCILED", "session_id": config.session_id,
-                                    "intent_id": intent_id, "status": state,
-                                    "reconciliation_id": str(reconciliation["reconciliation_id"])})
+                    reconciliation_id = str(reconciliation["reconciliation_id"])
+                    if last_outbox.get("t") == "OUTBOX_RECONCILED":
+                        if (state != last_outbox.get("status")
+                                or reconciliation_id != last_outbox.get("reconciliation_id")):
+                            raise RunnerError("recovered reconciliation contradicts its durable receipt")
+                    else:
+                        journal.append({"t": "OUTBOX_RECONCILED", "session_id": config.session_id,
+                                        "intent_id": intent_id, "status": state,
+                                        "reconciliation_id": reconciliation_id})
                     if state == "APPLIED":
                         reconciled_execution = reconciliation.get("execution")
                         if not isinstance(reconciled_execution, dict):
@@ -436,6 +453,8 @@ class ForwardSessionRunner:
                         self._validate_execution_receipt(execution)
                         self._persist_execution_and_ack(journal, config.session_id, intent_id, execution)
                     else:
+                        journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
+                                        "intent_id": intent_id})
                         execution = self._execute_with_receipt(journal, config.session_id, decision,
                                                                intent_id, observed, execution_fn,
                                                                self.clock_provider, visible_at)
