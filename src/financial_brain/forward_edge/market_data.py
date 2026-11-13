@@ -24,7 +24,8 @@ class DataError(ValueError):
     pass
 
 
-KINDS = frozenset({"TICK", "QUOTE", "DEPTH", "BAR", "HALT", "AUCTION", "CORP_ACTION", "BROKER_UPDATE"})
+KINDS = frozenset({"TICK", "QUOTE", "DEPTH", "BAR", "HALT", "AUCTION", "CORP_ACTION",
+                   "BROKER_UPDATE", "BOOK_POSITION"})
 
 
 def _aware(value: datetime, label: str) -> datetime:

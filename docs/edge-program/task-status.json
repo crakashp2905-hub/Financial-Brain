@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 39,
-  "unrecorded_tasks": 179,
+  "recorded_tasks": 40,
+  "unrecorded_tasks": 178,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -331,6 +331,29 @@
       "blockers": [
         "actual authorized market-session capture is not yet evidenced"
       ]
+    },
+    {
+      "id": "PE-0020",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/book_adapter.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/paper/book.py",
+        "tests/test_forward_book_adapter.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/book-horizon-adapter-contract.md",
+        "docs/edge-program/pe-0020-book-horizon-evidence.json"
+      ],
+      "tests": [
+        "test_twenty_session_position_survives_overnight_and_is_runner_visible",
+        "test_signal_day_does_not_force_entry_or_expiry_from_intraday_time",
+        "test_twenty_completed_holding_sessions_are_flagged_due_at_daily_close",
+        "test_future_marks_and_horizon_corruption_are_rejected"
+      ],
+      "test_result": "Persisted swing/position/momentum book rows now adapt into normalized BOOK_POSITION events consumed by ForwardSessionRunner. The adapter is read-only and daily-session based; a 20-session position remains active across overnight sessions, an unfilled signal stays ENTRY_PENDING, and an open position at its horizon remains EXIT_DUE for close reconciliation. Focused adapter/book/runner suite: 40 passed; Ruff and mypy passed.",
+      "evidence_sha256": "1cc3acdb9c18b36a24c3829e28ca7ca1ceced69efb0e32827f98de022b246e70",
+      "blockers": []
     },
     {
       "id": "PE-0021",

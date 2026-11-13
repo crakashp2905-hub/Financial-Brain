@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0020",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T06:19:03Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/book_adapter.py": "9ca181a54fd7ac9b9893511d134fd85533051fa47f27d0fbce0f1d1a24e26542",
+    "src/financial_brain/forward_edge/market_data.py": "f9b4ee1847b48373ea4305dd09247d679ceff97414b6e5ea2455d66bc64df43c",
+    "src/financial_brain/forward_edge/session_runner.py": "48f764697e8e88a11b5ab5c371ab4895d199a62e9a87aa828a490e40b2c82787",
+    "src/financial_brain/paper/book.py": "2995938c054b17f3990998867f07e6ced39515558399b077aed1662fa19db956",
+    "tests/test_forward_book_adapter.py": "c84aab3ae47abecb65be9a6d5bec650753e1bb42040eda8428071f43f5c254ff",
+    "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
+    "docs/edge-program/book-horizon-adapter-contract.md": "6215ac83af1b645f6a84718039c7764a67429b0a2fcf4b34a0a22ded1693031d"
+  },
+  "acceptance_tests": [
+    "test_twenty_session_position_survives_overnight_and_is_runner_visible",
+    "test_signal_day_does_not_force_entry_or_expiry_from_intraday_time",
+    "test_twenty_completed_holding_sessions_are_flagged_due_at_daily_close",
+    "test_future_marks_and_horizon_corruption_are_rejected"
+  ],
+  "result": "Persisted swing/position/momentum book rows now adapt into normalized BOOK_POSITION events consumed by ForwardSessionRunner. The adapter is read-only and daily-session based; a 20-session position remains active across overnight sessions, an unfilled signal stays ENTRY_PENDING, and an open position at its horizon remains EXIT_DUE for close reconciliation.",
+  "focused_tests": "40 passed (book adapter, paper-book and forward-runner integration)",
+  "ruff": "passed",
+  "mypy": "passed",
+  "diff_check": "passed",
+  "limitations": [
+    "This is a local paper-book state bridge; it makes no claim about market-data rights, observed fills, or live-account integration."
+  ]
+}
