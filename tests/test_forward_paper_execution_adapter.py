@@ -93,11 +93,12 @@ def test_quote_simulator_is_connected_to_durable_runner(tmp_path):
     )
     runner = ForwardSessionRunner(tmp_path / "session.jsonl")
     runner.record_preflight(config, {"approved": True, "status": "PASS"})
-    quote = _quote(DECISION_AT + timedelta(milliseconds=50))
+    baseline = _quote(DECISION_AT - timedelta(milliseconds=10), bid="99.8", ask="100.0")
+    quote = _quote(DECISION_AT + timedelta(milliseconds=50), bid="100.0", ask="100.2")
     simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
 
     result = runner.run(
-        config, [quote], decision_at=DECISION_AT,
+        config, [baseline, quote], decision_at=DECISION_AT,
         decision_fn=lambda _events: {"instrument": "NSE:INFY", "side": "BUY", "quantity": 2},
         risk_fn=lambda _decision: {"approved": True}, execution_fn=simulator,
     )
@@ -105,3 +106,7 @@ def test_quote_simulator_is_connected_to_durable_runner(tmp_path):
     assert result["status"] == "PAPER_COMPLETE"
     assert result["execution"]["fidelity"] == "SIMULATED_QUOTE"
     assert result["execution"]["fills"][0]["quantity"] == 2
+    diagnostic = result["execution"]["quote_arrival_shortfall"]
+    assert diagnostic["benchmark_type"] == "SUBSEQUENT_EXECUTABLE_QUOTE"
+    assert diagnostic["broker_fill_observation"] is False
+    assert Decimal(diagnostic["shortfall_bp"]) == Decimal("20")

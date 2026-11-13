@@ -767,10 +767,9 @@
         "test_quote_arrival_shortfall_measures_only_displayed_quote_depth_not_broker_fills",
         "test_quote_arrival_shortfall_fails_closed_on_early_quotes_missing_depth_and_broker_labels"
       ],
-      "test_result": "Forward execution/adapter tests: 29 passed; Ruff, mypy and diff checks passed. Quote-at-arrival shortfall is latency-gated, depth-limited and explicitly labeled SIMULATED_QUOTE with zero broker-fill observations.",
-      "evidence_sha256": "275e0db1eb94dc3869649959e3bf43789a101c43c966c0afb9205efc3d357910",
+      "test_result": "Forward execution/adapter tests: 29 passed; Ruff and mypy passed. Quote-at-arrival shortfall now flows into the durable execution receipt when a pre-decision baseline quote exists. It remains latency-gated, depth-limited and explicitly SIMULATED_QUOTE with zero broker-fill observations.",
+      "evidence_sha256": "c734ea97770cbf52fd972071f0b4417fe6f761c4d10d24b53d1d22e8ccb30ed6",
       "blockers": [
-        "Not wired into the durable session report.",
         "No actual observed Kite quote-arrival sample is available; current test fixtures are synthetic."
       ]
     },

@@ -15,6 +15,7 @@ from financial_brain.forward_edge.execution import (
     OrderIntent,
     Quote,
     execute_or_no_trade,
+    quote_arrival_shortfall,
 )
 from financial_brain.forward_edge.market_data import NormalizedEvent
 
@@ -101,6 +102,16 @@ class MarketableQuoteSimulator:
                            key=lambda q: q.available_utc)
         quote_event = quote_events.get(id(selected)) if selected is not None else None
         data_snapshot_sha256 = _sha256(sorted(event.content_sha256() for event in quote_events.values()))
+        arrival_diagnostic = None
+        baselines = [q for q in quotes if q.available_utc <= decision_at]
+        if selected is not None and quote_event is not None and baselines:
+            baseline = max(baselines, key=lambda q: q.available_utc)
+            modeled_price = baseline.ask if intent.side == "BUY" else baseline.bid
+            arrival_diagnostic = quote_arrival_shortfall(
+                side=intent.side, modeled_price=modeled_price, requested_qty=quantity,
+                decision_utc=decision_at, latency=self.latency, quote=selected,
+                source_sha256=quote_event.content_sha256(),
+            )
         receipt = {
             "receipt_id": f"sim-{intent_id}",
             "simulator": "marketable-quote-v1",
@@ -118,6 +129,7 @@ class MarketableQuoteSimulator:
             "queue_position_known": result.queue_position_known,
             "quote_event_sha256s": sorted(event.content_sha256() for event in quote_events.values()),
             "fills": [],
+            "quote_arrival_shortfall": arrival_diagnostic,
         }
         if result.filled_qty and result.avg_price is not None and selected is not None and quote_event is not None:
             quote_hash = quote_event.content_sha256()
