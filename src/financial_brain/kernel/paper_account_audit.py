@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
+import re
 from pathlib import Path
 
 from financial_brain.forward_edge.durable import DurableJournal
@@ -184,4 +185,87 @@ def audit_paper_account_journal(path: Path) -> dict:
     return {"status": "RECONCILED", "currency": currency, "initial_cash": str(initial_cash),
             "cash": str(cash), "positions": current_positions, "realized_pnl_gross": str(realized),
             "fees": str(fees), "realized_pnl_net": str(realized - fees), "current_nav": str(current_nav),
+            "fill_ids": sorted(fill_ids),
+            "marks": {symbol: {"price": str(price), "observed_at": observed.isoformat()}
+                      for symbol, (price, observed) in sorted(marks.items())},
             "nav_snapshots": snapshots, "journal_event_count": len(records), "source": "DURABLE_JOURNAL_ONLY"}
+
+
+def reconcile_eod_snapshot(*, journal_state: dict, reference_positions: dict[str, int],
+                           reference_fill_ids: list[str], reference_marks: dict[str, dict],
+                           as_of: datetime, mark_tolerance: Decimal = Decimal("0.01"),
+                           prior_incident_open: bool = False, repair_signoff: dict | None = None) -> dict:
+    """Compare independent end-of-day positions, fill receipts and marks; gate new entries.
+
+    A clean snapshot after an earlier discrepancy remains blocked until a named human
+    records a hash-backed repair signoff. Signoff cannot override a current mismatch.
+    """
+    if as_of.tzinfo is None or as_of.utcoffset() is None:
+        raise PaperAuditError("EOD as_of must be timezone-aware")
+    tolerance = Decimal(str(mark_tolerance))
+    if not tolerance.is_finite() or tolerance < 0:
+        raise PaperAuditError("mark tolerance must be finite and non-negative")
+    mismatches: list[str] = []
+    journal_positions = journal_state.get("positions", {})
+    if not isinstance(journal_positions, dict):
+        raise PaperAuditError("journal position snapshot is invalid")
+    expected_positions = {symbol: int(row["quantity"]) for symbol, row in journal_positions.items()}
+    normalized_reference = {symbol: qty for symbol, qty in reference_positions.items() if qty != 0}
+    if expected_positions != normalized_reference:
+        mismatches.append(f"positions differ: journal={expected_positions}, reference={normalized_reference}")
+
+    expected_fills = journal_state.get("fill_ids")
+    if not isinstance(expected_fills, list) or any(not isinstance(value, str) or not value for value in expected_fills):
+        raise PaperAuditError("journal fill receipt IDs are missing or invalid")
+    if len(reference_fill_ids) != len(set(reference_fill_ids)) or any(not value for value in reference_fill_ids):
+        mismatches.append("reference fill receipt IDs are duplicated or empty")
+    elif set(expected_fills) != set(reference_fill_ids):
+        mismatches.append(f"fill receipts differ: journal={sorted(expected_fills)}, reference={sorted(reference_fill_ids)}")
+
+    journal_marks = journal_state.get("marks", {})
+    if not isinstance(journal_marks, dict):
+        raise PaperAuditError("journal marks are invalid")
+    for symbol in sorted(expected_positions):
+        left, right = journal_marks.get(symbol), reference_marks.get(symbol)
+        if not isinstance(left, dict) or not isinstance(right, dict):
+            mismatches.append(f"{symbol}: missing journal or independent EOD mark")
+            continue
+        try:
+            local_price, external_price = Decimal(str(left["price"])), Decimal(str(right["price"]))
+            observed = datetime.fromisoformat(str(right["observed_at"]).replace("Z", "+00:00"))
+        except (KeyError, InvalidOperation, TypeError, ValueError) as exc:
+            raise PaperAuditError(f"{symbol}: malformed EOD mark evidence") from exc
+        if (not local_price.is_finite() or local_price <= 0 or not external_price.is_finite() or external_price <= 0
+                or observed.tzinfo is None or observed.utcoffset() is None):
+            mismatches.append(f"{symbol}: invalid independent mark")
+            continue
+        digest = right.get("source_sha256")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            mismatches.append(f"{symbol}: independent mark lacks source hash")
+        elif observed > as_of:
+            mismatches.append(f"{symbol}: independent mark is after the EOD cutoff")
+        elif abs(local_price - external_price) > tolerance:
+            mismatches.append(f"{symbol}: mark differs ({local_price} vs {external_price})")
+
+    if mismatches:
+        status, allowed = "HALT_MISMATCH", False
+    elif prior_incident_open:
+        valid_signoff = False
+        if isinstance(repair_signoff, dict):
+            actor = repair_signoff.get("actor")
+            try:
+                signed_at = datetime.fromisoformat(str(repair_signoff.get("signed_at", "")).replace("Z", "+00:00"))
+            except ValueError:
+                signed_at = None
+            valid_signoff = bool(
+                repair_signoff.get("incident_id") and repair_signoff.get("repair_id")
+                and isinstance(actor, str) and actor.strip() and not actor.startswith("agent:")
+                and isinstance(repair_signoff.get("source_sha256"), str)
+                and re.fullmatch(r"[0-9a-f]{64}", repair_signoff["source_sha256"])
+                and signed_at is not None and signed_at.tzinfo is not None and signed_at <= as_of
+            )
+        status, allowed = ("RECONCILED_SIGNED_OFF", True) if valid_signoff else ("AWAITING_REPAIR_SIGNOFF", False)
+    else:
+        status, allowed = "RECONCILED", True
+    return {"status": status, "entries_allowed": allowed, "mismatches": mismatches,
+            "requires_repair_signoff": prior_incident_open and status != "RECONCILED_SIGNED_OFF"}

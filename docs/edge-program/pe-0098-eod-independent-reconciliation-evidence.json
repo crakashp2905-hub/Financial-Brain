@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0098",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_paper_account_audit.py tests/test_paper_account.py",
+    "result": "13 passed; Ruff and mypy passed for the changed audit module."
+  },
+  "implemented": [
+    "The journal-only auditor exports independently recomputed positions, fill IDs and latest marks.",
+    "A separate EOD comparison checks reference positions, fill receipt IDs and source-hashed marks against the journal audit.",
+    "Any mismatch returns HALT_MISMATCH and blocks new entries; a clean repaired snapshot remains blocked until a human hash-backed signoff is recorded."
+  ],
+  "blockers": [
+    "The operational paper runner does not yet invoke the EOD comparison or persist its halt state across restart.",
+    "Independent provider/OMS reconciliation snapshots are not yet captured in the daily evidence bundle."
+  ],
+  "source_sha256": {
+    "src/financial_brain/kernel/paper_account_audit.py": "515edd47579ededcd72f2bb8067d47e75609cdb7d0dbbf4b9bcbc580908e5016",
+    "tests/test_paper_account_audit.py": "857f6173d35fa0af15e31b01f496c4856d047c617ed97346e5310600db364950"
+  }
+}

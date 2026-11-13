@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 104,
-  "unrecorded_tasks": 114,
+  "recorded_tasks": 105,
+  "unrecorded_tasks": 113,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2260,6 +2260,26 @@
       "blockers": [
         "Automatic integration with durable PaperAccount event and mark projections remains outstanding.",
         "Canonical carry and execution-slippage source joins remain outstanding."
+      ]
+    },
+    {
+      "id": "PE-0098",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/paper_account_audit.py",
+        "tests/test_paper_account_audit.py",
+        "docs/edge-program/pe-0098-eod-independent-reconciliation.md",
+        "docs/edge-program/pe-0098-eod-independent-reconciliation-evidence.json"
+      ],
+      "tests": [
+        "test_independent_journal_audit_recomputes_balances_and_daily_nav",
+        "test_eod_reconciliation_halts_on_mismatch_and_requires_human_repair_signoff"
+      ],
+      "test_result": "13 focused audit/account tests passed; Ruff and mypy passed. EOD comparison now gates entries on positions, fill receipts and source-hashed marks, and requires human signoff after repair.",
+      "evidence_sha256": "ac6c2a70c16e721e97a9c8a1937bd4ca968b860afff915d714317de825d30057",
+      "blockers": [
+        "Operational runner invocation and restart-persistent halt state remain outstanding.",
+        "Independent provider/OMS EOD snapshots are not yet included in the daily evidence bundle."
       ]
     }
   ]

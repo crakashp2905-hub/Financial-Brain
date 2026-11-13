@@ -6,7 +6,11 @@ import pytest
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.kernel.oms import State
 from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
-from financial_brain.kernel.paper_account_audit import PaperAuditError, audit_paper_account_journal
+from financial_brain.kernel.paper_account_audit import (
+    PaperAuditError,
+    audit_paper_account_journal,
+    reconcile_eod_snapshot,
+)
 
 
 def _submit(account, client_id, side, quantity, limit, reserve):
@@ -45,7 +49,39 @@ def test_independent_journal_audit_recomputes_balances_and_daily_nav(tmp_path):
     assert audit["fees"] == "0.32"
     assert audit["realized_pnl_net"] == "19.68"
     assert audit["current_nav"] == "10049.68"
+    assert audit["fill_ids"] == ["buy-fill", "sell-fill"]
+    assert audit["marks"]["NSE:INFY"]["price"] == "130"
     assert all(row["reconciled"] for row in audit["nav_snapshots"])
+
+
+def test_eod_reconciliation_halts_on_mismatch_and_requires_human_repair_signoff():
+    as_of = datetime(2026, 10, 6, 11, tzinfo=timezone.utc)
+    journal_state = {
+        "positions": {"NSE:INFY": {"quantity": 2, "cost_basis": "200"}},
+        "fill_ids": ["fill-1", "fill-2"],
+        "marks": {"NSE:INFY": {"price": "110", "observed_at": "2026-10-06T10:00:00+00:00"}},
+    }
+    clean = {
+        "reference_positions": {"NSE:INFY": 2},
+        "reference_fill_ids": ["fill-2", "fill-1"],
+        "reference_marks": {"NSE:INFY": {"price": "110.01", "observed_at": "2026-10-06T10:05:00+00:00",
+                                                  "source_sha256": "a" * 64}},
+    }
+    mismatch = reconcile_eod_snapshot(journal_state=journal_state, as_of=as_of,
+                                      **{**clean, "reference_positions": {"NSE:INFY": 1}})
+    assert mismatch["status"] == "HALT_MISMATCH"
+    assert mismatch["entries_allowed"] is False
+
+    repaired = reconcile_eod_snapshot(journal_state=journal_state, as_of=as_of, prior_incident_open=True, **clean)
+    assert repaired["status"] == "AWAITING_REPAIR_SIGNOFF"
+    assert repaired["entries_allowed"] is False
+    signed = reconcile_eod_snapshot(
+        journal_state=journal_state, as_of=as_of, prior_incident_open=True, **clean,
+        repair_signoff={"incident_id": "inc-1", "repair_id": "repair-1", "actor": "owner",
+                        "signed_at": "2026-10-06T10:59:00+00:00", "source_sha256": "b" * 64},
+    )
+    assert signed["status"] == "RECONCILED_SIGNED_OFF"
+    assert signed["entries_allowed"] is True
 
 
 def test_independent_audit_rejects_nav_mismatch_in_a_valid_hash_chain(tmp_path):
