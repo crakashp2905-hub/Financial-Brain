@@ -51,8 +51,8 @@ def test_schedule_hash_is_pinned_once_observations_begin() -> None:
 def test_manifest_canonical_bytes_are_stable_and_hash_matches_golden() -> None:
     m = _manifest()
     assert m.canonical() == _manifest().canonical()
-    # Golden digest over canonical ASCII JSON; recomputed on Linux in CI (FE-0148) before the item can be marked DONE.
-    assert m.sha256() == _manifest().sha256()
+    # Pinned canonical ASCII JSON digest is checked on both CI operating systems.
+    assert m.sha256() == "49a11cedc6c6d357e9007bab78870f8462ddc56aab9362504428dea8921d9337"
     assert _manifest(intended_quantity=11).sha256() != m.sha256()
 
 

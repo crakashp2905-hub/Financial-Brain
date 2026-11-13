@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 109,
-  "unrecorded_tasks": 109,
+  "recorded_tasks": 110,
+  "unrecorded_tasks": 108,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2363,6 +2363,25 @@
         "Schedule persists ranges, not explicit authoritative exchange-session dates.",
         "No authoritative future exchange calendar or active prospective cohort is available."
       ]
+    },
+    {
+      "id": "PE-0104",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/decision_custody.py",
+        "tests/test_forward_edge_f04.py",
+        "tests/test_forward_edge_f00.py",
+        "docs/edge-program/pe-0104-preentry-decision-manifest.md",
+        "docs/edge-program/pe-0104-preentry-decision-manifest-evidence.json"
+      ],
+      "tests": [
+        "test_manifest_canonical_bytes_are_stable_and_hash_matches_golden",
+        "test_manifest_rejects_floats_bad_hashes_and_late_decisions",
+        "test_manifest_must_be_recorded_before_entry_and_never_overwritten"
+      ],
+      "test_result": "62 focused decision-custody tests passed; Ruff and mypy passed. Canonical manifest hash is now pinned, and decision/record/entry clocks are ordered strictly with overwrite refusal.",
+      "evidence_sha256": "da260b40dea9175814ec5329de5064464d7bd14c2a7099e18efaf7505a600c0c",
+      "blockers": []
     }
   ]
 }
