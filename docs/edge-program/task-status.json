@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 92,
-  "unrecorded_tasks": 126,
+  "recorded_tasks": 93,
+  "unrecorded_tasks": 125,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1990,6 +1990,33 @@
       "blockers": [
         "No authorized independent validation return receipts are available; empirical factor-neutral candidate comparison remains unperformed.",
         "No strategy promotion or paper-eligibility decision is implied by candidate registration."
+      ]
+    },
+    {
+      "id": "PE-0067",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/forecast_cost_benefit.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_forecast_cost_benefit.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/pe-0067-calibrated-cost-to-benefit-gate.md",
+        "docs/edge-program/pe-0067-calibrated-cost-to-benefit-gate-evidence.json"
+      ],
+      "tests": [
+        "test_benefit_calibration_uses_development_rows_and_cannot_inflate_forecast",
+        "test_cost_to_calibrated_benefit_ratio_and_zero_placeholder_fail_closed",
+        "test_no_policy_wrong_model_and_prevalidation_session_abstain",
+        "test_frozen_benefit_policy_registry_is_immutable",
+        "test_runner_applies_frozen_cost_to_calibrated_benefit_gate",
+        "test_placeholder_zero_net_alpha_is_rejected_after_calibrated_cost_ratio",
+        "test_runner_requires_frozen_benefit_policy_identity_for_configured_paper"
+      ],
+      "test_result": "47 focused policy and paper-runner tests passed; mypy, Ruff, and source inventory checks pass. Synthetic fixtures verified the calibrated cost ratio, model/session binding, immutability, and abstention when calibrated benefit cannot cover costs.",
+      "evidence_sha256": "9f594e6153f858f6d56b6b94c9114a776bce7414a4b8e8849886f001043ea315",
+      "blockers": [
+        "No approved real development data or calibration protocol; live forecast calibration remains unverified.",
+        "Legacy runner construction without the optional registry remains compatibility mode and does not require model-level benefit calibration."
       ]
     }
   ]

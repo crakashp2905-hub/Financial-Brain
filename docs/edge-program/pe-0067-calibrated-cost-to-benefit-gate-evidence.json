@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0067",
+  "status": "PARTIAL",
+  "implemented": [
+    "Development-only forecast-benefit calibration is keyed to strategy, cohort, and model, hashed with source data and protocol, frozen before validation, and cannot inflate benefits.",
+    "A durable registry rejects conflicting frozen policy replacements.",
+    "The decision gate calculates itemized execution costs divided by calibrated forecast benefit and abstains on absent/mismatched calibration, pre-validation dates, zero benefit, or excessive cost ratio.",
+    "Configured forward paper/shadow sessions bind the frozen policy and pass only adjusted after-cost alpha to the net-alpha gate; the zero-net placeholder fixture never executes."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forecast_cost_benefit.py tests/test_forward_session_runner.py -q",
+    "result": "47 passed; mypy and Ruff passed.",
+    "cases": [
+      "test_benefit_calibration_uses_development_rows_and_cannot_inflate_forecast",
+      "test_cost_to_calibrated_benefit_ratio_and_zero_placeholder_fail_closed",
+      "test_no_policy_wrong_model_and_prevalidation_session_abstain",
+      "test_frozen_benefit_policy_registry_is_immutable",
+      "test_runner_applies_frozen_cost_to_calibrated_benefit_gate",
+      "test_placeholder_zero_net_alpha_is_rejected_after_calibrated_cost_ratio",
+      "test_runner_requires_frozen_benefit_policy_identity_for_configured_paper"
+    ]
+  },
+  "limitations": [
+    "Only synthetic development rows were used; no forecast-calibration or trading-performance claim is made.",
+    "The model-level calibration gate is enforced when a runner is constructed with its registry; legacy compatibility mode does not require it.",
+    "No reviewed calibration protocol or production cohort registry wiring has been supplied."
+  ]
+}

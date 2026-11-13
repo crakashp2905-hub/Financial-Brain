@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -14,6 +14,10 @@ from financial_brain.forward_edge.session_runner import (
 from financial_brain.forward_edge.uncertainty_sizing import (
     UncertaintySizingPolicy,
     UncertaintySizingRegistry,
+)
+from financial_brain.forward_edge.forecast_cost_benefit import (
+    ForecastBenefitPolicyRegistry,
+    calibrate_forecast_benefit_policy,
 )
 
 
@@ -55,6 +59,19 @@ def _sizing_policy():
         calibration_protocol_sha256="c" * 64, development_start="2026-10-01",
         development_end="2026-10-31", validation_start="2026-11-12", observation_count=30,
         frozen_at_utc="2026-11-01T00:00:00+00:00",
+    )
+
+
+def _benefit_policy():
+    observations = [{"split": "DEVELOPMENT", "exchange_date": "2026-10-01",
+                     "forecast_benefit": 0.02, "realized_excess": 0.01,
+                     "decision_sha256": f"{i:064x}", "forecast_model_sha256": "d" * 64}
+                    for i in range(1, 31)]
+    return calibrate_forecast_benefit_policy(
+        strategy_sha256="a" * 64, cohort_id="C1", forecast_model_sha256="d" * 64,
+        observations=observations, validation_start=date.fromisoformat("2026-11-12"),
+        frozen_at=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        calibration_protocol_sha256="e" * 64,
     )
 
 
@@ -686,3 +703,57 @@ def test_paper_runner_rejects_unbound_or_prevalidation_uncertainty_policy(tmp_pa
     with pytest.raises(RunnerError, match="validation start"):
         runner.begin(_config(exchange_date="2026-11-11",
                              uncertainty_sizing_policy_sha256=policy.sha256))
+
+
+def test_runner_applies_frozen_cost_to_calibrated_benefit_gate(tmp_path):
+    policy = _benefit_policy()
+    registry = ForecastBenefitPolicyRegistry(tmp_path / "forecast-benefit.jsonl")
+    registry.freeze(policy)
+    config = _config(forecast_benefit_policy_sha256=policy.sha256)
+    runner = ForwardSessionRunner(tmp_path / "benefit-paper.jsonl", forecast_benefit_registry=registry)
+    _approve_preflight(runner, config)
+    risk_alpha = []
+    result = runner.run(
+        config, [_event()], decision_at=NOW,
+        decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.01,
+                               "forecast_horizon_sessions": 1, "forecast_costs_included": True,
+                               "forecast_model_sha256": "d" * 64,
+                               "net_alpha_forecast": _net_alpha_forecast()},
+        risk_fn=lambda decision: risk_alpha.append(decision["expected_net_alpha"]) or {"approved": True},
+        execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "cost-benefit-missed",
+                                 "fidelity": "SIMULATED_QUOTE"},
+    )
+    assert result["status"] == "PAPER_COMPLETE"
+    assert risk_alpha == [pytest.approx(0.0035)]
+    assert result["decision"]["cost_benefit_assessment"]["ratio"] == pytest.approx(0.003 / 0.0065)
+
+
+def test_placeholder_zero_net_alpha_is_rejected_after_calibrated_cost_ratio(tmp_path):
+    policy = _benefit_policy()
+    registry = ForecastBenefitPolicyRegistry(tmp_path / "forecast-benefit.jsonl")
+    registry.freeze(policy)
+    config = _config(forecast_benefit_policy_sha256=policy.sha256)
+    runner = ForwardSessionRunner(tmp_path / "zero-benefit.jsonl", forecast_benefit_registry=registry)
+    _approve_preflight(runner, config)
+    executions = []
+    result = runner.run(
+        config, [_event()], decision_at=NOW,
+        decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.0,
+                               "forecast_horizon_sessions": 1, "forecast_costs_included": True,
+                               "forecast_model_sha256": "d" * 64,
+                               "net_alpha_forecast": _net_alpha_forecast(net=0.0)},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: executions.append(True) or {},
+    )
+    assert result["status"] == "NO_TRADE"
+    assert result["reason"] == "COST_EXCEEDS_CALIBRATED_BENEFIT"
+    assert executions == []
+
+
+def test_runner_requires_frozen_benefit_policy_identity_for_configured_paper(tmp_path):
+    policy = _benefit_policy()
+    registry = ForecastBenefitPolicyRegistry(tmp_path / "forecast-benefit.jsonl")
+    registry.freeze(policy)
+    runner = ForwardSessionRunner(tmp_path / "missing-benefit-policy.jsonl", forecast_benefit_registry=registry)
+    with pytest.raises(RunnerError, match="frozen forecast-benefit"):
+        runner.begin(_config())

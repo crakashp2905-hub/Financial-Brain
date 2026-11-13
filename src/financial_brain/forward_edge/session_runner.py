@@ -22,6 +22,9 @@ from financial_brain.forward_edge.net_alpha_policy import NetAlphaPolicyError, N
 from financial_brain.forward_edge.uncertainty_sizing import (UncertaintySizingError,
                                                               UncertaintySizingRegistry,
                                                               uncertainty_size_multiplier)
+from financial_brain.forward_edge.forecast_cost_benefit import (CostBenefitError,
+                                                               ForecastBenefitPolicyRegistry,
+                                                               assess_cost_to_benefit)
 from financial_brain.forward_edge.session_clock import ClockError, SessionClockProvider, as_utc
 from financial_brain.forward_edge.session_ops import SessionDateLedger, SessionError
 
@@ -61,6 +64,7 @@ class ForwardRunConfig:
     minimum_forecast_net_alpha: float = 0.0
     net_alpha_policy_sha256: str | None = None
     uncertainty_sizing_policy_sha256: str | None = None
+    forecast_benefit_policy_sha256: str | None = None
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
@@ -88,6 +92,10 @@ class ForwardRunConfig:
                 len(self.uncertainty_sizing_policy_sha256) != 64
                 or any(ch not in "0123456789abcdef" for ch in self.uncertainty_sizing_policy_sha256)):
             raise RunnerError("uncertainty sizing policy identity must be a SHA-256 digest")
+        if self.forecast_benefit_policy_sha256 is not None and (
+                len(self.forecast_benefit_policy_sha256) != 64
+                or any(ch not in "0123456789abcdef" for ch in self.forecast_benefit_policy_sha256)):
+            raise RunnerError("forecast-benefit policy identity must be a SHA-256 digest")
         try:
             if date.fromisoformat(self.exchange_date).isoformat() != self.exchange_date:
                 raise ValueError
@@ -116,6 +124,8 @@ class ForwardRunConfig:
         # Preserve historical identities for legacy runs without uncertainty policy provenance.
         if self.uncertainty_sizing_policy_sha256 is not None:
             canonical["uncertainty_sizing_policy_sha256"] = self.uncertainty_sizing_policy_sha256
+        if self.forecast_benefit_policy_sha256 is not None:
+            canonical["forecast_benefit_policy_sha256"] = self.forecast_benefit_policy_sha256
         return canonical
 
     @property
@@ -144,12 +154,14 @@ class ForwardSessionRunner:
                  clock_provider: SessionClockProvider | None = None,
                  session_date_ledger: SessionDateLedger | None = None,
                  net_alpha_threshold_registry: NetAlphaThresholdRegistry | None = None,
-                 uncertainty_sizing_registry: UncertaintySizingRegistry | None = None) -> None:
+                 uncertainty_sizing_registry: UncertaintySizingRegistry | None = None,
+                 forecast_benefit_registry: ForecastBenefitPolicyRegistry | None = None) -> None:
         self.journal_path = Path(journal_path)
         self.clock_provider = clock_provider or SessionClockProvider()
         self.session_date_ledger = session_date_ledger
         self.net_alpha_threshold_registry = net_alpha_threshold_registry
         self.uncertainty_sizing_registry = uncertainty_sizing_registry
+        self.forecast_benefit_registry = forecast_benefit_registry
 
     def mark_incomplete(self, session_id: str, reason: str) -> None:
         """Close a nonterminal session as incomplete without fabricating an outcome."""
@@ -247,6 +259,20 @@ class ForwardSessionRunner:
                     raise RunnerError("paper session predates uncertainty-policy validation start")
             elif config.uncertainty_sizing_policy_sha256 is not None:
                 raise RunnerError("uncertainty sizing policy cannot be verified without its registry")
+            if self.forecast_benefit_registry is not None:
+                if config.forecast_benefit_policy_sha256 is None:
+                    raise RunnerError("paper session needs a frozen forecast-benefit calibration policy")
+                try:
+                    benefit_policy = self.forecast_benefit_registry.resolve(
+                        config.strategy_sha256, config.cohort_id)
+                except CostBenefitError as exc:
+                    raise RunnerError(str(exc)) from exc
+                if benefit_policy is None or benefit_policy.sha256 != config.forecast_benefit_policy_sha256:
+                    raise RunnerError("forecast-benefit policy does not match the frozen strategy cohort")
+                if date.fromisoformat(config.exchange_date) < date.fromisoformat(benefit_policy.validation_start):
+                    raise RunnerError("paper session predates forecast-benefit validation start")
+            elif config.forecast_benefit_policy_sha256 is not None:
+                raise RunnerError("forecast-benefit policy cannot be verified without its registry")
         for row in records:
             if row.get("t") != "SESSION_PLAN" or row.get("session_id") == config.session_id:
                 continue
@@ -258,7 +284,9 @@ class ForwardSessionRunner:
                     and (prior_config.get("minimum_forecast_net_alpha") != config.minimum_forecast_net_alpha
                          or prior_config.get("net_alpha_policy_sha256") != config.net_alpha_policy_sha256
                          or prior_config.get("uncertainty_sizing_policy_sha256")
-                         != config.uncertainty_sizing_policy_sha256)):
+                         != config.uncertainty_sizing_policy_sha256
+                         or prior_config.get("forecast_benefit_policy_sha256")
+                         != config.forecast_benefit_policy_sha256)):
                 raise RunnerError("net-alpha hurdle is frozen for this strategy cohort")
         existing = [r for r in records if r.get("session_id") == config.session_id]
         for row in records:
@@ -490,6 +518,7 @@ class ForwardSessionRunner:
                 decision = decision_fn(decision_events)
             if not isinstance(decision, dict) or decision.get("side") not in ("BUY", "SELL", "NONE", "NO_TRADE"):
                 raise RunnerError("decision adapter must return a dictionary with BUY, SELL, or NONE side")
+            decision = self._apply_forecast_cost_benefit(config, decision)
             decision = self._apply_uncertainty_sizing(config, decision)
             journal.append({"t": "DECISION", "session_id": config.session_id,
                             "decision_at_utc": visible_at.isoformat(), "decision": decision})
@@ -724,6 +753,55 @@ class ForwardSessionRunner:
             return {"side": "NO_TRADE", "reason": "UNCERTAINTY_SIZE_BELOW_ONE_UNIT",
                     "rejected_candidate": decision, "uncertainty_sizing": receipt}
         return {**decision, "quantity": sized_quantity, "uncertainty_sizing": receipt}
+
+    def _apply_forecast_cost_benefit(self, config: ForwardRunConfig, decision: dict) -> dict:
+        """Require a matching frozen benefit-calibration policy before a configured paper entry."""
+        if (config.mode not in (Mode.LIVE_PAPER, Mode.SHADOW) or self.forecast_benefit_registry is None):
+            return decision
+        effect = decision.get("position_effect")
+        if effect is None and decision.get("side") == "BUY":
+            effect = "INCREASE"
+        if effect != "INCREASE":
+            return decision
+        try:
+            policy = self.forecast_benefit_registry.resolve(config.strategy_sha256, config.cohort_id)
+        except CostBenefitError as exc:
+            raise RunnerError(str(exc)) from exc
+        if policy is None or policy.sha256 != config.forecast_benefit_policy_sha256:
+            raise RunnerError("paper entry forecast-benefit policy is unavailable or changed")
+        forecast = decision.get("net_alpha_forecast")
+        if not isinstance(forecast, dict):
+            return {"side": "NO_TRADE", "reason": "FORECAST_BENEFIT_EVIDENCE_MISSING",
+                    "rejected_candidate": decision,
+                    "cost_benefit_assessment": {"approved": False, "reason": "FORECAST_BENEFIT_UNCALIBRATED",
+                                                "policy_sha256": policy.sha256}}
+        try:
+            expected = float(forecast["expected_return"])
+            benchmark = float(forecast["benchmark"])
+            fees, spread, impact = (float(forecast[name]) for name in ("fees", "spread", "impact"))
+            model_sha = str(decision["forecast_model_sha256"])
+            assessment = assess_cost_to_benefit(
+                forecast_benefit=expected - benchmark, fees=fees, spread=spread, impact=impact,
+                forecast_model_sha256=model_sha, session_date=date.fromisoformat(config.exchange_date),
+                policy=policy, strategy_sha256=config.strategy_sha256, cohort_id=config.cohort_id)
+        except (KeyError, TypeError, ValueError, CostBenefitError) as exc:
+            return {"side": "NO_TRADE", "reason": "FORECAST_BENEFIT_EVIDENCE_MISSING",
+                    "rejected_candidate": decision,
+                    "cost_benefit_assessment": {"approved": False, "reason": str(exc),
+                                                "policy_sha256": policy.sha256}}
+        if not assessment["approved"]:
+            return {"side": "NO_TRADE", "reason": str(assessment["reason"]),
+                    "rejected_candidate": decision, "cost_benefit_assessment": assessment}
+        calibrated_value = assessment["calibrated_benefit"]
+        if isinstance(calibrated_value, bool) or not isinstance(calibrated_value, (int, float)):
+            raise RunnerError("approved forecast-benefit assessment lacks a finite calibrated benefit")
+        calibrated_benefit = float(calibrated_value)
+        adjusted_forecast = {**forecast, "expected_return": benchmark + calibrated_benefit}
+        adjusted_alpha = calibrated_benefit - fees - spread - impact
+        return {**decision, "expected_net_alpha": adjusted_alpha,
+                "uncalibrated_net_alpha_forecast": forecast,
+                "net_alpha_forecast": adjusted_forecast,
+                "cost_benefit_assessment": assessment}
 
     @classmethod
     def _execute_with_receipt(cls, journal: DurableJournal, session_id: str, decision: dict,
