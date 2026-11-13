@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 93,
-  "unrecorded_tasks": 125,
+  "recorded_tasks": 94,
+  "unrecorded_tasks": 124,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2017,6 +2017,27 @@
       "blockers": [
         "No approved real development data or calibration protocol; live forecast calibration remains unverified.",
         "Legacy runner construction without the optional registry remains compatibility mode and does not require model-level benefit calibration."
+      ]
+    },
+    {
+      "id": "PE-0068",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/horizon_search.py",
+        "tests/test_horizon_search.py",
+        "docs/edge-program/pe-0068-budgeted-development-horizon-search.md",
+        "docs/edge-program/pe-0068-budgeted-development-horizon-search-evidence.json"
+      ],
+      "tests": [
+        "test_fixed_budget_compares_every_horizon_on_matched_development_decisions",
+        "test_search_rejects_holdout_rows_extra_trials_and_unmatched_cohorts",
+        "test_search_rejects_data_not_matching_frozen_digest_and_unbudgeted_grid",
+        "test_registry_records_plan_and_all_trials_immutably"
+      ],
+      "test_result": "4 tests passed; mypy, Ruff, source inventory, and strategy-variant inventory checks pass. Synthetic cases verify the frozen 20/40/60 budget, digest, matched samples, and complete result reporting.",
+      "evidence_sha256": "cc3508b8869573fe5d21366d479949de65233fae9f611b410e2e2b84ef6a6844",
+      "blockers": [
+        "No approved development dataset or reviewed economic horizon-search protocol has been evaluated; no horizon performance results are claimed."
       ]
     }
   ]
