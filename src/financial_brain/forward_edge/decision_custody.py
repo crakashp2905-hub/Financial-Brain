@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from financial_brain.forward_edge.custody import CustodyStatus, Receipt, TrustRoot, classify_custody
+from financial_brain.forward_edge.custody import (CustodyStatus, ProviderNotConfigured, Receipt, TimestampProvider,
+                                                  TrustRoot, classify_custody)
 from financial_brain.forward_edge.durable import DurableJournal
 
 _SHA = re.compile(r"^[0-9a-f]{64}$")
@@ -165,6 +166,16 @@ class ManifestJournal:
                 if session_id in self._sessions:
                     raise CustodyError("duplicate durable session outcome")
                 self._sessions[session_id] = outcome
+            elif row.get("t") == "DECISION_RECEIPT":
+                session_id = row.get("session_id")
+                if session_id not in self._manifests or session_id in self._receipts:
+                    raise CustodyError("durable receipt has no unique prior manifest")
+                try:
+                    receipt = Receipt(row["provider_id"], row["key_id"], row["digest_sha256"],
+                                      datetime.fromisoformat(row["anchored_at_utc"]), row["signature_b64"])
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise CustodyError("malformed durable decision receipt") from exc
+                self._receipts[session_id] = receipt
             else:
                 raise CustodyError("unknown durable manifest journal event")
 
@@ -189,7 +200,25 @@ class ManifestJournal:
             raise CustodyError("no manifest for session")
         if session_id in self._receipts:
             raise CustodyError("receipt already attached")
+        if self._durable is not None:
+            self._durable.append({"t": "DECISION_RECEIPT", "session_id": session_id,
+                                  "provider_id": receipt.provider_id, "key_id": receipt.key_id,
+                                  "digest_sha256": receipt.digest_sha256,
+                                  "anchored_at_utc": _utc(receipt.anchored_at_utc, "receipt").isoformat(),
+                                  "signature_b64": receipt.signature_b64})
         self._receipts[session_id] = receipt
+
+    def anchor(self, session_id: str, provider: TimestampProvider,
+               trust_roots: dict[tuple[str, str], TrustRoot]) -> CustodyStatus:
+        """Request an optional signed timestamp; an unconfigured provider leaves LOCAL_ONLY evidence."""
+        if session_id not in self._manifests:
+            raise CustodyError("no manifest for session")
+        try:
+            receipt = provider.anchor(self._manifests[session_id].sha256())
+        except ProviderNotConfigured:
+            return self.status(session_id, trust_roots)
+        self.attach_receipt(session_id, receipt)
+        return self.status(session_id, trust_roots)
 
     def outcome(self, session_id: str, outcome: str) -> None:
         if outcome not in SESSION_OUTCOMES:

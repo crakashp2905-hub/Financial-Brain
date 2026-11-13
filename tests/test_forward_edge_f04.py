@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from financial_brain.forward_edge import decision_custody as D
-from financial_brain.forward_edge.custody import CustodyStatus, Receipt
+from financial_brain.forward_edge.custody import CustodyStatus, Receipt, UnconfiguredProvider
 
 H = "d" * 64
 CHARTER = "c" * 64
@@ -104,6 +104,22 @@ def test_durable_manifest_journal_replays_decisions_and_all_terminal_outcome_cla
     assert counts["SCHEDULED"] == 6
     assert counts["UNRECORDED"] == 0
     assert all(counts[name] == 1 for name in outcomes.values())
+
+
+def test_optional_timestamp_provider_keeps_local_fallback_and_persists_untrusted_receipt(tmp_path: Path) -> None:
+    class FixtureProvider:
+        provider_id = "fixture-tsa"
+
+        def anchor(self, digest_sha256: str) -> Receipt:
+            return Receipt(self.provider_id, "fixture-key", digest_sha256, DECIDE + timedelta(seconds=6), "AAAA")
+
+    path = tmp_path / "optional-anchor.jsonl"
+    journal = D.ManifestJournal(path)
+    journal.record(_manifest(), recorded_at_utc=DECIDE + timedelta(seconds=5))
+    assert journal.anchor("2027-01-04", UnconfiguredProvider(), {}) is CustodyStatus.LOCAL_ONLY
+    assert journal.anchor("2027-01-04", FixtureProvider(), {}) is CustodyStatus.UNVERIFIED
+    recovered = D.ManifestJournal(path)
+    assert recovered.status("2027-01-04", {}) is CustodyStatus.UNVERIFIED
 
 
 def test_status_is_local_only_without_a_receipt_and_verified_only_with_a_pinned_one() -> None:
