@@ -178,11 +178,19 @@ def test_fx_execution_is_never_allowed() -> None:
 # ---- FE-0065 fidelity ----
 
 def test_fidelities_are_reported_separately_and_never_summed_together() -> None:
-    rs = [X.ExecutionReceipt("o1", "SIMULATED_QUOTE", 10, D("100")), X.ExecutionReceipt("o2", "OBSERVED_BROKER", 5, D("100"))]
-    assert X.totals_by_fidelity(rs) == {"SIMULATED_QUOTE": D("1000"), "OBSERVED_BROKER": D("500")}
+    rs = [
+        X.ExecutionReceipt("o1", "SIMULATED_QUOTE", 10, D("100")),
+        X.ExecutionReceipt("o2", "SIMULATED_BAR", 2, D("101")),
+        X.ExecutionReceipt("o3", "OBSERVED_BROKER", 5, D("100")),
+    ]
+    assert X.totals_by_fidelity(rs) == {
+        "SIMULATED_QUOTE": D("1000"), "SIMULATED_BAR": D("202"), "OBSERVED_BROKER": D("500")
+    }
     with pytest.raises(X.MixedFidelity):
         X.combined_total(rs)
-    assert X.combined_total(rs[:1]) == D("1000")
+    assert X.combined_total([rs[0]]) == D("1000")
+    assert X.combined_total([rs[1]]) == D("202")
+    assert X.combined_total([rs[2]]) == D("500")
     with pytest.raises(X.ExecutionError):
         X.ExecutionReceipt("o3", "GUESSED", 1, D("1"))
 

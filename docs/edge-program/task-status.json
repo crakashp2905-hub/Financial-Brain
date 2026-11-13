@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 45,
-  "unrecorded_tasks": 173,
+  "recorded_tasks": 46,
+  "unrecorded_tasks": 172,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -649,6 +649,21 @@
       ],
       "test_result": "Focused intraday paper suite: 17 passed. The decomposition reconciles decision-price signal P&L, quoted entry/exit crossing in execution P&L, statutory fees, and net P&L; spread impact is not charged twice. Ruff and diff checks passed. Synthetic acceptance only.",
       "evidence_sha256": "19416e5142bbcd09fa686a498fbe1a8d68bc154d9a7356382f8444c30f6fa3a9",
+      "blockers": []
+    },
+    {
+      "id": "PE-0079",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/execution.py",
+        "tests/test_forward_edge_f05.py",
+        "docs/edge-program/pe-0079-fidelity-isolation-evidence.json"
+      ],
+      "tests": [
+        "fidelities_are_reported_separately_and_never_summed_together"
+      ],
+      "test_result": "Focused three-tier fidelity isolation test: 1 passed. Bar, observed-quote simulation, and observed broker values remain separate; mixed-tier aggregation raises MixedFidelity. Ruff and diff checks passed.",
+      "evidence_sha256": "2c4c0cae2df076cda4acaf829163f2f1934476a36c6e399c4ac18ca796d594ca",
       "blockers": []
     },
     {
