@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 102,
-  "unrecorded_tasks": 116,
+  "recorded_tasks": 103,
+  "unrecorded_tasks": 115,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2220,6 +2220,26 @@
       "evidence_sha256": "b4cf27d74f9f16407a0e9f6c9ae14f2bc0ad9f9fe566967ef302e40f6c3462a2",
       "blockers": [
         "Current owner/broker rates are not independently verified; the fixture table is not a live tariff claim."
+      ]
+    },
+    {
+      "id": "PE-0096",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/multi_currency.py",
+        "tests/test_multi_currency.py",
+        "docs/edge-program/pe-0096-multicurrency-fx.md",
+        "docs/edge-program/pe-0096-multicurrency-fx-evidence.json"
+      ],
+      "tests": [
+        "test_cross_currency_conversion_balances_each_currency_and_fx_revaluation_is_explicit",
+        "test_fx_fixings_and_conversion_fail_closed_on_bad_or_future_provenance"
+      ],
+      "test_result": "24 focused multi-currency and accounting tests passed; Ruff and mypy passed. The new ledger primitive requires dated source-hashed fixings, balances conversion legs per currency, and posts explicit reporting-currency FX P&L.",
+      "evidence_sha256": "c3aa084b2a73ffe0a29581d87b702b72cd02f0a676c10a5f787355567132a8d2",
+      "blockers": [
+        "Durable PaperAccount lifecycle and replay-auditor integration remains outstanding.",
+        "No authorized FX fixing provider is configured; fixtures are not market-rate evidence."
       ]
     }
   ]
