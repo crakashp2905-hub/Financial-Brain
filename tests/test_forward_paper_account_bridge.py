@@ -1,10 +1,12 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+import json
 
 import pytest
 
 from financial_brain.forward_edge.market_data import NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.paper_account_bridge import (
     ForwardPaperSessionService,
     PaperAccountBridgeError,
@@ -74,6 +76,14 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
     assert durable_fill["execution_evidence"]["fee_schedule_sha256"] == SCHEDULE.sha256
     assert durable_fill["execution_evidence"]["execution_model_sha256"] == first["execution"]["execution_model_sha256"]
     assert first["account_reconciliation"]["data_snapshot_sha256"] == first["execution"]["data_snapshot_sha256"]
+    event_rows = [row for row in DurableJournal(runner_path).records()
+                  if row.get("t") == "CANONICAL_TRADING_EVENT"]
+    payloads = [json.loads(row["payload"]) for row in event_rows]
+    assert [payload["event_type"] for payload in payloads] == [
+        "IntentEvent", "OrderEvent", "OrderEvent", "FillEvent", "MarkEvent"
+    ]
+    assert len({row["event_sha256"] for row in event_rows}) == len(event_rows)
+    assert len(event_rows) == len(first["account_reconciliation"]["canonical_event_sha256s"])
     assert account.ledger.balance("cash:paper-main", "INR") == account.cash
     assert account.ledger.trial_balance_ok()
     assert first["account_reconciliation"]["mark"]["marking_policy"] == "LONG_LIQUIDATION_BID"

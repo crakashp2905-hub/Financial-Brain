@@ -854,10 +854,10 @@
         "test_common_order_event_contract_supports_cash_futures_and_options",
         "test_derivative_contracts_and_event_provenance_fail_closed"
       ],
-      "test_result": "Kernel schema suite: 8 passed; Ruff and mypy passed. Added immutable common event contracts for cash instruments, futures and options with UTC/source/fidelity provenance and lot-aware sizing.",
-      "evidence_sha256": "d1cbad9bbdac42471e8b133122a277cfa2df88cef6f2436299862a8472a82538",
+      "test_result": "18 forward paper bridge/execution and kernel schema tests passed; Ruff and mypy passed. Cash paper reconciliation now persists idempotent canonical intent, order-state, fill and mark events using the shared event contract.",
+      "evidence_sha256": "b35afc7adf21b7304848daf4b2928720d37d950ea2d855e28ca5cd0b1e25ae4c",
       "blockers": [
-        "Existing OMS, futures/options engines and paper books have not all been migrated to emit and consume these shared events; cash PaperAccount remains a separate accounting implementation.",
+        "Existing OMS/accounting and futures/options engines have not all been migrated to consume the shared contract; cash PaperAccount remains authoritative and the new contract is currently mirrored into its forward journal.",
         "Venue-specific contract metadata still requires sourced effective-date rules before executable orders can be accepted."
       ]
     },

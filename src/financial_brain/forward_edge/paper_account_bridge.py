@@ -11,6 +11,18 @@ from collections.abc import Callable, Iterable
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.market_data import NormalizedEvent
 from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner, RunnerError
+from financial_brain.kernel.schemas import (
+    AssetClass,
+    EventSide,
+    FillEvent,
+    InstrumentRef,
+    IntentEvent,
+    MarkEvent,
+    OrderEvent,
+    OrderStatus,
+    TradingEvent,
+    canonical_event_payload,
+)
 from financial_brain.kernel.oms import State
 from financial_brain.kernel.paper_account import PaperAccount, PaperAccountError
 
@@ -88,9 +100,13 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
     if receipt["fee_schedule_sha256"] != account.fee_schedule.sha256:
         raise PaperAccountBridgeError("execution receipt fee hash does not match the paper account schedule")
     quote_hashes = receipt.get("quote_event_sha256s")
+    if (not isinstance(quote_hashes, list)
+            or any(not isinstance(value, str) or len(value) != 64
+                   or any(char not in "0123456789abcdef" for char in value) for value in quote_hashes)):
+        raise PaperAccountBridgeError("execution receipt quote evidence must be a list of SHA-256 hashes")
     snapshot_digest = hashlib.sha256(json.dumps(quote_hashes, sort_keys=True, separators=(",", ":"),
                                                 allow_nan=False).encode("utf-8")).hexdigest()
-    if not isinstance(quote_hashes, list) or snapshot_digest != receipt["data_snapshot_sha256"]:
+    if snapshot_digest != receipt["data_snapshot_sha256"]:
         raise PaperAccountBridgeError("execution receipt data snapshot hash does not match quote evidence")
     if not isinstance(risk, dict) or risk.get("approved") is not True:
         raise PaperAccountBridgeError("paper account sync requires an approved persisted risk verdict")
@@ -143,6 +159,9 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
                 evidence = {key: fill.get(key) for key in evidence_fields}
                 if evidence != {key: receipt[key] for key in evidence_fields}:
                     raise PaperAccountBridgeError("fill provenance does not match its immutable receipt")
+                quote_digest = fill.get("quote_event_sha256")
+                if quote_digest not in quote_hashes:
+                    raise PaperAccountBridgeError("fill quote is absent from the receipt data snapshot")
                 account.record_fill(intent_id, fill_id=str(fill["fill_id"]),
                                     quantity=int(fill["quantity"]), price=Decimal(str(fill["price"])),
                                     filled_on=fill_day, execution_evidence=evidence)
@@ -173,6 +192,10 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
     except PaperAccountError:
         equity = None
         unrealized = None
+    canonical_events = _persist_canonical_events(
+        journal_path=Path(runner_journal_path), config=config, result=result,
+        account_id=account.account_id, mark=mark,
+    )
     row = {
         "t": "ACCOUNT_RECONCILIATION", "session_id": config.session_id,
         "intent_id": intent_id, "account_id": account.account_id,
@@ -190,6 +213,7 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
         "fee_schedule_sha256": receipt["fee_schedule_sha256"],
         "latency_model_sha256": receipt["latency_model_sha256"],
         "data_snapshot_sha256": receipt["data_snapshot_sha256"],
+        "canonical_event_sha256s": sorted(event["event_sha256"] for event in canonical_events),
         "physical_orders": False,
     }
     digest = hashlib.sha256(json.dumps(row, sort_keys=True, separators=(",", ":"),
@@ -206,6 +230,80 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
     if prior.get("reconciliation_sha256") != digest:
         raise RunnerError("paper account reconciliation id is already bound to different accounting facts")
     return prior
+
+
+def _persist_canonical_events(*, journal_path: Path, config: ForwardRunConfig, result: dict,
+                              account_id: str, mark: dict | None) -> list[dict]:
+    """Mirror the cash-paper lifecycle into the shared immutable cross-asset event contract."""
+    decision, receipt = result["decision"], result["execution"]
+    symbol = str(decision["instrument"])
+    if ":" not in symbol:
+        raise PaperAccountBridgeError("canonical cash-paper events require VENUE:SYMBOL identity")
+    venue, ticker = symbol.split(":", 1)
+    instrument = InstrumentRef(venue, ticker, AssetClass.EQUITY)
+    side = EventSide(str(decision["side"]))
+    intent_id = str(result["intent_id"])
+    rows = DurableJournal(journal_path).records()
+    decision_row = next((row for row in rows if row.get("t") == "DECISION"
+                         and row.get("session_id") == config.session_id), None)
+    if decision_row is None:
+        raise PaperAccountBridgeError("canonical event export is missing its durable decision timestamp")
+    decided_at = datetime.fromisoformat(decision_row["decision_at_utc"])
+    receipt_sha = hashlib.sha256(json.dumps(receipt, sort_keys=True, separators=(",", ":"),
+                                           allow_nan=False).encode("utf-8")).hexdigest()
+    events: list[TradingEvent] = [IntentEvent(
+        event_id=f"{intent_id}:intent", order_id=intent_id, account_id=account_id,
+        strategy_id=config.strategy_sha256, instrument=instrument, side=side,
+        quantity=int(decision["quantity"]), occurred_at=decided_at,
+        source_sha256=config.strategy_sha256,
+    ), OrderEvent(
+        event_id=f"{intent_id}:state:ACCEPTED", order_id=intent_id,
+        status=OrderStatus.ACCEPTED, occurred_at=decided_at, source_sha256=receipt_sha,
+    )]
+    final_status = receipt.get("status")
+    states: tuple[OrderStatus, ...]
+    if final_status == "FILLED":
+        states = (OrderStatus.FILLED,)
+    elif final_status == "PARTIAL":
+        states = (OrderStatus.PARTIAL, OrderStatus.CANCELED)
+    else:
+        states = (OrderStatus.REJECTED,)
+    for status in states:
+        events.append(OrderEvent(
+            event_id=f"{intent_id}:state:{status.value}", order_id=intent_id,
+            status=status, occurred_at=decided_at, source_sha256=receipt_sha,
+            reason=str(receipt.get("reason") or "SIMULATED_OUTCOME"),
+        ))
+    for fill in receipt.get("fills", []):
+        events.append(FillEvent(
+            event_id=str(fill["fill_id"]), order_id=intent_id, instrument=instrument, side=side,
+            quantity=int(fill["quantity"]), price=Decimal(str(fill["price"])),
+            occurred_at=datetime.fromisoformat(str(fill["quote_available_utc"])),
+            fidelity=str(receipt["fidelity"]), source_sha256=str(fill["quote_event_sha256"]),
+        ))
+    if mark is not None:
+        events.append(MarkEvent(
+            event_id=f"{intent_id}:mark", instrument=instrument, price=Decimal(str(mark["price"])),
+            occurred_at=datetime.fromisoformat(str(mark["observed_at_utc"])),
+            fidelity="SIMULATED_QUOTE", source_sha256=str(mark["source_event_sha256"]),
+        ))
+    journal = DurableJournal(journal_path)
+    prior = {row.get("event_id"): row for row in journal.records()
+             if row.get("t") == "CANONICAL_TRADING_EVENT" and row.get("session_id") == config.session_id}
+    additions, persisted = [], []
+    for event in events:
+        payload = canonical_event_payload(event).decode("utf-8")
+        digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        row = {"t": "CANONICAL_TRADING_EVENT", "session_id": config.session_id,
+               "event_id": event.event_id, "event_sha256": digest, "payload": payload}
+        previous = prior.get(event.event_id)
+        if previous is not None and previous != row:
+            raise PaperAccountBridgeError("canonical event id is already bound to different event content")
+        if previous is None:
+            additions.append(row)
+        persisted.append(row)
+    journal.append_many(additions)
+    return persisted
 
 
 def _mark_latest_after_fill(account: PaperAccount, symbol: str, intent_id: str,
