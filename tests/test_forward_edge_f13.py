@@ -165,7 +165,19 @@ def test_operations_guide_has_the_required_sections_and_commands() -> None:
 
 # ---- FE-0152 release labels ----
 
-FULL = {"tests_green": True, "protected_records_intact": True, "physical_orders_disabled": True}
+FULL = {
+    "tests_green": True,
+    "protected_records_intact": True,
+    "physical_orders_disabled": True,
+    "lint_green": True,
+    "types_green": True,
+    "migrations_green": True,
+    "coverage_green": True,
+    "ubuntu_green": True,
+    "windows_green": True,
+    "skip_count_reported": True,
+    "skip_count": 1,
+}
 
 
 def test_label_never_exceeds_the_evidence() -> None:
@@ -185,6 +197,28 @@ def test_each_label_needs_everything_below_it() -> None:
     assert release.highest_label(br) is ReleaseLabel.BROKER_READY
     assert release.highest_label({**br, "owner_live_approval_valid": True}) is ReleaseLabel.LIVE_APPROVED
     assert release.highest_label({**FULL, "tests_green": False}) is None
+
+
+def test_release_gate_fails_closed_for_each_ci_check_or_missing_skip_summary() -> None:
+    assert release.ci_quality_gate(FULL) is True
+    for key in release.REQUIRED_CI_CHECKS:
+        assert release.highest_label({**FULL, key: False}) is None
+    assert release.highest_label({key: value for key, value in FULL.items()
+                                  if key != "skip_count"}) is None
+    assert release.highest_label({**FULL, "skip_count_reported": False}) is None
+    assert release.highest_label({**FULL, "skip_count": -1}) is None
+    assert release.highest_label({**FULL, "skip_count": True}) is None
+
+
+def test_ci_workflow_exposes_platform_checks_and_test_skip_summary() -> None:
+    workflow = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "os: [ubuntu-latest, windows-latest]" in workflow
+    assert "name: Lint" in workflow and "python -m ruff check src tests" in workflow
+    assert "Type check" in workflow and "mypy" in workflow
+    assert "Schema migrations" in workflow and "tests/test_migrations.py" in workflow
+    assert "Critical-module coverage" in workflow
+    assert "Test suite (with skip summary)" in workflow
+    assert "python -m coverage run --source=financial_brain -m pytest -q -ra" in workflow
 
 
 def test_this_repository_today_can_claim_at_most_paper_ready() -> None:

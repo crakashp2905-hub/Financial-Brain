@@ -81,6 +81,15 @@ def test_q4_2026_protected_budget_is_exhausted_at_13_of_13() -> None:
     assert (status.spent, status.budget, status.exhausted) == (13, 13, True)
 
 
+def test_all_13_q4_trials_remain_failed_with_original_reasons() -> None:
+    rows = trials.load_rows(REPO / trials.LEDGER_REL)
+    q4 = [row for row in rows if row.get("kind") == "trial"
+          and date(2026, 10, 1) <= date.fromisoformat(row["date"][:10]) <= date(2026, 12, 31)]
+    assert len(q4) == 13
+    assert all(row.get("verdict") == "FAIL" for row in q4)
+    assert all(isinstance(row.get("failed"), list) and row["failed"] for row in q4)
+
+
 def test_protected_records_match_pinned_digests() -> None:
     assert trials.verify_pins(REPO) == []
 
