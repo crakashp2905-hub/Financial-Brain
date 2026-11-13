@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 43,
-  "unrecorded_tasks": 175,
+  "recorded_tasks": 44,
+  "unrecorded_tasks": 174,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -611,6 +611,27 @@
       "blockers": [
         "No independently verified data-provider retention-rights record is available; the archive checks only caller-supplied attestation fields.",
         "No authorized live-market capture has been observed; real session evidence requires owner login and an eligible market session."
+      ]
+    },
+    {
+      "id": "PE-0077",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/execution.py",
+        "tests/test_forward_edge_f05.py",
+        "docs/edge-program/indian-cash-cost-schedule-contract.md",
+        "docs/edge-program/pe-0077-indian-cost-model-evidence.json"
+      ],
+      "tests": [
+        "test_cost_rule_is_selected_by_effective_date_and_side",
+        "test_total_is_rounded_once_from_unrounded_parts",
+        "test_cost_rule_models_all_effective_dated_cash_equity_components_and_hashes_table",
+        "test_cost_rules_reject_invalid_rates_and_ambiguous_effective_dates"
+      ],
+      "test_result": "CostRule now has configurable effective-dated Indian cash-equity components (brokerage, exchange, STT, stamp duty, GST, SEBI, IPFT and clearing), brokerage bounds, and a schedule content hash. Synthetic round-trip calculation and existing cost tests: 22 passed; Ruff, mypy, diff checks pass. Current source-verified rates and PaperAccount bridge integration remain absent.",
+      "evidence_sha256": "276b4f90db81a8e356a53df85eb2c31036dd522277f24b839127ca842765ef0e",
+      "blockers": [
+        "Source-verified rate tables must be supplied and integrated into PaperAccount before rupee-level real-cost reconciliation can be claimed."
       ]
     },
     {

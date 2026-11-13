@@ -14,6 +14,8 @@ Rules enforced:
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN, Decimal
@@ -182,11 +184,54 @@ class CostRule:
     stt_bps_sell: Decimal
     stamp_bps_buy: Decimal
     gst_fraction: Decimal  # applied to brokerage + exchange charges
+    sebi_bps: Decimal = Decimal("0")
+    ipft_bps: Decimal = Decimal("0")
+    clearing_bps: Decimal = Decimal("0")
+    brokerage_min_inr: Decimal = Decimal("0")
+    brokerage_max_inr: Decimal | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.effective_from, date) or isinstance(self.effective_from, datetime):
+            raise ExecutionError("cost rule needs an effective calendar date")
+        rates = (self.brokerage_bps, self.exchange_bps, self.stt_bps_buy, self.stt_bps_sell,
+                 self.stamp_bps_buy, self.gst_fraction, self.sebi_bps, self.ipft_bps,
+                 self.clearing_bps, self.brokerage_min_inr)
+        if any(not isinstance(value, Decimal) or not value.is_finite() or value < 0 for value in rates):
+            raise ExecutionError("cost rates and brokerage floor must be finite nonnegative Decimals")
+        if self.gst_fraction > 1:
+            raise ExecutionError("GST fraction cannot exceed 100 percent")
+        if self.brokerage_max_inr is not None:
+            if (not isinstance(self.brokerage_max_inr, Decimal) or not self.brokerage_max_inr.is_finite()
+                    or self.brokerage_max_inr < 0 or self.brokerage_min_inr > self.brokerage_max_inr):
+                raise ExecutionError("brokerage cap must be finite and at least the brokerage floor")
 
 
 @dataclass(frozen=True)
 class CostSchedule:
     rules: dict[str, tuple[CostRule, ...]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.rules or any(not isinstance(segment, str) or not segment.strip() or not rules
+                                 for segment, rules in self.rules.items()):
+            raise ExecutionError("cost schedule needs nonempty named segment rules")
+        for rules in self.rules.values():
+            if len({rule.effective_from for rule in rules}) != len(rules):
+                raise ExecutionError("cost schedule has duplicate effective dates")
+
+    @property
+    def sha256(self) -> str:
+        """Content identity for the complete effective-dated table supplied by the owner."""
+        rows = []
+        for segment, rules in sorted(self.rules.items()):
+            for rule in sorted(rules, key=lambda item: item.effective_from):
+                rows.append({"segment": segment, "effective_from": rule.effective_from.isoformat(),
+                             **{name: (format(getattr(rule, name), "f")
+                                       if getattr(rule, name) is not None else None)
+                                for name in ("brokerage_bps", "exchange_bps", "stt_bps_buy", "stt_bps_sell",
+                                             "stamp_bps_buy", "gst_fraction", "sebi_bps", "ipft_bps",
+                                             "clearing_bps", "brokerage_min_inr", "brokerage_max_inr")}})
+        encoded = json.dumps(rows, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        return hashlib.sha256(encoded).hexdigest()
 
     def rule_for(self, segment: str, day: date) -> CostRule:
         eligible = [r for r in self.rules.get(segment, ()) if r.effective_from <= day]
@@ -194,18 +239,32 @@ class CostSchedule:
             raise ExecutionError(f"no cost rule effective for {segment} on {day}")
         return max(eligible, key=lambda r: r.effective_from)
 
-    def charges(self, segment: str, side: str, notional: Decimal, day: date) -> dict[str, Decimal]:
+    def charges(self, segment: str, side: str, notional: Decimal, day: date) -> dict[str, Decimal | str]:
+        if side not in {"BUY", "SELL"}:
+            raise ExecutionError("cost side must be BUY or SELL")
+        if not isinstance(notional, Decimal) or not notional.is_finite() or notional <= 0:
+            raise ExecutionError("cost notional must be a positive finite Decimal")
         r = self.rule_for(segment, day)
         bps = Decimal(10_000)
         brokerage = notional * r.brokerage_bps / bps
+        brokerage = max(brokerage, r.brokerage_min_inr)
+        if r.brokerage_max_inr is not None:
+            brokerage = min(brokerage, r.brokerage_max_inr)
         exchange = notional * r.exchange_bps / bps
+        sebi = notional * r.sebi_bps / bps
+        ipft = notional * r.ipft_bps / bps
+        clearing = notional * r.clearing_bps / bps
         stt = notional * (r.stt_bps_buy if side == "BUY" else r.stt_bps_sell) / bps
         stamp = notional * r.stamp_bps_buy / bps if side == "BUY" else Decimal(0)
-        gst = (brokerage + exchange) * r.gst_fraction
-        total = brokerage + exchange + stt + stamp + gst
-        out = {"brokerage": brokerage, "exchange": exchange, "stt": stt, "stamp": stamp, "gst": gst}
-        out = {k: v.quantize(CENT, rounding=ROUND_HALF_EVEN) for k, v in out.items()}
+        gst = (brokerage + exchange + sebi + ipft + clearing) * r.gst_fraction
+        total = brokerage + exchange + sebi + ipft + clearing + stt + stamp + gst
+        parts = {"brokerage": brokerage, "exchange": exchange, "sebi": sebi, "ipft": ipft,
+                 "clearing": clearing, "stt": stt, "stamp": stamp, "gst": gst}
+        out: dict[str, Decimal | str] = {
+            key: value.quantize(CENT, rounding=ROUND_HALF_EVEN) for key, value in parts.items()
+        }
         out["total"] = total.quantize(CENT, rounding=ROUND_HALF_EVEN)  # rounded once from unrounded parts
+        out["schedule_sha256"] = self.sha256
         return out
 
 

@@ -121,6 +121,34 @@ def test_total_is_rounded_once_from_unrounded_parts() -> None:
     assert c["brokerage"] + c["exchange"] == D("0.06")  # rounding each part first would give a different total
 
 
+def test_cost_rule_models_all_effective_dated_cash_equity_components_and_hashes_table() -> None:
+    rule = X.CostRule(
+        date(2026, 11, 1), D("3"), D("0.3"), D("1"), D("1.25"), D("0.1"), D("0.18"),
+        sebi_bps=D("0.01"), ipft_bps=D("0.005"), clearing_bps=D("0.02"),
+        brokerage_max_inr=D("20"),
+    )
+    schedule = X.CostSchedule({"NSE_CASH": (rule,)})
+    buy = schedule.charges("NSE_CASH", "BUY", D("100000"), date(2026, 11, 12))
+    sell = schedule.charges("NSE_CASH", "SELL", D("100000"), date(2026, 11, 12))
+    assert buy["brokerage"] == D("20.00")
+    assert buy["sebi"] == D("0.10")
+    assert buy["ipft"] == D("0.05")
+    assert buy["clearing"] == D("0.20")
+    assert buy["stt"] == D("10.00") and buy["stamp"] == D("1.00")
+    assert sell["stt"] == D("12.50") and sell["stamp"] == D("0.00")
+    assert buy["total"] == D("38.55") and sell["total"] == D("40.05")
+    assert buy["total"] + sell["total"] == D("78.60")
+    assert buy["schedule_sha256"] == schedule.sha256
+
+
+def test_cost_rules_reject_invalid_rates_and_ambiguous_effective_dates() -> None:
+    with pytest.raises(X.ExecutionError, match="finite nonnegative"):
+        X.CostRule(date(2026, 1, 1), D("-1"), D("0"), D("0"), D("0"), D("0"), D("0"))
+    rule = X.CostRule(date(2026, 1, 1), D("1"), D("1"), D("0"), D("0"), D("0"), D("0"))
+    with pytest.raises(X.ExecutionError, match="duplicate effective dates"):
+        X.CostSchedule({"S": (rule, rule)})
+
+
 # ---- FE-0061 stress ----
 
 def test_stress_reports_which_scenarios_stay_positive() -> None:
