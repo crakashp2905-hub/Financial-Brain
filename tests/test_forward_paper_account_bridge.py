@@ -31,7 +31,7 @@ def _config():
     )
 
 
-def _event(at, bid="99", ask="100", bid_qty=20, ask_qty=20):
+def _event(at, bid="99.95", ask="100", bid_qty=20, ask_qty=20):
     return NormalizedEvent(
         "QUOTE", "NSE:INFY", at - timedelta(milliseconds=2), at - timedelta(milliseconds=1), at,
         tuple(sorted({"bid_price": bid, "ask_price": ask,
@@ -52,7 +52,7 @@ def _service(tmp_path):
 def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently(tmp_path):
     service, config, account, runner_path, account_path = _service(tmp_path)
     events = [_event(DECISION_AT + timedelta(seconds=1)),
-              _event(DECISION_AT + timedelta(seconds=2), bid="102", ask="103")]
+              _event(DECISION_AT + timedelta(seconds=2), bid="102", ask="102.05")]
     simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
     preflight_calls = []
     kwargs = dict(
@@ -108,6 +108,26 @@ def test_partial_receipt_releases_unfilled_reservation_after_cancel(tmp_path):
     assert account.position("NSE:INFY").quantity == 1
     assert account.oms.order(result["intent_id"]).state is State.CANCELED
     assert account.oms.order(result["intent_id"]).reserved == 0
+
+
+def test_quote_quality_no_trade_reconciles_as_canceled_without_cash_or_position_changes(tmp_path):
+    service, config, account, _, _ = _service(tmp_path)
+    locked = _event(DECISION_AT + timedelta(seconds=1), bid="100", ask="100")
+
+    result = service.run(
+        config, [locked],
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _events: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE),
+        decision_at=DECISION_AT,
+    )
+
+    assert result["execution"]["status"] == "NO_TRADE"
+    assert result["execution"]["quote_quality_rejections"][0]["reason_codes"] == ["LOCKED_BOOK"]
+    assert result["account_reconciliation"]["order_state"] == "CANCELED"
+    assert account.cash == Decimal("10000")
+    assert account.position("NSE:INFY").quantity == 0
 
 
 def test_buy_sync_requires_explicit_risk_cash_reserve(tmp_path):

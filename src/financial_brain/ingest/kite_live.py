@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, time, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -154,8 +155,13 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
         sells = depth.get("sell", []) if isinstance(depth, dict) else []
         best_bid = buys[0] if buys and isinstance(buys[0], dict) else {}
         best_ask = sells[0] if sells and isinstance(sells[0], dict) else {}
-        payload.append(("quote_fidelity", "EXECUTABLE" if _valid_level(best_bid) and _valid_level(best_ask)
-                        else "LTP_ONLY"))
+        if not _valid_level(best_bid) or not _valid_level(best_ask):
+            quote_fidelity = "LTP_ONLY"
+        else:
+            bid_price, ask_price = Decimal(str(best_bid["price"])), Decimal(str(best_ask["price"]))
+            quote_fidelity = ("CROSSED_BOOK" if bid_price > ask_price else
+                              "LOCKED_BOOK" if bid_price == ask_price else "EXECUTABLE")
+        payload.append(("quote_fidelity", quote_fidelity))
         for side, level in (("bid", best_bid), ("ask", best_ask)):
             if _valid_level(level):
                 payload.extend(((f"{side}_price", str(level["price"])),
@@ -165,6 +171,13 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
             ohlc = quote.get("ohlc")
             value = quote.get(source) if "." not in source else (
                 ohlc.get(source.split(".")[1]) if isinstance(ohlc, dict) else None)
+            if value is not None:
+                payload.append((key_name, str(value)))
+        for key_name, source in (("circuit_lower", "lower_circuit_limit"),
+                                 ("circuit_upper", "upper_circuit_limit"),
+                                 ("auction_active", "auction_active"),
+                                 ("market_phase", "market_phase")):
+            value = quote.get(source)
             if value is not None:
                 payload.append((key_name, str(value)))
         try:
@@ -259,8 +272,9 @@ def historical_bar_events(symbol: str, instrument_token: int, start, as_of, *, f
 
 def _valid_level(level: dict) -> bool:
     try:
-        return float(level["price"]) > 0 and int(level["quantity"]) > 0
-    except (KeyError, TypeError, ValueError):
+        price, quantity = Decimal(str(level["price"])), int(level["quantity"])
+        return price.is_finite() and price > 0 and quantity > 0
+    except (KeyError, TypeError, ValueError, InvalidOperation):
         return False
 
 

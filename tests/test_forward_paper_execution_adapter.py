@@ -29,7 +29,7 @@ def _decision(**overrides):
 
 def test_quote_simulator_uses_first_quote_after_latency_and_caps_visible_size():
     early = _quote(DECISION_AT + timedelta(milliseconds=10), ask="90", ask_qty=50)
-    executable = _quote(DECISION_AT + timedelta(milliseconds=25), ask="101.02", ask_qty=3)
+    executable = _quote(DECISION_AT + timedelta(milliseconds=25), bid="100.9", ask="101.02", ask_qty=3)
     adapter = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")},
                                        latency=timedelta(milliseconds=20), **MODEL_EVIDENCE)
 
@@ -57,9 +57,46 @@ def test_quote_simulator_refuses_ltp_only_and_invalid_quotes():
 
     receipt = adapter(_decision(), "intent-2", [ltp_only, crossed])
 
-    assert receipt["status"] == "MISSED"
+    assert receipt["status"] == "NO_TRADE"
+    assert receipt["reason"] == "QUOTE_QUALITY_BLOCK"
     assert receipt["fills"] == []
-    assert "simulated_execution_at_utc" not in receipt
+    assert receipt["simulated_execution_at_utc"] == DECISION_AT.isoformat()
+    assert len(receipt["quote_quality_rejections"]) == 2
+
+
+def test_quote_simulator_blocks_circuit_auction_and_freeze_violations():
+    event = NormalizedEvent(
+        "QUOTE", "NSE:INFY", DECISION_AT - timedelta(milliseconds=2),
+        DECISION_AT - timedelta(milliseconds=1), DECISION_AT,
+        tuple(sorted({"bid_price": "99.9", "ask_price": "100.1", "bid_qty": "20",
+                      "ask_qty": "20", "circuit_hit": "true", "market_phase": "AUCTION",
+                      "freeze_qty": "2"}.items())),
+    )
+    adapter = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+
+    receipt = adapter(_decision(quantity=5), "intent-quality", [event])
+
+    assert receipt["status"] == "NO_TRADE"
+    assert receipt["reason"] == "QUOTE_QUALITY_BLOCK"
+    assert receipt["fills"] == []
+    assert receipt["quote_quality_rejections"][0]["reason_codes"] == [
+        "AUCTION_ACTIVE", "CIRCUIT_OR_HALT", "FREEZE_LIMIT"
+    ]
+    assert receipt["fidelity"] == "SIMULATED_QUOTE"
+
+
+def test_execution_model_hash_freezes_configured_quote_quality_limits():
+    event = _quote(DECISION_AT + timedelta(milliseconds=10), bid="100", ask="101")
+    strict = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+    configured = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")},
+                                          max_spread_bps=150, **MODEL_EVIDENCE)
+
+    strict_receipt = strict(_decision(quantity=2), "intent-strict", [event])
+    configured_receipt = configured(_decision(quantity=2), "intent-configured", [event])
+
+    assert strict_receipt["status"] == "NO_TRADE"
+    assert configured_receipt["status"] == "FILLED"
+    assert strict_receipt["execution_model_sha256"] != configured_receipt["execution_model_sha256"]
 
 
 def test_quote_simulator_abstains_when_feed_health_fails():

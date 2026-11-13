@@ -169,8 +169,13 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
             if order.remaining and order.state is State.PARTIAL:
                 account.move(intent_id, State.CANCEL_PENDING)
                 account.move(intent_id, State.CANCELED)
-        elif order.state in {State.CREATED, State.SUBMITTED, State.ACCEPTED}:
+        elif order.state in {State.CREATED, State.SUBMITTED}:
             account.move(intent_id, State.REJECTED)
+        elif order.state is State.ACCEPTED:
+            # A simulated no-fill ends as a cancellation; the OMS intentionally has
+            # no ACCEPTED -> REJECTED transition because rejection precedes acceptance.
+            account.move(intent_id, State.CANCEL_PENDING)
+            account.move(intent_id, State.CANCELED)
     except (PaperAccountError, ValueError, KeyError, InvalidOperation) as exc:
         if isinstance(exc, PaperAccountBridgeError):
             raise
@@ -266,8 +271,10 @@ def _persist_canonical_events(*, journal_path: Path, config: ForwardRunConfig, r
         states = (OrderStatus.FILLED,)
     elif final_status == "PARTIAL":
         states = (OrderStatus.PARTIAL, OrderStatus.CANCELED)
-    else:
+    elif final_status == "REJECTED":
         states = (OrderStatus.REJECTED,)
+    else:
+        states = (OrderStatus.CANCEL_PENDING, OrderStatus.CANCELED)
     for status in states:
         events.append(OrderEvent(
             event_id=f"{intent_id}:state:{status.value}", order_id=intent_id,

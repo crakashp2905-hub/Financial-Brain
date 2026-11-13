@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 65,
-  "unrecorded_tasks": 153,
+  "recorded_tasks": 66,
+  "unrecorded_tasks": 152,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1340,6 +1340,36 @@
       "blockers": [
         "The existing live intraday caller does not yet provide a source-specific maximum-age policy, so old Kite timestamps can still be admitted when the optional tolerance is omitted.",
         "The provider timestamp's exact semantics can vary between last trade time and quote/depth capture time; policy must account for feed type before this becomes a universal fill gate."
+      ]
+    },
+    {
+      "id": "PE-0040",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "docs/edge-program/quote-quality-contract.md",
+        "docs/edge-program/pe-0040-quote-quality-evidence.json",
+        "tests/test_forward_edge_f03.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_kite_forward_events.py"
+      ],
+      "tests": [
+        "test_quote_quality_gate_rejects_invalid_books_and_market_states",
+        "test_execution_model_hash_freezes_configured_quote_quality_limits",
+        "test_kite_circuit_limits_are_preserved_and_block_touching_band",
+        "test_no_trade_due_to_quote_quality_reconciles_as_canceled"
+      ],
+      "test_result": "102 focused tests passed; Ruff and mypy passed on changed Python modules. Invalid quote evidence blocks simulated execution and retains reason codes. Auction-source and effective instrument freeze-rule integration remain incomplete; see PE-0040 evidence.",
+      "evidence_sha256": "1395272a864b41004ba1d006a0eac8072c0299d0444c82e9c46f1a7b4a84892c",
+      "blockers": [
+        "Kite REST quote snapshots do not provide authoritative auction phase; a trusted session/auction state source must be connected.",
+        "Feed-specific quote age policy must account for Kite timestamp semantics; the default threshold is not empirically attested.",
+        "Effective-dated instrument freeze limits are configurable in the simulator but are not automatically resolved for every instrument.",
+        "Simulated top-of-book fills do not model queue position or prove live execution quality."
       ]
     }
   ]

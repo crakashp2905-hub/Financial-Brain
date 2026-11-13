@@ -3,7 +3,9 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from financial_brain.forward_edge.market_data import DataError, decision_visible, executable_quote
+from financial_brain.forward_edge.market_data import (
+    DataError, decision_visible, executable_quote, quote_quality_reasons,
+)
 from financial_brain.ingest.kite_live import forward_events
 
 
@@ -99,7 +101,30 @@ def test_crossed_or_empty_depth_is_not_executable():
         "NSE:INFY": {"timestamp": "2026-11-12 09:29:59", "depth": {
             "buy": [{"price": 101, "quantity": 5}], "sell": [{"price": 100, "quantity": 5}]}}
     }, received_at=RECEIPT)
-    assert executable_quote(event) == (False, "INVALID_OR_EMPTY_BOOK")
+    assert dict(event.payload)["quote_fidelity"] == "CROSSED_BOOK"
+    assert executable_quote(event) == (False, "CROSSED_BOOK")
+
+
+def test_locked_book_is_not_fill_capable():
+    event, = forward_events(["INFY"], quote_fn=lambda *_: {
+        "NSE:INFY": {"timestamp": "2026-11-12 09:29:59", "depth": {
+            "buy": [{"price": 100, "quantity": 5}], "sell": [{"price": 100, "quantity": 5}]}}
+    }, received_at=RECEIPT)
+    assert dict(event.payload)["quote_fidelity"] == "LOCKED_BOOK"
+    assert executable_quote(event) == (False, "LOCKED_BOOK")
+
+
+def test_kite_circuit_limits_are_preserved_and_block_touching_band():
+    event, = forward_events(["INFY"], quote_fn=lambda *_: {
+        "NSE:INFY": {"timestamp": "2026-11-12 09:29:59", "lower_circuit_limit": 90,
+                     "upper_circuit_limit": 100.1, "depth": {
+                         "buy": [{"price": 99.9, "quantity": 5}],
+                         "sell": [{"price": 100.1, "quantity": 5}]}}
+    }, received_at=RECEIPT)
+    payload = dict(event.payload)
+    assert payload["circuit_lower"] == "90"
+    assert payload["circuit_upper"] == "100.1"
+    assert quote_quality_reasons(event) == ["CIRCUIT_BAND"]
 
 
 def test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows():
