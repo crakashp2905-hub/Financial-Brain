@@ -118,6 +118,9 @@ class Instrument:
         Research callers may still use :meth:`rule_on` for historical tick conversion. This method is the stricter
         order gate and refuses incomplete owner-supplied Indian-market instrument, margin, session, or source rules.
         """
+        tradable, reason = self.tradable(day, Phase.CONTINUOUS)
+        if not tradable:
+            raise InstrumentError(f"instrument is not tradable: {reason}")
         rule = self.rule_on(day)
         required = {
             "exchange": rule.exchange,

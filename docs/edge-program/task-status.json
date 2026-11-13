@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 60,
-  "unrecorded_tasks": 158,
+  "recorded_tasks": 61,
+  "unrecorded_tasks": 157,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1231,6 +1231,24 @@
       "blockers": [
         "CLI recovery is demonstrated for no-trade sessions; a strategy-generated fill plus OMS cash/position reconciliation has not yet been connected end to end."
       ]
+    },
+    {
+      "id": "PE-0033",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/instruments.py",
+        "tests/test_kernel_instruments.py",
+        "docs/edge-program/pe-0033-effective-instrument-order-rules-evidence.json"
+      ],
+      "tests": [
+        "test_rule_lookup_is_effective_dated",
+        "test_execution_order_requires_complete_effective_source_specific_rule_set",
+        "test_execution_order_refuses_source_rule_violations",
+        "test_execution_order_rejects_suspended_or_expired_effective_instrument"
+      ],
+      "test_result": "23 passed (exit code 0); Ruff and mypy on the effective instrument-rule module passed. Historical tick/lot/freeze/session lookup and tradability validation refuse violations without synthetic repair.",
+      "evidence_sha256": "f97c4d672fbd563cbdcb767234055d9731cdde14e5049d25261d9103ea666e08",
+      "blockers": []
     }
   ]
 }

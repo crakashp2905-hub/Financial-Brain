@@ -132,3 +132,26 @@ def test_execution_order_refuses_source_rule_violations(overrides, reason):
     args.update(overrides)
     with pytest.raises(InstrumentError, match=reason):
         instrument.validate_order(**args)
+
+
+def test_execution_order_rejects_suspended_or_expired_effective_instrument():
+    rule = RuleVersion(
+        date(2026, 1, 1), tick=Decimal("0.05"), lot=25,
+        max_freeze_quantity=1800, max_order_quantity=1500,
+        exchange="NSE", margin_rule_id="MARGIN-SRC-1", session_rule_id="SESSION-SRC-1",
+        session_open=time(9, 15), session_close=time(15, 30),
+        source_id="owner-rules-v1", source_sha256="c" * 64,
+    )
+    args = {"exchange": "NSE", "quantity": 100, "price": Decimal("1500.05"),
+            "local_time": time(10, 0)}
+    suspended = Instrument(
+        InstrumentId("NSE", "EQUITY", "SUSP"), [rule],
+        status_history=[(date(2026, 1, 1), Status.ACTIVE), (date(2026, 9, 1), Status.SUSPENDED)],
+    )
+    with pytest.raises(InstrumentError, match="STATUS_SUSPENDED"):
+        suspended.validate_order(day=date(2026, 9, 2), **args)
+
+    expired = Instrument(InstrumentId("NSE", "FUTURE", "ABC26NOV"), [rule],
+                         expiry=date(2026, 11, 26))
+    with pytest.raises(InstrumentError, match="EXPIRED_BY_DATE"):
+        expired.validate_order(day=date(2026, 11, 27), **args)
