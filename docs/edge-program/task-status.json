@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 42,
-  "unrecorded_tasks": 176,
+  "recorded_tasks": 43,
+  "unrecorded_tasks": 175,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -202,7 +202,7 @@
         "test_inventory_covers_all_python_sources_without_inventing_owners",
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
       ],
-      "test_result": "Committed inventory captures 549 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 542 unassessed and 299 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
+      "test_result": "Committed inventory captures 550 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 543 unassessed and 300 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
       "evidence_sha256": "1b34f279de2e17a297690cccfbafb65edaf0fb67d5fa34f480f059ae8145d40c",
       "blockers": [
         "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state"
@@ -516,6 +516,27 @@
       ],
       "test_result": "An append-only date ledger pins calendar version, tradability and settlement deadline. Holidays become immutable NO_TRADE; special-session overrides remain eligible; completed and no-trade runner outcomes are recorded; feed loss or premature stop records INCOMPLETE; overdue missing outcomes are swept to INCOMPLETE. Cross-journal recovery is idempotent. Combined session-date/clock/runner/Kite/intraday suite: 59 passed; Ruff and mypy passed.",
       "evidence_sha256": "91455549290280db7d5153bdec83e9e02212d5e25956c972b21bdcfc75a0cb56",
+      "blockers": []
+    },
+    {
+      "id": "PE-0029",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/session_checkpoints.py",
+        "src/financial_brain/forward_edge/durable.py",
+        "tests/test_session_checkpoints.py",
+        "docs/edge-program/session-checkpoint-contract.md",
+        "docs/edge-program/pe-0029-checkpoint-evidence.json"
+      ],
+      "tests": [
+        "test_atomic_start_end_checkpoint_pair_tracks_both_journal_prefixes",
+        "test_checkpoint_requires_quiesced_writers_and_preserves_torn_source",
+        "test_checkpoint_verification_rejects_changed_journal_prefix",
+        "test_checkpoint_phase_retry_returns_original_snapshot_after_restart",
+        "test_checkpoint_journal_cannot_alias_source_journal"
+      ],
+      "test_result": "Atomic start/end checkpoints bind both event and account journal prefixes; restart retries preserve the original checkpoint; torn/corrupt sources are refused without mutating source; journal paths must be distinct. Five focused tests pass, with Ruff, mypy, and diff checks passing. Caller must quiesce both source writers.",
+      "evidence_sha256": "366969886ef6eab5c64fb5272f02191b7ee41b5a98d39062bfa0d725416851c5",
       "blockers": []
     },
     {
