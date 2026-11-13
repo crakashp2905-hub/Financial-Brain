@@ -54,6 +54,14 @@ ALLOWED: dict[Status, frozenset[Status]] = {
 PAPER_CAPABLE = frozenset({Status.PAPER_ELIGIBLE, Status.FROZEN_CHALLENGER, Status.VERIFIED})
 DIRECTIONS = frozenset({"LONG", "SHORT", "LONG_SHORT"})
 BENCHMARK_KINDS = frozenset({"FLAT_CASH", "SECTOR_MATCHED", "INDEX", "EQUAL_RISK", "MOMENTUM_MATCHED"})
+MONITORING_FAMILY_PREFIXES = ("orb", "opening_range", "gap", "chart_pattern", "candlestick", "candle_pattern",
+                              "directional_chart_pattern")
+
+
+def is_monitoring_family(family: str) -> bool:
+    """These families are discovery/monitoring only until a separately governed study clears them."""
+    key = re.sub(r"[^a-z0-9]+", "_", family.casefold()).strip("_")
+    return any(key == prefix or key.startswith(prefix + "_") for prefix in MONITORING_FAMILY_PREFIXES)
 
 
 @dataclass(frozen=True)
@@ -101,6 +109,8 @@ class StrategySpec:
             raise RegistryError("benchmark id cannot be blank")
         if self.status in PAPER_CAPABLE and not self.benchmark_id:
             raise RegistryError("paper-capable strategies need a frozen benchmark")
+        if self.status in PAPER_CAPABLE and is_monitoring_family(self.family):
+            raise RegistryError("ORB/gap/directional/chart-pattern families are monitoring-only and cannot be paper eligible")
 
     @property
     def can_place_paper_intents(self) -> bool:
@@ -154,6 +164,8 @@ class Registry:
         spec = self._specs[strategy_id]
         if new not in ALLOWED[spec.status]:
             raise RegistryError(f"{spec.status.value} -> {new.value} is not allowed for {strategy_id}")
+        if new in PAPER_CAPABLE and is_monitoring_family(spec.family):
+            raise RegistryError("ORB/gap/directional/chart-pattern families are monitoring-only")
         if new is Status.PAPER_ELIGIBLE:
             if approval is None or charter is None:
                 raise RegistryError("paper enrolment needs a scoped human approval and frozen trial charter")

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 79,
-  "unrecorded_tasks": 139,
+  "recorded_tasks": 80,
+  "unrecorded_tasks": 138,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1652,6 +1652,32 @@
       "blockers": [
         "No authenticated single-expiry contract, rights, costs, financing, or margin evidence is connected.",
         "No prospective futures carry performance after actual market costs has been observed."
+      ]
+    },
+    {
+      "id": "PE-0054",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "src/financial_brain/forward_edge/monitoring_candidates.py",
+        "src/financial_brain/patterns/candles.py",
+        "src/financial_brain/patterns/detectors.py",
+        "src/financial_brain/evaluation/chart_setups.py",
+        "docs/edge-program/pe-0054-monitoring-only-families.md",
+        "docs/edge-program/pe-0054-monitoring-only-evidence.json",
+        "tests/test_monitoring_candidates.py"
+      ],
+      "tests": [
+        "test_orb_gap_directional_and_chart_specs_are_shadow_monitoring_only",
+        "test_registry_policy_normalizes_monitoring_family_names",
+        "test_monitoring_signal_rejects_non_monitor_family_and_unregistered_spec",
+        "test_monitoring_family_cannot_be_constructed_as_paper_eligible"
+      ],
+      "test_result": "9 monitoring policy tests passed; Ruff and mypy passed. Listed families fail closed at spec construction and paper-eligibility transition; monitoring emits no quantity.",
+      "evidence_sha256": "f1f1eb85e7f8bb552bcf75d17c7fdbbf540d70144818172a3d5a2b64833e633b",
+      "blockers": [
+        "The 72 chart-pattern variants and all legacy ORB/GAP strategy/book surfaces are not individually integrated with the registry.",
+        "No prospective monitoring evidence has been collected."
       ]
     }
   ]
