@@ -202,7 +202,7 @@
         "test_inventory_covers_all_python_sources_without_inventing_owners",
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
       ],
-      "test_result": "Committed source inventory now captures 547 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 540 unassessed modules and 298 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
+      "test_result": "Committed inventory captures 548 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 541 unassessed and 298 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
       "evidence_sha256": "1b34f279de2e17a297690cccfbafb65edaf0fb67d5fa34f480f059ae8145d40c",
       "blockers": [
         "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state"
@@ -656,20 +656,29 @@
       "id": "PE-0110",
       "status": "PARTIAL",
       "sources": [
+        "src/financial_brain/evaluation/paper_cohort_adapter.py",
         "src/financial_brain/evaluation/champion.py",
-        "docs/edge-program/executable-cohort-contract.md"
+        "src/financial_brain/forward_edge/durable.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_paper_cohort_adapter.py",
+        "tests/test_champion_executable.py",
+        "docs/edge-program/executable-cohort-contract.md",
+        "docs/edge-program/pe-0110-paper-cohort-adapter-evidence.json"
       ],
       "tests": [
+        "test_journals_normalize_into_executable_cohort_inputs_and_resolve",
+        "test_missing_corporate_action_attestation_is_not_inferred",
+        "test_missing_fill_timestamp_refuses_executable_export",
         "test_executable_cohort_uses_actual_partial_fill_fees_marks_and_cash_days",
         "test_explicit_no_order_cash_cohort_resolves_to_zero_instead_of_disappearing",
-        "test_sell_fills_release_inventory_and_include_sell_fee_in_net_nav",
-        "test_missing_mark_or_unresolved_order_withholds_cohort_return",
-        "test_overlapping_frozen_cohorts_are_rejected"
+        "test_missing_mark_or_unresolved_order_withholds_cohort_return"
       ],
-      "test_result": "Five deterministic contract tests cover partial buy/sell fills, fees, marked NAV, cash days, missing marks, unresolved orders, and overlap rejection. Executable results are stored separately and take precedence over close-to-close diagnostics.",
-      "evidence_sha256": null,
+      "test_result": "A new durable-journal adapter links runner decisions/intents/receipts with PaperAccount OMS orders, booked fills/fees, and marks, then calls resolve_executable. Three adapter and six resolver tests pass; Ruff, mypy, and diff checks pass. Missing corporate-action attestation and missing fill timestamps fail closed.",
+      "evidence_sha256": "0dce419d4c7ad5ffecab115fdb12df23fd1c1c137aaffa42993cf03fc332717f",
       "blockers": [
-        "ForwardSessionRunner and PaperAccount durable events are not yet exported into this resolver's normalized cohort inputs; live prospective cohorts have not elapsed"
+        "No prospective live-market cohort has elapsed. Exchange-calendar and corporate-action-check inputs are supplied by the caller and still require independently sourced/verified evidence."
       ]
     },
     {
