@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0037",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_kite_forward_events.py tests/test_phase3_kite.py tests/test_raw_quote_archive.py",
+    "result": "41 passed (exit code 0); Ruff and mypy on Kite event normalization passed."
+  },
+  "implemented": [
+    "Kite event normalization never substitutes receipt time for a missing source timestamp; malformed/missing timestamps are rejected or durably reason-coded.",
+    "Received events explicitly reject source timestamps in the future, record source timestamp age, and support a caller-supplied non-negative source-specific maximum age.",
+    "Tests cover source-age tolerance, future source clocks, missing/invalid timestamps, source-local naive Kite timestamps, and reversed ingest/receipt clocks."
+  ],
+  "blockers": [
+    "The existing live intraday caller does not yet provide a source-specific maximum-age policy, so old Kite timestamps can still be admitted when the optional tolerance is omitted.",
+    "The provider timestamp's exact semantics can vary between last trade time and quote/depth capture time; policy must account for feed type before this becomes a universal fill gate."
+  ],
+  "scope_note": "Timestamp validity and configurable staleness checks are implemented at the Kite event boundary; full production enforcement remains incomplete until the live caller pins a feed-specific tolerance and execution gates consume it."
+}

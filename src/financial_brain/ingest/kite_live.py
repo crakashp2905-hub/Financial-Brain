@@ -63,7 +63,8 @@ def snapshot(con, symbols: list[str], *, quote_fn=None, now: datetime | None = N
 def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime | None = None,
                    ingested_at: datetime | None = None,
                    rejections_out: list[dict] | None = None, clock_provider=None,
-                   raw_archive: RawQuoteArchive | None = None):
+                   raw_archive: RawQuoteArchive | None = None,
+                   source_timestamp_tolerance: timedelta | None = None):
     """Capture read-only Kite full quotes as forward-edge events.
 
     An exchange timestamp is mandatory: receipt time is never substituted for it.
@@ -77,6 +78,9 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
 
     if not symbols or len(set(symbols)) != len(symbols):
         raise DataError("symbols must be nonempty and unique")
+    if source_timestamp_tolerance is not None and (
+            not isinstance(source_timestamp_tolerance, timedelta) or source_timestamp_tolerance < timedelta(0)):
+        raise DataError("source timestamp tolerance must be a non-negative timedelta")
     keys = [f"NSE:{symbol}" for symbol in symbols]
     if clock_provider is not None and (received_at is not None or ingested_at is not None):
         raise DataError("use the injected clock provider or explicit timestamps, not both")
@@ -127,11 +131,22 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
                 raise DataError(str(exc)) from exc
         else:
             receipt = available = received_at
+        source_age = receipt - exchange_at
+        if source_age < timedelta(0):
+            reject(key, quote, "FUTURE_EXCHANGE_TIMESTAMP")
+            continue
+        if source_timestamp_tolerance is not None and source_age > source_timestamp_tolerance:
+            reject(key, quote, "STALE_EXCHANGE_TIMESTAMP")
+            continue
         payload = [("exchange", "NSE"), ("source", "kite_connect")]
         raw_hash = hashlib.sha256(json.dumps(quote, sort_keys=True, separators=(",", ":"),
                                           ensure_ascii=False, default=str, allow_nan=False)
                              .encode("utf-8")).hexdigest()
         payload.append(("raw_sha256", raw_hash))
+        payload.append(("exchange_timestamp_age_ms", str(int(source_age.total_seconds() * 1000))))
+        if source_timestamp_tolerance is not None:
+            payload.append(("exchange_timestamp_tolerance_ms",
+                            str(int(source_timestamp_tolerance.total_seconds() * 1000))))
         if quote.get("last_price") is not None:
             payload.append(("last_price", str(quote["last_price"])))
         depth = quote.get("depth")

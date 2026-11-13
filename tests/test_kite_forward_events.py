@@ -35,6 +35,7 @@ def test_full_quote_becomes_timestamped_forward_event():
     assert payload["bid_price"] == "1500.4" and payload["ask_price"] == "1500.6"
     assert payload["bid_qty"] == "50" and payload["ask_qty"] == "40"
     assert payload["volume"] == "1000" and payload["session_high"] == "1510"
+    assert payload["exchange_timestamp_age_ms"] == "1000"
     assert len(payload["raw_sha256"]) == 64
     assert executable_quote(event) == (True, "EXECUTABLE_TOP_OF_BOOK")
     assert not decision_visible(event, datetime(2026, 11, 12, 3, 59, 59, tzinfo=timezone.utc))
@@ -49,6 +50,28 @@ def test_full_quote_becomes_timestamped_forward_event():
 def test_missing_or_invalid_exchange_evidence_fails_closed(reply):
     with pytest.raises(DataError):
         forward_events(["INFY"], quote_fn=lambda *_: reply, received_at=RECEIPT)
+
+
+def test_source_tolerance_rejects_future_and_stale_exchange_timestamps_without_repair():
+    replies = {
+        "NSE:INFY": {"timestamp": "2026-11-12 09:00:00", "last_price": 1500},
+    }
+    rejected = []
+    events = forward_events(["INFY"], quote_fn=lambda *_: replies, received_at=RECEIPT,
+                            rejections_out=rejected, source_timestamp_tolerance=timedelta(seconds=5))
+    assert events == []
+    assert rejected[0]["reason"] == "STALE_EXCHANGE_TIMESTAMP"
+
+    replies["NSE:INFY"]["timestamp"] = "2026-11-12 10:00:00"
+    rejected.clear()
+    events = forward_events(["INFY"], quote_fn=lambda *_: replies, received_at=RECEIPT,
+                            rejections_out=rejected, source_timestamp_tolerance=timedelta(seconds=5))
+    assert events == []
+    assert rejected[0]["reason"] == "FUTURE_EXCHANGE_TIMESTAMP"
+
+    with pytest.raises(DataError, match="non-negative timedelta"):
+        forward_events(["INFY"], quote_fn=lambda *_: {}, received_at=RECEIPT,
+                       source_timestamp_tolerance=timedelta(seconds=-1))
 
 
 def test_duplicate_symbols_and_naive_receipt_rejected():
