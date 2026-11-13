@@ -1,6 +1,7 @@
 # Exact environment the full suite runs in (1,428 tests: all pass, the torch LSTM test skips): a clean venv, `pip install -e .[dev]` on Windows 11, Python 3.13.5,
 # 2026-10-15. Recreate a result with: git checkout <commit>; pip install -r requirements-lock.txt; pip install -e . --no-deps
 ast_serialize==0.13.0
+attrs==26.1.0
 boolean.py==5.0
 CacheControl==0.14.4
 certifi==2026.7.22
@@ -14,6 +15,8 @@ filelock==4.2.0
 idna==3.20
 iniconfig==2.3.1
 joblib==1.6.0
+jsonschema-specifications==2025.9.1
+jsonschema==4.26.0
 librt==0.16.0
 license-expression==30.4.4
 lightgbm==4.7.0
@@ -42,8 +45,10 @@ pypdf==6.20.1
 pytest==9.1.1
 python-dateutil==2.9.0.post0
 pytz==2026.5
+referencing==0.37.0
 requests==2.34.2
 rich==15.0.0
+rpds-py==2026.9.1
 ruff==0.17.1
 scikit-learn==1.9.1
 scipy==1.18.1
