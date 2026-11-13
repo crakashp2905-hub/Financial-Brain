@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 52,
-  "unrecorded_tasks": 166,
+  "recorded_tasks": 53,
+  "unrecorded_tasks": 165,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -772,6 +772,28 @@
       "blockers": [
         "Not wired into the durable session report.",
         "No actual observed Kite quote-arrival sample is available; current test fixtures are synthetic."
+      ]
+    },
+    {
+      "id": "PE-0086",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/instruments.py",
+        "src/financial_brain/execution/oms/engine.py",
+        "tests/test_kernel_instruments.py",
+        "tests/test_oms.py",
+        "docs/edge-program/pe-0086-instrument-order-rule-gate-evidence.json"
+      ],
+      "tests": [
+        "test_execution_order_requires_complete_effective_source_specific_rule_set",
+        "test_execution_order_refuses_source_rule_violations",
+        "test_oms_refuses_orders_when_source_specific_instrument_rules_are_not_loaded"
+      ],
+      "test_result": "Instrument/OMS tests: 38 passed; Ruff, mypy and diff checks passed. OMS rejects orders without a versioned, source-identified rule master and validates session, tick, lot and size limits when provided.",
+      "evidence_sha256": "099f708aa2856a1850e81692749fe7012f32c7a5a8e55ceff67176329701864d",
+      "blockers": [
+        "Current official freeze and margin rules are not present; no values fabricated.",
+        "Interactive trading service still needs the complete owner-authorized rule-master loader; until then OMS orders fail closed."
       ]
     },
     {

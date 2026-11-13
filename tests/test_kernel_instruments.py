@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, time
 from decimal import Decimal
 
 import pytest
@@ -90,3 +90,45 @@ def test_fx_pip_conventions_differ_for_jpy() -> None:
 def test_bad_fx_pair_rejected() -> None:
     with pytest.raises(InstrumentError):
         fx_pip_size("eurusd")
+
+
+def test_execution_order_requires_complete_effective_source_specific_rule_set():
+    rule = RuleVersion(
+        date(2026, 1, 1), tick=Decimal("0.05"), lot=25,
+        max_freeze_quantity=1800, max_order_quantity=1500,
+        exchange="NSE", margin_rule_id="NSE-EQ-MARGIN-v1", session_rule_id="NSE-EQ-REGULAR-v1",
+        session_open=time(9, 15), session_close=time(15, 30), source_id="owner-instrument-master-2026-11",
+        source_sha256="a" * 64,
+    )
+    instrument = Instrument(InstrumentId("NSE", "EQUITY", "ABC"), [rule])
+    assert instrument.validate_order(day=date(2026, 11, 13), exchange="NSE", quantity=100,
+                                     price=Decimal("1500.05"), local_time=time(10, 0)) is rule
+    with pytest.raises(InstrumentError, match="missing source-specific fields"):
+        _equity().validate_order(day=date(2026, 3, 1), exchange="NSE", quantity=1,
+                                 price=Decimal("100"), local_time=time(10, 0))
+
+
+@pytest.mark.parametrize(
+    "overrides, reason",
+    [
+        ({"exchange": "BSE"}, "exchange does not match"),
+        ({"quantity": 101}, "multiple of lot size"),
+        ({"quantity": 1525}, "freeze limit"),
+        ({"price": Decimal("1500.03")}, "aligned to tick"),
+        ({"local_time": time(9, 0)}, "outside the effective exchange session"),
+    ],
+)
+def test_execution_order_refuses_source_rule_violations(overrides, reason):
+    rule = RuleVersion(
+        date(2026, 1, 1), tick=Decimal("0.05"), lot=25,
+        max_freeze_quantity=1800, max_order_quantity=1500,
+        exchange="NSE", margin_rule_id="MARGIN-SRC-1",
+        session_rule_id="SESSION-SRC-1", session_open=time(9, 15), session_close=time(15, 30),
+        source_id="owner-rules-v1", source_sha256="b" * 64,
+    )
+    instrument = Instrument(InstrumentId("NSE", "EQUITY", "ABC"), [rule])
+    args = {"day": date(2026, 11, 13), "exchange": "NSE", "quantity": 100,
+            "price": Decimal("1500.05"), "local_time": time(10, 0)}
+    args.update(overrides)
+    with pytest.raises(InstrumentError, match=reason):
+        instrument.validate_order(**args)

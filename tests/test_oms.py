@@ -1,7 +1,8 @@
 """The OMS (ADR-0005): every path against PaperBroker and a fake Kite transport - nothing touches a network."""
 import io
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
 import numpy as np
 import pytest
@@ -16,6 +17,7 @@ from financial_brain.execution.oms import reconcile as RC
 from financial_brain.execution.oms import risk_gate as RG
 from financial_brain.execution.oms import rollout as RO
 from financial_brain.execution.oms import slicer as SL
+from financial_brain.kernel.instruments import Instrument, InstrumentId, InstrumentMaster, RuleVersion
 
 IST = timezone(timedelta(hours=5, minutes=30))
 IN_SESSION = datetime(2026, 10, 13, 10, 0, tzinfo=IST)          # a Tuesday
@@ -27,8 +29,14 @@ def env(tmp_path):
     j = J.Journal(tmp_path / "oms.duckdb")
     b = B.PaperBroker()
     b.tick({K: 100.0})
+    master = InstrumentMaster()
+    master.add(Instrument(InstrumentId("NSE", "EQUITY", "ABC"), [RuleVersion(
+        date(2026, 1, 1), tick=Decimal("0.05"), lot=1, exchange="NSE", max_freeze_quantity=1800,
+        margin_rule_id="TEST-MARGIN-v1", session_rule_id="TEST-SESSION-v1", session_open=RG.OPEN,
+        session_close=RG.CLOSE, source_id="synthetic-oms-test-rules", source_sha256="a" * 64,
+    )]))
     oms = EN.OMS(j, b, verdicts={"s": "CANDIDATE"}, stage_path=tmp_path / "stage.json", ks_path=tmp_path / "ks.json",
-                 banned=frozenset(), clock=lambda: IN_SESSION)
+                 banned=frozenset(), clock=lambda: IN_SESSION, instrument_master=master)
     yield oms, j, b, tmp_path
     j.close()
 
@@ -148,6 +156,15 @@ def test_unreadable_ban_list_refuses_everything(env):
     oms, j, b, _ = env
     oms.banned = None
     assert _submit(oms).state == M.REJECTED_RISK
+
+
+def test_oms_refuses_orders_when_source_specific_instrument_rules_are_not_loaded(env):
+    oms, j, b, _ = env
+    oms.instrument_master = None
+    order = _submit(oms, qty=11)
+    assert order.state == M.REJECTED_RISK
+    assert "source-specific instrument rules are unavailable" in order.reason
+    assert b.orders() == []
 
 
 def test_ban_list_parser():
