@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 83,
-  "unrecorded_tasks": 135,
+  "recorded_tasks": 84,
+  "unrecorded_tasks": 134,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1757,6 +1757,30 @@
         "Economic holding horizon and predictor half-life remain unestimated pending suitable prospective cohorts.",
         "Fundamentals, filings, macro, options, and legacy feature libraries are not covered by this metadata contract.",
         "Actual release delays depend on provider timestamps and data-rights evidence."
+      ]
+    },
+    {
+      "id": "PE-0058",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/version_diff.py",
+        "tests/test_strategy_version_diff.py",
+        "docs/edge-program/pe-0058-strategy-version-diff.md",
+        "docs/edge-program/pe-0058-strategy-version-diff-evidence.json",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/strategy-variant-inventory.json"
+      ],
+      "tests": [
+        "test_diff_exposes_every_checklist_identity_dimension",
+        "test_version_increment_without_identity_change_is_explicit",
+        "test_diff_refuses_cross_strategy_or_skipped_versions",
+        "test_snapshot_rejects_missing_dimension_digest"
+      ],
+      "test_result": "5 passed (exit code 0); Ruff and mypy passed. Strategy-variant inventory --check passes (253 candidates); source inventory --check passes (564 Python files).",
+      "evidence_sha256": "d173a6060d66846baf80b87936055584cd71f6f75262689e2402f1b202428cd8",
+      "blockers": [
+        "Version snapshots are not yet exported by all registry, strategy and execution configuration sources.",
+        "Legacy candidates do not all supply frozen filter, universe and cost-model digests."
       ]
     }
   ]
