@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 88,
-  "unrecorded_tasks": 130,
+  "recorded_tasks": 89,
+  "unrecorded_tasks": 129,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1890,6 +1890,27 @@
         "A real development dataset and approved calibration protocol have not been supplied, so no production threshold is selected.",
         "The candidate selector is not multiplicity-corrected and must not be used as a promotion test.",
         "Legacy session runners without a supplied registry do not have external frozen-policy provenance."
+      ]
+    },
+    {
+      "id": "PE-0063",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/target_portfolio.py",
+        "src/financial_brain/forward_edge/signal_allocator.py",
+        "tests/test_target_portfolio.py",
+        "tests/test_signal_allocator.py",
+        "docs/edge-program/pe-0063-turnover-no-trade-band.md",
+        "docs/edge-program/pe-0063-turnover-no-trade-band-evidence.json"
+      ],
+      "tests": [
+        "test_no_trade_band_ignores_small_fee_drift_but_reports_material_rebalance",
+        "test_no_trade_band_must_be_a_finite_weight_fraction"
+      ],
+      "test_result": "11 portfolio allocator tests passed; mypy, Ruff, and source inventory checks pass. A 0.5%-of-NAV per-name band prevents small mark/fee drift from triggering a rebalance while material moves still honor the turnover cap.",
+      "evidence_sha256": "77f21f298b9f447da524ed780d2bf01016f8f3fa647ae0ba268de2af2c008594",
+      "blockers": [
+        "The default 0.005 NAV band is not calibrated from prospective market costs or validated out of sample."
       ]
     }
   ]

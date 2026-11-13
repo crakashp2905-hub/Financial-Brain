@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0063",
+  "status": "DONE",
+  "implemented": [
+    "A configurable per-name no-trade band suppresses small scheduled target changes and retains their value as explicit cash.",
+    "Material changes still use the optimizer's turnover cost and maximum one-way turnover cap.",
+    "The result exposes whether a scheduled evaluation actually triggered a rebalance.",
+    "The shared signal allocator forwards its band setting to the target optimizer."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_target_portfolio.py tests/test_signal_allocator.py -q",
+    "result": "11 passed; mypy, Ruff, and diff checks passed.",
+    "cases": [
+      "test_no_trade_band_ignores_small_fee_drift_but_reports_material_rebalance",
+      "test_no_trade_band_must_be_a_finite_weight_fraction"
+    ]
+  },
+  "limitations": [
+    "The 0.005 NAV default is a configurable engineering assumption, not a market-calibrated optimum.",
+    "No live costs, marks, or prospective rebalance outcomes were used."
+  ]
+}

@@ -24,6 +24,8 @@ class TargetPortfolio:
     risk_penalty: float
     turnover_cost: float
     utility: float
+    rebalance_triggered: bool = False
+    no_trade_band: float = 0.005
 
 
 def _project_capped_simplex(values: np.ndarray, *, budget: float, cap: float) -> np.ndarray:
@@ -59,6 +61,7 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
                           covariance_names: tuple[str, ...], previous_weights: Mapping[str, float],
                           max_name_weight: float = 0.10, cash_floor: float = 0.0,
                           max_one_way_turnover: float = 0.20, turnover_cost_per_unit: float = 0.0,
+                          no_trade_band: float = 0.005,
                           risk_aversion: float = 1.0, iterations: int = 500) -> TargetPortfolio:
     """Optimize long-only target weights on a frozen rebalance schedule.
 
@@ -89,6 +92,8 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
     if not isfinite(turnover_cost_per_unit) or turnover_cost_per_unit < 0 or not isfinite(risk_aversion) \
             or risk_aversion < 0 or iterations < 1:
         raise TargetPortfolioError("risk, turnover cost and iteration settings must be non-negative")
+    if not isfinite(no_trade_band) or not 0 <= no_trade_band <= 1:
+        raise TargetPortfolioError("no-trade band must be in [0, 1]")
     prev = np.array([float(previous_weights.get(name, 0.0)) for name in names], dtype=float)
     prev_cash = float(previous_weights.get("CASH", 0.0))
     if not np.isfinite(prev).all() or not isfinite(prev_cash) or np.any(prev < 0) or not 0 <= prev_cash <= 1 \
@@ -114,6 +119,7 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
                 weights = next_weights
                 break
             weights = next_weights
+        weights[np.abs(weights - prev) <= no_trade_band] = prev[np.abs(weights - prev) <= no_trade_band]
         delta = float(np.abs(weights - prev).sum()) / 2.0
         if delta > max_one_way_turnover and delta > 0:
             weights = prev + (weights - prev) * (max_one_way_turnover / delta)
@@ -128,4 +134,5 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
     cost = turnover_cost_per_unit * turnover if scheduled else 0.0
     return TargetPortfolio(as_of, scheduled,
                            tuple((name, float(weights[i])) for i, name in enumerate(names)) + (("CASH", cash),),
-                           turnover, cash, alpha, risk, cost, alpha - risk - cost)
+                           turnover, cash, alpha, risk, cost, alpha - risk - cost,
+                           scheduled and turnover > 1e-12, no_trade_band)

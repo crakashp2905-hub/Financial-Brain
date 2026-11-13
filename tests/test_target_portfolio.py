@@ -57,6 +57,28 @@ def test_turnover_cost_can_keep_a_paper_book_in_cash() -> None:
     assert result.utility == 0
 
 
+def test_no_trade_band_ignores_small_fee_drift_but_reports_material_rebalance():
+    common = dict(
+        as_of=DAY1, scheduled_rebalances=frozenset({DAY1}), expected_net_alpha={"A": 0.002},
+        covariance=np.array([[0.04]]), covariance_names=("A",), max_name_weight=0.40,
+        cash_floor=0.10, max_one_way_turnover=0.15, turnover_cost_per_unit=0.0,
+        risk_aversion=0.5, no_trade_band=0.01,
+    )
+    drifted = plan_target_portfolio(previous_weights={"A": 0.105, "CASH": 0.895}, **common)
+    assert dict(drifted.weights) == {"A": 0.105, "CASH": 0.895}
+    assert drifted.one_way_turnover == 0
+    assert drifted.rebalance_triggered is False
+
+    material = plan_target_portfolio(previous_weights={"A": 0.05, "CASH": 0.95}, **common)
+    assert dict(material.weights)["A"] == pytest.approx(0.10)
+    assert material.rebalance_triggered is True
+
+
+def test_no_trade_band_must_be_a_finite_weight_fraction():
+    with pytest.raises(TargetPortfolioError, match="no-trade band"):
+        _plan(no_trade_band=-0.01)
+
+
 def test_cash_days_count_explicit_cash_and_rejects_bad_ledgers() -> None:
     assert cash_days([{"A": 0.8, "CASH": 0.2}, {"A": 1.0, "CASH": 0.0}]) == 1
     with pytest.raises(TargetPortfolioError, match="sum to one"):
