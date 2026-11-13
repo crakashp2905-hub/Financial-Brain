@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0034",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_kite_forward_events.py tests/test_phase3_kite.py tests/test_phase5_intraday_runner.py tests/test_raw_quote_archive.py tests/test_forward_session_runner.py",
+    "result": "80 passed (exit code 0); Ruff and mypy on the Kite provider/normalizer passed."
+  },
+  "implemented": [
+    "Kite read-only quote polling normalizes into the same `NormalizedEvent` contract used by injected/mock feed adapters and the durable forward-session runner.",
+    "Events carry exchange, receive, availability and ingest clocks, source label, raw payload hash, available bid/ask depth and explicit LTP-only fidelity.",
+    "Kite HTTP access is allowlisted GET-only with no order endpoint; test proves an auth failure does not expose API key or access token.",
+    "The live intraday runner and raw archive path use the same normalized quote adapter, with opt-in authorized raw retention and hash lineage."
+  ],
+  "blockers": [],
+  "scope_note": "Completes the software adapter contract and polling path. This test run uses mocks and local archives; it does not assert a current real Kite session, quote entitlement, or live market observation. Data rights and actual session evidence are tracked separately."
+}
