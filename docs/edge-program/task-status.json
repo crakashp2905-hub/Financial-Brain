@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 68,
-  "unrecorded_tasks": 150,
+  "recorded_tasks": 69,
+  "unrecorded_tasks": 149,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1415,6 +1415,27 @@
       "blockers": [
         "Coverage denominator is the configured instrument set and strategy output, not every tradable market instrument or every candidate strategy could have produced.",
         "Candidate notional is unavailable unless the strategy explicitly provides it; real coverage and lost-opportunity rates require prospective market sessions."
+      ]
+    },
+    {
+      "id": "PE-0043",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/historical_divergence.py",
+        "docs/edge-program/live-historical-divergence-contract.md",
+        "docs/edge-program/pe-0043-live-historical-divergence-evidence.json",
+        "tests/test_historical_divergence.py"
+      ],
+      "tests": [
+        "test_historical_divergence_is_logged_unverified_and_never_adjusted",
+        "test_historical_bar_match_is_still_unverified_until_adjudicated",
+        "test_divergence_comparison_fails_closed_on_same_day_or_unknown_historical_source"
+      ],
+      "test_result": "15 divergence and archive tests passed; Ruff and mypy passed. Durable comparison logs retain per-field deltas and both source hashes; no data is modified. Real-feed prospective comparison and adjudication remain unavailable.",
+      "evidence_sha256": "78cc9242809adef6e3aab474fd68449c466be360e325b1afef38eededbfe8fcd",
+      "blockers": [
+        "Prospective authorized capture and next-day historical comparison have not been run or adjudicated on owner data.",
+        "A human/data-quality adjudication workflow to clear UNVERIFIED results is not connected."
       ]
     }
   ]

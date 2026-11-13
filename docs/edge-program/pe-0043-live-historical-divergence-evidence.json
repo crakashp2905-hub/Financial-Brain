@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0043",
+  "status": "PARTIAL",
+  "scope": "Deterministic comparison and durable audit using caller-supplied captured events; no real-feed agreement claim.",
+  "implemented": [
+    "Builds interval OHLC from same-instrument tick events and compares open, high, low and close with a later Kite historical bar.",
+    "Rejects unsupported intervals, unknown historical source tags, same-day retrieval and history available before the compared live ticks.",
+    "Logs deterministic per-field deltas, source labels and event hashes in an idempotent durable audit journal.",
+    "Disagreement is marked DIVERGENT and remains UNVERIFIED; matching data is also not treated as adjudicated. No series is repaired or overwritten."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_historical_divergence.py tests/test_raw_quote_archive.py -q",
+    "result": "15 passed (exit code 0); Ruff and mypy passed for historical_divergence.py.",
+    "cases": [
+      "test_historical_divergence_is_logged_unverified_and_never_adjusted",
+      "test_historical_bar_match_is_still_unverified_until_adjudicated",
+      "test_divergence_comparison_fails_closed_on_same_day_or_unknown_historical_source"
+    ]
+  },
+  "limitations": [
+    "No prospective live tick capture and next-day Kite history sample has been adjudicated; real divergence frequencies and provider-specific behavior remain unknown.",
+    "The caller is responsible for loading events through rights-gated archive APIs; source labels alone do not authenticate provider access.",
+    "A separate human/data-quality adjudication workflow is not yet connected to clear UNVERIFIED status."
+  ]
+}
