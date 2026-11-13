@@ -10,6 +10,8 @@ import numpy as np
 
 from financial_brain.decisions.net_alpha import NetAlpha
 from .target_portfolio import TargetPortfolio, plan_target_portfolio
+from .uncertainty_sizing import (UncertaintySizingPolicy, UncertaintySizingError,
+                                 uncertainty_size_multiplier)
 
 SIGNAL_ACTIONS = frozenset({"BUY", "HOLD", "SELL", "NO_SIGNAL"})
 
@@ -23,6 +25,7 @@ class SignalTargetResult:
     target: TargetPortfolio
     dispositions: tuple[tuple[str, str, float], ...]
     research_only: bool = True
+    uncertainty_multipliers: tuple[tuple[str, float], ...] = ()
 
 
 def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
@@ -33,6 +36,8 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
                      turnover_cost_per_unit: float = 0.0, no_trade_band: float = 0.005,
                      max_positions: int = 20, sectors: Mapping[str, str] | None = None,
                      max_sector_weight: float = 0.30,
+                     uncertainty_standard_errors: Mapping[str, float] | None = None,
+                     uncertainty_policy: UncertaintySizingPolicy | None = None,
                      risk_aversion: float = 1.0,
                      iterations: int = 500) -> SignalTargetResult:
     """Route every named signal through one allocator; input NetAlpha already itemizes trade costs.
@@ -69,8 +74,26 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
         dispositions.append((name, reason, forecast.net))
     if len(horizons) != 1:
         raise SignalAllocatorError("all forecasts in one target book must share the same holding horizon")
+    if (uncertainty_policy is None) != (uncertainty_standard_errors is None):
+        raise SignalAllocatorError("uncertainty standard errors and a frozen sizing policy must be supplied together")
+    if uncertainty_standard_errors is not None and set(uncertainty_standard_errors) != set(names):
+        raise SignalAllocatorError("uncertainty standard errors must cover the frozen signal universe")
+    multipliers: dict[str, float] = {}
+    if uncertainty_policy is not None and uncertainty_standard_errors is not None:
+        try:
+            multipliers = {
+                name: uncertainty_size_multiplier(
+                    expected_net_alpha=signals[name][1].net,
+                    uncertainty_standard_error=float(uncertainty_standard_errors[name]),
+                    policy=uncertainty_policy,
+                )
+                for name in names
+            }
+        except (TypeError, ValueError, UncertaintySizingError) as exc:
+            raise SignalAllocatorError(str(exc)) from exc
     target = plan_target_portfolio(
-        as_of=as_of, scheduled_rebalances=scheduled_rebalances, expected_net_alpha=alpha,
+        as_of=as_of, scheduled_rebalances=scheduled_rebalances,
+        expected_net_alpha={name: alpha[name] * multipliers.get(name, 1.0) for name in names},
         covariance=covariance, covariance_names=tuple(sorted(covariance_names)),
         previous_weights=previous_weights, max_name_weight=max_name_weight,
         cash_floor=cash_floor, max_one_way_turnover=max_one_way_turnover,
@@ -79,4 +102,4 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
         risk_aversion=risk_aversion,
         iterations=iterations,
     )
-    return SignalTargetResult(target, tuple(dispositions))
+    return SignalTargetResult(target, tuple(dispositions), uncertainty_multipliers=tuple(sorted(multipliers.items())))

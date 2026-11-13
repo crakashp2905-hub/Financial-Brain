@@ -5,6 +5,7 @@ import pytest
 
 from financial_brain.decisions.net_alpha import NetAlpha
 from financial_brain.forward_edge.signal_allocator import SignalAllocatorError, allocate_signals
+from financial_brain.forward_edge.uncertainty_sizing import UncertaintySizingPolicy
 
 
 DAY = date(2027, 1, 4)
@@ -71,3 +72,27 @@ def test_signal_allocator_forwards_position_and_sector_limits():
     assert sum(weight > 1e-12 for name, weight in weights.items() if name != "CASH") <= 1
     assert weights["A"] + weights["B"] <= 0.25 + 1e-8
     assert weights["CASH"] >= 0.75 - 1e-8
+
+
+def test_frozen_uncertainty_haircut_reduces_costed_signal_weight():
+    policy = UncertaintySizingPolicy(
+        strategy_sha256="a" * 64, cohort_id="demo", standardized_error_multiplier=1.0,
+        confidence_z=1.0, development_data_sha256="b" * 64,
+        calibration_protocol_sha256="c" * 64, development_start="2026-10-01",
+        development_end="2026-11-01", validation_start="2026-12-01", observation_count=30,
+        frozen_at_utc="2026-11-15T00:00:00+00:00",
+    )
+    signals = {"A": ("BUY", _alpha(0.02))}
+    plain = _allocate(signals, risk_aversion=10.0)
+    adjusted = _allocate(
+        signals, risk_aversion=10.0, uncertainty_policy=policy,
+        uncertainty_standard_errors={"A": 0.005},
+    )
+    assert dict(adjusted.target.weights)["A"] < dict(plain.target.weights)["A"]
+    assert dict(adjusted.target.weights)["CASH"] > dict(plain.target.weights)["CASH"]
+    assert adjusted.uncertainty_multipliers[0][1] == pytest.approx(1.0 - 0.005 / 0.017)
+
+
+def test_uncertainty_input_without_frozen_policy_fails_closed():
+    with pytest.raises(SignalAllocatorError, match="must be supplied together"):
+        _allocate({"A": ("BUY", _alpha(0.02))}, uncertainty_standard_errors={"A": 0.001})
