@@ -439,17 +439,35 @@ class ForwardSessionRunner:
         if risk_record is None or gated_risk != risk:
             risk = gated_risk
             journal.append({"t": "RISK_VERDICT", "session_id": config.session_id, "risk": risk})
+        hurdle = risk.get("net_alpha_hurdle", {})
+        hurdle_no_trade = (risk.get("reason") == "NET_ALPHA_HURDLE_NOT_MET"
+                           and hurdle.get("required") is True and hurdle.get("passed") is False)
+        reported_decision = decision
+        if hurdle_no_trade:
+            reported_decision = {"side": "NO_TRADE", "reason": "NET_ALPHA_HURDLE_NOT_MET",
+                                 "rejected_candidate": decision,
+                                 "expected_net_alpha": hurdle.get("expected_net_alpha"),
+                                 "net_alpha_forecast": hurdle.get("net_alpha_forecast")}
+            disposition = {"t": "DECISION_DISPOSITION", "session_id": config.session_id,
+                           "decision": reported_decision}
+            prior_disposition = next((r for r in existing if r.get("t") == "DECISION_DISPOSITION"), None)
+            if prior_disposition is None:
+                journal.append(disposition)
+            elif prior_disposition != disposition:
+                raise RunnerError("stored net-alpha no-trade disposition conflicts with its decision")
         self._ensure_state(journal, config.session_id, "DRAINING")
         result = {"session_id": config.session_id, "config_sha256": config.sha256,
                   "event_count": len(observed), "decision_event_count": len(decision_events),
                   "last_available_utc": last_available.isoformat()
-                  if last_available else None, "decision": decision, "risk": risk,
+                  if last_available else None, "decision": reported_decision, "risk": risk,
                   "preflight": preflight,
                   "mode": config.mode.value, "physical_orders": False}
         if feed_health_facts is not None:
             result["feed_health"] = {**feed_health_facts, "entry_allowed": allowed,
                                      "blocking_reasons": feed_health_reasons}
-        if not risk["approved"]:
+        if hurdle_no_trade:
+            result.update({"status": "NO_TRADE", "reason": "NET_ALPHA_HURDLE_NOT_MET"})
+        elif not risk["approved"]:
             self._ensure_state(journal, config.session_id, "REJECTED")
             result.update({"status": "REJECTED", "reason": str(risk.get("reason", "RISK_REJECTED"))})
         elif decision["side"] in ("BUY", "SELL") and not preflight["approved"]:
@@ -539,7 +557,7 @@ class ForwardSessionRunner:
             events=observed, decision=decision, execution=result.get("execution"),
         )
         result["closed_at_utc"] = datetime.now(timezone.utc).isoformat()
-        if risk["approved"]:
+        if risk["approved"] or hurdle_no_trade:
             self._ensure_state(journal, config.session_id, "CLOSED")
         journal.append({"t": "SESSION_CLOSED", "session_id": config.session_id, "result": result})
         self._record_date_outcome(str(result["status"]), str(result.get("reason", "SESSION_CLOSED")),

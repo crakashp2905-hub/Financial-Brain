@@ -1858,8 +1858,8 @@
         "test_paper_entry_above_hurdle_is_recorded_and_can_reach_simulator",
         "test_paper_position_reduction_is_exempt_but_short_entry_needs_hurdle"
       ],
-      "test_result": "118 tests passed (67 forward-session/account/replay integration and 51 fixture-replay tests); mypy, Ruff, Ruff format, and both source inventory checks pass. The runner recomputes itemized net alpha and persists the gate before paper intent creation.",
-      "evidence_sha256": "6cfee35c99e5bdfd3e20b2c4892e64122c3f0c73f97378924e5dd0d1a4920c41",
+      "test_result": "118 tests passed (67 forward-session/account/replay integration and 51 fixture-replay tests); mypy, Ruff, and both source inventory checks pass. The runner recomputes itemized net alpha before paper intent creation and records low-edge candidates as NO_TRADE with the rejected forecast preserved.",
+      "evidence_sha256": "a6b54dd3a3d8281ac96e698584f2e84e6f5c2fc3b5e588aaea714add71fc93b0",
       "blockers": [
         "Existing strategy adapters do not all emit the required cost-itemized forecast and will abstain until wired.",
         "Forecast calibration, prospective live-session evidence, and profitability remain unverified."

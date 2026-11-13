@@ -6,6 +6,7 @@
     "LIVE_PAPER and SHADOW position increases require a finite, cost-itemized net-alpha forecast and positive holding horizon.",
     "The runner recomputes excess return after fees, spread, and impact and rejects mismatched forecasts or net alpha at/below the configured hurdle.",
     "The threshold is frozen into session configuration and risk-verdict journal evidence.",
+    "Below-hurdle candidates become NO_TRADE with the rejected forecast retained in a durable disposition record.",
     "Reductions and closes are exempt; ambiguous SELL effects are rejected and short entries require the hurdle."
   ],
   "tests": {

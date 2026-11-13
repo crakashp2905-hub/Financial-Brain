@@ -4,7 +4,7 @@
 
 The threshold is expressed as a fractional return over the forecast holding horizon. It defaults to zero, which still rejects zero or negative net alpha. The configured threshold is part of the session's content-addressed configuration. Risk rejections retain their original reason while the hurdle verdict is persisted alongside the risk verdict. A SELL decision must explicitly mark `position_effect` as `REDUCE`, `CLOSE`, or `INCREASE`; short entries use the same net-alpha hurdle. Reductions and closes do not need an entry forecast.
 
-The forecast decomposition is carried in the immutable decision record, so session replay uses the same values. Missing, inconsistent, non-finite, negative-cost, or below-hurdle forecasts fail closed before a paper intent or simulator call can be created.
+The forecast decomposition is carried in the immutable decision record, so session replay uses the same values. A low-edge candidate is surfaced as `NO_TRADE`, with the original candidate and its rejected forecast preserved in a durable disposition record for counterfactual analysis. Missing, inconsistent, non-finite, negative-cost, or below-hurdle forecasts fail closed before a paper intent or simulator call can be created.
 
 ## Evidence boundary
 

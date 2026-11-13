@@ -471,12 +471,16 @@ def test_paper_entry_hurdle_rejects_missing_or_non_exceeding_forecast(tmp_path, 
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *args: calls.append(args) or {},
     )
-    assert result["status"] == "REJECTED"
+    assert result["status"] == "NO_TRADE"
     assert result["reason"] == "NET_ALPHA_HURDLE_NOT_MET"
+    assert result["decision"]["side"] == "NO_TRADE"
+    assert result["decision"]["rejected_candidate"] == decision
     assert result["risk"]["net_alpha_hurdle"]["required"] is True
     assert calls == []
     persisted = [r for r in DurableJournal(path).records() if r["t"] == "RISK_VERDICT"]
     assert persisted[-1]["risk"]["net_alpha_hurdle"] == result["risk"]["net_alpha_hurdle"]
+    dispositions = [r for r in DurableJournal(path).records() if r["t"] == "DECISION_DISPOSITION"]
+    assert dispositions[-1]["decision"] == result["decision"]
 
 
 def test_paper_entry_above_hurdle_is_recorded_and_can_reach_simulator(tmp_path):
@@ -519,7 +523,7 @@ def test_paper_position_reduction_is_exempt_but_short_entry_needs_hurdle(tmp_pat
         decision_fn=lambda _: {"side": "SELL", "position_effect": "INCREASE"},
         risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {},
     )
-    assert short_entry["status"] == "REJECTED"
+    assert short_entry["status"] == "NO_TRADE"
     assert short_entry["reason"] == "NET_ALPHA_HURDLE_NOT_MET"
 
 
