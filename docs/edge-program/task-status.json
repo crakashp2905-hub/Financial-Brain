@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 24,
-  "unrecorded_tasks": 194,
+  "recorded_tasks": 25,
+  "unrecorded_tasks": 193,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -52,6 +52,25 @@
       "test_result": "Pinned protected trial records verify against the pre-existing baseline; a forged FAIL-to-PASS trial-ledger edit is detected; closed outcomes reject endpoint/benchmark rewrites and registry recovery revalidates the content-addressed closure. Focused acceptance suite: 7 passed (exit code 0).",
       "evidence_sha256": "3c061f4126aae8e6e28e4c2b97ab051c556ef9d9675698d98e4e5d164f9fc5ac",
       "blockers": []
+    },
+    {
+      "id": "PE-0003",
+      "status": "PARTIAL",
+      "sources": [
+        "scripts/edge_asset_backup.py",
+        "tests/test_edge_asset_backup.py",
+        "docs/edge-program/pe-0003-backup-evidence.json"
+      ],
+      "tests": [
+        "test_duckdb_snapshot_restores_and_matches_checksum",
+        "test_active_duckdb_wal_is_recorded_as_blocked_without_copy",
+        "test_snapshot_rejects_paths_outside_repo"
+      ],
+      "test_result": "Backup tooling refuses active DuckDB WALs, rejects paths outside the repo, hashes copied files, restores to a separate location, verifies checksums and opens restored databases read-only. The local run backed up and restored 11 paper/archive/strategy-manifest artifacts; focused suite: 3 passed. PE-0003 remains incomplete because the active paper_live database could not be safely copied.",
+      "evidence_sha256": "1a61376ef7f56203d89ee2871f94a657186f3e521c7f7c52106824893bc18071",
+      "blockers": [
+        "data/paper_live.duckdb had a changing WAL at capture time; rerun backup after its writer/session closes cleanly"
+      ]
     },
     {
       "id": "PE-0015",
