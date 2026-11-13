@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 57,
-  "unrecorded_tasks": 161,
+  "recorded_tasks": 58,
+  "unrecorded_tasks": 160,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1165,6 +1165,23 @@
       ],
       "test_result": "49 passed (exit code 0) across the futures paper account, futures analytics/contract validation, portfolio and ledger regression suites; Ruff and mypy on the new futures paper module passed. Cash and position reconcile over consecutive settlements, roll and expiry; restart and duplicate-event handling are covered.",
       "evidence_sha256": "623b83b10d5a154458fdedff750e70772154990bb694f4890b3c76e6cb4210be",
+      "blockers": []
+    },
+    {
+      "id": "PE-0095",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/options_paper.py",
+        "tests/test_kernel_options_paper.py",
+        "docs/edge-program/pe-0095-options-expiry-settlement-evidence.json"
+      ],
+      "tests": [
+        "test_physical_call_spread_expiry_reconciles_both_legs_margin_cash_and_restart",
+        "test_cash_settled_long_put_pays_intrinsic_and_physical_assignment_creates_shares",
+        "test_naked_short_margin_gate_and_expiry_data_validation_are_fail_closed"
+      ],
+      "test_result": "92 passed (exit code 0); Ruff and mypy on the new options paper module passed. Expiry flows reconcile premium cash, spread reserve, both legs and physical/cash settlement; journal restart and duplicate commands are verified.",
+      "evidence_sha256": "942c35807c310feba52db386ccd5d70764ec11130f7af1ad12138ff94649309f",
       "blockers": []
     }
   ]
