@@ -78,6 +78,20 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
     risk = result.get("risk")
     if not isinstance(intent_id, str) or not isinstance(receipt, dict) or not isinstance(decision, dict):
         raise PaperAccountBridgeError("paper session is missing its stable intent, execution receipt, or decision")
+    evidence_fields = ("execution_model_id", "execution_model_sha256", "fee_schedule_sha256",
+                      "latency_model_sha256", "data_snapshot_sha256")
+    if any(not isinstance(receipt.get(key), str) or not receipt[key] for key in evidence_fields):
+        raise PaperAccountBridgeError("execution receipt is missing immutable model, fee, latency or snapshot identity")
+    for key in evidence_fields[1:]:
+        if len(receipt[key]) != 64 or any(char not in "0123456789abcdef" for char in receipt[key]):
+            raise PaperAccountBridgeError(f"execution receipt has an invalid {key}")
+    if receipt["fee_schedule_sha256"] != account.fee_schedule.sha256:
+        raise PaperAccountBridgeError("execution receipt fee hash does not match the paper account schedule")
+    quote_hashes = receipt.get("quote_event_sha256s")
+    snapshot_digest = hashlib.sha256(json.dumps(quote_hashes, sort_keys=True, separators=(",", ":"),
+                                                allow_nan=False).encode("utf-8")).hexdigest()
+    if not isinstance(quote_hashes, list) or snapshot_digest != receipt["data_snapshot_sha256"]:
+        raise PaperAccountBridgeError("execution receipt data snapshot hash does not match quote evidence")
     if not isinstance(risk, dict) or risk.get("approved") is not True:
         raise PaperAccountBridgeError("paper account sync requires an approved persisted risk verdict")
 
@@ -126,9 +140,12 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
             for fill in fills:
                 if not isinstance(fill, dict):
                     raise PaperAccountBridgeError("receipt fill must be a dictionary")
+                evidence = {key: fill.get(key) for key in evidence_fields}
+                if evidence != {key: receipt[key] for key in evidence_fields}:
+                    raise PaperAccountBridgeError("fill provenance does not match its immutable receipt")
                 account.record_fill(intent_id, fill_id=str(fill["fill_id"]),
                                     quantity=int(fill["quantity"]), price=Decimal(str(fill["price"])),
-                                    filled_on=fill_day)
+                                    filled_on=fill_day, execution_evidence=evidence)
             order = account.oms.order(intent_id)
             if order.remaining and order.state is State.PARTIAL:
                 account.move(intent_id, State.CANCEL_PENDING)
@@ -168,6 +185,11 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
                      "average_cost": str(position.average_cost)},
         "mark": mark,
         "fill_ids": sorted(str(fill["fill_id"]) for fill in fills),
+        "execution_model_id": receipt["execution_model_id"],
+        "execution_model_sha256": receipt["execution_model_sha256"],
+        "fee_schedule_sha256": receipt["fee_schedule_sha256"],
+        "latency_model_sha256": receipt["latency_model_sha256"],
+        "data_snapshot_sha256": receipt["data_snapshot_sha256"],
         "physical_orders": False,
     }
     digest = hashlib.sha256(json.dumps(row, sort_keys=True, separators=(",", ":"),

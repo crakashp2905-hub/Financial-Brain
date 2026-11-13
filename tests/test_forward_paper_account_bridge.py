@@ -17,6 +17,7 @@ from financial_brain.kernel.oms import State
 
 DECISION_AT = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
 SCHEDULE = FeeSchedule("paper-cost-v1", date(2026, 1, 1), Decimal("10"), Decimal("10"))
+MODEL_EVIDENCE = {"fee_schedule_sha256": SCHEDULE.sha256}
 
 
 def _config():
@@ -50,7 +51,7 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
     service, config, account, runner_path, account_path = _service(tmp_path)
     events = [_event(DECISION_AT + timedelta(seconds=1)),
               _event(DECISION_AT + timedelta(seconds=2), bid="102", ask="103")]
-    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")})
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
     preflight_calls = []
     kwargs = dict(
         preflight_fn=lambda: preflight_calls.append(True) or {"approved": True, "checks": {"cash": True}},
@@ -69,6 +70,10 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
     assert account.cash == cash_after_first == Decimal("9799.80")
     assert account.position("NSE:INFY").quantity == 2
     assert account.fees == Decimal("0.20")
+    durable_fill = next(row for row in account.journal.records() if row.get("t") == "FILL")
+    assert durable_fill["execution_evidence"]["fee_schedule_sha256"] == SCHEDULE.sha256
+    assert durable_fill["execution_evidence"]["execution_model_sha256"] == first["execution"]["execution_model_sha256"]
+    assert first["account_reconciliation"]["data_snapshot_sha256"] == first["execution"]["data_snapshot_sha256"]
     assert account.ledger.balance("cash:paper-main", "INR") == account.cash
     assert account.ledger.trial_balance_ok()
     assert first["account_reconciliation"]["mark"]["marking_policy"] == "LONG_LIQUIDATION_BID"
@@ -79,7 +84,7 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
 
 def test_partial_receipt_releases_unfilled_reservation_after_cancel(tmp_path):
     service, config, account, _, _ = _service(tmp_path)
-    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")})
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
 
     result = service.run(
         config, [_event(DECISION_AT + timedelta(seconds=1), ask_qty=1)],
@@ -104,8 +109,32 @@ def test_buy_sync_requires_explicit_risk_cash_reserve(tmp_path):
             preflight_fn=lambda: {"approved": True},
             decision_fn=lambda _events: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
             risk_fn=lambda _decision: {"approved": True},
-            execution_fn=MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}),
+            execution_fn=MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE),
             decision_at=DECISION_AT,
+        )
+
+    assert account.cash == Decimal("10000")
+    assert account.position("NSE:INFY").quantity == 0
+
+
+def test_execution_fee_hash_mismatch_is_rejected_before_account_posting(tmp_path):
+    service, config, account, _, _ = _service(tmp_path)
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+
+    def wrong_fee_execution(decision, intent_id, events):
+        receipt = simulator(decision, intent_id, events)
+        receipt["fee_schedule_sha256"] = "f" * 64
+        for fill in receipt["fills"]:
+            fill["fee_schedule_sha256"] = "f" * 64
+        return receipt
+
+    with pytest.raises(PaperAccountBridgeError, match="fee hash"):
+        service.run(
+            config, [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: {"approved": True},
+            decision_fn=lambda _events: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+            risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+            execution_fn=wrong_fee_execution, decision_at=DECISION_AT,
         )
 
     assert account.cash == Decimal("10000")

@@ -55,7 +55,8 @@ def test_simulated_fill_receipt_points_through_event_to_raw_quote_archive(tmp_pa
                             ingested_at=NOW + timedelta(seconds=2), raw_archive=archive)
     decision = {"instrument": "NSE:INFY", "side": "BUY", "quantity": 2,
                 "decision_at_utc": NOW.isoformat()}
-    receipt = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")})(decision, "intent-raw", [event])
+    receipt = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")},
+                                      fee_schedule_sha256="a" * 64)(decision, "intent-raw", [event])
 
     assert receipt["status"] == "FILLED"
     fill = receipt["fills"][0]

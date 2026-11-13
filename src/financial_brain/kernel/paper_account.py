@@ -13,6 +13,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
+import hashlib
+import json
 from pathlib import Path
 import re
 from uuid import uuid4
@@ -63,6 +65,11 @@ class FeeSchedule:
         return {"schedule_id": self.schedule_id, "effective_from": self.effective_from.isoformat(),
                 "buy_bps": str(self.buy_bps), "sell_bps": str(self.sell_bps),
                 "minimum_per_fill": str(self.minimum_per_fill)}
+
+    @property
+    def sha256(self) -> str:
+        canonical = json.dumps(self.as_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     @classmethod
     def from_dict(cls, value: dict | None) -> FeeSchedule | None:
@@ -296,7 +303,7 @@ class PaperAccount:
         self._validate_and_commit({"t": "STATE", "client_id": client_id, "state": state.value})
 
     def record_fill(self, client_id: str, *, fill_id: str, quantity: int, price: Decimal,
-                    filled_on: date | None = None) -> None:
+                    filled_on: date | None = None, execution_evidence: dict | None = None) -> None:
         order = self.oms.order(client_id)
         fee_amount = Decimal(0)
         if self.fee_schedule is not None:
@@ -305,15 +312,28 @@ class PaperAccount:
             if filled_on < self.fee_schedule.effective_from:
                 raise PaperAccountError("fee schedule is not yet effective on the fill date")
             fee_amount = self.fee_schedule.calculate(side=order.side, notional=price * quantity)
+        if execution_evidence is not None:
+            required = {"execution_model_id", "execution_model_sha256", "fee_schedule_sha256",
+                        "latency_model_sha256", "data_snapshot_sha256"}
+            if (set(execution_evidence) != required
+                    or not isinstance(execution_evidence.get("execution_model_id"), str)
+                    or not execution_evidence["execution_model_id"].strip()
+                    or any(not isinstance(execution_evidence.get(key), str)
+                           or not re.fullmatch(r"[0-9a-f]{64}", execution_evidence[key])
+                           for key in required - {"execution_model_id"})):
+                raise PaperAccountError("execution evidence must include model, fees, latency and data hashes")
+            if self.fee_schedule is None or execution_evidence["fee_schedule_sha256"] != self.fee_schedule.sha256:
+                raise PaperAccountError("execution evidence fee hash does not match the account fee schedule")
         rec = {
             "t": "FILL", "client_id": client_id, "fill_id": fill_id,
             "symbol": self._symbol_for(client_id), "side": order.side,
             "quantity": quantity, "price": str(price), "fee_amount": str(fee_amount),
             "fee_schedule_id": self.fee_schedule.schedule_id if self.fee_schedule else None,
             "filled_on": filled_on.isoformat() if filled_on else None,
+            "execution_evidence": dict(execution_evidence) if execution_evidence is not None else None,
         }
         content = (client_id, rec["symbol"], quantity, str(price), str(fee_amount),
-                   rec["fee_schedule_id"], rec["filled_on"])
+                   rec["fee_schedule_id"], rec["filled_on"], rec["execution_evidence"])
         if fill_id in self._fill_content:
             if self._fill_content[fill_id] != content:
                 raise PaperAccountError(f"fill id {fill_id} reused with different content")
@@ -406,7 +426,7 @@ class PaperAccount:
         order = self.oms.order(r["client_id"])
         prior: set[str] = getattr(self, "_fill_ids", set())
         content = (r["client_id"], r["symbol"], r["quantity"], r["price"], r.get("fee_amount", "0"),
-                   r.get("fee_schedule_id"), r.get("filled_on"))
+                   r.get("fee_schedule_id"), r.get("filled_on"), r.get("execution_evidence"))
         if fill_id in prior:
             if self._fill_content[fill_id] != content:
                 raise PaperAccountError(f"fill id {fill_id} reused with different content")
@@ -426,6 +446,9 @@ class PaperAccount:
             expected = self.fee_schedule.calculate(side=order.side, notional=amount)
             if fill_date < self.fee_schedule.effective_from or fee != expected:
                 raise PaperAccountError("durable fill fee does not match its effective schedule")
+            evidence = r.get("execution_evidence")
+            if evidence is not None and evidence.get("fee_schedule_sha256") != self.fee_schedule.sha256:
+                raise PaperAccountError("durable fill execution evidence fee hash does not match its schedule")
         elif fee != 0:
             raise PaperAccountError("fill includes a fee without an account fee schedule")
         if order.side == "BUY":

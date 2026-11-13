@@ -130,6 +130,14 @@ def test_slippage_gap_is_reported_and_execution_models_are_versioned_not_edited(
         reg.register("exec-v1", {"slippage_bps": 5.0})
     reg.register("exec-v2", {"slippage_bps": 5.0})
     assert reg.get("exec-v1")["slippage_bps"] == 2.5
+    assert len(reg.sha256("exec-v1")) == 64
+    nested = {"fees": {"bps": 3}}
+    reg.register("exec-v3", nested)
+    nested["fees"]["bps"] = 99
+    returned = reg.get("exec-v3")
+    returned["fees"]["bps"] = 88
+    assert reg.get("exec-v3")["fees"]["bps"] == 3
+    assert len(reg.sha256("exec-v3")) == 64
 
 
 # ---- FE-0141 ----

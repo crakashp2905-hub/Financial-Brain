@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 53,
-  "unrecorded_tasks": 165,
+  "recorded_tasks": 54,
+  "unrecorded_tasks": 164,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -795,6 +795,29 @@
         "Current official freeze and margin rules are not present; no values fabricated.",
         "Interactive trading service still needs the complete owner-authorized rule-master loader; until then OMS orders fail closed."
       ]
+    },
+    {
+      "id": "PE-0087",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/rehearsal.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_forward_edge_f12.py",
+        "docs/edge-program/pe-0087-immutable-paper-fill-provenance-evidence.json"
+      ],
+      "tests": [
+        "test_quote_simulator_uses_first_quote_after_latency_and_caps_visible_size",
+        "test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently",
+        "test_execution_fee_hash_mismatch_is_rejected_before_account_posting",
+        "test_slippage_gap_is_reported_and_execution_models_are_versioned_not_edited"
+      ],
+      "test_result": "49 focused tests passed; Ruff and mypy on changed source modules passed. Paper fills carry immutable execution-model, fee-schedule, latency-model and quote-snapshot hashes through account posting; invalid provenance is rejected.",
+      "evidence_sha256": "ca895b68e24297a1f86e70f66c5afca791daab07df2da07d19d61e510073f43c",
+      "blockers": []
     },
     {
       "id": "PE-0088",

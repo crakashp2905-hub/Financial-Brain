@@ -22,6 +22,7 @@ def _quote(offset_ms, *, bid="99.95", ask="100.05", bid_qty=10, ask_qty=10):
 
 def _simulate(events, *, latency=timedelta(milliseconds=10), quantity=5, feed_health=None):
     adapter = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, latency=latency,
+                                       fee_schedule_sha256="a" * 64,
                                        feed_health=feed_health)
     return adapter({"instrument": "NSE:INFY", "side": "BUY", "quantity": quantity,
                     "decision_at_utc": DECISION.isoformat()}, "perturbation", events)

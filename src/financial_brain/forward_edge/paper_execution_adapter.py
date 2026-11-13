@@ -5,6 +5,8 @@ This adapter is deterministic paper simulation only. It cannot submit broker ord
 from __future__ import annotations
 
 import hashlib
+import json
+import re
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Callable
@@ -25,14 +27,30 @@ class MarketableQuoteSimulator:
     """
 
     def __init__(self, tick_by_instrument: dict[str, Decimal], *,
+                 execution_model_id: str = "quote-v1",
+                 fee_schedule_sha256: str,
                  latency: timedelta = timedelta(0),
                  feed_health: Callable[[list[NormalizedEvent]], tuple[bool, list[str]]] | None = None) -> None:
         if latency < timedelta(0):
             raise ValueError("latency cannot be negative")
         if not tick_by_instrument or any(tick <= 0 for tick in tick_by_instrument.values()):
             raise ValueError("positive instrument ticks are required")
+        if not execution_model_id.strip():
+            raise ValueError("immutable execution_model_id is required")
+        if not re.fullmatch(r"[0-9a-f]{64}", fee_schedule_sha256):
+            raise ValueError("fee_schedule_sha256 must be a lowercase SHA-256")
         self.tick_by_instrument = dict(tick_by_instrument)
         self.latency = latency
+        self.execution_model_id = execution_model_id
+        self.fee_schedule_sha256 = fee_schedule_sha256
+        self.execution_model_sha256 = _sha256({
+            "model_id": execution_model_id,
+            "simulator": "marketable-quote-v1",
+            "ticks": {key: str(value) for key, value in sorted(tick_by_instrument.items())},
+        })
+        self.latency_model_sha256 = _sha256({
+            "model": "fixed-latency-v1", "latency_microseconds": latency // timedelta(microseconds=1),
+        })
         self.feed_health = feed_health or (lambda _events: (True, []))
 
     def __call__(self, decision: dict, intent_id: str,
@@ -82,9 +100,15 @@ class MarketableQuoteSimulator:
             selected = min((q for q in quotes if q.available_utc >= cutoff),
                            key=lambda q: q.available_utc)
         quote_event = quote_events.get(id(selected)) if selected is not None else None
+        data_snapshot_sha256 = _sha256(sorted(event.content_sha256() for event in quote_events.values()))
         receipt = {
             "receipt_id": f"sim-{intent_id}",
             "simulator": "marketable-quote-v1",
+            "execution_model_id": self.execution_model_id,
+            "execution_model_sha256": self.execution_model_sha256,
+            "fee_schedule_sha256": self.fee_schedule_sha256,
+            "latency_model_sha256": self.latency_model_sha256,
+            "data_snapshot_sha256": data_snapshot_sha256,
             "status": result.status,
             "reason": result.reason,
             "fidelity": result.fidelity,
@@ -104,5 +128,15 @@ class MarketableQuoteSimulator:
                 "price": str(result.avg_price),
                 "quote_event_sha256": quote_hash,
                 "quote_available_utc": selected.available_utc.isoformat(),
+                "execution_model_id": self.execution_model_id,
+                "execution_model_sha256": self.execution_model_sha256,
+                "fee_schedule_sha256": self.fee_schedule_sha256,
+                "latency_model_sha256": self.latency_model_sha256,
+                "data_snapshot_sha256": data_snapshot_sha256,
             }]
         return receipt
+
+
+def _sha256(value: object) -> str:
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
