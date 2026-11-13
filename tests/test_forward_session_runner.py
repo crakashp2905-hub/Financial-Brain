@@ -248,7 +248,7 @@ def test_no_trade_signal_never_reaches_execution_adapter(tmp_path):
 
 
 def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
-    assert _config().sha256 == "9d1dd4671d76c534997ed56259ec83d6b786b9eea08d62557b1abf4881f51bf3"
+    assert _config().sha256 == "282fc38dd14558bbdc403114f0b5828dcea195ff0eeff423ef07ecb718794095"
     assert _config(capital_inr="1000000.00").sha256 == _config(capital_inr="1000000").sha256
     assert _config(ledger_id="LEDGER-2").sha256 != _config().sha256
     assert _config(risk_policy_sha256="d" * 64).sha256 != _config().sha256

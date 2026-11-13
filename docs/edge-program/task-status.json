@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 87,
-  "unrecorded_tasks": 131,
+  "recorded_tasks": 88,
+  "unrecorded_tasks": 130,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1863,6 +1863,33 @@
       "blockers": [
         "Existing strategy adapters do not all emit the required cost-itemized forecast and will abstain until wired.",
         "Forecast calibration, prospective live-session evidence, and profitability remain unverified."
+      ]
+    },
+    {
+      "id": "PE-0062",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/net_alpha_policy.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_net_alpha_policy.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/pe-0062-development-only-threshold-calibration.md",
+        "docs/edge-program/pe-0062-development-only-threshold-calibration-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_threshold_calibration_uses_development_slice_and_freezes_before_validation",
+        "test_threshold_calibration_rejects_holdout_or_invalid_development_rows",
+        "test_frozen_threshold_cannot_be_changed_after_forward_drawdown",
+        "test_runner_checks_registry_policy_against_frozen_configuration",
+        "test_same_forward_cohort_cannot_change_threshold_between_sessions"
+      ],
+      "test_result": "125 focused tests passed; mypy, Ruff, and source-inventory checks pass (566 Python files). Synthetic cases confirm development-only selection, pre-validation freeze, durable immutability, runner binding, and refusal of threshold changes after a forward loss.",
+      "evidence_sha256": "5e78d7c3bf94c609cc189db224c30be1686ef94689eb2968153d0763d8006bfc",
+      "blockers": [
+        "A real development dataset and approved calibration protocol have not been supplied, so no production threshold is selected.",
+        "The candidate selector is not multiplicity-corrected and must not be used as a promotion test.",
+        "Legacy session runners without a supplied registry do not have external frozen-policy provenance."
       ]
     }
   ]

@@ -18,6 +18,7 @@ from typing import Callable, Iterable
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent, entry_allowed
 from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.net_alpha_policy import NetAlphaPolicyError, NetAlphaThresholdRegistry
 from financial_brain.forward_edge.session_clock import ClockError, SessionClockProvider, as_utc
 from financial_brain.forward_edge.session_ops import SessionDateLedger, SessionError
 
@@ -55,6 +56,7 @@ class ForwardRunConfig:
     mode: Mode = Mode.LIVE_PAPER
     attempt_id: str = "attempt-1"
     minimum_forecast_net_alpha: float = 0.0
+    net_alpha_policy_sha256: str | None = None
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
@@ -74,6 +76,10 @@ class ForwardRunConfig:
                 or not math.isfinite(self.minimum_forecast_net_alpha)
                 or self.minimum_forecast_net_alpha < 0):
             raise RunnerError("minimum forecast net-alpha hurdle must be finite and non-negative")
+        if self.net_alpha_policy_sha256 is not None and (
+                len(self.net_alpha_policy_sha256) != 64
+                or any(ch not in "0123456789abcdef" for ch in self.net_alpha_policy_sha256)):
+            raise RunnerError("net-alpha policy identity must be a SHA-256 digest")
         try:
             if date.fromisoformat(self.exchange_date).isoformat() != self.exchange_date:
                 raise ValueError
@@ -97,6 +103,7 @@ class ForwardRunConfig:
                 "benchmark_id": self.benchmark_id, "instruments": sorted(set(self.instruments)),
                 "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value,
                 "minimum_forecast_net_alpha": self.minimum_forecast_net_alpha,
+                "net_alpha_policy_sha256": self.net_alpha_policy_sha256,
                 "session_key": self.session_key, "attempt_id": self.attempt_id}
 
     @property
@@ -123,10 +130,12 @@ class ForwardSessionRunner:
 
     def __init__(self, journal_path: Path,
                  clock_provider: SessionClockProvider | None = None,
-                 session_date_ledger: SessionDateLedger | None = None) -> None:
+                 session_date_ledger: SessionDateLedger | None = None,
+                 net_alpha_threshold_registry: NetAlphaThresholdRegistry | None = None) -> None:
         self.journal_path = Path(journal_path)
         self.clock_provider = clock_provider or SessionClockProvider()
         self.session_date_ledger = session_date_ledger
+        self.net_alpha_threshold_registry = net_alpha_threshold_registry
 
     def mark_incomplete(self, session_id: str, reason: str) -> None:
         """Close a nonterminal session as incomplete without fabricating an outcome."""
@@ -195,6 +204,32 @@ class ForwardSessionRunner:
                 raise RunnerError("cannot open a session on a non-trading date")
         journal = DurableJournal(self.journal_path)
         records = journal.records()
+        if config.mode in (Mode.LIVE_PAPER, Mode.SHADOW):
+            if self.net_alpha_threshold_registry is not None:
+                if config.net_alpha_policy_sha256 is None:
+                    raise RunnerError("paper session needs a frozen development-calibrated net-alpha policy")
+                try:
+                    policy = self.net_alpha_threshold_registry.resolve(config.strategy_sha256, config.cohort_id)
+                except NetAlphaPolicyError as exc:
+                    raise RunnerError(str(exc)) from exc
+                if (policy is None or policy.sha256 != config.net_alpha_policy_sha256
+                        or policy.minimum_net_alpha != config.minimum_forecast_net_alpha):
+                    raise RunnerError("paper session threshold does not match its frozen cohort policy")
+                if date.fromisoformat(config.exchange_date) < date.fromisoformat(policy.validation_start):
+                    raise RunnerError("paper validation session predates the frozen policy validation start")
+            elif config.net_alpha_policy_sha256 is not None:
+                raise RunnerError("net-alpha policy identity cannot be verified without its registry")
+        for row in records:
+            if row.get("t") != "SESSION_PLAN" or row.get("session_id") == config.session_id:
+                continue
+            prior_config = row.get("config")
+            if (isinstance(prior_config, dict)
+                    and prior_config.get("strategy_sha256") == config.strategy_sha256
+                    and prior_config.get("cohort_id") == config.cohort_id
+                    and prior_config.get("mode") == config.mode.value
+                    and (prior_config.get("minimum_forecast_net_alpha") != config.minimum_forecast_net_alpha
+                         or prior_config.get("net_alpha_policy_sha256") != config.net_alpha_policy_sha256)):
+                raise RunnerError("net-alpha hurdle is frozen for this strategy cohort")
         existing = [r for r in records if r.get("session_id") == config.session_id]
         for row in records:
             if row.get("t") != "SESSION_PLAN" or row.get("session_id") == config.session_id:
