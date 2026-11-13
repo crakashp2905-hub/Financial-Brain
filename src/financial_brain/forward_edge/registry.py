@@ -17,9 +17,12 @@ import json
 import random
 import re
 from dataclasses import dataclass, field, replace
-from datetime import date
+from datetime import date, datetime, timezone
 from enum import Enum
 from pathlib import Path
+
+from .approvals import Approval, ApprovalError, validate_approval
+from .charter import ExperimentCharter
 
 _SHA = re.compile(r"^[0-9a-f]{64}$")
 
@@ -107,6 +110,14 @@ class StrategySpec:
 class Registry:
     def __init__(self) -> None:
         self._specs: dict[str, StrategySpec] = {}
+        self._benchmarks: dict[str, Benchmark] = {}
+
+    def register_benchmark(self, benchmark: "Benchmark") -> None:
+        """Register an immutable benchmark definition before any result is observed."""
+        previous = self._benchmarks.get(benchmark.benchmark_id)
+        if previous is not None and previous != benchmark:
+            raise RegistryError("benchmark identity is immutable once registered")
+        self._benchmarks[benchmark.benchmark_id] = benchmark
 
     def register(self, spec: StrategySpec) -> StrategySpec:
         if spec.strategy_id in self._specs:
@@ -137,13 +148,29 @@ class Registry:
     def __len__(self) -> int:
         return len(self._specs)
 
-    def transition(self, strategy_id: str, new: Status, *, reason: str, human_approved: bool = False,
-                   custody_verified: bool = False) -> StrategySpec:
+    def transition(self, strategy_id: str, new: Status, *, reason: str,
+                   approval: Approval | None = None, charter: ExperimentCharter | None = None,
+                   now: datetime | None = None, custody_verified: bool = False) -> StrategySpec:
         spec = self._specs[strategy_id]
         if new not in ALLOWED[spec.status]:
             raise RegistryError(f"{spec.status.value} -> {new.value} is not allowed for {strategy_id}")
-        if new is Status.PAPER_ELIGIBLE and not human_approved:
-            raise RegistryError("enrolment for paper needs a human approval")
+        if new is Status.PAPER_ELIGIBLE:
+            if approval is None or charter is None:
+                raise RegistryError("paper enrolment needs a scoped human approval and frozen trial charter")
+            try:
+                charter.require_evaluation_identity()
+                if charter.strategy_id != strategy_id or charter.code_sha256 != spec.code_sha256:
+                    raise RegistryError("paper charter does not match the registered strategy identity")
+                if len(charter.benchmarks) != 1 or charter.benchmarks[0] != spec.benchmark_id:
+                    raise RegistryError("paper charter benchmark must match the registered strategy benchmark")
+                benchmark = self._benchmarks.get(spec.benchmark_id or "")
+                if benchmark is None or benchmark.benchmark_id not in charter.benchmarks:
+                    raise RegistryError("paper enrolment needs its frozen benchmark registered")
+                assert_benchmark_frozen_before(benchmark, date.fromisoformat(charter.start_on))
+                validate_approval(approval, kind="STRATEGY_ENROLLMENT", subject=strategy_id,
+                                  scope_sha256=charter.sha256(), now=now or datetime.now(timezone.utc))
+            except (ApprovalError, ValueError) as exc:
+                raise RegistryError(f"invalid paper enrolment evidence: {exc}") from exc
         if new is Status.VERIFIED and not custody_verified:
             raise RegistryError("VERIFIED needs independently verified forward evidence")
         if new in (Status.FAILED, Status.RETIRED) and not reason.strip():

@@ -4,12 +4,14 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
 
 from financial_brain.forward_edge import registry as R
+from financial_brain.forward_edge.approvals import Approval
+from financial_brain.forward_edge.charter import EvaluationIdentity, ExperimentCharter
 from financial_brain.forward_edge.registry import Benchmark, Registry, RegistryError, Status, StrategySpec
 
 REPO = Path(__file__).resolve().parents[1]
@@ -23,6 +25,26 @@ def _spec(**over) -> StrategySpec:
                 status=Status.EXPLORATORY)
     base.update(over)
     return StrategySpec(**base)
+
+
+def _enrolment_evidence(*, actor_id: str = "owner-1", benchmark_day: date = date(2027, 1, 1)):
+    charter = ExperimentCharter(
+        charter_id="trial-M1-v1", version=1, strategy_id="M1", code_sha256=SHA,
+        capital_inr="100000", start_on="2027-01-04", end_on="2027-03-31",
+        universe=("NSE_EQ",), benchmarks=("NIFTY_CASH",), horizon_sessions=20,
+        evaluation_identity=EvaluationIdentity(
+            strategy_code_sha256=SHA, model_code_sha256="c" * 64, data_snapshot_sha256="d" * 64,
+            data_rights_id="kite-paper", data_rights_sha256="e" * 64, market_calendar_id="NSE-2027",
+            market_calendar_sha256="f" * 64, universe_sha256="1" * 64,
+            execution_cost_id="cost-v1", execution_cost_sha256="2" * 64,
+            benchmarks=(("NIFTY_CASH", "3" * 64),),
+        ),
+    )
+    benchmark = Benchmark("NIFTY_CASH", "INDEX", "3" * 64, benchmark_day)
+    now = datetime(2026, 12, 1, tzinfo=timezone.utc)
+    approval = Approval("STRATEGY_ENROLLMENT", "M1", charter.sha256(), actor_id, "human",
+                        now, datetime(2027, 1, 1, tzinfo=timezone.utc))
+    return charter, benchmark, approval, now
 
 
 # ---- FE-0023 immutable, validated spec ----
@@ -59,7 +81,7 @@ def test_failed_strategy_cannot_become_eligible_frozen_or_verified() -> None:
     reg.register(_spec(status=Status.FAILED, exclusion_reason="G3 fail", benchmark_id=None))
     for target in (Status.PAPER_ELIGIBLE, Status.FROZEN_CHALLENGER, Status.VERIFIED, Status.SHADOW_ONLY):
         with pytest.raises(RegistryError, match="not allowed"):
-            reg.transition("M1", target, reason="try", human_approved=True, custody_verified=True)
+            reg.transition("M1", target, reason="try", custody_verified=True)
     assert reg.get("M1").status is Status.FAILED
 
 
@@ -80,9 +102,12 @@ def test_registry_rejects_renamed_retry_of_failed_parameter_hash() -> None:
 def test_paper_enrolment_needs_a_human_and_has_a_benchmark() -> None:
     reg = Registry()
     reg.register(_spec(status=Status.SHADOW_ONLY, benchmark_id="NIFTY_CASH"))
-    with pytest.raises(RegistryError, match="human"):
+    with pytest.raises(RegistryError, match="scoped human approval"):
         reg.transition("M1", Status.PAPER_ELIGIBLE, reason="x")
-    enrolled = reg.transition("M1", Status.PAPER_ELIGIBLE, reason="preregistered", human_approved=True)
+    charter, benchmark, approval, now = _enrolment_evidence()
+    reg.register_benchmark(benchmark)
+    enrolled = reg.transition("M1", Status.PAPER_ELIGIBLE, reason="preregistered", approval=approval,
+                              charter=charter, now=now)
     assert enrolled.can_place_paper_intents
     frozen = reg.transition("M1", Status.FROZEN_CHALLENGER, reason="frozen charter")
     assert frozen.status is Status.FROZEN_CHALLENGER
@@ -91,8 +116,33 @@ def test_paper_enrolment_needs_a_human_and_has_a_benchmark() -> None:
 def test_paper_status_without_benchmark_is_refused_at_spec_level() -> None:
     reg = Registry()
     reg.register(_spec(status=Status.SHADOW_ONLY))  # no benchmark
+    charter, benchmark, approval, now = _enrolment_evidence()
+    reg.register_benchmark(benchmark)
     with pytest.raises(RegistryError, match="benchmark"):
-        reg.transition("M1", Status.PAPER_ELIGIBLE, reason="x", human_approved=True)
+        reg.transition("M1", Status.PAPER_ELIGIBLE, reason="x", approval=approval,
+                       charter=charter, now=now)
+    assert reg.get("M1").status is Status.SHADOW_ONLY
+
+
+def test_paper_enrolment_rejects_ai_stale_and_unfrozen_evidence() -> None:
+    reg = Registry()
+    reg.register(_spec(status=Status.SHADOW_ONLY, benchmark_id="NIFTY_CASH"))
+    charter, benchmark, approval, now = _enrolment_evidence()
+    reg.register_benchmark(benchmark)
+    ai_approval = dataclasses.replace(approval, actor_id="agent:codex")
+    with pytest.raises(RegistryError, match="agent or non-human"):
+        reg.transition("M1", Status.PAPER_ELIGIBLE, reason="x", approval=ai_approval,
+                       charter=charter, now=now)
+    stale_approval = dataclasses.replace(approval, scope_sha256="4" * 64)
+    with pytest.raises(RegistryError, match="stale approval"):
+        reg.transition("M1", Status.PAPER_ELIGIBLE, reason="x", approval=stale_approval,
+                       charter=charter, now=now)
+    late_reg = Registry()
+    late_reg.register(_spec(status=Status.SHADOW_ONLY, benchmark_id="NIFTY_CASH"))
+    late_reg.register_benchmark(dataclasses.replace(benchmark, frozen_on=date(2027, 1, 4)))
+    with pytest.raises(RegistryError, match="before the first forward result"):
+        late_reg.transition("M1", Status.PAPER_ELIGIBLE, reason="x", approval=approval,
+                            charter=charter, now=now)
     assert reg.get("M1").status is Status.SHADOW_ONLY
 
 

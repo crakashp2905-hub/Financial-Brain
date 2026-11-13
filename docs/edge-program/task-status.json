@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 73,
-  "unrecorded_tasks": 145,
+  "recorded_tasks": 74,
+  "unrecorded_tasks": 144,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1518,6 +1518,29 @@
       "blockers": [
         "Not every existing strategy runner and historical paper-book writer consumes the registry status/intent gate.",
         "The static eligibility inventory is not yet exhaustive for all source-linked candidates."
+      ]
+    },
+    {
+      "id": "PE-0048",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "src/financial_brain/forward_edge/approvals.py",
+        "src/financial_brain/forward_edge/charter.py",
+        "docs/edge-program/human-approved-paper-eligibility-contract.md",
+        "docs/edge-program/pe-0048-paper-eligibility-evidence.json",
+        "tests/test_forward_edge_f02.py"
+      ],
+      "tests": [
+        "test_paper_enrolment_needs_a_human_and_has_a_benchmark",
+        "test_paper_status_without_benchmark_is_refused_at_spec_level",
+        "test_paper_enrolment_rejects_ai_stale_and_unfrozen_evidence"
+      ],
+      "test_result": "27 F02 tests passed; Ruff and mypy passed. Boolean-only enrollment is removed; enrollment binds human approval metadata to a content-addressed charter and pre-observation benchmark. Cryptographic identity, durable receipt and all-writer integration remain incomplete.",
+      "evidence_sha256": "735dc48ad713af00bbb52cb86c613e6748c93e3392209d5c2ffe584e489790f0",
+      "blockers": [
+        "Approval metadata is not cryptographically authenticated as a human signature.",
+        "Approval and eligibility are not durably journaled atomically; legacy paper writers still need registry enforcement."
       ]
     }
   ]
