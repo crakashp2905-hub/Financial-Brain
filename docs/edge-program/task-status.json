@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 69,
-  "unrecorded_tasks": 149,
+  "recorded_tasks": 70,
+  "unrecorded_tasks": 148,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1437,6 +1437,23 @@
         "Prospective authorized capture and next-day historical comparison have not been run or adjudicated on owner data.",
         "A human/data-quality adjudication workflow to clear UNVERIFIED results is not connected."
       ]
+    },
+    {
+      "id": "PE-0044",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/capture_replay.py",
+        "docs/edge-program/capture-replay-equivalence-contract.md",
+        "docs/edge-program/pe-0044-capture-replay-equivalence-evidence.json",
+        "tests/test_capture_replay.py"
+      ],
+      "tests": [
+        "test_capture_and_archive_replay_produce_identical_signal_and_intent_hashes",
+        "test_capture_replay_mismatch_is_durably_reported_without_claiming_equivalence"
+      ],
+      "test_result": "29 parity and session-runner tests passed; Ruff and mypy passed. Identical normalized event sequences yielded identical signal and order-intent hashes; input mismatch is durably recorded as non-equivalent. Synthetic/offline scope only.",
+      "evidence_sha256": "26a23909ab22e9df15fd68c06c0d6e9f7057d4efb107199555afcc1990e0be6e",
+      "blockers": []
     }
   ]
 }
