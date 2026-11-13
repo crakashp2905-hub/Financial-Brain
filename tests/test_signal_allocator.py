@@ -58,3 +58,16 @@ def test_hurdle_and_covariance_universe_must_be_valid():
     with pytest.raises(SignalAllocatorError, match="covariance universe"):
         _allocate({"A": ("BUY", _alpha(0.02)), "B": ("BUY", _alpha(0.03))},
                   covariance_names=("A",))
+
+
+def test_signal_allocator_forwards_position_and_sector_limits():
+    result = _allocate(
+        {name: ("BUY", _alpha(0.02 - i * 0.001)) for i, name in enumerate(("A", "B", "C"))},
+        max_positions=1,
+        sectors={"A": "technology", "B": "technology", "C": "consumer"},
+        max_sector_weight=0.25,
+    )
+    weights = dict(result.target.weights)
+    assert sum(weight > 1e-12 for name, weight in weights.items() if name != "CASH") <= 1
+    assert weights["A"] + weights["B"] <= 0.25 + 1e-8
+    assert weights["CASH"] >= 0.75 - 1e-8

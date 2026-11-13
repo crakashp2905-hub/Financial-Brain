@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 89,
-  "unrecorded_tasks": 129,
+  "recorded_tasks": 90,
+  "unrecorded_tasks": 128,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1911,6 +1911,31 @@
       "evidence_sha256": "77f21f298b9f447da524ed780d2bf01016f8f3fa647ae0ba268de2af2c008594",
       "blockers": [
         "The default 0.005 NAV band is not calibrated from prospective market costs or validated out of sample."
+      ]
+    },
+    {
+      "id": "PE-0064",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/target_portfolio.py",
+        "src/financial_brain/forward_edge/signal_allocator.py",
+        "tests/test_target_portfolio.py",
+        "tests/test_signal_allocator.py",
+        "docs/edge-program/pe-0064-position-and-sector-diversification.md",
+        "docs/edge-program/pe-0064-position-and-sector-diversification-evidence.json"
+      ],
+      "tests": [
+        "test_position_and_sector_caps_leave_concentrated_exposure_in_cash",
+        "test_turnover_limit_cannot_reintroduce_positions_outside_position_budget",
+        "test_sector_map_must_cover_the_frozen_universe",
+        "test_max_positions_must_be_positive_integer",
+        "test_signal_allocator_forwards_position_and_sector_limits"
+      ],
+      "test_result": "16 target portfolio and shared allocator tests passed; mypy and Ruff passed for changed allocator modules and tests. Synthetic concentrated inputs were capped by position and sector constraints, with remaining capital held as explicit CASH.",
+      "evidence_sha256": "c8ee4ec33fb3d35089a01be1cd05644e64cfde8c35645659e256b88489d2058c",
+      "blockers": [
+        "Default position and sector limits are engineering assumptions, not calibrated from prospective market observations.",
+        "Sector taxonomy coverage and freshness remain input-data requirements."
       ]
     }
   ]
