@@ -100,12 +100,21 @@ def _receipt(decision: dict, intent_id: str, events: list[NormalizedEvent], fx: 
     else:
         execution_at = first.available_utc if first is not None else decision_at + latency
     source_hash = _sha(sorted(event.content_sha256() for event in used_events))
+    def input_ref(event: NormalizedEvent) -> dict:
+        return {"input_id": f"event:{event.content_sha256()}",
+                "kind": event.kind,
+                "event_sha256": event.content_sha256(),
+                "available_utc": event.available_utc.astimezone(timezone.utc).isoformat()}
+    quote_inputs = [input_ref(event) for event in quote_events]
+    used_input_ids = [input_ref(event)["input_id"] for event in used_events]
     receipt = {
         "receipt_id": f"fixture-sim-{intent_id}", "simulator": "fixture-replay-v1",
         "fidelity": result.fidelity, "status": result.status, "reason": result.reason,
         "instrument": instrument, "side": intent.side, "requested_quantity": intent.quantity,
         "simulated_execution_at_utc": execution_at.isoformat(),
         "quote_event_sha256s": sorted(event.content_sha256() for event in quote_events),
+        "quote_inputs": sorted(quote_inputs, key=lambda row: (row["available_utc"], row["input_id"])),
+        "used_input_ids": used_input_ids,
         "source_event_sha256s": sorted(event.content_sha256() for event in events),
         "fills": [],
     }
@@ -113,7 +122,12 @@ def _receipt(decision: dict, intent_id: str, events: list[NormalizedEvent], fx: 
         fill_id = hashlib.sha256(f"{intent_id}:{source_hash}".encode()).hexdigest()
         receipt["fills"] = [{"fill_id": fill_id, "quantity": result.filled_qty,
                              "price": str(result.avg_price),
-                             "source_events_sha256": source_hash}]
+                             "source_events_sha256": source_hash,
+                             "source_event_ids": used_input_ids,
+                             "quote_input_ids": [row["input_id"] for row in quote_inputs
+                                                 if row["event_sha256"] in {
+                                                     event.content_sha256() for event in used_events
+                                                 }]}]
     return receipt
 
 

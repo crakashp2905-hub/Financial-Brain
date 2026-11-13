@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 64,
-  "unrecorded_tasks": 154,
+  "recorded_tasks": 65,
+  "unrecorded_tasks": 153,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1296,6 +1296,30 @@
         "The current Kite polling payload has no packet sequence number or provider disconnect/reconnect callbacks, so live gaps/reconnect/drop counts cannot yet be populated automatically from the configured source.",
         "PacketDeduper's packet-ID/sequence memory itself is process-local; only recorded health snapshots survive restart. Persisted packet-level deduplication is not connected to the capture archive."
       ]
+    },
+    {
+      "id": "PE-0036",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/raw_quote_archive.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "src/financial_brain/forward_edge/fixture_replay.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "tests/test_raw_quote_archive.py",
+        "docs/edge-program/market-capture-replay-contract.md",
+        "docs/edge-program/pe-0036-time-aligned-market-capture-evidence.json"
+      ],
+      "tests": [
+        "test_market_archive_round_trips_quotes_ticks_and_bars_by_availability",
+        "test_market_archive_requires_kind_and_source_retention_scope",
+        "test_historical_kite_bars_are_available_only_after_retrieval_and_archive_with_rights",
+        "test_historical_kite_bars_reject_invalid_ohlc",
+        "test_simulated_fill_receipt_points_through_event_to_raw_quote_archive"
+      ],
+      "test_result": "109 passed (exit code 0); Ruff and mypy passed for changed modules, and source inventory freshness passed (554 Python files). Quote/depth, authorized normalized ticks and Kite minute bars are archived with source/receipt/availability provenance; historical bars are only available to replay from retrieval time. Receipts include exact quote IDs and fidelity. No complete trade tape or live fills are claimed.",
+      "evidence_sha256": "04d0a6c4d08ca5236c2c906af9ccccbd3e4e98395a3dbc51fe597189e36ed92a",
+      "blockers": []
     },
     {
       "id": "PE-0037",

@@ -7,7 +7,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Callable
 
@@ -102,6 +102,8 @@ class MarketableQuoteSimulator:
                            key=lambda q: q.available_utc)
         quote_event = quote_events.get(id(selected)) if selected is not None else None
         data_snapshot_sha256 = _sha256(sorted(event.content_sha256() for event in quote_events.values()))
+        quote_inputs = sorted((_quote_input_ref(event) for event in quote_events.values()),
+                              key=lambda row: (row["available_utc"], row["quote_id"]))
         arrival_diagnostic = None
         baselines = [q for q in quotes if q.available_utc <= decision_at]
         if selected is not None and quote_event is not None and baselines:
@@ -128,6 +130,8 @@ class MarketableQuoteSimulator:
             "requested_quantity": intent.quantity,
             "queue_position_known": result.queue_position_known,
             "quote_event_sha256s": sorted(event.content_sha256() for event in quote_events.values()),
+            "quote_inputs": quote_inputs,
+            "used_quote_input_id": _quote_input_ref(quote_event)["quote_id"] if quote_event else None,
             "fills": [],
             "quote_arrival_shortfall": arrival_diagnostic,
         }
@@ -139,6 +143,7 @@ class MarketableQuoteSimulator:
                 "quantity": result.filled_qty,
                 "price": str(result.avg_price),
                 "quote_event_sha256": quote_hash,
+                "quote_input_id": _quote_input_ref(quote_event)["quote_id"],
                 "quote_available_utc": selected.available_utc.isoformat(),
                 "execution_model_id": self.execution_model_id,
                 "execution_model_sha256": self.execution_model_sha256,
@@ -152,3 +157,18 @@ class MarketableQuoteSimulator:
 def _sha256(value: object) -> str:
     canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _quote_input_ref(event: NormalizedEvent) -> dict:
+    """Return a stable input ID backed by the raw archive when the event has one."""
+    digest = event.content_sha256()
+    payload = dict(event.payload)
+    sequence = payload.get("raw_archive_seq")
+    chain = payload.get("raw_archive_sha256")
+    if sequence is not None and chain is not None:
+        quote_id = f"raw:{sequence}:{chain}"
+    else:
+        quote_id = f"event:{digest}"
+    return {"quote_id": quote_id, "event_sha256": digest,
+            "available_utc": event.available_utc.astimezone(timezone.utc).isoformat(),
+            "raw_archive_seq": sequence, "raw_archive_chain_sha256": chain}

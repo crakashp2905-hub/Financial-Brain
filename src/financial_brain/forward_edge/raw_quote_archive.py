@@ -1,4 +1,4 @@
-"""Locally archive canonical Kite quote objects under an explicit retention attestation."""
+"""Locally archive market events only under an explicit, source-scoped retention attestation."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.market_data import DataError, NormalizedEvent
 
 
 class RawArchiveError(ValueError):
@@ -14,7 +15,7 @@ class RawArchiveError(ValueError):
 
 
 class RawQuoteArchive:
-    """Append-only hash-chained storage for parsed Kite quote objects.
+    """Append-only hash-chained storage for raw quotes and scoped normalized market events.
 
     The gate proves only that the caller supplied an attestation record. It cannot
     establish the legal scope or correctness of that operator-supplied statement.
@@ -39,10 +40,18 @@ class RawQuoteArchive:
                 raise ValueError
         except ValueError as exc:
             raise RawArchiveError("retention approval timestamp must be timezone-aware") from exc
+        authorization = {key: retention_attestation[key] for key in required}
+        authorization["approved"] = True
+        for scope_key in ("permitted_event_kinds", "permitted_sources"):
+            if scope_key in retention_attestation:
+                values = retention_attestation[scope_key]
+                if not isinstance(values, list) or any(not isinstance(value, str) or not value.strip()
+                                                       for value in values):
+                    raise RawArchiveError(f"{scope_key} must be a list of nonempty strings")
+                authorization[scope_key] = list(values)
         self.path = Path(path)
         self.journal = DurableJournal(self.path)
-        self.authorization = {key: retention_attestation[key] for key in required}
-        self.authorization["approved"] = True
+        self.authorization = authorization
 
     def append_quote(self, instrument: str, quote: dict, *, received_at: datetime,
                      available_at: datetime) -> dict:
@@ -76,16 +85,103 @@ class RawQuoteArchive:
         return {"archive_seq": sequence, "payload_sha256": payload_digest,
                 "archive_chain_sha256": self.journal.head}
 
+    def append_market_event(self, event: NormalizedEvent, *, source: str) -> dict:
+        """Persist a normalized quote, depth, trade tick, or bar when rights are scoped.
+
+        Unlike the legacy quote-only capture, this method requires the operator's
+        retention attestation to name both the permitted event kind and source. The
+        event's source, receipt, and availability clocks are preserved verbatim in
+        UTC; historical data becomes available to a replay only at its actual local
+        retrieval/receipt time, never retroactively at its event timestamp.
+        """
+        if not isinstance(event, NormalizedEvent):
+            raise RawArchiveError("a validated normalized market event is required")
+        if not event.instrument.strip():
+            raise RawArchiveError("normalized market event instrument is required")
+        if event.kind not in {"QUOTE", "DEPTH", "TICK", "BAR"}:
+            raise RawArchiveError("only quote, depth, tick, and bar events may be archived here")
+        if not isinstance(source, str) or not source.strip():
+            raise RawArchiveError("market event source must be named")
+        permitted_kinds = self.authorization.get("permitted_event_kinds")
+        permitted_sources = self.authorization.get("permitted_sources")
+        if not isinstance(permitted_kinds, list) or event.kind not in permitted_kinds:
+            raise RawArchiveError(f"retention attestation does not permit {event.kind} persistence")
+        if not isinstance(permitted_sources, list) or source not in permitted_sources:
+            raise RawArchiveError(f"retention attestation does not permit source {source!r}")
+        payload = dict(event.payload)
+        if len(payload) != len(event.payload):
+            raise RawArchiveError("normalized market event payload keys must be unique")
+        try:
+            payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                                      ensure_ascii=False, allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise RawArchiveError("normalized event payload must be finite canonical JSON") from exc
+        row = {
+            "t": "MARKET_EVENT_CAPTURE",
+            "archive_seq": self.journal.seq + 1,
+            "source": source,
+            "kind": event.kind,
+            "instrument": event.instrument,
+            "event_utc": event.event_utc.astimezone(timezone.utc).isoformat(),
+            "received_utc": event.received_utc.astimezone(timezone.utc).isoformat(),
+            "available_utc": event.available_utc.astimezone(timezone.utc).isoformat(),
+            "ingested_utc": event.ingested_utc.astimezone(timezone.utc).isoformat()
+            if event.ingested_utc is not None else None,
+            "payload_json": payload_json,
+            "payload_sha256": hashlib.sha256(payload_json.encode("utf-8")).hexdigest(),
+            "event_sha256": event.content_sha256(),
+            "retention_authorization_id": self.authorization["authorization_id"],
+            "retention_evidence_sha256": self.authorization["evidence_sha256"],
+        }
+        sequence = self.journal.append(row)
+        return {"archive_seq": sequence, "event_sha256": row["event_sha256"],
+                "archive_chain_sha256": self.journal.head,
+                "archive_id": f"{sequence}:{row['event_sha256']}"}
+
     def records(self) -> list[dict]:
         return self.journal.records()
+
+    def replay_events(self, *, as_of: datetime | None = None) -> list[NormalizedEvent]:
+        """Reconstruct captured normalized events, optionally bounded by availability time."""
+        if as_of is not None and (as_of.tzinfo is None or as_of.utcoffset() is None):
+            raise RawArchiveError("replay as_of must be timezone-aware")
+        cutoff = as_of.astimezone(timezone.utc) if as_of is not None else None
+        events: list[tuple[int, NormalizedEvent]] = []
+        for row in self.journal.records():
+            if row.get("t") != "MARKET_EVENT_CAPTURE":
+                continue
+            event = _event_from_record(row)
+            if cutoff is None or event.available_utc <= cutoff:
+                events.append((int(row["archive_seq"]), event))
+        return [event for _, event in sorted(events, key=lambda pair: (pair[1].available_utc, pair[0]))]
 
     def verify(self) -> bool:
         verified = DurableJournal(self.path)
         for row in verified.records():
-            if row.get("t") != "RAW_QUOTE_CAPTURE":
-                continue
             payload = row.get("payload_json")
-            if not isinstance(payload, str) or hashlib.sha256(payload.encode("utf-8")).hexdigest() != row.get(
-                    "payload_sha256"):
-                return False
+            if row.get("t") in {"RAW_QUOTE_CAPTURE", "MARKET_EVENT_CAPTURE"}:
+                if not isinstance(payload, str) or hashlib.sha256(payload.encode("utf-8")).hexdigest() != row.get(
+                        "payload_sha256"):
+                    return False
+            if row.get("t") == "MARKET_EVENT_CAPTURE":
+                try:
+                    if _event_from_record(row).content_sha256() != row.get("event_sha256"):
+                        return False
+                except (KeyError, TypeError, ValueError, DataError):
+                    return False
         return True
+
+
+def _event_from_record(row: dict) -> NormalizedEvent:
+    payload = json.loads(row["payload_json"])
+    if not isinstance(payload, dict):
+        raise RawArchiveError("archived normalized event payload is not an object")
+    return NormalizedEvent(
+        kind=str(row["kind"]),
+        instrument=str(row["instrument"]),
+        event_utc=datetime.fromisoformat(row["event_utc"]),
+        received_utc=datetime.fromisoformat(row["received_utc"]),
+        available_utc=datetime.fromisoformat(row["available_utc"]),
+        payload=tuple(sorted((str(key), str(value)) for key, value in payload.items())),
+        ingested_utc=datetime.fromisoformat(row["ingested_utc"]) if row.get("ingested_utc") else None,
+    )

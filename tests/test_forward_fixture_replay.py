@@ -24,6 +24,15 @@ def test_fixture_outcome_parity_runs_through_durable_forward_runner(tmp_path, na
         assert not any(row["t"] in {"PAPER_EXECUTION", "OUTBOX_ACK", "SESSION_CLOSED"} for row in records)
     else:
         assert any(row["t"] == "SESSION_CLOSED" for row in records)
+        receipt = replay["runner_result"].get("execution")
+        if receipt is not None:
+            assert receipt["fidelity"] in {"SIMULATED_QUOTE", "SIMULATED_BAR"}
+            quote_hashes = {row["event_sha256"] for row in receipt["quote_inputs"]}
+            assert quote_hashes == set(receipt["quote_event_sha256s"])
+            for fill in receipt["fills"]:
+                assert set(fill["quote_input_ids"]) <= {
+                    row["input_id"] for row in receipt["quote_inputs"]
+                }
 
 
 def test_fixture_replay_blocked_preflight_matches_no_trade_baseline(tmp_path):
