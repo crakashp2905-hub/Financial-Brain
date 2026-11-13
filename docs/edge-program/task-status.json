@@ -2,15 +2,15 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 27,
-  "unrecorded_tasks": 191,
+  "recorded_tasks": 36,
+  "unrecorded_tasks": 182,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "054193a524dd35eaa258df0ac352a58fc369e937",
+  "reviewed_main_sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
   "items": [
     {
       "id": "PE-0001",
@@ -27,8 +27,8 @@
       "tests": [
         "test_current_baseline_is_machine_readable_and_does_not_overclaim"
       ],
-      "test_result": "Recorded main SHA, PR graph, actual GitHub branch-protection/ruleset state, Python/CI runtime, source capabilities, freshness and access limitations. Baseline JSON parse and named test exit code 0; PR #30 exact-head Ubuntu and Windows checks passed.",
-      "evidence_sha256": "61daf5c475c233ca2d19de58a6098d63dd5b1cb043e5bb551f1309538c67ccb0",
+      "test_result": "Refreshed baseline after PR #31 merged: records exact main SHA 9170700, PR graph through #31, live branch-protection readback, Python/CI runtime, Kite capabilities, freshness and access limitations. JSON parse and baseline test pass; PR #31 current-head Ubuntu and Windows CI passed.",
+      "evidence_sha256": "bbec8e8daeac23adaa8a293c5f5772f486bcb566cf0e219da8048abe2c8681f0",
       "blockers": []
     },
     {
@@ -104,7 +104,154 @@
         "test_ci_workflow_exposes_platform_checks_and_test_skip_summary",
         "test_label_never_exceeds_the_evidence"
       ],
-      "test_result": "The paper-ready gate now requires successful lint, types, migrations, coverage, Ubuntu and Windows checks plus an explicitly reported nonnegative pytest skip count. CI exposes each check and runs pytest with -ra so skips are summarized. Four focused release/workflow tests passed; Ruff and mypy passed.",
+      "test_result": "The paper-ready gate now requires successful lint, types, migrations, coverage, Ubuntu and Windows checks plus an explicitly reported nonnegative pytest skip count. CI exposes each check and runs pytest with -ra so skips are summarized. Four focused release/workflow tests passed; Ruff and mypy passed; PR #31 Ubuntu and Windows full CI passed.",
+      "evidence_sha256": null,
+      "blockers": []
+    },
+    {
+      "id": "PE-0006",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/main-branch-protection-evidence.json",
+        "https://api.github.com/repos/crakashp2905-hub/Financial-Brain/branches/main/protection",
+        ".github/workflows/ci.yml"
+      ],
+      "tests": [
+        "GitHub branch-protection GET readback",
+        "test_ci_workflow_exposes_platform_checks_and_test_skip_summary",
+        "test_branch_protection_evidence_matches_baseline_contract"
+      ],
+      "test_result": "GitHub main protection is enabled and verified: strict Ubuntu/Windows status checks, one approving review, stale-review dismissal, last-push approval, admin enforcement, and conversation resolution. Force pushes and deletions are disabled. Evidence is read back from the live API at main SHA 9170700.",
+      "evidence_sha256": "0e00fbd72747c9eaa30bf07f0c5ececf7e548f736b8b86241d56099915f89bcd",
+      "blockers": []
+    },
+    {
+      "id": "PE-0007",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/data-source-matrix.json"
+      ],
+      "tests": [
+        "test_source_matrix_labels_rights_latency_and_credential_presence_without_values"
+      ],
+      "test_result": "Machine-readable source inventory covers configured market, company, macro, regulatory, and missing-data domains with access flags, credential presence only, measured-versus-unmeasured latency, retention status, and limitations. Missing US equity quotes and expired-options history are explicit. No secret values are recorded; focused matrix tests pass.",
+      "evidence_sha256": "4c64d02d59b21ce6237fca6c68d14b0155daab00b30be54ed8d6d0ea69f14624",
+      "blockers": []
+    },
+    {
+      "id": "PE-0008",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/mode-capability-matrix.json"
+      ],
+      "tests": [
+        "test_mode_matrix_has_tested_mode_fidelity_and_evidence_for_every_displayed_capability"
+      ],
+      "test_result": "A single matrix covers REAL_FEED, REPLAY, SHADOW, PAPER, BROKER_DRYRUN, and LIVE_CASH. Each row names tested mode, fidelity, and existing evidence paths; real capture, broker dry-run, and live cash limitations remain explicit. Focused matrix tests pass.",
+      "evidence_sha256": "067c8cb32078898fb093b4cc26f320a2aeff77041b670a005e03f8cd01494c4e",
+      "blockers": []
+    },
+    {
+      "id": "PE-0009",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/release-semantics.json",
+        "src/financial_brain/forward_edge/release.py",
+        "src/financial_brain/forward_edge/audit.py"
+      ],
+      "tests": [
+        "test_health_axes_are_separate_and_current_research_does_not_overclaim"
+      ],
+      "test_result": "Exact GREEN/YELLOW/RED semantics are separate for engineering, research, and trading. The current research and trading states remain YELLOW; the contract expressly prevents green CI from implying profitable research or live-trading authorization. Focused semantics test passes.",
+      "evidence_sha256": "aadcde20692ffffe2b11116d3dd288df46f0ce46dc87787ed73c51a29caeaf41",
+      "blockers": []
+    },
+    {
+      "id": "PE-0010",
+      "status": "PARTIAL",
+      "sources": [
+        ".python-version",
+        "requirements-lock.txt",
+        ".github/workflows/ci.yml",
+        "docs/edge-program/reproducible-runtime.json",
+        "tests/test_forward_edge_f13.py"
+      ],
+      "tests": [
+        "test_runtime_pins_are_explicit_and_offline_install_gap_stays_visible",
+        "test_golden_file_covers_every_fixture",
+        "test_session_signatures_match_the_canonical_hashes"
+      ],
+      "test_result": "Python 3.13.5, PYTHONHASHSEED=0, Asia/Kolkata CI environment, and deterministic golden fixture signatures are pinned or tested. The exact dependency lock exists, but CI still installs from broad pyproject extras and no clean offline install has been verified on both platforms.",
+      "evidence_sha256": "57fcca2e6e9f1bb8a9b24e5c322bee870930cc0de56c6e311f3372d198d44780",
+      "blockers": [
+        "Switch CI to a complete platform-aware lock and prove a clean offline wheelhouse install plus fixture hashes on Windows and Linux"
+      ]
+    },
+    {
+      "id": "PE-0011",
+      "status": "PARTIAL",
+      "sources": [
+        "scripts/source_inventory.py",
+        "docs/edge-program/source-inventory.json",
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/pipeline.py",
+        "src/financial_brain/kernel/paper_account.py"
+      ],
+      "tests": [
+        "test_inventory_covers_all_python_sources_without_inventing_owners",
+        "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
+      ],
+      "test_result": "Committed inventory captures 541 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 534 unassessed modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
+      "evidence_sha256": "1b34f279de2e17a297690cccfbafb65edaf0fb67d5fa34f480f059ae8145d40c",
+      "blockers": [
+        "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state"
+      ]
+    },
+    {
+      "id": "PE-0012",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/deviation-log.json",
+        "tests/test_edge_program_runtime.py"
+      ],
+      "tests": [
+        "test_deviation_log_records_author_clock_effect_and_rollback_for_every_deviation"
+      ],
+      "test_result": "Each recorded protocol deviation includes author, UTC clock, version context, evidence effect, and rollback. The log preserves live-data, rights/latency, active-WAL backup, multi-engine state, failed-trial, and reproducible-install gaps; schema contract test passes.",
+      "evidence_sha256": "a599e8a543a4d96dfbdc1ac0478d2d899d6c476754975c645bb188fe03336884",
+      "blockers": []
+    },
+    {
+      "id": "PE-0013",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/trials.py",
+        "src/financial_brain/forward_edge/charter.py",
+        "tests/test_forward_edge_f00.py"
+      ],
+      "tests": [
+        "test_q4_2026_protected_budget_is_exhausted_at_13_of_13",
+        "test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval",
+        "test_trial_in_2027q1_needs_only_a_protected_trial_approval"
+      ],
+      "test_result": "Protected Q4 budget is exhausted at 13/13. Tests refuse a new Q4 trial absent both owner approval and budget amendment; Q1 2027 registration follows the new protected approval path.",
+      "evidence_sha256": null,
+      "blockers": []
+    },
+    {
+      "id": "PE-0014",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/modes.py",
+        "tests/test_forward_edge_f00.py"
+      ],
+      "tests": [
+        "test_live_cash_is_unavailable_by_default",
+        "test_flipping_the_build_flag_alone_does_not_enable_cash",
+        "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders"
+      ],
+      "test_result": "Physical orders remain disabled in all simulation modes. Tests verify default live-cash denial, refusal of a forged enabling flag, and that only paper mode emits simulated fills while no mode sends physical orders.",
       "evidence_sha256": null,
       "blockers": []
     },
@@ -468,8 +615,19 @@
     {
       "id": "PE-0115",
       "status": "DONE",
-      "sources": ["src/financial_brain/forward_edge/trials.py", "src/financial_brain/forward_edge/charter.py", "tests/test_forward_edge_f00.py"],
-      "tests": ["test_q4_2026_protected_budget_is_exhausted_at_13_of_13", "test_new_protected_trial_refused_when_budget_is_spent", "test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval", "test_protected_trial_cannot_register_without_full_identity_registry", "test_prospective_cohort_cannot_register_without_human_trial_approval", "test_trial_in_2027q1_needs_only_a_protected_trial_approval"],
+      "sources": [
+        "src/financial_brain/forward_edge/trials.py",
+        "src/financial_brain/forward_edge/charter.py",
+        "tests/test_forward_edge_f00.py"
+      ],
+      "tests": [
+        "test_q4_2026_protected_budget_is_exhausted_at_13_of_13",
+        "test_new_protected_trial_refused_when_budget_is_spent",
+        "test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval",
+        "test_protected_trial_cannot_register_without_full_identity_registry",
+        "test_prospective_cohort_cannot_register_without_human_trial_approval",
+        "test_trial_in_2027q1_needs_only_a_protected_trial_approval"
+      ],
       "test_result": "The Q4 2026 13/13 budget refuses a protected cohort without both a human trial approval and governance amendment. Prospective cohorts require exact charter-hash approval and full identity/schedule/durable registry; a direct regression confirms no unapproved cohort is appended. The next research window still requires human approval.",
       "evidence_sha256": null,
       "blockers": []
@@ -477,11 +635,23 @@
     {
       "id": "PE-0116",
       "status": "PARTIAL",
-      "sources": ["src/financial_brain/forward_edge/exclusions.py", "src/financial_brain/forward_edge/approvals.py", "docs/edge-program/exclusion-review-contract.md"],
-      "tests": ["test_exclusion_requires_a_distinct_scoped_human_reviewer_and_recovers", "test_discretionary_exclusion_or_nonindependent_review_is_rejected", "test_excluded_date_stays_in_fixed_denominator_and_adverse_sensitivity", "test_unreviewed_missing_dates_remain_in_denominator_and_get_adverse_sensitivity", "test_observed_and_excluded_same_date_is_rejected"],
+      "sources": [
+        "src/financial_brain/forward_edge/exclusions.py",
+        "src/financial_brain/forward_edge/approvals.py",
+        "docs/edge-program/exclusion-review-contract.md"
+      ],
+      "tests": [
+        "test_exclusion_requires_a_distinct_scoped_human_reviewer_and_recovers",
+        "test_discretionary_exclusion_or_nonindependent_review_is_rejected",
+        "test_excluded_date_stays_in_fixed_denominator_and_adverse_sensitivity",
+        "test_unreviewed_missing_dates_remain_in_denominator_and_get_adverse_sensitivity",
+        "test_observed_and_excluded_same_date_is_rejected"
+      ],
       "test_result": "A durable append-only log allows only source/timestamp/schema corruption reasons, requires a second distinct human approval scoped to the exact request, revalidates on restart, and refuses outcome edits. Sensitivity reports retain every scheduled day, show approved exclusions and unresolved missing days, include fixed-denominator zero-fill and -100% adverse cases, and disable promotion when exclusions or missing dates exist. Eight focused tests pass.",
       "evidence_sha256": null,
-      "blockers": ["Reviewer actor IDs and human status are supplied by the caller; production identity/authentication must independently verify the reviewer before this can be treated as externally independent review"]
+      "blockers": [
+        "Reviewer actor IDs and human status are supplied by the caller; production identity/authentication must independently verify the reviewer before this can be treated as externally independent review"
+      ]
     },
     {
       "id": "PE-0117",
