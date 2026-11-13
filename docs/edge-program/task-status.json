@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 47,
-  "unrecorded_tasks": 171,
+  "recorded_tasks": 48,
+  "unrecorded_tasks": 170,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -680,6 +680,21 @@
       ],
       "test_result": "Kernel fill suite: 13 passed; Ruff, mypy and diff checks passed. Same-bar stop/target collisions resolve to the adverse stop, then long exits cross at the bid and short exits at the ask using the supplied spread.",
       "evidence_sha256": "b306a7c10849e2737b1909d021404b2f57ec11a7cc3f0b260d4bf3417338668b",
+      "blockers": []
+    },
+    {
+      "id": "PE-0084",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/paper/book.py",
+        "tests/test_phase5_book.py",
+        "docs/edge-program/pe-0084-cost-drag-measures-evidence.json"
+      ],
+      "tests": [
+        "test_the_record_keeps_losers_and_nets_costs_and_the_universe"
+      ],
+      "test_result": "Focused swing-book suite: 11 passed; Ruff and diff checks passed. Summary reports rupee costs, basis points of closed entry notional, and cost drag in fraction/basis points of starting NAV; gross minus costs reconciles to net.",
+      "evidence_sha256": "ddbed9084a23a7463fa32fa868fa1f8d5bdca903a2d0180cab3150711ce3ef7c",
       "blockers": []
     },
     {
