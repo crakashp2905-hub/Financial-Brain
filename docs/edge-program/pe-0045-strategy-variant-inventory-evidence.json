@@ -24,10 +24,11 @@
   },
   "tests": {
     "command": "python -m pytest tests/test_strategy_variant_inventory.py -q; python -m ruff check scripts/strategy_variant_inventory.py tests/test_strategy_variant_inventory.py",
-    "result": "2 passed (exit code 0); Ruff and mypy passed; generated inventory --check passed with 253 source-linked candidates and 172 entries still requiring asset/clock qualification.",
+    "result": "3 tests passed (exit code 0); Ruff and mypy passed; generated inventory --check passed. Source digests and variant digests now normalize CRLF to Git LF, so inventory verification is consistent across Windows and Ubuntu.",
     "cases": [
       "test_strategy_inventory_is_deterministic_unique_and_source_hashed",
-      "test_committed_strategy_inventory_is_current"
+      "test_committed_strategy_inventory_is_current",
+      "test_source_hash_is_independent_of_checkout_line_endings"
     ]
   },
   "limitations": [

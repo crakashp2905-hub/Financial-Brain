@@ -9,8 +9,10 @@ version, pre-registered first.
 from __future__ import annotations
 
 import json
+import hashlib
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -26,7 +28,11 @@ class LearnedModelError(RuntimeError):
 
 
 def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int = 30,
-                model_path: Path = MODEL, meta_path: Path = META) -> dict:
+                model_path: Path = MODEL, meta_path: Path = META, seed: int = 0) -> dict:
+    if not features or len(set(features)) != len(features):
+        raise LearnedModelError("feature list must be non-empty and unique")
+    if embargo_days < 1 or not isinstance(seed, int):
+        raise LearnedModelError("training embargo and integer seed are required")
     import lightgbm as lgb
     from . import deep_library as DL
     p = panel.dropna(subset=["fwd20"])
@@ -34,10 +40,28 @@ def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int =
     p = p[p["d"] <= cutoff]
     X = p.groupby("d")[features].rank(pct=True).to_numpy(np.float32)
     y = p.groupby("d")["fwd20"].rank(pct=True).to_numpy()
-    m = lgb.LGBMRegressor(**DL.GBM_PARAMS).fit(X, y)
+    params: dict[str, Any] = {**DL.GBM_PARAMS, "random_state": seed}
+    m = lgb.LGBMRegressor(**params).fit(X, y)
     m.booster_.save_model(str(model_path))
-    meta = {"version": VERSION, "features": features, "trained_through": str(cutoff), "rows": int(len(p)),
-            "params": DL.GBM_PARAMS}
+    feature_source_sha256 = _file_sha256(Path(__file__).parents[1] / "features" / "library.py")
+    feature_schema_sha256 = hashlib.sha256(json.dumps(
+        {"features": features, "implementation_sha256": feature_source_sha256},
+        sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    data_sha256 = _training_data_sha256(p, features)
+    model_sha256 = _file_sha256(model_path)
+    code_sha256 = _file_sha256(Path(__file__))
+    identity_params = {k: str(v) for k, v in sorted(params.items())}
+    identity_params["model_artifact_sha256"] = model_sha256
+    from ..forward_edge.governance import model_id
+    stable_model_id = model_id(data_sha256=data_sha256, feature_schema_sha256=feature_schema_sha256,
+                               params=identity_params, seed=seed, code_sha256=code_sha256)
+    meta = {"version": VERSION, "model_id": stable_model_id, "features": features,
+            "feature_schema_sha256": feature_schema_sha256, "training_data_sha256": data_sha256,
+            "feature_source_sha256": feature_source_sha256, "model_sha256": model_sha256,
+            "code_sha256": code_sha256, "seed": seed,
+            "trained_through": str(cutoff), "embargo_days": embargo_days,
+            "embargo_semantics": "calendar-day proxy; label-end timestamps unavailable",
+            "rows": int(len(p)), "params": params, "identity_params": identity_params}
     meta_path.write_text(json.dumps(meta, indent=1), encoding="utf-8")
     return meta
 
@@ -46,7 +70,75 @@ def load(model_path: Path = MODEL, meta_path: Path = META):
     import lightgbm as lgb
     if not model_path.exists() or not meta_path.exists():
         raise LearnedModelError("no trained model - run train_final first")
-    return lgb.Booster(model_file=str(model_path)), json.loads(meta_path.read_text(encoding="utf-8"))
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    required = ("model_id", "feature_schema_sha256", "training_data_sha256", "feature_source_sha256", "model_sha256")
+    if any(not meta.get(key) for key in required):
+        raise LearnedModelError("model predates the content-addressed lineage manifest; retrain the challenger")
+    if meta.get("model_sha256") and _file_sha256(model_path) != meta["model_sha256"]:
+        raise LearnedModelError("model file digest differs from the registered training manifest")
+    return lgb.Booster(model_file=str(model_path)), meta
+
+
+def _file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _training_data_sha256(panel: pd.DataFrame, features: list[str]) -> str:
+    """Digest the exact ordered, label-bearing training rows with stable date/float encodings."""
+    required = {"d", "lineage", "fwd20", *features}
+    missing = required - set(panel.columns)
+    if missing:
+        raise LearnedModelError(f"training data missing lineage fields: {sorted(missing)}")
+    if panel.duplicated(["d", "lineage"]).any():
+        raise LearnedModelError("training rows must be unique by date and lineage")
+    rows = []
+    for row in panel.sort_values(["d", "lineage"], kind="mergesort")[
+            ["d", "lineage", *features, "fwd20"]].itertuples(index=False, name=None):
+        day, lineage, *values = row
+        encoded = [day.isoformat() if hasattr(day, "isoformat") else str(day), str(lineage)]
+        encoded.extend(None if pd.isna(value) else float(value).hex() for value in values)
+        rows.append(encoded)
+    body = json.dumps(rows, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def prediction_batch_sha256(frame: pd.DataFrame, *, as_of, model_digest: str) -> str:
+    """Content hash a prediction batch independent of input row order or display formatting."""
+    if "lineage" not in frame or "pred" not in frame or not model_digest:
+        raise LearnedModelError("prediction batch needs lineage, predictions and model identity")
+    if frame["lineage"].isna().any() or frame["lineage"].duplicated().any():
+        raise LearnedModelError("prediction batch lineages must be present and unique")
+    rows = []
+    for row in frame[["lineage", "pred"]].sort_values("lineage", kind="mergesort").itertuples(index=False):
+        score = float(row.pred)
+        if not np.isfinite(score):
+            raise LearnedModelError("prediction batch contains a non-finite score")
+        rows.append([str(row.lineage), score.hex()])
+    body = json.dumps({"as_of": str(as_of), "model_id": model_digest, "predictions": rows},
+                      sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def _valid_prediction_cache(frame: pd.DataFrame, *, as_of, meta: dict, model_path: Path) -> bool:
+    """Accept only cache rows matching the current model artifact and their own content digest."""
+    required = {"prediction_batch_sha256", "model_id", "feature_schema_sha256", "lineage", "pred"}
+    if not required.issubset(frame.columns) or not model_path.exists():
+        return False
+    if _file_sha256(model_path) != meta.get("model_sha256") or not meta.get("model_id"):
+        return False
+    if frame["model_id"].nunique() != 1 or frame["model_id"].iloc[0] != meta["model_id"]:
+        return False
+    if frame["feature_schema_sha256"].nunique() != 1 \
+            or frame["feature_schema_sha256"].iloc[0] != meta.get("feature_schema_sha256"):
+        return False
+    if frame["prediction_batch_sha256"].nunique() != 1:
+        return False
+    return frame["prediction_batch_sha256"].iloc[0] == prediction_batch_sha256(
+        frame, as_of=as_of, model_digest=meta["model_id"])
 
 
 def score_frame(frame: pd.DataFrame, booster, features: list[str]) -> pd.Series:
@@ -102,7 +194,11 @@ def score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_pat
     if cache is not None:
         f = cache / f"{pd.Timestamp(day).date()}.parquet"
         if f.exists():
-            return pd.read_parquet(f)
+            cached = pd.read_parquet(f)
+            metadata = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
+            if _valid_prediction_cache(cached, as_of=pd.Timestamp(day).date(), meta=metadata,
+                                       model_path=model_path):
+                return cached
     out = _score_day(rcon, day, names=names, model_path=model_path, meta_path=meta_path)
     if cache is not None:
         cache.mkdir(parents=True, exist_ok=True)
@@ -136,6 +232,11 @@ def _score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_pa
     if frame.empty:
         raise LearnedModelError(f"no names scored on {day}")
     frame["pred"] = score_frame(frame, booster, meta["features"])
+    batch_hash = prediction_batch_sha256(frame.assign(lineage=frame["lineage"], pred=frame["pred"]),
+                                         as_of=pd.Timestamp(day).date(), model_digest=meta["model_id"])
+    frame["prediction_batch_sha256"] = batch_hash
+    frame["model_id"] = meta["model_id"]
+    frame["feature_schema_sha256"] = meta["feature_schema_sha256"]
     frame["why"] = drivers(booster, frame[meta["features"]].rank(pct=True).to_numpy(np.float32), meta["features"])
     tick = dict(rcon.execute("SELECT lineage, ticker FROM adjusted_prices WHERE business_date = ? AND lineage IN (SELECT UNNEST(?))",
                              [day, list(frame["lineage"])]).fetchall())

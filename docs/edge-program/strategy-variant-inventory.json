@@ -23,9 +23,9 @@
         "pattern_name": "Horn top (weekly)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "eaf945c6b1c71d0d9c0a3a36c5ad5b18227176b4fe3a86777639a2f731e18484",
+      "variant_sha256": "1406be730d97fc58ecd4c76a7fbf3a0fddc1e7c7b80a95004df88477dcb77c68",
       "version": 1
     },
     {
@@ -39,9 +39,9 @@
         "pattern_name": "Pipe top (weekly)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "a5b3ae452233930a86c2f2a0862d2b29a8c01daf660a5226e3c1a4345428f00a",
+      "variant_sha256": "24373900fc175d831f40a107d235f1ed64e5ce5dd6191a6c1fc456228332ffce",
       "version": 1
     },
     {
@@ -55,9 +55,9 @@
         "pattern_name": "Descending triangle"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "27df29b8692b4c76a9b823f9a341a9874985b45639f43528529babb008e772a9",
+      "variant_sha256": "2d3a761fe471d3e52b699ea8aac2c53a8db4f458b624caf2eb013e2df0e178a6",
       "version": 1
     },
     {
@@ -71,9 +71,9 @@
         "pattern_name": "Hanging man (open=high=close, low >=5% below)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "60451a622817bf2781dcf6b5f3a4efa2d9c59c442c9cd972eef3e8fb9c9d7ab8",
+      "variant_sha256": "4d51fde36f086d343915a5b30bb2cff1a65c1e8749451cfa99b084907de57567",
       "version": 1
     },
     {
@@ -87,9 +87,9 @@
         "pattern_name": "Hammer / hanging man"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1bb0087e2afecd004f36b382cdb73c3838d8ea80f36eeaface6536ebe909a6fb",
+      "variant_sha256": "d45abf2b7ec0c00d4f9c6ed4e3d09297d58e2770d06902031a9894a025c6295e",
       "version": 1
     },
     {
@@ -103,9 +103,9 @@
         "pattern_name": "Shooting star / inverted hammer"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "c5238ca0c761375f84cbdb4bc34784cab6b40796b8fae185cbbce07a42aa40e9",
+      "variant_sha256": "a28db1982d878bcb8bb06018916e32f120c0bb22d8b780e67c5b0170c7643773",
       "version": 1
     },
     {
@@ -119,9 +119,9 @@
         "pattern_name": "Engulfing (bullish/bearish)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "d27d563128420505afff35f740b1d392c39b13ac8a4ca6f0fa3946a73ebd8695",
+      "variant_sha256": "bef4923b2c1e66287ac62b6a2cc333df25859b655d8f930c009de95f3b86ee36",
       "version": 1
     },
     {
@@ -135,9 +135,9 @@
         "pattern_name": "Dark-cloud cover"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "9d9722ef8395de91082e3136059af976280987ad073c2d6f36863d9c0851cccb",
+      "variant_sha256": "46677f5f0e60ed2cb847278ee0b65a98935c22d2be08c50ba3c8dcf69cf253d9",
       "version": 1
     },
     {
@@ -151,9 +151,9 @@
         "pattern_name": "Piercing pattern"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "acf61d37732a8c16d0017c7327efba9acc7f3d443862a801b756a60781b90bac",
+      "variant_sha256": "54e4bea82b2ad107fed4e9f0183c3143114d9d11f772608ee67e744bbe42034a",
       "version": 1
     },
     {
@@ -167,9 +167,9 @@
         "pattern_name": "Morning star / evening star"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "93ef0def3ff8c249cb20162f204f4c1cc25b32f39056050eac69b25549326254",
+      "variant_sha256": "e835e425868bf2eac0bede8c9639c2b1dbabb9008303f52b079287023799af0a",
       "version": 1
     },
     {
@@ -183,9 +183,9 @@
         "pattern_name": "Doji star / abandoned baby"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "5032a93f423c679fee7a33ef0446c8c7f94317c66ab3ce5c560f39660f4a8d2f",
+      "variant_sha256": "b41bb2e550da54fb85e6efda962ad5c2ccbbf28c03b14223212234bb4ba182dd",
       "version": 1
     },
     {
@@ -199,9 +199,9 @@
         "pattern_name": "Harami / harami cross"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "d1b0b6e939f08358fab5b7954bee15fb37da1b1bea2129cf4b06a2c9a2130a76",
+      "variant_sha256": "02a510c4ab0066f6b58a745aeaa19914a2af7a4d1e02e6ebbd761bfe64013891",
       "version": 1
     },
     {
@@ -215,9 +215,9 @@
         "pattern_name": "Tweezers top/bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "95badd3cc64d3fed26b45aee9f769ba457ebde966efc307efdc636410c5ab0da",
+      "variant_sha256": "9890e4a41340cb691d622966983fe59bba0cbc64f3167189981e3ad03081dc3b",
       "version": 1
     },
     {
@@ -231,9 +231,9 @@
         "pattern_name": "Belt hold"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "14325d521a7bc7dd2321bb155aa164ef10cc7457565d859c4eb2fd7776a5740c",
+      "variant_sha256": "82824b96ccada40912ab06773dd7e61cc300e2dfb765aba147c51a34613eec53",
       "version": 1
     },
     {
@@ -247,9 +247,9 @@
         "pattern_name": "Counterattack lines"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "abbc612915a27e7265b6e5d99aacfbd8417afb633f53cbaece547b2deff9ff53",
+      "variant_sha256": "78f74b4d877d112b3b0394b18950f7a93ce443e2deca2c47c8a10712fde176b0",
       "version": 1
     },
     {
@@ -263,9 +263,9 @@
         "pattern_name": "Upside-gap two crows / mat hold"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b083c4450a58f72a44d3b577615eedaf78583a85ef3379cc7cee8ae81f166068",
+      "variant_sha256": "2aa831e690ec06255aba8a5a8fad41fc66997e499b960ff6c2c9367688b6e9c0",
       "version": 1
     },
     {
@@ -279,9 +279,9 @@
         "pattern_name": "Three black crows / three white soldiers"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "3e421a180335ff2f3115c705af13583e258d37c548f8cb739e08ee79b8d7ab48",
+      "variant_sha256": "5d6717eda2f78df46cf9429f76f53c17ab95b86ad25a9399f2abf28f38cb22ad",
       "version": 1
     },
     {
@@ -295,9 +295,9 @@
         "pattern_name": "Tasuki gaps, gapping plays, side-by-side white lines, separating lines, rising/falling three methods"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "20b8553523357da1e5b4ebec715ede2b5c96ea67b868115ece3f395276507fdd",
+      "variant_sha256": "5cf6b4b558773d2a5415ce561d26ffba2df24145023c40bc491bf71e401edb65",
       "version": 1
     },
     {
@@ -311,9 +311,9 @@
         "pattern_name": "Doji family (long-legged, rickshaw, gravestone, tri-star, high wave)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "4e97115f4ec55f93e2bce2d6dbc0fb6d500b0329d09f3a5af9cf19727f6dd925",
+      "variant_sha256": "d6aa282f0dc82336cc065849e9b6652e7da437a2dfb29ffcca00a68cd0eeebf7",
       "version": 1
     },
     {
@@ -327,9 +327,9 @@
         "pattern_name": "Inside day"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "66d1f32d7114738762e98e22b6988c539f56215803d76444251e44b422a5e68d",
+      "variant_sha256": "499611c38a05cc3a250ed639c3dc51d18e464fffc7523ce2e78bb5703460b1d6",
       "version": 1
     },
     {
@@ -349,9 +349,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "5f45198d074f000f970a1789dec8851fdd922d7da49cbd35585fc1f228dcffc2",
+      "variant_sha256": "efb5e993366960fbf114080cd64049eba62e09d541978c906303745468e99a69",
       "version": 1
     },
     {
@@ -371,9 +371,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "22d245f28f276bb30910dcc96046fba7a6c3fa48859ed893fff02148039362ed",
+      "variant_sha256": "0386d8e6566ba581cf64a3d6aaa32c4d884566bb5987a36eef671d93231b4b9f",
       "version": 1
     },
     {
@@ -393,9 +393,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "ea9ca79108252425b02bc6fdbd8cac54aebfd70ef68bc3ca1d6827a732cf3d70",
+      "variant_sha256": "d20c93aac563961a0ab70559525dab43ed753db6042306e9c8a57dd252ddcbf0",
       "version": 1
     },
     {
@@ -415,9 +415,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "06d33ec38a74c0cb9c7bc04d5cd973804ec6b3f841dbc9f00b9f30b1244da0b6",
+      "variant_sha256": "7f3f9460b5812316e172485b43e6f58d1de1983027d2c59d880d97efe62f7c3e",
       "version": 1
     },
     {
@@ -437,9 +437,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "58268335a4d9aa85189dee3aca2987de0b8d1003c488436ebfed5e392b12d3f2",
+      "variant_sha256": "68151cc55a36bb61aea3b8d4565bbd8ff1b46f234156044d1fbf8cd419883fd7",
       "version": 1
     },
     {
@@ -459,9 +459,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "5027c62980050c37e55fad19ca34cb4d874935c1a37acff3ed7f0640948c2dbf",
+      "variant_sha256": "eac7e6ace9f8036da09d06808cba78fa72cdfd52180c824755aa39bce0d5a800",
       "version": 1
     },
     {
@@ -481,9 +481,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "d8764a9ee9b4045fff30b0f04ff2fb348b55463036b3345acf17bc6e9e1ee1aa",
+      "variant_sha256": "13db70ae5120082138536c03b6896e243510e08166be3933d5ad42c410a9ed70",
       "version": 1
     },
     {
@@ -503,9 +503,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "cf5ab3dd7a001ad454d108f01a54caef58982a263cb68f8ffcac0018d9fa280d",
+      "variant_sha256": "b0c4df9fcf347a94eaf71ff793b6aad1dd73ed20f654c576471a5fb76173bc38",
       "version": 1
     },
     {
@@ -525,9 +525,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "c3c8bd81e5fd076edda84fb70a7033825ae29c6576ae42d8a1221943df65edeb",
+      "variant_sha256": "079b73321b2776c3f232db9507bd3cf0bb341c6cd67a7e01f4403944bc1f34db",
       "version": 1
     },
     {
@@ -547,9 +547,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "0596243acb9c83df509009e9d4919dcb8e6c34f5d2f68329d98ddcca9612a26d",
+      "variant_sha256": "3b4c982b51fd7538afe992241cd6027f85cf5958e190ad1dcd22435643ffd9d6",
       "version": 1
     },
     {
@@ -569,9 +569,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "f28559afc5ae9aa78983c8416a6699d3c5d358294fbb0b29cf481b43de91aefc",
+      "variant_sha256": "a385cb4646f2a03a77dbd54e7dc2d20ad8defaceb8a066115eeca78bebd77a5e",
       "version": 1
     },
     {
@@ -591,9 +591,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "7903c30e1ec817b9a934736e36c4a891de36f568d81804ea73e7c2d4dc950ae1",
+      "variant_sha256": "f6a42c339e059e71e292f8daebf1a72f3a213884102209ee2dbc5aea003709c2",
       "version": 1
     },
     {
@@ -613,9 +613,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "c92792d08d6374473712635b89cbb0f541625549c689996d68348f95ae489b7c",
+      "variant_sha256": "bfc9febfe1fb085cad2901374c8aa3b0e3447a0fce9485160899d5003f3e0b31",
       "version": 1
     },
     {
@@ -635,9 +635,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "7b5344d6d4d1ea680057e23a7a62914ab41a0cfca9f0b0952f3373605b6cd1b7",
+      "variant_sha256": "de1f71993693b670f6dae3e94511807ec49fece02666be77db870803fbee2dd0",
       "version": 1
     },
     {
@@ -657,9 +657,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "9f72994234be2273430f6daaa798202cc63f4858472298e60eb7170be49f5991",
+      "variant_sha256": "81fce6baafde84cfd345302face8450e737d5834decff3dcd10e50b80f8599f4",
       "version": 1
     },
     {
@@ -679,9 +679,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "430a095e584bfa1fe6ec84252dafe77f2548026e2211c07b73cdf17307c71a36",
+      "variant_sha256": "2d5e290a192f61b7a622b9bc47c2bc3fdc45941fc011c522ac2ebbc9cbaa0066",
       "version": 1
     },
     {
@@ -701,9 +701,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "bb80ccdb983cccdfeb19aa872705acdd123e489e5e556cdbfc8d7cad85aa226c",
+      "variant_sha256": "f7225006242ef6b92e9784c83596021e2a93114d4cb300c6effb40f754f7d79f",
       "version": 1
     },
     {
@@ -723,9 +723,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "9fca8bea8a44769dd9e47e98454769dd163ab6c401699d697e7a7de76d62f62f",
+      "variant_sha256": "1bef82c61558227d20d99845750e9e64e2c90766bd7018cd44ecec3d0766f242",
       "version": 1
     },
     {
@@ -745,9 +745,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "4c4e4478ef5dd00169f008ba16279f7b8d3f0dad7c43955466159ed63d1e2c2e",
+      "variant_sha256": "3f7a4f2bf50471fb8874b716cca0caadcd822a4ad983e63a3a682e7292cea15f",
       "version": 1
     },
     {
@@ -767,9 +767,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "9a8987ada72e4c40cd88c2df5c8dc3e0110279d0c69504e9372060b6a5f805c2",
+      "variant_sha256": "54410aa3012916733f572fc2f0c72b5990c94f99141eabaf5be2129489c3293c",
       "version": 1
     },
     {
@@ -789,9 +789,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "26aac639abead1c355f7424a885719d85f815766099336941ec8252f2b87cf8c",
+      "variant_sha256": "47f6599a98f723df1169ec14133bb985422153377ea4e899d97c19ba11679b3b",
       "version": 1
     },
     {
@@ -811,9 +811,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "117680aed49e633eaa55fcdc8c1a78b556ad887ad3f910490367742f9ae4de55",
+      "variant_sha256": "54fdd275c6cbe49572f63acf13c33f22413afda80f3ba40c644238e2227f48a9",
       "version": 1
     },
     {
@@ -833,9 +833,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "7ba8f2197ce301c994d376975a8d01062d63cb412a894be34eb32399b84c015f",
+      "variant_sha256": "f0a07963b6dde12d16036bc796f362eb600a6e1b7c58a8de9d9846f4e331e0a7",
       "version": 1
     },
     {
@@ -855,9 +855,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "46a4401233ae5c1b1777644af083b31c51958c83509751d755a5fa0f2c883264",
+      "variant_sha256": "829decd1c7f638b832d3da815c157b12a7845155706c53cce0d4f5cfb07da2de",
       "version": 1
     },
     {
@@ -877,9 +877,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "a6f0374385a5b4e1feb945e576715324b95e82c16851db61113bd9c1d96d9555",
+      "variant_sha256": "1ac239c854623149ed038cd9e31218f918479c0acf7560cc1f4ac35fcc2a5ce8",
       "version": 1
     },
     {
@@ -899,9 +899,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "89f818cb9fe2ba758b2358444a158a3b16c63f3b3b448fc10a5bf5f13aa6d491",
+      "variant_sha256": "6eb6aaa6b7042e972a0951ca81005f36c0971a8a566d70f36858cf2b5cd9204e",
       "version": 1
     },
     {
@@ -921,9 +921,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "a2ccb49ea99adfe6b460d42677513551ab95821851a4e02abc76a7468e9485f5",
+      "variant_sha256": "a993a0c5b277964f1284a243359ed2d0829dcbc55d66c9b4f9913bb5ecac759b",
       "version": 1
     },
     {
@@ -943,9 +943,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "2766c9d427589811c2638ea80ac10262efee06a91a880f2acdac45e5071fbf11",
+      "variant_sha256": "40fb4eb055022232f821a38af0bf35607989ce61e36696736ba7d7dff5be9d2f",
       "version": 1
     },
     {
@@ -965,9 +965,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "9bad41a498c9fe8c97741574871330daea65ef453fc37c755a4df71d89dfd48c",
+      "variant_sha256": "aa417910f4cd82e79a6452fedfa3f76c91a473b9ffd9f52229cf60c307fa487e",
       "version": 1
     },
     {
@@ -987,9 +987,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "5733bd39135a4cb2a7004bd7399e69a47150159a994c050189bd22e6a973eaeb",
+      "variant_sha256": "9736af064f2566b9ec03bd30e3b8e3f17680af5aea46ceb01f8e7630bed4aa30",
       "version": 1
     },
     {
@@ -1009,9 +1009,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "ce7a9e0c78fc67d4a6be5a91f878597b50ae73ba7648d262be9c5293c7f5a97e",
+      "variant_sha256": "0e2ac17a81a5a8a250e706571cadb2d84471af4f9d6fa2e9ea0e315ec632ab62",
       "version": 1
     },
     {
@@ -1031,9 +1031,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "86d4b104cb7a5f1deb97b9c749ace4bc345d3437b45bfa3a2095b9f01cf64343",
+      "variant_sha256": "c42aa44f0f46b7d572e7ed8ba35212abeaa91b0423c7259cf779ae9d5bd27383",
       "version": 1
     },
     {
@@ -1053,9 +1053,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "3f8eb0fe85067c0c02fe02a7c6fd9807026295129108f260d0585e12773eb7f5",
+      "variant_sha256": "ebf3809aa03c84744970840b8492ef1c4020c4e428da53e09ea4ccfa9e70bfa3",
       "version": 1
     },
     {
@@ -1075,9 +1075,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "e6df7fcd0de3e56ea5b55142e4b2f0fd6d377b177f500e592f7305c50b160c33",
+      "variant_sha256": "187d2b4a1f8445f03dd7473d958f9a8a692127b9db5c81a230096f91f21b678f",
       "version": 1
     },
     {
@@ -1097,9 +1097,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "2b61d3ea725622b24a7131d51c95c8d0032648d2d9056ebbb96159d172636200",
+      "variant_sha256": "53ac0da6fcdeb92cfabfd13edf6c91967bf543a2ccf8bd93c1dcc0e5a1a4f599",
       "version": 1
     },
     {
@@ -1119,9 +1119,9 @@
         "volume_multiple": 1.5
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "da07121d8a8085054753255984572bff237f86bd8b5aaa8eabf9c6faee6d8bd1",
+      "variant_sha256": "a1bcdfd741a96e3cb149361069c852051723b41eb404c572e75e49baef85a5e2",
       "version": 1
     },
     {
@@ -1141,9 +1141,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "2ccea45765e731b5c811c8478152d6afe4ea40ac14b0c587d6546a747b4d6ee0",
+      "variant_sha256": "afaa6e44c82658ac609423a67e71971819a1894c0805d1a12da3084f505541fc",
       "version": 1
     },
     {
@@ -1157,9 +1157,9 @@
         "pattern_name": "Broadening wedge, descending"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1b9310d02ee066b6147381ae68e353e864dc0959460ca7c600d88999f1b50093",
+      "variant_sha256": "613d4db29c59964678c6983875417e39d933760463b0845a9781e1811582b4e4",
       "version": 1
     },
     {
@@ -1173,9 +1173,9 @@
         "pattern_name": "Cup with handle"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "9815d0bb081d9f1d9e998614d8365fa245d3c47ed06279fbe691ba44af139adc",
+      "variant_sha256": "00f0e6425ac380bca3a79f53e32315fce3a269c581b10699035ec8c5e59eee07",
       "version": 1
     },
     {
@@ -1189,9 +1189,9 @@
         "pattern_name": "Horn bottom (weekly)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "c551ef8ca4549e546e04d14ad7d7943b248f3d11e562e784a2f00f06c713854b",
+      "variant_sha256": "4f5811a2aaaa82cfeb596b2f8cb38fa1a769fdbadac5eb3d8c505bbd445c403d",
       "version": 1
     },
     {
@@ -1205,9 +1205,9 @@
         "pattern_name": "Rounding bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "217585b6caee3c6a78656221732d174ee27eb143e4b74069bdead361f8435016",
+      "variant_sha256": "11f11d436832414f396c76d61486ee3e5b8d9ebd200e9634676217156c13bbb0",
       "version": 1
     },
     {
@@ -1221,9 +1221,9 @@
         "pattern_name": "Rounding top (dome)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "963fe1abf597fff1acb13407af88d840f7842ebbcdad7ad08df07f1603dcd029",
+      "variant_sha256": "24efab6470a0f142815ea9c99e3e686511b1e7a499df1183c2e966970815496c",
       "version": 1
     },
     {
@@ -1237,9 +1237,9 @@
         "pattern_name": "Scallops (ascending/descending)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "f46cb9a65b66f4e55ff57019d93420636e3510b3da2e26bbc0da4f76d33cbeee",
+      "variant_sha256": "5a450d393823c3975c20e3de149ae92dff885f0eb9c73dc89f2ce235dd7b64e3",
       "version": 1
     },
     {
@@ -1253,9 +1253,9 @@
         "pattern_name": "Shark-32"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "f67bd412c9d7fc71f490be72c9bb50bbc76e168b7a45ef42021ddbca0d5e3efe",
+      "variant_sha256": "160c1ef3e7ef69d20b1b5ed11dfcf84852b68bacc1f9412a4f37d3123d691e15",
       "version": 1
     },
     {
@@ -1269,9 +1269,9 @@
         "pattern_name": "Ascending triangle"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "42fd724bbad3dc2de5c6c87ce00dd40fcde63c88bfbfd13e2d67147deae1261d",
+      "variant_sha256": "a324043ff4ab81418905c602ea081aee98cb3560d60484393fde571edcfe24aa",
       "version": 1
     },
     {
@@ -1285,9 +1285,9 @@
         "pattern_name": "Symmetrical triangle bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "deb74a23a7e98753731d0d2b6486915c7d3876aef9649a9e1c841f034f4fc899",
+      "variant_sha256": "abeab35e763bca4997cdd7c5abb6572780e4c14b46748257502c1b498ccb3b78",
       "version": 1
     },
     {
@@ -1301,9 +1301,9 @@
         "pattern_name": "Symmetrical triangle top"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "8585763c53cc1a8bf56d7a0f66008725efc64d88322d7a391284014326aab748",
+      "variant_sha256": "495b48cd23b2469bfc1d0c2592d0e120a1536a6ace9a4af0a802796c6ba67ed1",
       "version": 1
     },
     {
@@ -1317,9 +1317,9 @@
         "pattern_name": "Falling wedge"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "f743167c6402fb63d2225005fe400c00c1fb76119a2b8cf53a6dbdf5e8ee010a",
+      "variant_sha256": "01bb37f64d7b48a5c2ca4682cfc2b828fa12c9fb5ba3c1ccb07a5b3a89fa9c3d",
       "version": 1
     },
     {
@@ -1333,9 +1333,9 @@
         "pattern_name": "Broadening top"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "21bbcf0c9dd3066bab5bd482e4697cd8c89aaa94a47439f44af1e05519db836f",
+      "variant_sha256": "e17649204c99ac8603ff754d8041fbf57c01916aa9b1978a77f27a3e8bc1640c",
       "version": 1
     },
     {
@@ -1349,9 +1349,9 @@
         "pattern_name": "Flags and pennants"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "a7971bf7e7f0cae4bcddc9c153977f5bcbe9f52a790c9cec010d45feb89a05ca",
+      "variant_sha256": "c8d0c4ed88a7d490922444ca943dd51a7c7133b436df747ce7caa4f310d57fd6",
       "version": 1
     },
     {
@@ -1365,9 +1365,9 @@
         "pattern_name": "High and tight flag"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1529f1cac46d5bd4790803db56a56a2b2b66bfaf2db4176af6578295c5fc6bbe",
+      "variant_sha256": "804b0a20f7683482c3b8e404098e23ce3ab8d96f95d8523841ac112752f8ebc1",
       "version": 1
     },
     {
@@ -1381,9 +1381,9 @@
         "pattern_name": "Rectangle top"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "3169deca2b9c6be43f38c3698b130483b962a3f03344337a67301a93e491bbc5",
+      "variant_sha256": "288251c4e511af572ac82a2f96dfcdbd404a2c42b2a6b524ec003e871155b281",
       "version": 1
     },
     {
@@ -1397,9 +1397,9 @@
         "pattern_name": "Elliott wave with candles"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1951992f706d745a8a2bb4ac4ed67bdab558149787d8fdc56484d30ad6c74659",
+      "variant_sha256": "2ec7fec40c7cdf64f7a16548ab6c76777ab0beefd334086a480cac576189848a",
       "version": 1
     },
     {
@@ -1411,9 +1411,9 @@
       "name": "atr_breakout",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1425,9 +1425,9 @@
       "name": "bollinger_reversion",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1439,9 +1439,9 @@
       "name": "cci_trend",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1453,9 +1453,9 @@
       "name": "donchian_55_20",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1467,9 +1467,9 @@
       "name": "ema_ribbon",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1481,9 +1481,9 @@
       "name": "ichimoku_breakout",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1495,9 +1495,9 @@
       "name": "ma_cross_50_200",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1509,9 +1509,9 @@
       "name": "macd_cross",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1523,9 +1523,9 @@
       "name": "rsi_exhaustion",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1537,9 +1537,9 @@
       "name": "stochastic_cross",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1551,9 +1551,9 @@
       "name": "volume_spike_entry",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -1567,9 +1567,9 @@
         "pattern_name": "Right-angled descending broadening"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "e8e4afa0da51a5f7fe3961ed29abfab39ea292628639c7255c53dc5a8a0e6848",
+      "variant_sha256": "a2636ab1f2e8eed79660596d404c32a3a616f5d9836aa11ea379f0377f8061af",
       "version": 1
     },
     {
@@ -1583,9 +1583,9 @@
         "pattern_name": "Rectangle bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "fdb64c53ed7d1b8766e757e172335cdf1f904544bd99d1d47862929b556f40d4",
+      "variant_sha256": "a0a70cf39d2d702ed98d4bae3bb8902bae79d85a733753a9fe10343308f88b67",
       "version": 1
     },
     {
@@ -1605,9 +1605,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -1627,9 +1627,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -1649,9 +1649,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -1671,9 +1671,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -1693,9 +1693,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -1715,9 +1715,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -1737,9 +1737,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -1759,9 +1759,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -1781,9 +1781,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -1803,9 +1803,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -1825,9 +1825,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -1847,9 +1847,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -1869,9 +1869,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -1891,9 +1891,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -1913,9 +1913,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -1935,9 +1935,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -1957,9 +1957,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -1979,9 +1979,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -2001,9 +2001,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -2023,9 +2023,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -2045,9 +2045,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -2067,9 +2067,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -2089,9 +2089,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -2111,9 +2111,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -2133,9 +2133,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -2155,9 +2155,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -2177,9 +2177,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -2199,9 +2199,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -2221,9 +2221,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -2243,9 +2243,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -2265,9 +2265,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "aee20a20e80506921995dba391a50edd2c83bd246295364389537d9402ee9ef4",
+      "variant_sha256": "84a68c1a716016ab84d02d1f12936ad5491d56131cf5fd69f2d687ac79b803ec",
       "version": 1
     },
     {
@@ -2287,9 +2287,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1a7355f5cb538f768572a2b27ed4f82df5dca5f528e79d6bc40c3ab0130403c4",
+      "variant_sha256": "517143b3fe86816e5ec94a2b164840c89fb9da15877a0a4a7929a6eda1ea6678",
       "version": 1
     },
     {
@@ -2309,9 +2309,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b31a66ef99318d89b480cc2472b503c941631e89f9c257e6849202d6df5d84a1",
+      "variant_sha256": "6b6ff787d1fc72577ce586b0bd6d7d3abf31dc8925adfe515329f91f29b21a81",
       "version": 1
     },
     {
@@ -2325,9 +2325,9 @@
         "pattern_name": "Gaps (area, breakaway, continuation, exhaustion)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "0b6852921c1627b4511905ac19ca0de52ed7656d27becef0feb8b6e247725d97",
+      "variant_sha256": "1ff48caf7440f059917b5dbf5a00c7f77160281f9d78a3ca8c474ac24f6474bb",
       "version": 1
     },
     {
@@ -2341,9 +2341,9 @@
         "pattern_name": "Windows (range gaps)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "997de8b5f315e1e9f8673bf24e65745a5771b69e5473e7002e7278aaa3361913",
+      "variant_sha256": "57d4f90eaaba0cd47f97f68b4e8b45edc19d8ad213ed614a6aa5399d7c26970a",
       "version": 1
     },
     {
@@ -2360,7 +2360,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "1a1ba960c750b5c8f87d0e54e5f1e3e4080659c25a930b6d124b40a20a659f9d",
       "version": 1
@@ -2379,7 +2379,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "14f387f85b43f3002422fd59375e26d81405d493558cb4049807041250a7709a",
       "version": 1
@@ -2399,7 +2399,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "1436536943e4cb31960a9831876c0ef3ea118d8cb63e16b456a3cd49ef4b220a",
       "version": 1
@@ -2418,7 +2418,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "d00b89014620dfdb16f37b4939096159336df998389b70e014a1509f1df897c2",
       "version": 1
@@ -2438,7 +2438,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "41ed4f354ecdc3c0588275eaca052befc8d79c73a6658c512f7398b0b7d23f30",
       "version": 1
@@ -2458,7 +2458,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "1131cea8cd3bbf1f7eea577486df0af7e45dc8c6038104969b187982a4e96e62",
       "version": 1
@@ -2478,7 +2478,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "5ba4d2bfbfa04faeb9b49f85f7e4d84383de3d3358de171352e8c6708d10c46c",
       "version": 1
@@ -2497,7 +2497,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "282500c4196a0d658598166529861a68fcab4a73a74b00ec33d961f31a0045a8",
       "version": 1
@@ -2516,7 +2516,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "14c1d8ed11c0af779b78262abf93a721542ccd491d071c9da67af0981806383c",
       "version": 1
@@ -2535,7 +2535,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "81ba855e1fba468989e44b289a667c1b0c42e6731a10f5f4ec8b91e3994973bc",
       "version": 1
@@ -2555,7 +2555,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "56a2b4dc1537ca08983ac898a4b0f34a3c337be5da75f4142ee41dd0a7ecd47f",
       "version": 1
@@ -2575,7 +2575,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "8e1d1a652ccf4eeb108f75702e87dc24d392ccb4375ed06d72d679ea2677590c",
       "version": 1
@@ -2595,7 +2595,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "status": "FAIL",
       "variant_sha256": "41ddd6fabede014ea855236ddf0cb77ffe178a7e98a871a13827a52066194ebb",
       "version": 1
@@ -2611,9 +2611,9 @@
         "pattern_name": "Moving averages / MACD / RSI / stochastics / momentum with candles"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "cea876c515cb0ef388a868e51d0924cf5199e64bf4ccaf8ea4666e4ba77f1260",
+      "variant_sha256": "4230a65b958b1c686a43932ad6f009347f29c51055500dbbf765948cf27f7b20",
       "version": 1
     },
     {
@@ -2627,9 +2627,9 @@
         "pattern_name": "Volume and open interest with candles"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "d0dc5f9f8558ea27492576e97781932b59822209428ae80c8141a7ab7ecc5150",
+      "variant_sha256": "36ca309aa598326d663050bb146769763d887226f70ff8c1f49c75dba3577bea",
       "version": 1
     },
     {
@@ -2643,9 +2643,9 @@
         "pattern_name": "Change of polarity"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "719eea8d39a17574be4512d2f22e0c154bf3849daee7fb9393409ca0c97efc49",
+      "variant_sha256": "df8ff73d15919f8a74a109c28afbd29278e42ce421bae27875d72d265db439dd",
       "version": 1
     },
     {
@@ -2659,9 +2659,9 @@
         "pattern_name": "Retracements 38/50/62%"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "3216b635c633ae84976d7492ce5a28c640b39c74c98201f4b56e8595571e8068",
+      "variant_sha256": "c23ccfa45a056d720abb1dc47b0f2471dbe4bddd10a08c18a637b10a159c30ea",
       "version": 1
     },
     {
@@ -2673,9 +2673,9 @@
       "name": "edges",
       "parameters": {},
       "source": "src/financial_brain/evaluation/edges.py",
-      "source_sha256": "73c64a1799a1dea1ade4a7dfaafe92e86e671ea5be125a25f9e9febd03210df4",
+      "source_sha256": "21fcdbd42843a3e3ede2e7126e0d96728ff9a43b323fb87dfcb3a76156e2ca6c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "92074b69ec732098905de1f9e98535e24f919211660e30a8f68633b650d7b4ec",
+      "variant_sha256": "36d775be96a3ccafa6daf6c497463d2257b906e434adb9393187f7cc16a0a8ce",
       "version": 1
     },
     {
@@ -2687,9 +2687,9 @@
       "name": "futures",
       "parameters": {},
       "source": "src/financial_brain/forward_edge/futures.py",
-      "source_sha256": "e28f0907ebac77d0dba259060211da5ac9f17a2ea5448f36297d8b23cd609234",
+      "source_sha256": "7f7a75d6239882bb06eaa61e46c86ce307196e8e7c59980a60bd10f412cd0701",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "5c4733d94d99175fd699a1c27ca22514670f6f9f2938e61859af6fe32dc09aab",
+      "variant_sha256": "8f1f8b5f80ffaa58628a5fcdc91aa1207e425409dd18d7ab5a73c18b044b16fd",
       "version": 1
     },
     {
@@ -2701,9 +2701,9 @@
       "name": "futures_analytics",
       "parameters": {},
       "source": "src/financial_brain/kernel/futures_analytics.py",
-      "source_sha256": "315ab58b39f3754fc1ae6b26581b04c38c4b949e094c5c1ba785fa63da4bc2da",
+      "source_sha256": "f6e3ed0cbb218cd827c9cb317f020cdd6434f957d34730b9b0d57660524bf686",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "29aee0a991890dc1741b5037299f20f855d5a45e031ed69d542122da066d283b",
+      "variant_sha256": "0c85048ffba3477d9c6959d42dbbbde1df02a6520e68011f0cd18a1aa5cde532",
       "version": 1
     },
     {
@@ -2729,9 +2729,9 @@
       "name": "momentum_book",
       "parameters": {},
       "source": "src/financial_brain/evaluation/momentum_book.py",
-      "source_sha256": "35faec91079600c690fe2cd9c7de64ab28006017bba4c273c2398fe45ca8618c",
+      "source_sha256": "9717e7c6dd96b963de54c790cf6c2a1ad1ea363272809775cdfd58c6d4177a27",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "f7c8201e7678ba96a6e191a9db7afd3bb165f97230755d2b0746160b81239e96",
+      "variant_sha256": "0f5e316033e8653436b671a666e8fb54de74271d43b5fa6562352866154c3a23",
       "version": 1
     },
     {
@@ -2743,9 +2743,9 @@
       "name": "optimizer",
       "parameters": {},
       "source": "src/financial_brain/portfolio/optimizer.py",
-      "source_sha256": "b00bc0882b89c74f27df4122e219553589df0395bdae521525060700cb149b72",
+      "source_sha256": "b37145f74754eaf9db88ab8d317fbfb8f88212ae02bfe07f20666c77af8a7847",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "2f3f6b8cbe797555099f0a4e03280050113ff0d38afa779f53b08a7e21961897",
+      "variant_sha256": "37e774cbbdbd8205e51f31a21672d6c8e7fe88f33660f264097bdc858a656387",
       "version": 1
     },
     {
@@ -2757,9 +2757,9 @@
       "name": "options",
       "parameters": {},
       "source": "src/financial_brain/paper/options.py",
-      "source_sha256": "7ea4a5a6b5286f78ba49c25475542376ca5376e80268fc18463c053531910f7d",
+      "source_sha256": "afd6d05c3dc743b25eb193a9beb11d1d00838e73e59f9a78c1aa34e1fbedb696",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "541f8b27ea3638ba01ffbf4cd5b5940946a8913d3766cca0e8b9674abdefdcb1",
+      "variant_sha256": "a4c792fad198fe1155c3b23c21c1b9c04bfb2249c7c352bfda618ef224d2d0a4",
       "version": 1
     },
     {
@@ -2771,9 +2771,9 @@
       "name": "options_forward",
       "parameters": {},
       "source": "src/financial_brain/paper/options_forward.py",
-      "source_sha256": "9705556bc31dd9b279bf22458d18c966b0dff15b04194426c9409ef32d6fcf70",
+      "source_sha256": "b79f776d17fe6baef6f11d2ce1fd5b2d74e4a38abb863c3b03db776ddea9fda0",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "13b0e07f9a4b4849535f87ebdee690215d5eee19e5b7dcd7c5b436e48306dc83",
+      "variant_sha256": "fbbb1d9eb4a98fa961ab5909a033f3c27e77156c766cd0eaf839ac6e60ce7eb2",
       "version": 1
     },
     {
@@ -2785,9 +2785,9 @@
       "name": "options_real",
       "parameters": {},
       "source": "src/financial_brain/evaluation/options_real.py",
-      "source_sha256": "178242b80c9a680b1d5b93f6160bf1bf288c10649fd97714ff87e1dd5a440687",
+      "source_sha256": "473fcc4c039dd06b43a3f744c94d2eba728333c128a1f524a3947f7b4fe2aefc",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "7eaf318feee681b121485f761f92db8580dfc52d94ea29302f0d5253dcd25d05",
+      "variant_sha256": "c08ae44aee8fb810f3b9dd5a35753f49cead43e2487b70d42a5f1fe4a612d428",
       "version": 1
     },
     {
@@ -2799,9 +2799,9 @@
       "name": "options_runner",
       "parameters": {},
       "source": "src/financial_brain/paper/options_runner.py",
-      "source_sha256": "a3c43c56daf2c21eb68e66afe10c9e164a83a0333d9c41916d816fc459defdcf",
+      "source_sha256": "271f14fb703ee3e0e6dd9cae3b59b8d0e3aa0ba67daaae1dd1001713b2696706",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "a60973b608d9451883d2a23bdf6a8a2189d5d85a17e0393e2d33207bf66bbe32",
+      "variant_sha256": "c903aa98d465da0102625a50c09646171aad9b5817eaf721ce9a55e1d7a28702",
       "version": 1
     },
     {
@@ -2813,9 +2813,9 @@
       "name": "options_spread",
       "parameters": {},
       "source": "src/financial_brain/paper/options_spread.py",
-      "source_sha256": "333a772d4f390bd485c75df64ee6728abaec568ca156e1f036770ae170498761",
+      "source_sha256": "0c3d935c38e67a26c897b95f1127cc342c2377f2321602275cc66fb9b3501fcd",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "340420f3c3425429016d9a28cc53527982289d81c1c1a0c9e5ceacfecd42c43d",
+      "variant_sha256": "647b96d182fd8db253f3bb0248def04e43cbfd7e126b28676f972b87e56a449d",
       "version": 1
     },
     {
@@ -2827,9 +2827,9 @@
       "name": "options_synth",
       "parameters": {},
       "source": "src/financial_brain/evaluation/options_synth.py",
-      "source_sha256": "78c63d34cce8fe890523e8f47e93ab6b0279c0880e1e4006c9b0ee537388e700",
+      "source_sha256": "360ebc47fa9671262d481743913ed45974b1208a6c663a828d68612dc0fa1ca2",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "9d5185685749a2dccff8a2b870eff6649c1d7fb0ecda78eba492a13f898f1023",
+      "variant_sha256": "f894537605351459d8ce9cbee3ba11099d24f3687b6fff5c2ff286fb8f24a236",
       "version": 1
     },
     {
@@ -2841,9 +2841,9 @@
       "name": "options_vertical",
       "parameters": {},
       "source": "src/financial_brain/evaluation/options_vertical.py",
-      "source_sha256": "da6ae1b0b132f01ad9784e9b801e5e3d4aaeb1b1450789cba3e4d8447438297a",
+      "source_sha256": "fd5e1bf7d875e643c167637f083e91423fc05348673b68af46d61f6d59510719",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b269f4a735162111aa6271939832f8cd5aabeba4f560f62a88e95fdf68438c7e",
+      "variant_sha256": "9ab9e5b608cb918ac88e8e28dbc75e8932e1c2650f18f57912a817b58631084a",
       "version": 1
     },
     {
@@ -2855,9 +2855,9 @@
       "name": "zoo",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -2869,9 +2869,9 @@
       "name": "zoo_edges",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo_edges.py",
-      "source_sha256": "67c9f688a03725c9f2e3a8cc4ca8eaad53af2cdda9d93b5474e8d4f491d347af",
+      "source_sha256": "44610a7e98b1ac3c7630a2a5e6f9784f7476819fb17c58b7f76ba22a55dd2d21",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "83995eacc7b63f11f74c27b861dc8767f20aacec96e94684534b495496ce0b0e",
+      "variant_sha256": "a5b5d537e0419f6990b369da7e5f747a0dd84b5ee36ba8ee7b5150166b5d9d42",
       "version": 1
     },
     {
@@ -2885,9 +2885,9 @@
         "pattern_name": "Three mountain / three Buddha / three river"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "92f927258de3e3f618fdbc724dfc4305ce8c2ff8757fe913b358459efa9df030",
+      "variant_sha256": "cbc0f6266707ab082581e1adb8fe4e4ed321297893c6c89ca9ae0748ce7123e4",
       "version": 1
     },
     {
@@ -2901,9 +2901,9 @@
         "pattern_name": "Dumpling top / fry-pan bottom / tower"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "e6576300f4fad1c406e4608833f837f85c1b330ecf8f022e84d688dac6dd86e5",
+      "variant_sha256": "36fe1ad4184fe2792e052dc7699c62999a177fd70cbe7846429b9598249e18fe",
       "version": 1
     },
     {
@@ -2915,9 +2915,9 @@
       "name": "anti_martingale",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -2929,9 +2929,9 @@
       "name": "carry_basis_10",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -2943,9 +2943,9 @@
       "name": "edge_a16",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -2957,9 +2957,9 @@
       "name": "edge_a16_india_year_end",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -2971,9 +2971,9 @@
       "name": "edge_anomalies",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -2985,9 +2985,9 @@
       "name": "edge_bab",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -2999,9 +2999,9 @@
       "name": "edge_bab_futures",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3013,9 +3013,9 @@
       "name": "edge_d1",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3027,9 +3027,9 @@
       "name": "edge_d1_delivery_ls",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3041,9 +3041,9 @@
       "name": "edge_e1_mom_ensemble",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3055,9 +3055,9 @@
       "name": "edge_eap_announcement_premium",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3069,9 +3069,9 @@
       "name": "edge_eapr_announcement_short",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3083,9 +3083,9 @@
       "name": "edge_f",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3097,9 +3097,9 @@
       "name": "edge_f1_long_buildup",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3111,9 +3111,9 @@
       "name": "edge_f2_short_covering",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3125,9 +3125,9 @@
       "name": "edge_f3",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3139,9 +3139,9 @@
       "name": "edge_f3_short_buildup",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3153,9 +3153,9 @@
       "name": "edge_hv1_rising_volume",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3167,9 +3167,9 @@
       "name": "edge_hv2_improving_liquidity",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3181,9 +3181,9 @@
       "name": "edge_i1_index_intraday",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3195,9 +3195,9 @@
       "name": "edge_i2_seasonality_ls",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3209,9 +3209,9 @@
       "name": "edge_l2_learned_ls",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3223,9 +3223,9 @@
       "name": "edge_m1",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3237,9 +3237,9 @@
       "name": "edge_m1_momentum_book",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3251,9 +3251,9 @@
       "name": "edge_monthly",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3265,9 +3265,9 @@
       "name": "edge_p1_residual_mom",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3279,9 +3279,9 @@
       "name": "edge_p2_volmanaged_mom",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3293,9 +3293,9 @@
       "name": "edge_p3_frog_in_pan",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3307,9 +3307,9 @@
       "name": "edge_s1",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3321,9 +3321,9 @@
       "name": "edge_s1_no_news_reversal",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3335,9 +3335,9 @@
       "name": "edge_s2",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3349,9 +3349,9 @@
       "name": "edge_s2_reaction_drift",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3363,9 +3363,9 @@
       "name": "edge_v1_vwap_bounce",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3377,9 +3377,9 @@
       "name": "edge_w",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3391,9 +3391,9 @@
       "name": "edge_w1_reversal_ls",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3405,9 +3405,9 @@
       "name": "edge_w2_52wh_ls",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3419,9 +3419,9 @@
       "name": "edge_w3_momentum_ls",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3433,9 +3433,9 @@
       "name": "edge_x1_overnight",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3447,9 +3447,9 @@
       "name": "edge_x2_opening_fade",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3461,9 +3461,9 @@
       "name": "edge_z1_turn_of_month",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3475,9 +3475,9 @@
       "name": "grid",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3489,9 +3489,9 @@
       "name": "martingale",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3503,9 +3503,9 @@
       "name": "pairs_coint",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3517,9 +3517,9 @@
       "name": "pairs_distance",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3531,9 +3531,9 @@
       "name": "pca_statarb",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3545,9 +3545,9 @@
       "name": "results_reaction_short",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3559,9 +3559,9 @@
       "name": "scale_trader",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3573,9 +3573,9 @@
       "name": "sharpe_allocator",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3587,9 +3587,9 @@
       "name": "vix_mean_reversion",
       "parameters": {},
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "aff4a10b31001a9a1d9eebbff3bd85feb504c8dfd6d73209342e6ab8da24e033",
+      "source_sha256": "5467427d92931bb2836d75738cbb1fac12822d761520dbbcc7b77a582900710b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09b359e97623f9f7a59809e8606c20b23752384939f0512079f1b22a6b8b3488",
+      "variant_sha256": "fcf63122543c7feaa8b8bc18cf8cf43556b9251c9d23c4e357271d298071dd00",
       "version": 1
     },
     {
@@ -3601,9 +3601,9 @@
       "name": "breakouts",
       "parameters": {},
       "source": "src/financial_brain/strategies/breakouts.py",
-      "source_sha256": "3d08f11c59a2c890656d38b8f417dbbd7daea6d72d96658db97a03a363d88ed9",
+      "source_sha256": "fe7e4fb22b54d55845a5bc22aec438e958bd3000af514ea47c52282901b69fe3",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "1653f128c22feafe72fbe2575297d53221a690b1ef6b5f423ab1af0caf43e4bd",
+      "variant_sha256": "7496e5c8aa4c99747dd914ad7219bc7085fd24bd5559e3ce6fda25afd4546c03",
       "version": 1
     },
     {
@@ -3615,9 +3615,9 @@
       "name": "challengers",
       "parameters": {},
       "source": "src/financial_brain/strategies/challengers.py",
-      "source_sha256": "0811c2b388632fa977109b449ea678689d989b50f65c871bddf198e39e80918a",
+      "source_sha256": "3091fa40191ee5c871f9e5b5e6e1a6e38895aa9c13d3c46b112462421799904b",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "3885ca100c3a41c97a594d5289a8d79c12d882f787e604023bb623df4a2124a3",
+      "variant_sha256": "665cc25585a3b307923202038d118a7f32e416da405ef70c406af7fbc016bf5b",
       "version": 1
     },
     {
@@ -3629,9 +3629,9 @@
       "name": "evaluation_controls",
       "parameters": {},
       "source": "src/financial_brain/strategies/evaluation_controls.py",
-      "source_sha256": "29ce189801d1146fc6dc2abb9bb9c4cd69254b6ea8c8b80ecedde23f9a37c964",
+      "source_sha256": "4669b43a766547e7a6484b95bdb463e63541238d20ff71e1117e7961229a9875",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "cdeedc0d3dbacfcaf7854e61c0c8768190b67567577b953cbb0bc2d5935e607c",
+      "variant_sha256": "615d3f3870d0da21f7433e50aca9e08e3711f6e017aba5e9c1c27db8a3a53c92",
       "version": 1
     },
     {
@@ -3643,9 +3643,9 @@
       "name": "execution_rules",
       "parameters": {},
       "source": "src/financial_brain/strategies/execution_rules.py",
-      "source_sha256": "057485fd172ae3c449e2410d73fca96f1cfa3957de1db589a6be74fe165e756e",
+      "source_sha256": "bf49fec372b0f0cd09aa965290eee4600149a17c0b2d8be330c3081860dc8254",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "269ed05881ee668c2e4a396ff0eb9ad0b94f070e78c94a208c358e8c0c72b1ec",
+      "variant_sha256": "32d383735047bfdd37109e8ea73af75bb7abd61ba79c10865c380ad7b9c4ce6a",
       "version": 1
     },
     {
@@ -3657,9 +3657,9 @@
       "name": "families",
       "parameters": {},
       "source": "src/financial_brain/strategies/families.py",
-      "source_sha256": "761d85a10f33ae34e71a33023db38c7e7bdcf1356685fb83b0a0da8990e58cb0",
+      "source_sha256": "7aa0557c996ba0b100924f5c5cb1033ecad9a98477d7cad293c28da13d20dcec",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "09543ba5a7d250dda56816655792541841a31358f0001d2f6ec2b05f5e0d0dd9",
+      "variant_sha256": "f6792b85bdf1b70617f4a5c23a401b7cb6e0200b31b0da6af8ed3a3612e8c24f",
       "version": 1
     },
     {
@@ -3671,9 +3671,9 @@
       "name": "lifecycle",
       "parameters": {},
       "source": "src/financial_brain/strategies/lifecycle.py",
-      "source_sha256": "02d943516963c9e333ff1f8126db5972f1b56f331ed85d8ef8e733a652ad1de2",
+      "source_sha256": "2e547261757ed2e4e21b3a1707fc3722cbe03c36568c636416c10bcd1f1078a9",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "7258e675f4eafc6c3a6dd26a3d1cbf3aaca87e8903e0996f7df48bd60b864ed2",
+      "variant_sha256": "bb0167639e6de8485a428621282db9ef9ca1707b3bd356e9fb543da0f76f4def",
       "version": 1
     },
     {
@@ -3685,9 +3685,9 @@
       "name": "mean_reversion",
       "parameters": {},
       "source": "src/financial_brain/strategies/mean_reversion.py",
-      "source_sha256": "0ac68c98074f2304de0cf14e6f1d04787c91be4e5ccd277b7f27dca084c2ff27",
+      "source_sha256": "b41add6a63df2e6fa24c6068c38e863af724b6a16b379499a904be3a2b248de8",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "627cf17b3716536c6962d788f729fcb7d1df127f7f546888d64faaf1eb9bc472",
+      "variant_sha256": "5978e57fa745cc295e34d743bc251dac9024822857bb5098dc2aaa0d3c921629",
       "version": 1
     },
     {
@@ -3699,9 +3699,9 @@
       "name": "reports",
       "parameters": {},
       "source": "src/financial_brain/strategies/reports.py",
-      "source_sha256": "2a2f6898820a286e2baa3ba53b7eff7d5551874c812dab7a85628319419b7b9e",
+      "source_sha256": "552e86f8b897666233f1fc90f1cbecbe5f2482149a1c22b401a163d9ea240329",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "8681f57224a7ebdf2a2d5dfe08f88a421aebca693b45521108d8a342e60eee2b",
+      "variant_sha256": "9a4ee9c2c6b89abe292da5def5a9af88e39c553cc7b76fdcab557053b2ccd678",
       "version": 1
     },
     {
@@ -3713,9 +3713,9 @@
       "name": "session_breakout",
       "parameters": {},
       "source": "src/financial_brain/strategies/session_breakout.py",
-      "source_sha256": "73738beb16fe18c8e6f8acc9822571cbc7c6e4829ffdda10b0a87f86a0cd7a95",
+      "source_sha256": "6c83114791d53ca6a5b34fda0683f62e1aa995abf8e7b63f2a02b2c4697dc8e8",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "9b40e9ed0e7c896e852e6201790bf30858b0e9146e6115605024b913c7cef783",
+      "variant_sha256": "13559d2532ce5ecb957c61c52ac7b9c7475ecd394cf8f811a8aa562602b569a5",
       "version": 1
     },
     {
@@ -3727,9 +3727,9 @@
       "name": "specs",
       "parameters": {},
       "source": "src/financial_brain/strategies/specs.py",
-      "source_sha256": "72c7615120db4f7c3e78a997017224d700c32bd522f50d5d2392921dc50f980c",
+      "source_sha256": "95706ee6b10593789e9c702cf3d229001e035e5425e76c1436d7b624e1bc33ae",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "cbfccb47207e0e89d768ebc313996e22c61fbccf112ea69e12ce710103a62fe9",
+      "variant_sha256": "3d8e6cde01de0088fbe5c0a653e6b53f8176c65aee64fac289084739c9e10e8a",
       "version": 1
     },
     {
@@ -3741,9 +3741,9 @@
       "name": "structure",
       "parameters": {},
       "source": "src/financial_brain/strategies/structure.py",
-      "source_sha256": "8502fbb55f79e2a4dd36197745290ac8192a382abe2678dc731c67f565f7c82e",
+      "source_sha256": "b507873ab519702cbcb0a703863540e036c746d069f37fcd6fd18da27756402d",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "7413a38c99b303adb14cc5c7b2207f900c2c9abf8cb36db6cca678e3ff207892",
+      "variant_sha256": "2ac809e5226e9d0a6651de2fff0685afbb14c0f6567d1f4962d2eeaba990a4f8",
       "version": 1
     },
     {
@@ -3755,9 +3755,9 @@
       "name": "ui",
       "parameters": {},
       "source": "src/financial_brain/strategies/ui.py",
-      "source_sha256": "6e692bba07490c97959277da32bc51078b114201b5ebbba24760f44e22f91807",
+      "source_sha256": "8e44cc5eb92fba007da646f159b6d173d9b2ee9a267d2a60e3c23f79c6cbd6bd",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "db6e5250cb64bcfb6adc15255a98f7df01752c778d42704492d292bb48ba387c",
+      "variant_sha256": "292fe6f9cc130e6ea7e0722839daf2c4e4693cf071614447f79120312f7c8a03",
       "version": 1
     },
     {
@@ -3771,9 +3771,9 @@
         "pattern_name": "Outside day"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "525848ab753c15211b816358e253cce496c755f1b85603ff9801961f99329a02",
+      "variant_sha256": "4a3f8764fdcbc01ea30728ac9e6b56bc24c793977cbe42c66d231c015231e23d",
       "version": 1
     },
     {
@@ -3787,9 +3787,9 @@
         "pattern_name": "Springs and upthrusts"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "31f1b3aa8df1c27f9fefee20b86f8474b6a81fca3becb6eeb9e9c508e24f71df",
+      "variant_sha256": "3b2790c70067179fd8d6c3cf1ff81094af8676db27e48af310203bf9416a5de0",
       "version": 1
     },
     {
@@ -3809,9 +3809,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "e219ee35292fc7ff30981a195d65eb9648d17264c3197e4ea0c20e953445279b",
+      "variant_sha256": "412a0cc44eca0194a284c244ec8065991374f1a832e2f6901747bec877152eda",
       "version": 1
     },
     {
@@ -3831,9 +3831,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "fa3a08e3de045b0fd6cc6b42de3acf49745c578db847c90af25208f3774affc0",
+      "variant_sha256": "71f4cdf5fb18bc46488abeec69e942c806134ea5cd921db9bae6022400f6ac3f",
       "version": 1
     },
     {
@@ -3853,9 +3853,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b569c5c6c2c9ec3f80b448153d932fbd65ec57a5209682f7433ff3c375790ad4",
+      "variant_sha256": "f972e9f96ba795130de2451f86205068b8f3e6568925ced1bd8ef7a45a614ebd",
       "version": 1
     },
     {
@@ -3875,9 +3875,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "dbd53790e3d6f57b0787928c15e3a2cff1566368281e78546240dd57ea29c97f",
+      "variant_sha256": "8f12d4187380fdec6745ad972d5df081fea3a5f218d56135628793f41a43a804",
       "version": 1
     },
     {
@@ -3897,9 +3897,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "74210205a1f9944281319438ed5871db27aaedf5b362877f3c8a188298d472c2",
+      "variant_sha256": "85e2f9ce749d15f2b5831942b12fccfbd5929e362a85c51cb8b85c55975cef04",
       "version": 1
     },
     {
@@ -3919,9 +3919,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "e1519ff77f0adfdb0b6207a3cf7ce7c899a4236efd4160062dce0db389be1edd",
+      "variant_sha256": "ed82c03dfa2dd5e2c90eb944874728422f4647c87b87f3482015c7fe69d5778b",
       "version": 1
     },
     {
@@ -3941,9 +3941,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "703fa7124bd5137c229ed7a32aadfa361ffb3377a601be304f3b33b5396baf0c",
+      "variant_sha256": "de616b1c8ddcae52b2298f6c97b6071d93d9b884822823f6f01031cb777975f5",
       "version": 1
     },
     {
@@ -3963,9 +3963,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "f980b1d640f29e82db1f2f3182fe6a879c4b4b8ab06508464a3d77334e4fdc33",
+      "variant_sha256": "c03085fb8ab3eff269f8ec4c6755dba1d979f6bed7f87d9f35bf4a8c389294e3",
       "version": 1
     },
     {
@@ -3985,9 +3985,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "8d014b525be62e8db748d970b5b3ff8b916a80b9c872e893f9c21d9a8e66c743",
+      "variant_sha256": "2948410ac83976b4011f5052edf2ccddcc0952e6a1d9f093b971d20e19cba768",
       "version": 1
     },
     {
@@ -4007,9 +4007,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "04e48326a47c132e6eddfc1892e3a962445b7fcee63ff9031d9cf2d4a6b7e975",
+      "variant_sha256": "11a96f7b386a2d9de87a83f190073310ccd08291bd7f28818bd381e08dc18121",
       "version": 1
     },
     {
@@ -4029,9 +4029,9 @@
         "volume_multiple": 1.0
       },
       "source": "src/financial_brain/evaluation/bounded_search.py",
-      "source_sha256": "d27dfde40a1bae4d836d5cf54fb9fcede6f4d09d5f6a00acc46d241808f75208",
+      "source_sha256": "486c664cefbb15d50f9bb62141040d326792df9cc3ff8801b2e99f3159714c81",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "ebee6de512644e0ca9be293b6b3e8e7118f31c24e573637d285e9bb215223984",
+      "variant_sha256": "f22683d1d7cf39a71ccaecdb9c4fd826720e8bba43fdc7bdf62f91cc89b5e193",
       "version": 1
     },
     {
@@ -4045,9 +4045,9 @@
         "pattern_name": "Right-angled ascending broadening"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "80b8e52e591a39310ad54ced7b785afd9c98a4dba06022c4913feb3da9e80b0b",
+      "variant_sha256": "ca79f8b63d3df14da0b0113c0e8f73289261dc86ae0885ce8442caae4d793918",
       "version": 1
     },
     {
@@ -4061,9 +4061,9 @@
         "pattern_name": "Broadening wedge, ascending"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "03f77c398fb61036c02e4157918451603c3578728b2a147565b1f4dc9b4d9c43",
+      "variant_sha256": "eff137f678b9dfd1cc2375cb96137f9f5ec66c19c76158aacb5bc1dcd02224bd",
       "version": 1
     },
     {
@@ -4077,9 +4077,9 @@
         "pattern_name": "Bump-and-run reversal bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "2869982cd5de1181bdf4a6684a49cedb989047605fe5185925748df54357cded",
+      "variant_sha256": "c754026946c96d0537768df56b4e8086f7568f8ca78feff5d822ddf0b9b02266",
       "version": 1
     },
     {
@@ -4093,9 +4093,9 @@
         "pattern_name": "Bump-and-run reversal top"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "b11dcfa31a8ea26bf601a9dd3e366814fd3886cdf60905d2455ff4d7cf6518af",
+      "variant_sha256": "e87baa97189e5e7133af1e6b6e18356a81bdebe0f272dcba2bee0a6e38255fd0",
       "version": 1
     },
     {
@@ -4109,9 +4109,9 @@
         "pattern_name": "Dead-cat bounce"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "e01e62930d2905daa9161ae4096c8be7d71f4e2694bf4be80fbaa939953b341f",
+      "variant_sha256": "d36fa56cc8891f11742b74065697235070d8f793cf49030758b9335a0ddf62f3",
       "version": 1
     },
     {
@@ -4125,9 +4125,9 @@
         "pattern_name": "Diamond top/bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "81e78e0f647e41a66ce9518f7704e6c6c8c8c3b3e37571689b94855def1da334",
+      "variant_sha256": "e26d73267ec365fee2879683f0fbdb66f38509b82dd09f55df27e681b2aef379",
       "version": 1
     },
     {
@@ -4141,9 +4141,9 @@
         "pattern_name": "Double bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "a0e5f43b10279a88c5ec6db0e66fd098a4f2c9beaee22d4f85ded6ddaef52f4a",
+      "variant_sha256": "88f6c34ba47b03744b3a058b4250337c412c8a354dbc3ae5638c78c0fb32c4a2",
       "version": 1
     },
     {
@@ -4157,9 +4157,9 @@
         "pattern_name": "Double top"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "31968b46775165d77e85b5584f8b7b823c3c9cfa7c38832e020c556603689c56",
+      "variant_sha256": "6b07c4db91e0f3b145ada3491ed6a33965fdb8e23d3e7d2634e1a32cb3d4efb1",
       "version": 1
     },
     {
@@ -4173,9 +4173,9 @@
         "pattern_name": "Head-and-shoulders bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "cf3015017a7fa067b38acccf586a669b63a5e1cfb1f5dde3232b20bdce784e53",
+      "variant_sha256": "cc0e6f3ae0bc4526760385e6b82080f1febd5c4edfe250258173e7e7aa587f82",
       "version": 1
     },
     {
@@ -4189,9 +4189,9 @@
         "pattern_name": "Head-and-shoulders bottom, complex"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "7cef77aa2877b15e5ac7be38bd1ff8d598f259b14d96cdaae3776c01907a613d",
+      "variant_sha256": "7a3b50bce2c9b304aa06a05fa6e2d78aee57139453c5855cf97a84c256798615",
       "version": 1
     },
     {
@@ -4205,9 +4205,9 @@
         "pattern_name": "Head-and-shoulders top"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "29df7d58d1a01e286bbae617b2a74096e81a2ba2751281c8a05e71f4d91fb233",
+      "variant_sha256": "b429fe64ce9ca30faa3ed49efdf7fe1b4262cbf77a9c50747d475f9c2b3605a7",
       "version": 1
     },
     {
@@ -4221,9 +4221,9 @@
         "pattern_name": "Head-and-shoulders top, complex"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "47abeff3c740b3d48838de84949ae0579bcb1823f1397fb1f93c4fa3af06d53b",
+      "variant_sha256": "1159c6426e848f2cab2e3bf4d11fb3d69b618a47868126b0b85d34d438f3508a",
       "version": 1
     },
     {
@@ -4237,9 +4237,9 @@
         "pattern_name": "Measured move down"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "3b31e0d5b0579285d32ccd24c98ae4e895aca589ab3ff4d859963e829dc56c66",
+      "variant_sha256": "f60fe82e761ac3624345f5ee480c31be54b5042b737debcc39db506f60353467",
       "version": 1
     },
     {
@@ -4253,9 +4253,9 @@
         "pattern_name": "Measured move up"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "0eb9d775442fe741f55cdc27a37907bc3fef1624b2f82c1393c71c6a6472a5de",
+      "variant_sha256": "165c967e63abf3fdc1a5e7972d726ed2cf0923d192a4ff693b07d3e17bd191b1",
       "version": 1
     },
     {
@@ -4269,9 +4269,9 @@
         "pattern_name": "One-day reversal"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "4238f42fd3f98f6389bd64882808217bcf4de32c9f20639799922297d87a89bb",
+      "variant_sha256": "89c4edda549399e5e92e969fec566e2cba71f3c2741b1de8026ecd9c76d45ed2",
       "version": 1
     },
     {
@@ -4285,9 +4285,9 @@
         "pattern_name": "Pipe bottom (weekly)"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "afbf788917e226d49ce869fe058ec0cbc64b8e2928715f61afc1fa6207f116ad",
+      "variant_sha256": "f9cee59c9f64c8f449917e70ee9df6ba58fb029baaad8531141e7bca7a132486",
       "version": 1
     },
     {
@@ -4301,9 +4301,9 @@
         "pattern_name": "Triple bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "ee2c45dfdee48020be3c6b6c2fff07b25f7256bd97027801583650df9ebe7f61",
+      "variant_sha256": "be850fa04844d751f3414fe88eebb8904c1663bc73f16e0da6bb11853ca98b8a",
       "version": 1
     },
     {
@@ -4317,9 +4317,9 @@
         "pattern_name": "Triple top"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "a7b7b382f73c43bca51b926cdc4541493a34709774aabb6d45fff3547525b7aa",
+      "variant_sha256": "2dc9e07a0b44400709ee1e1bcb9f143e0739cdd4cb44b83c4bcce482d97a4b0b",
       "version": 1
     },
     {
@@ -4333,9 +4333,9 @@
         "pattern_name": "Rising wedge"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "5e7e3777ad3e352b906a41be4f16a84f97fdc38eb19d4534cbea87fdb11382ba",
+      "variant_sha256": "535e32e13c68963cf78e065cf725b0b62e9e85f899d04f558d76e351593ddf5d",
       "version": 1
     },
     {
@@ -4349,9 +4349,9 @@
         "pattern_name": "Weekly reversal, downside"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "5033249b716906b173b733fc36a78be5e1327c0d4c4756bbf44ce6e882fbfcf1",
+      "variant_sha256": "70d5262693fc76222c57aa70b9b6d4061b6b9c8e3385ac4e8b8bd0875ac533dd",
       "version": 1
     },
     {
@@ -4365,9 +4365,9 @@
         "pattern_name": "Weekly reversal, upside"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "7c6cdc4ba7f2aceacfaf35bc74b52db12119eed4b80e0263856e4d6d8faa7a8f",
+      "variant_sha256": "a3166224d7612416d91db63c74bcf0ead2d89cc0cd47577eade97c38a26fe428",
       "version": 1
     },
     {
@@ -4381,9 +4381,9 @@
         "pattern_name": "Broadening bottom"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "9137d03830f9c660ddba473ca60ddf028463fa58c3b72dd23756ae67b9bcadb7",
+      "variant_sha256": "5f93c7358d435e1e392aac7a3f3b4bcae235cbf773abbbfa5ed34ce190a900bf",
       "version": 1
     },
     {
@@ -4397,9 +4397,9 @@
         "pattern_name": "Island reversal"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "75446d9f629677f7af5ff08b35e920f2ba6bd6fb957f7979e4be1c01c4f2f85c",
+      "variant_sha256": "2ab33cf563f2602afc1c5bfbbdfe1acdb0cda5415ec8c5f6c4e6e119bed58d63",
       "version": 1
     },
     {
@@ -4413,9 +4413,9 @@
         "pattern_name": "Market Profile with candles"
       },
       "source": "docs/sources/pattern-catalogue.v1.json",
-      "source_sha256": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+      "source_sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "d7dfbd85caf576dbca619cbf2d2dfae8506a5c7610c9c9be21a9dfd652c3dce0",
+      "variant_sha256": "f90e6441ba515f1ef4eb58a58f95bcc27817551c771cdcedc9d3cfa0ce5d22e7",
       "version": 1
     }
   ],

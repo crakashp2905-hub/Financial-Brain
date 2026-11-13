@@ -24,8 +24,13 @@ def _sha(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def _normalized_source_bytes(path: Path) -> bytes:
+    """Return checkout-independent source bytes (Git stores text files with LF endings)."""
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
 def _path_hash(path: Path) -> str:
-    return _sha(path.read_bytes())
+    return _sha(_normalized_source_bytes(path))
 
 
 def _literal_assignment(path: Path, name: str):
@@ -70,7 +75,7 @@ def _add(rows: list[dict], *, category: str, family: str, name: str, source: Pat
          parameters: dict | None = None) -> None:
     source_hash = _path_hash(source)
     variant_body = json.dumps(parameters or {}, sort_keys=True, separators=(",", ":"), allow_nan=False)
-    variant_hash = _sha(source.read_bytes() + b"\0" + variant_body.encode("utf-8"))
+    variant_hash = _sha(_normalized_source_bytes(source) + b"\0" + variant_body.encode("utf-8"))
     rows.append({
         "family": family,
         "name": name,

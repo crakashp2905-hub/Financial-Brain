@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 77,
-  "unrecorded_tasks": 141,
+  "recorded_tasks": 78,
+  "unrecorded_tasks": 140,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1467,10 +1467,11 @@
       ],
       "tests": [
         "test_strategy_inventory_is_deterministic_unique_and_source_hashed",
-        "test_committed_strategy_inventory_is_current"
+        "test_committed_strategy_inventory_is_current",
+        "test_source_hash_is_independent_of_checkout_line_endings"
       ],
-      "test_result": "2 inventory tests passed; Ruff and mypy passed; generated inventory is fresh (253 candidates across eight categories). Options/futures/ranking module proxies, unspecified metadata, and approval-registry integration keep this partial.",
-      "evidence_sha256": "2f2064e3311faf87caf49f9d70d6a4543b26c3da64cbd54d64c316e46fbcd9fb",
+      "test_result": "3 inventory tests passed; Ruff/mypy and generator --check passed. Hashes normalize checkout line endings; cross-platform source digest test now covers Windows CRLF vs Git/Ubuntu LF. The inventory remains incomplete for 172 unqualified entries and module proxies.",
+      "evidence_sha256": "0cd1e61231bd7653ce368ce57dcd8d9ce7de3aaf6fbe079d28b891066367718c",
       "blockers": [
         "Options, futures and ranking portfolios need full executable variant/parameter enumeration rather than module proxies.",
         "Asset scope and decision clock need explicit qualification for 172 entries.",
@@ -1604,6 +1605,30 @@
       "blockers": [
         "The planner is not yet wired into the forward session runner or paper ledger.",
         "No prospective Indian-market forecast/covariance cohort or realized cash-day performance evidence exists."
+      ]
+    },
+    {
+      "id": "PE-0052",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/learned_model.py",
+        "src/financial_brain/forward_edge/governance.py",
+        "src/financial_brain/features/library.py",
+        "docs/edge-program/pe-0052-learned-challenger-lineage.md",
+        "docs/edge-program/pe-0052-learned-challenger-evidence.json",
+        "tests/test_phase5_learned_model.py"
+      ],
+      "tests": [
+        "test_train_saves_the_model_with_its_feature_list_and_embargo",
+        "test_prediction_batch_digest_is_order_independent_and_content_sensitive",
+        "test_prediction_cache_requires_matching_model_and_batch_hash",
+        "test_load_rejects_model_artifact_changed_after_manifest"
+      ],
+      "test_result": "5 learned challenger tests passed; Ruff and mypy passed. Training artifacts and prediction batches are content-addressed; tampered model and cache artifacts are rejected.",
+      "evidence_sha256": "ecfd92cd0932ce88a2b92a9116d729120e8568e8012a5aa20c746798ad1dd27a",
+      "blockers": [
+        "Embargo is calendar-day approximate because exact label-end sessions are absent from training rows.",
+        "No signed external attestation or prospective performance evidence is connected."
       ]
     }
   ]
