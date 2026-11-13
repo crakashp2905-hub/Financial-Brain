@@ -12,6 +12,7 @@ from financial_brain.kernel.fills import (
     half_spread_fill,
     next_bar_fill_index,
     resolve_stop_target,
+    resolve_stop_target_executable,
     square_root_impact,
 )
 
@@ -26,6 +27,16 @@ def test_signal_at_close_fills_no_earlier_than_next_open() -> None:
 def test_stop_and_target_in_same_bar_resolve_adversely() -> None:
     outcome, price = resolve_stop_target(BAR, "BUY", stop=98.5, target=103.0)
     assert outcome == "STOP_AMBIGUOUS_ADVERSE" and price == 98.5
+
+
+def test_ambiguous_exits_use_adverse_stop_then_cross_the_correct_quote_side():
+    assert resolve_stop_target_executable(BAR, "BUY", stop=98.5, target=103.0, spread=0.2) == (
+        "STOP_AMBIGUOUS_ADVERSE", 98.4
+    )
+    collision = OhlcBar(open=100.0, high=112.0, low=88.0, close=101.0, volume=1000)
+    assert resolve_stop_target_executable(collision, "SELL", stop=105.0, target=90.0, spread=0.2) == (
+        "STOP_AMBIGUOUS_ADVERSE", 105.1
+    )
 
 
 def test_clean_target_hit() -> None:

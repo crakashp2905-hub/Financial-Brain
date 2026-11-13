@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 46,
-  "unrecorded_tasks": 172,
+  "recorded_tasks": 47,
+  "unrecorded_tasks": 171,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -664,6 +664,22 @@
       ],
       "test_result": "Focused three-tier fidelity isolation test: 1 passed. Bar, observed-quote simulation, and observed broker values remain separate; mixed-tier aggregation raises MixedFidelity. Ruff and diff checks passed.",
       "evidence_sha256": "2c4c0cae2df076cda4acaf829163f2f1934476a36c6e399c4ac18ca796d594ca",
+      "blockers": []
+    },
+    {
+      "id": "PE-0080",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/fills.py",
+        "tests/test_kernel_fills.py",
+        "docs/edge-program/pe-0080-adverse-stop-quote-evidence.json"
+      ],
+      "tests": [
+        "test_stop_and_target_in_same_bar_resolve_adversely",
+        "test_ambiguous_exits_use_adverse_stop_then_cross_the_correct_quote_side"
+      ],
+      "test_result": "Kernel fill suite: 13 passed; Ruff, mypy and diff checks passed. Same-bar stop/target collisions resolve to the adverse stop, then long exits cross at the bid and short exits at the ask using the supplied spread.",
+      "evidence_sha256": "b306a7c10849e2737b1909d021404b2f57ec11a7cc3f0b260d4bf3417338668b",
       "blockers": []
     },
     {
