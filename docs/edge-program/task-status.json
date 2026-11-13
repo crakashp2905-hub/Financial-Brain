@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 40,
-  "unrecorded_tasks": 178,
+  "recorded_tasks": 41,
+  "unrecorded_tasks": 177,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -202,7 +202,7 @@
         "test_inventory_covers_all_python_sources_without_inventing_owners",
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
       ],
-      "test_result": "Committed inventory captures 548 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 541 unassessed and 298 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
+      "test_result": "Committed inventory captures 549 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 542 unassessed and 299 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
       "evidence_sha256": "1b34f279de2e17a297690cccfbafb65edaf0fb67d5fa34f480f059ae8145d40c",
       "blockers": [
         "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state"
@@ -650,6 +650,29 @@
       ],
       "test_result": "Effective-dated owner-supplied buy/sell rates are charged against each actual fill notional in the same balanced transaction as cash and inventory; a full entry/exit NAV bridge reconciles cash, fee expense, and net P&L to paise. 33 focused tests pass; Ruff and mypy pass.",
       "evidence_sha256": null,
+      "blockers": []
+    },
+    {
+      "id": "PE-0102",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/paper_account_audit.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/ledger.py",
+        "src/financial_brain/forward_edge/durable.py",
+        "tests/test_paper_account_audit.py",
+        "tests/test_paper_account.py",
+        "docs/edge-program/paper-account-audit-contract.md",
+        "docs/edge-program/pe-0102-paper-account-audit-evidence.json"
+      ],
+      "tests": [
+        "test_independent_journal_audit_recomputes_balances_and_daily_nav",
+        "test_independent_audit_rejects_nav_mismatch_in_a_valid_hash_chain",
+        "test_independent_audit_rejects_future_cash_flow_in_nav_snapshot",
+        "test_independent_audit_rejects_pre_fill_mark"
+      ],
+      "test_result": "Independent journal-only audit recomputes cash, positions/cost basis, realized P&L, fees, marked NAV, and persisted daily snapshots. It rejects inconsistent NAV, future cash flows, and pre-fill marks even when journal hash chains are valid. Eleven focused audit/account tests pass; Ruff, mypy, and diff checks pass.",
+      "evidence_sha256": "3156e4aeb2d37fa5958f548a1eaaa3d15d2ddcd7bf34e4ad8fbfb53eb7fa6db8",
       "blockers": []
     },
     {
