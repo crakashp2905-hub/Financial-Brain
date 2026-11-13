@@ -427,20 +427,34 @@
       "id": "PE-0023",
       "status": "PARTIAL",
       "sources": [
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
         "src/financial_brain/forward_edge/session_runner.py",
-        "tests/test_forward_session_runner.py"
+        "src/financial_brain/forward_edge/durable.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/oms.py",
+        "src/financial_brain/kernel/ledger.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/forward-paper-account-bridge-contract.md",
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "docs/edge-program/pe-0023-paper-account-bridge-evidence.json"
       ],
       "tests": [
+        "test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently",
+        "test_partial_receipt_releases_unfilled_reservation_after_cancel",
+        "test_buy_sync_requires_explicit_risk_cash_reserve",
+        "test_preflight_exception_is_durable_and_never_executes",
         "test_data_rejections_are_immutable_idempotent_and_persisted",
         "test_preflight_is_immutable_and_blocks_actionable_decisions",
         "test_actionable_decision_without_preflight_is_rejected_and_not_executed",
         "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink",
         "test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows"
       ],
-      "test_result": "Preflight verdicts, Kite source rejection hashes/reasons, decisions, risk, stable paper intents, execution receipts, and outbox acknowledgements persist in the append-only journal; 48 focused integration tests pass",
-      "evidence_sha256": null,
+      "test_result": "Added ForwardPaperSessionService requiring a durable explicit preflight, then running the forward coordinator and idempotently reconciling receipts into the existing PaperAccount OMS and double-entry ledger. Stable fill IDs, effective-dated fee accounting, order state, cash, position, realized P&L, and available conservative unrealized marks are captured. Local mock integration demonstrates restart-safe reconciliation. Combined account bridge/PaperAccount/runner/intraday suite: 50 passed; Ruff, mypy, inventory freshness and diff checks passed.",
+      "evidence_sha256": "8d7baca06ccd139bd7ea008f1d319bee9b186616ff3a56d7db10d4fd38c6a3e7",
       "blockers": [
-        "production runner invocation still needs an approved preflight callback and account-ledger integration; no actual authorized market session has been captured"
+        "No authorized Kite live-market session has yet been captured. The current daily access token is unavailable in this environment; real session evidence requires the owner login and an eligible market session."
       ]
     },
     {
