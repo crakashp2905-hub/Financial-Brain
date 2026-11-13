@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 103,
-  "unrecorded_tasks": 115,
+  "recorded_tasks": 104,
+  "unrecorded_tasks": 114,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2240,6 +2240,26 @@
       "blockers": [
         "Durable PaperAccount lifecycle and replay-auditor integration remains outstanding.",
         "No authorized FX fixing provider is configured; fixtures are not market-rate evidence."
+      ]
+    },
+    {
+      "id": "PE-0097",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/pnl_attribution.py",
+        "tests/test_pnl_attribution.py",
+        "docs/edge-program/pe-0097-complete-pnl-attribution.md",
+        "docs/edge-program/pe-0097-complete-pnl-attribution-evidence.json"
+      ],
+      "tests": [
+        "test_attribution_bridge_reconciles_every_economic_component_and_external_flow",
+        "test_attribution_refuses_missing_sources_currency_mismatch_and_unexplained_nav"
+      ],
+      "test_result": "15 focused attribution/account tests passed; Ruff and mypy passed. A strict hashed, single-currency bridge reconciles all specified P&L items to flow-adjusted NAV.",
+      "evidence_sha256": "3a5950a97de4ed8b9bc6ed7bb22ca6492fe08007017c8efadce74774bef5bef7",
+      "blockers": [
+        "Automatic integration with durable PaperAccount event and mark projections remains outstanding.",
+        "Canonical carry and execution-slippage source joins remain outstanding."
       ]
     }
   ]
