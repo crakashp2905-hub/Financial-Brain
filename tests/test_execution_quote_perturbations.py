@@ -31,8 +31,10 @@ def _simulate(events, *, latency=timedelta(milliseconds=10), quantity=5, feed_he
 def test_wider_spread_and_price_gap_never_improve_buy_fill_price():
     baseline = _simulate([_quote(11, ask="100.05")])
     stressed = _simulate([_quote(11, bid="98.00", ask="103.00")])
-    assert baseline["status"] == stressed["status"] == "FILLED"
-    assert Decimal(stressed["fills"][0]["price"]) > Decimal(baseline["fills"][0]["price"])
+    assert baseline["status"] == "FILLED"
+    assert stressed["status"] == "NO_TRADE"
+    assert stressed["fills"] == []
+    assert stressed["quote_quality_rejections"][0]["reason_codes"] == ["WIDE_SPREAD"]
 
 
 def test_feed_gap_and_late_pre_cutoff_quote_remain_missed():
@@ -44,7 +46,9 @@ def test_missing_or_zero_depth_never_creates_a_fill():
     missing = NormalizedEvent("QUOTE", "NSE:INFY", DECISION, DECISION, DECISION,
                               (("last_price", "100"),))
     zero_size = _quote(11, ask_qty=0)
-    assert _simulate([missing, zero_size])["status"] == "MISSED"
+    receipt = _simulate([missing, zero_size])
+    assert receipt["status"] == "NO_TRADE"
+    assert receipt["fills"] == []
 
 
 def test_duplicate_quote_print_does_not_multiply_visible_size_or_fill():

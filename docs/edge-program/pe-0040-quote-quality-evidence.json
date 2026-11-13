@@ -10,13 +10,15 @@
     "Quality thresholds and configured freeze limits are frozen into the execution-model digest; an accepted no-fill order is correctly canceled in the paper account bridge."
   ],
   "tests": {
-    "command": "python -m pytest tests/test_forward_edge_f03.py tests/test_kite_forward_events.py tests/test_forward_paper_execution_adapter.py tests/test_raw_quote_archive.py tests/test_forward_fixture_replay.py tests/test_forward_session_runner.py tests/test_forward_paper_account_bridge.py -q",
-    "result": "102 passed; Ruff passed for changed Python files; mypy passed for market_data.py, paper_execution_adapter.py, paper_account_bridge.py and kite_live.py.",
+    "command": "python -m pytest tests/test_forward_edge_f03.py tests/test_kite_forward_events.py tests/test_forward_paper_execution_adapter.py tests/test_raw_quote_archive.py tests/test_forward_fixture_replay.py tests/test_forward_session_runner.py tests/test_forward_paper_account_bridge.py tests/test_execution_quote_perturbations.py -q",
+    "result": "111 passed (exit code 0); Ruff passed for the updated perturbation test; prior Ruff and mypy checks passed for implementation modules.",
     "cases": [
       "test_quote_quality_gate_rejects_invalid_books_and_market_states",
       "test_execution_model_hash_freezes_configured_quote_quality_limits",
       "test_kite_circuit_limits_are_preserved_and_block_touching_band",
-      "test_no_trade_due_to_quote_quality_reconciles_as_canceled"
+      "test_no_trade_due_to_quote_quality_reconciles_as_canceled",
+      "test_wider_spread_and_price_gap_never_improve_buy_fill_price",
+      "test_missing_or_zero_depth_never_creates_a_fill"
     ]
   },
   "limitations": [

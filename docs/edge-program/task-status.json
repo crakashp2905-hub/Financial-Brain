@@ -1361,10 +1361,12 @@
         "test_quote_quality_gate_rejects_invalid_books_and_market_states",
         "test_execution_model_hash_freezes_configured_quote_quality_limits",
         "test_kite_circuit_limits_are_preserved_and_block_touching_band",
-        "test_no_trade_due_to_quote_quality_reconciles_as_canceled"
+        "test_no_trade_due_to_quote_quality_reconciles_as_canceled",
+        "test_wider_spread_and_price_gap_never_improve_buy_fill_price",
+        "test_missing_or_zero_depth_never_creates_a_fill"
       ],
-      "test_result": "102 focused tests passed; Ruff and mypy passed on changed Python modules. Invalid quote evidence blocks simulated execution and retains reason codes. Auction-source and effective instrument freeze-rule integration remain incomplete; see PE-0040 evidence.",
-      "evidence_sha256": "1395272a864b41004ba1d006a0eac8072c0299d0444c82e9c46f1a7b4a84892c",
+      "test_result": "111 focused tests passed after updating legacy stress expectations to require NO_TRADE for wide-spread and missing/zero-depth evidence; Ruff and mypy passed. Auction source and automatic effective freeze-rule integration remain incomplete.",
+      "evidence_sha256": "59d72c09f9f789ef0ea99ededfbe2751e7bb190b0cbc3a7c6e196ad35666c919",
       "blockers": [
         "Kite REST quote snapshots do not provide authoritative auction phase; a trusted session/auction state source must be connected.",
         "Feed-specific quote age policy must account for Kite timestamp semantics; the default threshold is not empirically attested.",
