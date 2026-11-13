@@ -13,17 +13,22 @@ from financial_brain.forward_edge import registry as R
 from financial_brain.forward_edge.approvals import Approval
 from financial_brain.forward_edge.charter import EvaluationIdentity, ExperimentCharter
 from financial_brain.forward_edge.exploratory_families import exploratory_specs
-from financial_brain.forward_edge.registry import Benchmark, Registry, RegistryError, Status, StrategySpec
+from financial_brain.forward_edge.registry import (Benchmark, MechanismHypothesis, Registry, RegistryError,
+                                                   Status, StrategySpec)
 
 REPO = Path(__file__).resolve().parents[1]
 SHA = "b" * 64
+HYPOTHESIS = MechanismHypothesis(
+    "Underreaction may sustain relative strength.", "Slow repositioning may delay convergence.",
+    "Late trend entrants may pay.", ("liquid trending market",),
+    "No costed advantage remains against the matched benchmark.")
 
 
 def _spec(**over) -> StrategySpec:
     base = dict(strategy_id="M1", family="momentum", version=1, code_sha256=SHA, asset_scope=("NSE_EQ",),
                 decision_clock="close_t", direction="LONG", exit_rule="time_20", horizon_sessions=20,
                 data_requirements=("adjusted_close",), source_lineage="docs/trials/ledger.jsonl#M1",
-                status=Status.EXPLORATORY)
+                status=Status.EXPLORATORY, mechanism_hypothesis=HYPOTHESIS)
     base.update(over)
     return StrategySpec(**base)
 
@@ -54,6 +59,28 @@ def _enrolment_evidence(*, actor_id: str = "owner-1", benchmark_day: date = date
 def test_missing_required_fields_fail_registration(field: str) -> None:
     with pytest.raises(RegistryError, match="missing fields"):
         _spec(**{field: " "})
+
+
+def test_structured_mechanism_hypothesis_is_required_and_content_addressable() -> None:
+    with pytest.raises(RegistryError, match="structured mechanism hypothesis"):
+        _spec(mechanism_hypothesis=None)
+    changed = MechanismHypothesis(
+        HYPOTHESIS.why_exists, HYPOTHESIS.why_may_persist, HYPOTHESIS.who_pays,
+        ("different regime",), HYPOTHESIS.falsifier)
+    assert HYPOTHESIS.sha256() != changed.sha256()
+
+
+@pytest.mark.parametrize("changes", [
+    {"why_exists": " "}, {"why_may_persist": " "}, {"who_pays": " "},
+    {"relevant_regimes": ()}, {"falsifier": " "},
+])
+def test_mechanism_hypothesis_rejects_missing_economic_claim_or_falsifier(changes: dict) -> None:
+    values = {"why_exists": HYPOTHESIS.why_exists, "why_may_persist": HYPOTHESIS.why_may_persist,
+              "who_pays": HYPOTHESIS.who_pays, "relevant_regimes": HYPOTHESIS.relevant_regimes,
+              "falsifier": HYPOTHESIS.falsifier}
+    values.update(changes)
+    with pytest.raises(RegistryError, match="mechanism hypothesis"):
+        MechanismHypothesis(**values)
 
 
 def test_spec_validation_rules() -> None:

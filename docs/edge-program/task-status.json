@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 81,
-  "unrecorded_tasks": 137,
+  "recorded_tasks": 82,
+  "unrecorded_tasks": 136,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1705,6 +1705,34 @@
         "Only the daily bounded random search is integrated; other research mechanisms remain outside this journal.",
         "No full dataset search, independent replay, or prospective paper performance is claimed.",
         "Cross-process journal locking is not implemented; bounded research journal is single-writer."
+      ]
+    },
+    {
+      "id": "PE-0056",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "src/financial_brain/forward_edge/monitoring_candidates.py",
+        "src/financial_brain/forward_edge/futures_carry.py",
+        "src/financial_brain/forward_edge/exploratory_families.py",
+        "tests/test_forward_edge_f02.py",
+        "tests/test_monitoring_candidates.py",
+        "docs/edge-program/pe-0056-mechanism-hypothesis.md",
+        "docs/edge-program/pe-0056-mechanism-hypothesis-evidence.json",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/strategy-variant-inventory.json"
+      ],
+      "tests": [
+        "test_structured_mechanism_hypothesis_is_required_and_content_addressable",
+        "test_mechanism_hypothesis_rejects_missing_economic_claim_or_falsifier",
+        "test_orb_gap_directional_and_chart_specs_are_shadow_monitoring_only",
+        "test_futures_candidates_are_explicitly_shadow_and_cannot_pass_registry_intent_gate"
+      ],
+      "test_result": "46 passed (exit code 0); Ruff and mypy passed. Strategy-variant inventory --check passes (253 candidates); source inventory --check passes (562 Python files). Strategy registration now requires an immutable, hash-addressable mechanism hypothesis.",
+      "evidence_sha256": "1cc3fab8e25a9978c897008d6c944a058b1d9307f85606e8c4bcb682d90d323d",
+      "blockers": [
+        "The wider 253-entry strategy inventory and legacy algorithms are not all registered with mechanism hypotheses.",
+        "No prospective observations have tested these economic conjectures; no profitability is claimed."
       ]
     }
   ]

@@ -9,7 +9,7 @@ import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
-from .registry import Status, StrategySpec, parameter_sha256
+from .registry import MechanismHypothesis, Status, StrategySpec, parameter_sha256
 
 
 @dataclass(frozen=True)
@@ -21,6 +21,7 @@ class ExploratoryFamily:
     horizon_sessions: int
     parameters: tuple[tuple[str, str], ...]
     source_lineage: str
+    mechanism_hypothesis: MechanismHypothesis
 
     def to_spec(self) -> StrategySpec:
         params = dict(self.parameters)
@@ -31,6 +32,7 @@ class ExploratoryFamily:
             exit_rule=f"time_{self.horizon_sessions}", horizon_sessions=self.horizon_sessions,
             data_requirements=(self.feature, "adjusted_close", "survivorship_aware_universe"),
             source_lineage=self.source_lineage, status=Status.EXPLORATORY,
+            mechanism_hypothesis=self.mechanism_hypothesis,
             parameter_sha256=parameter_sha256(params),
         )
 
@@ -42,12 +44,24 @@ EXPLORATORY_FAMILIES = (
         parameters=(("lookback_sessions", "252"), ("skip_recent_sessions", "21"),
                     ("selection", "cross_sectional_top_bottom_decile")),
         source_lineage="src/financial_brain/features/indicators.py::mom_12_1; exploratory PE-0049",
+        mechanism_hypothesis=MechanismHypothesis(
+            "Intermediate-horizon relative-strength persistence can arise from gradual information diffusion and underreaction.",
+            "Institutional rebalancing and slow capital movement may extend trends, while crowding and reversal erode them.",
+            "Late trend entrants and liquidity providers absorbing informed rebalancing may pay.",
+            ("persistent cross-sectional dispersion", "not a severe reversal or liquidity-stress regime"),
+            "Chronological after-cost returns fail to beat a matched momentum control with dependence and multiplicity adjustment."),
     ),
     ExploratoryFamily(
         strategy_id="PE49-CS-52W-HIGH", family="cross_sectional_52_week_high",
         feature="dist_52w_high", direction="LONG_SHORT", horizon_sessions=40,
         parameters=(("lookback_sessions", "250"), ("selection", "cross_sectional_top_bottom_decile")),
         source_lineage="src/financial_brain/features/indicators.py::dist_52w_high; exploratory PE-0049",
+        mechanism_hypothesis=MechanismHypothesis(
+            "Proximity to a 52-week high may proxy gradual incorporation of improving fundamentals and investor anchoring.",
+            "Slow belief updating may persist across rebalance cycles, but public salience can create crowding and reversal.",
+            "Investors fading persistent repricing and late crowded entrants may pay.",
+            ("gradual fundamental repricing", "liquid instruments without unresolved corporate actions"),
+            "The feature adds no incremental out-of-sample net alpha to matched momentum after costs and factor controls."),
     ),
 )
 

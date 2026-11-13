@@ -7,7 +7,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from .registry import Status, StrategySpec, parameter_sha256
+from .registry import MechanismHypothesis, Status, StrategySpec, parameter_sha256
 
 
 class FuturesCarryError(ValueError):
@@ -86,11 +86,26 @@ def candidate_specs() -> tuple[StrategySpec, ...]:
                           + Path(__file__).read_bytes()).hexdigest()
     definitions = (
         ("FE53-STOCK-CASH-CARRY", "stock_futures_cash_carry", "NSE_EQ+NSE_FUTURES",
-         "Long cash instrument, short verified single-expiry future to settlement."),
+         "Long cash instrument, short verified single-expiry future to settlement.",
+         MechanismHypothesis("Cash-futures basis reflects funding, dividends, risk transfer and market frictions.",
+                             "Balance-sheet, short-sale, tax and margin constraints may prevent arbitrage capital from closing the basis.",
+                             "The less constrained side of the basis trade may be compensated by the constrained hedger or directional trader.",
+                             ("verified single-expiry contract with stable funding and normal liquidity",),
+                             "Net basis is nonpositive after bid-ask, fees, funding, margin financing, dividends and stock-borrow effects.")),
         ("FE53-STOCK-BASIS", "single_expiry_stock_future_basis", "NSE_FUTURES",
-         "Single-expiry stock-futures basis with costs, financing and corporate actions."),
+         "Single-expiry stock-futures basis with costs, financing and corporate actions.",
+         MechanismHypothesis("Single-name futures basis can depart from fair carry because of stock-specific hedging demand and constraints.",
+                             "Short-sale limits, event risk and capital charges can delay convergence until expiry.",
+                             "Hedgers paying for immediacy or arbitrageurs carrying event and funding risk bear the transfer.",
+                             ("liquid single-name contract outside unresolved corporate actions",),
+                             "Matched single-expiry basis does not converge net of all financing, event, roll and execution costs.")),
         ("FE53-INDEX-CARRY", "index_futures_carry", "NSE_INDEX+NSE_FUTURES",
-         "Index carry proxy; basket creation/redemption costs remain required."),
+         "Index carry proxy; basket creation/redemption costs remain required.",
+         MechanismHypothesis("Index futures embed expected dividends, financing and aggregate hedging demand.",
+                             "Capital, basket-replication and margin frictions may delay fair-value convergence.",
+                             "Index hedgers may pay the carry premium received by risk-bearing arbitrage capital.",
+                             ("liquid index contracts with effective dividend and funding inputs",),
+                             "Carry is not positive after synchronized basket, dividend, financing, margin and execution costs.")),
     )
     return tuple(StrategySpec(
         strategy_id=key, family=family, version=1, code_sha256=code, asset_scope=(asset,),
@@ -99,5 +114,6 @@ def candidate_specs() -> tuple[StrategySpec, ...]:
         data_requirements=("single_expiry_contract_id", "spot_reference", "transaction_costs", "funding",
                            "margin_financing", "dividends", "corporate_actions", "data_rights"),
         source_lineage=f"src/financial_brain/evaluation/basis.py; {claim}", status=Status.SHADOW_ONLY,
+        mechanism_hypothesis=hypothesis,
         parameter_sha256=parameter_sha256({"family": family, "claim": claim}),
-    ) for key, family, asset, claim in definitions)
+    ) for key, family, asset, claim, hypothesis in definitions)

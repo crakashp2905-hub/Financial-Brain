@@ -65,6 +65,35 @@ def is_monitoring_family(family: str) -> bool:
 
 
 @dataclass(frozen=True)
+class MechanismHypothesis:
+    """Predeclared economic reason for a candidate, including an observable falsifier."""
+
+    why_exists: str
+    why_may_persist: str
+    who_pays: str
+    relevant_regimes: tuple[str, ...]
+    falsifier: str
+
+    def __post_init__(self) -> None:
+        text_fields = (self.why_exists, self.why_may_persist, self.who_pays, self.falsifier)
+        if any(not isinstance(value, str) or not value.strip() for value in text_fields):
+            raise RegistryError("mechanism hypothesis needs existence, persistence, payer, and falsifier")
+        if not isinstance(self.relevant_regimes, tuple) or not self.relevant_regimes or any(
+                not isinstance(value, str) or not value.strip() for value in self.relevant_regimes):
+            raise RegistryError("mechanism hypothesis needs at least one named market regime")
+        for name in ("why_exists", "why_may_persist", "who_pays", "falsifier"):
+            object.__setattr__(self, name, getattr(self, name).strip())
+        object.__setattr__(self, "relevant_regimes", tuple(value.strip() for value in self.relevant_regimes))
+
+    def sha256(self) -> str:
+        payload = {"why_exists": self.why_exists.strip(), "why_may_persist": self.why_may_persist.strip(),
+                   "who_pays": self.who_pays.strip(), "relevant_regimes": self.relevant_regimes,
+                   "falsifier": self.falsifier.strip()}
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                                         ensure_ascii=True).encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
 class StrategySpec:
     strategy_id: str
     family: str
@@ -82,6 +111,7 @@ class StrategySpec:
     exclusion_reason: str | None = None
     benchmark_id: str | None = None
     history: tuple[str, ...] = field(default=())
+    mechanism_hypothesis: MechanismHypothesis | None = None
 
     def __post_init__(self) -> None:
         required = {
@@ -103,6 +133,8 @@ class StrategySpec:
             raise RegistryError(f"direction must be one of {sorted(DIRECTIONS)}")
         if self.horizon_sessions < 1:
             raise RegistryError("horizon must be at least one session")
+        if not isinstance(self.mechanism_hypothesis, MechanismHypothesis):
+            raise RegistryError("strategy registration requires a structured mechanism hypothesis")
         if self.status in (Status.FAILED, Status.RETIRED) and not self.exclusion_reason:
             raise RegistryError(f"{self.status.value} needs an exclusion reason")
         if self.benchmark_id is not None and self.benchmark_id.strip() == "":
@@ -115,6 +147,12 @@ class StrategySpec:
     @property
     def can_place_paper_intents(self) -> bool:
         return self.status in PAPER_CAPABLE
+
+    @property
+    def mechanism_hypothesis_sha256(self) -> str:
+        if self.mechanism_hypothesis is None:
+            raise RegistryError("strategy has no mechanism hypothesis")
+        return self.mechanism_hypothesis.sha256()
 
 
 class Registry:
