@@ -122,6 +122,8 @@ def test_close_command_exit_code_reflects_completeness() -> None:
 def test_report_carries_coverage_benchmark_missing_data_and_never_promotes() -> None:
     out, code = cli.cmd_report("2027-01-04")
     assert code == cli.EXIT["INSUFFICIENT"] and out["real_money_enabled"] is False
+    assert out["mode"] == "FIXTURE_REPLAY" and out["evidence_class"] == "HISTORICAL_REPLAY"
+    assert out["tier"] == "HISTORICAL_REPLAY" and out["independently_attested"] is False
     assert out["promotion_verdict"] != "PROMOTION_GRADE"
     assert out["benchmark"] and out["coverage"] and "INDEPENDENT_TIMESTAMP_RECEIPTS_NOT_CONFIGURED" in out["missing_data"]
     assert out["independent_forward_sessions"] == 0

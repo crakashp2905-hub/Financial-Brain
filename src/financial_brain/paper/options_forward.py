@@ -15,6 +15,7 @@ import duckdb
 
 from .options import OptionPaperError
 from .options_runner import Intent, archive_quotes, run_intent
+from financial_brain.forward_edge.evidence_labels import metadata
 
 PATH = Path("data/options_paper_forward.duckdb")
 SCHEMA = """
@@ -82,6 +83,8 @@ def record_outcome(con, quote_con, intent: Intent, *, now: datetime | None = Non
                                 WHERE cohort=? AND rule_version=? AND signal_id=?""", key).fetchone()[0]
     if result.get("entry_at") is not None and result["entry_at"] <= recorded_at:
         raise OptionPaperError("entry quote did not follow the recorded intent")
+    result["mode"] = "local_paper"
+    result.update(metadata("local_paper"))
     body = json.dumps(result, sort_keys=True, default=str, separators=(",", ":"))
     con.execute("INSERT INTO outcomes VALUES (?, ?, ?, ?, ?, ?, ?)",
                 [*key, now, row[0], body, _digest(body)])
@@ -95,6 +98,6 @@ def audit(con) -> dict:
     bad_intents = [r[:3] for r in intents if _digest(str(r[3])) != r[4]]
     bad_outcomes = [r[:3] for r in outcomes if _digest(str(r[3])) != r[4]]
     closed = {r[:3] for r in outcomes}
-    return {"intents": len(intents), "outcomes": len(outcomes),
+    return {"intents": len(intents), "outcomes": len(outcomes), **metadata("local_paper"),
             "pending": len(intents) - len(closed), "invalid_intents": bad_intents,
             "invalid_outcomes": bad_outcomes, "external_timestamp_attested": False}

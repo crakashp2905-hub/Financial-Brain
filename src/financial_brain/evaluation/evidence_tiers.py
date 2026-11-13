@@ -12,6 +12,8 @@ record reaches its verdict sample, and never higher than MODERATE while live-for
 """
 from __future__ import annotations
 
+from financial_brain.forward_edge.custody import CustodyStatus
+
 HISTORICAL, WALK, PAPER, LIVE = "historical", "walk-forward", "paper-forward", "live-forward"
 
 #: From the result notes (brain/07-Research), per strategy: (historical, walk-forward), each (result, passed, source).
@@ -40,6 +42,8 @@ VERDICT_TRADES = 100
 
 
 def ledger(*, intraday=None, book=None) -> list[dict]:
+    from financial_brain.forward_edge.evidence_labels import metadata
+
     out = []
     for name, (hist, walk) in STATIC.items():
         tiers = {HISTORICAL: {"result": hist[0], "passed": hist[1], "source": hist[2]},
@@ -51,13 +55,15 @@ def ledger(*, intraday=None, book=None) -> list[dict]:
             if kind and kind[0] == "intraday" and intraday is not None:
                 n, net, days = intraday.execute("""SELECT COUNT(*), SUM(net_pnl), COUNT(DISTINCT day) FROM trades
                                                    WHERE strategy = ? AND mode = 'live' AND exit_ts IS NOT NULL""", [kind[1]]).fetchone()
-                tiers[PAPER] = {"result": f"{n} live paper trades over {days} day(s), net Rs {net or 0:,.0f}", "passed": None, "n": n}
+                tiers[PAPER] = {"result": f"{n} local-paper trades over {days} day(s), net Rs {net or 0:,.0f}",
+                                "passed": None, "n": n, **metadata("live")}
             if kind and kind[0] == "book" and book is not None:
                 n, = book.execute("SELECT COUNT(*) FROM positions WHERE version = ? AND mode = 'live' AND exit_day IS NOT NULL",
                                   [kind[1]]).fetchone()
                 o, = book.execute("SELECT COUNT(*) FROM positions WHERE version = ? AND mode = 'live' AND exit_day IS NULL",
                                   [kind[1]]).fetchone()
-                tiers[PAPER] = {"result": f"{n} sold, {o} open in the live paper book", "passed": None, "n": n}
+                tiers[PAPER] = {"result": f"{n} sold, {o} open in the local paper book", "passed": None, "n": n,
+                                **metadata("local_paper")}
         except Exception:                               # noqa: BLE001 - a missing table leaves the tier empty
             pass
         sh = SHARPE.get(name)
@@ -90,16 +96,45 @@ LIST_STRATEGY = {"terminal list": "ranking v1 (terminal list)", "ranking v2": "r
 
 
 def claim_tier(*, replicated: bool, paper_forward: bool, confirmed: bool) -> str:
-    """The one claim allowed. Monotone: each tier needs every tier below it, so a paper record on a strategy that
-    failed its historical gates is still an observation, and nothing is 'confirmed' without G5."""
+    """Static-claim compatibility wrapper; booleans alone cannot establish the source of forward evidence."""
     if not replicated:
         return OBSERVATION
-    if confirmed and paper_forward:
+    return REPLICATED
+
+
+def source_aware_claim_tier(*, replicated: bool, paper_forward: bool, confirmed: bool,
+                            evidence_mode: str | None = None, market_observed: bool = False,
+                            pre_entry_sealed: bool = False, session_complete: bool = False,
+                            custody_status: CustodyStatus | None = None) -> str:
+    """Derive forward claims from source class; replay labels cannot become paper-forward or confirmed."""
+    if not replicated:
+        return OBSERVATION
+    if not paper_forward or evidence_mode is None:
+        return REPLICATED
+    from financial_brain.forward_edge.evidence_labels import EvidenceClass, classify
+
+    try:
+        evidence_class = classify(evidence_mode, market_observed=market_observed,
+                                  pre_entry_sealed=pre_entry_sealed, session_complete=session_complete,
+                                  custody_status=custody_status)
+    except ValueError:
+        return REPLICATED
+    if evidence_class in (EvidenceClass.HISTORICAL_REPLAY, EvidenceClass.EXPLORATORY_SHADOW):
+        return REPLICATED
+    if not (market_observed and pre_entry_sealed and session_complete):
+        return REPLICATED
+    if confirmed and evidence_class is EvidenceClass.INDEPENDENTLY_ATTESTED_FORWARD:
         return CONFIRMED
-    return FORWARD_PAPER if paper_forward else REPLICATED
+    return FORWARD_PAPER
 
 
-def list_claim(strategy: str, *, paper_forward: bool = False, confirmed: bool = False) -> str:
+def list_claim(strategy: str, *, paper_forward: bool = False, confirmed: bool = False,
+               evidence_mode: str | None = None, market_observed: bool = False,
+               pre_entry_sealed: bool = False, session_complete: bool = False,
+               custody_status: CustodyStatus | None = None) -> str:
     """The claim for a list produced by one of the ``STATIC`` strategies: replicated means its walk-forward passed."""
     walk = STATIC.get(strategy)
-    return claim_tier(replicated=bool(walk and walk[1][1]), paper_forward=paper_forward, confirmed=confirmed)
+    return source_aware_claim_tier(replicated=bool(walk and walk[1][1]), paper_forward=paper_forward,
+                                   confirmed=confirmed, evidence_mode=evidence_mode,
+                                   market_observed=market_observed, pre_entry_sealed=pre_entry_sealed,
+                                   session_complete=session_complete, custody_status=custody_status)

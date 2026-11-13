@@ -20,6 +20,21 @@ def test_the_report_separates_live_from_replay_and_states_the_run(tmp_path):
             R.save(con, t, mode)
     text = DR.build(con, "2026-10-07")
     assert "live run:** complete, 1000 polls" in text
-    assert "LIVE (the evidence)" in text and "REPLAY" in text and "not evidence" in text
+    assert "LOCAL PAPER" in text and "not independently attested" in text
+    assert "HISTORICAL REPLAY" in text and "not forward evidence" in text
+    assert "Evidence class: `LOCAL_PAPER`" in text and "Evidence class: `HISTORICAL_REPLAY`" in text
     assert "ORB" in text and "Paper only" in text
     assert DR.build(con, "2026-10-08").count("No run recorded today") == 1
+
+
+def test_intraday_export_distinguishes_observed_paper_from_historical_replay(tmp_path, monkeypatch):
+    con = R.ledger(tmp_path / "l.duckdb")
+    monkeypatch.setattr(R, "REPORTS", tmp_path / "reports")
+    eng = I.DayEngine("2026-10-07")
+    local = R.write_report(con, "2026-10-07", "live", eng)
+    replay = R.write_report(con, "2026-10-07", "replay", eng)
+    local_text, replay_text = local.read_text(), replay.read_text()
+    assert "Evidence class: `LOCAL_PAPER`" in local_text
+    assert "no independent attestation" in local_text
+    assert "Evidence class: `HISTORICAL_REPLAY`" in replay_text
+    assert "not prospective" in replay_text

@@ -184,4 +184,3 @@ def test_full_universe_rejects_and_missing_paths_are_reported_with_action_sensit
     ids = ledger.execute("""SELECT corporate_action_ids FROM champion_universe_attempts
         WHERE day=? AND strategy=? AND isin='ISIN1'""", [calendar[0].isoformat(), C.CHAMPION]).fetchone()[0]
     assert ids == '["ACT-1"]'
-

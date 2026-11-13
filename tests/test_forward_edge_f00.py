@@ -146,6 +146,17 @@ def test_trial_in_2027q1_needs_only_a_protected_trial_approval(tmp_path) -> None
     assert ok.spent == 13  # the 2026Q4 count is not the 2027Q1 budget
 
 
+def test_prospective_cohort_cannot_register_without_human_trial_approval(tmp_path) -> None:
+    spec, cohort_schedule = _protected_charter("M1-2027", date(2027, 1, 15))
+    registry = charter.CharterRegistry(tmp_path / "unapproved.jsonl")
+    with pytest.raises(trials.TrialGovernanceError, match="needs a PROTECTED_TRIAL approval"):
+        trials.assert_new_protected_trial_allowed(
+            REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027", approvals=(), now=NOW,
+            scope_sha256=spec.sha256(), charter=spec, cohort_schedule=cohort_schedule,
+            charter_registry=registry)
+    assert registry.journal.records() == []
+
+
 def test_protected_trial_cannot_register_without_full_identity_registry(tmp_path) -> None:
     spec, cohort_schedule = _protected_charter("M9", date(2026, 11, 10))
     with pytest.raises(trials.TrialGovernanceError, match="durable registry"):

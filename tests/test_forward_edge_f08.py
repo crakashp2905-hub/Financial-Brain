@@ -151,7 +151,7 @@ def test_one_lucky_period_cannot_pass_regime_robustness() -> None:
 
 
 def test_every_reported_row_carries_exactly_one_claim_tier() -> None:
-    assert E.label_rows([{"x": 1, "tier": ClaimTier.SHADOW}])
+    assert E.label_rows([{"x": 1, "mode": "shadow", "tier": ClaimTier.SHADOW}])
     with pytest.raises(E.StatsError):
         E.label_rows([{"x": 1}])
     with pytest.raises(E.StatsError):

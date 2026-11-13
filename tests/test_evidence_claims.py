@@ -1,13 +1,25 @@
 """Every displayed opportunity makes exactly one of four claims, and a claim needs every tier below it."""
 from financial_brain.evaluation import evidence_tiers as ET
+from financial_brain.forward_edge.custody import CustodyStatus
 from financial_brain.paper import terminal as T
 
 
 def test_claims_are_monotone():
     assert ET.claim_tier(replicated=False, paper_forward=True, confirmed=True) == ET.OBSERVATION
     assert ET.claim_tier(replicated=True, paper_forward=False, confirmed=True) == ET.REPLICATED
-    assert ET.claim_tier(replicated=True, paper_forward=True, confirmed=False) == ET.FORWARD_PAPER
-    assert ET.claim_tier(replicated=True, paper_forward=True, confirmed=True) == ET.CONFIRMED
+    assert ET.claim_tier(replicated=True, paper_forward=True, confirmed=True) == ET.REPLICATED
+    assert ET.source_aware_claim_tier(replicated=True, paper_forward=True, confirmed=True,
+                                      evidence_mode="replay") == ET.REPLICATED
+    assert ET.source_aware_claim_tier(replicated=True, paper_forward=True, confirmed=True,
+                                      evidence_mode="live") == ET.REPLICATED
+    assert ET.source_aware_claim_tier(replicated=True, paper_forward=True, confirmed=True,
+                                      evidence_mode="live", market_observed=True, pre_entry_sealed=True,
+                                      session_complete=True) == ET.FORWARD_PAPER
+    assert ET.source_aware_claim_tier(
+        replicated=True, paper_forward=True, confirmed=True, evidence_mode="live",
+        market_observed=True, pre_entry_sealed=True, session_complete=True,
+        custody_status=CustodyStatus.VERIFIED,
+    ) == ET.CONFIRMED
 
 
 def test_the_terminal_list_is_an_observation_and_says_it_is_not_a_recommendation():
@@ -46,3 +58,15 @@ def test_a_lagging_input_makes_the_page_say_stale():
     assert len(late) == 1 and late[0].startswith("features ends 2026-10-14")
     assert "STALE INPUTS" in T._freshness_banner(late)
     assert T.freshness(con, now=datetime(2026, 10, 15, 10, 0)) == []       # morning: yesterday's data is current
+
+
+def test_paper_tier_ledger_labels_observed_paper_as_local_not_attested():
+    import duckdb
+
+    con = duckdb.connect()
+    con.execute("CREATE TABLE trades (strategy VARCHAR, mode VARCHAR, exit_ts TIMESTAMP, day DATE, net_pnl DOUBLE)")
+    con.execute("INSERT INTO trades VALUES ('ORB', 'live', TIMESTAMP '2026-10-28 10:00:00', DATE '2026-10-28', -25)")
+    row = next(x for x in ET.ledger(intraday=con) if x["strategy"] == "ORB intraday")
+    assert row["tiers"][ET.PAPER]["evidence_class"] == "LOCAL_PAPER"
+    assert row["tiers"][ET.PAPER]["independently_attested"] is False
+    assert "local-paper" in row["tiers"][ET.PAPER]["result"]
