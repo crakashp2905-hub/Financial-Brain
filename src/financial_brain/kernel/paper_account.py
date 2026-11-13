@@ -119,6 +119,10 @@ class PaperAccount:
         return self.oms.cash(self.account_id)
 
     @property
+    def initial_cash(self) -> Decimal:
+        return self._initial_cash
+
+    @property
     def available_cash(self) -> Decimal:
         return self.oms.available(self.account_id)
 

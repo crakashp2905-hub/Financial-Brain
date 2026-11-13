@@ -869,17 +869,25 @@
         "src/financial_brain/kernel/ledger.py",
         "src/financial_brain/kernel/oms.py",
         "src/financial_brain/forward_edge/durable.py",
-        "tests/test_paper_account.py"
+        "src/financial_brain/kernel/paper_portfolio.py",
+        "tests/test_paper_account.py",
+        "tests/test_paper_account_portfolio.py",
+        "tests/test_kernel_ledger_guards_ticks.py",
+        "docs/edge-program/pe-0090-multibook-cash-reconciliation-evidence.json"
       ],
       "tests": [
+        "test_portfolio_consolidates_isolated_book_ledgers_and_reconciles_marks",
+        "test_portfolio_keeps_total_nav_unavailable_if_any_book_lacks_a_position_mark",
+        "test_portfolio_refuses_ambiguous_duplicate_book_authority",
         "test_buy_sell_fees_and_restart_reconcile",
         "test_replayed_intent_fill_and_fee_have_one_economic_effect",
         "test_failed_fill_or_fee_does_not_change_journal"
       ],
-      "test_result": "32 focused account, OMS, and ledger tests passed; full Windows suite: 3278 passed, 1 skipped; Ruff and mypy passed",
-      "evidence_sha256": null,
+      "test_result": "27 focused portfolio, account, and ledger tests passed; Ruff and mypy passed. Added a read-only consolidated ledger/NAV view for registered PaperAccounts while preserving per-book capital isolation and withholding total NAV if any book lacks a mark.",
+      "evidence_sha256": "e609f99f71b934718e9b843ebbb13b0e365beea42a0a47f15b75761e563c9828",
       "blockers": [
-        "implementation currently covers one long-only single-currency paper book; aggregation across every strategy book, margin, settlement, and derivative accounting remain"
+        "The operational runner does not yet discover/register every strategy account into this derived view, and account subledgers remain the source of truth rather than one persisted portfolio ledger.",
+        "The scope remains long-only cash equities in one currency; margin, settlement, futures and options accounting are not implemented."
       ]
     },
     {
