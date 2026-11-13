@@ -46,6 +46,21 @@ def test_sell_signal_reduces_existing_position_and_no_signal_is_not_a_new_entry(
     assert weights["B"] == 0
 
 
+def test_hold_and_unheld_sell_do_not_open_a_position_or_create_turnover_cost():
+    held = _allocate({"A": ("HOLD", _alpha(0.02))},
+                     previous={"A": 0.2, "CASH": 0.8}, turnover_cost_per_unit=0.01)
+    assert dict(held.target.weights)["A"] == pytest.approx(0.2)
+    assert held.target.one_way_turnover == 0
+    assert held.target.turnover_cost == 0
+    assert {name: reason for name, reason, _ in held.dispositions}["A"] == "HOLD"
+
+    flat = _allocate({"A": ("SELL", _alpha(0.02))},
+                     previous={"A": 0.0, "CASH": 1.0}, turnover_cost_per_unit=0.01)
+    assert dict(flat.target.weights)["A"] == 0
+    assert flat.target.one_way_turnover == 0
+    assert flat.target.turnover_cost == 0
+
+
 def test_holds_must_be_observed_and_forecast_horizons_must_match():
     with pytest.raises(SignalAllocatorError, match="held instrument"):
         _allocate({"B": ("BUY", _alpha(0.02))}, previous={"A": 0.1, "CASH": 0.9})

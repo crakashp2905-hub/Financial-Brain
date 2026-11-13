@@ -43,8 +43,8 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
     """Route every named signal through one allocator; input NetAlpha already itemizes trade costs.
 
     The threshold is a per-horizon expected-return hurdle, not risk-adjusted utility. SELL signals
-    receive a negative target score; HOLD/NO_SIGNAL remain non-entry observations. Every held name
-    must be represented so the allocator cannot silently orphan an existing position.
+    receive a negative target score; HOLD/NO_SIGNAL carry no new-entry score. Every held name must
+    be represented so the allocator cannot silently orphan an existing position.
     """
     names = tuple(sorted(signals))
     if not names or set(names) != set(covariance_names) or len(set(covariance_names)) != len(covariance_names):
@@ -64,8 +64,8 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
         horizons.add(forecast.horizon)
         if action == "SELL":
             score, reason = -max(abs(forecast.net), min_forecast_net_alpha, 1e-12), "SELL_SIGNAL"
-        elif action == "NO_SIGNAL":
-            score, reason = 0.0, "NO_SIGNAL"
+        elif action in {"HOLD", "NO_SIGNAL"}:
+            score, reason = 0.0, action
         elif forecast.net <= min_forecast_net_alpha:
             score, reason = 0.0, "NO_TRADE_NET_ALPHA_HURDLE"
         else:

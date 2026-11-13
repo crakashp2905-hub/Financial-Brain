@@ -56,18 +56,20 @@ def test_dividend_posts_gross_income_withholding_and_net_cash_once(tmp_path):
     with pytest.raises(PaperAccountError, match="eligible quantity"):
         account.apply_cash_dividend(
             "dividend-wrong-qty", "NSE:INFY", ex_date=date(2026, 11, 12),
-            payment_date=date(2026, 11, 20), eligible_quantity=3,
+            payment_date=date(2026, 11, 20), applied_on=date(2026, 11, 20), eligible_quantity=3,
             gross_per_share=Decimal("1"), withholding_rate=Decimal("0.10"),
             source_id="owner-dividend-table-v1", source_sha256=SOURCE_SHA,
         )
     assert path.read_bytes() == before
     account.apply_cash_dividend(
         "dividend-q1", "NSE:INFY", ex_date=date(2026, 11, 12), payment_date=date(2026, 11, 20),
+        applied_on=date(2026, 11, 20),
         eligible_quantity=2, gross_per_share=Decimal("1"), withholding_rate=Decimal("0.10"),
         source_id="owner-dividend-table-v1", source_sha256=SOURCE_SHA,
     )
     account.apply_cash_dividend(
         "dividend-q1", "NSE:INFY", ex_date=date(2026, 11, 12), payment_date=date(2026, 11, 20),
+        applied_on=date(2026, 11, 20),
         eligible_quantity=2, gross_per_share=Decimal("1"), withholding_rate=Decimal("0.10"),
         source_id="owner-dividend-table-v1", source_sha256=SOURCE_SHA,
     )

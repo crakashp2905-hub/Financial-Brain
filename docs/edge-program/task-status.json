@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 94,
-  "unrecorded_tasks": 124,
+  "recorded_tasks": 99,
+  "unrecorded_tasks": 119,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2038,6 +2038,113 @@
       "evidence_sha256": "cc3508b8869573fe5d21366d479949de65233fae9f611b410e2e2b84ef6a6844",
       "blockers": [
         "No approved development dataset or reviewed economic horizon-search protocol has been evaluated; no horizon performance results are claimed."
+      ]
+    },
+    {
+      "id": "PE-0069",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_paper_account_income.py",
+        "tests/test_paper_account_corporate_actions.py",
+        "docs/edge-program/pe-0069-cash-carry-return-reconciliation.md",
+        "docs/edge-program/pe-0069-cash-carry-return-reconciliation-evidence.json"
+      ],
+      "tests": [
+        "test_cash_yield_uses_dated_cash_and_total_return_bridge_reconciles",
+        "test_cash_yield_rejects_undated_cash_overlaps_and_early_payment",
+        "test_cash_yield_rejects_late_posting_and_unmarked_total_return",
+        "test_dividend_posting_requires_payment_and_rejects_late_nav_rewrite"
+      ],
+      "test_result": "23 focused paper-account, corporate-action, NAV-return and income tests passed; mypy and Ruff passed. Synthetic fixtures verify dated dividend and cash-yield posting, cash-basis reconstruction, withholding, idempotency, and the total-return bridge.",
+      "evidence_sha256": "f71efa4a1a1a37aaf6042ccdb3c0699a588538a54724cda7459fea9104296f5e",
+      "blockers": [
+        "No independently validated owner-sourced cash-rate or dividend-payment dataset was available; no live income or carry result is claimed.",
+        "Futures carry is not integrated with canonical PaperAccount return reconciliation."
+      ]
+    },
+    {
+      "id": "PE-0070",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/signal_allocator.py",
+        "src/financial_brain/forward_edge/target_portfolio.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_signal_allocator.py",
+        "tests/test_target_portfolio.py",
+        "tests/test_paper_account.py",
+        "docs/edge-program/pe-0070-inventory-aware-sell-rules.md",
+        "docs/edge-program/pe-0070-inventory-aware-sell-rules-evidence.json"
+      ],
+      "tests": [
+        "test_hold_and_unheld_sell_do_not_open_a_position_or_create_turnover_cost",
+        "test_sell_signal_reduces_existing_position_and_no_signal_is_not_a_new_entry",
+        "test_no_trade_band_ignores_small_fee_drift_but_reports_material_rebalance",
+        "test_effective_fee_schedule_uses_filled_notional_and_reconciles_nav"
+      ],
+      "test_result": "26 focused allocator, target-portfolio and paper-account tests passed; mypy and Ruff passed. HOLD and unheld SELL cannot create inventory, unchanged targets carry zero turnover cost, and account fees are charged on recorded fills.",
+      "evidence_sha256": "24bc07f03d929007f1b0eca01297a6162bbceaf22f850ff3b4779c8e625a9684",
+      "blockers": [
+        "Synthetic fixtures establish allocation and accounting mechanics only; profitability and live execution cost remain unverified."
+      ]
+    },
+    {
+      "id": "PE-0071",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/portfolio_risk.py",
+        "tests/test_forward_edge_f09.py",
+        "docs/edge-program/pe-0071-capacity-evidence-gate.md",
+        "docs/edge-program/pe-0071-capacity-evidence-gate-evidence.json"
+      ],
+      "tests": [
+        "test_order_capacity_requires_fresh_hashed_adv_and_depth_and_applies_safety_margin"
+      ],
+      "test_result": "17 focused risk tests passed; mypy and Ruff passed. Synthetic fixtures verify participation/depth minima, a safety haircut, explicit missing/stale evidence abstention and rejection above capacity.",
+      "evidence_sha256": "5005be1933a160204752a1233a5b7fc7a99b70c0bf5ea2f426fdf3c3e82edd87",
+      "blockers": [
+        "Risk evidence is not yet required by every paper-runner and strategy-adapter path.",
+        "No authorized live ADV or quote-depth evidence was available."
+      ]
+    },
+    {
+      "id": "PE-0072",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/portfolio_risk.py",
+        "tests/test_forward_edge_f09.py",
+        "docs/edge-program/pe-0072-correlated-book-risk-evidence.md",
+        "docs/edge-program/pe-0072-correlated-book-risk-evidence.json"
+      ],
+      "tests": [
+        "test_multiple_strategy_books_share_market_and_correlated_risk_ceilings"
+      ],
+      "test_result": "17 focused risk tests passed; mypy and Ruff passed. Synthetic fixtures verify aggregate market-exposure and covariance-based combined portfolio-risk limits across books.",
+      "evidence_sha256": "b87344fc12f028593685d78c6e725f1fa3fe541f736a9372e07b6347fc6af0e1",
+      "blockers": [
+        "The gate is not yet coupled to OMS admission for every strategy book.",
+        "No live covariance or calibrated account risk limits are claimed."
+      ]
+    },
+    {
+      "id": "PE-0073",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/pareto_tradeoff.py",
+        "tests/test_pareto_tradeoff.py",
+        "docs/edge-program/pe-0073-training-pareto-archive.md",
+        "docs/edge-program/pe-0073-training-pareto-archive-evidence.json"
+      ],
+      "tests": [
+        "test_training_only_pareto_report_archives_selected_and_every_rejection_reason",
+        "test_pareto_report_rejects_holdout_rows_dominated_selection_and_missing_reasons",
+        "test_pareto_archive_is_append_only_and_detects_report_tampering"
+      ],
+      "test_result": "3 focused tests passed; mypy and Ruff passed. Synthetic fixtures verify training-only digests, all five Pareto objectives, explicit dispositions/reasons, nondominated selection and hash-chained archive tamper detection.",
+      "evidence_sha256": "07a18ec5232cbbb2b882107586ea14d0f4580cc616717f5ca2b9fff4b0ff2d63",
+      "blockers": [
+        "No approved real training cohort or governance-approved selection rule was available; no strategy performance claim is made.",
+        "The local archive is not an independent attestation service."
       ]
     }
   ]

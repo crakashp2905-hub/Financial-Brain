@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0072",
+  "status": "PARTIAL",
+  "implemented": [
+    "All named strategy-book factor exposures are aggregated before account risk limits are evaluated.",
+    "A market-factor exposure ceiling and covariance-based combined portfolio-volatility ceiling produce explicit ALLOW or NO_TRADE outcomes.",
+    "Unaligned, non-finite, asymmetric or non-positive-semidefinite covariance and incomplete book exposures are rejected."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f09.py -q",
+    "result": "17 passed; exit code 0.",
+    "additional_checks": [
+      "python -m mypy src/financial_brain/forward_edge/portfolio_risk.py — Success: no issues found in 1 source file.",
+      "python -m ruff check src/financial_brain/forward_edge/portfolio_risk.py tests/test_forward_edge_f09.py — All checks passed."
+    ],
+    "case": "test_multiple_strategy_books_share_market_and_correlated_risk_ceilings"
+  },
+  "limitations": [
+    "The aggregate risk gate is not yet coupled to account OMS admission for every strategy book.",
+    "Covariance and factor exposure inputs are synthetic test fixtures; no live risk limit calibration is claimed."
+  ]
+}

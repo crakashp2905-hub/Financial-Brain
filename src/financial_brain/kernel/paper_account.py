@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 import hashlib
 import json
@@ -133,7 +133,7 @@ class PaperAccount:
 
     @property
     def net_realized_pnl(self) -> Decimal:
-        return self.realized_pnl + self.dividend_income - self.fees - self.taxes
+        return self.realized_pnl + self.dividend_income + self.cash_yield_income - self.fees - self.taxes
 
     @property
     def fees(self) -> Decimal:
@@ -142,6 +142,10 @@ class PaperAccount:
     @property
     def dividend_income(self) -> Decimal:
         return -self.ledger.balance(f"dividend_income:{self.account_id}", self.currency)
+
+    @property
+    def cash_yield_income(self) -> Decimal:
+        return -self.ledger.balance(f"cash_yield_income:{self.account_id}", self.currency)
 
     @property
     def taxes(self) -> Decimal:
@@ -159,6 +163,28 @@ class PaperAccount:
     @property
     def net_pnl(self) -> Decimal:
         return self.equity - self._initial_cash
+
+    def reconcile_total_return(self) -> dict[str, str | bool]:
+        """Bridge NAV return to price P&L, income, costs, and external capital flows."""
+        equity = self.equity
+        opening_basis = sum((basis for _, basis in self._positions.values()), Decimal(0))
+        unrealized = equity - self.cash - opening_basis
+        price_pnl = self.realized_pnl + unrealized
+        gross_income = self.dividend_income + self.cash_yield_income
+        costs = self.fees + self.taxes
+        external_flows = sum((Decimal(row["amount"]) for row in self._external_flows), Decimal(0))
+        nav_return = equity - self._initial_cash - external_flows
+        economic_return = price_pnl + gross_income - costs
+        difference = nav_return - economic_return
+        if abs(difference) > Decimal("0.01"):
+            raise PaperAccountError("portfolio NAV return does not reconcile to price, income, costs and capital flows")
+        return {"equity_inr": str(equity), "external_flows_inr": str(external_flows),
+                "nav_return_inr": str(nav_return), "realized_price_pnl_inr": str(self.realized_pnl),
+                "unrealized_price_pnl_inr": str(unrealized), "gross_dividend_income_inr": str(self.dividend_income),
+                "gross_cash_yield_income_inr": str(self.cash_yield_income),
+                "fees_inr": str(self.fees), "taxes_inr": str(self.taxes),
+                "economic_return_inr": str(economic_return), "difference_inr": str(difference),
+                "reconciled": True}
 
     @property
     def nav_snapshots(self) -> list[dict]:
@@ -197,7 +223,9 @@ class PaperAccount:
             self._fill_ids: set[str] = set()
             self._fill_content: dict[str, tuple] = {}
             self._fee_ids: dict[str, Decimal] = {}
+            self._fee_effective_dates: dict[str, str | None] = {}
             self._corporate_action_ids: dict[str, tuple] = {}
+            self._cash_yield_ids: dict[str, tuple] = {}
             self._instrument_suspended: dict[str, bool] = {}
             self._marks: dict[str, tuple[Decimal, datetime, str]] = {}
             self._mark_ids: dict[str, tuple] = {}
@@ -208,6 +236,7 @@ class PaperAccount:
             self._last_flow_at: datetime | None = None
             self._nav_snapshots: list[dict] = []
             self._nav_snapshot_ids: dict[str, tuple] = {}
+            prior_records = [records[0]]
             for r in records[1:]:
                 t = r["t"]
                 if t == "INTENT":
@@ -240,12 +269,15 @@ class PaperAccount:
                     self._apply_stock_split(r)
                 elif t == "CASH_DIVIDEND":
                     self._apply_cash_dividend(r)
+                elif t == "CASH_YIELD":
+                    self._apply_cash_yield(r, prior_records=prior_records)
                 elif t == "INSTRUMENT_STATUS":
                     self._apply_instrument_status(r)
                 elif t == "DELISTING_SETTLEMENT":
                     self._apply_delisting_settlement(r)
                 else:
                     raise PaperAccountError(f"unknown paper account journal event: {t}")
+                prior_records.append(r)
             if not self.ledger.trial_balance_ok():
                 raise PaperAccountError("paper ledger trial balance does not reconcile")
             if self.ledger.balance(f"cash:{self.account_id}", self.currency) != self.cash:
@@ -429,15 +461,20 @@ class PaperAccount:
         self._validate_and_commit(record)
         return next(row for row in self._nav_snapshots if row["snapshot_id"] == snapshot_id)
 
-    def record_fee(self, fee_id: str, amount: Decimal) -> None:
+    def record_fee(self, fee_id: str, amount: Decimal, *, effective_on: date | None = None) -> None:
         fee = Decimal(amount)
-        if not fee_id or not fee.is_finite() or fee <= 0:
+        if (not fee_id or not fee.is_finite() or fee <= 0
+                or effective_on is not None and (not isinstance(effective_on, date)
+                                                 or isinstance(effective_on, datetime))):
             raise PaperAccountError("fee id and positive amount are required")
+        effective_text = effective_on.isoformat() if effective_on is not None else None
         if fee_id in self._fee_ids:
-            if self._fee_ids[fee_id] != fee:
+            if (self._fee_ids[fee_id] != fee
+                    or self._fee_effective_dates.get(fee_id) != effective_text):
                 raise PaperAccountError(f"fee id {fee_id} reused with different amount")
             return
-        self._validate_and_commit({"t": "FEE", "fee_id": fee_id, "amount": str(fee)})
+        self._validate_and_commit({"t": "FEE", "fee_id": fee_id, "amount": str(fee),
+                                   "effective_on": effective_text})
 
     def apply_stock_split(self, action_id: str, symbol: str, *, ratio: Decimal, effective_on: date,
                           source_id: str, source_sha256: str) -> None:
@@ -459,16 +496,17 @@ class PaperAccount:
         self._commit_corporate_action(row)
 
     def apply_cash_dividend(self, action_id: str, symbol: str, *, ex_date: date, payment_date: date,
-                            eligible_quantity: int, gross_per_share: Decimal, withholding_rate: Decimal,
+                            applied_on: date, eligible_quantity: int, gross_per_share: Decimal, withholding_rate: Decimal,
                             source_id: str, source_sha256: str) -> None:
         """Post owner-supplied gross dividend and withholding; the source must attest eligible shares and dates."""
         self._validate_corporate_action(action_id, symbol, payment_date, source_id, source_sha256)
         per_share, rate = Decimal(gross_per_share), Decimal(withholding_rate)
         if (not isinstance(ex_date, date) or isinstance(ex_date, datetime)
                 or not isinstance(payment_date, date) or isinstance(payment_date, datetime)
+                or not isinstance(applied_on, date) or isinstance(applied_on, datetime)
                 or type(eligible_quantity) is not int or eligible_quantity <= 0
                 or not per_share.is_finite() or per_share <= 0 or not rate.is_finite() or not 0 <= rate <= 1
-                or payment_date < ex_date):
+                or payment_date < ex_date or applied_on < payment_date):
             raise PaperAccountError("dividend dates, eligible quantity, gross rate or withholding are invalid")
         calculated_eligible = self._quantity_on_ex_date(symbol, ex_date)
         if eligible_quantity != calculated_eligible:
@@ -479,10 +517,115 @@ class PaperAccount:
             raise PaperAccountError("dividend gross must be positive")
         row = {"t": "CASH_DIVIDEND", "action_id": action_id, "symbol": symbol,
                "ex_date": ex_date.isoformat(), "payment_date": payment_date.isoformat(),
+               "applied_on": applied_on.isoformat(),
                "eligible_quantity": eligible_quantity, "gross_per_share": str(per_share),
                "withholding_rate": str(rate), "gross_amount": str(gross), "tax_amount": str(tax),
                "source_id": source_id, "source_sha256": source_sha256}
+        content = tuple(sorted((key, value) for key, value in row.items() if key != "t"))
+        prior_action = self._corporate_action_ids.get(action_id)
+        if prior_action is not None:
+            if prior_action != content:
+                raise PaperAccountError("corporate action id reused with different dividend facts")
+            return
+        if any(date.fromisoformat(snapshot["session_date"]) >= applied_on for snapshot in self._nav_snapshots):
+            raise PaperAccountError("late dividend posting cannot rewrite an already captured NAV session")
         self._commit_corporate_action(row)
+
+    def apply_cash_yield(self, action_id: str, *, effective_start: date, effective_end: date,
+                         payment_date: date, applied_on: date, annual_rate: Decimal,
+                         withholding_rate: Decimal = Decimal(0),
+                         day_count: int = 365, source_id: str, source_sha256: str) -> None:
+        """Post sourced residual-cash yield over [effective_start, effective_end), using daily closing cash.
+
+        Cash-changing fills and standalone fees must have effective dates. If the journal cannot
+        reconstruct daily cash, the accrual is rejected rather than estimated from current cash.
+        """
+        self._validate_corporate_action(action_id, "CASH", payment_date, source_id, source_sha256)
+        rate, withholding = Decimal(annual_rate), Decimal(withholding_rate)
+        dates = (effective_start, effective_end, payment_date, applied_on)
+        if (any(not isinstance(value, date) or isinstance(value, datetime) for value in dates)
+                or effective_start >= effective_end or payment_date < effective_end
+                or applied_on < payment_date
+                or (effective_end - effective_start).days > 366
+                or not rate.is_finite() or rate < 0 or not withholding.is_finite()
+                or not 0 <= withholding <= 1 or type(day_count) is not int or day_count not in {360, 365, 366}):
+            raise PaperAccountError("cash-yield effective period, rate, withholding or day count is invalid")
+        prior_records = self.journal.records()
+        previous_action = next((row for row in prior_records
+                                if row.get("t") == "CASH_YIELD" and row.get("action_id") == action_id), None)
+        if previous_action is not None:
+            expected = {"effective_start": effective_start.isoformat(),
+                        "effective_end": effective_end.isoformat(), "payment_date": payment_date.isoformat(),
+                        "applied_on": applied_on.isoformat(), "annual_rate": str(rate),
+                        "day_count": day_count, "withholding_rate": str(withholding),
+                        "source_id": source_id, "source_sha256": source_sha256}
+            if any(previous_action.get(key) != value for key, value in expected.items()):
+                raise PaperAccountError("cash-yield action id reused with different effective facts")
+            return
+        if any(date.fromisoformat(row["session_date"]) >= applied_on for row in self._nav_snapshots):
+            raise PaperAccountError("late cash-yield posting cannot rewrite an already captured NAV session")
+        for record in prior_records:
+            if record.get("t") != "CASH_YIELD":
+                continue
+            old_start = date.fromisoformat(record["effective_start"])
+            old_end = date.fromisoformat(record["effective_end"])
+            if effective_start < old_end and old_start < effective_end:
+                raise PaperAccountError("cash-yield accrual periods cannot overlap")
+        daily_cash = []
+        current_day = effective_start
+        while current_day < effective_end:
+            closing = self._cash_close_on_date(current_day, prior_records)
+            if closing < 0:
+                raise PaperAccountError("cash-yield basis cannot include negative cash")
+            daily_cash.append([current_day.isoformat(), str(closing)])
+            current_day += timedelta(days=1)
+        gross = _round_paise(sum((Decimal(row[1]) * rate / Decimal(day_count)
+                                  for row in daily_cash), Decimal(0)))
+        tax = _round_paise(gross * withholding)
+        if gross <= 0:
+            raise PaperAccountError("cash-yield accrual needs positive dated residual cash and rate")
+        rec = {"t": "CASH_YIELD", "action_id": action_id,
+               "effective_start": effective_start.isoformat(), "effective_end": effective_end.isoformat(),
+               "payment_date": payment_date.isoformat(), "applied_on": applied_on.isoformat(),
+               "annual_rate": str(rate),
+               "day_count": day_count, "withholding_rate": str(withholding),
+               "daily_cash_basis": daily_cash, "gross_amount": str(gross), "tax_amount": str(tax),
+               "net_amount": str(gross - tax), "source_id": source_id, "source_sha256": source_sha256}
+        self._validate_and_commit(rec)
+
+    def _cash_close_on_date(self, target: date, records: list[dict]) -> Decimal:
+        cash = Decimal(records[0]["cash"])
+        for row in records[1:]:
+            kind = row.get("t")
+            effective: date | None = None
+            delta = Decimal(0)
+            if kind == "FILL":
+                if not row.get("filled_on"):
+                    raise PaperAccountError("cash yield requires dated fills to reconstruct the historical cash basis")
+                effective = date.fromisoformat(row["filled_on"])
+                notional = Decimal(row["price"]) * int(row["quantity"])
+                fee = Decimal(row.get("fee_amount", "0"))
+                delta = -(notional + fee) if row["side"] == "BUY" else notional - fee
+            elif kind == "FEE":
+                if not row.get("effective_on"):
+                    raise PaperAccountError("cash yield requires dated standalone fees to reconstruct cash")
+                effective = date.fromisoformat(row["effective_on"])
+                delta = -Decimal(row["amount"])
+            elif kind == "EXTERNAL_FLOW":
+                effective = datetime.fromisoformat(row["occurred_at"]).date()
+                delta = Decimal(row["amount"])
+            elif kind == "CASH_DIVIDEND":
+                effective = date.fromisoformat(row.get("applied_on", row["payment_date"]))
+                delta = Decimal(row["gross_amount"]) - Decimal(row["tax_amount"])
+            elif kind == "DELISTING_SETTLEMENT":
+                effective = date.fromisoformat(row["effective_on"])
+                delta = Decimal(row["proceeds"])
+            elif kind == "CASH_YIELD":
+                effective = date.fromisoformat(row.get("applied_on", row["payment_date"]))
+                delta = Decimal(row["net_amount"])
+            if effective is not None and effective <= target:
+                cash += delta
+        return cash
 
     def set_instrument_suspended(self, action_id: str, symbol: str, *, suspended: bool,
                                  effective_on: date, source_id: str, source_sha256: str) -> None:
@@ -744,9 +887,13 @@ class PaperAccount:
 
     def _apply_fee(self, r: dict, *, post_to_oms: bool) -> None:
         fee_id, amount = r["fee_id"], Decimal(r["amount"])
+        effective_on = r.get("effective_on")
+        if effective_on is not None:
+            effective_on = date.fromisoformat(effective_on).isoformat()
         prior = getattr(self, "_fee_ids", {})
         if fee_id in prior:
-            if prior[fee_id] != amount:
+            if (prior[fee_id] != amount
+                    or self._fee_effective_dates.get(fee_id) != effective_on):
                 raise PaperAccountError(f"fee id {fee_id} reused with different amount")
             return
         self.ledger.post(Transaction(f"fee:{fee_id}", (
@@ -756,6 +903,7 @@ class PaperAccount:
         if post_to_oms:
             self.oms.apply_cash_adjustment(self.account_id, -amount, adjustment_id=fee_id)
         self._fee_ids = {**prior, fee_id: amount}
+        self._fee_effective_dates[fee_id] = effective_on
 
     def _apply_stock_split(self, r: dict) -> None:
         self._validate_corporate_action(r["action_id"], r["symbol"], date.fromisoformat(r["effective_on"]),
@@ -785,11 +933,15 @@ class PaperAccount:
         quantity = int(r["eligible_quantity"])
         per_share, rate = Decimal(r["gross_per_share"]), Decimal(r["withholding_rate"])
         ex_date, payment_date = date.fromisoformat(r["ex_date"]), date.fromisoformat(r["payment_date"])
+        applied_on = date.fromisoformat(r.get("applied_on", r["payment_date"]))
         if (quantity <= 0 or not per_share.is_finite() or per_share <= 0 or not rate.is_finite()
-                or not 0 <= rate <= 1 or payment_date < ex_date or not gross.is_finite() or not tax.is_finite()
+                or not 0 <= rate <= 1 or payment_date < ex_date or applied_on < payment_date
+                or not gross.is_finite() or not tax.is_finite()
                 or gross != _round_paise(per_share * quantity) or tax != _round_paise(gross * rate)
                 or tax < 0 or tax > gross):
             raise PaperAccountError("durable dividend facts do not reconcile")
+        if any(date.fromisoformat(row["session_date"]) >= applied_on for row in self._nav_snapshots):
+            raise PaperAccountError("durable dividend posting is later than an immutable NAV snapshot")
         content = tuple(sorted((key, value) for key, value in r.items() if key != "t"))
         prior = self._corporate_action_ids.get(action_id)
         if prior is not None:
@@ -806,6 +958,61 @@ class PaperAccount:
         self.ledger.post(Transaction(f"dividend:{action_id}", tuple(entries)))
         self.oms.apply_cash_adjustment(self.account_id, net, adjustment_id=f"dividend:{action_id}")
         self._corporate_action_ids[action_id] = content
+
+    def _apply_cash_yield(self, r: dict, *, prior_records: list[dict]) -> None:
+        action_id = r["action_id"]
+        start, end = date.fromisoformat(r["effective_start"]), date.fromisoformat(r["effective_end"])
+        payment = date.fromisoformat(r["payment_date"])
+        applied_on = date.fromisoformat(r["applied_on"])
+        self._validate_corporate_action(action_id, "CASH", payment, r["source_id"], r["source_sha256"])
+        rate, withholding = Decimal(r["annual_rate"]), Decimal(r["withholding_rate"])
+        day_count = r["day_count"]
+        if (start >= end or payment < end or applied_on < payment or (end - start).days > 366
+                or not rate.is_finite() or rate < 0 or not withholding.is_finite()
+                or not 0 <= withholding <= 1 or type(day_count) is not int or day_count not in {360, 365, 366}):
+            raise PaperAccountError("durable cash-yield period or rate facts are invalid")
+        if any(date.fromisoformat(row["session_date"]) >= applied_on for row in self._nav_snapshots):
+            raise PaperAccountError("durable cash-yield posting is later than an immutable NAV snapshot")
+        prior = self._cash_yield_ids.get(action_id)
+        content = tuple(sorted((key, value) for key, value in r.items() if key != "t"))
+        if prior is not None:
+            if prior != content:
+                raise PaperAccountError("cash-yield action id reused with different effective facts")
+            return
+        for record in prior_records:
+            if record.get("t") != "CASH_YIELD":
+                continue
+            old_start = date.fromisoformat(record["effective_start"])
+            old_end = date.fromisoformat(record["effective_end"])
+            if start < old_end and old_start < end:
+                raise PaperAccountError("cash-yield accrual periods cannot overlap")
+        expected_basis = []
+        current_day = start
+        while current_day < end:
+            balance = self._cash_close_on_date(current_day, prior_records)
+            if balance < 0:
+                raise PaperAccountError("durable cash-yield basis cannot include negative cash")
+            expected_basis.append([current_day.isoformat(), str(balance)])
+            current_day += timedelta(days=1)
+        if r.get("daily_cash_basis") != expected_basis:
+            raise PaperAccountError("durable cash-yield daily cash basis does not reconcile to dated account events")
+        gross = _round_paise(sum((Decimal(row[1]) * rate / Decimal(day_count)
+                                  for row in expected_basis), Decimal(0)))
+        tax = _round_paise(gross * withholding)
+        net = gross - tax
+        if (gross <= 0 or Decimal(r["gross_amount"]) != gross or Decimal(r["tax_amount"]) != tax
+                or Decimal(r["net_amount"]) != net):
+            raise PaperAccountError("durable cash-yield amount or withholding does not reconcile")
+        entries = []
+        if net:
+            entries.append(Entry(f"cash:{self.account_id}", DEBIT, Money.of(net, self.currency)))
+        if tax:
+            entries.append(Entry(f"taxes:{self.account_id}", DEBIT, Money.of(tax, self.currency)))
+        entries.append(Entry(f"cash_yield_income:{self.account_id}", CREDIT, Money.of(gross, self.currency)))
+        self.ledger.post(Transaction(f"cash-yield:{action_id}", tuple(entries)))
+        if net:
+            self.oms.apply_cash_adjustment(self.account_id, net, adjustment_id=f"cash-yield:{action_id}")
+        self._cash_yield_ids[action_id] = content
 
     def _apply_instrument_status(self, r: dict) -> None:
         action_id, symbol = r["action_id"], r["symbol"]
