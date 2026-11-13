@@ -412,7 +412,8 @@ class ForwardSessionRunner:
                 if last_outbox is None:
                     journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
                                     "intent_id": intent_id})
-                    execution = self._execute_with_receipt(journal, config.session_id, decision,
+                    execution = self._execute_with_receipt(journal, config.session_id,
+                                                           self._execution_decision(decision, visible_at),
                                                            intent_id, observed, execution_fn,
                                                            self.clock_provider, visible_at)
                 elif last_outbox.get("t") == "OUTBOX_RECONCILED" \
@@ -421,7 +422,8 @@ class ForwardSessionRunner:
                     # lets recovery distinguish this retry from the prior reconciliation.
                     journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
                                     "intent_id": intent_id})
-                    execution = self._execute_with_receipt(journal, config.session_id, decision,
+                    execution = self._execute_with_receipt(journal, config.session_id,
+                                                           self._execution_decision(decision, visible_at),
                                                            intent_id, observed, execution_fn,
                                                            self.clock_provider, visible_at)
                 else:
@@ -455,7 +457,8 @@ class ForwardSessionRunner:
                     else:
                         journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
                                         "intent_id": intent_id})
-                        execution = self._execute_with_receipt(journal, config.session_id, decision,
+                        execution = self._execute_with_receipt(journal, config.session_id,
+                                                               self._execution_decision(decision, visible_at),
                                                                intent_id, observed, execution_fn,
                                                                self.clock_provider, visible_at)
             else:
@@ -468,7 +471,8 @@ class ForwardSessionRunner:
         if risk["approved"]:
             self._ensure_state(journal, config.session_id, "CLOSED")
         journal.append({"t": "SESSION_CLOSED", "session_id": config.session_id, "result": result})
-        self._record_date_outcome(result["status"], result.get("reason", "SESSION_CLOSED"), config.session_id)
+        self._record_date_outcome(str(result["status"]), str(result.get("reason", "SESSION_CLOSED")),
+                                  config.session_id)
         return result
 
     @classmethod
@@ -494,6 +498,11 @@ class ForwardSessionRunner:
             raise
         cls._persist_execution_and_ack(journal, session_id, intent_id, execution)
         return execution
+
+    @staticmethod
+    def _execution_decision(decision: dict, decision_at: datetime) -> dict:
+        """Pass the immutable runner decision time to execution without changing the signal."""
+        return {**decision, "decision_at_utc": decision_at.isoformat()}
 
     @staticmethod
     def _validate_execution_receipt(execution: object) -> None:

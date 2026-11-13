@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "task_id": "PE-0026",
   "status": "DONE",
-  "captured_at_utc": "2026-11-13T06:27:51Z",
+  "captured_at_utc": "2026-11-13T06:36:14Z",
   "source_sha256": {
     "src/financial_brain/forward_edge/session_ops.py": "002b6c6dd237c831b784d47484410022b649c4b77de599f26ea8e29a280d0a3b",
-    "src/financial_brain/forward_edge/session_runner.py": "fbe1d063eb82fabea4879684060646eb82349713f9606a2f08d2340618da89af",
+    "src/financial_brain/forward_edge/session_runner.py": "dc338055fb120325f93c5ecaf8a7b9c8f81d9a80e652de41ccba3e62f71ed0f3",
     "tests/test_session_date_ledger.py": "37f9cb4c9be51f80069258f58fa067fa10e9a5321a5bcf0606dd3e94fe422de7",
     "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
     "docs/edge-program/session-date-outcome-contract.md": "5b578aaed05265f547063be5461ac7f804b3dfe8119c33003fee7f642f5afe58"

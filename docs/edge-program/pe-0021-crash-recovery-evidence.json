@@ -2,9 +2,9 @@
   "schema_version": "1.0",
   "task_id": "PE-0021",
   "status": "DONE",
-  "captured_at_utc": "2026-11-13T06:27:51Z",
+  "captured_at_utc": "2026-11-13T06:36:14Z",
   "source_sha256": {
-    "src/financial_brain/forward_edge/session_runner.py": "fbe1d063eb82fabea4879684060646eb82349713f9606a2f08d2340618da89af",
+    "src/financial_brain/forward_edge/session_runner.py": "dc338055fb120325f93c5ecaf8a7b9c8f81d9a80e652de41ccba3e62f71ed0f3",
     "src/financial_brain/forward_edge/durable.py": "0f32847d2bf0d192780c69a20d7e928a8efcd1830c26814d9cccdc7fd8d70d04",
     "tests/test_forward_session_crash_matrix.py": "4535261aaf1b81bb5f8f86817512a01d1635b3225e87d1a02018aa4d4da25e37",
     "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
