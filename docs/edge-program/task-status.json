@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 78,
-  "unrecorded_tasks": 140,
+  "recorded_tasks": 79,
+  "unrecorded_tasks": 139,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1629,6 +1629,29 @@
       "blockers": [
         "Embargo is calendar-day approximate because exact label-end sessions are absent from training rows.",
         "No signed external attestation or prospective performance evidence is connected."
+      ]
+    },
+    {
+      "id": "PE-0053",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/futures_carry.py",
+        "src/financial_brain/forward_edge/futures.py",
+        "src/financial_brain/evaluation/basis.py",
+        "docs/edge-program/pe-0053-futures-carry-governance.md",
+        "docs/edge-program/pe-0053-futures-carry-evidence.json",
+        "tests/test_futures_carry_governance.py"
+      ],
+      "tests": [
+        "test_positive_gross_basis_is_reduced_by_all_costs_and_never_paper_eligible",
+        "test_incomplete_economics_and_governance_stay_shadow_only",
+        "test_futures_candidates_are_explicitly_shadow_and_cannot_pass_registry_intent_gate"
+      ],
+      "test_result": "3 futures carry governance tests passed; Ruff and mypy passed. Separate carry candidates remain paper-ineligible; incomplete costs/governance fail closed.",
+      "evidence_sha256": "5b8752074986f0420600806b7477b464fe7e40a820e8b43a083c8d2159440581",
+      "blockers": [
+        "No authenticated single-expiry contract, rights, costs, financing, or margin evidence is connected.",
+        "No prospective futures carry performance after actual market costs has been observed."
       ]
     }
   ]

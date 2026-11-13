@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0053",
+  "status": "PARTIAL",
+  "implemented": [
+    "Added distinct SHADOW_ONLY stock cash-and-carry, stock basis, and index carry candidate specs.",
+    "Added per-unit carry calculator requiring transaction costs, funding, margin financing, dividend, expiry, and positive prices.",
+    "Missing economic fields fail as INSUFFICIENT_ECONOMIC_INPUTS; missing contract/corporate-action/rights/universe/limit gates remain shadow-only.",
+    "Even fully positive calculated net carry is labeled research-only and never paper eligible."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_futures_carry_governance.py -q",
+    "result": "3 passed (exit code 0); Ruff and mypy passed.",
+    "cases": [
+      "test_positive_gross_basis_is_reduced_by_all_costs_and_never_paper_eligible",
+      "test_incomplete_economics_and_governance_stay_shadow_only",
+      "test_futures_candidates_are_explicitly_shadow_and_cannot_pass_registry_intent_gate"
+    ]
+  },
+  "limitations": [
+    "The evaluator trusts supplied contract and rights verification booleans; it does not authenticate exchange/provider evidence.",
+    "No Kite same-expiry contract data, execution-depth evidence, or real financing/margin quote has been evaluated.",
+    "No prospective cost-adjusted futures carry or basis results are established."
+  ]
+}
