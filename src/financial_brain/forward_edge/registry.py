@@ -8,10 +8,12 @@
 * Shadow adapters emit signals only; order intents are allowed only for paper-eligible families (FE-0026).
 * Null and placebo controllers provide measurable nulls (FE-0030). Selection on shadow results is labelled
   exploratory unless a preregistered trial exists (FE-0032). Correlated candidates are deduplicated (FE-0031).
+* Explicit parameter hashes on retained failed specs cannot be registered again under a renamed ID (PE-0046).
 """
 from __future__ import annotations
 
 import hashlib
+import json
 import random
 import re
 from dataclasses import dataclass, field, replace
@@ -65,6 +67,7 @@ class StrategySpec:
     data_requirements: tuple[str, ...]
     source_lineage: str
     status: Status
+    parameter_sha256: str | None = None
     exclusion_reason: str | None = None
     benchmark_id: str | None = None
     history: tuple[str, ...] = field(default=())
@@ -81,6 +84,8 @@ class StrategySpec:
             raise RegistryError("version starts at 1")
         if not _SHA.match(self.code_sha256):
             raise RegistryError("code hash must be sha256 hex")
+        if self.parameter_sha256 is not None and not _SHA.match(self.parameter_sha256):
+            raise RegistryError("parameter hash must be sha256 hex")
         if not self.asset_scope or not self.data_requirements:
             raise RegistryError("asset scope and data requirements are required")
         if self.direction not in DIRECTIONS:
@@ -106,8 +111,16 @@ class Registry:
     def register(self, spec: StrategySpec) -> StrategySpec:
         if spec.strategy_id in self._specs:
             raise RegistryError(f"{spec.strategy_id} is already registered; use transition()")
+        if spec.parameter_sha256 is not None and any(
+            old.parameter_sha256 == spec.parameter_sha256
+            and (old.status is Status.FAILED or any("->FAILED:" in row or "FAILED->" in row
+                                                    for row in old.history))
+            for old in self._specs.values()
+        ):
+            raise RegistryError("parameter hash duplicates a retained failed trial")
         self._specs[spec.strategy_id] = spec
         return spec
+
 
     def get(self, strategy_id: str) -> StrategySpec:
         return self._specs[strategy_id]
@@ -133,6 +146,17 @@ class Registry:
         )
         self._specs[strategy_id] = nxt
         return nxt
+
+
+def parameter_sha256(parameters: dict) -> str:
+    """Canonical parameter identity for detecting a renamed retry of a failed strategy."""
+    if not isinstance(parameters, dict):
+        raise RegistryError("strategy parameters must be an object")
+    try:
+        body = json.dumps(parameters, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise RegistryError("strategy parameters must be finite canonical JSON") from exc
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True)

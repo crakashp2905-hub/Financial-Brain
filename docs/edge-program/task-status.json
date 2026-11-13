@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 71,
-  "unrecorded_tasks": 147,
+  "recorded_tasks": 72,
+  "unrecorded_tasks": 146,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1475,6 +1475,27 @@
         "Options, futures and ranking portfolios need full executable variant/parameter enumeration rather than module proxies.",
         "Asset scope and decision clock need explicit qualification for 172 entries.",
         "The inventory needs integration with the approval registry before complete eligibility governance is achieved."
+      ]
+    },
+    {
+      "id": "PE-0046",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "docs/edge-program/failed-parameter-reuse-contract.md",
+        "docs/edge-program/pe-0046-failed-parameter-reuse-evidence.json",
+        "tests/test_forward_edge_f02.py"
+      ],
+      "tests": [
+        "test_registry_rejects_renamed_retry_of_failed_parameter_hash",
+        "test_every_recorded_trial_maps_to_a_failed_registry_entry",
+        "test_transition_creates_a_new_version_and_keeps_the_old_one"
+      ],
+      "test_result": "25 F02 registry tests passed; Ruff and mypy passed. A failed parameter digest cannot be reused under another ID. Legacy ledger entries lack parameter hashes, so those historical variants cannot yet be exactly matched.",
+      "evidence_sha256": "7758a6f03cec212e87d83d939895398310c00721071fd2df37dc9438dbe546b1",
+      "blockers": [
+        "Original canonical parameter artifacts/hashes are absent for the 13 failed ledger rows.",
+        "Duplicate enforcement requires callers to provide parameter_sha256."
       ]
     }
   ]

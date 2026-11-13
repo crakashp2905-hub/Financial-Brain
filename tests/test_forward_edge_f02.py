@@ -63,6 +63,20 @@ def test_failed_strategy_cannot_become_eligible_frozen_or_verified() -> None:
     assert reg.get("M1").status is Status.FAILED
 
 
+def test_registry_rejects_renamed_retry_of_failed_parameter_hash() -> None:
+    parameter_hash = R.parameter_sha256({"lookback": 20, "holding_sessions": 5})
+    reg = Registry()
+    reg.register(_spec(status=Status.FAILED, exclusion_reason="historical failure",
+                       parameter_sha256=parameter_hash))
+
+    with pytest.raises(RegistryError, match="duplicates a retained failed trial"):
+        reg.register(_spec(strategy_id="M1-renamed", family="momentum_challenger",
+                           status=Status.EXPLORATORY, parameter_sha256=parameter_hash))
+    reg.register(_spec(strategy_id="M1-new-parameters", family="momentum_challenger",
+                       status=Status.EXPLORATORY,
+                       parameter_sha256=R.parameter_sha256({"lookback": 40, "holding_sessions": 5})))
+
+
 def test_paper_enrolment_needs_a_human_and_has_a_benchmark() -> None:
     reg = Registry()
     reg.register(_spec(status=Status.SHADOW_ONLY, benchmark_id="NIFTY_CASH"))
