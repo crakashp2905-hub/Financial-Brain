@@ -55,7 +55,8 @@ class PaperAccountPortfolio:
             raise PaperPortfolioError("consolidated double-entry ledger does not balance")
         rows: dict[str, dict] = {}
         totals = {key: Decimal(0) for key in (
-            "initial_cash", "cash", "reserved", "available_cash", "fees", "realized_pnl", "net_realized_pnl"
+            "initial_cash", "cash", "reserved", "available_cash", "fees", "taxes", "dividend_income",
+            "realized_pnl", "net_realized_pnl"
         )}
         total_equity = Decimal(0)
         all_equity_available = True
@@ -76,6 +77,8 @@ class PaperAccountPortfolio:
                 "reserved": account.oms.reserved(book_id),
                 "available_cash": account.available_cash,
                 "fees": account.fees,
+                "taxes": account.taxes,
+                "dividend_income": account.dividend_income,
                 "realized_pnl": account.realized_pnl,
                 "net_realized_pnl": account.net_realized_pnl,
             }

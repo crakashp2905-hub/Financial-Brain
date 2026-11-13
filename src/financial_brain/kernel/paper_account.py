@@ -133,11 +133,19 @@ class PaperAccount:
 
     @property
     def net_realized_pnl(self) -> Decimal:
-        return self.realized_pnl - self.fees
+        return self.realized_pnl + self.dividend_income - self.fees - self.taxes
 
     @property
     def fees(self) -> Decimal:
         return self.ledger.balance(f"fees:{self.account_id}", self.currency)
+
+    @property
+    def dividend_income(self) -> Decimal:
+        return -self.ledger.balance(f"dividend_income:{self.account_id}", self.currency)
+
+    @property
+    def taxes(self) -> Decimal:
+        return self.ledger.balance(f"taxes:{self.account_id}", self.currency)
 
     @property
     def equity(self) -> Decimal:
@@ -189,6 +197,8 @@ class PaperAccount:
             self._fill_ids: set[str] = set()
             self._fill_content: dict[str, tuple] = {}
             self._fee_ids: dict[str, Decimal] = {}
+            self._corporate_action_ids: dict[str, tuple] = {}
+            self._instrument_suspended: dict[str, bool] = {}
             self._marks: dict[str, tuple[Decimal, datetime, str]] = {}
             self._mark_ids: dict[str, tuple] = {}
             self._external_flows: list[dict] = []
@@ -226,6 +236,14 @@ class PaperAccount:
                     self._apply_external_flow(r, post_to_oms=True)
                 elif t == "NAV_SNAPSHOT":
                     self._apply_nav_snapshot(r)
+                elif t == "STOCK_SPLIT":
+                    self._apply_stock_split(r)
+                elif t == "CASH_DIVIDEND":
+                    self._apply_cash_dividend(r)
+                elif t == "INSTRUMENT_STATUS":
+                    self._apply_instrument_status(r)
+                elif t == "DELISTING_SETTLEMENT":
+                    self._apply_delisting_settlement(r)
                 else:
                     raise PaperAccountError(f"unknown paper account journal event: {t}")
             if not self.ledger.trial_balance_ok():
@@ -271,6 +289,8 @@ class PaperAccount:
     ) -> None:
         if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", symbol or ""):
             raise PaperAccountError("symbol must be a stable identifier")
+        if self._instrument_suspended.get(symbol, False):
+            raise PaperAccountError("instrument is suspended or delisted; new paper intents are blocked")
         side = side.upper()
         if side not in {"BUY", "SELL"} or type(quantity) is not int or quantity <= 0:
             raise PaperAccountError("invalid side or quantity")
@@ -418,6 +438,150 @@ class PaperAccount:
                 raise PaperAccountError(f"fee id {fee_id} reused with different amount")
             return
         self._validate_and_commit({"t": "FEE", "fee_id": fee_id, "amount": str(fee)})
+
+    def apply_stock_split(self, action_id: str, symbol: str, *, ratio: Decimal, effective_on: date,
+                          source_id: str, source_sha256: str) -> None:
+        """Apply an evidenced split ratio; fractional-share outcomes are refused for owner resolution."""
+        ratio = Decimal(ratio)
+        self._validate_corporate_action(action_id, symbol, effective_on, source_id, source_sha256)
+        quantity = self.position(symbol).quantity
+        if quantity <= 0 or not ratio.is_finite() or ratio <= 0:
+            raise PaperAccountError("stock split needs a held long position and positive finite ratio")
+        new_quantity = Decimal(quantity) * ratio
+        if new_quantity != new_quantity.to_integral_value():
+            raise PaperAccountError("split creates fractional shares; an evidenced cash-in-lieu resolution is required")
+        self._require_no_working_orders(symbol)
+        self._require_action_before_trading(symbol, effective_on)
+        row = {"t": "STOCK_SPLIT", "action_id": action_id, "symbol": symbol,
+               "ratio": str(ratio), "effective_on": effective_on.isoformat(),
+               "source_id": source_id, "source_sha256": source_sha256,
+               "old_quantity": quantity, "new_quantity": int(new_quantity)}
+        self._commit_corporate_action(row)
+
+    def apply_cash_dividend(self, action_id: str, symbol: str, *, ex_date: date, payment_date: date,
+                            eligible_quantity: int, gross_per_share: Decimal, withholding_rate: Decimal,
+                            source_id: str, source_sha256: str) -> None:
+        """Post owner-supplied gross dividend and withholding; the source must attest eligible shares and dates."""
+        self._validate_corporate_action(action_id, symbol, payment_date, source_id, source_sha256)
+        per_share, rate = Decimal(gross_per_share), Decimal(withholding_rate)
+        if (not isinstance(ex_date, date) or isinstance(ex_date, datetime)
+                or not isinstance(payment_date, date) or isinstance(payment_date, datetime)
+                or type(eligible_quantity) is not int or eligible_quantity <= 0
+                or not per_share.is_finite() or per_share <= 0 or not rate.is_finite() or not 0 <= rate <= 1
+                or payment_date < ex_date):
+            raise PaperAccountError("dividend dates, eligible quantity, gross rate or withholding are invalid")
+        calculated_eligible = self._quantity_on_ex_date(symbol, ex_date)
+        if eligible_quantity != calculated_eligible:
+            raise PaperAccountError("dividend eligible quantity does not match the pre-ex-date paper position")
+        gross = _round_paise(per_share * eligible_quantity)
+        tax = _round_paise(gross * rate)
+        if gross <= 0:
+            raise PaperAccountError("dividend gross must be positive")
+        row = {"t": "CASH_DIVIDEND", "action_id": action_id, "symbol": symbol,
+               "ex_date": ex_date.isoformat(), "payment_date": payment_date.isoformat(),
+               "eligible_quantity": eligible_quantity, "gross_per_share": str(per_share),
+               "withholding_rate": str(rate), "gross_amount": str(gross), "tax_amount": str(tax),
+               "source_id": source_id, "source_sha256": source_sha256}
+        self._commit_corporate_action(row)
+
+    def set_instrument_suspended(self, action_id: str, symbol: str, *, suspended: bool,
+                                 effective_on: date, source_id: str, source_sha256: str) -> None:
+        """Persist a sourced suspension/resumption status; suspended symbols reject new orders."""
+        self._validate_corporate_action(action_id, symbol, effective_on, source_id, source_sha256)
+        if type(suspended) is not bool:
+            raise PaperAccountError("suspended must be a boolean")
+        self._require_action_before_trading(symbol, effective_on)
+        row = {"t": "INSTRUMENT_STATUS", "action_id": action_id, "symbol": symbol,
+               "suspended": suspended, "effective_on": effective_on.isoformat(),
+               "source_id": source_id, "source_sha256": source_sha256}
+        self._commit_corporate_action(row)
+
+    def settle_delisting(self, action_id: str, symbol: str, *, recovery_per_share: Decimal,
+                         effective_on: date, source_id: str, source_sha256: str) -> None:
+        """Settle a delisted long position at an explicitly sourced cash recovery, including zero recovery."""
+        recovery = Decimal(recovery_per_share)
+        self._validate_corporate_action(action_id, symbol, effective_on, source_id, source_sha256)
+        quantity, basis = self._positions.get(symbol, (0, Decimal(0)))
+        if quantity <= 0 or not recovery.is_finite() or recovery < 0:
+            raise PaperAccountError("delisting needs a held long position and nonnegative finite recovery price")
+        self._require_no_working_orders(symbol)
+        self._require_action_before_trading(symbol, effective_on)
+        proceeds = _round_paise(recovery * quantity)
+        row = {"t": "DELISTING_SETTLEMENT", "action_id": action_id, "symbol": symbol,
+               "effective_on": effective_on.isoformat(), "quantity": quantity, "basis": str(basis),
+               "recovery_per_share": str(recovery), "proceeds": str(proceeds),
+               "source_id": source_id, "source_sha256": source_sha256}
+        self._commit_corporate_action(row)
+
+    def _validate_corporate_action(self, action_id: str, symbol: str, effective_on: date,
+                                   source_id: str, source_sha256: str) -> None:
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", action_id or ""):
+            raise PaperAccountError("corporate action needs a stable action id")
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", symbol or ""):
+            raise PaperAccountError("corporate action needs a stable symbol")
+        if not isinstance(effective_on, date) or isinstance(effective_on, datetime):
+            raise PaperAccountError("corporate action effective date must be a calendar date")
+        if not isinstance(source_id, str) or not source_id.strip():
+            raise PaperAccountError("corporate action source id is required")
+        if not re.fullmatch(r"[0-9a-f]{64}", source_sha256 or ""):
+            raise PaperAccountError("corporate action source SHA-256 is required")
+
+    def _commit_corporate_action(self, row: dict) -> None:
+        action_id = row["action_id"]
+        digestable = {key: value for key, value in row.items() if key != "t"}
+        content = tuple(sorted(digestable.items()))
+        prior = self._corporate_action_ids.get(action_id)
+        if prior is not None:
+            if prior != content:
+                raise PaperAccountError(f"corporate action id {action_id} reused with different content")
+            return
+        self._validate_and_commit(row)
+
+    def _require_no_working_orders(self, symbol: str) -> None:
+        for order in self.oms._orders.values():
+            if (self._symbol_for(order.client_id) == symbol and order.remaining > 0
+                    and order.state not in {State.CANCELED, State.REJECTED, State.EXPIRED, State.FILLED}):
+                raise PaperAccountError("corporate action requires working orders to be canceled first")
+
+    def _require_action_before_trading(self, symbol: str, effective_on: date) -> None:
+        for row in self.journal.records():
+            if (row.get("t") == "FILL" and row.get("symbol") == symbol and row.get("filled_on")
+                    and date.fromisoformat(row["filled_on"]) >= effective_on):
+                raise PaperAccountError("effective-date status/action must be recorded before that day's fills")
+
+    def _quantity_on_ex_date(self, symbol: str, ex_date: date) -> int:
+        events: list[tuple[date, int, int, dict]] = []
+        for sequence, row in enumerate(self.journal.records()):
+            if row.get("t") == "FILL" and row.get("symbol") == symbol:
+                if not row.get("filled_on"):
+                    raise PaperAccountError("cannot verify dividend eligibility without dated fills")
+                filled_on = date.fromisoformat(row["filled_on"])
+                if filled_on < ex_date:
+                    events.append((filled_on, 1, sequence, row))
+            elif row.get("t") == "STOCK_SPLIT" and row.get("symbol") == symbol:
+                split_on = date.fromisoformat(row["effective_on"])
+                if split_on <= ex_date:
+                    events.append((split_on, 0, sequence, row))
+            elif row.get("t") == "DELISTING_SETTLEMENT" and row.get("symbol") == symbol:
+                delisted_on = date.fromisoformat(row["effective_on"])
+                if delisted_on <= ex_date:
+                    events.append((delisted_on, 0, sequence, row))
+        quantity = 0
+        for _, _, _, row in sorted(events, key=lambda item: item[:3]):
+            kind = row["t"]
+            if kind == "FILL":
+                signed = int(row["quantity"]) if row["side"] == "BUY" else -int(row["quantity"])
+                quantity += signed
+            elif kind == "STOCK_SPLIT":
+                updated = Decimal(quantity) * Decimal(row["ratio"])
+                if updated != updated.to_integral_value():
+                    raise PaperAccountError("ex-date split eligibility creates fractional shares")
+                quantity = int(updated)
+            else:
+                quantity = 0
+        if quantity < 0:
+            raise PaperAccountError("pre-ex-date paper position cannot be short for cash dividend accounting")
+        return quantity
 
     def _symbol_for(self, client_id: str) -> str:
         for r in self.journal.records():
@@ -592,4 +756,107 @@ class PaperAccount:
         if post_to_oms:
             self.oms.apply_cash_adjustment(self.account_id, -amount, adjustment_id=fee_id)
         self._fee_ids = {**prior, fee_id: amount}
+
+    def _apply_stock_split(self, r: dict) -> None:
+        self._validate_corporate_action(r["action_id"], r["symbol"], date.fromisoformat(r["effective_on"]),
+                                        r["source_id"], r["source_sha256"])
+        ratio = Decimal(r["ratio"])
+        old_qty, basis = self._positions.get(r["symbol"], (0, Decimal(0)))
+        new_qty = Decimal(old_qty) * ratio
+        if (not ratio.is_finite() or ratio <= 0 or old_qty != int(r["old_quantity"])
+                or new_qty != new_qty.to_integral_value() or int(new_qty) != int(r["new_quantity"])):
+            raise PaperAccountError("stock split quantity does not reconcile to the prior position")
+        content = tuple(sorted((key, value) for key, value in r.items() if key != "t"))
+        prior = self._corporate_action_ids.get(r["action_id"])
+        if prior is not None:
+            if prior != content:
+                raise PaperAccountError("corporate action id reused with different split facts")
+            return
+        self._positions[r["symbol"]] = (int(new_qty), basis)
+        self._marks.pop(r["symbol"], None)
+        self._corporate_action_ids[r["action_id"]] = content
+
+    def _apply_cash_dividend(self, r: dict) -> None:
+        action_id, symbol = r["action_id"], r["symbol"]
+        self._validate_corporate_action(action_id, symbol, date.fromisoformat(r["payment_date"]),
+                                        r["source_id"], r["source_sha256"])
+        gross = Decimal(r["gross_amount"])
+        tax = Decimal(r["tax_amount"])
+        quantity = int(r["eligible_quantity"])
+        per_share, rate = Decimal(r["gross_per_share"]), Decimal(r["withholding_rate"])
+        ex_date, payment_date = date.fromisoformat(r["ex_date"]), date.fromisoformat(r["payment_date"])
+        if (quantity <= 0 or not per_share.is_finite() or per_share <= 0 or not rate.is_finite()
+                or not 0 <= rate <= 1 or payment_date < ex_date or not gross.is_finite() or not tax.is_finite()
+                or gross != _round_paise(per_share * quantity) or tax != _round_paise(gross * rate)
+                or tax < 0 or tax > gross):
+            raise PaperAccountError("durable dividend facts do not reconcile")
+        content = tuple(sorted((key, value) for key, value in r.items() if key != "t"))
+        prior = self._corporate_action_ids.get(action_id)
+        if prior is not None:
+            if prior != content:
+                raise PaperAccountError("corporate action id reused with different dividend facts")
+            return
+        net = gross - tax
+        entries = []
+        if net:
+            entries.append(Entry(f"cash:{self.account_id}", DEBIT, Money.of(net, self.currency)))
+        if tax:
+            entries.append(Entry(f"taxes:{self.account_id}", DEBIT, Money.of(tax, self.currency)))
+        entries.append(Entry(f"dividend_income:{self.account_id}", CREDIT, Money.of(gross, self.currency)))
+        self.ledger.post(Transaction(f"dividend:{action_id}", tuple(entries)))
+        self.oms.apply_cash_adjustment(self.account_id, net, adjustment_id=f"dividend:{action_id}")
+        self._corporate_action_ids[action_id] = content
+
+    def _apply_instrument_status(self, r: dict) -> None:
+        action_id, symbol = r["action_id"], r["symbol"]
+        self._validate_corporate_action(action_id, symbol, date.fromisoformat(r["effective_on"]),
+                                        r["source_id"], r["source_sha256"])
+        suspended = r["suspended"]
+        if type(suspended) is not bool:
+            raise PaperAccountError("durable instrument status must be boolean")
+        content = tuple(sorted((key, value) for key, value in r.items() if key != "t"))
+        prior = self._corporate_action_ids.get(action_id)
+        if prior is not None:
+            if prior != content:
+                raise PaperAccountError("corporate action id reused with different status facts")
+            return
+        self._instrument_suspended[symbol] = suspended
+        self._corporate_action_ids[action_id] = content
+
+    def _apply_delisting_settlement(self, r: dict) -> None:
+        action_id, symbol = r["action_id"], r["symbol"]
+        self._validate_corporate_action(action_id, symbol, date.fromisoformat(r["effective_on"]),
+                                        r["source_id"], r["source_sha256"])
+        qty, basis = self._positions.get(symbol, (0, Decimal(0)))
+        recovery, proceeds = Decimal(r["recovery_per_share"]), Decimal(r["proceeds"])
+        if (qty <= 0 or qty != int(r["quantity"]) or basis != Decimal(r["basis"])
+                or not recovery.is_finite() or recovery < 0 or proceeds != _round_paise(recovery * qty)):
+            raise PaperAccountError("delisting settlement does not reconcile to the held position")
+        content = tuple(sorted((key, value) for key, value in r.items() if key != "t"))
+        prior = self._corporate_action_ids.get(action_id)
+        if prior is not None:
+            if prior != content:
+                raise PaperAccountError("corporate action id reused with different settlement facts")
+            return
+        entries = []
+        if proceeds:
+            entries.append(Entry(f"cash:{self.account_id}", DEBIT, Money.of(proceeds, self.currency)))
+        entries.append(Entry(f"position:{self.account_id}:{symbol}", CREDIT, Money.of(basis, self.currency)))
+        difference = proceeds - basis
+        if difference > 0:
+            entries.append(Entry(f"realized_pnl:{self.account_id}", CREDIT, Money.of(difference, self.currency)))
+        elif difference < 0:
+            entries.append(Entry(f"realized_pnl:{self.account_id}", DEBIT, Money.of(-difference, self.currency)))
+        self.ledger.post(Transaction(f"delisting:{action_id}", tuple(entries)))
+        self.oms.apply_cash_adjustment(self.account_id, proceeds, adjustment_id=f"delisting:{action_id}")
+        self._positions[symbol] = (0, Decimal(0))
+        self._marks.pop(symbol, None)
+        self._instrument_suspended[symbol] = True
+        self._corporate_action_ids[action_id] = content
+
+
+def _round_paise(amount: Decimal) -> Decimal:
+    if not amount.is_finite():
+        raise PaperAccountError("cash amount must be finite")
+    return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 55,
-  "unrecorded_tasks": 163,
+  "recorded_tasks": 56,
+  "unrecorded_tasks": 162,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -928,6 +928,31 @@
       "test_result": "Effective-dated owner-supplied buy/sell rates are charged against each actual fill notional in the same balanced transaction as cash and inventory; a full entry/exit NAV bridge reconciles cash, fee expense, and net P&L to paise. 33 focused tests pass; Ruff and mypy pass.",
       "evidence_sha256": null,
       "blockers": []
+    },
+    {
+      "id": "PE-0093",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/ledger.py",
+        "tests/test_paper_account_corporate_actions.py",
+        "tests/test_paper_account.py",
+        "docs/edge-program/pe-0093-cash-equity-corporate-action-evidence.json"
+      ],
+      "tests": [
+        "test_split_preserves_total_cost_basis_invalidates_old_mark_and_replays",
+        "test_dividend_posts_gross_income_withholding_and_net_cash_once",
+        "test_suspension_blocks_intents_until_a_sourced_resumption",
+        "test_delisting_cash_recovery_realizes_loss_and_zero_recovery_is_supported",
+        "test_actions_without_source_hash_or_with_fractional_split_do_not_mutate_account"
+      ],
+      "test_result": "32 focused corporate-action, account and portfolio tests passed; Ruff and mypy passed. Added source-hash-bound split, dividend/withholding, suspension and delisting cash-settlement events with restart-safe accounting.",
+      "evidence_sha256": "4236e0ea9bad53470954e51060c900dcf1a16f0adadde196b9be3d9ca40a2d1d",
+      "blockers": [
+        "Source hashes and supplied rates are not independently checked against an official corporate-action provider or tax authority; no real source feed is configured.",
+        "Fractional split entitlements require a sourced cash-in-lieu workflow and are currently refused.",
+        "Delisting settlement models only owner-supplied gross cash recovery; event-specific tax, legal settlement, symbol succession and non-cash demerger/rights mechanics remain unsupported."
+      ]
     },
     {
       "id": "PE-0102",
