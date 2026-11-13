@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 70,
-  "unrecorded_tasks": 148,
+  "recorded_tasks": 71,
+  "unrecorded_tasks": 147,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1454,6 +1454,28 @@
       "test_result": "29 parity and session-runner tests passed; Ruff and mypy passed. Identical normalized event sequences yielded identical signal and order-intent hashes; input mismatch is durably recorded as non-equivalent. Synthetic/offline scope only.",
       "evidence_sha256": "26a23909ab22e9df15fd68c06c0d6e9f7057d4efb107199555afcc1990e0be6e",
       "blockers": []
+    },
+    {
+      "id": "PE-0045",
+      "status": "PARTIAL",
+      "sources": [
+        "scripts/strategy_variant_inventory.py",
+        "docs/edge-program/strategy-variant-inventory.json",
+        "docs/edge-program/strategy-variant-inventory-contract.md",
+        "docs/edge-program/pe-0045-strategy-variant-inventory-evidence.json",
+        "tests/test_strategy_variant_inventory.py"
+      ],
+      "tests": [
+        "test_strategy_inventory_is_deterministic_unique_and_source_hashed",
+        "test_committed_strategy_inventory_is_current"
+      ],
+      "test_result": "2 inventory tests passed; Ruff and mypy passed; generated inventory is fresh (253 candidates across eight categories). Options/futures/ranking module proxies, unspecified metadata, and approval-registry integration keep this partial.",
+      "evidence_sha256": "2f2064e3311faf87caf49f9d70d6a4543b26c3da64cbd54d64c316e46fbcd9fb",
+      "blockers": [
+        "Options, futures and ranking portfolios need full executable variant/parameter enumeration rather than module proxies.",
+        "Asset scope and decision clock need explicit qualification for 172 entries.",
+        "The inventory needs integration with the approval registry before complete eligibility governance is achieved."
+      ]
     }
   ]
 }
