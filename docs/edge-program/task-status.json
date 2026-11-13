@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 84,
-  "unrecorded_tasks": 134,
+  "recorded_tasks": 85,
+  "unrecorded_tasks": 133,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1781,6 +1781,28 @@
       "blockers": [
         "Version snapshots are not yet exported by all registry, strategy and execution configuration sources.",
         "Legacy candidates do not all supply frozen filter, universe and cost-model digests."
+      ]
+    },
+    {
+      "id": "PE-0059",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "tests/test_forward_edge_f02.py",
+        "docs/edge-program/pe-0059-frozen-benchmarks.md",
+        "docs/edge-program/pe-0059-frozen-benchmarks-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_benchmark_must_be_frozen_before_first_forward_result",
+        "test_registered_benchmark_definition_cannot_be_rewritten",
+        "test_paper_enrolment_rejects_ai_stale_and_unfrozen_evidence"
+      ],
+      "test_result": "35 passed (exit code 0); Ruff and mypy passed. Source inventory --check passes (564 Python files). Benchmark identities are content-addressed and immutable in the registry; paper enrollment checks freeze date before charter start.",
+      "evidence_sha256": "f17b360ecceb12de5dcd323c3f752d0a1ecde2dda632d1d6cb4bf47688adbc63",
+      "blockers": [
+        "Benchmark registry is not transactionally coupled to every exploratory result store or legacy research surface.",
+        "No complete cross-surface audit of historical benchmark inspection or post-outcome changes is claimed."
       ]
     }
   ]

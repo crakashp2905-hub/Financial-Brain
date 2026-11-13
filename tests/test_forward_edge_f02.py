@@ -227,6 +227,15 @@ def test_benchmark_must_be_frozen_before_first_forward_result() -> None:
         Benchmark("X", "GUESS", SHA, date(2027, 1, 1))
 
 
+def test_registered_benchmark_definition_cannot_be_rewritten() -> None:
+    registry = Registry()
+    original = Benchmark("NIFTY_CASH", "INDEX", SHA, date(2027, 1, 1))
+    registry.register_benchmark(original)
+    registry.register_benchmark(original)  # identical replay is idempotent
+    with pytest.raises(RegistryError, match="immutable"):
+        registry.register_benchmark(dataclasses.replace(original, definition_sha256="c" * 64))
+
+
 # ---- FE-0026 shadow adapters cannot place orders ----
 
 @pytest.mark.parametrize("status", [Status.FAILED, Status.EXPLORATORY, Status.SHADOW_ONLY])
