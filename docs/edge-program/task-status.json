@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 67,
-  "unrecorded_tasks": 151,
+  "recorded_tasks": 68,
+  "unrecorded_tasks": 150,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1395,6 +1395,26 @@
       "blockers": [
         "No provider or exchange license/terms have been legally adjudicated by the repository; the software can only enforce a scoped owner-supplied attestation.",
         "Direct filesystem or underlying journal access can bypass application-level checks, so host filesystem permissions are still required."
+      ]
+    },
+    {
+      "id": "PE-0042",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "docs/edge-program/opportunity-coverage-report-contract.md",
+        "docs/edge-program/pe-0042-opportunity-coverage-evidence.json",
+        "tests/test_forward_session_runner.py"
+      ],
+      "tests": [
+        "test_session_report_preserves_coverage_and_lost_opportunity_denominators",
+        "test_session_report_exposes_unavailable_candidate_notional_denominator"
+      ],
+      "test_result": "27 runner tests passed; Ruff and mypy passed. Finalized session reports persist date, configured instrument, candidate, notional, quote, fill/miss and missing-data denominators. Market-wide discovery and prospective coverage are not established.",
+      "evidence_sha256": "31e0c69eaebddbf12a498260e22d5aca2f973afa44accf2313262dc3fb547074",
+      "blockers": [
+        "Coverage denominator is the configured instrument set and strategy output, not every tradable market instrument or every candidate strategy could have produced.",
+        "Candidate notional is unavailable unless the strategy explicitly provides it; real coverage and lost-opportunity rates require prospective market sessions."
       ]
     }
   ]

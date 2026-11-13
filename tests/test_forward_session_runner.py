@@ -63,6 +63,60 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     assert states == ["PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED"]
 
 
+def test_session_report_preserves_coverage_and_lost_opportunity_denominators(tmp_path):
+    event = _event()
+    digest = event.content_sha256()
+    config = _config(instruments=("NSE:INFY", "NSE:TCS"))
+    runner = ForwardSessionRunner(tmp_path / "coverage.jsonl")
+    runner.record_preflight(config, {"approved": True, "status": "PASS"})
+    result = runner.run(
+        config, [event], decision_at=NOW,
+        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 10,
+                               "candidate_notional_inr": "10000"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {
+            "status": "MISSED", "receipt_id": "missed-coverage",
+            "fidelity": "SIMULATED_QUOTE", "simulated_execution_at_utc": NOW.isoformat(),
+            "quote_inputs": [{"event_sha256": digest, "quote_id": f"event:{digest}"}],
+            "fills": [],
+        },
+    )
+    coverage = result["opportunity_coverage"]
+    assert coverage["exchange_date"] == "2026-11-12"
+    assert coverage["session_date_denominator"] == 1
+    assert coverage["planned_instrument_count"] == 2
+    assert coverage["quoted_instrument_count"] == 1
+    assert coverage["missing_quote_instruments"] == ["NSE:TCS"]
+    assert coverage["candidate_signal_count"] == 1
+    assert coverage["candidate_signal_quote_covered_count"] == 1
+    assert coverage["candidate_notional_denominator_inr"] == "10000"
+    assert coverage["filled_notional_inr"] == "0"
+    assert coverage["missed_candidate_signal_count"] == 1
+    assert coverage["lost_opportunity_denominator_count"] == 1
+    assert coverage["candidate_universe_scope"] == "STRATEGY_OUTPUT_NOT_MARKET_WIDE"
+    assert coverage["missing_denominators"] == []
+
+
+def test_session_report_exposes_unavailable_candidate_notional_denominator(tmp_path):
+    runner = ForwardSessionRunner(tmp_path / "missing-denominator.jsonl")
+    config = _config()
+    runner.record_preflight(config, {"approved": True, "status": "PASS"})
+    result = runner.run(
+        config, [_event()], decision_at=NOW,
+        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {
+            "status": "MISSED", "receipt_id": "missing-notional",
+            "fidelity": "SIMULATED_QUOTE", "simulated_execution_at_utc": NOW.isoformat(),
+            "fills": [],
+        },
+    )
+    coverage = result["opportunity_coverage"]
+    assert coverage["candidate_signal_count"] == 1
+    assert coverage["candidate_notional_denominator_inr"] is None
+    assert coverage["missing_denominators"] == ["CANDIDATE_NOTIONAL_INR", "EXECUTION_QUOTE_RECEIPTS"]
+
+
 def test_runner_uses_injected_decision_and_simulated_execution_clocks(tmp_path):
     from financial_brain.forward_edge.session_clock import SessionClockProvider
 

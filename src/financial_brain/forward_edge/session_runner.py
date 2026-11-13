@@ -522,6 +522,10 @@ class ForwardSessionRunner:
                 if not any(r.get("t") == "OUTBOX_ACK" and r.get("intent_id") == intent_id for r in existing):
                     self._persist_ack(journal, config.session_id, intent_id, execution)
             result.update({"status": "PAPER_COMPLETE", "intent_id": intent_id, "execution": execution})
+        result["opportunity_coverage"] = _opportunity_coverage(
+            exchange_date=config.exchange_date, planned_instruments=config.instruments,
+            events=observed, decision=decision, execution=result.get("execution"),
+        )
         result["closed_at_utc"] = datetime.now(timezone.utc).isoformat()
         if risk["approved"]:
             self._ensure_state(journal, config.session_id, "CLOSED")
@@ -635,3 +639,86 @@ class ForwardSessionRunner:
         if event.ingested_utc is not None:
             result["ingested_utc"] = cls._utc(event.ingested_utc).isoformat()
         return result
+
+
+def _opportunity_coverage(*, exchange_date: str, planned_instruments: Iterable[str],
+                          events: list[NormalizedEvent], decision: dict,
+                          execution: object) -> dict:
+    """Report session denominators without imputing unknown candidates or notionals."""
+    planned = sorted(set(planned_instruments))
+    quotes = [event for event in events if event.kind == "QUOTE"]
+    observed_instruments = {event.instrument for event in quotes}
+    execution = execution if isinstance(execution, dict) else {}
+    quote_inputs = execution.get("quote_inputs", [])
+    quote_inputs = quote_inputs if isinstance(quote_inputs, list) else []
+    accepted_hashes = {row.get("event_sha256") for row in quote_inputs if isinstance(row, dict)}
+    quality_rejections = execution.get("quote_quality_rejections", [])
+    quality_rejections = quality_rejections if isinstance(quality_rejections, list) else []
+    rejected_hashes = {row.get("event_sha256") for row in quality_rejections if isinstance(row, dict)}
+    quote_by_hash = {event.content_sha256(): event for event in quotes}
+    accepted_events = [quote_by_hash[digest] for digest in accepted_hashes if digest in quote_by_hash]
+    candidate_rows = decision.get("candidate_signals")
+    if isinstance(candidate_rows, list):
+        candidates = [row for row in candidate_rows if isinstance(row, dict)]
+    elif decision.get("side") in {"BUY", "SELL"}:
+        candidates = [decision]
+    else:
+        candidates = []
+    candidate_instruments = [str(row.get("instrument")) for row in candidates if row.get("instrument")]
+    accepted_instruments = {event.instrument for event in accepted_events}
+    covered_candidates = sum(1 for instrument in candidate_instruments if instrument in accepted_instruments)
+
+    notional_values: list[Decimal] = []
+    missing_candidate_notional = 0
+    for candidate in candidates:
+        value = candidate.get("candidate_notional_inr", candidate.get("notional_inr"))
+        try:
+            notional = Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            missing_candidate_notional += 1
+            continue
+        if not notional.is_finite() or notional < 0:
+            missing_candidate_notional += 1
+            continue
+        notional_values.append(notional)
+    total_notional = sum(notional_values, Decimal(0))
+    fills = execution.get("fills", [])
+    fills = fills if isinstance(fills, list) else []
+    filled_notional = Decimal(0)
+    for fill in fills:
+        if not isinstance(fill, dict):
+            continue
+        try:
+            amount = Decimal(str(fill["price"])) * int(fill["quantity"])
+        except (KeyError, TypeError, ValueError, InvalidOperation):
+            continue
+        if amount.is_finite() and amount >= 0:
+            filled_notional += amount
+    execution_status = execution.get("status", execution.get("state"))
+    has_fill = bool(fills)
+    missed_candidates = len(candidates) if execution_status in {"MISSED", "NO_TRADE"} and not has_fill else 0
+    return {
+        "exchange_date": exchange_date,
+        "session_date_denominator": 1,
+        "planned_instrument_count": len(planned),
+        "quoted_instrument_count": len(observed_instruments.intersection(planned)),
+        "missing_quote_instruments": sorted(set(planned) - observed_instruments),
+        "quote_event_count": len(quotes),
+        "candidate_signal_count": len(candidates),
+        "candidate_signal_quote_covered_count": covered_candidates,
+        "candidate_signal_quote_coverage_pct": round(100 * covered_candidates / len(candidates), 4)
+        if candidates else None,
+        "candidate_notional_denominator_inr": str(total_notional)
+        if candidates and not missing_candidate_notional else None,
+        "candidate_notional_missing_count": missing_candidate_notional,
+        "filled_notional_inr": str(filled_notional) if has_fill else "0",
+        "quote_inputs_accepted_count": len(accepted_hashes),
+        "quote_inputs_quality_rejected_count": len(rejected_hashes),
+        "filled_quote_count": 1 if has_fill and execution.get("used_quote_input_id") else 0,
+        "missed_candidate_signal_count": missed_candidates,
+        "lost_opportunity_denominator_count": len(candidates),
+        "candidate_universe_scope": "STRATEGY_OUTPUT_NOT_MARKET_WIDE",
+        "execution_status": execution_status,
+        "missing_denominators": (["CANDIDATE_NOTIONAL_INR"] if missing_candidate_notional else [])
+        + (["EXECUTION_QUOTE_RECEIPTS"] if candidates and not quote_inputs and not quality_rejections else []),
+    }
