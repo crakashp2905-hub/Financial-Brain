@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "captured_at": "2026-11-13T03:49:08Z",
+  "backup_manifest": "data/edge_program_backups/pre-migration-20261113/manifest.json",
+  "backup_manifest_sha256": "38edd00f8eb487002ff71aa858435b1549b73780122a4c25bc8e5879af53b2b3",
+  "restore_report": "data/edge_program_backups/pre-migration-20261113/restore-check.json",
+  "restore_report_sha256": "99e227fd1bc9b75dd097c51f3a1321b93b0c0ec71d8b0c317202be15727174b5",
+  "result_counts": {
+    "restored_and_verified": 11,
+    "blocked_active_wal": 1,
+    "not_found": 3
+  },
+  "blocked_sources": [
+    {
+      "path": "data/paper_live.duckdb",
+      "reason": "A changing DuckDB WAL was present, so the running paper book was not copied or checkpointed. Snapshot after the writer closes cleanly."
+    }
+  ],
+  "not_found_sources": [
+    "data/options_paper_forward.duckdb",
+    "data/oms_paper.duckdb",
+    "data/depth_archive.duckdb"
+  ],
+  "backup_location": "Local ignored data directory. Market data and paper databases were not added to Git.",
+  "rights_note": "The quote archive was copied locally as requested. Its underlying provider retention rights were not independently revalidated by this backup operation."
+}

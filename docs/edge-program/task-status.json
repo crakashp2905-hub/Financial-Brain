@@ -2,16 +2,112 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 22,
-  "unrecorded_tasks": 196,
+  "recorded_tasks": 27,
+  "unrecorded_tasks": 191,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "3806fc3fcac91389c7fcd93bc989915b85f68d67",
+  "reviewed_main_sha": "054193a524dd35eaa258df0ac352a58fc369e937",
   "items": [
+    {
+      "id": "PE-0001",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/current-baseline.json",
+        ".github/workflows/ci.yml",
+        "docs/forward-edge/capability-matrix.json",
+        "docs/forward-edge/OPERATIONS.md",
+        "src/financial_brain/providers/kite_data.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "src/financial_brain/forward_edge/market_data.py"
+      ],
+      "tests": [
+        "test_current_baseline_is_machine_readable_and_does_not_overclaim"
+      ],
+      "test_result": "Recorded main SHA, PR graph, actual GitHub branch-protection/ruleset state, Python/CI runtime, source capabilities, freshness and access limitations. Baseline JSON parse and named test exit code 0; PR #30 exact-head Ubuntu and Windows checks passed.",
+      "evidence_sha256": "61daf5c475c233ca2d19de58a6098d63dd5b1cb043e5bb551f1309538c67ccb0",
+      "blockers": []
+    },
+    {
+      "id": "PE-0002",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/trials.py",
+        "docs/forward-edge/protected-pins.json",
+        "docs/audits/protected-baseline.json",
+        "src/financial_brain/forward_edge/charter.py",
+        "tests/test_forward_edge_f00.py",
+        "tests/test_evaluation_identity.py"
+      ],
+      "tests": [
+        "test_protected_records_match_pinned_digests",
+        "test_pins_agree_with_the_existing_protected_baseline",
+        "test_retrospective_edit_of_the_trial_ledger_is_detected",
+        "test_durable_registry_rejects_retroactive_benchmark_and_endpoint_edits",
+        "test_registry_revalidates_cohort_closure_events_during_recovery"
+      ],
+      "test_result": "Pinned protected trial records verify against the pre-existing baseline; a forged FAIL-to-PASS trial-ledger edit is detected; closed outcomes reject endpoint/benchmark rewrites and registry recovery revalidates the content-addressed closure. Focused acceptance suite: 7 passed (exit code 0).",
+      "evidence_sha256": "3c061f4126aae8e6e28e4c2b97ab051c556ef9d9675698d98e4e5d164f9fc5ac",
+      "blockers": []
+    },
+    {
+      "id": "PE-0003",
+      "status": "PARTIAL",
+      "sources": [
+        "scripts/edge_asset_backup.py",
+        "tests/test_edge_asset_backup.py",
+        "docs/edge-program/pe-0003-backup-evidence.json"
+      ],
+      "tests": [
+        "test_duckdb_snapshot_restores_and_matches_checksum",
+        "test_active_duckdb_wal_is_recorded_as_blocked_without_copy",
+        "test_snapshot_rejects_paths_outside_repo"
+      ],
+      "test_result": "Backup tooling refuses active DuckDB WALs, rejects paths outside the repo, hashes copied files, restores to a separate location, verifies checksums and opens restored databases read-only. The local run backed up and restored 11 paper/archive/strategy-manifest artifacts; focused suite: 3 passed. PE-0003 remains incomplete because the active paper_live database could not be safely copied.",
+      "evidence_sha256": "1a61376ef7f56203d89ee2871f94a657186f3e521c7f7c52106824893bc18071",
+      "blockers": [
+        "data/paper_live.duckdb had a changing WAL at capture time; rerun backup after its writer/session closes cleanly"
+      ]
+    },
+    {
+      "id": "PE-0004",
+      "status": "DONE",
+      "sources": [
+        "docs/trials/ledger.jsonl",
+        "docs/forward-edge/protected-pins.json",
+        "src/financial_brain/forward_edge/trials.py",
+        "tests/test_forward_edge_f00.py"
+      ],
+      "tests": [
+        "test_q4_2026_protected_budget_is_exhausted_at_13_of_13",
+        "test_all_13_q4_trials_remain_failed_with_original_reasons",
+        "test_protected_records_match_pinned_digests",
+        "test_retrospective_edit_of_the_trial_ledger_is_detected"
+      ],
+      "test_result": "All 13 Q4 2026 trial rows remain verdict=FAIL and retain nonempty original failed-criterion arrays. The append-only pin matches the prior canonical ledger SHA and detects reclassification or deletion. Focused suite: 4 passed (exit code 0).",
+      "evidence_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "blockers": []
+    },
+    {
+      "id": "PE-0005",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/release.py",
+        ".github/workflows/ci.yml",
+        "tests/test_forward_edge_f13.py"
+      ],
+      "tests": [
+        "test_release_gate_fails_closed_for_each_ci_check_or_missing_skip_summary",
+        "test_ci_workflow_exposes_platform_checks_and_test_skip_summary",
+        "test_label_never_exceeds_the_evidence"
+      ],
+      "test_result": "The paper-ready gate now requires successful lint, types, migrations, coverage, Ubuntu and Windows checks plus an explicitly reported nonnegative pytest skip count. CI exposes each check and runs pytest with -ra so skips are summarized. Four focused release/workflow tests passed; Ruff and mypy passed.",
+      "evidence_sha256": null,
+      "blockers": []
+    },
     {
       "id": "PE-0015",
       "status": "DONE",

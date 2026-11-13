@@ -44,8 +44,8 @@ jobs:
         run: python scripts/chart_patterns_matrix.py --check
       - name: Chart-pattern offline demo (network denied)
         run: python -m financial_brain.patterns.demo --offline
-      - name: Test suite
-        run: python -m coverage run --source=financial_brain -m pytest -q
+      - name: Test suite (with skip summary)
+        run: python -m coverage run --source=financial_brain -m pytest -q -ra
       - name: Critical-module coverage
         run: python -m coverage report --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*"
       - name: Chart-pattern package coverage floor
