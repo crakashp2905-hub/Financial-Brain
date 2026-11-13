@@ -14,6 +14,7 @@ from decimal import ROUND_HALF_EVEN, Decimal
 
 from financial_brain.forward_edge import decision_custody as DC
 from financial_brain.forward_edge import execution as X
+from financial_brain.forward_edge import fixture_replay as FR
 from financial_brain.forward_edge import session_ops as S
 from financial_brain.forward_edge.modes import Mode, SessionMode, resolve_mode
 from financial_brain.kernel.ledger import CREDIT, DEBIT, DoubleEntryLedger, Entry, Transaction
@@ -37,10 +38,15 @@ def _canon(obj) -> str:
 
 
 def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE") -> dict:
-    """Run one fixture session in paper mode. Refuses any mode that could reach a broker or cash."""
+    """Run one fixture through the durable session runner, then its accounting projection.
+
+    The fixture pack is synthetic. The runner owns decision visibility, preflight, execution
+    outcomes and outbox evidence; this function retains the canonical accounting projection.
+    """
     session = resolve_mode(mode, now=_utc(fx["decision_utc"]))
     if not isinstance(session, SessionMode) or mode in (Mode.LIVE_CASH, Mode.BROKER_DRYRUN) or broker != "NONE":
         raise PermissionError("the pipeline runs paper only with no broker")
+    replay = FR.run_fixture_on_forward_runner(fx, mode=mode, broker=broker)
     trace: list[dict] = []
     ledger = DoubleEntryLedger()
     sid = fx["session_id"]
@@ -63,42 +69,33 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
         segments.add("decisions")
         trace.append({"stage": "manifest", "sha256": manifest.sha256(), "custody": journal.status(sid, {}).value})
 
-        quotes = [X.Quote(decision + timedelta(milliseconds=q["offset_ms"]), Decimal(q["bid"]), Decimal(q["ask"]),
-                          int(q["bid_qty"]), int(q["ask_qty"])) for q in fx["quotes"]]
         segments.add("quotes")
-        intent = X.OrderIntent(fx["instrument"], fx["side"], int(fx["quantity"]), decision, Decimal(fx["tick"]),
-                               Decimal(fx["limit"]) if fx.get("limit") else None)
-        latency = timedelta(milliseconds=int(fx.get("latency_ms", 200)))
-        feed = fx.get("feed", {"ok": True, "reasons": []})
-        first = X.earliest_quote(quotes, decision, latency)
-        late = first is not None and (first.available_utc - decision) > timedelta(milliseconds=int(fx.get("max_wait_ms", 5000)))
-
-        if fx.get("ack_lost"):
+        if replay["outcome"] == "UNKNOWN_ORDER":
             outcome, reason = "UNKNOWN_ORDER", "ACK_LOST_NO_RESEND"
             trace.append({"stage": "order", "state": "UNKNOWN", "resend_allowed": False})
             segments.add("orders")
-        elif late:
+        elif replay["outcome"] == "LATE_QUOTE":
             outcome, reason = "LATE_QUOTE", "FIRST_QUOTE_AFTER_MAX_WAIT"
             trace.append({"stage": "order", "state": "NO_ORDER", "reason": reason})
         else:
-            if fx.get("passive"):
-                trades = [(decision + timedelta(milliseconds=t["offset_ms"]), Decimal(t["price"]), int(t["qty"]))
-                          for t in fx.get("trades", [])]
-                res = X.passive_limit(intent, trades, latency)
-                if fx.get("adverse_bps"):
-                    res = X.apply_adverse_selection(res, intent.side, Decimal(fx["adverse_bps"]))
-            else:
-                band = (Decimal(fx["price_band"][0]), Decimal(fx["price_band"][1])) if fx.get("price_band") else None
-                if not feed.get("ok", True):
-                    res = X.execute_or_no_trade(False, feed.get("reasons", []), intent, quotes, latency)
-                else:
-                    res = X.marketable_limit(intent, quotes, latency, band)
+            receipt = replay["runner_result"]["execution"]
+            fills = receipt.get("fills", [])
+            fill = fills[0] if fills else None
+            res = X.ExecResult(
+                status=receipt["status"],
+                filled_qty=int(fill["quantity"]) if fill else 0,
+                avg_price=Decimal(str(fill["price"])) if fill else None,
+                reason=str(receipt["reason"]), fidelity=str(receipt["fidelity"]),
+                queue_position_known=bool(receipt.get("queue_position_known", True)),
+            )
             segments.update({"orders"})
             trace.append({"stage": "execution", "status": res.status, "filled": res.filled_qty,
                           "price": str(res.avg_price) if res.avg_price is not None else None, "reason": res.reason,
                           "fidelity": res.fidelity})
             if res.status in ("FILLED", "PARTIAL"):
                 qty, px = res.filled_qty, res.avg_price
+                if px is None:
+                    raise RuntimeError("a filled fixture receipt must include its simulated fill price")
                 notional = _paise(px * qty)
                 fee_rate = Decimal(fx.get("fee_bps", "3")) / Decimal(10_000)
                 entry_fee = _paise(notional * fee_rate)
