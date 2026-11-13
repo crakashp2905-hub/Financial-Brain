@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 106,
-  "unrecorded_tasks": 112,
+  "recorded_tasks": 107,
+  "unrecorded_tasks": 111,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2297,6 +2297,26 @@
       ],
       "test_result": "27 focused risk-latch, account, audit and crash-recovery tests passed; Ruff and mypy passed. Restart restores the active latch and outstanding reservations, blocks new orders, and requires a human hash-backed repair signoff to reset.",
       "evidence_sha256": "eb747cd78180d47337c7df14bd89243f9d2a8d29db082b38cca14b9b318ca9c5",
+      "blockers": []
+    },
+    {
+      "id": "PE-0100",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/paper_account_audit.py",
+        "tests/test_paper_account.py",
+        "tests/test_paper_account_audit.py",
+        "docs/edge-program/pe-0100-provider-fill-idempotency.md",
+        "docs/edge-program/pe-0100-provider-fill-idempotency-evidence.json"
+      ],
+      "tests": [
+        "test_replayed_intent_fill_and_fee_have_one_economic_effect",
+        "test_conflicting_client_fill_and_fee_ids_are_refused",
+        "test_independent_journal_audit_recomputes_balances_and_daily_nav"
+      ],
+      "test_result": "PaperAccount exact fill replay leaves cash, position and ledger unchanged; changed fill content under a reused fill ID is refused; independent journal auditor enforces unique fill IDs. Focused account/audit tests pass.",
+      "evidence_sha256": "1722daffc96afc017b697b08232c90f663fcc8d4eadd623498407e215da28e53",
       "blockers": []
     }
   ]
