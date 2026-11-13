@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 61,
-  "unrecorded_tasks": 157,
+  "recorded_tasks": 63,
+  "unrecorded_tasks": 155,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1249,6 +1249,53 @@
       "test_result": "23 passed (exit code 0); Ruff and mypy on the effective instrument-rule module passed. Historical tick/lot/freeze/session lookup and tradability validation refuse violations without synthetic repair.",
       "evidence_sha256": "f97c4d672fbd563cbdcb767234055d9731cdde14e5049d25261d9103ea666e08",
       "blockers": []
+    },
+    {
+      "id": "PE-0034",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/providers/kite_data.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_kite_forward_events.py",
+        "tests/test_phase3_kite.py",
+        "tests/test_phase5_intraday_runner.py",
+        "tests/test_raw_quote_archive.py",
+        "docs/edge-program/pe-0034-read-only-kite-polling-adapter-evidence.json"
+      ],
+      "tests": [
+        "test_full_quote_becomes_timestamped_forward_event",
+        "test_injected_clock_provider_stamps_each_kite_event_after_exchange_time",
+        "test_read_only_provider_error_never_exposes_credentials",
+        "test_live_runner_can_opt_in_to_authorized_raw_quote_archive",
+        "test_kite_event_links_durable_raw_quote_record_under_authorized_archive"
+      ],
+      "test_result": "80 passed (exit code 0); Ruff and mypy on the Kite provider/normalizer passed. Mock and Kite provider paths share timestamped normalized events; no credential or broker-order behavior is exposed.",
+      "evidence_sha256": "3d1162ca4a85401555a1cbcbfc9ae77f4aab2337b1fbae401f18350e069288ec",
+      "blockers": []
+    },
+    {
+      "id": "PE-0035",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/session_ops.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_forward_feed_health.py",
+        "docs/edge-program/pe-0035-durable-feed-health-and-stale-no-trade-evidence.json"
+      ],
+      "tests": [
+        "test_packet_monitor_counts_gaps_duplicates_disconnects_reconnects_and_drops",
+        "test_feed_health_rejects_future_quote_and_stale_heartbeat",
+        "test_stale_feed_forces_durable_no_trade_and_session_completeness_counts"
+      ],
+      "test_result": "49 passed (exit code 0); Ruff and mypy on the feed-health and session-runner modules passed. Fault injection produces STALE_FEED/NO_TRADE without invoking strategy or execution, and session evidence persists all health counters.",
+      "evidence_sha256": "b1c183ccf46fd0fd601fb4f0afa35d19b18aa0fb67c20beae516fb1c7a609467",
+      "blockers": [
+        "The current Kite polling payload has no packet sequence number or provider disconnect/reconnect callbacks, so live gaps/reconnect/drop counts cannot yet be populated automatically from the configured source.",
+        "PacketDeduper's packet-ID/sequence memory itself is process-local; only recorded health snapshots survive restart. Persisted packet-level deduplication is not connected to the capture archive."
+      ]
     }
   ]
 }

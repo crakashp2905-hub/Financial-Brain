@@ -182,14 +182,36 @@ class FeedHealth:
     gaps: int
     disconnects: int
     dropped_updates: int
+    duplicates: int = 0
+    reconnects: int = 0
+    last_heartbeat_utc: datetime | None = None
+
+    def __post_init__(self) -> None:
+        if any(type(value) is not int or value < 0 for value in (
+                self.gaps, self.disconnects, self.dropped_updates, self.duplicates, self.reconnects)):
+            raise DataError("feed-health counters must be non-negative integers")
+        for label, value in (("last available", self.last_available_utc),
+                             ("last heartbeat", self.last_heartbeat_utc)):
+            if value is not None:
+                _aware(value, label)
 
 
 def entry_allowed(health: FeedHealth, now: datetime, *, max_age: timedelta = timedelta(seconds=5)) -> tuple[bool, list[str]]:
     reasons = []
     if health.last_available_utc is None:
         reasons.append("NO_QUOTES")
-    elif _aware(now, "now") - _aware(health.last_available_utc, "last") > max_age:
-        reasons.append("STALE_QUOTE")
+    else:
+        quote_age = _aware(now, "now") - _aware(health.last_available_utc, "last")
+        if quote_age < timedelta(0):
+            reasons.append("FUTURE_QUOTE")
+        elif quote_age > max_age:
+            reasons.append("STALE_QUOTE")
+    if health.last_heartbeat_utc is not None:
+        heartbeat_age = _aware(now, "now") - _aware(health.last_heartbeat_utc, "heartbeat")
+        if heartbeat_age < timedelta(0):
+            reasons.append("FUTURE_HEARTBEAT")
+        elif heartbeat_age > max_age:
+            reasons.append("STALE_HEARTBEAT")
     if health.gaps:
         reasons.append("QUOTE_GAP")
     if health.disconnects:

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from financial_brain.forward_edge.durable import DurableJournal
-from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent, entry_allowed
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.session_clock import ClockError, SessionClockProvider, as_utc
 from financial_brain.forward_edge.session_ops import SessionDateLedger, SessionError
@@ -297,6 +297,34 @@ class ForwardSessionRunner:
         journal.append_many(additions)
         return len(additions)
 
+    def record_feed_health(self, config: ForwardRunConfig, health: FeedHealth, *, observed_at: datetime) -> None:
+        """Persist one monotonic feed-health snapshot before the session decision."""
+        observed = self._utc(observed_at)
+        payload = {
+            "observed_at_utc": observed.isoformat(),
+            "last_available_utc": self._utc(health.last_available_utc).isoformat()
+            if health.last_available_utc else None,
+            "last_heartbeat_utc": self._utc(health.last_heartbeat_utc).isoformat()
+            if health.last_heartbeat_utc else None,
+            "gaps": health.gaps, "disconnects": health.disconnects,
+            "dropped_updates": health.dropped_updates, "duplicates": health.duplicates,
+            "reconnects": health.reconnects,
+        }
+        digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                                             allow_nan=False).encode("utf-8")).hexdigest()
+        self.begin(config)
+        journal = DurableJournal(self.journal_path)
+        rows = [r for r in journal.records() if r.get("session_id") == config.session_id]
+        if any(r.get("t") in {"DECISION", "SESSION_CLOSED"} for r in rows):
+            raise RunnerError("feed health must be recorded before the session decision")
+        samples = [r for r in rows if r.get("t") == "FEED_HEALTH"]
+        if samples and observed < datetime.fromisoformat(samples[-1]["health"]["observed_at_utc"]):
+            raise RunnerError("feed-health sample timestamps must be monotonic")
+        if samples and samples[-1].get("snapshot_sha256") == digest:
+            return
+        journal.append({"t": "FEED_HEALTH", "session_id": config.session_id,
+                        "snapshot_sha256": digest, "health": payload})
+
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
             decision_at: datetime | None = None,
             decision_fn: Callable[[list[NormalizedEvent]], dict],
@@ -357,12 +385,36 @@ class ForwardSessionRunner:
         if not isinstance(preflight, dict) or type(preflight.get("approved")) is not bool:
             raise RunnerError("persisted preflight must contain a boolean approved field")
 
+        feed_health_record = next((r for r in reversed(existing) if r.get("t") == "FEED_HEALTH"), None)
+        feed_health_facts = None
+        feed_health_reasons: list[str] = []
+        if feed_health_record is not None:
+            feed_health_facts = feed_health_record["health"]
+            health = FeedHealth(
+                datetime.fromisoformat(feed_health_facts["last_available_utc"])
+                if feed_health_facts.get("last_available_utc") else None,
+                int(feed_health_facts["gaps"]), int(feed_health_facts["disconnects"]),
+                int(feed_health_facts["dropped_updates"]), int(feed_health_facts["duplicates"]),
+                int(feed_health_facts["reconnects"]),
+                datetime.fromisoformat(feed_health_facts["last_heartbeat_utc"])
+                if feed_health_facts.get("last_heartbeat_utc") else None,
+            )
+            allowed, feed_health_reasons = entry_allowed(health, visible_at)
+        else:
+            allowed = True
         decision_record = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
         decision = decision_record["decision"] if decision_record is not None else None
         if decision_record is not None and decision_record.get("decision_at_utc") != visible_at.isoformat():
             raise RunnerError("session id already has a different decision timestamp")
         if decision is None:
-            decision = decision_fn(decision_events)
+            if not allowed:
+                reason = "STALE_FEED" if any(r in feed_health_reasons for r in (
+                    "STALE_QUOTE", "STALE_HEARTBEAT", "FUTURE_QUOTE", "FUTURE_HEARTBEAT", "NO_QUOTES")) \
+                    else "FEED_HEALTH_UNSAFE"
+                decision = {"side": "NONE", "reason": reason,
+                            "feed_health_reasons": feed_health_reasons}
+            else:
+                decision = decision_fn(decision_events)
             if not isinstance(decision, dict) or decision.get("side") not in ("BUY", "SELL", "NONE", "NO_TRADE"):
                 raise RunnerError("decision adapter must return a dictionary with BUY, SELL, or NONE side")
             journal.append({"t": "DECISION", "session_id": config.session_id,
@@ -382,6 +434,9 @@ class ForwardSessionRunner:
                   if last_available else None, "decision": decision, "risk": risk,
                   "preflight": preflight,
                   "mode": config.mode.value, "physical_orders": False}
+        if feed_health_facts is not None:
+            result["feed_health"] = {**feed_health_facts, "entry_allowed": allowed,
+                                     "blocking_reasons": feed_health_reasons}
         if not risk["approved"]:
             self._ensure_state(journal, config.session_id, "REJECTED")
             result.update({"status": "REJECTED", "reason": str(risk.get("reason", "RISK_REJECTED"))})

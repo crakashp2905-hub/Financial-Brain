@@ -16,7 +16,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
 from financial_brain.forward_edge.durable import DurableJournal
-from financial_brain.forward_edge.market_data import Calendar
+from financial_brain.forward_edge.market_data import Calendar, DataError, FeedHealth, _aware
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -207,17 +207,53 @@ class PacketDeduper:
         self.buffer: list[tuple[int, str, dict]] = []
         self.duplicates = 0
         self.reconnects = 0
+        self.disconnects = 0
+        self.dropped_updates = 0
+        self.last_heartbeat_utc: datetime | None = None
+        self.last_available_utc: datetime | None = None
+        self._last_sequence: int | None = None
+        self.gaps = 0
 
     def reconnect(self) -> None:
         self.reconnects += 1
+        self._last_sequence = None
 
-    def offer(self, packet_id: str, seq: int, payload: dict) -> bool:
+    def disconnect(self) -> None:
+        self.disconnects += 1
+
+    def heartbeat(self, at: datetime) -> None:
+        stamp = _aware(at, "heartbeat")
+        if self.last_heartbeat_utc is not None and stamp < self.last_heartbeat_utc:
+            raise DataError("heartbeat timestamps must be monotonic")
+        self.last_heartbeat_utc = stamp
+
+    def record_drop(self, count: int = 1) -> None:
+        if type(count) is not int or count <= 0:
+            raise DataError("drop count must be a positive integer")
+        self.dropped_updates += count
+
+    def offer(self, packet_id: str, seq: int, payload: dict,
+              available_utc: datetime | None = None) -> bool:
+        if not packet_id or type(seq) is not int or seq < 0:
+            raise DataError("packet id and non-negative integer sequence are required")
         if packet_id in self.seen:
             self.duplicates += 1
             return False
+        if self._last_sequence is not None and seq > self._last_sequence + 1:
+            self.gaps += seq - self._last_sequence - 1
+        if self._last_sequence is None or seq > self._last_sequence:
+            self._last_sequence = seq
+        if available_utc is not None:
+            stamp = _aware(available_utc, "packet availability")
+            if self.last_available_utc is None or stamp > self.last_available_utc:
+                self.last_available_utc = stamp
         self.seen.add(packet_id)
         self.buffer.append((seq, packet_id, payload))
         return True
+
+    def feed_health(self) -> FeedHealth:
+        return FeedHealth(self.last_available_utc, self.gaps, self.disconnects, self.dropped_updates,
+                          self.duplicates, self.reconnects, self.last_heartbeat_utc)
 
     def ordered(self) -> list[dict]:
         return [p for _, _, p in sorted(self.buffer, key=lambda x: (x[0], x[1]))]
