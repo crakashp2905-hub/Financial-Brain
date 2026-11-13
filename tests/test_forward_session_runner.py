@@ -11,6 +11,10 @@ from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunner,
     RunnerError,
 )
+from financial_brain.forward_edge.uncertainty_sizing import (
+    UncertaintySizingPolicy,
+    UncertaintySizingRegistry,
+)
 
 
 NOW = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
@@ -42,6 +46,16 @@ def _net_alpha_forecast(net=0.01, horizon=1, *, fees=0.001, spread=0.001, impact
     benchmark = 0.01
     return {"horizon": horizon, "expected_return": benchmark + fees + spread + impact + net,
             "benchmark": benchmark, "fees": fees, "spread": spread, "impact": impact}
+
+
+def _sizing_policy():
+    return UncertaintySizingPolicy(
+        strategy_sha256="a" * 64, cohort_id="C1", standardized_error_multiplier=1.0,
+        confidence_z=1.0, development_data_sha256="b" * 64,
+        calibration_protocol_sha256="c" * 64, development_start="2026-10-01",
+        development_end="2026-10-31", validation_start="2026-11-12", observation_count=30,
+        frozen_at_utc="2026-11-01T00:00:00+00:00",
+    )
 
 
 def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_path):
@@ -616,3 +630,59 @@ def test_invalid_state_transition_fails_closed(tmp_path):
     ForwardSessionRunner._ensure_state(journal, "S-1", "PLANNED")
     with pytest.raises(RunnerError, match="invalid session transition"):
         ForwardSessionRunner._ensure_state(journal, "S-1", "OPEN")
+
+
+def test_paper_runner_applies_frozen_uncertainty_haircut_to_order_quantity(tmp_path):
+    policy = _sizing_policy()
+    registry = UncertaintySizingRegistry(tmp_path / "sizing-policy.jsonl")
+    registry.freeze(policy)
+    config = _config(uncertainty_sizing_policy_sha256=policy.sha256)
+    runner = ForwardSessionRunner(tmp_path / "sized-paper.jsonl", uncertainty_sizing_registry=registry)
+    _approve_preflight(runner, config)
+    observed_risk_quantities = []
+    observed_order_quantities = []
+    decision = {"side": "BUY", "quantity": 10, "expected_net_alpha": 0.01,
+                "uncertainty_standard_error": 0.005, "forecast_horizon_sessions": 1,
+                "forecast_costs_included": True, "net_alpha_forecast": _net_alpha_forecast()}
+    result = runner.run(
+        config, [_event()], decision_at=NOW, decision_fn=lambda _: decision,
+        risk_fn=lambda value: observed_risk_quantities.append(value["quantity"]) or {"approved": True},
+        execution_fn=lambda value, *_: observed_order_quantities.append(value["quantity"]) or {
+            "status": "MISSED", "receipt_id": "uncertainty-missed", "fidelity": "SIMULATED_QUOTE"},
+    )
+    assert result["status"] == "PAPER_COMPLETE"
+    assert result["decision"]["quantity"] == 5
+    assert result["decision"]["uncertainty_sizing"]["size_multiplier"] == pytest.approx(0.5)
+    assert observed_risk_quantities == [5]
+    assert observed_order_quantities == [5]
+
+
+def test_uncertainty_policy_fails_closed_on_missing_error_or_subunit_size(tmp_path):
+    policy = _sizing_policy()
+    registry = UncertaintySizingRegistry(tmp_path / "sizing-policy.jsonl")
+    registry.freeze(policy)
+    config = _config(uncertainty_sizing_policy_sha256=policy.sha256)
+    runner = ForwardSessionRunner(tmp_path / "missing-uncertainty.jsonl", uncertainty_sizing_registry=registry)
+    _approve_preflight(runner, config)
+    executions = []
+    result = runner.run(
+        config, [_event()], decision_at=NOW,
+        decision_fn=lambda _: {"side": "BUY", "quantity": 10, "expected_net_alpha": 0.01},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: executions.append(True) or {},
+    )
+    assert result["status"] == "NO_TRADE"
+    assert result["reason"] == "UNCERTAINTY_SIZING_EVIDENCE_MISSING"
+    assert executions == []
+
+
+def test_paper_runner_rejects_unbound_or_prevalidation_uncertainty_policy(tmp_path):
+    policy = _sizing_policy()
+    registry = UncertaintySizingRegistry(tmp_path / "sizing-policy.jsonl")
+    registry.freeze(policy)
+    runner = ForwardSessionRunner(tmp_path / "policy-binding.jsonl", uncertainty_sizing_registry=registry)
+    with pytest.raises(RunnerError, match="needs a frozen uncertainty-sizing policy"):
+        runner.begin(_config())
+    with pytest.raises(RunnerError, match="validation start"):
+        runner.begin(_config(exchange_date="2026-11-11",
+                             uncertainty_sizing_policy_sha256=policy.sha256))

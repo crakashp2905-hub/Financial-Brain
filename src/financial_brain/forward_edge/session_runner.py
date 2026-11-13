@@ -19,6 +19,9 @@ from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent, entry_allowed
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.net_alpha_policy import NetAlphaPolicyError, NetAlphaThresholdRegistry
+from financial_brain.forward_edge.uncertainty_sizing import (UncertaintySizingError,
+                                                              UncertaintySizingRegistry,
+                                                              uncertainty_size_multiplier)
 from financial_brain.forward_edge.session_clock import ClockError, SessionClockProvider, as_utc
 from financial_brain.forward_edge.session_ops import SessionDateLedger, SessionError
 
@@ -57,6 +60,7 @@ class ForwardRunConfig:
     attempt_id: str = "attempt-1"
     minimum_forecast_net_alpha: float = 0.0
     net_alpha_policy_sha256: str | None = None
+    uncertainty_sizing_policy_sha256: str | None = None
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
@@ -80,6 +84,10 @@ class ForwardRunConfig:
                 len(self.net_alpha_policy_sha256) != 64
                 or any(ch not in "0123456789abcdef" for ch in self.net_alpha_policy_sha256)):
             raise RunnerError("net-alpha policy identity must be a SHA-256 digest")
+        if self.uncertainty_sizing_policy_sha256 is not None and (
+                len(self.uncertainty_sizing_policy_sha256) != 64
+                or any(ch not in "0123456789abcdef" for ch in self.uncertainty_sizing_policy_sha256)):
+            raise RunnerError("uncertainty sizing policy identity must be a SHA-256 digest")
         try:
             if date.fromisoformat(self.exchange_date).isoformat() != self.exchange_date:
                 raise ValueError
@@ -96,15 +104,19 @@ class ForwardRunConfig:
                     raise ValueError
             except ValueError as exc:
                 raise RunnerError(f"{name} must be a SHA-256 hex digest") from exc
-        return {"session_id": self.session_id, "exchange_date": self.exchange_date,
-                "cohort_id": self.cohort_id, "strategy_sha256": self.strategy_sha256,
-                "risk_policy_sha256": self.risk_policy_sha256,
-                "constraints_sha256": self.constraints_sha256, "ledger_id": self.ledger_id,
-                "benchmark_id": self.benchmark_id, "instruments": sorted(set(self.instruments)),
-                "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value,
-                "minimum_forecast_net_alpha": self.minimum_forecast_net_alpha,
-                "net_alpha_policy_sha256": self.net_alpha_policy_sha256,
-                "session_key": self.session_key, "attempt_id": self.attempt_id}
+        canonical = {"session_id": self.session_id, "exchange_date": self.exchange_date,
+                     "cohort_id": self.cohort_id, "strategy_sha256": self.strategy_sha256,
+                     "risk_policy_sha256": self.risk_policy_sha256,
+                     "constraints_sha256": self.constraints_sha256, "ledger_id": self.ledger_id,
+                     "benchmark_id": self.benchmark_id, "instruments": sorted(set(self.instruments)),
+                     "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value,
+                     "minimum_forecast_net_alpha": self.minimum_forecast_net_alpha,
+                     "net_alpha_policy_sha256": self.net_alpha_policy_sha256,
+                     "session_key": self.session_key, "attempt_id": self.attempt_id}
+        # Preserve historical identities for legacy runs without uncertainty policy provenance.
+        if self.uncertainty_sizing_policy_sha256 is not None:
+            canonical["uncertainty_sizing_policy_sha256"] = self.uncertainty_sizing_policy_sha256
+        return canonical
 
     @property
     def session_key(self) -> str:
@@ -131,11 +143,13 @@ class ForwardSessionRunner:
     def __init__(self, journal_path: Path,
                  clock_provider: SessionClockProvider | None = None,
                  session_date_ledger: SessionDateLedger | None = None,
-                 net_alpha_threshold_registry: NetAlphaThresholdRegistry | None = None) -> None:
+                 net_alpha_threshold_registry: NetAlphaThresholdRegistry | None = None,
+                 uncertainty_sizing_registry: UncertaintySizingRegistry | None = None) -> None:
         self.journal_path = Path(journal_path)
         self.clock_provider = clock_provider or SessionClockProvider()
         self.session_date_ledger = session_date_ledger
         self.net_alpha_threshold_registry = net_alpha_threshold_registry
+        self.uncertainty_sizing_registry = uncertainty_sizing_registry
 
     def mark_incomplete(self, session_id: str, reason: str) -> None:
         """Close a nonterminal session as incomplete without fabricating an outcome."""
@@ -219,6 +233,20 @@ class ForwardSessionRunner:
                     raise RunnerError("paper validation session predates the frozen policy validation start")
             elif config.net_alpha_policy_sha256 is not None:
                 raise RunnerError("net-alpha policy identity cannot be verified without its registry")
+            if self.uncertainty_sizing_registry is not None:
+                if config.uncertainty_sizing_policy_sha256 is None:
+                    raise RunnerError("paper session needs a frozen uncertainty-sizing policy")
+                try:
+                    sizing_policy = self.uncertainty_sizing_registry.resolve(
+                        config.strategy_sha256, config.cohort_id)
+                except UncertaintySizingError as exc:
+                    raise RunnerError(str(exc)) from exc
+                if sizing_policy is None or sizing_policy.sha256 != config.uncertainty_sizing_policy_sha256:
+                    raise RunnerError("uncertainty sizing policy does not match the frozen strategy cohort")
+                if date.fromisoformat(config.exchange_date) < date.fromisoformat(sizing_policy.validation_start):
+                    raise RunnerError("paper session predates uncertainty-policy validation start")
+            elif config.uncertainty_sizing_policy_sha256 is not None:
+                raise RunnerError("uncertainty sizing policy cannot be verified without its registry")
         for row in records:
             if row.get("t") != "SESSION_PLAN" or row.get("session_id") == config.session_id:
                 continue
@@ -228,7 +256,9 @@ class ForwardSessionRunner:
                     and prior_config.get("cohort_id") == config.cohort_id
                     and prior_config.get("mode") == config.mode.value
                     and (prior_config.get("minimum_forecast_net_alpha") != config.minimum_forecast_net_alpha
-                         or prior_config.get("net_alpha_policy_sha256") != config.net_alpha_policy_sha256)):
+                         or prior_config.get("net_alpha_policy_sha256") != config.net_alpha_policy_sha256
+                         or prior_config.get("uncertainty_sizing_policy_sha256")
+                         != config.uncertainty_sizing_policy_sha256)):
                 raise RunnerError("net-alpha hurdle is frozen for this strategy cohort")
         existing = [r for r in records if r.get("session_id") == config.session_id]
         for row in records:
@@ -460,6 +490,7 @@ class ForwardSessionRunner:
                 decision = decision_fn(decision_events)
             if not isinstance(decision, dict) or decision.get("side") not in ("BUY", "SELL", "NONE", "NO_TRADE"):
                 raise RunnerError("decision adapter must return a dictionary with BUY, SELL, or NONE side")
+            decision = self._apply_uncertainty_sizing(config, decision)
             journal.append({"t": "DECISION", "session_id": config.session_id,
                             "decision_at_utc": visible_at.isoformat(), "decision": decision})
         risk_record = next((r for r in reversed(existing) if r.get("t") == "RISK_VERDICT"), None)
@@ -652,6 +683,47 @@ class ForwardSessionRunner:
             out["approved"] = False
             out["reason"] = gate["reason"]
         return out
+
+    def _apply_uncertainty_sizing(self, config: ForwardRunConfig, decision: dict) -> dict:
+        """Scale paper-entry quantity by a frozen uncertainty policy or abstain on missing evidence."""
+        if (config.mode not in (Mode.LIVE_PAPER, Mode.SHADOW)
+                or self.uncertainty_sizing_registry is None):
+            return decision
+        effect = decision.get("position_effect")
+        if effect is None and decision.get("side") == "BUY":
+            effect = "INCREASE"
+        if effect != "INCREASE":
+            return decision
+        try:
+            policy = self.uncertainty_sizing_registry.resolve(config.strategy_sha256, config.cohort_id)
+        except UncertaintySizingError as exc:
+            raise RunnerError(str(exc)) from exc
+        if policy is None or policy.sha256 != config.uncertainty_sizing_policy_sha256:
+            raise RunnerError("paper entry uncertainty policy is unavailable or changed")
+        alpha = decision.get("expected_net_alpha")
+        uncertainty = decision.get("uncertainty_standard_error")
+        quantity = decision.get("quantity")
+        if (isinstance(alpha, bool) or not isinstance(alpha, (int, float)) or not math.isfinite(alpha)
+                or isinstance(uncertainty, bool) or not isinstance(uncertainty, (int, float))
+                or not math.isfinite(uncertainty) or uncertainty < 0
+                or type(quantity) is not int or quantity <= 0):
+            return {"side": "NO_TRADE", "reason": "UNCERTAINTY_SIZING_EVIDENCE_MISSING",
+                    "rejected_candidate": decision,
+                    "uncertainty_sizing": {"policy_sha256": policy.sha256, "passed": False}}
+        try:
+            multiplier = uncertainty_size_multiplier(expected_net_alpha=float(alpha),
+                                                     uncertainty_standard_error=float(uncertainty),
+                                                     policy=policy)
+        except UncertaintySizingError as exc:
+            raise RunnerError(str(exc)) from exc
+        sized_quantity = math.floor(quantity * multiplier)
+        receipt = {"policy_sha256": policy.sha256, "passed": sized_quantity > 0,
+                   "raw_quantity": quantity, "uncertainty_standard_error": float(uncertainty),
+                   "size_multiplier": multiplier, "sized_quantity": sized_quantity}
+        if sized_quantity < 1:
+            return {"side": "NO_TRADE", "reason": "UNCERTAINTY_SIZE_BELOW_ONE_UNIT",
+                    "rejected_candidate": decision, "uncertainty_sizing": receipt}
+        return {**decision, "quantity": sized_quantity, "uncertainty_sizing": receipt}
 
     @classmethod
     def _execute_with_receipt(cls, journal: DurableJournal, session_id: str, decision: dict,

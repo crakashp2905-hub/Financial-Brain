@@ -1944,8 +1944,10 @@
       "sources": [
         "src/financial_brain/forward_edge/uncertainty_sizing.py",
         "src/financial_brain/forward_edge/signal_allocator.py",
+        "src/financial_brain/forward_edge/session_runner.py",
         "tests/test_uncertainty_sizing.py",
         "tests/test_signal_allocator.py",
+        "tests/test_forward_session_runner.py",
         "docs/edge-program/pe-0065-development-calibrated-uncertainty-sizing.md",
         "docs/edge-program/pe-0065-development-calibrated-uncertainty-sizing-evidence.json"
       ],
@@ -1955,13 +1957,16 @@
         "test_sizing_multiplier_is_bounded_and_falls_as_uncertainty_rises",
         "test_frozen_uncertainty_policy_cannot_be_replaced",
         "test_frozen_uncertainty_haircut_reduces_costed_signal_weight",
-        "test_uncertainty_input_without_frozen_policy_fails_closed"
+        "test_uncertainty_input_without_frozen_policy_fails_closed",
+        "test_paper_runner_applies_frozen_uncertainty_haircut_to_order_quantity",
+        "test_uncertainty_policy_fails_closed_on_missing_error_or_subunit_size",
+        "test_paper_runner_rejects_unbound_or_prevalidation_uncertainty_policy"
       ],
-      "test_result": "11 focused tests passed; mypy and Ruff passed. Synthetic development rows confirm pre-validation calibration and bounded monotone haircuts; no real development sample was used.",
-      "evidence_sha256": "a832230eccc1d3fba20a067ec0ee973753034bfa9480e9d47653dfcf1beedd24",
+      "test_result": "51 tests across uncertainty calibration, allocator, and forward paper runner passed; mypy, Ruff, source inventory and strategy-variant inventory checks passed. Synthetic tests verify frozen-policy binding, quantity reduction before risk/order intent, abstention on missing inputs, and legacy config hash stability.",
+      "evidence_sha256": "1a87ca51755f95806cc7ea8b6b3589cd9184c67c7b4e2d0ae24ef35ced1bc0a7",
       "blockers": [
-        "No real, approved development dataset or reviewed calibration protocol is available.",
-        "ForwardSessionRunner does not yet require policy resolution or enforce uncertainty scaling on paper order quantity."
+        "No approved in-house development sample or calibration protocol is available; no market calibration is claimed.",
+        "Legacy paper-runner construction without a supplied registry remains compatible and does not enforce uncertainty sizing."
       ]
     }
   ]
