@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -53,6 +54,7 @@ class ForwardRunConfig:
     capital_inr: str
     mode: Mode = Mode.LIVE_PAPER
     attempt_id: str = "attempt-1"
+    minimum_forecast_net_alpha: float = 0.0
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
@@ -67,6 +69,11 @@ class ForwardRunConfig:
             raise RunnerError("instruments must be nonempty and unique")
         if self.mode not in (Mode.LIVE_PAPER, Mode.SHADOW, Mode.RESEARCH_REPLAY):
             raise RunnerError("forward runner only accepts replay, shadow, or paper mode")
+        if (isinstance(self.minimum_forecast_net_alpha, bool)
+                or not isinstance(self.minimum_forecast_net_alpha, (int, float))
+                or not math.isfinite(self.minimum_forecast_net_alpha)
+                or self.minimum_forecast_net_alpha < 0):
+            raise RunnerError("minimum forecast net-alpha hurdle must be finite and non-negative")
         try:
             if date.fromisoformat(self.exchange_date).isoformat() != self.exchange_date:
                 raise ValueError
@@ -89,6 +96,7 @@ class ForwardRunConfig:
                 "constraints_sha256": self.constraints_sha256, "ledger_id": self.ledger_id,
                 "benchmark_id": self.benchmark_id, "instruments": sorted(set(self.instruments)),
                 "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value,
+                "minimum_forecast_net_alpha": self.minimum_forecast_net_alpha,
                 "session_key": self.session_key, "attempt_id": self.attempt_id}
 
     @property
@@ -419,14 +427,18 @@ class ForwardSessionRunner:
                 raise RunnerError("decision adapter must return a dictionary with BUY, SELL, or NONE side")
             journal.append({"t": "DECISION", "session_id": config.session_id,
                             "decision_at_utc": visible_at.isoformat(), "decision": decision})
-        risk = next((r["risk"] for r in reversed(existing) if r.get("t") == "RISK_VERDICT"), None)
+        risk_record = next((r for r in reversed(existing) if r.get("t") == "RISK_VERDICT"), None)
+        risk = risk_record["risk"] if risk_record is not None else None
         if risk is None:
             risk = risk_fn(decision)
             if not isinstance(risk, dict) or type(risk.get("approved")) is not bool:
                 raise RunnerError("risk adapter must return a dictionary with boolean approved")
-            journal.append({"t": "RISK_VERDICT", "session_id": config.session_id, "risk": risk})
         if type(risk.get("approved")) is not bool:
             raise RunnerError("risk adapter must return a dictionary with boolean approved")
+        gated_risk = self._apply_net_alpha_hurdle(config, decision, risk)
+        if risk_record is None or gated_risk != risk:
+            risk = gated_risk
+            journal.append({"t": "RISK_VERDICT", "session_id": config.session_id, "risk": risk})
         self._ensure_state(journal, config.session_id, "DRAINING")
         result = {"session_id": config.session_id, "config_sha256": config.sha256,
                   "event_count": len(observed), "decision_event_count": len(decision_events),
@@ -533,6 +545,60 @@ class ForwardSessionRunner:
         self._record_date_outcome(str(result["status"]), str(result.get("reason", "SESSION_CLOSED")),
                                   config.session_id)
         return result
+
+    @staticmethod
+    def _apply_net_alpha_hurdle(config: ForwardRunConfig, decision: dict, risk: dict) -> dict:
+        """Require recomputable, costed positive net alpha before adding paper or shadow risk."""
+        if config.mode not in (Mode.LIVE_PAPER, Mode.SHADOW):
+            return risk
+        side = decision.get("side")
+        effect = decision.get("position_effect")
+        if effect is None and side == "BUY":
+            effect = "INCREASE"
+        elif effect is None and side in ("NONE", "NO_TRADE"):
+            effect = "REDUCE"
+        if effect not in {"INCREASE", "REDUCE", "CLOSE"}:
+            gate = {"required": True, "passed": False, "reason": "INVALID_POSITION_EFFECT"}
+        elif effect != "INCREASE":
+            gate = {"required": False, "passed": True, "reason": "POSITION_REDUCTION",
+                    "position_effect": effect}
+        else:
+            raw_alpha = decision.get("expected_net_alpha")
+            forecast_value = decision.get("net_alpha_forecast")
+            forecast = forecast_value if isinstance(forecast_value, dict) else {}
+            horizon = forecast.get("horizon")
+            costs_included = decision.get("forecast_costs_included") is True
+            forecast_fields = ("expected_return", "benchmark", "fees", "spread", "impact")
+            valid_forecast = (isinstance(forecast_value, dict)
+                              and all(isinstance(forecast.get(key), (int, float))
+                                      and not isinstance(forecast.get(key), bool)
+                                      and math.isfinite(float(forecast[key]))
+                                      for key in forecast_fields)
+                              and all(float(forecast[key]) >= 0 for key in ("fees", "spread", "impact")))
+            computed_alpha = (float(forecast["expected_return"] - forecast["benchmark"]
+                                    - forecast["fees"] - forecast["spread"] - forecast["impact"])
+                              if valid_forecast else None)
+            raw_alpha_value = (float(raw_alpha) if isinstance(raw_alpha, (int, float))
+                               and not isinstance(raw_alpha, bool) and math.isfinite(float(raw_alpha)) else None)
+            valid_alpha = (raw_alpha_value is not None and computed_alpha is not None
+                           and math.isclose(raw_alpha_value, computed_alpha, rel_tol=1e-9, abs_tol=1e-12))
+            decision_horizon = decision.get("forecast_horizon_sessions")
+            valid_horizon = (isinstance(horizon, int) and not isinstance(horizon, bool) and horizon > 0
+                             and decision_horizon == horizon)
+            passed = bool(valid_alpha and valid_horizon and costs_included and computed_alpha is not None
+                          and computed_alpha > config.minimum_forecast_net_alpha)
+            gate = {"required": True, "passed": passed,
+                    "reason": "NET_ALPHA_ABOVE_HURDLE" if passed else "NET_ALPHA_HURDLE_NOT_MET",
+                    "expected_net_alpha": computed_alpha if valid_alpha else None,
+                    "net_alpha_forecast": forecast if valid_forecast else None,
+                    "forecast_horizon_sessions": horizon if valid_horizon else None,
+                    "forecast_costs_included": costs_included,
+                    "minimum_forecast_net_alpha": config.minimum_forecast_net_alpha}
+        out = {**risk, "net_alpha_hurdle": gate}
+        if not gate["passed"] and risk.get("approved") is True:
+            out["approved"] = False
+            out["reason"] = gate["reason"]
+        return out
 
     @classmethod
     def _execute_with_receipt(cls, journal: DurableJournal, session_id: str, decision: dict,

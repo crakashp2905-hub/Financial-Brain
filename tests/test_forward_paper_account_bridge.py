@@ -57,7 +57,7 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
     preflight_calls = []
     kwargs = dict(
         preflight_fn=lambda: preflight_calls.append(True) or {"approved": True, "checks": {"cash": True}},
-        decision_fn=lambda _events: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=simulator, decision_at=DECISION_AT,
     )
@@ -99,7 +99,7 @@ def test_partial_receipt_releases_unfilled_reservation_after_cancel(tmp_path):
     result = service.run(
         config, [_event(DECISION_AT + timedelta(seconds=1), ask_qty=1)],
         preflight_fn=lambda: {"approved": True},
-        decision_fn=lambda _events: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 3},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 3},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=simulator, decision_at=DECISION_AT,
     )
@@ -117,7 +117,7 @@ def test_quote_quality_no_trade_reconciles_as_canceled_without_cash_or_position_
     result = service.run(
         config, [locked],
         preflight_fn=lambda: {"approved": True},
-        decision_fn=lambda _events: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE),
         decision_at=DECISION_AT,
@@ -137,7 +137,7 @@ def test_buy_sync_requires_explicit_risk_cash_reserve(tmp_path):
         service.run(
             config, [_event(DECISION_AT + timedelta(seconds=1))],
             preflight_fn=lambda: {"approved": True},
-            decision_fn=lambda _events: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+            decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
             risk_fn=lambda _decision: {"approved": True},
             execution_fn=MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE),
             decision_at=DECISION_AT,
@@ -162,7 +162,7 @@ def test_execution_fee_hash_mismatch_is_rejected_before_account_posting(tmp_path
         service.run(
             config, [_event(DECISION_AT + timedelta(seconds=1))],
             preflight_fn=lambda: {"approved": True},
-            decision_fn=lambda _events: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+            decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
             risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
             execution_fn=wrong_fee_execution, decision_at=DECISION_AT,
         )
@@ -178,7 +178,7 @@ def test_preflight_exception_is_durable_and_never_executes(tmp_path):
     result = service.run(
         config, [_event(DECISION_AT + timedelta(seconds=1))],
         preflight_fn=lambda: (_ for _ in ()).throw(RuntimeError("private preflight details")),
-        decision_fn=lambda _events: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=lambda *_: calls.append(True) or {}, decision_at=DECISION_AT,
     )

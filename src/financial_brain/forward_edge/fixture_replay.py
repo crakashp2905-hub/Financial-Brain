@@ -162,7 +162,11 @@ def run_fixture_on_forward_runner(fx: dict, journal_path: Path | None = None,
                                      "reason": "PREFLIGHT_BLOCKED" if not approved else "PASS",
                                      "checks": checks})
     signal = {"side": str(fx["side"]), "instrument": str(fx["instrument"]),
-              "quantity": int(fx["quantity"]), "limit": fx.get("limit")}
+              "quantity": int(fx["quantity"]), "limit": fx.get("limit"),
+              "expected_net_alpha": fx.get("expected_net_alpha"),
+              "forecast_horizon_sessions": fx.get("forecast_horizon_sessions"),
+              "forecast_costs_included": fx.get("forecast_costs_included") is True,
+              "net_alpha_forecast": fx.get("net_alpha_forecast")}
     try:
         result = runner.run(
             config, fixture_events(fx), decision_at=decision_at,

@@ -71,7 +71,7 @@ def test_lifecycle_crash_at_each_durable_boundary_recovers_one_economic_event(
 
     kwargs = {
         "decision_at": NOW,
-        "decision_fn": lambda visible: {"side": "BUY", "visible_events": len(visible)},
+        "decision_fn": lambda visible: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "visible_events": len(visible)},
         "risk_fn": lambda _: {"approved": True},
         "execution_fn": execution,
     }
@@ -137,7 +137,7 @@ def test_crash_after_not_applied_reconciliation_does_not_repeat_reconciliation_o
         }
 
     kwargs = {
-        "decision_at": NOW, "decision_fn": lambda _: {"side": "BUY"},
+        "decision_at": NOW, "decision_fn": lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
         "risk_fn": lambda _: {"approved": True}, "execution_fn": execution,
     }
     with pytest.raises(RuntimeError, match="no simulation effect"):

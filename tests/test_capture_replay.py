@@ -36,13 +36,13 @@ def test_capture_and_archive_replay_produce_identical_signal_and_intent_hashes(t
     event = _event()
     report = verify_capture_replay_equivalence(
         config=_config(), captured_events=[event], replayed_events=[event], decision_at=DECISION,
-        decision_fn=lambda visible: {"side": "BUY", "instrument": "NSE:INFY", "quantity": len(visible)},
+        decision_fn=lambda visible: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": len(visible)},
         risk_fn=lambda _: {"approved": True}, execution_fn=_execution,
         audit_path=tmp_path / "parity.jsonl",
     )
     again = verify_capture_replay_equivalence(
         config=_config(), captured_events=[event], replayed_events=[event], decision_at=DECISION,
-        decision_fn=lambda visible: {"side": "BUY", "instrument": "NSE:INFY", "quantity": len(visible)},
+        decision_fn=lambda visible: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": len(visible)},
         risk_fn=lambda _: {"approved": True}, execution_fn=_execution,
         audit_path=tmp_path / "parity.jsonl",
     )
@@ -59,7 +59,7 @@ def test_capture_replay_mismatch_is_durably_reported_without_claiming_equivalenc
     report = verify_capture_replay_equivalence(
         config=_config(), captured_events=[_event()], replayed_events=[_event("1501")],
         decision_at=DECISION,
-        decision_fn=lambda visible: {"side": "BUY", "instrument": "NSE:INFY", "quantity": len(visible)},
+        decision_fn=lambda visible: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": len(visible)},
         risk_fn=lambda _: {"approved": True}, execution_fn=_execution,
         audit_path=tmp_path / "mismatch.jsonl",
     )

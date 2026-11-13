@@ -23,7 +23,7 @@ def _quote(available_at, *, bid="99.9", ask="100.1", bid_qty=20, ask_qty=3):
 
 
 def _decision(**overrides):
-    return {"instrument": "NSE:INFY", "side": "BUY", "quantity": 5,
+    return {"instrument": "NSE:INFY", "side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "quantity": 5,
             "decision_at_utc": DECISION_AT.isoformat(), **overrides}
 
 
@@ -136,7 +136,7 @@ def test_quote_simulator_is_connected_to_durable_runner(tmp_path):
 
     result = runner.run(
         config, [baseline, quote], decision_at=DECISION_AT,
-        decision_fn=lambda _events: {"instrument": "NSE:INFY", "side": "BUY", "quantity": 2},
+        decision_fn=lambda _events: {"instrument": "NSE:INFY", "side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "quantity": 2},
         risk_fn=lambda _decision: {"approved": True}, execution_fn=simulator,
     )
 

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 86,
-  "unrecorded_tasks": 132,
+  "recorded_tasks": 87,
+  "unrecorded_tasks": 131,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1831,6 +1831,38 @@
         "The shared allocator is not yet wired into every strategy adapter or the forward paper session/account bridge.",
         "Forecast calibration and versioned covariance/universe alignment are not yet demonstrated.",
         "No prospective profitability is claimed."
+      ]
+    },
+    {
+      "id": "PE-0061",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/fixtures.py",
+        "src/financial_brain/forward_edge/fixture_replay.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_capture_replay.py",
+        "tests/test_forward_feed_health.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "tests/test_forward_session_crash_matrix.py",
+        "tests/test_forward_fixture_replay.py",
+        "tests/test_forward_edge_f13.py",
+        "docs/edge-program/pe-0061-paper-entry-net-alpha-hurdle.md",
+        "docs/edge-program/pe-0061-paper-entry-net-alpha-hurdle-evidence.json",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/strategy-variant-inventory.json"
+      ],
+      "tests": [
+        "test_paper_entry_hurdle_rejects_missing_or_non_exceeding_forecast",
+        "test_paper_entry_above_hurdle_is_recorded_and_can_reach_simulator",
+        "test_paper_position_reduction_is_exempt_but_short_entry_needs_hurdle"
+      ],
+      "test_result": "118 tests passed (67 forward-session/account/replay integration and 51 fixture-replay tests); mypy, Ruff, Ruff format, and both source inventory checks pass. The runner recomputes itemized net alpha and persists the gate before paper intent creation.",
+      "evidence_sha256": "6cfee35c99e5bdfd3e20b2c4892e64122c3f0c73f97378924e5dd0d1a4920c41",
+      "blockers": [
+        "Existing strategy adapters do not all emit the required cost-itemized forecast and will abstain until wired.",
+        "Forecast calibration, prospective live-session evidence, and profitability remain unverified."
       ]
     }
   ]

@@ -32,10 +32,16 @@ def _event(available=NOW - timedelta(seconds=1)):
                            (("last_price", "1500"),))
 
 
-def _approve_preflight(runner):
+def _approve_preflight(runner, config=None):
     runner.record_preflight(
-        _config(), {"approved": True, "status": "PASS", "checks": {"clock": True, "market_feed": True}}
+        config or _config(), {"approved": True, "status": "PASS", "checks": {"clock": True, "market_feed": True}}
     )
+
+
+def _net_alpha_forecast(net=0.01, horizon=1, *, fees=0.001, spread=0.001, impact=0.001):
+    benchmark = 0.01
+    return {"horizon": horizon, "expected_return": benchmark + fees + spread + impact + net,
+            "benchmark": benchmark, "fees": fees, "spread": spread, "impact": impact}
 
 
 def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_path):
@@ -43,7 +49,7 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     _approve_preflight(runner)
     calls = []
     result = runner.run(_config(), [_event(), _event(NOW + timedelta(seconds=1))], decision_at=NOW,
-                        decision_fn=lambda events: {"side": "BUY", "count": len(events)},
+                        decision_fn=lambda events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "count": len(events)},
                         risk_fn=lambda decision: {"approved": True},
                         execution_fn=lambda decision, intent, events: calls.append((intent, events)) or {
                             "status": "MISSED", "receipt_id": "sim-receipt-1", "fidelity": "SIMULATED_QUOTE"
@@ -71,7 +77,7 @@ def test_session_report_preserves_coverage_and_lost_opportunity_denominators(tmp
     runner.record_preflight(config, {"approved": True, "status": "PASS"})
     result = runner.run(
         config, [event], decision_at=NOW,
-        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 10,
+        decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 10,
                                "candidate_notional_inr": "10000"},
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *_: {
@@ -103,7 +109,7 @@ def test_session_report_exposes_unavailable_candidate_notional_denominator(tmp_p
     runner.record_preflight(config, {"approved": True, "status": "PASS"})
     result = runner.run(
         config, [_event()], decision_at=NOW,
-        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+        decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *_: {
             "status": "MISSED", "receipt_id": "missing-notional",
@@ -126,7 +132,7 @@ def test_runner_uses_injected_decision_and_simulated_execution_clocks(tmp_path):
     _approve_preflight(runner)
     result = runner.run(
         _config(), [_event()],
-        decision_fn=lambda visible: {"side": "BUY", "visible_count": len(visible)},
+        decision_fn=lambda visible: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "visible_count": len(visible)},
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "clocked-sim",
                                  "fidelity": "SIMULATED_QUOTE"},
@@ -167,7 +173,7 @@ def test_one_clock_provider_spans_kite_capture_decision_and_paper_execution(tmp_
     runner = ForwardSessionRunner(tmp_path / "same-provider.jsonl", clock)
     _approve_preflight(runner)
     result = runner.run(
-        _config(), events, decision_fn=lambda visible: {"side": "BUY", "count": len(visible)},
+        _config(), events, decision_fn=lambda visible: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "count": len(visible)},
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "shared-clock",
                                  "fidelity": "SIMULATED_QUOTE"},
@@ -242,7 +248,7 @@ def test_no_trade_signal_never_reaches_execution_adapter(tmp_path):
 
 
 def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
-    assert _config().sha256 == "657cb827a9e223c0ba7cb49cbb0b5ff114891979aaa53ff41649da7c1a9de363"
+    assert _config().sha256 == "9d1dd4671d76c534997ed56259ec83d6b786b9eea08d62557b1abf4881f51bf3"
     assert _config(capital_inr="1000000.00").sha256 == _config(capital_inr="1000000").sha256
     assert _config(ledger_id="LEDGER-2").sha256 != _config().sha256
     assert _config(risk_policy_sha256="d" * 64).sha256 != _config().sha256
@@ -292,7 +298,7 @@ def test_pending_outbox_requires_reconciliation_after_unknown_side_effect(tmp_pa
                 raise RuntimeError("simulated process loss after paper side effect")
         return executions[intent_id]
 
-    kwargs = dict(decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+    kwargs = dict(decision_at=NOW, decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
                   risk_fn=lambda _: {"approved": True}, execution_fn=execution)
     with pytest.raises(RuntimeError, match="process loss"):
         runner.run(_config(), [_event()], **kwargs)
@@ -325,7 +331,7 @@ def test_outbox_retries_only_after_reconciliation_proves_no_effect(tmp_path):
         return {"status": "FILLED", "receipt_id": "sim-fill-2", "fidelity": "SIMULATED_BAR",
                 "fills": [{"fill_id": "F-2", "quantity": 10, "price": "100.25"}]}
 
-    kwargs = dict(decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+    kwargs = dict(decision_at=NOW, decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
                   risk_fn=lambda _: {"approved": True}, execution_fn=execution)
     with pytest.raises(RuntimeError, match="before simulation"):
         runner.run(_config(), [_event()], **kwargs)
@@ -346,7 +352,7 @@ def test_execution_without_simulation_receipt_cannot_close_paper_session(tmp_pat
     _approve_preflight(runner)
     with pytest.raises(RunnerError, match="receipt_id"):
         runner.run(
-            _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+            _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
             risk_fn=lambda _: {"approved": True},
             execution_fn=lambda *_: {"status": "FILLED", "fidelity": "SIMULATED_QUOTE"},
         )
@@ -361,7 +367,7 @@ def test_filled_status_without_fill_facts_cannot_be_acknowledged(tmp_path):
     _approve_preflight(runner)
     with pytest.raises(RunnerError, match="observed fills"):
         runner.run(
-            _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+            _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
             risk_fn=lambda _: {"approved": True},
             execution_fn=lambda *_: {
                 "status": "FILLED", "receipt_id": "sim-empty", "fidelity": "SIMULATED_QUOTE"
@@ -393,7 +399,7 @@ def test_restart_after_execution_receipt_before_ack_does_not_repeat_execution(tm
         return seq
 
     monkeypatch.setattr(session_module.DurableJournal, "append", append_then_crash)
-    kwargs = dict(decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+    kwargs = dict(decision_at=NOW, decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
                   risk_fn=lambda _: {"approved": True},
                   execution_fn=lambda *args: calls.append(args) or receipt)
     with pytest.raises(RuntimeError, match="receipt fsync"):
@@ -432,17 +438,96 @@ def test_non_boolean_risk_approval_is_rejected_without_execution(tmp_path):
     calls = []
     with pytest.raises(RunnerError, match="boolean approved"):
         ForwardSessionRunner(journal_path).run(
-            _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+            _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
             risk_fn=lambda _: {"approved": "false"}, execution_fn=lambda *args: calls.append(args) or {})
     assert calls == []
     assert all(r["t"] != "RISK_VERDICT" for r in DurableJournal(journal_path).records())
+
+
+@pytest.mark.parametrize("decision", [
+    {"side": "BUY"},
+    {"side": "BUY", "expected_net_alpha": 0.01, "forecast_horizon_sessions": 1,
+     "net_alpha_forecast": _net_alpha_forecast()},
+    {"side": "BUY", "expected_net_alpha": 0.01, "forecast_horizon_sessions": 1,
+     "forecast_costs_included": False, "net_alpha_forecast": _net_alpha_forecast()},
+    {"side": "BUY", "expected_net_alpha": 0.01, "forecast_horizon_sessions": 0,
+     "forecast_costs_included": True, "net_alpha_forecast": _net_alpha_forecast(horizon=0)},
+    {"side": "BUY", "expected_net_alpha": 0.01, "forecast_horizon_sessions": 1,
+     "forecast_costs_included": True, "net_alpha_forecast": _net_alpha_forecast()},
+    {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1,
+     "forecast_costs_included": True, "net_alpha_forecast": _net_alpha_forecast(net=0.01)},
+    {"side": "BUY", "expected_net_alpha": -0.001, "forecast_horizon_sessions": 1,
+     "forecast_costs_included": True, "net_alpha_forecast": _net_alpha_forecast(net=-0.001)},
+    {"side": "SELL", "position_effect": "INCREASE"},
+])
+def test_paper_entry_hurdle_rejects_missing_or_non_exceeding_forecast(tmp_path, decision):
+    path = tmp_path / "net-alpha-gate.jsonl"
+    runner = ForwardSessionRunner(path)
+    config = _config(minimum_forecast_net_alpha=0.01)
+    _approve_preflight(runner, config)
+    calls = []
+    result = runner.run(
+        config, [_event()], decision_at=NOW, decision_fn=lambda _: decision,
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *args: calls.append(args) or {},
+    )
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "NET_ALPHA_HURDLE_NOT_MET"
+    assert result["risk"]["net_alpha_hurdle"]["required"] is True
+    assert calls == []
+    persisted = [r for r in DurableJournal(path).records() if r["t"] == "RISK_VERDICT"]
+    assert persisted[-1]["risk"]["net_alpha_hurdle"] == result["risk"]["net_alpha_hurdle"]
+
+
+def test_paper_entry_above_hurdle_is_recorded_and_can_reach_simulator(tmp_path):
+    path = tmp_path / "net-alpha-pass.jsonl"
+    runner = ForwardSessionRunner(path)
+    config = _config(minimum_forecast_net_alpha=0.01)
+    _approve_preflight(runner, config)
+    calls = []
+    decision = {"side": "BUY", "expected_net_alpha": 0.02,
+                "forecast_horizon_sessions": 3, "forecast_costs_included": True,
+                "net_alpha_forecast": _net_alpha_forecast(net=0.02, horizon=3)}
+    result = runner.run(
+        config, [_event()], decision_at=NOW, decision_fn=lambda _: decision,
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: calls.append(True) or {
+            "status": "MISSED", "receipt_id": "sim-missed-gate",
+            "fidelity": "SIMULATED_QUOTE",
+        },
+    )
+    assert result["status"] == "PAPER_COMPLETE"
+    assert result["risk"]["net_alpha_hurdle"]["passed"] is True
+    assert len(calls) == 1
+
+
+def test_paper_position_reduction_is_exempt_but_short_entry_needs_hurdle(tmp_path):
+    runner = ForwardSessionRunner(tmp_path / "position-effects.jsonl")
+    _approve_preflight(runner)
+    reductions = runner.run(
+        _config(), [_event()], decision_at=NOW,
+        decision_fn=lambda _: {"side": "SELL", "position_effect": "REDUCE"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "sim-reduce",
+                                 "fidelity": "SIMULATED_QUOTE"},
+    )
+    assert reductions["risk"]["net_alpha_hurdle"]["required"] is False
+
+    short_runner = ForwardSessionRunner(tmp_path / "short-entry.jsonl")
+    short_entry = short_runner.run(
+        _config(session_id="short-entry"), [_event()], decision_at=NOW,
+        decision_fn=lambda _: {"side": "SELL", "position_effect": "INCREASE"},
+        risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {},
+    )
+    assert short_entry["status"] == "REJECTED"
+    assert short_entry["reason"] == "NET_ALPHA_HURDLE_NOT_MET"
 
 
 def test_risk_rejection_is_terminal_and_never_executes(tmp_path):
     journal_path = tmp_path / "rejected.jsonl"
     calls = []
     result = ForwardSessionRunner(journal_path).run(
-        _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+        _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
         risk_fn=lambda _: {"approved": False, "reason": "MAX_EXPOSURE"},
         execution_fn=lambda *args: calls.append(args) or {"state": "FILLED"})
     assert result["status"] == "REJECTED" and result["reason"] == "MAX_EXPOSURE"
@@ -455,7 +540,7 @@ def test_actionable_decision_without_preflight_is_rejected_and_not_executed(tmp_
     path = tmp_path / "missing-preflight.jsonl"
     calls = []
     result = ForwardSessionRunner(path).run(
-        _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+        _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *args: calls.append(args) or {},
     )
@@ -488,7 +573,7 @@ def test_preflight_is_immutable_and_blocks_actionable_decisions(tmp_path):
         runner.record_preflight(_config(), {"approved": True, "status": "PASS"})
     calls = []
     outcome = runner.run(
-        _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY"},
+        _config(), [_event()], decision_at=NOW, decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *args: calls.append(args) or {},
     )

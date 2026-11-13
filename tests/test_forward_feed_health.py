@@ -67,7 +67,7 @@ def test_stale_feed_forces_durable_no_trade_and_session_completeness_counts(tmp_
     execution_calls = []
     result = runner.run(
         config, [], decision_at=NOW,
-        decision_fn=lambda _: decision_calls.append(True) or {"side": "BUY"},
+        decision_fn=lambda _: decision_calls.append(True) or {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}},
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *args: execution_calls.append(args) or {"status": "FILLED"},
     )
