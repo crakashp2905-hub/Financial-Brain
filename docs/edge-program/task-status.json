@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 54,
-  "unrecorded_tasks": 164,
+  "recorded_tasks": 55,
+  "unrecorded_tasks": 163,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -841,6 +841,25 @@
       "test_result": "Adversarial quote perturbation tests cover worse spreads, gaps, pre-latency and stale/late feed gating, missing depth, duplicate quote observations, and duplicate passive trade tuples. Exact duplicate trade tuples are collapsed conservatively; 41 focused execution/Kite tests pass. Ruff, mypy on execution.py, and diff checks pass.",
       "evidence_sha256": "82f5b93ca2e2eed1099656c1442762f70a84ff0284a7345fb390facc9f693679",
       "blockers": []
+    },
+    {
+      "id": "PE-0089",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/schemas.py",
+        "tests/test_kernel_schemas.py",
+        "docs/edge-program/pe-0089-common-asset-order-event-contract-evidence.json"
+      ],
+      "tests": [
+        "test_common_order_event_contract_supports_cash_futures_and_options",
+        "test_derivative_contracts_and_event_provenance_fail_closed"
+      ],
+      "test_result": "Kernel schema suite: 8 passed; Ruff and mypy passed. Added immutable common event contracts for cash instruments, futures and options with UTC/source/fidelity provenance and lot-aware sizing.",
+      "evidence_sha256": "d1cbad9bbdac42471e8b133122a277cfa2df88cef6f2436299862a8472a82538",
+      "blockers": [
+        "Existing OMS, futures/options engines and paper books have not all been migrated to emit and consume these shared events; cash PaperAccount remains a separate accounting implementation.",
+        "Venue-specific contract metadata still requires sourced effective-date rules before executable orders can be accepted."
+      ]
     },
     {
       "id": "PE-0090",

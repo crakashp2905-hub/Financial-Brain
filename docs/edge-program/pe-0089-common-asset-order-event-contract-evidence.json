@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0089",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_kernel_schemas.py",
+    "result": "8 passed (exit code 0); Ruff and mypy on kernel/schemas.py passed."
+  },
+  "implemented": [
+    "Introduced immutable asset-aware InstrumentRef, IntentEvent, OrderEvent, FillEvent and MarkEvent contracts with common IDs, UTC timestamps, source hashes and execution-fidelity labels.",
+    "Cash equity/ETF, futures and options require compatible contract fields; derivative quantities respect lot-size multiples.",
+    "Added deterministic canonical JSON event serialization and SHA-256 identity for cross-engine journal/transport use.",
+    "Legacy schemas remain available so adoption can be incremental without breaking existing callers."
+  ],
+  "blockers": [
+    "Existing OMS, futures/options engines and paper books have not all been migrated to emit and consume these shared events; the current cash PaperAccount remains a separate accounting implementation.",
+    "Venue-specific contract metadata still requires sourced effective-date rules before executable orders can be accepted."
+  ],
+  "scope_note": "This package establishes and validates the shared contract; it does not enable derivatives execution or replace existing ledgers."
+}
