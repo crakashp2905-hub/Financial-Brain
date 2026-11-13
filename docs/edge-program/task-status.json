@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 44,
-  "unrecorded_tasks": 174,
+  "recorded_tasks": 45,
+  "unrecorded_tasks": 173,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -633,6 +633,23 @@
       "blockers": [
         "Source-verified rate tables must be supplied and integrated into PaperAccount before rupee-level real-cost reconciliation can be claimed."
       ]
+    },
+    {
+      "id": "PE-0078",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/paper/intraday.py",
+        "src/financial_brain/paper/execution.py",
+        "tests/test_phase5_intraday_paper.py",
+        "docs/edge-program/pe-0078-cost-attribution-evidence.json"
+      ],
+      "tests": [
+        "test_live_trade_separates_decision_alpha_spread_crossing_and_statutory_charges",
+        "test_with_live_quotes_the_bucket_impact_is_not_charged_on_top_of_the_spread"
+      ],
+      "test_result": "Focused intraday paper suite: 17 passed. The decomposition reconciles decision-price signal P&L, quoted entry/exit crossing in execution P&L, statutory fees, and net P&L; spread impact is not charged twice. Ruff and diff checks passed. Synthetic acceptance only.",
+      "evidence_sha256": "19416e5142bbcd09fa686a498fbe1a8d68bc154d9a7356382f8444c30f6fa3a9",
+      "blockers": []
     },
     {
       "id": "PE-0088",
