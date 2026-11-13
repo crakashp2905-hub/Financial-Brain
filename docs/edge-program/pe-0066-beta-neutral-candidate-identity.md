@@ -1,0 +1,5 @@
+# PE-0066 beta-neutral candidate identity
+
+Added a development-only beta estimator that accepts paired strategy/benchmark returns with unique decision hashes. Each fitted residual-return transform receives a distinct content-addressed strategy SHA derived from the base strategy, benchmark, fitted beta, development-data digest, protocol digest, and validation start. A durable registry requires that candidate identity be registered before validation and stores subsequent candidate-specific validation performance receipts separately by strategy SHA. Receipts retain gross return, benchmark return, and each execution-cost component; net alpha is calculated from those fields.
+
+The package remains `PARTIAL`: only synthetic series were used and no approved forward validation receipts were available. It creates a separate research identity and storage path; it does not establish that beta neutralization improves performance or permit a strategy promotion. Future evaluation must use a predeclared experiment and untouched, properly authorized validation observations.

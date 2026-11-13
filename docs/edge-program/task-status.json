@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 91,
-  "unrecorded_tasks": 127,
+  "recorded_tasks": 92,
+  "unrecorded_tasks": 126,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1967,6 +1967,29 @@
       "blockers": [
         "No approved in-house development sample or calibration protocol is available; no market calibration is claimed.",
         "Legacy paper-runner construction without a supplied registry remains compatible and does not enforce uncertainty sizing."
+      ]
+    },
+    {
+      "id": "PE-0066",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/beta_candidate.py",
+        "tests/test_beta_candidate.py",
+        "docs/edge-program/pe-0066-beta-neutral-candidate-identity.md",
+        "docs/edge-program/pe-0066-beta-neutral-candidate-identity-evidence.json"
+      ],
+      "tests": [
+        "test_beta_candidate_is_development_fit_with_separate_frozen_strategy_identity",
+        "test_beta_candidate_rejects_validation_rows_duplicate_identity_and_zero_market_variance",
+        "test_candidate_performance_records_are_validation_only_and_not_coalesced",
+        "test_performance_record_must_match_candidate_and_follow_validation_start",
+        "test_candidate_must_be_registered_before_validation_and_before_performance"
+      ],
+      "test_result": "5 focused tests passed; mypy, Ruff, and source inventory checks pass. Synthetic checks confirm distinct strategy hashes, pre-validation registration, separate candidate performance storage, and after-cost net-alpha derivation.",
+      "evidence_sha256": "f4e84145bf1dcf4ac4329a2e2ed63cb4c747ea680bc9a7acfa3676453e00f253",
+      "blockers": [
+        "No authorized independent validation return receipts are available; empirical factor-neutral candidate comparison remains unperformed.",
+        "No strategy promotion or paper-eligibility decision is implied by candidate registration."
       ]
     }
   ]
