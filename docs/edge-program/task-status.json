@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 75,
-  "unrecorded_tasks": 143,
+  "recorded_tasks": 76,
+  "unrecorded_tasks": 142,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1560,6 +1560,27 @@
       "evidence_sha256": "69ff09206e6fa116f35e6fa8d67cf50cd6d836320e8441513e1e697b6e8c6ef9",
       "blockers": [
         "No point-in-time adapter, frozen prospective charter, costs/benchmark evaluation, or multiplicity/overlap analysis has been completed."
+      ]
+    },
+    {
+      "id": "PE-0050",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/family_overlap.py",
+        "docs/edge-program/pe-0050-low-vol-atr-overlap.md",
+        "docs/edge-program/pe-0050-low-vol-atr-evidence.json",
+        "tests/test_family_overlap.py"
+      ],
+      "tests": [
+        "test_identical_low_risk_ranks_are_flagged_as_overlapping",
+        "test_overlap_uses_only_matched_finite_values_without_imputation",
+        "test_overlap_rejects_weak_or_invalid_inputs"
+      ],
+      "test_result": "3 focused tests passed; Ruff, mypy and diff checks passed. Matched-universe rank and membership redundancy can be measured without imputing missing values. No production Indian equity panel is yet measured.",
+      "evidence_sha256": "d8321297ce7c8bb8633e85ea6c59933faac1aea18ba0fab884cf3695d05f6d38",
+      "blockers": [
+        "No authorized point-in-time Indian equity panel has been assessed for actual low-volatility/ATR overlap.",
+        "Overlap is not alpha or investability evidence; production evaluation still needs eligibility, costs and liquidity controls."
       ]
     }
   ]
