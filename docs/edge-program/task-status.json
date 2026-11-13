@@ -2,16 +2,35 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 22,
-  "unrecorded_tasks": 196,
+  "recorded_tasks": 23,
+  "unrecorded_tasks": 195,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "3806fc3fcac91389c7fcd93bc989915b85f68d67",
+  "reviewed_main_sha": "054193a524dd35eaa258df0ac352a58fc369e937",
   "items": [
+    {
+      "id": "PE-0001",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/current-baseline.json",
+        ".github/workflows/ci.yml",
+        "docs/forward-edge/capability-matrix.json",
+        "docs/forward-edge/OPERATIONS.md",
+        "src/financial_brain/providers/kite_data.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "src/financial_brain/forward_edge/market_data.py"
+      ],
+      "tests": [
+        "test_current_baseline_is_machine_readable_and_does_not_overclaim"
+      ],
+      "test_result": "Recorded main SHA, PR graph, actual GitHub branch-protection/ruleset state, Python/CI runtime, source capabilities, freshness and access limitations. Baseline JSON parse and named test exit code 0; PR #30 exact-head Ubuntu and Windows checks passed.",
+      "evidence_sha256": "61daf5c475c233ca2d19de58a6098d63dd5b1cb043e5bb551f1309538c67ccb0",
+      "blockers": []
+    },
     {
       "id": "PE-0015",
       "status": "DONE",
