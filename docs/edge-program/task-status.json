@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 23,
-  "unrecorded_tasks": 195,
+  "recorded_tasks": 24,
+  "unrecorded_tasks": 194,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -29,6 +29,28 @@
       ],
       "test_result": "Recorded main SHA, PR graph, actual GitHub branch-protection/ruleset state, Python/CI runtime, source capabilities, freshness and access limitations. Baseline JSON parse and named test exit code 0; PR #30 exact-head Ubuntu and Windows checks passed.",
       "evidence_sha256": "61daf5c475c233ca2d19de58a6098d63dd5b1cb043e5bb551f1309538c67ccb0",
+      "blockers": []
+    },
+    {
+      "id": "PE-0002",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/trials.py",
+        "docs/forward-edge/protected-pins.json",
+        "docs/audits/protected-baseline.json",
+        "src/financial_brain/forward_edge/charter.py",
+        "tests/test_forward_edge_f00.py",
+        "tests/test_evaluation_identity.py"
+      ],
+      "tests": [
+        "test_protected_records_match_pinned_digests",
+        "test_pins_agree_with_the_existing_protected_baseline",
+        "test_retrospective_edit_of_the_trial_ledger_is_detected",
+        "test_durable_registry_rejects_retroactive_benchmark_and_endpoint_edits",
+        "test_registry_revalidates_cohort_closure_events_during_recovery"
+      ],
+      "test_result": "Pinned protected trial records verify against the pre-existing baseline; a forged FAIL-to-PASS trial-ledger edit is detected; closed outcomes reject endpoint/benchmark rewrites and registry recovery revalidates the content-addressed closure. Focused acceptance suite: 7 passed (exit code 0).",
+      "evidence_sha256": "3c061f4126aae8e6e28e4c2b97ab051c556ef9d9675698d98e4e5d164f9fc5ac",
       "blockers": []
     },
     {
