@@ -1694,15 +1694,17 @@
       ],
       "tests": [
         "test_every_declared_variant_must_be_recorded_before_closing_and_recovery",
+        "test_hard_stop_pending_variants_are_aborted_on_explicit_restart_recovery",
         "test_duplicate_results_and_nonresearch_promotion_are_rejected",
         "test_variant_budget_and_duplicate_ids_are_rejected",
         "test_bounded_search_durably_records_one_result_per_frozen_variant"
       ],
-      "test_result": "Focused suite: 8 passed; after refreshing the strategy inventory, combined strategy-inventory/research/bounded-search suite: 11 passed. Ruff and mypy passed. Full-suite run: 3,539 passed, 1 skipped; 2 inventory freshness checks initially failed and passed on targeted rerun after regeneration.",
-      "evidence_sha256": "cdb811b069d528ab27f7bdfeda3465a8a5dc348052a5681f108f9c231d5944de",
+      "test_result": "Combined strategy-inventory, research-journal and bounded-search suite: 12 passed (exit code 0); Ruff, mypy, strategy inventory --check, and source inventory --check passed. Explicit restart recovery marks pending variants ABORTED before a new bounded search opens.",
+      "evidence_sha256": "44bd95bb35bed2612200e559a076d40a0d7d367e0bfe38a0848216ac610177cb",
       "blockers": [
         "Only the daily bounded random search is integrated; other research mechanisms remain outside this journal.",
-        "No full dataset search, independent replay, or prospective paper performance is claimed."
+        "No full dataset search, independent replay, or prospective paper performance is claimed.",
+        "Cross-process journal locking is not implemented; bounded research journal is single-writer."
       ]
     }
   ]

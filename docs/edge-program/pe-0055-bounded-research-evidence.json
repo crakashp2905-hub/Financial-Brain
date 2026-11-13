@@ -7,13 +7,16 @@
     "Frozen mechanism source digest, seed, parameter catalogue and run timestamp.",
     "Exactly one evaluated/failed/skipped/aborted outcome per declared variant; close requires complete accounting.",
     "Bounded daily random search writes its complete variant results and records aborted outcomes on evaluator exceptions.",
+    "Restart recovery records ABORTED for pending variants left by a hard process stop before opening a new run.",
+    "Single-writer limitation is explicit; recovery is not safe to run concurrently with another writer.",
     "Research-only and auto-promotion-disabled flags are mandatory journal invariants."
   ],
   "tests": {
-    "command": "python -m pytest tests/test_research_library.py tests/test_bounded_search.py -q",
-    "result": "Focused suite: 8 passed; after refreshing the strategy inventory, combined strategy-inventory/research/bounded-search suite: 11 passed. Ruff and mypy passed. Full-suite run: 3,539 passed, 1 skipped; 2 inventory freshness checks initially failed and passed on targeted rerun after regeneration.",
+    "command": "python -m pytest tests/test_research_library.py tests/test_bounded_search.py tests/test_strategy_variant_inventory.py -q",
+    "result": "12 passed (exit code 0); Ruff, mypy, strategy inventory check, and source inventory check passed.",
     "cases": [
       "test_every_declared_variant_must_be_recorded_before_closing_and_recovery",
+      "test_hard_stop_pending_variants_are_aborted_on_explicit_restart_recovery",
       "test_duplicate_results_and_nonresearch_promotion_are_rejected",
       "test_variant_budget_and_duplicate_ids_are_rejected",
       "test_bounded_search_durably_records_one_result_per_frozen_variant"
@@ -21,6 +24,7 @@
   },
   "limitations": [
     "The journal applies to the daily bounded search only; other search mechanisms are not yet wired to it.",
+    "Journal recovery assumes one active writer and does not implement cross-process locking.",
     "No full search on the owner's historical dataset or independent reproduction is claimed.",
     "Research records do not establish a deployable edge or authorize strategy promotion."
   ]

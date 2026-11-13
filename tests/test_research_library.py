@@ -34,6 +34,23 @@ def test_every_declared_variant_must_be_recorded_before_closing_and_recovery(tmp
     }
 
 
+def test_hard_stop_pending_variants_are_aborted_on_explicit_restart_recovery(tmp_path):
+    path = tmp_path / "research.jsonl"
+    journal = ResearchVariantJournal(path)
+    run_id = _open(journal, variants=[{"variant_id": name, "parameters": {}} for name in ("a", "b")])
+    digests = journal.variant_digests(run_id)
+    journal.record_result(run_id, digests["a"], outcome="EVALUATED", details={"trades": 3})
+
+    recovered = ResearchVariantJournal(path)
+    assert recovered.recover_incomplete_runs() == [run_id]
+    state = ResearchVariantJournal(path).run_state(run_id)
+    assert state["closed"] is True
+    assert state["recorded_count"] == 2
+    assert state["outcomes"][digests["a"]] == "EVALUATED"
+    assert state["outcomes"][digests["b"]] == "ABORTED"
+    assert ResearchVariantJournal(path).recover_incomplete_runs() == []
+
+
 def test_duplicate_results_and_nonresearch_promotion_are_rejected(tmp_path):
     journal = ResearchVariantJournal(tmp_path / "research.jsonl")
     run_id = _open(journal)
@@ -72,9 +89,16 @@ def test_bounded_search_durably_records_one_result_per_frozen_variant(monkeypatc
     monkeypatch.setattr(search, "summarize", summarize)
     monkeypatch.setattr(search, "multiplicity_diagnostic", lambda *_args: {"status": "NO_EVENTS"})
     audit_path = tmp_path / "search.jsonl"
+    prior = ResearchVariantJournal(audit_path)
+    prior_run_id = prior.open_run(
+        mechanism_id="interrupted", mechanism_source_sha256="b" * 64,
+        variants=[{"variant_id": "old", "parameters": {}}], seed=99)
     result = search.run(basis_path=tmp_path / "basis.parquet", research_db=tmp_path / "db.duckdb",
                         sample_size=1, random_budget=1, seed=7, audit_path=audit_path)
-    state = ResearchVariantJournal(audit_path).run_state(result["research_audit_run_id"])
+    recovered = ResearchVariantJournal(audit_path)
+    assert recovered.run_state(prior_run_id)["outcomes"] == {
+        next(iter(prior.variant_digests(prior_run_id).values())): "ABORTED"}
+    state = recovered.run_state(result["research_audit_run_id"])
     assert state["closed"] is True
     assert state["recorded_count"] == result["searched_variants"]
     assert set(state["outcomes"].values()) == {"EVALUATED"}

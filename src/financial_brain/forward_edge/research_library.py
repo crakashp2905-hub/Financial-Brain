@@ -157,6 +157,21 @@ class ResearchVariantJournal:
         for digest in sorted(state["expected"] - set(state["results"])):
             self.record_result(run_id, digest, outcome="ABORTED", details={"reason": reason})
 
+    def recover_incomplete_runs(self, *, reason: str = "process_restarted_before_completion") -> list[str]:
+        """Close interrupted runs with explicit outcomes before a new single-writer run starts.
+
+        This is intentionally an explicit operation: constructing a journal to inspect it does not
+        mutate evidence. Callers must ensure no other process is actively writing this journal.
+        """
+        recovered = []
+        for run_id, state in list(self._runs.items()):
+            if state["closed"]:
+                continue
+            self.abort_pending(run_id, reason=reason)
+            self.close_run(run_id)
+            recovered.append(run_id)
+        return recovered
+
     def close_run(self, run_id: str) -> None:
         state = self._active_run(run_id)
         if state["expected"] != set(state["results"]):

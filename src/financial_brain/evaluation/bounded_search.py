@@ -261,6 +261,9 @@ def run(*, basis_path: Path = Path("data/basis_contracts.parquet"),
     symbols = choose_symbols(pd.read_parquet(basis_path), n=sample_size, seed=seed)
     catalogue = variants(seed=seed, random_budget=random_budget)
     journal = ResearchVariantJournal(audit_path)
+    # A hard process stop bypasses the in-process exception handler. Account for that prior run
+    # before opening the next run; this local journal is single-writer by contract.
+    journal.recover_incomplete_runs()
     audit_run_id = journal.open_run(
         mechanism_id="bounded_daily_random_search_v1",
         mechanism_source_sha256=source_sha256(Path(__file__)),
