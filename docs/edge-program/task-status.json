@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 113,
-  "unrecorded_tasks": 105,
+  "recorded_tasks": 114,
+  "unrecorded_tasks": 104,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2445,6 +2445,29 @@
       "test_result": "62 focused manifest and durable-journal tests passed; Ruff and mypy passed. Reopening a mutated manifest journal fails integrity validation, while intact local-only evidence is not misclassified as independently attested.",
       "evidence_sha256": "12d540dedb4d4201f2f8d2e0f13eac2190d1618edb87a435f59f9237d28b916f",
       "blockers": []
+    },
+    {
+      "id": "PE-0108",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/prospective.py",
+        "src/financial_brain/forward_edge/custody.py",
+        "tests/test_prospective_champion.py",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/pe-0108-canonical-schedule-verification.md",
+        "docs/edge-program/pe-0108-canonical-schedule-verification-evidence.json"
+      ],
+      "tests": [
+        "test_external_anchor_is_required_and_reverified",
+        "test_canonical_custody_verifier_requires_pinned_signature_and_scheduled_day",
+        "test_manifest_mutation_or_pick_only_legacy_anchor_never_verifies"
+      ],
+      "test_result": "5 passed, 3 skipped because cryptography is not installed in the local environment; Ruff and mypy passed for prospective.py. Canonical signed-receipt verification and frozen scheduled-date filtering are implemented.",
+      "evidence_sha256": "a3eab53ee6e4d7f9ac373b0c0092190efc7601ad08cdd46cceb445c93c68c809",
+      "blockers": [
+        "No authoritative explicit exchange-session schedule is available; PE-0103 still stores date ranges.",
+        "No owner-approved external timestamp service or production trust root is configured."
+      ]
     }
   ]
 }

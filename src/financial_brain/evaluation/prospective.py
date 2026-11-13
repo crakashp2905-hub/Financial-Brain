@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping, Set
 from datetime import date, datetime, time, timedelta, timezone
 
 from ..evidence.decision_manifest import canonical_bytes, ManifestError
+from ..forward_edge.custody import CustodyStatus, Receipt, TrustRoot, classify_custody
 from . import champion
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -68,7 +70,9 @@ def _has_picks(con) -> bool:
     return bool(con.execute("SELECT 1 FROM information_schema.tables WHERE table_name = 'champion_picks'").fetchone())
 
 
-def audit(ledger_con, *, verifier=None) -> dict:
+def audit(ledger_con, *,
+          trust_roots: Mapping[tuple[str, str], TrustRoot] | None = None,
+          scheduled_days: Set[str] | None = None) -> dict:
     """Classify evidence without mutating the ledger or retroactively attesting rows."""
     tables = {r[0] for r in ledger_con.execute("SELECT table_name FROM information_schema.tables").fetchall()}
     if "champion_picks" not in tables:
@@ -78,7 +82,8 @@ def audit(ledger_con, *, verifier=None) -> dict:
     rows = ledger_con.execute("SELECT DISTINCT day FROM champion_picks").fetchall()
     days = {r[0] for r in rows}
     verified = locally_verified_days(ledger_con)
-    independent = verified_days(ledger_con, verifier=verifier)
+    independent = verified_days(ledger_con, trust_roots=trust_roots,
+                                scheduled_days=scheduled_days)
     resolved = {r[0] for r in ledger_con.execute("SELECT DISTINCT day FROM champion_cohorts").fetchall()} if "champion_cohorts" in tables else set()
     return {"status": "LOCAL_COHORTS_AVAILABLE_NOT_INDEPENDENTLY_ATTESTED" if verified & resolved else "NOT_PROSPECTIVELY_VERIFIED",
             "attested_days": len(days & verified), "unattested_days": len(days - verified),
@@ -132,7 +137,7 @@ Only a new manifest and its independent receipt can enter ``verified_days``.
 
 
 def attach_anchor(ledger_con, day: date, *, provider: str, anchored_at_utc: datetime,
-                  receipt: str) -> None:
+                  receipt: str, key_id: str | None = None) -> None:
     """Store an external receipt; verification happens again on every read."""
     if not provider or not receipt or anchored_at_utc.tzinfo is None:
         raise champion.ChampionError("external anchor needs provider, receipt and aware timestamp")
@@ -153,13 +158,14 @@ def attach_anchor(ledger_con, day: date, *, provider: str, anchored_at_utc: date
         raise champion.ChampionError("external anchor predates the local pick record")
     ledger_con.execute(ANCHOR_SCHEMA)
     ledger_con.execute("ALTER TABLE champion_pick_anchors ADD COLUMN IF NOT EXISTS manifest_sha256 VARCHAR")
+    ledger_con.execute("ALTER TABLE champion_pick_anchors ADD COLUMN IF NOT EXISTS key_id VARCHAR")
     if ledger_con.execute("SELECT 1 FROM champion_pick_anchors WHERE day = ?", [key]).fetchone():
         raise champion.ChampionError("anchor already exists")
     ledger_con.execute("""INSERT INTO champion_pick_anchors
-        (day, provider, anchored_at_utc, picks_sha256, receipt, manifest_sha256)
-        VALUES (?,?,?,?,?,?)""",
+        (day, provider, anchored_at_utc, picks_sha256, receipt, manifest_sha256, key_id)
+        VALUES (?,?,?,?,?,?,?)""",
         [key, provider, anchored_at_utc.astimezone(timezone.utc).replace(tzinfo=None),
-         _pick_digest(ledger_con, key), receipt, manifest[1]])
+         _pick_digest(ledger_con, key), receipt, manifest[1], key_id])
 
 
 def _manifest_row(ledger_con, day: str) -> tuple[dict, str] | None:
@@ -180,14 +186,20 @@ def _manifest_row(ledger_con, day: str) -> tuple[dict, str] | None:
     return value, row[1]
 
 
-def verified_days(ledger_con, *, verifier=None) -> set[str]:
+def verified_days(
+    ledger_con,
+    *,
+    trust_roots: Mapping[tuple[str, str], TrustRoot] | None = None,
+    scheduled_days: Set[str] | None = None,
+) -> set[str]:
     """Promotion-grade days need an independently verified signed receipt.
 
-    No trusted provider is configured by default, so the fail-closed result is
-    empty. ``verifier(provider, day, digest, anchored_at_utc, receipt)`` must
-    validate an external signature and timestamp against a pinned trust root.
+    The path takes pinned ``trust_roots`` and verifies an Ed25519
+    receipt over the complete decision-manifest digest. ``scheduled_days`` is
+    the frozen cohort denominator; only dates in it can enter the numerator.
+    With no pinned roots or frozen schedule, the fail-closed result is empty.
     """
-    if verifier is None:
+    if trust_roots is None or scheduled_days is None:
         return set()
     tables = {r[0] for r in ledger_con.execute("SELECT table_name FROM information_schema.tables").fetchall()}
     if "champion_pick_anchors" not in tables:
@@ -197,19 +209,41 @@ def verified_days(ledger_con, *, verifier=None) -> set[str]:
         return set()  # legacy pick-only receipts cannot establish full decision evidence
     local = locally_verified_days(ledger_con)
     out = set()
-    for day, provider, anchored, digest, receipt, manifest_digest in ledger_con.execute(
-            "SELECT day, provider, anchored_at_utc, picks_sha256, receipt, manifest_sha256 FROM champion_pick_anchors").fetchall():
+    key_select = "key_id" if "key_id" in columns else "NULL"
+    for day, provider, anchored, digest, receipt_value, manifest_digest, key_id in ledger_con.execute(
+            "SELECT day, provider, anchored_at_utc, picks_sha256, receipt, manifest_sha256, "
+            f"{key_select} FROM champion_pick_anchors").fetchall():
         manifest = _manifest_row(ledger_con, day)
         if manifest is None:
             continue
         deadline = datetime.combine(date.fromisoformat(day) + timedelta(days=1), time(9, 15), IST)
         recorded = ledger_con.execute("SELECT recorded_at_utc FROM champion_pick_attestations WHERE day = ?",
                                       [day]).fetchone()
-        if (day in local and recorded and recorded[0] <= anchored < deadline.astimezone(timezone.utc).replace(tzinfo=None)
+        eligible = (day in local and day in scheduled_days
+                and recorded and recorded[0] <= anchored < deadline.astimezone(timezone.utc).replace(tzinfo=None)
                 and digest == _pick_digest(ledger_con, day) and manifest_digest == manifest[1]
-                and anchored < datetime.fromisoformat(manifest[0]["entry_earliest_at_utc"].replace("Z", "+00:00")).replace(tzinfo=None)):
+                and anchored < datetime.fromisoformat(manifest[0]["entry_earliest_at_utc"].replace("Z", "+00:00")).replace(tzinfo=None))
+        if eligible:
             try:
-                if verifier(provider, day, manifest_digest, anchored, receipt):
+                decision_at = datetime.fromisoformat(
+                    manifest[0]["decision_at_utc"].replace("Z", "+00:00"))
+                entry_at = datetime.fromisoformat(
+                    manifest[0]["entry_earliest_at_utc"].replace("Z", "+00:00"))
+                canonical_receipt = Receipt(
+                    provider_id=provider,
+                    key_id=key_id or "",
+                    digest_sha256=manifest_digest,
+                    anchored_at_utc=anchored.replace(tzinfo=timezone.utc),
+                    signature_b64=receipt_value,
+                )
+                accepted = classify_custody(
+                    manifest_sha256=manifest_digest,
+                    decision_at_utc=decision_at,
+                    entry_earliest_at_utc=entry_at,
+                    receipt=canonical_receipt,
+                    trust_roots=trust_roots,
+                ) is CustodyStatus.VERIFIED
+                if accepted:
                     out.add(day)
             except Exception:  # noqa: BLE001 - unavailable verifier never grants promotion
                 continue

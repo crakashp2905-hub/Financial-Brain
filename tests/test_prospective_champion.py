@@ -1,9 +1,11 @@
 from datetime import date, datetime, timezone
+import base64
 
 import duckdb
 import pytest
 
 from financial_brain.evaluation import champion, prospective
+from financial_brain.forward_edge import custody
 
 
 TODAY = date(2026, 10, 29)
@@ -49,6 +51,27 @@ def _manifest(ledger, day=TODAY):
                                       "available_at_utc": "2026-10-29T11:59:01Z"}]}
 
 
+def _attach_signed_anchor(ledger, day=TODAY):
+    cryptography = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
+    from cryptography.hazmat.primitives import serialization
+
+    manifest = prospective._manifest_row(ledger, day.isoformat())
+    assert manifest is not None
+    digest = manifest[1]
+    anchored = NOW.replace(minute=1)
+    provider, key_id = "pinned-tsa", "root-1"
+    private_key = cryptography.Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+    message = custody.receipt_message(provider, key_id, digest, anchored)
+    signature = base64.b64encode(private_key.sign(message)).decode("ascii")
+    prospective.attach_anchor(ledger, day, provider=provider, key_id=key_id,
+                              anchored_at_utc=anchored, receipt=signature)
+    roots = {(provider, key_id): custody.TrustRoot(
+        provider, key_id, base64.b64encode(public_key).decode("ascii"))}
+    return roots
+
+
 def test_forward_record_attests_write_time(monkeypatch):
     monkeypatch.setattr(champion, "record", _fake_record)
     ledger = duckdb.connect()
@@ -81,17 +104,34 @@ def test_external_anchor_is_required_and_reverified(monkeypatch):
         prospective.attach_anchor(ledger, TODAY, provider="test-signer",
                                   anchored_at_utc=anchor_time, receipt="signed-batch")
     prospective.attach_manifest(ledger, TODAY, _manifest(ledger))
-    prospective.attach_anchor(ledger, TODAY, provider="test-signer",
-                              anchored_at_utc=anchor_time, receipt="signed-batch")
-    assert prospective.verified_days(ledger) == set()
-    assert prospective.verified_days(ledger, verifier=lambda *args: args[-1] == "signed-batch") == {str(TODAY)}
-    assert prospective.audit(ledger, verifier=lambda *args: args[-1] == "signed-batch")[
+    roots = _attach_signed_anchor(ledger)
+    assert prospective.verified_days(ledger, scheduled_days={str(TODAY)}) == set()
+    assert prospective.verified_days(ledger, trust_roots=roots,
+                                     scheduled_days={str(TODAY)}) == {str(TODAY)}
+    assert prospective.audit(ledger, trust_roots=roots, scheduled_days={str(TODAY)})[
         "independently_verified_days"] == 1
-    def unavailable(*args):
-        raise ConnectionError("external verifier unavailable")
-    assert prospective.verified_days(ledger, verifier=unavailable) == set()
     ledger.execute("UPDATE champion_pick_anchors SET receipt = 'tampered'")
-    assert prospective.verified_days(ledger, verifier=lambda *args: args[-1] == "signed-batch") == set()
+    assert prospective.verified_days(ledger, trust_roots=roots,
+                                     scheduled_days={str(TODAY)}) == set()
+
+
+def test_canonical_custody_verifier_requires_pinned_signature_and_scheduled_day(monkeypatch):
+    monkeypatch.setattr(champion, "record", _fake_record)
+    ledger = duckdb.connect()
+    prospective.record(_research(), ledger, TODAY, now=NOW)
+    prospective.attach_manifest(ledger, TODAY, _manifest(ledger))
+    roots = _attach_signed_anchor(ledger)
+
+    assert prospective.verified_days(ledger, trust_roots=roots) == set()
+    assert prospective.verified_days(ledger, trust_roots=roots,
+                                     scheduled_days={TODAY.isoformat()}) == {TODAY.isoformat()}
+    assert prospective.verified_days(ledger, trust_roots=roots,
+                                     scheduled_days={"2026-10-30"}) == set()
+    assert prospective.verified_days(ledger, trust_roots={},
+                                     scheduled_days={TODAY.isoformat()}) == set()
+    assert prospective.audit(ledger, trust_roots=roots,
+                             scheduled_days={TODAY.isoformat()})[
+        "independently_verified_days"] == 1
 
 
 def test_manifest_mutation_or_pick_only_legacy_anchor_never_verifies(monkeypatch):
@@ -99,16 +139,17 @@ def test_manifest_mutation_or_pick_only_legacy_anchor_never_verifies(monkeypatch
     ledger = duckdb.connect()
     prospective.record(_research(), ledger, TODAY, now=NOW)
     prospective.attach_manifest(ledger, TODAY, _manifest(ledger))
-    prospective.attach_anchor(ledger, TODAY, provider="test-signer",
-                              anchored_at_utc=NOW.replace(minute=1), receipt="signed-batch")
-    verifier = lambda *args: args[-1] == "signed-batch"
-    assert prospective.verified_days(ledger, verifier=verifier) == {str(TODAY)}
+    roots = _attach_signed_anchor(ledger)
+    assert prospective.verified_days(ledger, trust_roots=roots,
+                                     scheduled_days={str(TODAY)}) == {str(TODAY)}
     ledger.execute("UPDATE champion_decision_manifests SET manifest_json = '{}' WHERE day = ?", [str(TODAY)])
-    assert prospective.verified_days(ledger, verifier=verifier) == set()
+    assert prospective.verified_days(ledger, trust_roots=roots,
+                                     scheduled_days={str(TODAY)}) == set()
     ledger.execute("UPDATE champion_decision_manifests SET manifest_json = ? WHERE day = ?",
                    [prospective.canonical_bytes(_manifest(ledger)).decode(), str(TODAY)])
     ledger.execute("UPDATE champion_pick_anchors SET manifest_sha256 = NULL")
-    assert prospective.verified_days(ledger, verifier=verifier) == set()
+    assert prospective.verified_days(ledger, trust_roots=roots,
+                                     scheduled_days={str(TODAY)}) == set()
 
 
 def test_forward_record_rejects_backfill_and_future_outcome(monkeypatch):

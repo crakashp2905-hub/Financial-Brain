@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0108",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_prospective_champion.py",
+    "result": "5 passed, 3 skipped because cryptography is not installed in the local environment; Ruff and mypy passed for prospective.py."
+  },
+  "implemented": [
+    "verified_days now requires a frozen scheduled-date set and pinned trust roots; absent either, the independent numerator is empty.",
+    "Promotion eligibility uses the canonical custody verifier against the full canonical decision-manifest SHA-256, Ed25519 signature, decision time, and earliest entry time.",
+    "Audit accepts the same schedule and trust roots, so out-of-schedule dates cannot enter the independently verified count.",
+    "Removed arbitrary verifier callbacks that could return true without validating the canonical receipt."
+  ],
+  "blockers": [
+    "PE-0103 still stores date ranges rather than an authoritative explicit exchange-session list, so the caller cannot yet bind production verification to a frozen exchange calendar.",
+    "No owner-approved external timestamp provider or pinned production trust root is configured; tests do not constitute independent market-session evidence."
+  ],
+  "source_sha256": {
+    "src/financial_brain/evaluation/prospective.py": "4d96e4adeecefa2569e538416f99ce6825768f02ad514b757646638312fd7253",
+    "src/financial_brain/forward_edge/custody.py": "0a1839d3aab1212a31aae145b62f40ef4358178061c82c6be82609b5d06a0dab",
+    "tests/test_prospective_champion.py": "14ede7e0b4b80c8efd75b7a4061b6e81475e5a685cde92641c7df0eff93a6d41",
+    "docs/edge-program/source-inventory.json": "3071acf3a0aee43f4bc6fa35c62351765c4963a1c899816e9f63df7a4bcb1930"
+  }
+}
