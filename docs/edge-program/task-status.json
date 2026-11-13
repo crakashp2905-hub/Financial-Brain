@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 58,
-  "unrecorded_tasks": 160,
+  "recorded_tasks": 60,
+  "unrecorded_tasks": 158,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1183,6 +1183,54 @@
       "test_result": "92 passed (exit code 0); Ruff and mypy on the new options paper module passed. Expiry flows reconcile premium cash, spread reserve, both legs and physical/cash settlement; journal restart and duplicate commands are verified.",
       "evidence_sha256": "942c35807c310feba52db386ccd5d70764ec11130f7af1ad12138ff94649309f",
       "blockers": []
+    },
+    {
+      "id": "PE-0027",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/offline_paper.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/cli.py",
+        "tests/test_forward_offline_paper_cli.py",
+        "docs/forward-edge/offline-paper-cli.md",
+        "docs/edge-program/pe-0027-offline-real-paper-cli-evidence.json"
+      ],
+      "tests": [
+        "test_real_paper_archive_cli_runs_without_network_or_physical_orders",
+        "test_resume_after_interrupted_session_reuses_journal_events_and_never_duplicates_fill",
+        "test_archive_requires_same_exchange_date_timezone_and_source_lineage",
+        "test_real_paper_cli_requires_explicit_paper_confirmation",
+        "tests/test_forward_session_runner.py"
+      ],
+      "test_result": "29 passed (exit code 0); Ruff and mypy on the offline CLI module passed. Local archive replay and recovery are fail-closed, network-denied and order-free; no strategy adapter or OMS fills are asserted.",
+      "evidence_sha256": "eb5238777106e0171af014a4cb50a50905ff49c2378b2b1a2b4867b7248e8274",
+      "blockers": [
+        "A registered strategy adapter and canonical paper-account fill/ledger path are not wired; the current command completes as NO_TRADE."
+      ]
+    },
+    {
+      "id": "PE-0028",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/offline_paper.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/cli.py",
+        "tests/test_forward_offline_paper_cli.py",
+        "docs/forward-edge/offline-paper-cli.md",
+        "docs/edge-program/pe-0028-offline-session-resume-evidence.json"
+      ],
+      "tests": [
+        "test_real_paper_archive_cli_runs_without_network_or_physical_orders",
+        "test_resume_after_interrupted_session_reuses_journal_events_and_never_duplicates_fill",
+        "test_archive_requires_same_exchange_date_timezone_and_source_lineage",
+        "test_real_paper_cli_requires_explicit_paper_confirmation",
+        "tests/test_forward_session_runner.py"
+      ],
+      "test_result": "29 passed (exit code 0); Ruff and mypy on the offline CLI module passed. Local archive replay and recovery are fail-closed, network-denied and order-free; no strategy adapter or OMS fills are asserted.",
+      "evidence_sha256": "bf9ef3aaf750b50b8311a8ff5698613a83b52bdea3a24dce9a349c58dfdb6db3",
+      "blockers": [
+        "CLI recovery is demonstrated for no-trade sessions; a strategy-generated fill plus OMS cash/position reconciliation has not yet been connected end to end."
+      ]
     }
   ]
 }
