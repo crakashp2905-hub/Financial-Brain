@@ -181,8 +181,8 @@
         "test_golden_file_covers_every_fixture",
         "test_session_signatures_match_the_canonical_hashes"
       ],
-      "test_result": "Python 3.13.5, PYTHONHASHSEED=0, Asia/Kolkata CI environment, and deterministic golden fixture signatures are pinned or tested. The exact dependency lock exists, but CI still installs from broad pyproject extras and no clean offline install has been verified on both platforms.",
-      "evidence_sha256": "57fcca2e6e9f1bb8a9b24e5c322bee870930cc0de56c6e311f3372d198d44780",
+      "test_result": "Python 3.13.18, PYTHONHASHSEED=0, Asia/Kolkata CI environment, and deterministic golden fixture signatures are pinned or tested. The exact dependency lock exists, but CI still installs from broad pyproject extras and no clean offline install has been verified on both platforms.",
+      "evidence_sha256": "c09d69133a0160fc7b630d8ba19ae8e64cb68cf358b7be63af7d637c2317f7db",
       "blockers": [
         "Switch CI to a complete platform-aware lock and prove a clean offline wheelhouse install plus fixture hashes on Windows and Linux"
       ]

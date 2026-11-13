@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "status": "PARTIAL",
   "python_version_file": ".python-version",
-  "python_version": "3.13.5",
+  "python_version": "3.13.18",
   "ci_installs_pinned_python": true,
   "python_hash_seed": "0",
   "stochastic_seed_policy": "Per-experiment seeds must be frozen in experiment identity; CI does not claim a global RNG seed for all research code.",
