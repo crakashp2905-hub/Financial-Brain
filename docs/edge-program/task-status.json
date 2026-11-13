@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 50,
-  "unrecorded_tasks": 168,
+  "recorded_tasks": 51,
+  "unrecorded_tasks": 167,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -700,6 +700,27 @@
       "blockers": [
         "Authorized observed broker fills are unavailable; no actual calibration claim.",
         "Output is not wired to the execution-model registry or promotion gate."
+      ]
+    },
+    {
+      "id": "PE-0082",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "tests/test_forward_edge_f08.py",
+        "tests/test_forward_edge_f13.py",
+        "docs/edge-program/pe-0082-fill-cost-stress-evidence.json"
+      ],
+      "tests": [
+        "test_each_gate_independently_blocks_promotion",
+        "test_missing_cost_by_fill_rate_grid_blocks_promotion_as_insufficient_evidence",
+        "test_report_carries_coverage_benchmark_missing_data_and_never_promotes"
+      ],
+      "test_result": "Focused evidence gate and fixture report suites: 63 passed; Ruff, mypy and diff checks passed. A full 1x/1.5x/2x cost by 100/75/50% fill-rate matrix is required; missing cells block promotion and any non-positive cell fails the candidate.",
+      "evidence_sha256": "fcf46e9d88d58074adbf1f58bdae9ff05f3684d0900246304af9a57e23a96b6d",
+      "blockers": [
+        "No unified scenario report builder derives the matrix from all intentions, including missed and partial fills.",
+        "No observed forward fills are available to calibrate the grid."
       ]
     },
     {
