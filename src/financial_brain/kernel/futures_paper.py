@@ -40,7 +40,7 @@ class FuturesContract:
     def __post_init__(self) -> None:
         if not self.contract_id.strip() or not self.symbol.strip() or not self.source_id.strip():
             raise FuturesPaperError("contract identity and source id are required")
-        if isinstance(self.expiry, type(date.today())) is False:
+        if type(self.expiry) is not date:
             raise FuturesPaperError("contract expiry must be a date")
         for name, value in (("tick", self.tick), ("multiplier", self.multiplier),
                             ("initial margin", self.initial_margin_per_lot),

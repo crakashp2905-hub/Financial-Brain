@@ -3,8 +3,8 @@
   "task_id": "PE-0094",
   "status": "DONE",
   "test": {
-    "command": "python -m pytest -q tests/test_kernel_futures_paper.py tests/test_kernel_futures_analytics.py tests/test_kernel_sdk_validation_futures_fx.py tests/test_kernel_portfolio.py tests/test_kernel_ledger_guards_ticks.py",
-    "result": "49 passed (exit code 0) across the futures paper account, futures analytics/contract validation, portfolio and ledger regression suites; Ruff and mypy on the new futures paper module passed."
+    "command": "python -m pytest -q tests/test_kernel_architecture.py tests/test_kernel_futures_paper.py tests/test_kernel_options_paper.py tests/test_kernel_futures_analytics.py tests/test_kernel_sdk_validation_futures_fx.py tests/test_kernel_portfolio.py tests/test_kernel_ledger_guards_ticks.py",
+    "result": "55 passed (exit code 0); Ruff and mypy on the futures paper module passed. CI architecture failure on the initial patch was fixed by replacing its date.today() type check with a wall-clock-free exact date type check."
   },
   "implemented": [
     "A durable single-currency futures paper account accepts owner-supplied contract terms with source identifiers and SHA-256 provenance; no Indian exchange lot, tick, multiplier or margin constants are hardcoded.",

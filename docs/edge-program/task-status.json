@@ -1163,8 +1163,8 @@
         "test_trade_margin_gate_roll_lot_compatibility_and_expiry",
         "test_margin_rejects_trade_without_appending_and_blocks_stale_order"
       ],
-      "test_result": "49 passed (exit code 0) across the futures paper account, futures analytics/contract validation, portfolio and ledger regression suites; Ruff and mypy on the new futures paper module passed. Cash and position reconcile over consecutive settlements, roll and expiry; restart and duplicate-event handling are covered.",
-      "evidence_sha256": "623b83b10d5a154458fdedff750e70772154990bb694f4890b3c76e6cb4210be",
+      "test_result": "55 passed (exit code 0); Ruff and mypy on the futures paper module passed. CI architecture failure on the initial patch was fixed by replacing its date.today() type check with a wall-clock-free exact date type check. Cash and position reconcile over consecutive settlements, roll and expiry; restart and duplicate-event handling are covered.",
+      "evidence_sha256": "22735a25d85711c7767661bcccfdfe83122ef509402e7580c6c5ed2e8e18f84e",
       "blockers": []
     },
     {
