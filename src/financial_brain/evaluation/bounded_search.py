@@ -21,6 +21,7 @@ import pandas as pd
 from . import rule_systems as RS
 from . import family_validation as FV
 from .script_mechanisms import TRAIN_END, daily_signals
+from ..forward_edge.research_library import ResearchVariantJournal, source_sha256
 
 SEED = 20261024
 TRAIN_SPLIT = date(2018, 12, 31)
@@ -255,36 +256,53 @@ def multiplicity_diagnostic(results: pd.DataFrame, catalogue: list[Variant]) -> 
 def run(*, basis_path: Path = Path("data/basis_contracts.parquet"),
         research_db: Path = Path("data/financial_brain.duckdb"),
         sample_size: int = DEFAULT_SYMBOLS, random_budget: int = 48,
-        seed: int = SEED) -> dict:
-    """Read-only search; no trial, alerts, orders or persistent output."""
+        seed: int = SEED, audit_path: Path = Path("data/bounded_search_journal.jsonl")) -> dict:
+    """Run a frozen research-only search and durably record every declared variant outcome."""
     symbols = choose_symbols(pd.read_parquet(basis_path), n=sample_size, seed=seed)
     catalogue = variants(seed=seed, random_budget=random_budget)
-    panel, market = load_data(symbols, db=research_db)
-    if not panel:
-        raise ValueError("no sampled symbols have sufficient training data")
-    events_ = evaluate(panel, market, catalogue)
-    result = summarize(events_, catalogue)
-    winner = result["selected_on_training"]
-    if winner:
-        result["selected_variant_diagnostics"] = selected_diagnostics(events_, winner["variant"])
-        selected = [v for v in catalogue if v.name == winner["variant"]]
-        stress = summarize(evaluate(panel, market, selected, cost=STRESS_COST), selected)
-        result["selected_variant_stress_cost"] = stress["all_variants"][0]["internal_validation"]
-    else:
-        result["selected_variant_stress_cost"] = None
-        result["selected_variant_diagnostics"] = None
-    result["multiplicity_diagnostic"] = multiplicity_diagnostic(events_, catalogue)
-    result.update({"seed": seed, "sampled_symbols": symbols, "usable_symbols": sorted(panel),
-                   "round_trip_cost": BASE_COST, "stress_round_trip_cost": STRESS_COST,
-                   "benchmark": "same-date, same-horizon equal-weight 2016-start F&O stock cohort net of same cost",
-                   "excluded": [
-                       "options: no sealed historical executable two-sided book",
-                       "intraday liquidity filter: no sealed decision-time quote/depth and frozen baseline P&L",
-                       "pairs, carry and portfolio overlays: not comparable under single-stock entry/exit convention"],
-                   "limitations": "2016-start F&O convenience sample; adjusted factors are not audited PIT; "
-                                  "entry events reinterpret 11 fixed position rules; overlapping trades and "
-                                  "capital constraints are not modelled. Not a deployable strategy."})
-    return result
+    journal = ResearchVariantJournal(audit_path)
+    audit_run_id = journal.open_run(
+        mechanism_id="bounded_daily_random_search_v1",
+        mechanism_source_sha256=source_sha256(Path(__file__)),
+        variants=[{"variant_id": v.name, "family": v.family, "parameters": asdict(v)} for v in catalogue],
+        seed=seed)
+    digests = journal.variant_digests(audit_run_id)
+    try:
+        panel, market = load_data(symbols, db=research_db)
+        if not panel:
+            raise ValueError("no sampled symbols have sufficient training data")
+        events_ = evaluate(panel, market, catalogue)
+        result = summarize(events_, catalogue)
+        winner = result["selected_on_training"]
+        if winner:
+            result["selected_variant_diagnostics"] = selected_diagnostics(events_, winner["variant"])
+            selected = [v for v in catalogue if v.name == winner["variant"]]
+            stress = summarize(evaluate(panel, market, selected, cost=STRESS_COST), selected)
+            result["selected_variant_stress_cost"] = stress["all_variants"][0]["internal_validation"]
+        else:
+            result["selected_variant_stress_cost"] = None
+            result["selected_variant_diagnostics"] = None
+        result["multiplicity_diagnostic"] = multiplicity_diagnostic(events_, catalogue)
+        result.update({"seed": seed, "sampled_symbols": symbols, "usable_symbols": sorted(panel),
+                       "round_trip_cost": BASE_COST, "stress_round_trip_cost": STRESS_COST,
+                       "benchmark": "same-date, same-horizon equal-weight 2016-start F&O stock cohort net of same cost",
+                       "excluded": [
+                           "options: no sealed historical executable two-sided book",
+                           "intraday liquidity filter: no sealed decision-time quote/depth and frozen baseline P&L",
+                           "pairs, carry and portfolio overlays: not comparable under single-stock entry/exit convention"],
+                       "limitations": "2016-start F&O convenience sample; adjusted factors are not audited PIT; "
+                                      "entry events reinterpret 11 fixed position rules; overlapping trades and "
+                                      "capital constraints are not modelled. Not a deployable strategy."})
+        for item in result["all_variants"]:
+            journal.record_result(audit_run_id, digests[item["variant"]], outcome="EVALUATED", details=item)
+        journal.close_run(audit_run_id)
+        result["research_audit_run_id"] = audit_run_id
+        result["research_audit_path"] = str(audit_path)
+        return result
+    except Exception as exc:
+        journal.abort_pending(audit_run_id, reason=f"{type(exc).__name__}: {exc}")
+        journal.close_run(audit_run_id)
+        raise
 
 
 def main(argv: list[str] | None = None) -> int:
