@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 76,
-  "unrecorded_tasks": 142,
+  "recorded_tasks": 77,
+  "unrecorded_tasks": 141,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1581,6 +1581,29 @@
       "blockers": [
         "No authorized point-in-time Indian equity panel has been assessed for actual low-volatility/ATR overlap.",
         "Overlap is not alpha or investability evidence; production evaluation still needs eligibility, costs and liquidity controls."
+      ]
+    },
+    {
+      "id": "PE-0051",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/target_portfolio.py",
+        "docs/edge-program/pe-0051-target-portfolio-evidence.md",
+        "docs/edge-program/pe-0051-target-portfolio-evidence.json",
+        "tests/test_target_portfolio.py"
+      ],
+      "tests": [
+        "test_scheduled_rebalance_returns_bounded_target_weights_and_cash",
+        "test_unscheduled_observation_preserves_previous_book",
+        "test_turnover_cost_can_keep_a_paper_book_in_cash",
+        "test_cash_days_count_explicit_cash_and_rejects_bad_ledgers",
+        "test_invalid_covariance_and_previous_cash_floor_fail_closed"
+      ],
+      "test_result": "5 focused tests passed; Ruff and mypy passed. Frozen-date portfolio targets enforce risk, name, cash, turnover and fee constraints and preserve the existing book off schedule.",
+      "evidence_sha256": "ff546b901672795a840b8e4d0ea87e9d6d4d90e4b92755ad755653346cd900ba",
+      "blockers": [
+        "The planner is not yet wired into the forward session runner or paper ledger.",
+        "No prospective Indian-market forecast/covariance cohort or realized cash-day performance evidence exists."
       ]
     }
   ]
