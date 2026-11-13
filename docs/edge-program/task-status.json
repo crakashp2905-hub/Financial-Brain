@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 74,
-  "unrecorded_tasks": 144,
+  "recorded_tasks": 75,
+  "unrecorded_tasks": 143,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1541,6 +1541,25 @@
       "blockers": [
         "Approval metadata is not cryptographically authenticated as a human signature.",
         "Approval and eligibility are not durably journaled atomically; legacy paper writers still need registry enforcement."
+      ]
+    },
+    {
+      "id": "PE-0049",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/exploratory_families.py",
+        "src/financial_brain/features/indicators.py",
+        "docs/edge-program/pe-0049-slow-factor-exploratories.md",
+        "docs/edge-program/pe-0049-slow-factor-evidence.json",
+        "tests/test_forward_edge_f02.py"
+      ],
+      "tests": [
+        "test_pe49_slow_factor_exploratories_are_distinct_and_non_promotable"
+      ],
+      "test_result": "28 F02 tests passed; Ruff, mypy and diff checks passed. Separate, non-promotable exploratory specs are parameter-hashed and leave failed M1 immutable.",
+      "evidence_sha256": "69ff09206e6fa116f35e6fa8d67cf50cd6d836320e8441513e1e697b6e8c6ef9",
+      "blockers": [
+        "No point-in-time adapter, frozen prospective charter, costs/benchmark evaluation, or multiplicity/overlap analysis has been completed."
       ]
     }
   ]

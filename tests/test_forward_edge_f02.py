@@ -12,6 +12,7 @@ import pytest
 from financial_brain.forward_edge import registry as R
 from financial_brain.forward_edge.approvals import Approval
 from financial_brain.forward_edge.charter import EvaluationIdentity, ExperimentCharter
+from financial_brain.forward_edge.exploratory_families import exploratory_specs
 from financial_brain.forward_edge.registry import Benchmark, Registry, RegistryError, Status, StrategySpec
 
 REPO = Path(__file__).resolve().parents[1]
@@ -97,6 +98,15 @@ def test_registry_rejects_renamed_retry_of_failed_parameter_hash() -> None:
     reg.register(_spec(strategy_id="M1-new-parameters", family="momentum_challenger",
                        status=Status.EXPLORATORY,
                        parameter_sha256=R.parameter_sha256({"lookback": 40, "holding_sessions": 5})))
+
+
+def test_pe49_slow_factor_exploratories_are_distinct_and_non_promotable() -> None:
+    specs = exploratory_specs()
+    assert {spec.strategy_id for spec in specs} == {"PE49-CS-MOM-12-1", "PE49-CS-52W-HIGH"}
+    assert all(spec.status is Status.EXPLORATORY and not spec.can_place_paper_intents for spec in specs)
+    assert all(spec.strategy_id != "M1" and spec.source_lineage.endswith("exploratory PE-0049")
+               for spec in specs)
+    assert len({spec.parameter_sha256 for spec in specs}) == len(specs)
 
 
 def test_paper_enrolment_needs_a_human_and_has_a_benchmark() -> None:
