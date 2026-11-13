@@ -1,5 +1,5 @@
 """Read-only Kite quote adapter contracts; no network or credentials required."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -8,6 +8,7 @@ from financial_brain.ingest.kite_live import forward_events
 
 
 RECEIPT = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
+INGESTED = datetime(2026, 11, 12, 4, 0, 0, 125000, tzinfo=timezone.utc)
 
 
 def test_full_quote_becomes_timestamped_forward_event():
@@ -20,11 +21,12 @@ def test_full_quote_becomes_timestamped_forward_event():
                               "depth": {"buy": [{"price": 1500.4, "quantity": 50}],
                                         "sell": [{"price": 1500.6, "quantity": 40}]}}}
 
-    event, = forward_events(["INFY"], quote_fn=quote, received_at=RECEIPT)
+    event, = forward_events(["INFY"], quote_fn=quote, received_at=RECEIPT, ingested_at=INGESTED)
     assert calls == [(["NSE:INFY"], "full")]
     assert event.instrument == "NSE:INFY"
     assert event.event_utc == datetime(2026, 11, 12, 3, 59, 59, tzinfo=timezone.utc)
     assert event.received_utc == event.available_utc == RECEIPT
+    assert event.ingested_utc == INGESTED
     payload = dict(event.payload)
     assert payload["exchange"] == "NSE"
     assert payload["source"] == "kite_connect"
@@ -54,6 +56,11 @@ def test_duplicate_symbols_and_naive_receipt_rejected():
         forward_events(["INFY", "INFY"], quote_fn=lambda *_: {})
     with pytest.raises(DataError, match="timezone-aware"):
         forward_events(["INFY"], quote_fn=lambda *_: {}, received_at=datetime(2026, 11, 12))
+    calls = []
+    with pytest.raises(DataError, match="ingest clock"):
+        forward_events(["INFY"], quote_fn=lambda *args: calls.append(args) or {}, received_at=RECEIPT,
+                       ingested_at=RECEIPT - timedelta(microseconds=1))
+    assert calls == []
 
 
 def test_ltp_only_is_analyzable_but_not_fill_capable():

@@ -78,6 +78,27 @@ def test_market_polls_can_be_durably_appended_before_session_finalization(tmp_pa
     assert decision_counts == [1]
 
 
+def test_ingest_clock_and_raw_source_hash_survive_durable_event_round_trip(tmp_path):
+    path = tmp_path / "ingest-lineage.jsonl"
+    runner = ForwardSessionRunner(path)
+    event = NormalizedEvent(
+        "QUOTE", "NSE:INFY", NOW - timedelta(seconds=3), NOW - timedelta(seconds=2),
+        NOW - timedelta(seconds=2), (("raw_sha256", "d" * 64), ("source", "kite_connect")),
+        ingested_utc=NOW - timedelta(seconds=1),
+    )
+    assert runner.append_events(_config(), [event]) == 1
+    record, = [r for r in DurableJournal(path).records() if r["t"] == "MARKET_EVENT"]
+    assert record["event"]["ingested_utc"] == (NOW - timedelta(seconds=1)).isoformat()
+    assert dict(tuple(item) for item in record["event"]["payload"])["raw_sha256"] == "d" * 64
+    restarted = ForwardSessionRunner(path)
+    result = restarted.run(_config(), [], decision_at=NOW,
+                           decision_fn=lambda visible: {"side": "NONE", "visible": len(visible)},
+                           risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
+    assert result["decision"]["visible"] == 1
+    replayed, = [r for r in DurableJournal(path).records() if r["t"] == "MARKET_EVENT"]
+    assert replayed["event"]["ingested_utc"] == record["event"]["ingested_utc"]
+
+
 def test_closed_session_is_replayed_without_reexecuting(tmp_path):
     journal_path = tmp_path / "session.jsonl"
     runner = ForwardSessionRunner(journal_path)

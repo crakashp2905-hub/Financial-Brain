@@ -57,6 +57,7 @@ def snapshot(con, symbols: list[str], *, quote_fn=None, now: datetime | None = N
 
 
 def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime | None = None,
+                   ingested_at: datetime | None = None,
                    rejections_out: list[dict] | None = None):
     """Capture read-only Kite full quotes as forward-edge events.
 
@@ -71,11 +72,17 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
     if not symbols or len(set(symbols)) != len(symbols):
         raise DataError("symbols must be nonempty and unique")
     keys = [f"NSE:{symbol}" for symbol in symbols]
-    raw = (quote_fn or kd.quote)(keys, "full")
     receipt = received_at or datetime.now(timezone.utc)
     if receipt.tzinfo is None or receipt.utcoffset() is None:
         raise DataError("received_at must be timezone-aware")
     receipt = receipt.astimezone(timezone.utc)
+    ingested = ingested_at or datetime.now(timezone.utc)
+    if ingested.tzinfo is None or ingested.utcoffset() is None:
+        raise DataError("ingested_at must be timezone-aware")
+    ingested = ingested.astimezone(timezone.utc)
+    if ingested < receipt:
+        raise DataError("ingest clock cannot precede source availability")
+    raw = (quote_fn or kd.quote)(keys, "full")
     events = []
 
     def reject(key: str, raw_quote: object, reason: str) -> None:
@@ -131,6 +138,7 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
             events.append(NormalizedEvent(
                 kind="QUOTE", instrument=key, event_utc=stamp.astimezone(timezone.utc),
                 received_utc=receipt, available_utc=receipt, payload=tuple(sorted(payload)),
+                ingested_utc=ingested,
             ))
         except DataError:
             reject(key, quote, "INVALID_EVENT_CLOCK_ORDER")

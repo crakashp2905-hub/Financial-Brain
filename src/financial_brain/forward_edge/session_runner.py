@@ -277,7 +277,9 @@ class ForwardSessionRunner:
             event_utc=datetime.fromisoformat(row["event_utc"]),
             received_utc=datetime.fromisoformat(row["received_utc"]),
             available_utc=datetime.fromisoformat(row["available_utc"]),
-            payload=tuple(tuple(item) for item in row["payload"])) for row in old_events]
+            payload=tuple(tuple(item) for item in row["payload"]),
+            ingested_utc=datetime.fromisoformat(row["ingested_utc"]) if row.get("ingested_utc") else None)
+            for row in old_events]
         last_available = max((self._utc(e.available_utc) for e in observed), default=None)
         self._ensure_state(journal, config.session_id, "OPEN")
         observed.sort(key=lambda e: (self._utc(e.available_utc), e.content_sha256()))
@@ -461,8 +463,11 @@ class ForwardSessionRunner:
 
     @classmethod
     def _event_dict(cls, event: NormalizedEvent) -> dict:
-        return {"kind": event.kind, "instrument": event.instrument,
+        result = {"kind": event.kind, "instrument": event.instrument,
                 "event_utc": cls._utc(event.event_utc).isoformat(),
                 "received_utc": cls._utc(event.received_utc).isoformat(),
                 "available_utc": cls._utc(event.available_utc).isoformat(),
                 "payload": [list(item) for item in event.payload]}
+        if event.ingested_utc is not None:
+            result["ingested_utc"] = cls._utc(event.ingested_utc).isoformat()
+        return result

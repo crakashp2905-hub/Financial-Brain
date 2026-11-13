@@ -433,15 +433,19 @@
       "sources": [
         "src/financial_brain/ingest/kite_live.py",
         "src/financial_brain/forward_edge/market_data.py",
-        "tests/test_kite_forward_events.py"
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_kite_forward_events.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/pe-0032-ingest-lineage-evidence.json"
       ],
       "tests": [
-        "test_full_quote_becomes_timestamped_forward_event"
+        "test_full_quote_becomes_timestamped_forward_event",
+        "test_ingest_clock_and_raw_source_hash_survive_durable_event_round_trip"
       ],
-      "test_result": "Raw source payload hash and normalized source/exchange/receive/availability fields are tested",
-      "evidence_sha256": null,
+      "test_result": "Normalized Kite events now carry a distinct ingest timestamp in addition to source event, receive, and availability clocks. Ingest time and raw source hash are included in the content identity and survive durable journal restart/replay. Kite adapter and runner lineage tests pass.",
+      "evidence_sha256": "c4fa7e17d7400c11747bd46a69ea723e2761c3ffdd9cc1be39f59e4002d2dd66",
       "blockers": [
-        "separate ingest clock and durable raw-to-fill lineage are not implemented"
+        "Raw source payload bytes are not archived and linked to fill receipts; data retention rights and an authorized market capture remain unverified"
       ]
     },
     {

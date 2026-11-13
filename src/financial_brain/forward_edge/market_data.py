@@ -1,6 +1,6 @@
 """Market-session capture and data integrity (FE-0033 .. FE-0044). Offline: fixtures only, no live feed.
 
-* Normalized events keep UTC event, received, available and decision clocks, and reject impossible ordering (FE-0033).
+* Normalized events keep UTC event, received, available, and optional ingest clocks; decisions use availability time.
 * Venue calendar from an explicit, versioned file; no weekday guessing (FE-0034). The real NSE holiday list is not
   bundled here: that is a named input, see tracker BLK-DATA / calendar note.
 * Fixture feed replays normalized events; the live Kite adapter is not implemented (FE-0035, blocked).
@@ -41,6 +41,7 @@ class NormalizedEvent:
     received_utc: datetime
     available_utc: datetime
     payload: tuple[tuple[str, str], ...] = ()
+    ingested_utc: datetime | None = None
 
     def __post_init__(self) -> None:
         if self.kind not in KINDS:
@@ -50,13 +51,18 @@ class NormalizedEvent:
         a = _aware(self.available_utc, "available")
         if not (e <= r <= a):
             raise DataError("clocks must satisfy event <= received <= available")
+        if self.ingested_utc is not None and _aware(self.ingested_utc, "ingested") < a:
+            raise DataError("ingest clock cannot precede source availability")
 
     def content_sha256(self) -> str:
-        body = json.dumps({"kind": self.kind, "instrument": self.instrument,
+        body_obj = {"kind": self.kind, "instrument": self.instrument,
                            "event": _aware(self.event_utc, "e").isoformat(),
                            "received": _aware(self.received_utc, "r").isoformat(),
                            "available": _aware(self.available_utc, "a").isoformat(),
-                           "payload": [list(p) for p in self.payload]}, sort_keys=True, separators=(",", ":"))
+                           "payload": [list(p) for p in self.payload]}
+        if self.ingested_utc is not None:
+            body_obj["ingested"] = _aware(self.ingested_utc, "ingested").isoformat()
+        body = json.dumps(body_obj, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 

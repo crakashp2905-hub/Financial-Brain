@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0032",
+  "status": "PARTIAL",
+  "captured_at_utc": "2026-11-13T05:03:49Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/market_data.py": "8c3ecd9f1e3be008063a594a38a84d8fe4b40a33d11e2cd1d8b7cb263c97e60c",
+    "src/financial_brain/ingest/kite_live.py": "f9fab147d65bd3de4ea0d1e5e4895d3b23be8c5a0f08820d503dc3043c743feb",
+    "src/financial_brain/forward_edge/session_runner.py": "39ca1c1bbcd7baa9c124ae27f89f589f4900b8260b6af140d3373651946bfdca",
+    "tests/test_kite_forward_events.py": "e3da242104de47cdbcd4cb3283c15cdd2f38958408300eaaf1b53293937771c2",
+    "tests/test_forward_session_runner.py": "fab89604738edcb6bf6cc3032160fc22d90fa52f21fce0c9fe318531856afeab"
+  },
+  "tests": {
+    "command": "python -m pytest -q tests/test_kite_forward_events.py tests/test_forward_session_runner.py",
+    "result": "30 passed"
+  },
+  "verified": [
+    "Kite event keeps source event, receive, availability, and separate ingest clocks",
+    "Raw source payload SHA-256 accompanies normalized event",
+    "Ingest clock and raw source hash persist through durable journal restart and replay",
+    "Ingest-before-availability is rejected before the quote provider is called"
+  ],
+  "blockers": [
+    "Raw source payload bytes are not archived and linked to simulated fill receipts",
+    "No authorized live-market capture or verified retention-rights record exists"
+  ],
+  "secrets_or_market_payloads_included": false
+}
