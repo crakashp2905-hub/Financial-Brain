@@ -127,6 +127,11 @@ class PaperAccount:
         return self.oms.available(self.account_id)
 
     @property
+    def risk_latched(self) -> bool:
+        """Whether persistent risk state currently blocks new paper intents."""
+        return self._risk_latched
+
+    @property
     def realized_pnl(self) -> Decimal:
         # Credit balances are positive economic P&L; ledger.balance is signed debits-minus-credits.
         return -self.ledger.balance(f"realized_pnl:{self.account_id}", self.currency)
@@ -236,10 +241,16 @@ class PaperAccount:
             self._last_flow_at: datetime | None = None
             self._nav_snapshots: list[dict] = []
             self._nav_snapshot_ids: dict[str, tuple] = {}
+            self._risk_latched = False
+            self._risk_incident_id: str | None = None
+            self._risk_reason: str | None = None
+            self._risk_occurred_at: datetime | None = None
             prior_records = [records[0]]
             for r in records[1:]:
                 t = r["t"]
                 if t == "INTENT":
+                    if self._risk_latched:
+                        raise PaperAccountError("journal contains a new intent after the risk latch tripped")
                     self.oms.submit_intent(
                         client_id=r["client_id"], account=self.account_id, side=r["side"],
                         quantity=r["quantity"], limit=Decimal(r["limit"]) if r["limit"] is not None else None,
@@ -275,6 +286,42 @@ class PaperAccount:
                     self._apply_instrument_status(r)
                 elif t == "DELISTING_SETTLEMENT":
                     self._apply_delisting_settlement(r)
+                elif t == "RISK_LATCH":
+                    incident_id = r.get("incident_id")
+                    if not isinstance(incident_id, str) or not incident_id:
+                        raise PaperAccountError("risk latch event needs an incident id")
+                    if r.get("state") == "TRIPPED":
+                        if self._risk_latched or not str(r.get("reason", "")).strip():
+                            raise PaperAccountError("invalid or duplicate risk latch trip")
+                        try:
+                            occurred = datetime.fromisoformat(str(r["occurred_at"]).replace("Z", "+00:00"))
+                        except (KeyError, ValueError) as exc:
+                            raise PaperAccountError("risk latch timestamp is invalid") from exc
+                        if occurred.tzinfo is None or occurred.utcoffset() is None:
+                            raise PaperAccountError("risk latch timestamp must be timezone-aware")
+                        self._risk_latched, self._risk_incident_id = True, incident_id
+                        self._risk_reason = r["reason"]
+                        self._risk_occurred_at = occurred
+                    elif r.get("state") == "RESET":
+                        actor = r.get("actor")
+                        if not self._risk_latched or incident_id != self._risk_incident_id:
+                            raise PaperAccountError("risk latch reset does not match an active incident")
+                        if (not r.get("repair_id") or not isinstance(actor, str) or not actor.strip()
+                                or actor.startswith("agent:") or not re.fullmatch(r"[0-9a-f]{64}",
+                                                                                  str(r.get("signoff_sha256", "")))):
+                            raise PaperAccountError("risk latch reset needs a human hash-backed repair signoff")
+                        try:
+                            signed = datetime.fromisoformat(str(r["signed_at"]).replace("Z", "+00:00"))
+                        except (KeyError, ValueError) as exc:
+                            raise PaperAccountError("risk latch signoff timestamp is invalid") from exc
+                        if signed.tzinfo is None or signed.utcoffset() is None:
+                            raise PaperAccountError("risk latch signoff timestamp must be timezone-aware")
+                        if self._risk_occurred_at is not None and signed < self._risk_occurred_at:
+                            raise PaperAccountError("risk latch signoff predates its incident")
+                        self._risk_latched, self._risk_incident_id, self._risk_reason = False, None, None
+                        self._risk_occurred_at = None
+                    else:
+                        raise PaperAccountError("unknown risk latch transition")
                 else:
                     raise PaperAccountError(f"unknown paper account journal event: {t}")
                 prior_records.append(r)
@@ -343,6 +390,8 @@ class PaperAccount:
             if existing != proposed:
                 raise PaperAccountError(f"client id {client_id} reused with different content")
             return
+        if self._risk_latched:
+            raise PaperAccountError(f"risk latch blocks new paper intents: {self._risk_reason}")
         if side == "SELL" and self.position(symbol).quantity - sum(
             qty for cid, qty in self._sell_reserved.items()
             if self.oms.order(cid).state not in {State.CANCELED, State.REJECTED, State.EXPIRED, State.FILLED}
@@ -357,6 +406,31 @@ class PaperAccount:
 
     def move(self, client_id: str, state: State) -> None:
         self._validate_and_commit({"t": "STATE", "client_id": client_id, "state": state.value})
+
+    def trip_risk_latch(self, *, incident_id: str, reason: str, occurred_at: datetime) -> bool:
+        """Persist a risk halt; the latch survives journal replay and blocks new intents."""
+        if not incident_id.strip() or not reason.strip() or occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise PaperAccountError("risk trip needs an incident id, reason and aware timestamp")
+        if self._risk_latched:
+            if incident_id == self._risk_incident_id and reason == self._risk_reason:
+                return False
+            raise PaperAccountError("an active risk incident must be repaired before another latch trip")
+        self._validate_and_commit({"t": "RISK_LATCH", "state": "TRIPPED", "incident_id": incident_id,
+                                   "reason": reason, "occurred_at": occurred_at.isoformat()})
+        return True
+
+    def reset_risk_latch(self, *, incident_id: str, repair_id: str, actor: str, signed_at: datetime,
+                         signoff_sha256: str) -> None:
+        """Clear a latch only after a human records a timestamped, hash-backed repair signoff."""
+        if not self._risk_latched or incident_id != self._risk_incident_id:
+            raise PaperAccountError("risk latch reset does not match an active incident")
+        if (not repair_id.strip() or not actor.strip() or actor.startswith("agent:")
+                or signed_at.tzinfo is None or signed_at.utcoffset() is None
+                or not re.fullmatch(r"[0-9a-f]{64}", signoff_sha256)):
+            raise PaperAccountError("risk latch reset needs a human hash-backed repair signoff")
+        self._validate_and_commit({"t": "RISK_LATCH", "state": "RESET", "incident_id": incident_id,
+                                   "repair_id": repair_id, "actor": actor,
+                                   "signed_at": signed_at.isoformat(), "signoff_sha256": signoff_sha256})
 
     def record_fill(self, client_id: str, *, fill_id: str, quantity: int, price: Decimal,
                     filled_on: date | None = None, execution_evidence: dict | None = None) -> None:

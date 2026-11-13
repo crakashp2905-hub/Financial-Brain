@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 105,
-  "unrecorded_tasks": 113,
+  "recorded_tasks": 106,
+  "unrecorded_tasks": 112,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2281,6 +2281,23 @@
         "Operational runner invocation and restart-persistent halt state remain outstanding.",
         "Independent provider/OMS EOD snapshots are not yet included in the daily evidence bundle."
       ]
+    },
+    {
+      "id": "PE-0099",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_paper_account_risk_latch.py",
+        "docs/edge-program/pe-0099-persistent-risk-latch.md",
+        "docs/edge-program/pe-0099-persistent-risk-latch-evidence.json"
+      ],
+      "tests": [
+        "test_risk_latch_and_open_order_reservations_survive_restart_and_require_human_reset",
+        "test_latch_does_not_allow_signoff_to_predate_incident"
+      ],
+      "test_result": "27 focused risk-latch, account, audit and crash-recovery tests passed; Ruff and mypy passed. Restart restores the active latch and outstanding reservations, blocks new orders, and requires a human hash-backed repair signoff to reset.",
+      "evidence_sha256": "eb747cd78180d47337c7df14bd89243f9d2a8d29db082b38cca14b9b318ca9c5",
+      "blockers": []
     }
   ]
 }
