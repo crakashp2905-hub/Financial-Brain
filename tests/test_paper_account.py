@@ -137,6 +137,26 @@ def test_conflicting_client_fill_and_fee_ids_are_refused(tmp_path) -> None:
         book.record_fee("fee", Decimal("2"))
 
 
+def test_daily_nav_curve_keeps_cash_days_and_open_losing_positions(tmp_path) -> None:
+    path = tmp_path / "complete-nav.jsonl"
+    book = PaperAccount(path, account_id="daily-nav", initial_cash=Decimal("1000"))
+    book.record_nav_snapshot(date(2026, 11, 10), snapshot_id="cash-day-1",
+                             captured_at=datetime(2026, 11, 10, 10, tzinfo=timezone.utc))
+    book.record_nav_snapshot(date(2026, 11, 11), snapshot_id="cash-day-2",
+                             captured_at=datetime(2026, 11, 11, 10, tzinfo=timezone.utc))
+    _buy(book, client_id="open-loss", quantity=5)
+    book.record_fill("open-loss", fill_id="open-loss-fill", quantity=5, price=Decimal("100"))
+    book.record_mark("NSE:ABC", mark_id="loss-mark", price=Decimal("90"),
+                     observed_at=datetime(2026, 11, 12, 10, tzinfo=timezone.utc))
+    book.record_nav_snapshot(date(2026, 11, 12), snapshot_id="open-loss-day",
+                             captured_at=datetime(2026, 11, 12, 10, 1, tzinfo=timezone.utc))
+
+    reopened = PaperAccount(path, account_id="daily-nav", initial_cash=Decimal("1000"))
+    assert [row["nav"] for row in reopened.nav_snapshots] == ["1000", "1000", "950"]
+    assert reopened.daily_nav_returns == [Decimal("0"), Decimal("-0.05")]
+    assert reopened.position("NSE:ABC").quantity == 5  # loss is open, not omitted as a closed-trade sample
+
+
 def test_effective_fee_schedule_uses_filled_notional_and_reconciles_nav(tmp_path) -> None:
     path = tmp_path / "fee-nav.jsonl"
     schedule = FeeSchedule(

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 107,
-  "unrecorded_tasks": 111,
+  "recorded_tasks": 108,
+  "unrecorded_tasks": 110,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2317,6 +2317,25 @@
       ],
       "test_result": "PaperAccount exact fill replay leaves cash, position and ledger unchanged; changed fill content under a reused fill ID is refused; independent journal auditor enforces unique fill IDs. Focused account/audit tests pass.",
       "evidence_sha256": "1722daffc96afc017b697b08232c90f663fcc8d4eadd623498407e215da28e53",
+      "blockers": []
+    },
+    {
+      "id": "PE-0101",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/paper_account_audit.py",
+        "tests/test_paper_account.py",
+        "tests/test_paper_account_audit.py",
+        "docs/edge-program/pe-0101-full-nav-performance.md",
+        "docs/edge-program/pe-0101-full-nav-performance-evidence.json"
+      ],
+      "tests": [
+        "test_daily_nav_curve_keeps_cash_days_and_open_losing_positions",
+        "test_independent_journal_audit_recomputes_balances_and_daily_nav"
+      ],
+      "test_result": "14 focused NAV/account audit tests passed; Ruff and mypy passed. Reopened NAV series includes zero-return cash days and open marked losses, with journal-only independent snapshot recomputation.",
+      "evidence_sha256": "13663200d8e378d4b875ac04df1ebd040c36dd199efa479af0f01d04ff37f210",
       "blockers": []
     }
   ]
