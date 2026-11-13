@@ -12,9 +12,10 @@ import hashlib
 import json
 import shutil
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
+from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.market_data import Calendar
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -22,6 +23,89 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 class SessionError(ValueError):
     pass
+
+
+class SessionDateLedger:
+    """Append-only outcome ledger so planned exchange dates cannot vanish silently."""
+
+    def __init__(self, path: Path) -> None:
+        self.journal = DurableJournal(Path(path))
+
+    def _records(self) -> list[dict]:
+        return self.journal.records()
+
+    def is_planned(self, session_id: str) -> bool:
+        return any(row.get("t") == "SESSION_DATE_PLAN" and row.get("session_id") == session_id
+                   for row in self._records())
+
+    def outcome(self, session_id: str) -> dict | None:
+        return next((row for row in reversed(self._records())
+                     if row.get("t") == "SESSION_DATE_RESULT" and row.get("session_id") == session_id), None)
+
+    def plan_date(self, session_id: str, exchange_date: str, calendar: Calendar,
+                  settlement_deadline_utc: datetime) -> dict:
+        if not session_id:
+            raise SessionError("session id is required")
+        try:
+            if date.fromisoformat(exchange_date).isoformat() != exchange_date:
+                raise ValueError
+        except ValueError as exc:
+            raise SessionError("exchange date must be canonical ISO date") from exc
+        if settlement_deadline_utc.tzinfo is None or settlement_deadline_utc.utcoffset() is None:
+            raise SessionError("settlement deadline must be timezone-aware")
+        deadline = settlement_deadline_utc.astimezone(timezone.utc)
+        plan = {"t": "SESSION_DATE_PLAN", "session_id": session_id,
+                "exchange_date": exchange_date, "calendar_version": calendar.version,
+                "tradable": calendar.is_tradable(date.fromisoformat(exchange_date)),
+                "settlement_deadline_utc": deadline.isoformat()}
+        records = self._records()
+        existing = next((row for row in records if row.get("t") == "SESSION_DATE_PLAN"
+                         and row.get("session_id") == session_id), None)
+        if existing is not None:
+            if existing != plan:
+                raise SessionError("planned exchange date is immutable")
+        else:
+            self.journal.append(plan)
+        outcome = self.outcome(session_id)
+        if outcome is None and not plan["tradable"]:
+            return self.record_result(session_id, "NO_TRADE", "NON_TRADING_DATE")
+        return outcome or {"session_id": session_id, "status": "PLANNED"}
+
+    def record_result(self, session_id: str, status: str, reason: str) -> dict:
+        if (status not in {"CLOSED", "NO_TRADE", "INCOMPLETE"}
+                or not isinstance(reason, str) or not reason.strip()):
+            raise SessionError("session date result needs CLOSED, NO_TRADE or INCOMPLETE and a reason")
+        plan = next((row for row in self._records() if row.get("t") == "SESSION_DATE_PLAN"
+                     and row.get("session_id") == session_id), None)
+        if plan is None:
+            raise SessionError("session date must be planned before it can be finalized")
+        if not plan["tradable"] and (status != "NO_TRADE" or reason != "NON_TRADING_DATE"):
+            raise SessionError("a non-trading date is immutable NO_TRADE")
+        result = {"t": "SESSION_DATE_RESULT", "session_id": session_id,
+                  "exchange_date": plan["exchange_date"], "status": status,
+                  "reason": reason.strip()}
+        prior = self.outcome(session_id)
+        if prior is not None:
+            if prior != result:
+                raise SessionError("session date result is immutable")
+            return prior
+        self.journal.append(result)
+        return result
+
+    def expire_missing(self, now_utc: datetime) -> list[dict]:
+        if now_utc.tzinfo is None or now_utc.utcoffset() is None:
+            raise SessionError("sweep clock must be timezone-aware")
+        now = now_utc.astimezone(timezone.utc)
+        records = self._records()
+        plans = [row for row in records if row.get("t") == "SESSION_DATE_PLAN" and row.get("tradable")]
+        expired = []
+        for plan in plans:
+            if self.outcome(plan["session_id"]) is not None:
+                continue
+            deadline = datetime.fromisoformat(plan["settlement_deadline_utc"])
+            if deadline <= now:
+                expired.append(self.record_result(plan["session_id"], "INCOMPLETE", "SESSION_RESULT_MISSING"))
+        return expired
 
 
 # ---- FE-0069 preflight ----

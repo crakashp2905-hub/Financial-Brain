@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0026",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T06:09:21Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/session_ops.py": "002b6c6dd237c831b784d47484410022b649c4b77de599f26ea8e29a280d0a3b",
+    "src/financial_brain/forward_edge/session_runner.py": "48f764697e8e88a11b5ab5c371ab4895d199a62e9a87aa828a490e40b2c82787",
+    "tests/test_session_date_ledger.py": "37f9cb4c9be51f80069258f58fa067fa10e9a5321a5bcf0606dd3e94fe422de7",
+    "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
+    "docs/edge-program/session-date-outcome-contract.md": "5b578aaed05265f547063be5461ac7f804b3dfe8119c33003fee7f642f5afe58"
+  },
+  "acceptance_tests": [
+    "test_calendar_holiday_is_persisted_as_no_trade_and_cannot_be_rewritten",
+    "test_special_session_is_planned_and_closes_normally",
+    "test_expired_unresolved_trading_dates_become_incomplete_once",
+    "test_runner_requires_calendar_plan_and_marks_feed_loss_incomplete",
+    "test_runner_persists_a_terminal_no_trade_date",
+    "test_invalid_or_unplanned_outcomes_fail_closed"
+  ],
+  "result": "An append-only date ledger pins calendar version, tradability and settlement deadline. Holidays become immutable NO_TRADE; special-session overrides remain eligible; completed and no-trade runner outcomes are recorded; feed loss or premature stop records INCOMPLETE; overdue missing outcomes are swept to INCOMPLETE. Cross-journal recovery is idempotent.",
+  "focused_tests": "59 passed (session-date, clock, runner, Kite and intraday integration)",
+  "ruff": "passed",
+  "mypy": "passed",
+  "diff_check": "passed",
+  "limitations": [
+    "Completeness depends on scheduling every eligible date from an authoritative versioned calendar, supplying correct special-session deadlines, and running the overdue sweep."
+  ]
+}

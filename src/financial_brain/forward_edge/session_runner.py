@@ -18,6 +18,7 @@ from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.market_data import NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.session_clock import ClockError, SessionClockProvider, as_utc
+from financial_brain.forward_edge.session_ops import SessionDateLedger, SessionError
 
 
 class RunnerError(ValueError):
@@ -113,9 +114,11 @@ class ForwardSessionRunner:
     """
 
     def __init__(self, journal_path: Path,
-                 clock_provider: SessionClockProvider | None = None) -> None:
+                 clock_provider: SessionClockProvider | None = None,
+                 session_date_ledger: SessionDateLedger | None = None) -> None:
         self.journal_path = Path(journal_path)
         self.clock_provider = clock_provider or SessionClockProvider()
+        self.session_date_ledger = session_date_ledger
 
     def mark_incomplete(self, session_id: str, reason: str) -> None:
         """Close a nonterminal session as incomplete without fabricating an outcome."""
@@ -127,8 +130,28 @@ class ForwardSessionRunner:
             raise RunnerError("cannot mark an unplanned session incomplete")
         if any(r.get("t") == "SESSION_CLOSED" for r in records):
             raise RunnerError("closed session cannot become incomplete")
+        prior = next((r for r in records if r.get("t") == "SESSION_INCOMPLETE"), None)
+        if prior is not None:
+            if prior.get("reason") != reason.strip():
+                raise RunnerError("incomplete session reason is immutable")
+            self._record_date_outcome("INCOMPLETE", reason.strip(), session_id)
+            return
         self._ensure_state(journal, session_id, "INCOMPLETE")
-        journal.append({"t": "SESSION_INCOMPLETE", "session_id": session_id, "reason": reason.strip()})
+        result = {"session_id": session_id, "status": "INCOMPLETE", "reason": reason.strip(),
+                  "physical_orders": False}
+        journal.append({"t": "SESSION_INCOMPLETE", "session_id": session_id,
+                        "reason": reason.strip(), "result": result})
+        self._record_date_outcome("INCOMPLETE", reason.strip(), session_id)
+
+    def _record_date_outcome(self, status: str, reason: str, session_id: str) -> None:
+        if self.session_date_ledger is None:
+            return
+        outcome = "NO_TRADE" if status in {"NO_TRADE", "REJECTED"} else (
+            "CLOSED" if status == "PAPER_COMPLETE" else status)
+        try:
+            self.session_date_ledger.record_result(session_id, outcome, reason)
+        except SessionError as exc:
+            raise RunnerError(str(exc)) from exc
 
     @staticmethod
     def _ensure_state(journal: DurableJournal, session_id: str, target: str) -> None:
@@ -156,6 +179,12 @@ class ForwardSessionRunner:
     def begin(self, config: ForwardRunConfig) -> None:
         """Create or resume the durable session before market polling starts."""
         plan = config.canonical()
+        if self.session_date_ledger is not None:
+            outcome = self.session_date_ledger.outcome(config.session_id)
+            if not self.session_date_ledger.is_planned(config.session_id):
+                raise RunnerError("exchange date must be recorded in the session date ledger first")
+            if outcome is not None and outcome.get("reason") == "NON_TRADING_DATE":
+                raise RunnerError("cannot open a session on a non-trading date")
         journal = DurableJournal(self.journal_path)
         records = journal.records()
         existing = [r for r in records if r.get("session_id") == config.session_id]
@@ -292,6 +321,8 @@ class ForwardSessionRunner:
         self.begin(config)
         closed = next((r for r in reversed(existing) if r.get("t") == "SESSION_CLOSED"), None)
         if closed is not None:
+            self._record_date_outcome(closed["result"]["status"], closed["result"].get("reason", "SESSION_CLOSED"),
+                                      config.session_id)
             return closed["result"]
         self.append_events(config, events)
         journal = DurableJournal(self.journal_path)
@@ -418,6 +449,7 @@ class ForwardSessionRunner:
         if risk["approved"]:
             self._ensure_state(journal, config.session_id, "CLOSED")
         journal.append({"t": "SESSION_CLOSED", "session_id": config.session_id, "result": result})
+        self._record_date_outcome(result["status"], result.get("reason", "SESSION_CLOSED"), config.session_id)
         return result
 
     @classmethod
