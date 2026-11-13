@@ -667,39 +667,45 @@
       "sources": [
         "src/financial_brain/execution/oms/quality.py",
         "tests/test_execution_slippage_calibration.py",
+        "src/financial_brain/forward_edge/rehearsal.py",
+        "docs/edge-program/pe-0081-slippage-calibration.md",
         "docs/edge-program/pe-0081-slippage-calibration-evidence.json"
       ],
       "tests": [
         "test_slippage_buckets_cover_each_requested_condition_and_keep_missing_explicit",
         "test_calibration_uses_only_provenance_bearing_observed_broker_fills",
-        "test_simulated_or_under_sampled_buckets_are_uncalibrated_and_emit_no_parameter"
+        "test_simulated_or_under_sampled_buckets_are_uncalibrated_and_emit_no_parameter",
+        "test_only_complete_observed_calibration_can_register_a_new_immutable_model"
       ],
-      "test_result": "Execution-quality calibration tests: 21 passed; Ruff, mypy and diff checks passed. Five-dimensional buckets and observed-only calibration guard work; absent/unverified inputs return UNCALIBRATED.",
-      "evidence_sha256": "6a45dc790f229b24abfb5710db11513e04b759839d3596e6182a1e37a7c4d664",
+      "test_result": "4 focused calibration tests passed; Ruff and mypy passed for changed modules. Calibration registration now requires all buckets to contain provenance-bearing observed broker fills above the configured floor and creates a new immutable model version. Synthetic data is not a calibration claim.",
+      "evidence_sha256": "ca4b2d466154c136ddcf9d1dff20893483693d214bbf79a599cbe38cc26255e8",
       "blockers": [
-        "Authorized observed broker fills are unavailable; no actual calibration claim.",
-        "Output is not wired to the execution-model registry or promotion gate."
+        "Authorized observed broker fills are unavailable; market calibration remains unverified."
       ]
     },
     {
       "id": "PE-0082",
       "status": "PARTIAL",
       "sources": [
+        "src/financial_brain/forward_edge/execution_stress.py",
         "src/financial_brain/forward_edge/evidence_stats.py",
+        "tests/test_execution_stress_report.py",
         "tests/test_forward_edge_f08.py",
         "tests/test_forward_edge_f13.py",
+        "docs/edge-program/pe-0082-fill-cost-stress.md",
         "docs/edge-program/pe-0082-fill-cost-stress-evidence.json"
       ],
       "tests": [
+        "test_full_intention_stress_grid_includes_missed_and_partial_intentions_deterministically",
+        "test_fragile_candidate_fails_grid_and_missing_intentions_are_not_silently_dropped",
         "test_each_gate_independently_blocks_promotion",
         "test_missing_cost_by_fill_rate_grid_blocks_promotion_as_insufficient_evidence",
         "test_report_carries_coverage_benchmark_missing_data_and_never_promotes"
       ],
-      "test_result": "Focused evidence gate and fixture report suites: 63 passed; Ruff, mypy and diff checks passed. A full 1x/1.5x/2x cost by 100/75/50% fill-rate matrix is required; missing cells block promotion and any non-positive cell fails the candidate.",
-      "evidence_sha256": "fcf46e9d88d58074adbf1f58bdae9ff05f3684d0900246304af9a57e23a96b6d",
+      "test_result": "65 focused execution stress, promotion gate and report tests passed; Ruff and mypy passed. The full 1x/1.5x/2x cost by 100/75/50% fill matrix is deterministically derived from the entire frozen intention population, hashed, and gated. Uniform fill scaling is explicitly scenario analysis.",
+      "evidence_sha256": "c014d32351255d459674c90921d82dcdea733a28600625bba79d974123e663ed",
       "blockers": [
-        "No unified scenario report builder derives the matrix from all intentions, including missed and partial fills.",
-        "No observed forward fills are available to calibrate the grid."
+        "Observed forward fill outcomes are unavailable, so scenario assumptions are not empirically calibrated."
       ]
     },
     {

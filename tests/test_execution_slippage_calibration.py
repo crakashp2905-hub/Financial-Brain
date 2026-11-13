@@ -2,7 +2,12 @@ from datetime import datetime, timezone
 
 import pytest
 
-from financial_brain.execution.oms.quality import calibrate_slippage, slippage_bucket
+from financial_brain.execution.oms.quality import (
+    calibrate_slippage,
+    register_calibrated_slippage,
+    slippage_bucket,
+)
+from financial_brain.forward_edge.rehearsal import ExecutionModelRegistry, RehearsalError
 
 
 def _observation(**overrides):
@@ -49,3 +54,17 @@ def test_simulated_or_under_sampled_buckets_are_uncalibrated_and_emit_no_paramet
     assert bucket["recommended_slippage_bp"] is None
     with pytest.raises(ValueError, match="min_observations"):
         calibrate_slippage([], min_observations=0)
+
+
+def test_only_complete_observed_calibration_can_register_a_new_immutable_model():
+    registry = ExecutionModelRegistry()
+    uncalibrated = calibrate_slippage([_observation(fidelity="SIMULATED_QUOTE")], min_observations=1)
+    with pytest.raises(ValueError, match="uncalibrated"):
+        register_calibrated_slippage(uncalibrated, registry=registry, version="simulated")
+
+    observed = calibrate_slippage([_observation(slippage_bp=float(i)) for i in range(20)])
+    digest = register_calibrated_slippage(observed, registry=registry, version="observed-v1")
+    assert len(digest) == 64
+    assert registry.get("observed-v1")["source"] == "OBSERVED_BROKER_CALIBRATION"
+    with pytest.raises(RehearsalError, match="version exists"):
+        register_calibrated_slippage(observed, registry=registry, version="observed-v1")

@@ -158,3 +158,26 @@ def calibrate_slippage(observations: list[dict], *, min_observations: int = MIN_
                                          if calibrated else None),
         }
     return {"min_observations": min_observations, "buckets": result}
+
+
+def register_calibrated_slippage(calibration: dict, *, registry, version: str) -> str:
+    """Register a new immutable execution-model version only from complete observed calibration.
+
+    Uncalibrated buckets are refused rather than defaulted to zero or to a simulated estimate.
+    The registry is deliberately passed in, avoiding hidden active-model mutation.
+    """
+    buckets = calibration.get("buckets")
+    if not isinstance(buckets, dict) or not buckets:
+        raise ValueError("slippage calibration has no buckets")
+    uncalibrated = [key for key, row in buckets.items() if row.get("status") != "CALIBRATED"
+                    or row.get("recommended_slippage_bp") is None
+                    or row.get("observed_broker_fills", 0) < calibration.get("min_observations", MIN_ORDERS)]
+    if uncalibrated:
+        raise ValueError("uncalibrated slippage buckets cannot change an execution model: "
+                         + ", ".join(sorted(uncalibrated)))
+    params = {"source": "OBSERVED_BROKER_CALIBRATION", "min_observations": calibration["min_observations"],
+              "buckets": {key: {"recommended_slippage_bp": row["recommended_slippage_bp"],
+                                "observed_broker_fills": row["observed_broker_fills"]}
+                          for key, row in sorted(buckets.items())}}
+    registry.register(version, params)
+    return registry.sha256(version)
