@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 56,
-  "unrecorded_tasks": 162,
+  "recorded_tasks": 57,
+  "unrecorded_tasks": 161,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1149,6 +1149,28 @@
       "test_result": "Persisted daily NAV reconciles cash plus marked open positions and external flows. Flow-adjusted returns account for cash days and later fills/marks; snapshots reject future marks, late flows, duplicate dates and rewrites. Restart reproduces snapshots and returns. Focused account suite: 9 passed; Ruff and mypy passed.",
       "evidence_sha256": null,
       "blockers": []
+    },
+    {
+      "id": "PE-0094",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/futures_paper.py",
+        "tests/test_kernel_futures_paper.py",
+        "docs/edge-program/pe-0094-futures-variation-margin-evidence.json"
+      ],
+      "tests": [
+        "test_daily_variation_margin_recovery_and_idempotent_events",
+        "test_trade_margin_gate_roll_lot_compatibility_and_expiry",
+        "test_margin_rejects_trade_without_appending_and_blocks_stale_order"
+      ],
+      "test_result": "Durable futures paper accounting covers sourced terms, lot-sized trades, daily cash variation, margin checks, roll and expiry lifecycle. The focused futures and ledger regression suite passed 49 tests; Ruff and mypy passed.",
+      "evidence_sha256": "21213240b22f303848e48a7463aa729f37e1953ad3833aa0f1480cb92f1bc15a",
+      "blockers": [
+        "Contract/price source hashes are required but are not independently validated against official exchange or Kite source artifacts; authenticated contract-master ingestion is not wired.",
+        "The futures account is not yet registered in the shared multi-book portfolio, live forward session runner, strategy adapters, or evidence package pipeline.",
+        "The paper model does not charge brokerage, exchange charges, taxes, slippage, funding or settlement costs, and maintenance breach only reports a margin-call state; it does not model broker liquidation or recovery.",
+        "No prospective market-session cohort or observed fills establish execution assumptions or profitability."
+      ]
     }
   ]
 }

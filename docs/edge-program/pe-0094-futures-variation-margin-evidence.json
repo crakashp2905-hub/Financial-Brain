@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0094",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_kernel_futures_paper.py tests/test_kernel_futures_analytics.py tests/test_kernel_sdk_validation_futures_fx.py tests/test_kernel_portfolio.py tests/test_kernel_ledger_guards_ticks.py",
+    "result": "49 passed (exit code 0); Ruff and mypy on the new futures paper module passed."
+  },
+  "implemented": [
+    "A durable single-currency futures paper account accepts owner-supplied contract terms with source identifiers and SHA-256 provenance; no Indian exchange lot, tick, multiplier or margin constants are hardcoded.",
+    "Signed lot-sized trades, daily cash variation settlement, margin availability and maintenance-call status, expiry settlement, and atomic same-root later-expiry rolls are journaled and rebuilt through the existing hash-chained durable journal and double-entry ledger.",
+    "Event IDs are idempotent and bind to request content; insufficient initial margin, stale dates, incompatible roll lot sizes, invalid ticks, and conflicting retries are rejected without committing state.",
+    "Restart reproduces position, cash and variation P&L; focused futures and accounting regression suite passes."
+  ],
+  "blockers": [
+    "Contract/price source hashes are required but are not independently validated against official exchange or Kite source artifacts; authenticated contract-master ingestion is not wired.",
+    "The futures account is not yet registered in the shared multi-book portfolio, live forward session runner, strategy adapters, or evidence package pipeline.",
+    "The paper model does not charge brokerage, exchange charges, taxes, slippage, funding or settlement costs, and maintenance breach only reports a margin-call state; it does not model broker liquidation or recovery.",
+    "No prospective market-session cohort or observed fills establish execution assumptions or profitability."
+  ],
+  "scope_note": "This is a paper-only accounting component for a single open futures contract and is not a broker execution path, official margin calculator, or profitability claim."
+}
