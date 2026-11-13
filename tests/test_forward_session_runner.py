@@ -63,6 +63,68 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     assert states == ["PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED"]
 
 
+def test_runner_uses_injected_decision_and_simulated_execution_clocks(tmp_path):
+    from financial_brain.forward_edge.session_clock import SessionClockProvider
+
+    ticks = iter((NOW, NOW + timedelta(milliseconds=5)))
+    runner = ForwardSessionRunner(tmp_path / "injected-clock.jsonl",
+                                  clock_provider=SessionClockProvider(lambda: next(ticks)))
+    _approve_preflight(runner)
+    result = runner.run(
+        _config(), [_event()],
+        decision_fn=lambda visible: {"side": "BUY", "visible_count": len(visible)},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "clocked-sim",
+                                 "fidelity": "SIMULATED_QUOTE"},
+    )
+    assert result["decision"]["visible_count"] == 1
+    assert result["execution"]["simulated_execution_at_utc"] == (
+        NOW + timedelta(milliseconds=5)).isoformat()
+
+
+def test_injected_decision_clock_excludes_later_available_market_event(tmp_path):
+    from financial_brain.forward_edge.session_clock import SessionClockProvider
+
+    runner = ForwardSessionRunner(tmp_path / "future-event.jsonl",
+                                  clock_provider=SessionClockProvider(lambda: NOW))
+    calls = []
+    result = runner.run(
+        _config(), [_event(NOW + timedelta(seconds=2))],
+        decision_fn=lambda visible: calls.append(visible) or {"side": "NONE"},
+        risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {},
+    )
+    assert result["decision_event_count"] == 0
+    assert calls == [[]]
+
+
+def test_one_clock_provider_spans_kite_capture_decision_and_paper_execution(tmp_path):
+    from financial_brain.ingest.kite_live import forward_events
+    from financial_brain.forward_edge.session_clock import SessionClockProvider
+
+    ticks = iter(NOW + timedelta(milliseconds=step) for step in (1, 2, 3, 4, 5))
+    clock = SessionClockProvider(lambda: next(ticks))
+    events = forward_events(
+        ["INFY"],
+        quote_fn=lambda *_: {"NSE:INFY": {
+            "timestamp": "2026-11-12T09:30:00+05:30", "last_price": 1500,
+        }},
+        clock_provider=clock,
+    )
+    runner = ForwardSessionRunner(tmp_path / "same-provider.jsonl", clock)
+    _approve_preflight(runner)
+    result = runner.run(
+        _config(), events, decision_fn=lambda visible: {"side": "BUY", "count": len(visible)},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "shared-clock",
+                                 "fidelity": "SIMULATED_QUOTE"},
+    )
+    assert events[0].received_utc == NOW + timedelta(milliseconds=1)
+    assert events[0].available_utc == NOW + timedelta(milliseconds=2)
+    assert result["decision"]["count"] == 1
+    assert result["execution"]["simulated_execution_at_utc"] == (
+        NOW + timedelta(milliseconds=5)).isoformat()
+
+
 def test_market_polls_can_be_durably_appended_before_session_finalization(tmp_path):
     path = tmp_path / "stream.jsonl"
     config = _config()
@@ -169,6 +231,7 @@ def test_pending_outbox_requires_reconciliation_after_unknown_side_effect(tmp_pa
         if intent_id not in executions:
             executions[intent_id] = {
                 "status": "FILLED", "receipt_id": "sim-fill-F-1", "fidelity": "SIMULATED_QUOTE",
+                    "simulated_execution_at_utc": (NOW + timedelta(seconds=1)).isoformat(),
                 "fills": [{"fill_id": "F-1", "quantity": 10, "price": "100.00"}],
             }
             if len(attempts) == 1:
@@ -262,6 +325,7 @@ def test_restart_after_execution_receipt_before_ack_does_not_repeat_execution(tm
     _approve_preflight(runner)
     calls = []
     receipt = {"status": "FILLED", "receipt_id": "sim-fill-crash", "fidelity": "SIMULATED_QUOTE",
+               "simulated_execution_at_utc": (NOW + timedelta(seconds=1)).isoformat(),
                "fills": [{"fill_id": "F-3", "quantity": 1, "price": "123.45"}]}
     original_append = session_module.DurableJournal.append
     crashed = False

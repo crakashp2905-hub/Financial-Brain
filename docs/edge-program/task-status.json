@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 37,
-  "unrecorded_tasks": 181,
+  "recorded_tasks": 38,
+  "unrecorded_tasks": 180,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -406,6 +406,29 @@
       ],
       "test_result": "Attempts share a deterministic per-strategy/cohort/exchange-date/mode key and have unique stable attempt IDs. A second closed attempt appends a new session plan; the earlier attempt records and result remain byte-for-byte unchanged. Reusing an attempt ID for the same session key is rejected. Focused runner/intraday suite: 36 passed; Ruff and mypy passed.",
       "evidence_sha256": "7b5e44e8722f453e1a641607da22304af9953b6946bed82f597f70efc0809dd3",
+      "blockers": []
+    },
+    {
+      "id": "PE-0025",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/session_clock.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "tests/test_forward_session_clock.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_kite_forward_events.py",
+        "docs/edge-program/session-clock-contract.md",
+        "docs/edge-program/pe-0025-session-clock-evidence.json"
+      ],
+      "tests": [
+        "test_one_clock_provider_spans_kite_capture_decision_and_paper_execution",
+        "test_runner_uses_injected_decision_and_simulated_execution_clocks",
+        "test_injected_decision_clock_excludes_later_available_market_event",
+        "test_event_clock_provider_rejects_exchange_skew_and_backwards_local_clock"
+      ],
+      "test_result": "Shared injected clock runs from Kite quote capture through the forward runner. Clock skew and regression fail closed; future-available events are excluded from earlier decisions; simulation time is durable. Clock/runner/Kite/intraday integration suite: 53 passed; Ruff and mypy passed.",
+      "evidence_sha256": "0868c9ed4aaa1ee12dbd18ea5e5764102a6035629d5863539c3700b0fd2b41cb",
       "blockers": []
     },
     {

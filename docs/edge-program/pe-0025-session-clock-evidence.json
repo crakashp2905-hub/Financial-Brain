@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0025",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T05:58:19Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/session_clock.py": "2eb9cdb1a918198c306d6f82a2551a018b2206572eae79533613b251182376d1",
+    "src/financial_brain/forward_edge/session_runner.py": "aef8a2aec7f05ab27a0290259eb3e37394a668f658525983d9433f0b03a6b3e0",
+    "src/financial_brain/ingest/kite_live.py": "c0105c3343125dd588a7c2e575f2e0776cb0edf6c2ebdcaf0da215362013b6cf",
+    "tests/test_forward_session_clock.py": "55509cbb547c74eec9c610810ce7cc746e8a3cf0dbc3eb936c6dc881daed614f",
+    "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
+    "tests/test_kite_forward_events.py": "fb1a4426e9b534a3297848ab3c4df87810112500c706367023f19c10c9a7f342",
+    "docs/edge-program/session-clock-contract.md": "bea9169c5a6396231efd5bda0970cac5010ff64bd082548221d94c6347d0f26e"
+  },
+  "acceptance_tests": [
+    "test_one_clock_provider_spans_kite_capture_decision_and_paper_execution",
+    "test_runner_uses_injected_decision_and_simulated_execution_clocks",
+    "test_injected_decision_clock_excludes_later_available_market_event",
+    "test_event_clock_provider_rejects_exchange_skew_and_backwards_local_clock"
+  ],
+  "result": "One injectable SessionClockProvider now supplies receive, availability, ingest, decision and simulated execution times; exchange time is retained from the provider payload. Kite receive is captured after quote response and availability after normalization. The runner filters decision-visible events, persists an aware simulated execution timestamp, rejects backward time, and resumes from the original durable decision time.",
+  "focused_tests": "53 passed (clock, runner, Kite and intraday integration)",
+  "ruff": "passed",
+  "mypy": "passed",
+  "diff_check": "passed",
+  "limitations": [
+    "Default production clock is UTC system time; independent synchronization/attestation is not provided by this software."
+  ]
+}

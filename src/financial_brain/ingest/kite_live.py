@@ -58,7 +58,7 @@ def snapshot(con, symbols: list[str], *, quote_fn=None, now: datetime | None = N
 
 def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime | None = None,
                    ingested_at: datetime | None = None,
-                   rejections_out: list[dict] | None = None):
+                   rejections_out: list[dict] | None = None, clock_provider=None):
     """Capture read-only Kite full quotes as forward-edge events.
 
     An exchange timestamp is mandatory: receipt time is never substituted for it.
@@ -67,20 +67,24 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
     returning only valid normalized events; invalid rows are never repaired or forward-filled.
     """
     from ..forward_edge.market_data import DataError, NormalizedEvent
+    from ..forward_edge.session_clock import ClockError, SessionClockProvider
     from ..providers import kite_data as kd
 
     if not symbols or len(set(symbols)) != len(symbols):
         raise DataError("symbols must be nonempty and unique")
     keys = [f"NSE:{symbol}" for symbol in symbols]
-    receipt = received_at or datetime.now(timezone.utc)
-    if receipt.tzinfo is None or receipt.utcoffset() is None:
-        raise DataError("received_at must be timezone-aware")
-    receipt = receipt.astimezone(timezone.utc)
-    ingested = ingested_at or datetime.now(timezone.utc)
-    if ingested.tzinfo is None or ingested.utcoffset() is None:
-        raise DataError("ingested_at must be timezone-aware")
-    ingested = ingested.astimezone(timezone.utc)
-    if ingested < receipt:
+    if clock_provider is not None and (received_at is not None or ingested_at is not None):
+        raise DataError("use the injected clock provider or explicit timestamps, not both")
+    clock = clock_provider or SessionClockProvider()
+    if received_at is not None:
+        if received_at.tzinfo is None or received_at.utcoffset() is None:
+            raise DataError("received_at must be timezone-aware")
+        received_at = received_at.astimezone(timezone.utc)
+    if ingested_at is not None:
+        if ingested_at.tzinfo is None or ingested_at.utcoffset() is None:
+            raise DataError("ingested_at must be timezone-aware")
+        ingested_at = ingested_at.astimezone(timezone.utc)
+    if received_at is not None and ingested_at is not None and ingested_at < received_at:
         raise DataError("ingest clock cannot precede source availability")
     raw = (quote_fn or kd.quote)(keys, "full")
     events = []
@@ -110,6 +114,14 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
         # Kite's exchange timestamps are India-local when the API omits a zone.
         if stamp.tzinfo is None:
             stamp = stamp.replace(tzinfo=IST)
+        exchange_at = stamp.astimezone(timezone.utc)
+        if received_at is None:
+            try:
+                receipt = clock.receive_time(exchange_at)
+            except ClockError as exc:
+                raise DataError(str(exc)) from exc
+        else:
+            receipt = available = received_at
         payload = [("exchange", "NSE"), ("source", "kite_connect")]
         raw_hash = hashlib.sha256(json.dumps(quote, sort_keys=True, separators=(",", ":"),
                                           default=str).encode("utf-8")).hexdigest()
@@ -135,9 +147,17 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
             if value is not None:
                 payload.append((key_name, str(value)))
         try:
+            if received_at is None:
+                available = clock.availability_time(exchange_at, receipt)
+            try:
+                ingested = ingested_at or clock.now_utc("ingest")
+            except ClockError as exc:
+                raise DataError(str(exc)) from exc
+            if ingested < available:
+                raise DataError("ingest clock cannot precede source availability")
             events.append(NormalizedEvent(
-                kind="QUOTE", instrument=key, event_utc=stamp.astimezone(timezone.utc),
-                received_utc=receipt, available_utc=receipt, payload=tuple(sorted(payload)),
+                kind="QUOTE", instrument=key, event_utc=exchange_at,
+                received_utc=receipt, available_utc=available, payload=tuple(sorted(payload)),
                 ingested_utc=ingested,
             ))
         except DataError:

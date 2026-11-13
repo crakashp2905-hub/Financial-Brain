@@ -95,3 +95,21 @@ def test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows():
     assert rejected[0]["instrument"] == "NSE:TCS"
     assert rejected[0]["reason"] == "INVALID_EXCHANGE_TIMESTAMP"
     assert len(rejected[0]["event_sha256"]) == 64
+
+
+def test_injected_clock_provider_stamps_each_kite_event_after_exchange_time():
+    from financial_brain.forward_edge.session_clock import SessionClockProvider
+
+    stamps = iter((RECEIPT, RECEIPT + timedelta(milliseconds=2),
+                   RECEIPT + timedelta(milliseconds=3)))
+    events = forward_events(
+        ["INFY"],
+        quote_fn=lambda *_: {"NSE:INFY": {
+            "timestamp": "2026-11-12T09:30:00+05:30", "last_price": 1500,
+        }},
+        clock_provider=SessionClockProvider(lambda: next(stamps)),
+    )
+    event, = events
+    assert event.received_utc == RECEIPT
+    assert event.available_utc == RECEIPT + timedelta(milliseconds=2)
+    assert event.ingested_utc == RECEIPT + timedelta(milliseconds=3)

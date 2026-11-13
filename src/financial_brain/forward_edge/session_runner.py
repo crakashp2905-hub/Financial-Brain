@@ -17,6 +17,7 @@ from typing import Callable, Iterable
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.market_data import NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.session_clock import ClockError, SessionClockProvider, as_utc
 
 
 class RunnerError(ValueError):
@@ -111,8 +112,10 @@ class ForwardSessionRunner:
     post-decision observations and be idempotent by that id. Results are journaled before return.
     """
 
-    def __init__(self, journal_path: Path) -> None:
+    def __init__(self, journal_path: Path,
+                 clock_provider: SessionClockProvider | None = None) -> None:
         self.journal_path = Path(journal_path)
+        self.clock_provider = clock_provider or SessionClockProvider()
 
     def mark_incomplete(self, session_id: str, reason: str) -> None:
         """Close a nonterminal session as incomplete without fabricating an outcome."""
@@ -266,20 +269,27 @@ class ForwardSessionRunner:
         return len(additions)
 
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
-            decision_at: datetime,
+            decision_at: datetime | None = None,
             decision_fn: Callable[[list[NormalizedEvent]], dict],
             risk_fn: Callable[[dict], dict],
             execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
             reconcile_execution_fn: Callable[[str], dict] | None = None) -> dict:
         from financial_brain.forward_edge.market_data import decision_visible
 
-        visible_at = self._utc(decision_at)
-        self.begin(config)
-        records = DurableJournal(self.journal_path).records()
+        journal = DurableJournal(self.journal_path)
+        records = journal.records()
         existing = [r for r in records if r.get("session_id") == config.session_id]
         prior_decision = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
-        if prior_decision is not None and prior_decision.get("decision_at_utc") != visible_at.isoformat():
-            raise RunnerError("session id already has a different decision timestamp")
+        try:
+            if prior_decision is not None:
+                visible_at = self._utc(datetime.fromisoformat(prior_decision["decision_at_utc"]))
+                if decision_at is not None and self._utc(decision_at) != visible_at:
+                    raise RunnerError("session id already has a different decision timestamp")
+            else:
+                visible_at = self.clock_provider.decision_time(decision_at)
+        except ClockError as exc:
+            raise RunnerError(str(exc)) from exc
+        self.begin(config)
         closed = next((r for r in reversed(existing) if r.get("t") == "SESSION_CLOSED"), None)
         if closed is not None:
             return closed["result"]
@@ -370,7 +380,8 @@ class ForwardSessionRunner:
                     journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
                                     "intent_id": intent_id})
                     execution = self._execute_with_receipt(journal, config.session_id, decision,
-                                                           intent_id, observed, execution_fn)
+                                                           intent_id, observed, execution_fn,
+                                                           self.clock_provider, visible_at)
                 else:
                     if reconcile_execution_fn is None:
                         journal.append({"t": "OUTBOX_UNKNOWN", "session_id": config.session_id,
@@ -395,7 +406,8 @@ class ForwardSessionRunner:
                         self._persist_execution_and_ack(journal, config.session_id, intent_id, execution)
                     else:
                         execution = self._execute_with_receipt(journal, config.session_id, decision,
-                                                               intent_id, observed, execution_fn)
+                                                               intent_id, observed, execution_fn,
+                                                               self.clock_provider, visible_at)
             else:
                 execution = prior_execution
                 self._validate_execution_receipt(execution)
@@ -411,10 +423,20 @@ class ForwardSessionRunner:
     @classmethod
     def _execute_with_receipt(cls, journal: DurableJournal, session_id: str, decision: dict,
                               intent_id: str, events: list[NormalizedEvent],
-                              execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict]) -> dict:
+                              execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
+                              clock_provider: SessionClockProvider, decision_utc: datetime) -> dict:
         try:
             execution = execution_fn(decision, intent_id, events)
+            if isinstance(execution, dict):
+                execution = dict(execution)
+                execution_at = clock_provider.simulated_execution_time(
+                    decision_utc, execution.get("simulated_execution_at_utc"))
+                execution["simulated_execution_at_utc"] = execution_at.isoformat()
             cls._validate_execution_receipt(execution)
+        except ClockError as exc:
+            journal.append({"t": "OUTBOX_UNKNOWN", "session_id": session_id,
+                            "intent_id": intent_id, "reason": "INVALID_SIMULATION_CLOCK"})
+            raise RunnerError(str(exc)) from exc
         except Exception as exc:
             journal.append({"t": "OUTBOX_UNKNOWN", "session_id": session_id,
                             "intent_id": intent_id, "reason": type(exc).__name__})
@@ -430,6 +452,11 @@ class ForwardSessionRunner:
             raise RunnerError("paper execution result needs a non-empty simulated receipt_id")
         if execution.get("fidelity") not in {"SIMULATED_QUOTE", "SIMULATED_BAR"}:
             raise RunnerError("paper execution receipt must declare simulated quote or bar fidelity")
+        try:
+            as_utc(datetime.fromisoformat(execution["simulated_execution_at_utc"]),
+                   "simulated execution clock")
+        except (KeyError, TypeError, ValueError) as exc:
+            raise RunnerError("paper execution receipt needs an aware simulated execution timestamp") from exc
         status = execution.get("status", execution.get("state"))
         if status not in {"FILLED", "PARTIAL", "MISSED", "REJECTED", "NO_TRADE"}:
             raise RunnerError("paper execution receipt needs a recognized outcome status")
