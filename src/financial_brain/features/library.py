@@ -13,6 +13,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .metadata import metadata_for_columns
+
 FVG_LOOKBACK = 20          #: sessions an unfilled gap stays "open" for the count and distance features
 EPS = 1e-12
 
@@ -173,6 +175,7 @@ def compute(bars: pd.DataFrame, market: pd.Series | None = None) -> pd.DataFrame
     # ---------------------------------------------------------------- outcomes (not features)
     f["fwd5"] = c.shift(-5) / c - 1
     f["fwd20"] = c.shift(-20) / c - 1
+    f.attrs["feature_metadata"] = [item.to_dict() for item in metadata_for_columns(list(f.columns))]
     return f
 
 
@@ -187,7 +190,8 @@ def _fvg_features(o, h, l, c, atr) -> dict:
     n = len(c)
     out = {k: np.full(n, np.nan) for k in ("fvg_bull_new", "fvg_bear_new", "fvg_bull_open", "fvg_bear_open",
                                             "fvg_bull_dist", "fvg_bear_dist", "fvg_bull_retest", "fvg_bear_retest")}
-    bull, bear = [], []                                  # [formed_at, bottom, top]
+    bull: list[list[float]] = []                         # [formed_at, bottom, top]
+    bear: list[list[float]] = []
     for t in range(n):
         a = atr[t] if np.isfinite(atr[t]) and atr[t] > 0 else np.nan
         # test existing gaps against this bar first: they were known before it
@@ -475,7 +479,7 @@ def _gartley(H, L) -> np.ndarray:
     0.382-0.886 AB, AD about 0.786 XA), -1 for the bearish mirror, else 0. Swings confirm 2 bars after the pivot."""
     n = len(H)
     out = np.zeros(n)
-    alt = []                                               # alternating swings (index, price, +1 high / -1 low)
+    alt: list[tuple[int, float, int]] = []                 # alternating swings (index, price, +1 high / -1 low)
     for t in range(4, n):
         k = t - 2
         for p in ((k, H[k], 1) if H[k] > max(H[k - 2], H[k - 1], H[k + 1], H[k + 2]) else None,

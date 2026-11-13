@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 82,
-  "unrecorded_tasks": 136,
+  "recorded_tasks": 83,
+  "unrecorded_tasks": 135,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1733,6 +1733,30 @@
       "blockers": [
         "The wider 253-entry strategy inventory and legacy algorithms are not all registered with mechanism hypotheses.",
         "No prospective observations have tested these economic conjectures; no profitability is claimed."
+      ]
+    },
+    {
+      "id": "PE-0057",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/features/metadata.py",
+        "src/financial_brain/features/library.py",
+        "tests/test_phase5_feature_library.py",
+        "docs/edge-program/pe-0057-feature-timing-metadata.md",
+        "docs/edge-program/pe-0057-feature-timing-evidence.json",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/strategy-variant-inventory.json"
+      ],
+      "tests": [
+        "test_every_generated_field_has_causal_horizon_and_availability_metadata",
+        "test_no_feature_looks_ahead"
+      ],
+      "test_result": "Combined feature-library and strategy-inventory suite: 9 passed; Ruff and mypy passed. Source inventory --check passes (563 Python files). Every generated daily price-library field carries a role, construction window, availability policy, refresh cadence and explicit estimated/unestimated horizon state.",
+      "evidence_sha256": "3c8fa9af1037ba26a90470fe107b696fe61648a0d4b1549d065fa1dd0b302984",
+      "blockers": [
+        "Economic holding horizon and predictor half-life remain unestimated pending suitable prospective cohorts.",
+        "Fundamentals, filings, macro, options, and legacy feature libraries are not covered by this metadata contract.",
+        "Actual release delays depend on provider timestamps and data-rights evidence."
       ]
     }
   ]
