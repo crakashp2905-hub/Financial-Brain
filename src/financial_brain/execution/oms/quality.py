@@ -15,6 +15,7 @@ so a strategy is never blamed for its fills, nor credited for them.
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime
 
 import numpy as np
@@ -23,6 +24,7 @@ from . import model as M
 
 ROUND_TRIP = {"mega": 0.0025, "large": 0.0030, "mid": 0.0045, "small": 0.0060}
 MIN_ORDERS = 20
+Bucket = tuple[str, str, str, str, str]
 
 
 def bucket(adv_inr: float | None) -> str:
@@ -68,3 +70,91 @@ def report(orders: list[M.Order], events: list[dict], adv: dict[str, float]) -> 
                   "latency_s_median": float(np.median(ls)) if ls else np.nan,
                   "judged": len(filled) >= MIN_ORDERS}
     return out
+
+
+def slippage_bucket(*, spread_bp: float | None, adv_inr: float | None,
+                    time_minute: int | None, participation: float | None,
+                    volatility_pct: float | None) -> Bucket:
+    """Return stable spread/ADV/time/participation/volatility bucket labels.
+
+    Missing or invalid market context is explicit (`unknown`); it is never mapped to the cheapest bucket.
+    `time_minute` is local exchange time in minutes after midnight, and volatility is a percent value.
+    """
+    def numeric(value: float | None) -> float | None:
+        return float(value) if value is not None and np.isfinite(value) else None
+
+    spread, adv, part, vol = map(numeric, (spread_bp, adv_inr, participation, volatility_pct))
+    spread_key = ("unknown" if spread is None or spread < 0 else "lt_5bp" if spread < 5
+                  else "5_15bp" if spread < 15 else "15_50bp" if spread < 50 else "gte_50bp")
+    adv_key = bucket(adv)
+    if time_minute is None or not isinstance(time_minute, int) or not 0 <= time_minute < 1440:
+        time_key = "unknown"
+    elif 555 <= time_minute < 600:
+        time_key = "open_0915_1000"
+    elif 600 <= time_minute < 870:
+        time_key = "midday_1000_1430"
+    elif 870 <= time_minute <= 930:
+        time_key = "close_1430_1530"
+    else:
+        time_key = "outside_regular_session"
+    part_key = ("unknown" if part is None or part < 0 else "le_1pct" if part <= 0.01
+                else "1_5pct" if part <= 0.05 else "5_10pct" if part <= 0.10 else "gt_10pct")
+    vol_key = ("unknown" if vol is None or vol < 0 else "lt_1pct" if vol < 1
+               else "1_2pct" if vol < 2 else "2_4pct" if vol < 4 else "gte_4pct")
+    return spread_key, adv_key, time_key, part_key, vol_key
+
+
+def calibrate_slippage(observations: list[dict], *, min_observations: int = MIN_ORDERS) -> dict:
+    """Build conservative five-dimensional slippage buckets from observed broker fills only.
+
+    Each row must include context (`spread_bp`, `adv_inr`, `time_minute`, `participation`, `volatility_pct`),
+    signed adverse `slippage_bp`, fidelity, an aware `observed_at` timestamp, and a 64-hex source hash. Simulated
+    quote/bar rows are counted as excluded evidence. A bucket below the sample floor or without observed receipts
+    returns no parameter and `UNCALIBRATED`; this report never mutates the active execution model.
+    """
+    if min_observations < 1:
+        raise ValueError("min_observations must be positive")
+    groups: dict[Bucket, list[float]] = {}
+    excluded: dict[Bucket, int] = {}
+    for row in observations:
+        key = slippage_bucket(
+            spread_bp=row.get("spread_bp"), adv_inr=row.get("adv_inr"),
+            time_minute=row.get("time_minute"), participation=row.get("participation"),
+            volatility_pct=row.get("volatility_pct"),
+        )
+        value = row.get("slippage_bp")
+        if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+            slip = float("nan")
+        else:
+            try:
+                slip = float(value)
+            except ValueError:
+                slip = float("nan")
+        stamp = row.get("observed_at")
+        try:
+            parsed = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+            has_aware_time = parsed.tzinfo is not None and parsed.utcoffset() is not None
+        except (TypeError, ValueError):
+            has_aware_time = False
+        valid_source = isinstance(row.get("source_sha256"), str) and bool(
+            re.fullmatch(r"[0-9a-f]{64}", row["source_sha256"]))
+        observed = (row.get("fidelity") == "OBSERVED_BROKER" and np.isfinite(slip)
+                    and has_aware_time and valid_source)
+        if observed:
+            groups.setdefault(key, []).append(slip)
+        else:
+            excluded[key] = excluded.get(key, 0) + 1
+
+    result = {}
+    for key in sorted(set(groups) | set(excluded)):
+        values = groups.get(key, [])
+        calibrated = len(values) >= min_observations
+        result["|".join(key)] = {
+            "spread": key[0], "adv": key[1], "time": key[2],
+            "participation": key[3], "volatility": key[4],
+            "observed_broker_fills": len(values), "excluded_unverified_rows": excluded.get(key, 0),
+            "status": "CALIBRATED" if calibrated else "UNCALIBRATED",
+            "recommended_slippage_bp": (max(0.0, float(np.quantile(values, 0.75, method="higher")))
+                                         if calibrated else None),
+        }
+    return {"min_observations": min_observations, "buckets": result}
