@@ -42,7 +42,7 @@ def _enrolment_evidence(*, actor_id: str = "owner-1", benchmark_day: date = date
             strategy_code_sha256=SHA, model_code_sha256="c" * 64, data_snapshot_sha256="d" * 64,
             data_rights_id="kite-paper", data_rights_sha256="e" * 64, market_calendar_id="NSE-2027",
             market_calendar_sha256="f" * 64, universe_sha256="1" * 64,
-            execution_cost_id="cost-v1", execution_cost_sha256="2" * 64,
+            execution_cost_id="cost-v1", execution_cost_sha256="2" * 64, risk_policy_sha256="4" * 64,
             benchmarks=(("NIFTY_CASH", "3" * 64),),
         ),
     )

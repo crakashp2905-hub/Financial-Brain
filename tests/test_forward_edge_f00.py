@@ -37,6 +37,7 @@ def _protected_charter(name: str, start: date) -> tuple[charter.ExperimentCharte
         data_rights_id="owner-kite-api", data_rights_sha256="d" * 64,
         market_calendar_id="NSE-CASH-v1", market_calendar_sha256="e" * 64,
         universe_sha256="f" * 64, execution_cost_id="owner-costs-v1", execution_cost_sha256="1" * 64,
+        risk_policy_sha256="0" * 64,
         benchmarks=(("NIFTY50_CASH", "2" * 64),),
     )
     charter_value = charter.ExperimentCharter(
