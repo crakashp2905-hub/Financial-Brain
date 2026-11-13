@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0109",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f04.py",
+    "result": "15 passed; Ruff and mypy passed for decision_custody.py."
+  },
+  "implemented": [
+    "Cohort export is deterministic and includes exact scheduled session IDs, frozen schedule identity, denominator counts, manifests, and custody receipt/status rows.",
+    "Optional ordered order and equity JSONL artifacts are hash-indexed for second-machine replay.",
+    "Verifier checks bundle file hashes, schedule and manifest digests, schedule membership, replayed order/equity hashes, and reports custody-status mismatches against supplied trust roots.",
+    "Export refuses duplicate or out-of-schedule session IDs."
+  ],
+  "limitations": [
+    "The snapshot proves deterministic artifact reproduction, not independent source-market provenance or strategy profitability.",
+    "Production exchange-calendar authority and trust-root configuration remain governed by PE-0103 and PE-0106."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/decision_custody.py": "acf212970da75bbb7c1440224087bff9d1010cbc408b0134fe42867d9932c218",
+    "tests/test_forward_edge_f04.py": "53a865c38e15c216d0f2398202d098098542bad1239f43458f84efe41b2c36bb",
+    "docs/edge-program/source-inventory.json": "3071acf3a0aee43f4bc6fa35c62351765c4963a1c899816e9f63df7a4bcb1930"
+  }
+}

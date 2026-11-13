@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 114,
-  "unrecorded_tasks": 104,
+  "recorded_tasks": 115,
+  "unrecorded_tasks": 103,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2468,6 +2468,26 @@
         "No authoritative explicit exchange-session schedule is available; PE-0103 still stores date ranges.",
         "No owner-approved external timestamp service or production trust root is configured."
       ]
+    },
+    {
+      "id": "PE-0109",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/decision_custody.py",
+        "tests/test_forward_edge_f04.py",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/pe-0109-deterministic-cohort-snapshot.md",
+        "docs/edge-program/pe-0109-deterministic-cohort-snapshot-evidence.json"
+      ],
+      "tests": [
+        "test_bundle_verifies_and_detects_tampering",
+        "test_bundle_copy_verifies_on_another_location",
+        "test_bundle_replay_hashes_and_custody_mismatches_are_reported",
+        "test_bundle_refuses_duplicate_or_out_of_schedule_sessions"
+      ],
+      "test_result": "15 focused forward decision-custody tests passed; Ruff and mypy passed for decision_custody.py. Exported replay hashes match, altered equity hashes are detected, and custody-status mismatches are reported.",
+      "evidence_sha256": "c055fae4c9671e1355edf66d34499c7c54c6a2f01b1b50dc52e3d2efe187f665",
+      "blockers": []
     }
   ]
 }

@@ -9,7 +9,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from financial_brain.forward_edge.custody import (CustodyStatus, ProviderNotConfigured, Receipt, TimestampProvider,
@@ -256,17 +256,51 @@ class ManifestJournal:
 # ---- FE-0054 attestation bundle export and offline verification ----
 
 def export_bundle(journal: ManifestJournal, schedule: CohortSchedule, out: Path,
-                  *, sessions: list[str]) -> dict:
+                  *, sessions: list[str], orders: list[dict] | None = None,
+                  equity: list[dict] | None = None,
+                  trust_roots: dict[tuple[str, str], TrustRoot] | None = None) -> dict:
+    """Export a deterministic, replayable cohort snapshot with explicit custody state."""
+    if len(sessions) != len(set(sessions)):
+        raise CustodyError("scheduled session list contains duplicates")
+    for sid in sessions:
+        try:
+            day = date.fromisoformat(sid)
+        except (TypeError, ValueError) as exc:
+            raise CustodyError(f"invalid scheduled session date {sid!r}") from exc
+        if not any(date.fromisoformat(c.start) <= day <= date.fromisoformat(c.end)
+                   for c in schedule.cohorts):
+            raise CustodyError(f"session outside frozen schedule {sid}")
     out.mkdir(parents=True, exist_ok=True)
     files = {}
     rows = [json.loads(m.canonical().decode("utf-8")) | {"manifest_sha256": m.sha256(),
                                                           "recorded_at_utc": journal._recorded_at[m.session_id].isoformat()}
-            for m in journal.manifests()]
-    files["manifests.jsonl"] = "".join(json.dumps(r, sort_keys=True) + "\n" for r in rows)
+            for m in journal.manifests() if m.session_id in set(sessions)]
+    files["manifests.jsonl"] = _jsonl(rows)
+    custody_rows: list[dict] = []
+    roots = trust_roots or {}
+    for sid in sorted(set(sessions)):
+        if sid not in journal._manifests:
+            custody_rows.append({"session_id": sid, "status": "UNRECORDED", "receipt": None})
+            continue
+        receipt = journal._receipts.get(sid)
+        receipt_row = None if receipt is None else {
+            "provider_id": receipt.provider_id, "key_id": receipt.key_id,
+            "digest_sha256": receipt.digest_sha256,
+            "anchored_at_utc": _utc(receipt.anchored_at_utc, "receipt").isoformat(),
+            "signature_b64": receipt.signature_b64,
+        }
+        custody_rows.append({"session_id": sid, "status": journal.status(sid, roots).value,
+                             "receipt": receipt_row})
+    files["custody.jsonl"] = _jsonl(custody_rows)
     files["schedule.json"] = json.dumps({"charter_sha256": schedule.charter_sha256,
                                          "cohorts": [[c.cohort_id, c.start, c.end] for c in schedule.cohorts],
                                          "schedule_sha256": schedule.sha256()}, sort_keys=True) + "\n"
     files["denominator.json"] = json.dumps(journal.denominator(sessions), sort_keys=True) + "\n"
+    files["sessions.json"] = json.dumps(sorted(set(sessions)), separators=(",", ":")) + "\n"
+    if orders is not None:
+        files["orders.jsonl"] = _jsonl(orders)
+    if equity is not None:
+        files["equity.jsonl"] = _jsonl(equity)
     index = {}
     for name, text in files.items():
         (out / name).write_text(text, encoding="utf-8", newline="\n")
@@ -275,8 +309,15 @@ def export_bundle(journal: ManifestJournal, schedule: CohortSchedule, out: Path,
     return index
 
 
-def verify_bundle(bundle: Path) -> list[str]:
-    """Recompute every file digest and every manifest digest from the bytes on disk. Returns problems (empty = ok)."""
+def _jsonl(rows: list[dict]) -> str:
+    return "".join(json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
+                   for row in rows)
+
+
+def verify_bundle(bundle: Path, *, replay_orders: list[dict] | None = None,
+                  replay_equity: list[dict] | None = None,
+                  trust_roots: dict[tuple[str, str], TrustRoot] | None = None) -> list[str]:
+    """Verify snapshot files, optional independent replay outputs, and custody status."""
     problems = []
     index = json.loads((bundle / "index.json").read_text(encoding="utf-8"))
     for name, expected in sorted(index.items()):
@@ -288,6 +329,7 @@ def verify_bundle(bundle: Path) -> list[str]:
         if hashlib.sha256(text.encode("utf-8")).hexdigest() != expected:
             problems.append(f"digest mismatch {name}")
     manifests = bundle / "manifests.jsonl"
+    manifest_rows = {}
     if manifests.exists():
         for line in manifests.read_text(encoding="utf-8").splitlines():
             row = json.loads(line)
@@ -295,4 +337,68 @@ def verify_bundle(bundle: Path) -> list[str]:
             row.pop("recorded_at_utc", None)
             if hashlib.sha256(_canon(row)).hexdigest() != digest:
                 problems.append(f"manifest digest mismatch {row.get('session_id')}")
+            manifest_rows[row.get("session_id")] = {**row, "_manifest_sha256": digest}
+    sessions_path = bundle / "sessions.json"
+    sessions = json.loads(sessions_path.read_text(encoding="utf-8")) if sessions_path.exists() else []
+    schedule_path = bundle / "schedule.json"
+    if schedule_path.exists():
+        schedule_row = json.loads(schedule_path.read_text(encoding="utf-8"))
+        try:
+            cohorts = tuple(Cohort(*row) for row in schedule_row["cohorts"])
+            schedule = CohortSchedule(schedule_row["charter_sha256"], cohorts)
+            if schedule.sha256() != schedule_row.get("schedule_sha256"):
+                problems.append("schedule hash mismatch")
+            if len(sessions) != len(set(sessions)):
+                problems.append("scheduled session list contains duplicates")
+            for sid in sessions:
+                day = date.fromisoformat(sid)
+                if not any(date.fromisoformat(c.start) <= day <= date.fromisoformat(c.end)
+                           for c in schedule.cohorts):
+                    problems.append(f"session outside frozen schedule {sid}")
+        except (KeyError, TypeError, ValueError, CustodyError):
+            problems.append("invalid frozen schedule")
+    custody_path = bundle / "custody.jsonl"
+    if custody_path.exists():
+        roots = trust_roots or {}
+        for line in custody_path.read_text(encoding="utf-8").splitlines():
+            row = json.loads(line)
+            sid, expected = row.get("session_id"), row.get("status")
+            manifest_row = manifest_rows.get(sid)
+            if manifest_row is None:
+                actual = "UNRECORDED"
+            else:
+                values = {k: v for k, v in manifest_row.items() if k != "_manifest_sha256"}
+                digest = manifest_row["_manifest_sha256"]
+                try:
+                    manifest = DecisionManifest(**values)
+                    receipt_row = row.get("receipt")
+                    receipt = (Receipt(
+                        receipt_row["provider_id"], receipt_row["key_id"],
+                        receipt_row["digest_sha256"],
+                        datetime.fromisoformat(receipt_row["anchored_at_utc"]),
+                        receipt_row["signature_b64"],
+                    ) if receipt_row is not None else None)
+                    actual = classify_custody(
+                        manifest_sha256=digest,
+                        decision_at_utc=manifest.decision_utc,
+                        entry_earliest_at_utc=manifest.entry_utc,
+                        receipt=receipt,
+                        trust_roots=roots,
+                    ).value
+                except (KeyError, TypeError, ValueError, CustodyError):
+                    actual = "CONFLICTED"
+            if expected != actual:
+                problems.append(f"custody mismatch {sid}: expected {expected}, computed {actual}")
+    for label, replay, filename in (
+        ("orders", replay_orders, "orders.jsonl"),
+        ("equity", replay_equity, "equity.jsonl"),
+    ):
+        if replay is None:
+            continue
+        path = bundle / filename
+        if not path.exists():
+            problems.append(f"missing replay input {filename}")
+        elif hashlib.sha256(_jsonl(replay).encode("utf-8")).hexdigest() != hashlib.sha256(
+                path.read_bytes()).hexdigest():
+            problems.append(f"replay {label} hash mismatch")
     return problems

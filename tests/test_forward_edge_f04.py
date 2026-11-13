@@ -1,6 +1,7 @@
 """F04 - forward decision custody (FE-0045 .. FE-0054). Offline. Without a configured provider every session is LOCAL_ONLY."""
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -178,7 +179,7 @@ def test_bundle_verifies_and_detects_tampering(tmp_path: Path) -> None:
     D.export_bundle(j, sched, out, sessions=["2027-01-04"])
     assert D.verify_bundle(out) == []
     original = (out / "manifests.jsonl").read_text(encoding="utf-8")
-    text = original.replace('"intended_quantity": 10', '"intended_quantity": 11')
+    text = original.replace('"intended_quantity":10', '"intended_quantity":11')
     assert text != original  # the edit must actually happen
     (out / "manifests.jsonl").write_text(text, encoding="utf-8")
     problems = D.verify_bundle(out)
@@ -197,3 +198,43 @@ def test_bundle_copy_verifies_on_another_location(tmp_path: Path) -> None:
         (dst / p.name).write_bytes(p.read_bytes())
     assert D.verify_bundle(dst) == []
     assert json.loads((dst / "schedule.json").read_text(encoding="utf-8"))["charter_sha256"] == CHARTER
+
+
+def test_bundle_replay_hashes_and_custody_mismatches_are_reported(tmp_path: Path) -> None:
+    j = D.ManifestJournal()
+    j.record(_manifest(), recorded_at_utc=DECIDE + timedelta(seconds=5))
+    sched = D.CohortSchedule(CHARTER, _cohorts(("2027-01-04", "2027-02-01")))
+    orders = [{"order_id": "o1", "filled_qty": 5, "price": "100.00"}]
+    equity = [{"session_id": "2027-01-04", "nav": "100000.00"}]
+    out = tmp_path / "replay-bundle"
+    D.export_bundle(j, sched, out, sessions=["2027-01-04"], orders=orders,
+                    equity=equity)
+
+    assert D.verify_bundle(out, replay_orders=orders, replay_equity=equity) == []
+    mismatched = D.verify_bundle(out, replay_orders=orders,
+                                 replay_equity=[{"session_id": "2027-01-04", "nav": "99999.00"}])
+    assert "replay equity hash mismatch" in mismatched
+
+    custody_path = out / "custody.jsonl"
+    custody_row = json.loads(custody_path.read_text(encoding="utf-8"))
+    custody_row["status"] = "VERIFIED"  # no receipt or pinned root supports this claim
+    custody_bytes = (json.dumps(custody_row, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    custody_path.write_bytes(custody_bytes)
+    index_path = out / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    index["custody.jsonl"] = hashlib.sha256(custody_bytes).hexdigest()
+    index_path.write_text(json.dumps(index, sort_keys=True, indent=1) + "\n", encoding="utf-8")
+
+    problems = D.verify_bundle(out, replay_orders=orders, replay_equity=equity)
+    assert any(p.startswith("custody mismatch 2027-01-04:") for p in problems)
+
+
+def test_bundle_refuses_duplicate_or_out_of_schedule_sessions(tmp_path: Path) -> None:
+    journal = D.ManifestJournal()
+    schedule = D.CohortSchedule(CHARTER, _cohorts(("2027-01-04", "2027-02-01")))
+    with pytest.raises(D.CustodyError, match="duplicates"):
+        D.export_bundle(journal, schedule, tmp_path / "duplicate",
+                        sessions=["2027-01-04", "2027-01-04"])
+    with pytest.raises(D.CustodyError, match="outside frozen schedule"):
+        D.export_bundle(journal, schedule, tmp_path / "outside",
+                        sessions=["2027-03-01"])
