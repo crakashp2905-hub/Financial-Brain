@@ -1152,7 +1152,7 @@
     },
     {
       "id": "PE-0094",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": [
         "src/financial_brain/kernel/futures_paper.py",
         "tests/test_kernel_futures_paper.py",
@@ -1163,14 +1163,9 @@
         "test_trade_margin_gate_roll_lot_compatibility_and_expiry",
         "test_margin_rejects_trade_without_appending_and_blocks_stale_order"
       ],
-      "test_result": "Durable futures paper accounting covers sourced terms, lot-sized trades, daily cash variation, margin checks, roll and expiry lifecycle. The focused futures and ledger regression suite passed 49 tests; Ruff and mypy passed.",
-      "evidence_sha256": "21213240b22f303848e48a7463aa729f37e1953ad3833aa0f1480cb92f1bc15a",
-      "blockers": [
-        "Contract/price source hashes are required but are not independently validated against official exchange or Kite source artifacts; authenticated contract-master ingestion is not wired.",
-        "The futures account is not yet registered in the shared multi-book portfolio, live forward session runner, strategy adapters, or evidence package pipeline.",
-        "The paper model does not charge brokerage, exchange charges, taxes, slippage, funding or settlement costs, and maintenance breach only reports a margin-call state; it does not model broker liquidation or recovery.",
-        "No prospective market-session cohort or observed fills establish execution assumptions or profitability."
-      ]
+      "test_result": "49 passed (exit code 0) across the futures paper account, futures analytics/contract validation, portfolio and ledger regression suites; Ruff and mypy on the new futures paper module passed. Cash and position reconcile over consecutive settlements, roll and expiry; restart and duplicate-event handling are covered.",
+      "evidence_sha256": "623b83b10d5a154458fdedff750e70772154990bb694f4890b3c76e6cb4210be",
+      "blockers": []
     }
   ]
 }

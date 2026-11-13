@@ -39,10 +39,16 @@ def test_daily_variation_margin_recovery_and_idempotent_events(tmp_path):
     assert account.position == 2
     assert account.initial_margin == Decimal("200")
     assert account.available_cash == Decimal("9820.00")
-
-    # Repeating the same command is idempotent; restart folds exactly the same cash and position.
     account.settle("settle-1", settlement_price=Decimal("110"),
                    session_date=date(2026, 11, 13), source_sha256=HASH_B)
+
+    account.settle("settle-2", settlement_price=Decimal("100"),
+                   session_date=date(2026, 11, 16), source_sha256=HASH_B)
+    assert account.cash == Decimal("10000.00")
+    assert account.position == 2
+    assert account.variation_pnl == Decimal("0.00")
+
+    # Restart folds exactly the same cash and position.
     recovered = FuturesPaperAccount(path, account_id="acct", initial_cash=Decimal("10000"))
     assert (recovered.cash, recovered.position, recovered.variation_pnl) == (
         account.cash, account.position, account.variation_pnl
@@ -51,7 +57,7 @@ def test_daily_variation_margin_recovery_and_idempotent_events(tmp_path):
 
     with pytest.raises(FuturesPaperError, match="different futures request"):
         recovered.settle("settle-1", settlement_price=Decimal("109"),
-                         session_date=date(2026, 11, 13), source_sha256=HASH_B)
+                         session_date=date(2026, 11, 16), source_sha256=HASH_B)
 
 
 def test_trade_margin_gate_roll_lot_compatibility_and_expiry(tmp_path):
