@@ -103,9 +103,11 @@ def _read_offline_training_manifest(meta: dict, meta_path: Path) -> dict:
             or training_manifest.get("feature_schema_sha256") != meta.get("feature_schema_sha256")
             or training_manifest.get("code_sha256") != meta.get("offline_training_code_sha256")):
         raise LearnedModelError("offline-training manifest does not match the registered model lineage")
-    if (training_manifest.get("schema_version") != "fb.offline-training-job.v1"
+    if (training_manifest.get("schema_version") != "fb.offline-training-job.v2"
             or training_manifest.get("maturity_contract") !=
             "label_matured_at_utc is known and <= trained_as_of_utc"
+            or training_manifest.get("temporal_split_contract") !=
+            "expanding folds; purge labels overlapping validation; exclude embargo-adjacent sessions; feature availability and revision <= row decision; label maturity and revision <= fit cutoff"
             or training_manifest.get("features") != meta.get("features")
             or training_manifest.get("seed") != meta.get("seed")
             or not training_manifest.get("dataset_version")
@@ -139,6 +141,34 @@ def _read_offline_training_manifest(meta: dict, meta_path: Path) -> dict:
     if (as_of.tzinfo is None or mature.tzinfo is None or mature > as_of
             or not counts_valid):
         raise LearnedModelError("offline-training manifest includes invalid or immature training outcomes")
+    folds = training_manifest.get("temporal_folds")
+    split_parameters = training_manifest.get("temporal_split_parameters")
+    if (not isinstance(folds, list) or not folds or not isinstance(split_parameters, dict)
+            or type(split_parameters.get("n_splits")) is not int
+            or type(split_parameters.get("embargo_sessions")) is not int
+            or training_manifest.get("final_training_fold") != folds[-1].get("fold")
+            or training_manifest.get("fitted_rows") != folds[-1].get("train_count")
+            or training_manifest.get("reserved_validation_rows") != folds[-1].get("validation_count")):
+        raise LearnedModelError("offline-training manifest lacks its purged validation split")
+    for fold in folds:
+        try:
+            validation_start = pd.Timestamp(fold["validation_start_decision_at_utc"])
+            latest_maturity = pd.Timestamp(fold["max_train_label_matured_at_utc"])
+            latest_revision = pd.Timestamp(fold["max_train_label_revision_at_utc"])
+            valid_counts = (type(fold["train_count"]) is int and fold["train_count"] > 0
+                            and type(fold["validation_count"]) is int and fold["validation_count"] > 0
+                            and type(fold["embargo_sessions"]) is int
+                            and type(fold["embargoed_session_count"]) is int
+                            and fold["embargoed_session_count"] >= 0)
+            valid_hashes = all(isinstance(fold[key], str) and len(fold[key]) == 64
+                               and all(c in "0123456789abcdef" for c in fold[key])
+                               for key in ("train_rows_sha256", "validation_rows_sha256"))
+        except (KeyError, TypeError, ValueError):
+            raise LearnedModelError("offline-training split metadata is invalid") from None
+        if (validation_start.tzinfo is None or latest_maturity.tzinfo is None
+                or latest_revision.tzinfo is None or latest_maturity >= validation_start
+                or latest_revision >= validation_start or not valid_counts or not valid_hashes):
+            raise LearnedModelError("offline-training split leaks labels or has invalid membership")
     return training_manifest
 
 

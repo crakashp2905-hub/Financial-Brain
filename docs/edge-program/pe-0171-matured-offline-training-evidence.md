@@ -10,8 +10,8 @@ Offline training must use timestamped, versioned outcomes that have matured by a
 
 `learned_model.load` verifies the manifest and model lineage before using a model. The prediction-cache path performs the same manifest check, so existing cached predictions cannot make an unmanifested legacy model usable. The lower-level `train_final` helper remains a fitter for internal use and does not create a loadable artifact by itself.
 
-Verification: `tests/test_phase5_learned_model.py` — 7 passed. Ruff and targeted mypy passed. Source inventory and strategy-variant inventory checks passed (618 Python files; 253 source-linked strategy candidates).
+Verification: `tests/test_phase5_learned_model.py` — 10 passed after the PE-0172 temporal-split extension. Ruff and targeted mypy passed. Source inventory and strategy-variant inventory checks passed (618 Python files; 253 source-linked strategy candidates).
 
 ## Limits
 
-Tests use synthetic panels and synthetic maturity timestamps. This proves cutoff enforcement, quarantine, hashing and load-time integrity; it does not establish model quality, profitability, forward validation or provenance of any real financial outcome. The caller must supply a trustworthy dataset version and outcome-maturity timestamps. Feature-level point-in-time availability is handled by the separate PE-0175 requirement.
+Tests use synthetic panels and synthetic maturity timestamps. This proves cutoff enforcement, quarantine, hashing and load-time integrity; it does not establish model quality, profitability, forward validation or provenance of any real financial outcome. The caller must supply a trustworthy dataset version and outcome-maturity timestamps. PE-0172 adds training-time availability and revision checks; PE-0175 extends point-in-time availability contracts to inference and batch schemas.

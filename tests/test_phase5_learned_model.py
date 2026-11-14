@@ -25,7 +25,10 @@ def timestamped(panel_data):
     frame = panel_data.copy()
     decisions = pd.to_datetime(frame["d"]).dt.tz_localize("UTC") + pd.Timedelta(hours=10)
     frame["decision_at_utc"] = decisions
+    frame["feature_available_at_utc"] = decisions - pd.Timedelta(seconds=1)
+    frame["feature_revision_at_utc"] = decisions - pd.Timedelta(seconds=1)
     frame["label_matured_at_utc"] = decisions + pd.Timedelta(days=20)
+    frame["label_revision_at_utc"] = frame["label_matured_at_utc"]
     frame["dataset_version"] = "library-outcomes-v1"
     frame["feature_schema_version"] = "features-v1"
     return frame
@@ -42,12 +45,16 @@ def test_matured_offline_job_saves_reproducible_model_manifest(tmp_path):
     )
     meta = json.loads((tmp_path / "m.json").read_text())
     assert meta["features"] == ["a", "b"]
-    assert meta["trained_through"] == str(p["d"].max() - timedelta(days=1))
+    fit_last_day = pd.Timestamp(manifest["temporal_folds"][-1]["train_last_session"]).date()
+    assert meta["trained_through"] == str(fit_last_day - timedelta(days=1))
     assert meta["offline_training_manifest_sha256"] == manifest["manifest_sha256"]
     assert manifest["dataset_sha256"] and manifest["fit_dataset_sha256"]
     assert manifest["dataset_version"] == "library-outcomes-v1"
     assert manifest["feature_schema_version"] == "features-v1"
     assert manifest["eligible_matured_rows"] == len(p)
+    assert manifest["fitted_rows"] == manifest["temporal_folds"][-1]["train_count"]
+    assert manifest["reserved_validation_rows"] == manifest["temporal_folds"][-1]["validation_count"]
+    assert manifest["fitted_rows"] < manifest["eligible_matured_rows"]
     assert manifest["quarantined_rows"] == 0
     assert manifest["seed"] == 0 and len(manifest["code_sha256"]) == 64
     assert manifest["environment"]["threads"] == 1
@@ -61,11 +68,12 @@ def test_matured_offline_job_saves_reproducible_model_manifest(tmp_path):
 
 
 def test_offline_job_quarantines_unknown_and_not_yet_mature_outcomes(tmp_path):
-    p = timestamped(panel(n_dates=30, n=50))
-    as_of = datetime(2021, 1, 1, tzinfo=timezone.utc)
+    p = timestamped(panel(n_dates=120, n=50))
+    as_of = datetime(2024, 1, 1, tzinfo=timezone.utc)
     pending = p.iloc[[0]].copy()
     pending.loc[:, "lineage"] = "PENDING"
     pending.loc[:, "label_matured_at_utc"] = pd.Timestamp(as_of) + pd.Timedelta(days=1)
+    pending.loc[:, "label_revision_at_utc"] = pd.Timestamp(as_of) + pd.Timedelta(days=1)
     unknown = p.iloc[[1]].copy()
     unknown.loc[:, "lineage"] = "UNKNOWN"
     unknown.loc[:, "label_matured_at_utc"] = pd.NaT
@@ -98,6 +106,41 @@ def test_offline_job_rejects_unversioned_or_naive_timestamp_data(tmp_path):
         )
 
 
+def test_purged_embargo_folds_remove_overlapping_labels_and_nearby_sessions():
+    source = timestamped(panel(n_dates=80, n=2))
+    folds = OT.purged_embargo_splits(
+        source, trained_as_of=datetime(2023, 1, 1, tzinfo=timezone.utc),
+        n_splits=3, embargo_sessions=1,
+    )
+    sessions = sorted(pd.to_datetime(source["d"]).dt.date.unique())
+    for fold in folds:
+        train = source.iloc[fold["train_rows"]]
+        validation = source.iloc[fold["validation_rows"]]
+        val_start = pd.Timestamp(fold["validation_first_session"])
+        val_start = val_start.tz_localize("UTC") + pd.Timedelta(hours=10)
+        assert set(train.index).isdisjoint(validation.index)
+        assert (train["decision_at_utc"] < val_start).all()
+        assert (train["label_matured_at_utc"] < val_start).all()
+        assert (train["label_revision_at_utc"] < val_start).all()
+        start_position = sessions.index(pd.Timestamp(fold["validation_first_session"]).date())
+        assert sessions.index(pd.Timestamp(fold["train_last_session"]).date()) < start_position - 1
+        assert fold["purged_label_count"] > 0
+
+
+@pytest.mark.parametrize("column", ["feature_available_at_utc", "feature_revision_at_utc"])
+def test_future_feature_availability_or_revision_is_rejected_before_fitting(tmp_path, column):
+    source = timestamped(panel(n_dates=40, n=10))
+    row = source.index[0]
+    source.loc[row, column] = source.loc[row, "decision_at_utc"] + pd.Timedelta(seconds=1)
+    with pytest.raises(OT.OfflineTrainingError, match="after its decision time"):
+        OT.run_offline_training_job(
+            source, ["a", "b"], dataset_version="library-outcomes-v1",
+            feature_schema_version="features-v1",
+            trained_as_of=datetime(2023, 1, 1, tzinfo=timezone.utc),
+            model_path=tmp_path / "m.txt", meta_path=tmp_path / "m.json",
+        )
+
+
 def test_prediction_batch_digest_is_order_independent_and_content_sensitive():
     frame = pd.DataFrame({"lineage": ["L2", "L1"], "pred": [0.2, -0.1]})
     digest = LM.prediction_batch_sha256(frame, as_of=date(2026, 11, 2), model_digest="m" * 64)
@@ -117,7 +160,7 @@ def test_prediction_cache_requires_matching_model_and_batch_hash(tmp_path):
             "offline_training_manifest_file": manifest_name,
             "offline_training_code_sha256": code_sha256, "features": ["a", "b"], "seed": 0}
     manifest = {
-        "schema_version": "fb.offline-training-job.v1",
+        "schema_version": "fb.offline-training-job.v2",
         "maturity_contract": "label_matured_at_utc is known and <= trained_as_of_utc",
         "dataset_version": "test-data-v1", "feature_schema_version": "test-schema-v1",
         "features": meta["features"], "seed": meta["seed"],
@@ -130,6 +173,20 @@ def test_prediction_cache_requires_matching_model_and_batch_hash(tmp_path):
         "trained_as_of_utc": "2026-11-02T00:00:00+00:00",
         "max_eligible_label_matured_at_utc": "2026-11-01T00:00:00+00:00",
         "input_rows": 2, "eligible_matured_rows": 2, "quarantined_rows": 0,
+        "temporal_split_contract": "expanding folds; purge labels overlapping validation; exclude embargo-adjacent sessions; feature availability and revision <= row decision; label maturity and revision <= fit cutoff",
+        "temporal_split_parameters": {"n_splits": 1, "embargo_sessions": 1},
+        "temporal_folds": [{
+            "fold": 1, "train_count": 1, "validation_count": 1,
+            "train_rows_sha256": "f" * 64, "validation_rows_sha256": "1" * 64,
+            "embargo_sessions": 1, "embargoed_session_count": 1,
+            "train_last_session": "2026-10-30", "validation_first_session": "2026-11-01",
+            "validation_last_session": "2026-11-01",
+            "validation_start_decision_at_utc": "2026-11-01T10:00:00+00:00",
+            "max_train_label_matured_at_utc": "2026-10-29T10:00:00+00:00",
+            "max_train_label_revision_at_utc": "2026-10-29T10:00:00+00:00",
+            "purged_label_count": 1, "candidate_train_count": 2,
+        }],
+        "fitted_rows": 1, "reserved_validation_rows": 1, "final_training_fold": 1,
     }
     manifest["manifest_sha256"] = OT._manifest_sha256(manifest)
     meta["offline_training_manifest_sha256"] = manifest["manifest_sha256"]

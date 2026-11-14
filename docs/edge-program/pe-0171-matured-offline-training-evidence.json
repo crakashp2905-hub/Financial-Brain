@@ -11,11 +11,11 @@
     "tests/test_source_inventory.py",
     "tests/test_strategy_variant_inventory.py"
   ],
-  "test_result": "7 learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventories passed (618 Python files).",
+  "test_result": "10 learned-model and temporal-split tests passed; Ruff and targeted mypy passed; source and strategy-variant inventories passed (618 Python files).",
   "evidence_scope": "Synthetic learned-model panels and timestamps. No real market dataset, financial outcome provenance, profitability, or forward model quality is claimed.",
   "operational_limits": [
     "Rows with unknown or future maturity, incomplete values, unversioned datasets, or naive timestamps cannot enter fitting.",
     "The model loader and cache verifier reject artifacts without a matching offline job manifest.",
-    "Feature-level point-in-time availability checks are a separate PE-0175 acceptance item."
+    "PE-0172 checks training-time feature availability/revisions; PE-0175 extends availability contracts to inference and batch schemas."
   ]
 }

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 169,
-  "unrecorded_tasks": 49,
+  "recorded_tasks": 170,
+  "unrecorded_tasks": 48,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3720,8 +3720,28 @@
         "test_source_inventory.py",
         "test_strategy_variant_inventory.py"
       ],
-      "test_result": "7 learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventories passed (618 Python files).",
-      "evidence_sha256": "02914bac4f2e9b65c9fc30333525699b13b58ca52e47f20f8b602caa5a90b178",
+      "test_result": "10 learned-model and temporal-split tests passed; Ruff and targeted mypy passed; source and strategy-variant inventories passed (618 Python files).",
+      "evidence_sha256": "a06de80018ff8f0ee35067da46818d8a3dfcaaaeb31d059a721cdf3168a937a5",
+      "blockers": []
+    },
+    {
+      "id": "PE-0172",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/offline_training.py",
+        "src/financial_brain/evaluation/learned_model.py",
+        "tests/test_phase5_learned_model.py",
+        "docs/edge-program/pe-0172-purged-embargoed-training-evidence.md",
+        "docs/edge-program/pe-0172-purged-embargoed-training-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_phase5_learned_model.py",
+        "test_source_inventory.py",
+        "test_strategy_variant_inventory.py"
+      ],
+      "test_result": "10 learned-model and temporal-split tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (618 Python files, 253 linked candidates). CI pending.",
+      "evidence_sha256": "c44740f25e6a8f0c198ac1c8773ac3bdad582d2597471f40d95d156d1422dfac",
       "blockers": []
     }
   ]

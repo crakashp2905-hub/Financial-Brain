@@ -1,0 +1,20 @@
+{
+  "checklist_task": "PE-0172",
+  "status": "DONE",
+  "criterion": "Use purged/embargoed splits for overlapping holding horizons and nearby events; no feature, target, label, or revision from after decision time enters fitting.",
+  "implementation": [
+    "src/financial_brain/evaluation/offline_training.py",
+    "src/financial_brain/evaluation/learned_model.py"
+  ],
+  "tests": [
+    "tests/test_phase5_learned_model.py"
+  ],
+  "test_result": "10 learned-model and temporal-split tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (618 Python files, 253 linked candidates). CI pending.",
+  "evidence_scope": "Synthetic panels and timestamps only. No real market-data provenance, predictive quality, profitability, or forward validation is represented.",
+  "operational_limits": [
+    "Feature availability and revision timestamps must be trustworthy and no later than each decision.",
+    "Labels and revisions must have maturity timestamps; immature or post-cutoff outcomes cannot be fit.",
+    "Embargo is expressed in exchange sessions; the caller must use the appropriate session calendar.",
+    "Reserved validation rows are recorded and excluded from the saved model's fitting rows."
+  ]
+}
