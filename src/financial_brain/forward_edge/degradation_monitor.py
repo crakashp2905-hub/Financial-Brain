@@ -172,6 +172,32 @@ class DegradationMonitor:
         """Current latched action, including a state recovered from the journal."""
         return self._latched
 
+    @staticmethod
+    def observation_sha256(observation: RollingObservation) -> str:
+        """Return the canonical content identity used for a rolling observation."""
+        start, end, seen = (_utc(observation.window_start, "window_start"),
+                            _utc(observation.window_end, "window_end"),
+                            _utc(observation.observed_at, "observed_at"))
+        evidence = tuple(dict.fromkeys(x.strip() for x in observation.evidence_ids if x.strip()))
+
+        def digest_metric(value: float | None) -> float | str | None:
+            if value is None:
+                return None
+            return value if math.isfinite(value) else repr(value)
+
+        canonical = {
+            "observation_id": observation.observation_id,
+            "policy_sha256": observation.policy_sha256,
+            "window_start": start.isoformat(), "window_end": end.isoformat(),
+            "observed_at": seen.isoformat(), "net_alpha_bps": digest_metric(observation.net_alpha_bps),
+            "slippage_bps": digest_metric(observation.slippage_bps),
+            "fill_coverage": digest_metric(observation.fill_coverage),
+            "drift_score": digest_metric(observation.drift_score), "sample_count": observation.sample_count,
+            "evidence_ids": evidence,
+        }
+        return hashlib.sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":"),
+                                         allow_nan=False).encode()).hexdigest()
+
     def observe(self, observation: RollingObservation) -> AlarmEvent:
         policy = self.policy
         if observation.observation_id in self._ids:
@@ -234,23 +260,7 @@ class DegradationMonitor:
         # Pause/retire are latched. Recovery requires a separately reviewed policy/cohort.
         if self._latched == Action.PAUSE and action == Action.CONTINUE:
             action = Action.PAUSE
-        def digest_metric(value: float | None) -> float | str | None:
-            if value is None:
-                return None
-            return value if math.isfinite(value) else repr(value)
-
-        canonical = {
-            "observation_id": observation.observation_id,
-            "policy_sha256": observation.policy_sha256,
-            "window_start": start.isoformat(), "window_end": end.isoformat(),
-            "observed_at": seen.isoformat(), "net_alpha_bps": digest_metric(observation.net_alpha_bps),
-            "slippage_bps": digest_metric(observation.slippage_bps),
-            "fill_coverage": digest_metric(observation.fill_coverage),
-            "drift_score": digest_metric(observation.drift_score), "sample_count": observation.sample_count,
-            "evidence_ids": evidence,
-        }
-        digest = hashlib.sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":"),
-                                           allow_nan=False).encode()).hexdigest()
+        digest = self.observation_sha256(observation)
         event = AlarmEvent(observation.observation_id, policy.strategy_id, policy.strategy_version,
                            policy.policy_sha256, action, tuple(reasons), next_breaches, next_severe, digest)
         if self._journal is not None:

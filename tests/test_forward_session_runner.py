@@ -1034,17 +1034,38 @@ def test_runner_persists_closed_session_degradation_observation(tmp_path):
     config = _config(degradation_policy_sha256=policy.policy_sha256)
     journal_path = tmp_path / "session.jsonl"
     runner = ForwardSessionRunner(journal_path)
+    observed_sessions = []
+
+    def observe(run_config, _result, _records):
+        observed_sessions.append(run_config.session_id)
+        return _degradation_observation(policy, run_config.session_id)
+
     result = runner.run(
         config, [], decision_at=NOW,
         decision_fn=lambda _: {"side": "NONE", "reason": "NO_SIGNAL"},
         risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: pytest.fail("no intent"),
         degradation_policy=policy,
+        degradation_observation_fn=observe,
     )
     assert result["status"] == "NO_TRADE"
+    assert result["degradation"]["action"] == DegradationAction.CONTINUE.value
     alarm = runner.record_degradation_observation(
         config, policy, _degradation_observation(policy, config.session_id),
     )
     assert alarm.action == DegradationAction.CONTINUE
+    with pytest.raises(RunnerError, match="conflicts with its persisted"):
+        runner.record_degradation_observation(
+            config, policy, _degradation_observation(policy, config.session_id, alpha=6.0),
+        )
+    replay = runner.run(
+        config, [], decision_at=NOW,
+        decision_fn=lambda _: pytest.fail("closed session must not rerun decisions"),
+        risk_fn=lambda _: pytest.fail("closed session must not rerun risk"),
+        execution_fn=lambda *_: pytest.fail("closed session must not execute"),
+        degradation_policy=policy, degradation_observation_fn=observe,
+    )
+    assert replay["degradation"] == result["degradation"]
+    assert observed_sessions == [config.session_id]
     assert any(r["t"] == "DEGRADATION_ALARM" and r["observation_id"] == config.session_id
                for r in DurableJournal(journal_path).records())
 
@@ -1059,6 +1080,8 @@ def test_runner_rejects_degradation_policy_for_another_strategy_version(tmp_path
             config, [], decision_at=NOW,
             decision_fn=lambda _: {"side": "NONE"}, risk_fn=lambda _: {"approved": True},
             execution_fn=lambda *_: {}, degradation_policy=policy,
+            degradation_observation_fn=lambda run_config, _result, _records:
+                _degradation_observation(policy, run_config.session_id),
         )
     assert not journal_path.exists()
 
@@ -1079,6 +1102,8 @@ def test_durable_degradation_pause_blocks_next_runner_candidate(tmp_path):
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *_: pytest.fail("paused strategy must not create an intent"),
         degradation_policy=policy,
+        degradation_observation_fn=lambda run_config, _result, _records:
+            _degradation_observation(policy, run_config.session_id),
     )
     assert result["status"] == "NO_TRADE"
     assert result["reason"] == "DEGRADATION_PAUSE"
@@ -1105,6 +1130,8 @@ def test_durable_degradation_pause_still_allows_explicit_position_close(tmp_path
         execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "close-missed",
                                  "fidelity": "SIMULATED_QUOTE"},
         degradation_policy=policy,
+        degradation_observation_fn=lambda run_config, _result, _records:
+            _degradation_observation(policy, run_config.session_id),
     )
     assert result["status"] == "PAPER_COMPLETE"
     assert result["decision"]["position_effect"] == "CLOSE"

@@ -14,11 +14,13 @@
     "Returned alarm events are immutable and contain reasons, policy identity, and observation digest; no strategy parameter mutation is exposed.",
     "Optional DurableJournal persistence writes alarms to its hash chain before returning and restores event IDs, breach counters, and latched state after restart.",
     "A failed journal append does not advance monitor state, allowing safe retry of the same observation.",
-    "ForwardSessionRunner binds rolling observations to matching closed LIVE_PAPER sessions, strategy authority, and exact strategy digest, then persists alarms in the same journal.",
+    "ForwardSessionRunner requires an observation adapter when degradation policy is enabled, invokes it after every closed LIVE_PAPER session, binds it to session/authority/digest, and persists alarms in the same journal.",
+    "A restart after session close retries a missing alarm summary idempotently without repeating decisions or execution.",
+    "Idempotent observation recovery compares the canonical metric digest and rejects changed content for an already observed session.",
     "A policy-latched PAUSE or RETIRE withholds new/increasing exposure in later sessions while allowing explicit REDUCE/CLOSE decisions."
   ],
   "blockers": [
-    "A trusted scheduled rolling-metric adapter does not yet generate observations after every forward paper session; the recording API is caller-triggered.",
+    "A trusted rolling-metric adapter that derives observations from verified paper records is not configured.",
     "Production thresholds, trusted identity roots, alarm delivery, and prospective market-cohort evidence are not configured or verified."
   ],
   "source_sha256": {}

@@ -13,16 +13,19 @@ strategy-parameter mutation interface. An optional `DurableJournal` sink writes
 each alarm into the hash-chained paper journal before returning it; reopening the
 monitor recovers the breach counts, duplicate guard, and latched pause/retirement
 state. A failed journal append leaves in-memory monitor state unchanged. The
-forward session runner binds a rolling observation to a completed paper session
-and withholds new or increasing exposure in later sessions when its registered
-policy is latched at `PAUSE` or `RETIRE`. Explicit `REDUCE` and `CLOSE` decisions
-remain eligible so a paused strategy can exit existing exposure.
+forward session runner requires an observation adapter whenever a degradation
+policy is configured, invokes it after each closed paper session, binds its
+result to that session, and idempotently recovers a missing summary after a
+restart. It withholds new or increasing exposure in later sessions when the
+registered policy is latched at `PAUSE` or `RETIRE`. Explicit `REDUCE` and
+`CLOSE` decisions remain eligible so a paused strategy can exit existing
+exposure.
 
 Validation: `python -m pytest -q tests/test_degradation_monitor.py
 tests/test_forward_session_runner.py` (65 passed), Ruff, and mypy passed.
 
-Remaining work: schedule a trusted rolling-metric adapter after every forward
-paper session; establish production policy and identity roots; run the monitor
-on real forward-attested cohorts; verify alarm delivery and pause enforcement in
-an owner-authorized market session. This package makes no claim of observed
-alpha, realized performance, or production activation.
+Remaining work: configure a trusted rolling-metric adapter that derives metrics
+from verified paper records; establish production policy and identity roots; run
+the monitor on real forward-attested cohorts; verify alarm delivery and pause
+enforcement in an owner-authorized market session. This package makes no claim
+of observed alpha, realized performance, or production activation.

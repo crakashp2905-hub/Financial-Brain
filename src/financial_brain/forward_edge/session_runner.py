@@ -577,7 +577,14 @@ class ForwardSessionRunner:
                    for r in session_records):
             raise RunnerError("degradation observations require the matching closed paper session")
         try:
-            return DegradationMonitor(policy, journal=journal).observe(observation)
+            monitor = DegradationMonitor(policy, journal=journal)
+            prior = next((event for event in monitor.events
+                          if event.observation_id == observation.observation_id), None)
+            if prior is not None:
+                if prior.observation_sha256 != monitor.observation_sha256(observation):
+                    raise RunnerError("degradation observation conflicts with its persisted session evidence")
+                return prior
+            return monitor.observe(observation)
         except DegradationError as exc:
             raise RunnerError(f"degradation observation rejected: {exc}") from exc
 
@@ -587,11 +594,15 @@ class ForwardSessionRunner:
             risk_fn: Callable[[dict], dict],
             execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
             reconcile_execution_fn: Callable[[str], dict] | None = None,
-            degradation_policy: FrozenThresholds | None = None) -> dict:
+            degradation_policy: FrozenThresholds | None = None,
+            degradation_observation_fn: Callable[[ForwardRunConfig, dict, list[dict]],
+                                                 RollingObservation] | None = None) -> dict:
         from financial_brain.forward_edge.market_data import decision_visible
 
         if (degradation_policy is None) != (config.degradation_policy_sha256 is None):
             raise RunnerError("configured degradation policy and run-time policy must be supplied together")
+        if (degradation_policy is None) != (degradation_observation_fn is None):
+            raise RunnerError("degradation policy requires an observation adapter for every paper session")
         if degradation_policy is not None:
             if config.mode is not Mode.LIVE_PAPER:
                 raise RunnerError("degradation pause enforcement is restricted to LIVE_PAPER sessions")
@@ -637,7 +648,24 @@ class ForwardSessionRunner:
         if closed is not None:
             self._record_date_outcome(closed["result"]["status"], closed["result"].get("reason", "SESSION_CLOSED"),
                                       config.session_id)
-            return closed["result"]
+            result = closed["result"]
+            if degradation_policy is None or degradation_observation_fn is None:
+                return result
+            prior_summary = next((r for r in existing
+                                  if r.get("t") == "DEGRADATION_SESSION_SUMMARY"), None)
+            if prior_summary is None:
+                observation = degradation_observation_fn(config, result, journal.records())
+                if not isinstance(observation, RollingObservation):
+                    raise RunnerError("degradation observation adapter must return RollingObservation")
+                event = self.record_degradation_observation(config, degradation_policy, observation)
+                summary = self._degradation_summary(event)
+                DurableJournal(self.journal_path).append({
+                    "t": "DEGRADATION_SESSION_SUMMARY", "session_id": config.session_id,
+                    "summary": summary,
+                })
+            else:
+                summary = prior_summary["summary"]
+            return {**result, "degradation": summary}
         self.append_events(config, events)
         journal = DurableJournal(self.journal_path)
         records = journal.records()
@@ -971,7 +999,25 @@ class ForwardSessionRunner:
         journal.append({"t": "SESSION_CLOSED", "session_id": config.session_id, "result": result})
         self._record_date_outcome(str(result["status"]), str(result.get("reason", "SESSION_CLOSED")),
                                   config.session_id)
+        if degradation_policy is not None and degradation_observation_fn is not None:
+            observation = degradation_observation_fn(config, result, journal.records())
+            if not isinstance(observation, RollingObservation):
+                raise RunnerError("degradation observation adapter must return RollingObservation")
+            event = self.record_degradation_observation(config, degradation_policy, observation)
+            summary = self._degradation_summary(event)
+            DurableJournal(self.journal_path).append({
+                "t": "DEGRADATION_SESSION_SUMMARY", "session_id": config.session_id,
+                "summary": summary,
+            })
+            result = {**result, "degradation": summary}
         return result
+
+    @staticmethod
+    def _degradation_summary(event: AlarmEvent) -> dict:
+        return {"observation_id": event.observation_id, "strategy_id": event.strategy_id,
+                "strategy_version": event.strategy_version, "policy_sha256": event.policy_sha256,
+                "action": event.action.value, "reasons": list(event.reasons),
+                "observation_sha256": event.observation_sha256}
 
     @staticmethod
     def _apply_net_alpha_hurdle(config: ForwardRunConfig, decision: dict, risk: dict) -> dict:
