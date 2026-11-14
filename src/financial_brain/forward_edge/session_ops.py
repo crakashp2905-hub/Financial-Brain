@@ -205,9 +205,13 @@ def replay_hash(records: list[dict]) -> str:
 # ---- FE-0073 packet dedupe ----
 
 class PacketDeduper:
-    """Unique packet ids, tolerant of reconnect replays and out-of-order delivery."""
+    """Unique packet IDs, optionally recovering dedupe and health state from a durable journal.
 
-    def __init__(self) -> None:
+    The journal stores only packet-ID hashes and sequencing metadata, never quote payloads.
+    """
+
+    def __init__(self, journal_path: Path | None = None) -> None:
+        self.journal = DurableJournal(Path(journal_path)) if journal_path is not None else None
         self.seen: set[str] = set()
         self.buffer: list[tuple[int, str, dict]] = []
         self.duplicates = 0
@@ -218,30 +222,39 @@ class PacketDeduper:
         self.last_available_utc: datetime | None = None
         self._last_sequence: int | None = None
         self.gaps = 0
+        if self.journal is not None:
+            self._restore(self.journal.records())
 
-    def reconnect(self) -> None:
-        self.reconnects += 1
-        self._last_sequence = None
+    @staticmethod
+    def _packet_digest(packet_id: str) -> str:
+        return hashlib.sha256(packet_id.encode("utf-8")).hexdigest()
 
-    def disconnect(self) -> None:
-        self.disconnects += 1
+    def _restore(self, records: list[dict]) -> None:
+        for row in records:
+            kind = row.get("t")
+            if kind == "PACKET_OFFER":
+                self._apply_offer(row["packet_id_sha256"], row["seq"], {},
+                                  datetime.fromisoformat(row["available_utc"])
+                                  if row.get("available_utc") else None)
+            elif kind == "PACKET_DUPLICATE":
+                self.duplicates += 1
+            elif kind == "HEARTBEAT":
+                self._apply_heartbeat(datetime.fromisoformat(row["at_utc"]))
+            elif kind == "DISCONNECT":
+                self.disconnects += 1
+            elif kind == "RECONNECT":
+                self.reconnects += 1
+                self._last_sequence = None
+            elif kind == "DROP":
+                self.dropped_updates += row["count"]
 
-    def heartbeat(self, at: datetime) -> None:
-        stamp = _aware(at, "heartbeat")
-        if self.last_heartbeat_utc is not None and stamp < self.last_heartbeat_utc:
-            raise DataError("heartbeat timestamps must be monotonic")
-        self.last_heartbeat_utc = stamp
+    def _append(self, row: dict) -> None:
+        if self.journal is not None:
+            self.journal.append(row)
 
-    def record_drop(self, count: int = 1) -> None:
-        if type(count) is not int or count <= 0:
-            raise DataError("drop count must be a positive integer")
-        self.dropped_updates += count
-
-    def offer(self, packet_id: str, seq: int, payload: dict,
-              available_utc: datetime | None = None) -> bool:
-        if not packet_id or type(seq) is not int or seq < 0:
-            raise DataError("packet id and non-negative integer sequence are required")
-        if packet_id in self.seen:
+    def _apply_offer(self, packet_digest: str, seq: int, payload: dict,
+                     available_utc: datetime | None) -> bool:
+        if packet_digest in self.seen:
             self.duplicates += 1
             return False
         if self._last_sequence is not None and seq > self._last_sequence + 1:
@@ -252,9 +265,51 @@ class PacketDeduper:
             stamp = _aware(available_utc, "packet availability")
             if self.last_available_utc is None or stamp > self.last_available_utc:
                 self.last_available_utc = stamp
-        self.seen.add(packet_id)
-        self.buffer.append((seq, packet_id, payload))
+        self.seen.add(packet_digest)
+        self.buffer.append((seq, packet_digest, payload))
         return True
+
+    def reconnect(self) -> None:
+        self._append({"t": "RECONNECT"})
+        self.reconnects += 1
+        self._last_sequence = None
+
+    def disconnect(self) -> None:
+        self._append({"t": "DISCONNECT"})
+        self.disconnects += 1
+
+    def heartbeat(self, at: datetime) -> None:
+        stamp = _aware(at, "heartbeat")
+        if self.last_heartbeat_utc is not None and stamp < self.last_heartbeat_utc:
+            raise DataError("heartbeat timestamps must be monotonic")
+        self._append({"t": "HEARTBEAT", "at_utc": stamp.isoformat()})
+        self._apply_heartbeat(stamp)
+
+    def _apply_heartbeat(self, stamp: datetime) -> None:
+        stamp = _aware(stamp, "heartbeat")
+        if self.last_heartbeat_utc is not None and stamp < self.last_heartbeat_utc:
+            raise DataError("heartbeat timestamps must be monotonic")
+        self.last_heartbeat_utc = stamp
+
+    def record_drop(self, count: int = 1) -> None:
+        if type(count) is not int or count <= 0:
+            raise DataError("drop count must be a positive integer")
+        self._append({"t": "DROP", "count": count})
+        self.dropped_updates += count
+
+    def offer(self, packet_id: str, seq: int, payload: dict,
+              available_utc: datetime | None = None) -> bool:
+        if not packet_id or type(seq) is not int or seq < 0:
+            raise DataError("packet id and non-negative integer sequence are required")
+        digest = self._packet_digest(packet_id)
+        available = _aware(available_utc, "packet availability") if available_utc is not None else None
+        if digest in self.seen:
+            self._append({"t": "PACKET_DUPLICATE", "packet_id_sha256": digest})
+            self.duplicates += 1
+            return False
+        self._append({"t": "PACKET_OFFER", "packet_id_sha256": digest, "seq": seq,
+                      "available_utc": available.isoformat() if available is not None else None})
+        return self._apply_offer(digest, seq, payload, available)
 
     def feed_health(self) -> FeedHealth:
         return FeedHealth(self.last_available_utc, self.gaps, self.disconnects, self.dropped_updates,

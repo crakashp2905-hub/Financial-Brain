@@ -1303,20 +1303,21 @@
       "sources": [
         "src/financial_brain/forward_edge/market_data.py",
         "src/financial_brain/forward_edge/session_ops.py",
+        "src/financial_brain/forward_edge/durable.py",
         "src/financial_brain/forward_edge/session_runner.py",
         "tests/test_forward_feed_health.py",
         "docs/edge-program/pe-0035-durable-feed-health-and-stale-no-trade-evidence.json"
       ],
       "tests": [
         "test_packet_monitor_counts_gaps_duplicates_disconnects_reconnects_and_drops",
+        "test_packet_deduper_recovers_sequence_and_duplicate_state_after_restart",
         "test_feed_health_rejects_future_quote_and_stale_heartbeat",
         "test_stale_feed_forces_durable_no_trade_and_session_completeness_counts"
       ],
-      "test_result": "49 passed (exit code 0); Ruff and mypy on the feed-health and session-runner modules passed. Fault injection produces STALE_FEED/NO_TRADE without invoking strategy or execution, and session evidence persists all health counters.",
-      "evidence_sha256": "b1c183ccf46fd0fd601fb4f0afa35d19b18aa0fb67c20beae516fb1c7a609467",
+      "test_result": "88 passed (exit code 0) across feed health, forward session, and execution-gate tests; Ruff and mypy passed for the changed session-ops module. PacketDeduper optionally persists packet-ID hashes and feed state in the hash-chained durable journal, restoring duplicate/gap state after restart without quote payloads.",
+      "evidence_sha256": "90476c473ddb63270f7fce631eba799e706c7fbf6d62c27f1dba954de49aa017",
       "blockers": [
-        "The current Kite polling payload has no packet sequence number or provider disconnect/reconnect callbacks, so live gaps/reconnect/drop counts cannot yet be populated automatically from the configured source.",
-        "PacketDeduper's packet-ID/sequence memory itself is process-local; only recorded health snapshots survive restart. Persisted packet-level deduplication is not connected to the capture archive."
+        "The current Kite REST polling payload has no provider sequence number or disconnect/reconnect callbacks; true source-level gaps and reconnect/drop counters still require a sequenced streaming source and owner-authorized session."
       ]
     },
     {

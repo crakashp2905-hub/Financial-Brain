@@ -41,6 +41,28 @@ def test_packet_monitor_counts_gaps_duplicates_disconnects_reconnects_and_drops(
     assert monitor.ordered() == [{}, {}, {}]
 
 
+def test_packet_deduper_recovers_sequence_and_duplicate_state_after_restart(tmp_path):
+    path = tmp_path / "packets.jsonl"
+    monitor = PacketDeduper(path)
+    assert monitor.offer("private-packet-id-1", 10, {"quote": "not persisted"}, NOW)
+    assert monitor.offer("private-packet-id-4", 13, {}, NOW + timedelta(seconds=1))
+    assert not monitor.offer("private-packet-id-1", 10, {}, NOW + timedelta(seconds=2))
+    monitor.heartbeat(NOW + timedelta(seconds=3))
+    monitor.disconnect()
+    monitor.reconnect()
+    monitor.record_drop(2)
+
+    recovered = PacketDeduper(path)
+    health = recovered.feed_health()
+    assert (health.gaps, health.duplicates, health.disconnects, health.reconnects,
+            health.dropped_updates) == (2, 1, 1, 1, 2)
+    assert health.last_available_utc == NOW + timedelta(seconds=1)
+    assert health.last_heartbeat_utc == NOW + timedelta(seconds=3)
+    assert not recovered.offer("private-packet-id-1", 10, {}, NOW + timedelta(seconds=4))
+    assert "private-packet-id-1" not in path.read_text(encoding="utf-8")
+    assert "not persisted" not in path.read_text(encoding="utf-8")
+
+
 def test_feed_health_rejects_future_quote_and_stale_heartbeat():
     health = FeedHealth(NOW + timedelta(seconds=1), 0, 0, 0,
                         last_heartbeat_utc=NOW - timedelta(seconds=10))
