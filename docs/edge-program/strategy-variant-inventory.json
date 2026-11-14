@@ -2715,9 +2715,9 @@
       "name": "futures_paper",
       "parameters": {},
       "source": "src/financial_brain/kernel/futures_paper.py",
-      "source_sha256": "a6af95779b825caaa2b621921b989d7b6af4e95a87da63a161ad352552bf96de",
+      "source_sha256": "2804967e5c5230f1f38d20b01a4e9acc20e05a828c845da31acecd74b84d6c0f",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "789d77f18a80edae39bcec727a81cd316404a4b614aea7e9dc9abfd0fc5eb9fd",
+      "variant_sha256": "263ec4969c789945a00ec4f532126003eee0acfb7467194839b45923b1533e9f",
       "version": 1
     },
     {
@@ -2813,9 +2813,9 @@
       "name": "options_spread",
       "parameters": {},
       "source": "src/financial_brain/paper/options_spread.py",
-      "source_sha256": "0c3d935c38e67a26c897b95f1127cc342c2377f2321602275cc66fb9b3501fcd",
+      "source_sha256": "63c03020d2a02b46dcdb358fad1b203509906e925fad822e180f002a1c7f2a25",
       "status": "SHADOW_ONLY",
-      "variant_sha256": "647b96d182fd8db253f3bb0248def04e43cbfd7e126b28676f972b87e56a449d",
+      "variant_sha256": "d56a614b30626cb7d7dcd02c84962a2242f6a113c2002b1eeec5c4991bd99b45",
       "version": 1
     },
     {
