@@ -41,6 +41,30 @@
       "source": ["src/financial_brain/decisions/net_alpha.py"],
       "tests": ["tests/test_phase5_scanners.py", "tests/test_phase5_trader_core.py"],
       "blockers": ["Model estimate is not validated net trading profit"]
+    },
+    {
+      "id": "forward-paper-account-authority",
+      "owner_role": "Execution",
+      "maturity": "partial",
+      "source": ["src/financial_brain/forward_edge/paper_account_bridge.py", "src/financial_brain/forward_edge/session_runner.py"],
+      "tests": ["tests/test_forward_paper_account_bridge.py", "tests/test_forward_session_runner.py"],
+      "blockers": ["Legacy intraday DuckDB engine is not bound to the same authority registry", "No owner-authorized observed market session"]
+    },
+    {
+      "id": "registered-paper-book-isolation",
+      "owner_role": "Execution",
+      "maturity": "partial",
+      "source": ["src/financial_brain/kernel/registered_paper_books.py", "src/financial_brain/kernel/paper_account.py"],
+      "tests": ["tests/test_registered_paper_books.py", "tests/test_paper_account_portfolio.py"],
+      "blockers": ["Formal strategy eligibility and every order path are not yet registry-wired", "Owner identity authentication and account closure are not implemented"]
+    },
+    {
+      "id": "market-data-availability-lineage",
+      "owner_role": "Integration",
+      "maturity": "partial",
+      "source": ["src/financial_brain/forward_edge/market_data.py", "src/financial_brain/ingest/kite_live.py"],
+      "tests": ["tests/test_kite_forward_events.py", "tests/test_kite_history_refresh.py"],
+      "blockers": ["No authorized observed Kite session has been captured", "Provider timestamp semantics, entitlement and real-feed latency remain unverified"]
     }
   ]
 }

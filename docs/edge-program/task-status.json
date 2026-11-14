@@ -4425,20 +4425,31 @@
       "status": "PARTIAL",
       "sources": [
         "scripts/audit_capability_evidence.py",
+        "docs/audits/capability-matrix.v1.json",
         "docs/audits/capability-evidence.v1.json",
         "tests/test_capability_evidence_audit.py",
         ".github/workflows/ci.yml",
-        "docs/edge-program/pe-0206-capability-evidence-audit.md"
+        "docs/edge-program/pe-0206-capability-evidence-audit.md",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/kernel/registered_paper_books.py",
+        "src/financial_brain/forward_edge/market_data.py"
       ],
       "tests": [
+        "tests/test_capability_matrix.py",
         "tests/test_capability_evidence_audit.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_registered_paper_books.py",
+        "tests/test_paper_account_portfolio.py",
+        "tests/test_kite_forward_events.py",
+        "tests/test_kite_history_refresh.py",
         "full pytest suite in CI before evidence-manifest check"
       ],
-      "test_result": "The capability evidence generator and post-suite freshness audit passed in complete Ubuntu and Windows CI run 43601378017 at commit 2c61abe6cbc50e2efa864fb8c883a734431894ef. Scope remains five curated capability records; this does not prove every platform capability.",
+      "test_result": "Expanded the hash-pinned capability evidence matrix from five to eight curated domains, adding forward paper account authority, registered book isolation, and market-data availability lineage. Matrix validation passed; targeted acceptance suite: 98 passed. The evidence generator produced manifest_sha256=2f1d66d6fad176c549a9a39e675a3f5c66297ec004ec850b2cd7eeea4133e66a. Cross-platform full CI for this update is pending.",
       "blockers": [
-        "The curated matrix and its hash-pinned audit cover five capabilities, not every feature in the platform."
+        "The matrix remains curated rather than exhaustive across all platform capabilities; independent market evidence, entitlements and custody are not supplied by file hashes."
       ],
-      "evidence_sha256": "ebb5dbf84f87b71c24321cb8e0335314b7539a7f7e80be5a1e93a8ec3d801d25"
+      "evidence_sha256": "e9187965a5a31507da65d163a3444a1c13a160fdaaa39ca7f48285207af0ea55"
     },
     {
       "id": "PE-0202",
