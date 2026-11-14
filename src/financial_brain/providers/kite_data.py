@@ -116,6 +116,15 @@ def _throttle() -> None:
         _last_call = time.monotonic()
 
 
+def _redact_credentials(value: object, key: str, token: str) -> str:
+    """Return provider diagnostics without echoing the API key or daily access token."""
+    message = str(value)
+    for secret in (key, token):
+        if secret:
+            message = message.replace(secret, "[REDACTED]")
+    return message
+
+
 def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
     """The only way this module talks to Kite. GET, allowlisted path, throttled."""
     if not _is_read_endpoint(path):
@@ -133,8 +142,9 @@ def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
             raw = r.read()
     except urllib.error.HTTPError as e:
         if e.code in (401, 403):
-            raise KiteAuthError(f"Kite session rejected (HTTP {e.code}) on {path}") from e
-        raise KiteDataError(f"{e.code} from {path}: {e.read()[:200]!r}") from e
+            raise KiteAuthError(f"Kite session rejected (HTTP {e.code}) on {path}") from None
+        detail = _redact_credentials(e.read()[:200].decode("utf-8", errors="replace"), key, token)
+        raise KiteDataError(f"{e.code} from {path}: {detail}") from None
     except OSError as e:
         raise KiteDataError(f"{path}: {e}") from e
 
@@ -143,8 +153,8 @@ def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
     body = json.loads(raw)
     if body.get("status") != "success":
         if body.get("error_type") == "TokenException":
-            raise KiteAuthError(f"Kite session rejected on {path}")
-        raise KiteDataError(f"Kite error on {path}: {body.get('message', body)}")
+            raise KiteAuthError(f"Kite session rejected on {path}") from None
+        raise KiteDataError(f"Kite error on {path}: {_redact_credentials(body.get('message', body), key, token)}") from None
     return body
 
 

@@ -1,7 +1,10 @@
 """Integration guard: paper-side Kite access remains read-only at the HTTP boundary."""
 from datetime import datetime, timezone
+from email.message import Message
+from io import BytesIO
 import json
 import urllib.parse
+import urllib.error
 
 import pytest
 
@@ -70,3 +73,40 @@ def test_paper_data_reads_use_only_get_routes_and_order_paths_never_reach_networ
     with pytest.raises(kite_data.KiteDataError, match="venue code"):
         kite_data.instruments("../orders")
     assert len(requests) == calls_before_blocked_routes
+
+
+def test_provider_error_diagnostics_redact_api_key_and_access_token(monkeypatch):
+    api_key, access_token = "private-key-123", "daily-token-456"
+    headers = Message()
+    headers["Content-Type"] = "text/plain"
+    error_body = f"reflected {api_key} {access_token}".encode()
+    response = urllib.error.HTTPError("https://api.kite.trade/quote", 500, "failure", headers,
+                                      BytesIO(error_body))
+    monkeypatch.setattr(kite_data, "credentials", lambda: (api_key, access_token))
+    monkeypatch.setattr(kite_data, "_throttle", lambda: None)
+    monkeypatch.setattr(kite_data.urllib.request, "urlopen", lambda *_args, **_kwargs: (_ for _ in ()).throw(response))
+
+    with pytest.raises(kite_data.KiteDataError) as caught:
+        kite_data.quote(["NSE:INFY"], kind="full")
+
+    message = str(caught.value)
+    assert api_key not in message and access_token not in message
+    assert "[REDACTED]" in message
+
+
+def test_success_error_payload_redacts_credentials(monkeypatch):
+    api_key, access_token = "private-key-abc", "daily-token-def"
+    body = {"status": "error", "message": f"bad {api_key} {access_token}"}
+
+    class JsonResponse(Response):
+        def read(self):
+            return json.dumps(body).encode()
+
+    monkeypatch.setattr(kite_data, "credentials", lambda: (api_key, access_token))
+    monkeypatch.setattr(kite_data, "_throttle", lambda: None)
+    monkeypatch.setattr(kite_data.urllib.request, "urlopen", lambda *_args, **_kwargs: JsonResponse(b""))
+
+    with pytest.raises(kite_data.KiteDataError) as caught:
+        kite_data.quote(["NSE:INFY"], kind="full")
+
+    assert api_key not in str(caught.value) and access_token not in str(caught.value)

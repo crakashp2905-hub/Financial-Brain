@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 198,
-  "unrecorded_tasks": 20,
+  "recorded_tasks": 199,
+  "unrecorded_tasks": 19,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4309,6 +4309,26 @@
         "Dependency files must be explicitly supplied; automatic discovery and end-to-end reconstruction of all journals, quote archives, ledgers, manifests and configuration inputs from a real session are not wired into one operator drill."
       ],
       "evidence_sha256": "29c6db177d32e45bfdc4921c975fef88600b2c9bd4c8cac24b37cc3af39a6a86"
+    },
+    {
+      "id": "PE-0203",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/providers/kite_data.py",
+        "src/financial_brain/forward_edge/modes.py",
+        "tests/test_kite_paper_readonly.py",
+        "docs/edge-program/pe-0203-readonly-kite-secret-hygiene-evidence.md"
+      ],
+      "tests": [
+        "test_paper_data_reads_use_only_get_routes_and_order_paths_never_reach_network",
+        "test_provider_error_diagnostics_redact_api_key_and_access_token",
+        "test_success_error_payload_redacts_credentials"
+      ],
+      "test_result": "Kite provider enforces a fixed GET allowlist and has no order endpoint; LIVE_PAPER mode forbids physical order sends. Added redaction of API key/access token from HTTP and structured provider error diagnostics, with mocked credential tests. Kite paper-readonly and session backup tests: 17 passed; Ruff and mypy passed. No live credential was used.",
+      "blockers": [
+        "Owner-authorized Kite session and explicit least-privilege account/IP configuration are not observable here; secret scanning of the complete repository and runtime logs still need an operational drill."
+      ],
+      "evidence_sha256": "e63c66f6dd1e7bebf55d263cc1f79ac5e5a1d51d018c8085ea27dd386961ba29"
     }
   ]
 }
