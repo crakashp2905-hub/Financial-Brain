@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 159,
-  "unrecorded_tasks": 59,
+  "recorded_tasks": 160,
+  "unrecorded_tasks": 58,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3517,6 +3517,23 @@
       ],
       "test_result": "4 passed; Ruff passed; source inventory --check passed (610 Python files).",
       "evidence_sha256": "2abd658af3b04ce91d228a0089a35a37c79c88d3dc8213d999b0807027e7d249",
+      "blockers": []
+    },
+    {
+      "id": "PE-0162",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/intraday_book_coverage.py",
+        "tests/test_intraday_book_coverage.py",
+        "docs/edge-program/pe-0162-intraday-book-coverage.md",
+        "docs/edge-program/pe-0162-intraday-book-coverage-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_intraday_book_coverage.py"
+      ],
+      "test_result": "6 passed; Ruff passed; source inventory --check passed (611 Python files).",
+      "evidence_sha256": "f11ca73e9e1b8a36d2617acb8ee0322454ad539db0973020d729c4325a17e279",
       "blockers": []
     }
   ]
