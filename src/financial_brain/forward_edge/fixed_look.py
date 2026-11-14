@@ -58,6 +58,22 @@ class FixedLookPolicy:
                              allow_nan=False)
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
+    def as_dict(self) -> dict:
+        value = asdict(self)
+        value["checkpoints"] = list(self.checkpoints)
+        return value
+
+    @classmethod
+    def from_dict(cls, value: dict) -> "FixedLookPolicy":
+        expected = {"policy_id", "checkpoints", "familywise_alpha", "max_drawdown_floor",
+                    "frozen_at_utc", "first_observation_at_utc"}
+        if not isinstance(value, dict) or set(value) != expected or not isinstance(value["checkpoints"], list):
+            raise FixedLookError("malformed fixed-look policy")
+        try:
+            return cls(**{**value, "checkpoints": tuple(value["checkpoints"])})
+        except (TypeError, ValueError) as exc:
+            raise FixedLookError("malformed fixed-look policy") from exc
+
 
 def evaluate_look(
     policy: FixedLookPolicy,

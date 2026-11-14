@@ -8,11 +8,13 @@ import pytest
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.approvals import Approval
-from financial_brain.forward_edge.fixed_look import FixedLookPolicy, evaluate_look
-from financial_brain.forward_edge.charter import EvaluationIdentity, ExperimentCharter
+from financial_brain.forward_edge.fixed_look import FixedLookPolicy
+from financial_brain.forward_edge.charter import CharterRegistry, EvaluationIdentity, ExperimentCharter
+from financial_brain.forward_edge.decision_custody import Cohort, CohortSchedule
 from financial_brain.forward_edge.governance import FamilyEvidence, family_action_scope_sha256
 from financial_brain.forward_edge.durable import DurableJournal
 import financial_brain.forward_edge.paper_account_bridge as paper_bridge
+from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
 from financial_brain.forward_edge.paper_account_bridge import (
     ForwardPaperSessionService,
     PaperAccountBridgeError,
@@ -222,8 +224,25 @@ def test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart(tm
         max_drawdown_floor=-0.15, frozen_at_utc="2026-01-01T00:00:00Z",
         first_observation_at_utc="2026-01-02T00:00:00Z",
     )
-    risk_stop = evaluate_look(
-        policy, completed_sessions=23, lower_confidence_bound=0.5, observed_max_drawdown=-0.15)
+    identity = EvaluationIdentity(
+        strategy_code_sha256=service.strategy_spec.code_sha256, model_code_sha256="1" * 64,
+        data_snapshot_sha256="2" * 64, data_rights_id="fixed-look-test",
+        data_rights_sha256="3" * 64, market_calendar_id="NSE-test",
+        market_calendar_sha256="4" * 64, universe_sha256="5" * 64,
+        execution_cost_id="paper-cost-v1", execution_cost_sha256="6" * 64,
+        risk_policy_sha256=policy.sha256(), benchmarks=(("NIFTY50", "f" * 64),),
+    )
+    charter = ExperimentCharter(
+        charter_id="trial-risk-v1", version=1, strategy_id=service.strategy_spec.strategy_id,
+        code_sha256=service.strategy_spec.code_sha256, capital_inr="10000",
+        start_on="2026-11-12", end_on="2027-03-31", universe=("NSE_EQ",),
+        benchmarks=("NIFTY50",), horizon_sessions=5, evaluation_identity=identity,
+    )
+    charter_registry = CharterRegistry(tmp_path / "risk-charter.jsonl")
+    schedule = CohortSchedule(charter.sha256(), (Cohort("risk-test", "2026-11-12", "2027-03-31"),))
+    charter_registry.register(charter, schedule)
+    fixed_look_registry = FixedLookRegistry(tmp_path / "risk-look.jsonl", charter_registry)
+    fixed_look_registry.register(policy, charter_id=charter.charter_id)
     strategy_calls = []
     result = service.run(
         config, [_event(DECISION_AT + timedelta(seconds=1))],
@@ -232,7 +251,13 @@ def test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart(tm
         risk_fn=lambda _: strategy_calls.append("risk") or {"approved": True},
         execution_fn=lambda *_: strategy_calls.append("execution") or {},
         decision_at=DECISION_AT, feed_health=FEED_HEALTH,
-        feed_health_observed_at=DECISION_AT, risk_stop_fn=lambda: risk_stop,
+        feed_health_observed_at=DECISION_AT, fixed_look_registry=fixed_look_registry,
+        fixed_look_policy_id=policy.policy_id,
+        fixed_look_observation_fn=lambda: {
+            "completed_sessions": 23,
+            "lower_confidence_bound": 0.5,
+            "observed_max_drawdown": -0.15,
+        },
     )
 
     assert result["status"] == "REJECTED"

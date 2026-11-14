@@ -224,7 +224,7 @@
         "test_source_capture_start.py",
         "test_capability_matrix.py"
       ],
-      "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (628 Python sources; 612 unassessed; 360 role-unassigned).",
+      "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (629 Python sources; 613 unassessed; 361 role-unassigned).",
       "evidence_sha256": "4e6b5c9c3582ce98b6ef9beb36849d85c4d561ec08fd9fa456973e64e9b511df",
       "blockers": [
         "Deployment must configure a shared registry path and canonical matching strategy IDs; this has not been verified in the owner environment.",
@@ -2730,11 +2730,13 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/forward_edge/fixed_look.py",
-        "tests/test_fixed_look.py",
-        "docs/edge-program/pe-0126-fixed-look-risk-stop.md",
-        "docs/edge-program/pe-0126-fixed-look-risk-stop-evidence.json",
+        "src/financial_brain/forward_edge/fixed_look_registry.py",
+        "src/financial_brain/forward_edge/charter.py",
         "src/financial_brain/forward_edge/paper_account_bridge.py",
-        "tests/test_forward_paper_account_bridge.py"
+        "tests/test_fixed_look.py",
+        "tests/test_fixed_look_registry.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "docs/edge-program/pe-0126-fixed-look-risk-stop.md"
       ],
       "tests": [
         "test_unscheduled_interim_display_cannot_produce_an_efficacy_decision",
@@ -2744,13 +2746,16 @@
         "test_missing_risk_evidence_fails_closed_and_withholds_efficacy",
         "test_policy_is_frozen_before_first_observation_and_hashes_all_look_controls",
         "test_invalid_look_observations_are_rejected",
+        "test_registered_policy_is_recovered_and_evaluated_from_frozen_charter",
+        "test_registry_rejects_policy_that_does_not_match_charter_risk_hash",
+        "test_registry_rejects_policy_after_charter_revision",
         "test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart"
       ],
-      "test_result": "Fixed-look policy harm is now wired through ForwardPaperSessionService to the durable paper-account risk latch. Integration verifies the breach prevents decision/risk/execution callbacks, stores the risk result in the runner journal, and remains blocking after account replay. Fixed-look plus paper-bridge suites: 28 passed; Ruff and mypy passed.",
-      "evidence_sha256": "8adb655268efe392fa7ba3cd7e559d2adc45a2abafe22a4c0c16c92d71737822",
+      "test_result": "FixedLookRegistry durably binds each fixed-look risk policy to the registered charter revision risk hash; historical registration replays, while policy resolution fails after charter revision. ForwardPaperSessionService evaluates registered observations and persists harm breaches to the paper-account latch; integration proves strategy/risk/execution callbacks remain blocked after account restart. Focused charter/fixed-look/registry/bridge suite: 89 passed. Full Windows suite: 4147 passed, 1 skipped. Ruff, configured mypy, migrations, capability matrix, source inventory, algo/chart matrices, and offline pattern demo passed. Synthetic tests only.",
+      "evidence_sha256": "bc5106e2575f7bac41bce1a2e5f51827a9e94e65bfb6c3ad171a2a2ae5333b56",
       "blockers": [
-        "No authoritative trial registry persists the fixed-look policy or automatically supplies the risk-stop callback to production sessions.",
-        "The fixed-look schedule is not joined to sample-size design or prospective performance evidence; no live result is claimed."
+        "Production session configuration does not yet require the registry or bind its observation callback to receipt-derived cohort metrics; a legacy arbitrary callback path remains for compatibility.",
+        "The fixed-look schedule is not automatically joined to the power-based sample-size plan or prospective performance evidence; no live result is claimed."
       ]
     },
     {

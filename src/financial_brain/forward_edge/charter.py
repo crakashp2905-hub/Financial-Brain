@@ -273,6 +273,29 @@ class CharterRegistry:
         except KeyError as exc:
             raise CharterError(f"unknown charter: {charter_id}") from exc
 
+    def registered_revision(self, charter_id: str, charter_sha256: str
+                            ) -> tuple[ExperimentCharter, CohortSchedule, str]:
+        """Resolve an immutable historical revision by its registered content hash."""
+        for row in self.journal.records():
+            if row.get("t") != "CHARTER_REGISTERED":
+                continue
+            try:
+                charter = ExperimentCharter.from_dict(row["charter"])
+                if charter.charter_id != charter_id or row.get("charter_sha256") != charter_sha256:
+                    continue
+                schedule = CohortSchedule(
+                    charter_sha256=row["schedule"]["charter_sha256"],
+                    cohorts=tuple(Cohort(*item) for item in row["schedule"]["cohorts"]),
+                )
+                if (charter.sha256() != charter_sha256
+                        or schedule.charter_sha256 != charter_sha256
+                        or schedule.sha256() != row["schedule_sha256"]):
+                    raise CharterError("charter registry hash mismatch")
+                return charter, schedule, charter_sha256
+            except (KeyError, TypeError, ValueError) as exc:
+                raise CharterError("malformed charter registry revision") from exc
+        raise CharterError(f"unknown charter revision: {charter_id}@{charter_sha256}")
+
     def _accept_close(self, charter_id: str, charter_sha256: str, cohort_id: str, *, closed_on: str,
                       outcome_sha256: str) -> None:
         if not _SHA.fullmatch(outcome_sha256):

@@ -1,27 +1,31 @@
 {
-  "schema_version": "1.0",
-  "task_id": "PE-0126",
-  "status": "PARTIAL",
-  "test": {
-    "command": "python -m pytest -q tests/test_fixed_look.py tests/test_forward_paper_account_bridge.py; ruff check src/financial_brain/forward_edge/paper_account_bridge.py tests/test_forward_paper_account_bridge.py; python -m mypy src/financial_brain/forward_edge/paper_account_bridge.py",
-    "result": "28 passed across fixed-look and paper-account bridge suites; Ruff and mypy passed. Risk-stop integration test reopens the account after a halt and confirms subsequent strategy, risk approval and execution callbacks remain blocked."
-  },
+  "blockers": [
+    "Production session configuration does not yet require the registry or bind its observation callback to receipt-derived cohort metrics; a legacy arbitrary callback path remains for compatibility.",
+    "The fixed-look schedule is not automatically joined to the power-based sample-size plan or prospective performance evidence; no live result is claimed."
+  ],
   "implemented": [
     "The policy freezes ordered session-count looks, familywise alpha, drawdown harm floor and freeze timestamps into a content hash.",
     "Unscheduled efficacy views return no efficacy decision; alpha is divided across registered looks.",
     "Risk harm stops at any observation, including between looks; missing risk evidence fails closed.",
     "The module reports order permission semantics without granting permission at efficacy checkpoints.",
-    "ForwardPaperSessionService accepts a validated optional fixed-look risk-stop callback, persists a harm stop to the append-only account risk latch before strategy evaluation, and records the stop report with the runner risk verdict. Account replay preserves the latch across restart."
+    "FixedLookRegistry persists policies in a hash-chained journal and binds each policy digest to a registered ExperimentCharter revision risk-policy hash; it verifies archived revisions during recovery and rejects policy resolution after charter revision.",
+    "ForwardPaperSessionService can evaluate the registered policy from a supplied observation callback, persist harm stops to the append-only paper-account latch before strategy evaluation, include the report in the runner verdict and preserve the latch through restart."
   ],
-  "blockers": [
-    "No authoritative trial registry persists the fixed-look policy or automatically supplies the risk-stop callback to production sessions.",
-    "The fixed-look schedule is not joined to sample-size design or prospective performance evidence; no live result is claimed."
-  ],
+  "schema_version": "1.0",
   "source_sha256": {
-    "src/financial_brain/forward_edge/fixed_look.py": "bbe15db3050a1b6aa60d0434e78877d4cb57ff359473d7918a709a4d2d438848",
-    "tests/test_fixed_look.py": "391b033c8a9b8f8bb17fe0598671feff1efaecf5880029146df73ad12cc18241",
-    "src/financial_brain/forward_edge/paper_account_bridge.py": "e6fd589812b98e45e0bf367b9423b3e6fa4221a70f2c203d8935e4bf3280847b",
-    "tests/test_forward_paper_account_bridge.py": "179054b3890d6d74367551bcfc194bb836e477e3471397b1169fddbbcce7747a",
-    "docs/edge-program/pe-0126-fixed-look-risk-stop.md": "7d34b3284c6daa15a24e49316fd32abab6d39e9e39cb1a0c15607e6863afbb98"
+    "docs/edge-program/pe-0126-fixed-look-risk-stop.md": "556bf5ded910f35cdd61f07a1103b252d0fe47c8d00c18a19618189d5bb6ad2c",
+    "src/financial_brain/forward_edge/charter.py": "7f8af1993709b199481b577fb3266a989b369df7463e2bab504be26a270aad59",
+    "src/financial_brain/forward_edge/fixed_look.py": "cc9a83664472775ea8e75ab1ad30368c244befc556e806d1f2a0d5b7c992d36b",
+    "src/financial_brain/forward_edge/fixed_look_registry.py": "02904af7bc6f1709ea7932327f34b6580d516accbd0b1a7199dd89a24ab53db6",
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "e4620c88f1b1b02a340ebbd997650d6bdacef0fe3cd65d4ed3009c3c7d582991",
+    "tests/test_fixed_look.py": "1385001c45a6ed74bf86d0165d0a4ae1b3a41e52714a42f3169bdd6d218cefbb",
+    "tests/test_fixed_look_registry.py": "dc6371bd654f5b62f38782979cff38913b47bca28ccfec47b53284e832a0eece",
+    "tests/test_forward_paper_account_bridge.py": "4cb34853454f8adaf3abb6fab59ae3d751b6f7c4ddcea940e5326b5282f4cb40"
+  },
+  "status": "PARTIAL",
+  "task_id": "PE-0126",
+  "test": {
+    "command": "python -m pytest -q; python -m ruff check src tests; python -m mypy; python -m pytest -q tests/test_migrations.py; python scripts/validate_capability_matrix.py; python scripts/source_inventory.py --check docs/edge-program/source-inventory.json; python scripts/algo_progress.py --check; python scripts/chart_patterns_matrix.py --check; offline patterns demo",
+    "result": "Full Windows test suite: 4147 passed, 1 skipped. The focused charter/fixed-look/registry/paper-bridge suite: 89 passed. Ruff passed on src/tests; configured mypy passed (45 source files); migrations: 2 passed; capability matrix, source inventory, algorithm matrix, chart-pattern matrix, and offline synthetic pattern demo passed. The fixed-look harm integration remains synthetic; it is not prospective or profitability evidence."
   }
 }

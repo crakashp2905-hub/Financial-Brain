@@ -9,6 +9,7 @@ from pathlib import Path
 from collections.abc import Callable, Iterable
 
 from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.registry import Registry, StrategySpec, order_intent_allowed
@@ -107,7 +108,10 @@ class ForwardPaperSessionService:
             reconcile_execution_fn: Callable[[str], dict] | None = None,
             feed_health: FeedHealth | None = None,
             feed_health_observed_at: datetime | None = None,
-            risk_stop_fn: Callable[[], dict] | None = None) -> dict:
+            risk_stop_fn: Callable[[], dict] | None = None,
+            fixed_look_registry: FixedLookRegistry | None = None,
+            fixed_look_policy_id: str | None = None,
+            fixed_look_observation_fn: Callable[[], dict] | None = None) -> dict:
         """Persist one preflight, run the session, then reconcile its receipt to PaperAccount."""
         if decision_at is None:
             existing_decision = next((row for row in DurableJournal(self.runner.journal_path).records()
@@ -162,21 +166,38 @@ class ForwardPaperSessionService:
             self.runner.record_preflight(config, preflight)
         risk_stop_report = None
         risk_stop_block: str | None = None
-        if risk_stop_fn is not None:
+        registered_risk_configured = any(value is not None for value in (
+            fixed_look_registry, fixed_look_policy_id, fixed_look_observation_fn))
+        if risk_stop_fn is not None and registered_risk_configured:
+            risk_stop_block = "FIXED_LOOK_CONFIGURATION_INVALID"
+        elif registered_risk_configured and (
+                fixed_look_registry is None or fixed_look_policy_id is None
+                or fixed_look_observation_fn is None):
+            risk_stop_block = "FIXED_LOOK_CONFIGURATION_INVALID"
+        elif (fixed_look_registry is not None and fixed_look_policy_id is not None
+              and fixed_look_observation_fn is not None):
+            try:
+                observation = fixed_look_observation_fn()
+                candidate = fixed_look_registry.evaluate(fixed_look_policy_id, observation)
+            except Exception as exc:  # noqa: BLE001 - evidence callback failures block orders
+                candidate = None
+                risk_stop_block = f"FIXED_LOOK_REGISTRY_EVALUATION_FAILED:{type(exc).__name__}"
+        elif risk_stop_fn is not None:
             try:
                 candidate = risk_stop_fn()
             except Exception as exc:  # noqa: BLE001 - evidence callback failures block orders
                 candidate = None
                 risk_stop_block = f"FIXED_LOOK_EVIDENCE_CALLBACK_FAILED:{type(exc).__name__}"
+        else:
+            candidate = None
+        if risk_stop_fn is not None or registered_risk_configured:
             if risk_stop_block is None:
                 required = {"status", "orders_permission", "completed_sessions", "policy_id", "policy_sha256"}
                 try:
                     json.dumps(candidate, sort_keys=True, allow_nan=False)
                 except (TypeError, ValueError):
                     risk_stop_block = "FIXED_LOOK_EVIDENCE_INVALID"
-                if risk_stop_block is not None:
-                    pass
-                elif (not isinstance(candidate, dict) or not required <= set(candidate)
+                if risk_stop_block is None and (not isinstance(candidate, dict) or not required <= set(candidate)
                         or not isinstance(candidate.get("status"), str)
                         or not isinstance(candidate.get("orders_permission"), str)
                         or type(candidate.get("completed_sessions")) is not int
@@ -187,7 +208,7 @@ class ForwardPaperSessionService:
                         or len(candidate["policy_sha256"]) != 64
                         or any(c not in "0123456789abcdef" for c in candidate["policy_sha256"])):
                     risk_stop_block = "FIXED_LOOK_EVIDENCE_INVALID"
-                else:
+                elif risk_stop_block is None and isinstance(candidate, dict):
                     risk_stop_report = candidate
                     permission = candidate["orders_permission"]
                     status = candidate["status"]
@@ -206,6 +227,8 @@ class ForwardPaperSessionService:
                         risk_stop_block = "FIXED_LOOK_RISK_EVIDENCE_MISSING"
                     elif permission != "UNCHANGED_BY_THIS_REPORT" or status == "STOP_FOR_RISK_HARM":
                         risk_stop_block = "FIXED_LOOK_EVIDENCE_INVALID"
+                elif risk_stop_block is None:
+                    risk_stop_block = "FIXED_LOOK_EVIDENCE_INVALID"
 
         def guarded_decision(observed: list[NormalizedEvent]) -> dict:
             if self.account.risk_latched or risk_stop_block is not None:
