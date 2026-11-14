@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 127,
-  "unrecorded_tasks": 91,
+  "recorded_tasks": 128,
+  "unrecorded_tasks": 90,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2752,6 +2752,30 @@
       "blockers": [
         "Checks remain caller assertions rather than registered, data-backed tests.",
         "The status report and promotion evaluator are not bound in one immutable evidence object."
+      ]
+    },
+    {
+      "id": "PE-0130",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/queue_fill_scenarios.py",
+        "tests/test_queue_fill_scenarios.py",
+        "docs/edge-program/pe-0130-queue-fill-boundaries.md",
+        "docs/edge-program/pe-0130-queue-fill-boundaries-evidence.json"
+      ],
+      "tests": [
+        "test_alternative_fill_scenarios_and_queue_bounds_are_explicit",
+        "test_economic_best_and_worst_bounds_do_not_assume_more_fills_are_better",
+        "test_each_intention_exposes_fill_fraction_and_population_hash_is_order_independent",
+        "test_malformed_queue_and_economic_inputs_fail_closed",
+        "test_duplicate_ids_and_empty_populations_are_rejected"
+      ],
+      "test_result": "10 queue-scenario tests passed; Ruff passed. All alternate fill cases and non-monotone economic bounds are explicit.",
+      "evidence_sha256": "cf075d7a5091e37c82ab605f2ac518af841b27c2e187d21745afffc1f25e93f8",
+      "blockers": [
+        "No licensed observed queue/depth evidence is wired.",
+        "Partial-fill gross and costs rely on a linear scaling assumption.",
+        "Queue scenario result is not connected to promotion."
       ]
     }
   ]
