@@ -2,25 +2,27 @@
   "schema_version": 1,
   "task_id": "PE-0047",
   "status": "PARTIAL",
-  "scope": "Registry-level defaults and paper-intent gate; not yet a mandatory integration in every legacy strategy/book engine.",
+  "scope": "Registry-level defaults and paper-intent gate, now enforced by the live legacy intraday runner for local-paper versus shadow attribution; not yet integrated in every historical book writer.",
   "implemented": [
     "Unknown strategy IDs resolve to SHADOW_ONLY and cannot emit paper intents.",
     "Paper intent authorization requires exact registry membership plus a paper-capable registered status.",
     "A caller-created PAPER_ELIGIBLE spec or stale version is rejected when it is not the exact current registered spec.",
-    "Shadow signals remain quantity-free observations; human approval is still required for the transition into PAPER_ELIGIBLE."
+    "Shadow signals remain quantity-free observations; human approval is still required for the transition into PAPER_ELIGIBLE.",
+    "The legacy intraday paper runner defaults missing registries, unknown strategies, monitoring families, and non-paper-capable statuses to shadow attribution; only an exact currently registered paper-capable spec can enter the local-paper lane."
   ],
   "tests": {
-    "command": "python -m pytest tests/test_forward_edge_f02.py -q",
-    "result": "26 passed (exit code 0); Ruff and mypy passed for registry.py.",
+    "command": "python -m pytest tests/test_forward_edge_f02.py tests/test_phase5_intraday_runner.py -q",
+    "result": "58 passed (exit code 0) across F02 registry and legacy intraday runner tests; Ruff and mypy passed for changed modules.",
     "cases": [
       "test_unregistered_candidate_defaults_to_shadow_only_observation",
       "test_only_paper_capable_statuses_get_order_intents",
       "test_failed_exploratory_and_shadow_families_never_get_order_intents",
-      "test_paper_enrolment_needs_a_human_and_has_a_benchmark"
+      "test_paper_enrolment_needs_a_human_and_has_a_benchmark",
+      "test_legacy_paper_lane_requires_exact_registry_eligibility"
     ]
   },
   "limitations": [
-    "The registry gate is not yet wired into every old strategy runner or paper-book writer.",
+    "Historical paper-book writers and other legacy strategy runners are not all wired into the registry gate.",
     "Static eligibility inventory is still narrower than all 253 source-linked candidates."
   ]
 }

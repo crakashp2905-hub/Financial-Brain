@@ -54,9 +54,9 @@
       "id": "registered-paper-book-isolation",
       "owner_role": "Execution",
       "maturity": "partial",
-      "source": ["src/financial_brain/kernel/registered_paper_books.py", "src/financial_brain/kernel/paper_account.py"],
-      "tests": ["tests/test_registered_paper_books.py", "tests/test_paper_account_portfolio.py"],
-      "blockers": ["Formal strategy eligibility and every order path are not yet registry-wired", "Owner identity authentication and account closure are not implemented"]
+      "source": ["src/financial_brain/kernel/registered_paper_books.py", "src/financial_brain/kernel/paper_account.py", "src/financial_brain/forward_edge/registry.py", "src/financial_brain/paper/intraday_runner.py"],
+      "tests": ["tests/test_registered_paper_books.py", "tests/test_paper_account_portfolio.py", "tests/test_forward_edge_f02.py", "tests/test_phase5_intraday_runner.py"],
+      "blockers": ["Historical paper-book writers and other legacy strategy runners do not all enforce registry eligibility", "Owner identity authentication and account closure are not implemented"]
     },
     {
       "id": "market-data-availability-lineage",

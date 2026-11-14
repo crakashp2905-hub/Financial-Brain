@@ -48,9 +48,17 @@ BACKTEST_NET_BP = {"ORB": -18.0, "GAP": None}
 SHADOW_ONLY_LIVE_MONITORS = frozenset({"ORB", "GAP"})
 
 
-def live_recording_mode(strategy: str) -> str:
-    """Isolate new evidence-failed ORB/GAP monitoring from the local-paper lane."""
-    return "shadow" if strategy.strip().upper() in SHADOW_ONLY_LIVE_MONITORS else "live"
+def live_recording_mode(strategy: str, registry=None) -> str:
+    """Only an exact registered paper-capable strategy can enter the formal local-paper lane."""
+    from ..forward_edge.registry import order_intent_allowed
+
+    if strategy.strip().upper() in SHADOW_ONLY_LIVE_MONITORS or registry is None:
+        return "shadow"
+    try:
+        spec = registry.get(strategy)
+    except KeyError:
+        return "shadow"
+    return "live" if order_intent_allowed(spec, registry) else "shadow"
 
 log = logging.getLogger("paper_intraday")
 
@@ -251,7 +259,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
              rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
              event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None,
              raw_archive=None, authority_path: Path | None = None,
-             source_timestamp_tolerance: timedelta = KITE_SOURCE_TIMESTAMP_TOLERANCE) -> dict:
+             source_timestamp_tolerance: timedelta = KITE_SOURCE_TIMESTAMP_TOLERANCE,
+             strategy_registry=None) -> dict:
     from ..providers import kite_data as kd
     if not isinstance(source_timestamp_tolerance, timedelta) or source_timestamp_tolerance < timedelta(0):
         raise ValueError("Kite source timestamp tolerance must be a non-negative timedelta")
@@ -458,16 +467,16 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             for sym, px in last.items():
                 bid, ask = book.get(sym, (None, None))
                 for t in eng.on_price(sym, now.replace(tzinfo=None), px, bid=bid, ask=ask):
-                    save(con, t, live_recording_mode(t.strategy))
+                    save(con, t, live_recording_mode(t.strategy, strategy_registry))
             if clock >= I.TIME_EXIT and not eng.closed_for_day:
                 for t in eng.end_of_day(now.replace(tzinfo=None), last):
-                    save(con, t, live_recording_mode(t.strategy))
+                    save(con, t, live_recording_mode(t.strategy, strategy_registry))
         publish(path, eng, now=now, status="Paper session running", polls=polls,
                 prices=last, quote_at=quote_at)
         sleep_fn(poll)
     if session_issue is None and not eng.closed_for_day:
         for t in eng.end_of_day(now_fn().replace(tzinfo=None), last):
-            save(con, t, live_recording_mode(t.strategy))
+            save(con, t, live_recording_mode(t.strategy, strategy_registry))
     status = ("session_unavailable" if session_issue is not None else
               "capture_incomplete" if capture_failures else "complete")
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,

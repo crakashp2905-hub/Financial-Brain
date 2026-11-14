@@ -225,8 +225,8 @@
         "test_source_capture_start.py",
         "test_capability_matrix.py"
       ],
-      "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (627 Python sources; 612 unassessed; 359 role-unassigned).",
-      "evidence_sha256": "91579cef58650bb9c19534d826ca0ba82ba4777c965829de95c9bc01eb7813b9",
+      "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (627 Python sources; 611 unassessed; 359 role-unassigned).",
+      "evidence_sha256": "abf4530c81db2205be581a386008c8d0402ba7093e0f66ff679356012347818b",
       "blockers": [
         "Deployment must configure a shared registry path and canonical matching strategy IDs; this has not been verified in the owner environment.",
         "Other direct/manual paper writers, authenticated owner identity, and account closure/release governance are not bound to this control.",
@@ -1529,20 +1529,23 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/forward_edge/registry.py",
+        "src/financial_brain/paper/intraday_runner.py",
         "docs/edge-program/unregistered-shadow-only-contract.md",
         "docs/edge-program/pe-0047-unregistered-shadow-only-evidence.json",
-        "tests/test_forward_edge_f02.py"
+        "tests/test_forward_edge_f02.py",
+        "tests/test_phase5_intraday_runner.py"
       ],
       "tests": [
         "test_unregistered_candidate_defaults_to_shadow_only_observation",
         "test_only_paper_capable_statuses_get_order_intents",
         "test_failed_exploratory_and_shadow_families_never_get_order_intents",
-        "test_paper_enrolment_needs_a_human_and_has_a_benchmark"
+        "test_paper_enrolment_needs_a_human_and_has_a_benchmark",
+        "test_legacy_paper_lane_requires_exact_registry_eligibility"
       ],
-      "test_result": "26 F02 tests passed; Ruff and mypy passed. Unknown IDs default to SHADOW_ONLY and only the exact registered paper-capable spec can pass the intent gate. Legacy strategy engines remain to be wired through this gate.",
-      "evidence_sha256": "6fde5b29ff0bd547d67403e5d6f4b20157bde5209f12befa7e12e94cc40c5efd",
+      "test_result": "58 passed (exit code 0) across registry F02 and legacy intraday runner tests; repository Ruff and changed-module mypy passed. The legacy runner attributes output to local-paper only for exact registered paper-capable specs and otherwise defaults to shadow.",
+      "evidence_sha256": "a399c0320431a8bc1cc6203a0587ed38dce2b22d14e96a240ca09138ab5d8631",
       "blockers": [
-        "Not every existing strategy runner and historical paper-book writer consumes the registry status/intent gate.",
+        "Historical paper-book writers and other legacy strategy runners are not all wired into the registry gate.",
         "The static eligibility inventory is not yet exhaustive for all source-linked candidates."
       ]
     },

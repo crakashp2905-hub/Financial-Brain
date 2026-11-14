@@ -80,6 +80,27 @@ def test_legacy_intraday_runner_rejects_forward_engine_claim_before_creating_led
     assert not path.exists()
 
 
+def test_legacy_paper_lane_requires_exact_registry_eligibility():
+    from types import SimpleNamespace
+
+    class FakeRegistry:
+        def __init__(self, specs):
+            self.specs = specs
+
+        def get(self, strategy_id):
+            return self.specs[strategy_id]
+
+    eligible = SimpleNamespace(strategy_id="CUSTOM", can_place_paper_intents=True)
+    ineligible = SimpleNamespace(strategy_id="FAILED", can_place_paper_intents=False)
+    registry = FakeRegistry({"CUSTOM": eligible, "FAILED": ineligible, "ORB": eligible})
+
+    assert R.live_recording_mode("CUSTOM") == "shadow"  # absent registry fails closed
+    assert R.live_recording_mode("UNKNOWN", registry) == "shadow"
+    assert R.live_recording_mode("FAILED", registry) == "shadow"
+    assert R.live_recording_mode("ORB", registry) == "shadow"  # monitoring-only family
+    assert R.live_recording_mode("CUSTOM", registry) == "live"
+
+
 def test_new_orb_gap_monitoring_is_shadow_and_historical_failed_live_rows_remain_queryable(setup):
     from financial_brain.paper.intraday import Trade
 
