@@ -83,6 +83,14 @@ def test_eod_reconciliation_halts_on_mismatch_and_requires_human_repair_signoff(
     assert signed["status"] == "RECONCILED_SIGNED_OFF"
     assert signed["entries_allowed"] is True
 
+    nonhuman = reconcile_eod_snapshot(
+        journal_state=journal_state, as_of=as_of, prior_incident_open=True, **clean,
+        repair_signoff={"incident_id": "inc-1", "repair_id": "repair-2", "actor": "automation:reconcile",
+                        "signed_at": "2026-10-06T10:59:00+00:00", "source_sha256": "c" * 64},
+    )
+    assert nonhuman["status"] == "AWAITING_REPAIR_SIGNOFF"
+    assert nonhuman["entries_allowed"] is False
+
 
 def test_independent_audit_rejects_nav_mismatch_in_a_valid_hash_chain(tmp_path):
     journal = DurableJournal(tmp_path / "bad-nav.jsonl")

@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_paper_eod_gate.py tests/test_paper_account_audit.py tests/test_paper_account_risk_latch.py",
-    "result": "11 passed; Ruff passed for changed audit, gate, CLI and tests; mypy passed for the changed audit, gate and CLI."
+    "result": "11 focused EOD/account tests passed; Ruff and mypy passed. Human signoff rejects all software actor identities. EOD mismatch persists across restart, trips the account risk latch, rejects changed evidence and wrong-incident signoff, and the CLI audits the local paper journal before comparing explicit reference evidence."
   },
   "implemented": [
     "The journal-only auditor exports independently recomputed positions, fill IDs and latest marks and recognizes validated account risk-latch events.",
@@ -17,10 +17,10 @@
     "The live-market runner does not automatically schedule reconciliation; operators must provide the reference snapshot and invoke the CLI."
   ],
   "source_sha256": {
-    "src/financial_brain/kernel/paper_account_audit.py": "798577991d3cc05d7447f3a84e0ebdd0dd2279db72dca107301b085c87c46e44",
+    "src/financial_brain/kernel/paper_account_audit.py": "bf3f05384118ad4938d1f68d9fa7af9f7bc0f1a5bdf514e94673da93eead7f3c",
     "src/financial_brain/kernel/paper_eod_gate.py": "e25ff39513fc31149383c0f052128584a61d060f862f444a07d6f6249a5dd290",
     "src/financial_brain/forward_edge/cli.py": "9d050823eafcfad0d892a92733386824dd2772bb76ffe5b30ee074ca7dcdf5e0",
-    "tests/test_paper_account_audit.py": "857f6173d35fa0af15e31b01f496c4856d047c617ed97346e5310600db364950",
+    "tests/test_paper_account_audit.py": "5a8ecca100a4f8d5b4b2d14912975caf8130780955ea0a85a7f013d267a270b8",
     "tests/test_paper_eod_gate.py": "8099e78d22b4ab9c8be5f4710acaad1ae3b22293282e8adcdeb748e11793f4ce",
     "tests/test_paper_account_risk_latch.py": "e5ea853cf941b49b3f1f4d713a615c96dc84642c41cd775f74e99daf2b22a688"
   }

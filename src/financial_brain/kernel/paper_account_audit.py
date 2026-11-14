@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 import re
 from pathlib import Path
 
+from financial_brain.forward_edge.approvals import is_agent_actor
 from financial_brain.forward_edge.durable import DurableJournal
 
 
@@ -194,7 +195,7 @@ def audit_paper_account_journal(path: Path) -> dict:
                 except (KeyError, ValueError) as exc:
                     raise PaperAuditError("risk latch reset timestamp is invalid") from exc
                 if (active_risk_incident != incident_id or not isinstance(actor, str) or not actor.strip()
-                        or actor.startswith("agent:") or not isinstance(repair_id, str) or not repair_id.strip()
+                        or is_agent_actor(actor, "human") or not isinstance(repair_id, str) or not repair_id.strip()
                         or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)
                         or signed_at.tzinfo is None or signed_at.utcoffset() is None):
                     raise PaperAuditError("risk latch reset lacks a matching human hash-backed signoff")
@@ -288,7 +289,7 @@ def reconcile_eod_snapshot(*, journal_state: dict, reference_positions: dict[str
                 signed_at = None
             valid_signoff = bool(
                 repair_signoff.get("incident_id") and repair_signoff.get("repair_id")
-                and isinstance(actor, str) and actor.strip() and not actor.startswith("agent:")
+                and isinstance(actor, str) and actor.strip() and not is_agent_actor(actor, "human")
                 and isinstance(repair_signoff.get("source_sha256"), str)
                 and re.fullmatch(r"[0-9a-f]{64}", repair_signoff["source_sha256"])
                 and signed_at is not None and signed_at.tzinfo is not None and signed_at <= as_of
