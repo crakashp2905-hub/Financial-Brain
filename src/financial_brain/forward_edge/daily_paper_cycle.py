@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 
 from financial_brain.forward_edge.book_performance_report import (
@@ -12,6 +13,8 @@ from financial_brain.forward_edge.book_performance_report import (
 )
 from financial_brain.forward_edge.cli import EXIT, cmd_daily_finalize
 from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.eod_paper_archive import EodArchiveError, validate_close_evidence
+from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
 from financial_brain.kernel.registered_paper_books import RegisteredPaperBooks
 
 
@@ -19,13 +22,8 @@ class DailyPaperCycleError(ValueError):
     """A daily manifest is incomplete or its evidence does not match the frozen book plan."""
 
 
-def run_daily_paper_cycle(manifest_path: Path) -> dict:
-    """Finalize all planned books and write a content-addressed daily performance report.
-
-    The caller supplies close marks, session IDs, runner journals and prior session rows. The
-    operation is retryable per book: EOD archives and bundles are immutable/idempotent, so a
-    failure on a later book can be resumed by rerunning the same manifest and captured inputs.
-    """
+def _prepare_daily_paper_cycle(manifest_path: Path) -> tuple[dict, list[dict]]:
+    """Validate every account and input before the cycle performs its first close mutation."""
     try:
         manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
@@ -37,6 +35,9 @@ def run_daily_paper_cycle(manifest_path: Path) -> dict:
     missing = [name for name in required if name not in manifest]
     if missing:
         raise DailyPaperCycleError(f"daily-cycle manifest missing fields: {', '.join(missing)}")
+    for key in ("captured_at", "registry", "plan_id", "account_root", "report_output_root"):
+        if not isinstance(manifest[key], str) or not manifest[key].strip():
+            raise DailyPaperCycleError(f"manifest {key} must be a non-empty string")
     session_date = manifest["session_date"]
     try:
         canonical_date = date.fromisoformat(session_date).isoformat()
@@ -48,6 +49,10 @@ def run_daily_paper_cycle(manifest_path: Path) -> dict:
     history = manifest.get("history_sessions", [])
     if not isinstance(books, list) or not isinstance(history, list):
         raise DailyPaperCycleError("books and history_sessions must be arrays")
+    try:
+        captured_at = datetime.fromisoformat(manifest["captured_at"])
+    except (TypeError, ValueError) as exc:
+        raise DailyPaperCycleError("captured_at must be an aware ISO-8601 timestamp") from exc
     registry = RegisteredPaperBooks(Path(manifest["registry"]))
     plan_id = manifest["plan_id"]
     plan = next((row for row in registry.plans if row.plan_id == plan_id), None)
@@ -65,8 +70,12 @@ def run_daily_paper_cycle(manifest_path: Path) -> dict:
     if set(supplied) != set(expected):
         raise DailyPaperCycleError("daily-cycle must include every account in the frozen plan")
 
-    report_sessions = list(history)
-    finalized = []
+    try:
+        build_book_performance_report(history)
+    except BookPerformanceError as exc:
+        raise DailyPaperCycleError(f"history_sessions failed report validation: {exc}") from exc
+    history_keys = {(item["book_id"], item["session_id"]) for item in history}
+    prepared = []
     account_root = Path(manifest["account_root"])
     for strategy_id, allocation in sorted(expected.items()):
         row = supplied[strategy_id]
@@ -75,11 +84,36 @@ def run_daily_paper_cycle(manifest_path: Path) -> dict:
         if absent:
             raise DailyPaperCycleError(
                 f"book {strategy_id} missing fields: {', '.join(absent)}")
+        for key in needed:
+            if not isinstance(row[key], str) or not row[key].strip():
+                raise DailyPaperCycleError(f"book {strategy_id} field {key} must be a non-empty string")
         account_path = registry.account_path(
             plan_id=plan_id, account_id=allocation.account_id, root=account_root)
         runner_path = Path(row["runner_journal"])
-        if not account_path.is_file() or not runner_path.is_file():
-            raise DailyPaperCycleError(f"book {strategy_id} account or runner journal is missing")
+        marks_path = Path(row["marks"])
+        if not account_path.is_file() or not runner_path.is_file() or not marks_path.is_file():
+            raise DailyPaperCycleError(f"book {strategy_id} account, runner, or marks file is missing")
+        try:
+            account_rows = DurableJournal(account_path).records()
+            marks = json.loads(marks_path.read_text(encoding="utf-8"))
+            if not account_rows or account_rows[0].get("t") != "ACCOUNT_OPEN":
+                raise ValueError("account journal has no durable opening record")
+            opening = account_rows[0]
+            if opening.get("account") != allocation.account_id:
+                raise ValueError("account journal ID differs from registered allocation")
+            opening_cash = Decimal(str(opening["cash"]))
+            if opening_cash != Decimal(allocation.capital_inr):
+                raise ValueError("account opening cash differs from frozen allocated capital")
+            account = PaperAccount(
+                account_path, account_id=allocation.account_id, initial_cash=opening_cash,
+                currency=str(opening["currency"]),
+                fee_schedule=FeeSchedule.from_dict(opening.get("fee_schedule")))
+            if not isinstance(marks, dict):
+                raise ValueError("marks file must contain a symbol-keyed JSON object")
+            validate_close_evidence(account=account, session_date=date.fromisoformat(session_date),
+                                    captured_at=captured_at, marks=marks)
+        except (OSError, ValueError, KeyError, TypeError, EodArchiveError) as exc:
+            raise DailyPaperCycleError(f"book {strategy_id} account or close evidence failed preflight: {exc}") from exc
         try:
             runner_rows = DurableJournal(runner_path).records()
         except (OSError, ValueError) as exc:
@@ -99,22 +133,59 @@ def run_daily_paper_cycle(manifest_path: Path) -> dict:
             raise DailyPaperCycleError(
                 f"book {strategy_id} lacks a matching dated terminal session bound to its registered account")
 
+        if (strategy_id, session_id) in history_keys:
+            raise DailyPaperCycleError("history_sessions already contains this book/session")
+        prepared.append({"strategy_id": strategy_id, "allocation": allocation,
+                         "row": row, "account_path": account_path,
+                         "runner_path": runner_path, "runner_rows": runner_rows})
+
+    return manifest, prepared
+
+
+def preflight_daily_paper_cycle(manifest_path: Path) -> dict:
+    """Run non-mutating validation of all registered books and daily-cycle inputs."""
+    manifest, prepared = _prepare_daily_paper_cycle(manifest_path)
+    return {"session_date": manifest["session_date"], "plan_id": manifest["plan_id"],
+            "books": [{"strategy_id": item["strategy_id"],
+                       "account_id": item["allocation"].account_id,
+                       "session_id": item["row"]["session_id"],
+                       "runner_journal_head": DurableJournal(item["runner_path"]).head}
+                      for item in prepared], "ready": True, "physical_orders": False}
+
+
+def run_daily_paper_cycle(manifest_path: Path) -> dict:
+    """Finalize all planned books and write a content-addressed daily performance report.
+
+    The caller supplies close marks, session IDs, runner journals and prior session rows. The
+    operation is retryable per book: EOD archives and bundles are immutable/idempotent, so a
+    failure on a later book can be resumed by rerunning the same manifest and captured inputs.
+    All input validation runs before the first account close mutation.
+    """
+    manifest, prepared = _prepare_daily_paper_cycle(manifest_path)
+    report_sessions = list(manifest.get("history_sessions", []))
+    finalized = []
+    for item in prepared:
+        strategy_id = item["strategy_id"]
+        allocation = item["allocation"]
+        row = item["row"]
+        runner_rows = item["runner_rows"]
+
         result, code = cmd_daily_finalize(
-            account_journal_path=str(account_path), session_date=session_date,
+            account_journal_path=str(item["account_path"]), session_date=manifest["session_date"],
             captured_at=manifest["captured_at"], marks_path=str(row["marks"]),
-            runner_journal_path=str(runner_path), session_id=session_id,
+            runner_journal_path=str(item["runner_path"]), session_id=row["session_id"],
             archive_dir=str(row["archive_dir"]), bundle_root=str(row["bundle_root"]))
         if code != EXIT["OK"]:
             raise DailyPaperCycleError(
                 f"book {strategy_id} finalization failed: {result.get('error', 'incomplete evidence')}")
-        archive_path = Path(row["archive_dir"]) / session_date / f"{allocation.account_id}.json"
+        archive_path = Path(row["archive_dir"]) / manifest["session_date"] / f"{allocation.account_id}.json"
         try:
             archive = json.loads(archive_path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
             raise DailyPaperCycleError(f"book {strategy_id} close archive is missing or invalid") from exc
         report_sessions.append({
-            "book_id": strategy_id, "session_id": session_id,
-            "session_date": session_date, "runner_records": runner_rows,
+            "book_id": strategy_id, "session_id": row["session_id"],
+            "session_date": manifest["session_date"], "runner_records": runner_rows,
             "account_archive": archive,
         })
         finalized.append({"strategy_id": strategy_id, **result})
@@ -124,6 +195,6 @@ def run_daily_paper_cycle(manifest_path: Path) -> dict:
         report_files = write_book_performance_report(report, Path(manifest["report_output_root"]))
     except (BookPerformanceError, OSError, ValueError) as exc:
         raise DailyPaperCycleError(f"daily per-book report could not be written: {exc}") from exc
-    return {"session_date": session_date, "plan_id": plan_id, "finalized_books": finalized,
+    return {"session_date": manifest["session_date"], "plan_id": manifest["plan_id"], "finalized_books": finalized,
             "report": report_files, "physical_orders": False}
 

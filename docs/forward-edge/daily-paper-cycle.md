@@ -2,6 +2,8 @@
 
 `python -m financial_brain.forward_edge.cli daily-paper-cycle --manifest <path>` finalizes the accounts in one frozen `RegisteredPaperBooks` plan, creates each paper close archive and portable evidence bundle, then writes the by-book performance report.
 
+Run `python -m financial_brain.forward_edge.cli daily-paper-preflight --manifest <path>` first. Preflight reopens every existing account from its durable journal, validates the account against frozen allocated capital, checks every close mark and outstanding order state, verifies every dated runner session and strategy/account binding, and validates the supplied historical report rows. It does not write to account journals or close books. The cycle repeats these checks immediately before it begins.
+
 ## Manifest contract
 
 The manifest is an operator-owned JSON file. It contains:

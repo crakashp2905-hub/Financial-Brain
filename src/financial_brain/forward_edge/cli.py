@@ -183,8 +183,22 @@ def cmd_daily_paper_cycle(manifest_path: str) -> tuple[dict, int]:
 
     try:
         result = run_daily_paper_cycle(Path(manifest_path))
-    except (OSError, ValueError, DailyPaperCycleError) as exc:
+    except (OSError, ValueError, TypeError, DailyPaperCycleError) as exc:
         return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    return result, EXIT["OK"]
+
+
+def cmd_daily_paper_preflight(manifest_path: str) -> tuple[dict, int]:
+    """Validate a complete daily-cycle manifest without closing or mutating any book."""
+    from financial_brain.forward_edge.daily_paper_cycle import (
+        DailyPaperCycleError,
+        preflight_daily_paper_cycle,
+    )
+
+    try:
+        result = preflight_daily_paper_cycle(Path(manifest_path))
+    except (OSError, ValueError, TypeError, DailyPaperCycleError) as exc:
+        return {"error": str(exc), "ready": False, "physical_orders": False}, EXIT["INCOMPLETE"]
     return result, EXIT["OK"]
 
 
@@ -320,6 +334,9 @@ def main(argv: list[str] | None = None) -> int:
     cycle = sub.add_parser(
         "daily-paper-cycle", help="finalize all frozen-plan paper books and build the by-book report")
     cycle.add_argument("--manifest", required=True, help="owner-prepared JSON inputs for this session")
+    preflight = sub.add_parser(
+        "daily-paper-preflight", help="validate all daily-cycle evidence without mutating accounts")
+    preflight.add_argument("--manifest", required=True, help="owner-prepared JSON inputs for this session")
     df = sub.add_parser("daily-finalize", help="close a local paper book and export verified evidence")
     df.add_argument("--account-journal", required=True)
     df.add_argument("--session-date", required=True, help="exchange session date in YYYY-MM-DD")
@@ -352,6 +369,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_registered_portfolio_report(args.registry, args.plan_id, args.account_root)
     elif args.cmd == "daily-paper-cycle":
         out, code = cmd_daily_paper_cycle(args.manifest)
+    elif args.cmd == "daily-paper-preflight":
+        out, code = cmd_daily_paper_preflight(args.manifest)
     elif args.cmd == "daily-finalize":
         out, code = cmd_daily_finalize(
             account_journal_path=args.account_journal, session_date=args.session_date,

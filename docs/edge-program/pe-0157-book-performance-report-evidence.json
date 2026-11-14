@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_daily_paper_cycle.py tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py tests/test_book_performance_report.py tests/test_source_inventory.py; ruff check src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py tests/test_daily_paper_cycle.py; python -m mypy src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py",
-    "result": "28 passed across the daily cycle, evidence bundle, EOD archive, book report, and source-inventory suites; Ruff and mypy passed. A live local integration test finalizes two real synthetic paper-account journals, verifies both exported bundles, and reads the immutable per-book report. This is synthetic workflow verification, not observed Kite-market evidence."
+    "result": "29 passed across daily-cycle, read-only preflight, evidence-bundle, EOD-archive, book-report, and source-inventory suites; Ruff and mypy passed. Integration finalized two synthetic accounts, verified both bundles and read the immutable report. Preflight validation left both account journal heads unchanged on success and on missing later-book evidence. No observed Kite-market result is claimed."
   },
   "implemented": [
     "Per-book reports keep CLOSED, NO_TRADE, INCOMPLETE and UNRECORDED session outcomes in an explicit denominator.",
@@ -13,7 +13,8 @@
     "EOD archive hashes are verified; cumulative flow-adjusted gross/net returns, fees and taxes are differenced without double counting same-date snapshots.",
     "Missing close archives and missing quote/session evidence are visible and are never imputed to zero.",
     "The forward CLI accepts a JSON sessions array and writes deterministic JSON and operator text under an immutable report-hash directory; identical reruns reuse outputs and changed outputs are refused.",
-    "The daily-paper-cycle CLI finalizes every book in a frozen plan, then supplies newly verified archives and runner journal rows to the by-book report along with explicit caller-supplied prior sessions."
+    "The daily-paper-cycle CLI finalizes every book in a frozen plan, then supplies newly verified archives and runner journal rows to the by-book report along with explicit caller-supplied prior sessions.",
+    "The forward-edge CLI exposes the read-only daily-paper-preflight command, which validates all registered accounts, close marks, terminal strategy/account bindings and historical report rows before any book is finalized."
   ],
   "blockers": [
     "No OS scheduler invokes daily-paper-cycle for each market session; its multi-session denominator requires explicit history_sessions.",
@@ -22,9 +23,10 @@
   ],
   "source_sha256": {
     "src/financial_brain/forward_edge/book_performance_report.py": "bbf62f845f2f763029b2de59fbe170cc2186d939d64a03b1e009ed809f21d175",
-    "src/financial_brain/forward_edge/cli.py": "3392a067ef9fabd1ee4c4988220eb8fb59e26e34fcc7816735a9238f9e0a3cd7",
-    "src/financial_brain/forward_edge/daily_paper_cycle.py": "692973cec6621ca2ece1e08ad8ebc63b83a650656c705dca43f3222376b41fb6",
-    "tests/test_daily_paper_cycle.py": "2d40321ef08ce04ad63d2cfb3eb45c8338526874cb962f6a057af16abcb9d17f",
-    "tests/test_book_performance_report.py": "1c0115fba9032e24b55e08eccb708993a821043ca28e4aa615575465f5db3b0a"
+    "src/financial_brain/forward_edge/cli.py": "2ba0bb4b1e71db0efd1a4b0e27c9cef11bd9979968bd5382a62c5d13c3d47527",
+    "src/financial_brain/forward_edge/daily_paper_cycle.py": "484ac0499faf54307c647d57b29962f4ae126a135f72f4b73038fe8be75d3b13",
+    "tests/test_daily_paper_cycle.py": "e76ea08e5648f38e3b99ace3980cab2f0c081fa7ce40ec202bcac39aeac65407",
+    "tests/test_book_performance_report.py": "1c0115fba9032e24b55e08eccb708993a821043ca28e4aa615575465f5db3b0a",
+    "src/financial_brain/forward_edge/eod_paper_archive.py": "c7009ccb1fe98891aee8faede9863efedde60969f8c9d8b10cafc55b146ddbbe"
   }
 }

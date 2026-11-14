@@ -50,11 +50,10 @@ def _fixture(tmp_path, monkeypatch, *, mock_finalize=True, mock_reports=True):
         books.append({
             "strategy_id": allocation.strategy_id,
             "session_id": f"s-{allocation.strategy_id}",
-            "runner_journal": str(runner_path), "marks": str(tmp_path / "marks.json"),
+            "runner_journal": str(runner_path), "marks": str(tmp_path / f"marks-{allocation.strategy_id}.json"),
             "archive_dir": str(tmp_path / "archives"), "bundle_root": str(tmp_path / "bundles"),
         })
-    marks = tmp_path / "marks.json"
-    marks.write_text("{}", encoding="utf-8")
+        Path(books[-1]["marks"]).write_text("{}", encoding="utf-8")
 
     def finalize(**kwargs):
         archive_root = tmp_path / "archives" / kwargs["session_date"]
@@ -109,6 +108,28 @@ def test_daily_paper_cycle_requires_exact_frozen_plan_membership_before_close(tm
     with pytest.raises(cycle.DailyPaperCycleError, match="every account in the frozen plan"):
         # Membership is validated before any account finalizer can mutate a journal.
         cycle.run_daily_paper_cycle(manifest_path)
+
+
+def test_daily_paper_preflight_is_read_only_and_checks_all_books_before_close(tmp_path, monkeypatch, capsys):
+    manifest, manifest_path, _ = _fixture(tmp_path, monkeypatch)
+    account_paths = [tmp_path / "accounts" / "paper-alpha.jsonl",
+                     tmp_path / "accounts" / "paper-beta.jsonl"]
+    before = [DurableJournal(path).head for path in account_paths]
+
+    code = main(["daily-paper-preflight", "--manifest", str(manifest_path)])
+    ready = json.loads(capsys.readouterr().out)
+
+    assert code == 0
+    assert ready["ready"] is True
+    assert {row["strategy_id"] for row in ready["books"]} == {"alpha", "beta"}
+    assert [DurableJournal(path).head for path in account_paths] == before
+
+    Path(manifest["books"][1]["marks"]).unlink()
+    code = main(["daily-paper-preflight", "--manifest", str(manifest_path)])
+    blocked = json.loads(capsys.readouterr().out)
+    assert code == 3
+    assert blocked["ready"] is False
+    assert [DurableJournal(path).head for path in account_paths] == before
 
 
 def test_daily_paper_cycle_real_close_bundle_and_report_integration(tmp_path, monkeypatch, capsys):

@@ -20,7 +20,7 @@ class EodArchiveError(ValueError):
     """The paper account cannot be safely closed or its archive is inconsistent."""
 
 
-def _canonical(value: dict) -> bytes:
+def _canonical(value: dict | list) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
@@ -54,14 +54,9 @@ def _order_closeout(account: PaperAccount) -> list[dict]:
     return account.orders
 
 
-def close_and_archive_paper_session(*, account: PaperAccount, session_date: date,
-                                    captured_at: datetime, marks: dict[str, dict],
-                                    archive_dir: Path) -> dict:
-    """Reconcile/cancel orders, mark inventory, snapshot NAV, and atomically archive exact state.
-
-    `marks` is keyed by held symbol; each value carries positive `price`, aware `observed_at`,
-    `source_id`, and a SHA-256 source identity. No stale/missing mark is replaced by zero.
-    """
+def validate_close_evidence(*, account: PaperAccount, session_date: date,
+                            captured_at: datetime, marks: dict[str, dict]) -> tuple[datetime, dict]:
+    """Validate close inputs and order states without writing to the paper account journal."""
     if type(session_date) is not date:
         raise EodArchiveError("exchange session date is required")
     capture = _aware(captured_at, "end-of-session capture clock")
@@ -98,6 +93,24 @@ def close_and_archive_paper_session(*, account: PaperAccount, session_date: date
         normalized_marks[symbol] = {"price": str(price), "observed_at": observed.isoformat(),
                                     "source_id": source_id, "source_sha256": source_sha,
                                     "mark_id": mark_id}
+    closable_states = TERMINAL | {State.CREATED, State.ACCEPTED, State.PARTIAL, State.CANCEL_PENDING}
+    unresolved = [row["client_id"] for row in account.orders
+                  if State(row["state"]) not in closable_states]
+    if unresolved:
+        raise EodArchiveError(f"unresolved orders block close: {', '.join(unresolved)}")
+    return capture, normalized_marks
+
+
+def close_and_archive_paper_session(*, account: PaperAccount, session_date: date,
+                                    captured_at: datetime, marks: dict[str, dict],
+                                    archive_dir: Path) -> dict:
+    """Reconcile/cancel orders, mark inventory, snapshot NAV, and atomically archive exact state.
+
+    `marks` is keyed by held symbol; each value carries positive `price`, aware `observed_at`,
+    `source_id`, and a SHA-256 source identity. No stale/missing mark is replaced by zero.
+    """
+    capture, normalized_marks = validate_close_evidence(
+        account=account, session_date=session_date, captured_at=captured_at, marks=marks)
 
     orders = _order_closeout(account)
     for symbol, row in normalized_marks.items():
