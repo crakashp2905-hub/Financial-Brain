@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 128,
-  "unrecorded_tasks": 90,
+  "recorded_tasks": 129,
+  "unrecorded_tasks": 89,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2776,6 +2776,31 @@
         "No licensed observed queue/depth evidence is wired.",
         "Partial-fill gross and costs rely on a linear scaling assumption.",
         "Queue scenario result is not connected to promotion."
+      ]
+    },
+    {
+      "id": "PE-0131",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/contribution_report.py",
+        "tests/test_contribution_report.py",
+        "docs/edge-program/pe-0131-contributor-removal-report.md",
+        "docs/edge-program/pe-0131-contributor-removal-report-evidence.json"
+      ],
+      "tests": [
+        "test_report_exposes_distribution_best_contributors_and_fixed_denominator_removals",
+        "test_report_hash_is_order_independent_and_bound_to_the_frozen_protocol",
+        "test_missing_sessions_remain_in_denominator_and_report_is_incomplete",
+        "test_contribution_reconciliation_is_enforced_and_zero_cash_days_can_have_no_rows",
+        "test_protocol_and_schedule_are_pinned_before_observations",
+        "test_duplicate_or_nonfinite_contribution_inputs_are_rejected"
+      ],
+      "test_result": "8 contribution-distribution tests passed; Ruff passed. Return summaries, per-instrument reconciliation and top day/month/instrument removal diagnostics are verified.",
+      "evidence_sha256": "bf9e5490f5b8f30aac9b15b7753ab0278214549f4be60ee5b24f60d8440ecb94",
+      "blockers": [
+        "Attribution rows and protocol digest are caller-supplied, not held in the authoritative evidence registry.",
+        "Report is not wired to the promotion gate.",
+        "Removal sensitivity is additive diagnostic accounting, not a portfolio replay."
       ]
     }
   ]

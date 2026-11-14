@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0131",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_contribution_report.py",
+    "result": "8 passed; Ruff passed for the new module and test file."
+  },
+  "implemented": [
+    "Reports daily return mean, median, standard deviation, quantiles, minimum, maximum and positive/negative fractions.",
+    "Requires per-instrument daily net contributions to reconcile to observed scheduled-day returns.",
+    "Shows best and worst day, month and instrument plus fixed-denominator sensitivity after removing the top day, month or instrument.",
+    "Includes frozen protocol/schedule identity in a deterministic report hash and keeps missing dates in the cohort denominator."
+  ],
+  "blockers": [
+    "Attribution rows and protocol digest are caller-supplied and are not bound to an authoritative evidence registry.",
+    "The report is not included in the final promotion gate.",
+    "Removal analysis is additive diagnostic attribution, not a portfolio replay of the counterfactual trade set."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/contribution_report.py": "818cab286122337aef4841430e79a52de2efbc1903fdd1d8700904a97de97645",
+    "tests/test_contribution_report.py": "8f65ed0897edc859bbd31a790fc6aca2f0da8fcf2a751ba980e01c610aa439aa"
+  }
+}
