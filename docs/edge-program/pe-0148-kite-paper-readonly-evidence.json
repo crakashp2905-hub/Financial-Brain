@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0148",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_kite_paper_readonly.py tests/test_phase3_kite.py; ruff check src/financial_brain/providers/kite_data.py tests/test_kite_paper_readonly.py",
+    "result": "27 passed; Ruff passed."
+  },
+  "implemented": [
+    "Kite GET route checking uses exact route shapes and validated path components instead of an unsafe prefix-only allowlist.",
+    "Instrument route input rejects traversal and malformed exchange codes; embedded query strings, fragments, suffixes, and external URLs are rejected before network access.",
+    "Mocked HTTP integration confirms paper-mode read access uses GET only for market-data endpoints and every attempted order route is blocked before transport.",
+    "The LIVE_PAPER mode contract explicitly reports that physical orders are disabled."
+  ],
+  "blockers": [
+    "Arbitrary caller-injected execution callbacks are outside the provider route guard and still require trusted integration policy.",
+    "Owner account/IP allowlisting and live deployment controls are not independently verified."
+  ],
+  "source_sha256": {
+    "src/financial_brain/providers/kite_data.py": "280e169bb91bef2f8130bd9e7c7bdf43dfc2486032bdeab61615f27684f120bc",
+    "tests/test_kite_paper_readonly.py": "6fe24fceb5536e43b1e6708042ff0efd8d62232784a3a3c11f0631c27f565c4e"
+  }
+}

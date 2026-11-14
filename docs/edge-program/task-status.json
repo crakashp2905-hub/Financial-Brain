@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 145,
-  "unrecorded_tasks": 73,
+  "recorded_tasks": 146,
+  "unrecorded_tasks": 72,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3215,6 +3215,30 @@
         "Live Kite capture startup does not call this receipt API.",
         "Clock and entitlement evidence remains caller-supplied and unauthenticated.",
         "No actual observed capture session was produced."
+      ]
+    },
+    {
+      "id": "PE-0148",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/providers/kite_data.py",
+        "tests/test_kite_paper_readonly.py",
+        "docs/edge-program/pe-0148-kite-paper-readonly.md",
+        "docs/edge-program/pe-0148-kite-paper-readonly-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_paper_data_reads_use_only_get_routes_and_order_paths_never_reach_network",
+        "test_no_endpoint_is_transactional",
+        "test_a_path_outside_the_allowlist_is_refused_before_any_credential_is_read",
+        "test_the_package_contains_no_order_call_anywhere"
+      ],
+      "test_result": "27 Kite read-only and paper-mode integration tests passed; Ruff passed. Quotes/history/instruments issue GET-only requests; traversal and attempted order routes are rejected before HTTP transport. LIVE_PAPER mode reports physical orders disabled.",
+      "evidence_sha256": "9ac17a2811de80a687850e56d8c4d24f95e133d4cf8246268b6888ba32b0f770",
+      "blockers": [
+        "Arbitrary injected execution callbacks remain outside the Kite route guard.",
+        "Owner account/IP allowlisting and deployment controls are not independently verified."
       ]
     }
   ]

@@ -40,6 +40,7 @@ import csv
 import io
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -51,8 +52,8 @@ API = "https://api.kite.trade"
 MIN_INTERVAL_S = 1 / 3          # Kite's documented ceiling for historical data
 MAX_QUOTE_SYMBOLS = 500         # Kite's documented cap per quote call
 
-#: Every path this module will build. All GET, none transactional. `_get` refuses any
-#: URL that does not start with one of these, so a typo cannot become a POST to /orders.
+#: Route families served by this read-only module. `_is_read_endpoint` validates exact
+#: route shapes; a prefix alone is insufficient because path traversal can escape it.
 ENDPOINTS = (
     "/instruments",             # the tradable universe and its instrument tokens
     "/instruments/historical/",  # candles: minute, day, and the intervals between
@@ -63,6 +64,18 @@ ENDPOINTS = (
 
 INTERVALS = ("minute", "3minute", "5minute", "10minute", "15minute", "30minute",
              "60minute", "day")
+
+
+def _is_read_endpoint(path: str) -> bool:
+    """Allow only known GET routes with validated path components and no embedded query."""
+    parsed = urllib.parse.urlsplit(path)
+    if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment or parsed.path != path:
+        return False
+    if path in {"/instruments", "/quote", "/quote/ohlc", "/quote/ltp"}:
+        return True
+    if re.fullmatch(r"/instruments/[A-Z][A-Z0-9_-]{0,15}", path):
+        return True
+    return re.fullmatch(r"/instruments/historical/[1-9][0-9]*/(?:minute|3minute|5minute|10minute|15minute|30minute|60minute|day)", path) is not None
 
 _clock = threading.Lock()
 _last_call = 0.0
@@ -105,7 +118,7 @@ def _throttle() -> None:
 
 def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
     """The only way this module talks to Kite. GET, allowlisted path, throttled."""
-    if not any(path.startswith(p) for p in ENDPOINTS):
+    if not _is_read_endpoint(path):
         raise KiteDataError(f"refusing {path!r}: not a read endpoint this module serves")
     key, token = credentials()
     url = f"{API}{path}"
@@ -137,6 +150,8 @@ def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
 
 def instruments(exchange: str = "NSE") -> list[dict]:
     """The tradable universe, with the instrument tokens every other call needs."""
+    if exchange and not re.fullmatch(r"[A-Z][A-Z0-9_-]{0,15}", exchange):
+        raise KiteDataError("exchange must be a simple uppercase venue code")
     body = _get(f"/instruments/{exchange}" if exchange else "/instruments")
     raw = body.get("raw", b"")
     return list(csv.DictReader(io.StringIO(raw.decode("utf-8", errors="replace"))))
