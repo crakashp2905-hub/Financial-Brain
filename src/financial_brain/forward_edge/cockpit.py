@@ -398,6 +398,56 @@ def timeline(scheduled: list[str], outcomes: dict[str, str]) -> str:
     return html
 
 
+def opportunity_coverage(*, scheduled_dates: list[str], outcomes: list[dict]) -> str:
+    """Count explicit opportunity outcomes by reason without dropping unrecorded planned dates."""
+    from collections import Counter
+
+    if not scheduled_dates or len(set(scheduled_dates)) != len(scheduled_dates):
+        raise CockpitError("scheduled dates must be non-empty and unique")
+    allowed = {"REJECTED", "ABSTAINED", "MISSED", "NO_SIGNAL", "TRADED", "UNKNOWN"}
+    planned = set(scheduled_dates)
+    seen_ids: set[str] = set()
+    by_date: dict[str, list[dict]] = {day: [] for day in scheduled_dates}
+    for event in outcomes:
+        event_id = event.get("event_id")
+        day = event.get("session_date")
+        kind = str(event.get("outcome", "")).upper()
+        reason = event.get("reason_code")
+        if not isinstance(event_id, str) or not event_id.strip() or event_id in seen_ids:
+            raise CockpitError("opportunity outcome IDs must be non-empty and unique")
+        if day not in planned:
+            raise CockpitError("opportunity outcome falls outside the planned session denominator")
+        if kind not in allowed:
+            raise CockpitError(f"unknown opportunity outcome {kind or 'MISSING'}")
+        if not isinstance(reason, str) or not reason.strip():
+            raise CockpitError("every opportunity outcome needs an explicit reason code")
+        seen_ids.add(event_id)
+        by_date[day].append({**event, "outcome": kind, "reason_code": reason.strip()})
+
+    counts = Counter(str(event["outcome"]) for events in by_date.values() for event in events)
+    unrecorded = [day for day, events in by_date.items() if not events]
+    counts["UNRECORDED"] = len(unrecorded)
+    count_html = "".join(f"<tr><th>{escape(kind.replace('_', ' ').title())}</th><td>{counts[kind]}</td></tr>"
+                         for kind in ("REJECTED", "ABSTAINED", "MISSED", "NO_SIGNAL", "TRADED", "UNKNOWN", "UNRECORDED"))
+    rows: list[str] = []
+    for day in sorted(planned):
+        events = sorted(by_date[day], key=lambda item: str(item["event_id"]))
+        if not events:
+            events = [{"event_id": "—", "outcome": "UNRECORDED", "reason_code": "NO_RECORDED_OUTCOME"}]
+        rows.extend(
+            f"<tr><td>{escape(day)}</td><td>{escape(str(event['event_id']))}</td>"
+            f"<td>{escape(str(event['outcome']))}</td><td>{escape(str(event['reason_code']))}</td></tr>"
+            for event in events
+        )
+    html = _page("Opportunity coverage", f"<p>Planned session denominator: {len(planned)} dates."
+                 f" Unrecorded dates: {len(unrecorded)}.</p><h2>Outcome counts</h2>"
+                 f"<table><tbody>{count_html}</tbody></table><h2>All planned dates and outcomes</h2>"
+                 "<table><thead><tr><th>Session</th><th>Event</th><th>Outcome</th><th>Reason code</th></tr></thead><tbody>"
+                 + "".join(rows) + "</tbody></table>")
+    assert_read_only(html)
+    return html
+
+
 # ---- FE-0120 ----
 
 def scorecard(rows: list[dict]) -> str:

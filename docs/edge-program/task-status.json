@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 183,
-  "unrecorded_tasks": 35,
+  "recorded_tasks": 184,
+  "unrecorded_tasks": 34,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4002,6 +4002,26 @@
       ],
       "test_result": "27 dashboard, EOD archive, and cockpit tests passed; Ruff, targeted mypy, and source inventory passed. Archive hashes, cash plus marked inventory, and exact session-to-ledger NAV rows reconcile.",
       "evidence_sha256": "9e74019b8881fad5ca046fe9c2339195a2ff3f9603df7191f2e4d9ef163c4d97",
+      "blockers": []
+    },
+    {
+      "id": "PE-0186",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/cockpit.py",
+        "tests/test_opportunity_coverage_dashboard.py",
+        "tests/test_forward_edge_f10.py",
+        "docs/edge-program/pe-0186-opportunity-coverage-evidence.md",
+        "docs/edge-program/pe-0186-opportunity-coverage-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_opportunity_coverage_dashboard.py",
+        "test_forward_edge_f10.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "24 dashboard tests passed; Ruff, targeted mypy, refreshed source inventory, and inventory check passed. All planned dates remain visible; missing outcomes are UNRECORDED.",
+      "evidence_sha256": "0a9a25b353e6d5af34b30b2a9fee4ac668846b8fdf1595877bbd6b56f784aa0f",
       "blockers": []
     }
   ]
