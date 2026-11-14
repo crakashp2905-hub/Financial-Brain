@@ -110,6 +110,66 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
                         fee_schedule=SCHEDULE).position("NSE:INFY").quantity == 2
 
 
+def test_crash_after_durable_fill_and_cost_post_restarts_without_duplicate_economics(tmp_path, monkeypatch):
+    service, config, account, runner_path, account_path = _service(tmp_path)
+    events = [_event(DECISION_AT + timedelta(seconds=1)),
+              _event(DECISION_AT + timedelta(seconds=2), bid="102", ask="102.05")]
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+    kwargs = dict(
+        preflight_fn=lambda: {"approved": True, "checks": {"cash": True}},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02,
+                                     "forecast_horizon_sessions": 1, "forecast_costs_included": True,
+                                     "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033,
+                                         "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001},
+                                     "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=simulator, decision_at=DECISION_AT,
+    )
+    reference_dir = tmp_path / "reference"
+    reference_dir.mkdir()
+    reference_service, reference_config, reference_account, reference_runner_path, _ = _service(reference_dir)
+    reference = reference_service.run(reference_config, events, **kwargs)
+    append = DurableJournal.append
+
+    def crash_after_account_fill(journal, record):
+        sequence = append(journal, record)
+        if journal.path == account_path and record.get("t") == "FILL":
+            raise RuntimeError("simulated crash after durable fill and fee")
+        return sequence
+
+    monkeypatch.setattr(DurableJournal, "append", crash_after_account_fill)
+    with pytest.raises(RuntimeError, match="after durable fill and fee"):
+        service.run(config, events, **kwargs)
+    monkeypatch.setattr(DurableJournal, "append", append)
+
+    restarted_account = PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
+                                     fee_schedule=SCHEDULE)
+    assert restarted_account.cash == Decimal("9799.80")
+    assert restarted_account.fees == Decimal("0.20")
+    assert restarted_account.position("NSE:INFY").quantity == 2
+    restarted_service = ForwardPaperSessionService(ForwardSessionRunner(runner_path), restarted_account)
+    recovered = restarted_service.run(config, events, **kwargs)
+
+    assert recovered["status"] == "PAPER_COMPLETE"
+    assert recovered["account_reconciliation"]["fees_inr"] == "0.20"
+    assert recovered["account_reconciliation"] == reference["account_reconciliation"]
+    assert DurableJournal(account_path).head == DurableJournal(reference_account.path).head
+    records = restarted_account.journal.records()
+    assert len([row for row in records if row.get("t") == "FILL"]) == 1
+    assert len([row for row in records if row.get("t") == "INTENT"]) == 1
+    recovered_runner_rows = DurableJournal(runner_path).records()
+    reference_runner_rows = DurableJournal(reference_runner_path).records()
+    recovered_receipt = next(row for row in recovered_runner_rows if row.get("t") == "PAPER_EXECUTION")
+    reference_receipt = next(row for row in reference_runner_rows if row.get("t") == "PAPER_EXECUTION")
+    assert recovered_receipt["execution"] == reference_receipt["execution"]
+    recovered_receipt_hash = next(row["execution_sha256"] for row in recovered_runner_rows
+                                  if row.get("t") == "OUTBOX_ACK")
+    reference_receipt_hash = next(row["execution_sha256"] for row in reference_runner_rows
+                                  if row.get("t") == "OUTBOX_ACK")
+    assert recovered_receipt_hash == reference_receipt_hash
+    assert len([row for row in recovered_runner_rows if row.get("t") == "ACCOUNT_RECONCILIATION"]) == 1
+
+
 def test_partial_receipt_releases_unfilled_reservation_after_cancel(tmp_path):
     service, config, account, _, _ = _service(tmp_path)
     simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)

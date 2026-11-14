@@ -232,6 +232,11 @@ def recover(journal: DurableJournal, broker: SimBroker, key: str) -> dict:
 
 def rollover(journal: DurableJournal, archive_path: Path) -> str:
     """Compact: archive the old segment, atomically start a new one whose first record is a state snapshot."""
+    archive_path = Path(archive_path)
+    if archive_path.resolve() == journal.path.resolve():
+        raise ValueError("archive path must differ from the active journal")
+    if archive_path.exists():
+        raise FileExistsError(f"archive segment already exists: {archive_path}")
     st = fold(journal)
     before = state_hash(st)
     clean = {k: v for k, v in st.items() if not k.startswith("_")}

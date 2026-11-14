@@ -46,10 +46,6 @@ jobs:
         run: python scripts/chart_patterns_matrix.py --check
       - name: Chart-pattern offline demo (network denied)
         run: python -m financial_brain.patterns.demo --offline
-      - name: Chart-pattern completion matrix is current
-        run: python scripts/chart_patterns_matrix.py --check
-      - name: Chart-pattern offline demo (network denied)
-        run: python -m financial_brain.patterns.demo --offline
       - name: Test suite (with skip summary)
         run: python -m coverage run --source=financial_brain -m pytest -q -ra
       - name: Critical-module coverage

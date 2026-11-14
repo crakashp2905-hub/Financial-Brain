@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 192,
-  "unrecorded_tasks": 26,
+  "recorded_tasks": 197,
+  "unrecorded_tasks": 21,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4198,6 +4198,98 @@
       "blockers": [
         "All demo scenarios are synthetic fixtures; no live feed, real execution, or profitability evidence is claimed."
       ]
+    },
+    {
+      "id": "PE-0195",
+      "status": "PARTIAL",
+      "sources": [
+        ".github/workflows/ci.yml",
+        "docs/edge-program/pe-0195-ci-evidence.md",
+        "docs/edge-program/pe-0195-ci-evidence.md"
+      ],
+      "tests": [
+        "CI run 43580566788 (Ubuntu and Windows)",
+        "python -m ruff check tests/test_accounting_properties.py tests/test_forward_edge_f14.py src/financial_brain/forward_edge/durable.py",
+        "python -m mypy src/financial_brain/forward_edge/durable.py"
+      ],
+      "test_result": "Existing PR head da72876 completed GitHub Actions on Ubuntu and Windows: 4026 passed, 17 skipped on Ubuntu; lint, types, migrations, inventory, coverage and audit passed. New targeted changes pass local Ruff/mypy and 78 focused tests. Main commit acceptance is not yet met; this commit will trigger a fresh matrix.",
+      "blockers": [
+        "PR #32 still needs independent approval and merge to main; self-approval is not performed."
+      ],
+      "evidence_sha256": "8b52c3e0244cbcbd3ebe59f2865bcfe2ccf34de0fa87f6318dd666227c3307f1"
+    },
+    {
+      "id": "PE-0196",
+      "status": "PARTIAL",
+      "sources": [
+        "docs/edge-program/critical-coverage-policy.json",
+        "scripts/check_critical_coverage.py",
+        "tests/test_critical_coverage.py",
+        "docs/edge-program/pe-0196-critical-coverage-baseline.md"
+      ],
+      "tests": [
+        "tests/test_critical_coverage.py",
+        "193-test diagnostic coverage subset"
+      ],
+      "test_result": "Added deterministic coverage-domain evaluator and regression/missing-record tests. Measured subset: OMS 80.93%, custody 35.34%, market data 47.55%, accounting 44.48%, evaluation 38.33%, risk 51.62%. Five proposed 60% floors fail this diagnostic subset; no enforcement step was added to CI. Full-suite cross-platform baseline and calibrated floors remain required.",
+      "blockers": [
+        "Critical coverage floors are not enforced. Collect full-suite reports on clean Ubuntu/Windows, fill material test gaps, then add calibrated regression thresholds."
+      ],
+      "evidence_sha256": "6b85bbe3a62a6b29fe7255231db18e87dfa2a9458138864b43b51f50623a8108"
+    },
+    {
+      "id": "PE-0197",
+      "status": "DONE",
+      "sources": [
+        "tests/test_accounting_properties.py",
+        "docs/edge-program/pe-0197-accounting-invariants-evidence.md",
+        "docs/edge-program/pe-0197-accounting-invariants-evidence.md"
+      ],
+      "tests": [
+        "tests/test_accounting_properties.py"
+      ],
+      "test_result": "Added deterministic parameterized directional P&L checks, fee monotonicity, balanced-ledger assertions, duplicate-fill idempotency/conflicting-payload rejection, and short-option settlement/margin direction checks. Accounting property suite passes in the 78-test focused run.",
+      "blockers": [],
+      "evidence_sha256": "5ef3e8daa23eca5eba2f3f6ca50b600cf2d165bbc24b30c345b623e773119b4a"
+    },
+    {
+      "id": "PE-0198",
+      "status": "DONE",
+      "sources": [
+        "tests/test_forward_session_crash_matrix.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "docs/edge-program/pe-0198-crash-recovery-evidence.md",
+        "docs/edge-program/pe-0198-crash-recovery-evidence.md"
+      ],
+      "tests": [
+        "tests/test_forward_session_crash_matrix.py",
+        "tests/test_forward_paper_account_bridge.py"
+      ],
+      "test_result": "Existing crash matrix plus new crash-after-durable-fill-and-fee recovery test compare recovered cash, positions, account head, receipt hash and reconciliation with uninterrupted reference. Combined focused accounting/archive/crash suite: 78 passed; Ruff and mypy passed.",
+      "blockers": [
+        "Fault injection does not model hardware power loss, arbitrary filesystem corruption, or live broker side effects."
+      ],
+      "evidence_sha256": "c8b15def70207a169e9362fa976c91fbf02608f1891fc45313e78155df0c9fe2"
+    },
+    {
+      "id": "PE-0200",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/durable.py",
+        "tests/test_forward_edge_f14.py",
+        "docs/edge-program/pe-0200-journal-rotation-evidence.md",
+        "docs/edge-program/pe-0200-journal-rotation-evidence.md"
+      ],
+      "tests": [
+        "tests/test_forward_edge_f14.py"
+      ],
+      "test_result": "Rollover refuses active-journal alias and existing archive destination. Regression test proves both files remain unchanged on rejection; existing tests verify state hash and restore equivalence. Journal replay rejects terminated hash-chain corruption. Focused suite: 78 passed; Ruff and mypy passed.",
+      "blockers": [
+        "A durable multi-segment catalog/manifest chain linking archive rotations is not implemented."
+      ],
+      "evidence_sha256": "1ead5fdd688439ae3c97d3fb00cdff241daf55a16ffa420ddbc7ac772255b061"
     }
   ]
 }
