@@ -93,7 +93,7 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     record_types = [r["t"] for r in DurableJournal(tmp_path / "session.jsonl").records()]
     assert record_types == ["SESSION_PLAN", "SESSION_STATE", "SESSION_STATE", "SESSION_STATE",
                             "PREFLIGHT_RESULT", "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT", "SESSION_STATE",
-                            "PAPER_INTENT", "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK",
+                            "PAPER_INTENT", "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK", "PAPER_SKIP",
                             "SESSION_STATE", "SESSION_CLOSED"]
     states = [r["state"] for r in DurableJournal(tmp_path / "session.jsonl").records()
               if r["t"] == "SESSION_STATE"]

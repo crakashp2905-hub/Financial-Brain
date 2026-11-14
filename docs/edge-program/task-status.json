@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 147,
-  "unrecorded_tasks": 71,
+  "recorded_tasks": 148,
+  "unrecorded_tasks": 70,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3261,6 +3261,29 @@
       "test_result": "48 decision-sealing and forward-session runner tests passed; Ruff passed. New signal and abstention decisions persist the decision clock, exact causal event hashes, configuration/preflight/feed-health hashes, manifest digest, and signal digest before risk or execution; future inputs are excluded/rejected.",
       "evidence_sha256": "65202151d6c5174424a173876cff8f0c453f500d708a22d2b4804f55b814f1b7",
       "blockers": []
+    },
+    {
+      "id": "PE-0150",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/pretrade_gates.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_pretrade_gates.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/pe-0150-pretrade-gates-and-skips.md",
+        "docs/edge-program/pe-0150-pretrade-gates-and-skips-evidence.json"
+      ],
+      "tests": [
+        "test_pretrade_gates.py",
+        "test_forward_session_runner.py",
+        "test_decision_sealing.py"
+      ],
+      "test_result": "58 passed; Ruff passed.",
+      "evidence_sha256": "4ca10c9f4250be45381906c66462c1d147d796854e85e2959d5b9e5a17e72c7d",
+      "blockers": [
+        "Frozen gate policies and evidence sources are not automatically bound to every strategy/session.",
+        "Authoritative ADV/cost feeds, exposure-book integration, calibrated confidence, and formal eligibility wiring remain unverified."
+      ]
     }
   ]
 }

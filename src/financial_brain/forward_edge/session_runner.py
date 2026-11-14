@@ -657,6 +657,71 @@ class ForwardSessionRunner:
                 if not any(r.get("t") == "OUTBOX_ACK" and r.get("intent_id") == intent_id for r in existing):
                     self._persist_ack(journal, config.session_id, intent_id, execution)
             result.update({"status": "PAPER_COMPLETE", "intent_id": intent_id, "execution": execution})
+        execution_receipt = result.get("execution")
+        execution_status = (execution_receipt.get("status", execution_receipt.get("state"))
+                            if isinstance(execution_receipt, dict) else None)
+        skip_needed = (result.get("status") in {"NO_TRADE", "REJECTED"}
+                       or execution_status in {"NO_TRADE", "REJECTED", "MISSED"})
+        if skip_needed:
+            reasons: list[str] = []
+
+            def add_reason(value: object) -> None:
+                if isinstance(value, str) and value.strip() and value not in reasons:
+                    reasons.append(value.strip())
+
+            add_reason(result.get("reason"))
+            add_reason(decision.get("reason"))
+            if risk.get("approved") is not True:
+                add_reason(risk.get("reason", "RISK_REJECTED"))
+            if preflight.get("approved") is not True:
+                add_reason(preflight.get("reason", "PREFLIGHT_REJECTED"))
+            if isinstance(risk.get("reasons"), list):
+                for reason in risk["reasons"]:
+                    add_reason(reason)
+            if isinstance(risk.get("checks"), list):
+                for check in risk["checks"]:
+                    if isinstance(check, dict) and check.get("passed") is False:
+                        add_reason(check.get("reason") or check.get("name"))
+            if isinstance(execution_receipt, dict):
+                add_reason(execution_receipt.get("reason"))
+                if execution_status:
+                    add_reason(f"EXECUTION_{execution_status}")
+            if not reasons:
+                reasons.append("PAPER_INTENT_WITHHELD")
+            persisted_decision = next((row for row in reversed(journal.records())
+                                       if row.get("session_id") == config.session_id
+                                       and row.get("t") == "DECISION"), {})
+            candidate_intent_id = (hashlib.sha256(f"{config.session_id}:{config.sha256}".encode()).hexdigest()
+                                   if decision.get("side") in {"BUY", "SELL"} else None)
+            skip_body = {
+                "t": "PAPER_SKIP", "session_id": config.session_id,
+                "attempt_id": config.attempt_id, "config_sha256": config.sha256,
+                "candidate_intent_id": candidate_intent_id,
+                "candidate_sha256": hashlib.sha256(json.dumps(
+                    decision, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest(),
+                "decision_sha256": persisted_decision.get("decision_sha256"),
+                "signal_sha256": persisted_decision.get("signal_sha256"),
+                "input_manifest_sha256": persisted_decision.get("input_manifest_sha256"),
+                "preflight_sha256": persisted_decision.get("preflight_sha256"),
+                "runner_status": result.get("status"),
+                "execution_status": execution_status,
+                "reason_codes": reasons,
+                "decision": decision, "risk_verdict": risk, "preflight": preflight,
+                "execution_summary": ({"status": execution_status,
+                                       "reason": execution_receipt.get("reason")}
+                                      if isinstance(execution_receipt, dict) else None),
+            }
+            skip_id = hashlib.sha256(json.dumps(skip_body, sort_keys=True, separators=(",", ":"),
+                                               allow_nan=False).encode()).hexdigest()
+            skip_record = {**skip_body, "skip_id": skip_id}
+            prior_skip = next((row for row in journal.records()
+                               if row.get("session_id") == config.session_id and row.get("t") == "PAPER_SKIP"), None)
+            if prior_skip is not None and prior_skip != skip_record:
+                raise RunnerError("paper skip record is immutable for this session attempt")
+            if prior_skip is None:
+                journal.append(skip_record)
+            result["skip_id"] = skip_id
+            result["skip_reason_codes"] = reasons
         result["opportunity_coverage"] = _opportunity_coverage(
             exchange_date=config.exchange_date, planned_instruments=config.instruments,
             events=observed, decision=decision, execution=result.get("execution"),
