@@ -109,6 +109,16 @@ class FuturesPaperAccount:
         return -self.ledger.balance(f"variation_pnl:{self.account_id}", self.currency)
 
     @property
+    def funding_pnl(self) -> Decimal:
+        """Cumulative signed funding P&L (positive is income, negative is cost)."""
+        return -self.ledger.balance(f"funding_expense:{self.account_id}", self.currency)
+
+    @property
+    def net_pnl(self) -> Decimal:
+        """Variation P&L plus posted overnight funding; transaction fees are separate inputs."""
+        return self.variation_pnl + self.funding_pnl
+
+    @property
     def initial_margin(self) -> Decimal:
         if self.contract is None or not self.position:
             return Decimal(0)
@@ -171,6 +181,45 @@ class FuturesPaperAccount:
         self._commit(row)
         return self.variation_pnl
 
+    def fund_overnight(self, event_id: str, *, annual_rate: Decimal, mark_price: Decimal,
+                       days: int, session_date: date, source_sha256: str) -> Decimal:
+        """Post sourced annual funding on marked futures notional for calendar days held.
+
+        The rate convention is explicit and configurable. A negative rate is a funding
+        credit. This is an accounting scenario input, not a broker financing quote.
+        """
+        rate, price = Decimal(annual_rate), Decimal(mark_price)
+        self._validate_event_id(event_id)
+        self._validate_source(source_sha256)
+        if not rate.is_finite():
+            raise FuturesPaperError("annual funding rate must be finite")
+        if type(days) is not int or days <= 0:
+            raise FuturesPaperError("funding days must be a positive integer")
+        if self.contract is None or not self.position:
+            raise FuturesPaperError("overnight funding requires an open futures position")
+        self._validate_price(self.contract, price)
+        if session_date > self.contract.expiry:
+            raise FuturesPaperError("funding cannot be posted after contract expiry")
+        if self._last_event_date is not None and session_date < self._last_event_date:
+            raise FuturesPaperError("futures events must be recorded in effective-date order")
+        notional = Decimal(abs(self.position)) * self.contract.multiplier * price
+        amount = _paise(notional * rate * Decimal(days) / Decimal(365))
+        row = self._event_row("FUTURES_FUNDING", event_id, {
+            "contract_id": self.contract.contract_id,
+            "annual_rate": str(rate), "mark_price": str(price),
+            "marked_notional": str(notional), "days": days,
+            "funding_cost": str(amount), "session_date": session_date.isoformat(),
+            "source_sha256": source_sha256,
+        })
+        if session_date in self._funded_dates:
+            prior = next((item for item in self.journal.records()
+                          if item.get("t") == "FUTURES_FUNDING"
+                          and item.get("session_date") == session_date.isoformat()), None)
+            if prior is None or prior.get("event_id") != event_id:
+                raise FuturesPaperError("overnight funding is already posted for this session")
+        self._commit(row)
+        return amount
+
     def roll(self, event_id: str, new_contract: FuturesContract, *, old_exit_price: Decimal,
              new_entry_price: Decimal, session_date: date,
              old_price_source_sha256: str, new_price_source_sha256: str) -> None:
@@ -230,6 +279,7 @@ class FuturesPaperAccount:
         self._lots: list[tuple[int, Decimal]] = []
         self._last_event_date: date | None = None
         self._event_requests: dict[str, str] = {}
+        self._funded_dates: set[date] = set()
         for row in rows[1:]:
             if row.get("t") == "FUTURES_TRADE":
                 self._apply_trade(row)
@@ -239,6 +289,8 @@ class FuturesPaperAccount:
                 self._apply_roll(row)
             elif row.get("t") == "FUTURES_EXPIRY":
                 self._apply_settlement(row, expire=True)
+            elif row.get("t") == "FUTURES_FUNDING":
+                self._apply_funding(row)
             else:
                 raise FuturesPaperError(f"unknown futures journal event: {row.get('t')}")
         if not self.ledger.trial_balance_ok():
@@ -316,6 +368,32 @@ class FuturesPaperAccount:
         self._last_event_date = day
         self._event_requests[event_id] = request_sha
 
+    def _apply_funding(self, row: dict) -> None:
+        event_id, request_sha = row["event_id"], row["request_sha256"]
+        self._check_request(event_id, request_sha)
+        day = date.fromisoformat(row["session_date"])
+        rate, price = Decimal(row["annual_rate"]), Decimal(row["mark_price"])
+        days, cost = int(row["days"]), Decimal(row["funding_cost"])
+        if (self.contract is None or not self.position
+                or self.contract.contract_id != row["contract_id"]):
+            raise FuturesPaperError("funding does not match an open contract")
+        self._validate_source(row["source_sha256"])
+        self._validate_price(self.contract, price)
+        if not rate.is_finite() or days <= 0 or day > self.contract.expiry:
+            raise FuturesPaperError("funding inputs violate the contract lifecycle")
+        if self._last_event_date is not None and day < self._last_event_date:
+            raise FuturesPaperError("funding date precedes prior futures event")
+        if day in self._funded_dates:
+            raise FuturesPaperError("duplicate funding session in durable journal")
+        notional = Decimal(abs(self.position)) * self.contract.multiplier * price
+        expected = _paise(notional * rate * Decimal(days) / Decimal(365))
+        if Decimal(row["marked_notional"]) != notional or cost != expected:
+            raise FuturesPaperError("durable funding amount does not reconcile to its inputs")
+        self._post_funding(event_id, cost)
+        self._funded_dates.add(day)
+        self._last_event_date = day
+        self._event_requests[event_id] = request_sha
+
     def _post_variation(self, event_id: str, amount: Decimal) -> None:
         amount = _paise(amount)
         if amount > 0:
@@ -328,6 +406,19 @@ class FuturesPaperAccount:
         else:
             return
         self.ledger.post(Transaction(f"variation:{event_id}", entries))
+
+    def _post_funding(self, event_id: str, cost: Decimal) -> None:
+        cost = _paise(cost)
+        if cost > 0:
+            entries = (Entry(f"funding_expense:{self.account_id}", DEBIT, Money.of(cost, self.currency)),
+                       Entry(f"cash:{self.account_id}", CREDIT, Money.of(cost, self.currency)))
+        elif cost < 0:
+            income = -cost
+            entries = (Entry(f"cash:{self.account_id}", DEBIT, Money.of(income, self.currency)),
+                       Entry(f"funding_expense:{self.account_id}", CREDIT, Money.of(income, self.currency)))
+        else:
+            return
+        self.ledger.post(Transaction(f"funding:{event_id}", entries))
 
     def _commit(self, row: dict) -> None:
         existing = next((record for record in self.journal.records()

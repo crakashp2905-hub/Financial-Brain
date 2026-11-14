@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 161,
-  "unrecorded_tasks": 57,
+  "recorded_tasks": 162,
+  "unrecorded_tasks": 56,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3554,6 +3554,28 @@
       ],
       "test_result": "12 passed across as-of and daily mechanism suites; Ruff passed; source inventory --check passed (612 Python files).",
       "evidence_sha256": "615389e3b99028201cb353e37a6789ec037ff830e3f41f8e51a072807e7d4b03",
+      "blockers": []
+    },
+    {
+      "id": "PE-0164",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/futures_roll_schedule.py",
+        "src/financial_brain/kernel/futures_paper.py",
+        "tests/test_futures_lifecycle.py",
+        "tests/test_kernel_futures_paper.py",
+        "tests/test_forward_edge_f07.py",
+        "docs/edge-program/pe-0164-futures-lifecycle-evidence.md",
+        "docs/edge-program/pe-0164-futures-lifecycle-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_futures_lifecycle.py",
+        "test_kernel_futures_paper.py",
+        "test_forward_edge_f07.py"
+      ],
+      "test_result": "19 passed across futures lifecycle, paper-account, and carry suites; Ruff passed; source inventory --check passed (613 Python files).",
+      "evidence_sha256": "1215c8f4891d7e469fb0a962ba8c22d22be1531ccb74d18fc64ddab101aa6c10",
       "blockers": []
     }
   ]
