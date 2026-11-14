@@ -131,17 +131,20 @@ def _event(at, bid="99.95", ask="100", bid_qty=20, ask_qty=20):
     )
 
 
-def _service(tmp_path):
+def _service(tmp_path, *, account_cash=Decimal("10000")):
     config = _config()
     runner_path = tmp_path / f"{config.session_id}.runner.jsonl"
-    account_path = tmp_path / "account.jsonl"
-    account = PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
-                           fee_schedule=SCHEDULE)
     books = _registered_paper_books(tmp_path, config.family_evidence)
+    account_root = tmp_path / "registered-accounts"
+    account_path = books.account_path(plan_id="paper-plan-v1", account_id="paper-main",
+                                     root=account_root)
+    account = PaperAccount(account_path, account_id="paper-main", initial_cash=account_cash,
+                           fee_schedule=SCHEDULE)
     strategy_spec, registry = _registered_strategy()
     service = ForwardPaperSessionService(ForwardSessionRunner(runner_path), account,
                                          strategy_spec=strategy_spec, registry=registry,
-                                         paper_books=books, paper_book_plan_id="paper-plan-v1")
+                                         paper_books=books, paper_book_plan_id="paper-plan-v1",
+                                         paper_account_root=account_root)
     return service, config, account, runner_path, account_path
 
 
@@ -157,20 +160,32 @@ def test_session_evidence_and_paper_account_authority_journals_cannot_alias(tmp_
 
 
 def test_forward_paper_service_requires_account_opening_capital_to_match_frozen_plan(tmp_path):
-    service, config, _account, runner_path, _account_path = _service(tmp_path)
-    wrong_account = PaperAccount(tmp_path / "wrong-capital.jsonl", account_id="paper-main",
-                                 initial_cash=Decimal("9999"), fee_schedule=SCHEDULE)
+    mismatched, config, wrong_account, _runner_path, _account_path = _service(
+        tmp_path, account_cash=Decimal("9999"))
     before = wrong_account.journal.records()
-    mismatched = ForwardPaperSessionService(
-        ForwardSessionRunner(runner_path), wrong_account,
-        strategy_spec=service.strategy_spec, registry=service.registry,
-        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
-    )
 
     with pytest.raises(PaperAccountBridgeError, match="opening capital must match"):
         mismatched._validate_strategy(config, DECISION_AT)
 
     assert wrong_account.journal.records() == before
+
+
+def test_forward_paper_service_rejects_unregistered_journal_with_matching_id_and_capital(tmp_path):
+    service, config, _account, runner_path, _account_path = _service(tmp_path)
+    rogue_account = PaperAccount(tmp_path / "rogue-book.jsonl", account_id="paper-main",
+                                 initial_cash=Decimal("10000"), fee_schedule=SCHEDULE)
+    before = rogue_account.journal.records()
+    rogue_service = ForwardPaperSessionService(
+        ForwardSessionRunner(runner_path), rogue_account,
+        strategy_spec=service.strategy_spec, registry=service.registry,
+        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
+        paper_account_root=service.paper_account_root,
+    )
+
+    with pytest.raises(PaperAccountBridgeError, match="journal path"):
+        rogue_service._validate_strategy(config, DECISION_AT)
+
+    assert rogue_account.journal.records() == before
 
 
 def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently(tmp_path):
@@ -300,6 +315,7 @@ def test_crash_after_durable_fill_and_cost_post_restarts_without_duplicate_econo
         ForwardSessionRunner(runner_path), restarted_account,
         strategy_spec=service.strategy_spec, registry=service.registry,
         paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
+        paper_account_root=service.paper_account_root,
     )
     recovered = restarted_service.run(config, events, **kwargs)
 

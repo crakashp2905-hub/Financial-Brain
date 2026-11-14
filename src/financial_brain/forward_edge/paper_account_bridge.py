@@ -42,7 +42,8 @@ class ForwardPaperSessionService:
 
     def __init__(self, runner: ForwardSessionRunner, account: PaperAccount, *,
                  strategy_spec: StrategySpec, registry: Registry,
-                 paper_books: RegisteredPaperBooks, paper_book_plan_id: str) -> None:
+                 paper_books: RegisteredPaperBooks, paper_book_plan_id: str,
+                 paper_account_root: Path) -> None:
         if not isinstance(paper_books, RegisteredPaperBooks) or not paper_book_plan_id:
             raise PaperAccountBridgeError("LIVE_PAPER requires a registered frozen paper-book plan")
         self.runner = runner
@@ -51,6 +52,7 @@ class ForwardPaperSessionService:
         self.registry = registry
         self.paper_books = paper_books
         self.paper_book_plan_id = paper_book_plan_id
+        self.paper_account_root = Path(paper_account_root).resolve()
 
     def _validate_strategy(self, config: ForwardRunConfig, decision_at: datetime) -> None:
         """Bind the paper service to the exact guarded registry identity before any session writes."""
@@ -64,10 +66,17 @@ class ForwardPaperSessionService:
             raise PaperAccountBridgeError(f"no registered paper-book allocation for session: {exc}") from exc
         if plan.plan_id != self.paper_book_plan_id:
             raise PaperAccountBridgeError("session does not use the configured frozen paper-book plan")
+        try:
+            expected_account_path = self.paper_books.account_path(
+                plan_id=self.paper_book_plan_id, account_id=allocation.account_id,
+                root=self.paper_account_root)
+        except PaperBookRegistryError as exc:
+            raise PaperAccountBridgeError(f"registered paper-account path is unavailable: {exc}") from exc
         if (self.account.account_id != allocation.account_id
-                or self.account.initial_cash != allocation.capital_inr):
+                or self.account.initial_cash != allocation.capital_inr
+                or self.account.path.resolve() != expected_account_path):
             raise PaperAccountBridgeError(
-                "paper account identity and opening capital must match the frozen strategy allocation")
+                "paper account ID, journal path, and opening capital must match the frozen strategy allocation")
         try:
             registered = self.registry.get(self.strategy_spec.strategy_id)
         except KeyError as exc:

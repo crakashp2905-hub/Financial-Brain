@@ -12,13 +12,14 @@ and its scoped submit method rejects submitting one strategy through another
 strategy's account. Cash transfer is explicitly disabled.
 
 Validation: the registered-book and forward paper bridge suites pass together
-(29 tests); Ruff and mypy pass for the changed bridge. In addition to restart,
+(30 tests); Ruff and mypy pass for the changed modules. In addition to restart,
 capital isolation, and cross-book order rejection, the live-paper service now
 requires a registered plan, resolves the exact strategy allocation at the
-decision timestamp, and checks both account ID and opening capital before
-preflight or session writes. Receipt reconciliation submits the order through
-the registered-book family evidence and owner-approval gate. A mismatched
-opening-capital regression confirms rejection without writing to the account.
+decision timestamp, and checks the plan ID, account ID, canonical journal path,
+and opening capital before preflight or session writes. Receipt reconciliation
+submits the order through the registered-book family evidence and owner-approval
+gate. Regressions reject mismatched capital and an unregistered journal without
+additional account writes.
 
 Remaining work: authenticate the registration/change evidence through an
 approved owner identity service; reconcile account closure and safely release

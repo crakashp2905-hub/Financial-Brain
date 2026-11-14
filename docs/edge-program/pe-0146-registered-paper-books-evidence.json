@@ -4,14 +4,14 @@
   "status": "PARTIAL",
   "test": {
     "command": "pytest tests/test_forward_paper_account_bridge.py tests/test_registered_paper_books.py tests/test_source_inventory.py -q; ruff check src/financial_brain/forward_edge/paper_account_bridge.py tests/test_forward_paper_account_bridge.py; mypy src/financial_brain/forward_edge/paper_account_bridge.py",
-    "result": "29 passed; Ruff and mypy passed. Local focused validation only; full cross-platform CI for this change is pending."
+    "result": "30 passed; Ruff and mypy passed. Local focused validation only; full cross-platform CI for this change is pending."
   },
   "implemented": [
     "Append-only frozen allocation plans bind the eligible-strategy set to unique account IDs, INR capital, an effective time, and scoped family-capital approval evidence.",
     "Separate persistent account journals remain isolated; successor plans cannot reassign or resize existing accounts or exceed the cumulative budget.",
-    "ForwardPaperSessionService now requires a registered paper-book registry and configured plan. Before any session writes it resolves the strategy allocation at the decision timestamp and checks plan ID, account ID, and opening cash against the frozen allocation.",
+    "ForwardPaperSessionService requires a registered paper-book registry, configured plan, and paper-account root. Before any session writes it resolves the strategy allocation at the decision timestamp and checks plan ID, account ID, canonical journal path, and opening cash against the frozen allocation.",
     "Paper receipt reconciliation submits its OMS intent through RegisteredPaperBooks.submit_intent, enforcing the matching family evidence and owner approval for that frozen strategy allocation.",
-    "Regression coverage rejects a mismatched account opening capital without additional account-journal writes; existing crash/replay, partial-fill, cross-book and no-transfer checks remain passing."
+    "Regression coverage rejects mismatched account opening capital and a separate unregistered journal even when account ID and capital match, without additional account-journal writes; crash/replay, partial-fill, cross-book and no-transfer checks remain passing."
   ],
   "blockers": [
     "Registration and allocation-change evidence IDs still need authentication by an approved owner-identity service.",
@@ -19,9 +19,9 @@
     "Legacy or directly constructed PaperAccount writers outside ForwardPaperSessionService can still bypass this registered-book order path."
   ],
   "source_sha256": {
-    "src/financial_brain/kernel/registered_paper_books.py": "e7a211570a64eeec8125c7f4e553be726a989684643cff5ba047070fef32097a",
-    "src/financial_brain/forward_edge/paper_account_bridge.py": "e16edd329c70509906d1224c469ec1e79cba04198a8916b3019ee60a693908f6",
+    "src/financial_brain/kernel/registered_paper_books.py": "17be756b22e8af5030f2964a3d2bcff76be56dd65841ded1b9c8258bbd143878",
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "8adc42b87cb9132a4211351e2d65f211f60d0f8cb300ded748787d4b89a35418",
     "tests/test_registered_paper_books.py": "29f12b7baca3ed3df1daff41e57d38523ea9da8cef047b57bba96c77e994b570",
-    "tests/test_forward_paper_account_bridge.py": "39de35ec4f8a594eae1c001de0b575f8639a499583a6e1887fa3eb61fbea1792"
+    "tests/test_forward_paper_account_bridge.py": "3ce9459b9c7384466f84253ab4a522fbbfc48d9aa77bbd2940902da288f21847"
   }
 }

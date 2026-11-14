@@ -3206,10 +3206,11 @@
         "tests/test_registered_paper_books.py",
         "tests/test_forward_paper_account_bridge.py",
         "tests/test_source_inventory.py",
-        "test_forward_paper_service_requires_account_opening_capital_to_match_frozen_plan"
+        "test_forward_paper_service_requires_account_opening_capital_to_match_frozen_plan",
+        "test_forward_paper_service_rejects_unregistered_journal_with_matching_id_and_capital"
       ],
-      "test_result": "The LIVE_PAPER service now requires the exact configured registered book plan and validates effective strategy allocation, account ID, and opening capital before preflight or journal writes. Receipt reconciliation submits intents via the registered-book family evidence/approval gate. Focused bridge, registry, and source inventory suite: 29 passed; Ruff and mypy passed. Full cross-platform CI for this update is pending.",
-      "evidence_sha256": "9bf1b77932adaf6046e35384cfab1174d282cee1a8b533c8762698e928e09d2d",
+      "test_result": "The LIVE_PAPER service requires the exact configured registered book plan and validates effective strategy allocation, account ID, canonical journal path, and opening cash before preflight or journal writes. Receipt reconciliation submits intents via the registered-book family evidence/approval gate. Focused bridge, registry, and source inventory suite: 30 passed; Ruff and mypy passed. Full cross-platform CI for this update is pending.",
+      "evidence_sha256": "a0d635ea46144a8dc4435f6ea12622897cf0c7add33b193bbb5c6a77c4c59bcc",
       "blockers": [
         "Registration and allocation-change evidence IDs are not authenticated by an approved owner-identity service.",
         "Account closure and released-capital reconciliation are not implemented; capital recycling remains blocked.",
@@ -4444,7 +4445,7 @@
         "tests/test_kite_history_refresh.py",
         "full pytest suite in CI before evidence-manifest check"
       ],
-      "test_result": "Expanded the hash-pinned capability evidence matrix from five to eight curated domains. Matrix validation and the post-suite manifest audit passed full Ubuntu and Windows CI run #609 (43605705134) at commit bf19b2fb56a8917a685cedf0a5c91582461af5f0. Follow-up registered-book bridge changes are newer and still require full CI.",
+      "test_result": "The eight-domain hash-pinned capability matrix passed full Ubuntu/Windows CI run #609 at commit bf19b2fb56a8917a685cedf0a5c91582461af5f0. Current follow-up registered-book account-path enforcement has refreshed the manifest but needs its own CI run.",
       "blockers": [
         "The matrix remains curated rather than exhaustive across all platform capabilities; independent market evidence, entitlements and custody are not supplied by file hashes."
       ],

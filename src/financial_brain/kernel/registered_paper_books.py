@@ -383,6 +383,16 @@ class RegisteredPaperBooks:
             raise PaperBookRegistryError("strategy is not eligible in the effective frozen book plan")
         return plan, allocation
 
+    def account_path(self, *, plan_id: str, account_id: str, root: Path) -> Path:
+        """Return the only journal path assigned to an account in a registered plan."""
+        plan = next((plan for plan, _ in self._plans if plan.plan_id == plan_id), None)
+        if plan is None:
+            raise PaperBookRegistryError("paper account paths require a registered plan")
+        if not any(book.account_id == account_id for book in plan.books):
+            raise PaperBookRegistryError("account ID is not allocated by the registered plan")
+        path_id = hashlib.sha256(account_id.encode()).hexdigest()[:24]
+        return Path(root).resolve() / f"{path_id}.jsonl"
+
     def open_accounts(self, *, plan_id: str, root: Path, fee_schedule: FeeSchedule) -> dict[str, PaperAccount]:
         plan = next((plan for plan, _ in self._plans if plan.plan_id == plan_id), None)
         if plan is None:
@@ -391,9 +401,9 @@ class RegisteredPaperBooks:
         root.mkdir(parents=True, exist_ok=True)
         accounts = {}
         for allocation in plan.books:
-            path_id = hashlib.sha256(allocation.account_id.encode()).hexdigest()[:24]
             accounts[allocation.strategy_id] = PaperAccount(
-                root / f"{path_id}.jsonl", account_id=allocation.account_id,
+                self.account_path(plan_id=plan_id, account_id=allocation.account_id, root=root),
+                account_id=allocation.account_id,
                 initial_cash=allocation.capital_inr, currency="INR", fee_schedule=fee_schedule,
             )
         return accounts

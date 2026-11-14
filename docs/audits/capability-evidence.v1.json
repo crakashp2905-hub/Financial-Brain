@@ -26,16 +26,16 @@
       }
     },
     {
-      "artifact_sha256": "e6c2f50bce58c37a02f09399317f842c017eb26c17e90bf24f9eb2b3dc8a3250",
+      "artifact_sha256": "5987642dd07162d6a99231248fdfd1da9557c2b23bedb8a66303af6684a9cb1c",
       "id": "forward-paper-account-authority",
       "maturity": "partial",
       "sources": {
-        "src/financial_brain/forward_edge/paper_account_bridge.py": "e16edd329c70509906d1224c469ec1e79cba04198a8916b3019ee60a693908f6",
+        "src/financial_brain/forward_edge/paper_account_bridge.py": "8adc42b87cb9132a4211351e2d65f211f60d0f8cb300ded748787d4b89a35418",
         "src/financial_brain/forward_edge/session_runner.py": "fb32ffa0b045bb2e15a157acd2edc2a0eddba0f0935383a5667bb315b540daa9"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_forward_paper_account_bridge.py": "39de35ec4f8a594eae1c001de0b575f8639a499583a6e1887fa3eb61fbea1792",
+        "tests/test_forward_paper_account_bridge.py": "3ce9459b9c7384466f84253ab4a522fbbfc48d9aa77bbd2940902da288f21847",
         "tests/test_forward_session_runner.py": "60049055c34fffa8b16e5bc17a9cb35559c0ba9af680e396fb6634df870e2786"
       }
     },
@@ -94,12 +94,12 @@
       }
     },
     {
-      "artifact_sha256": "34a5d8fd5638725ebc7ee8c023b0a5e0402548180e82f52d5b797da0646c5ac3",
+      "artifact_sha256": "784aa2184e02f7ee758a4e2b09bfdfd054e30709367fdb4f301ec03983aef432",
       "id": "registered-paper-book-isolation",
       "maturity": "partial",
       "sources": {
         "src/financial_brain/kernel/paper_account.py": "9c10a115239da3913a20dbfcd682c5db5579c56d39392dd10ad2454eaf7827ad",
-        "src/financial_brain/kernel/registered_paper_books.py": "e7a211570a64eeec8125c7f4e553be726a989684643cff5ba047070fef32097a"
+        "src/financial_brain/kernel/registered_paper_books.py": "17be756b22e8af5030f2964a3d2bcff76be56dd65841ded1b9c8258bbd143878"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
@@ -108,7 +108,7 @@
       }
     }
   ],
-  "manifest_sha256": "43ba55e2b940014688cb751d0647dc7b11782d5d3fbaf8feb4def558e3f0a82b",
+  "manifest_sha256": "bb7861d63ad38a5b384a8429c3731da068736da10c2720e7b73568982e287b8a",
   "matrix_sha256": "5afd1967e7eca837e030105a73e21c2d46c8d44787395efdc2cb4122c8b9950d",
   "schema_version": "fb.capability-evidence.v1"
 }
