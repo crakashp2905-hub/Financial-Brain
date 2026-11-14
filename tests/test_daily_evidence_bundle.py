@@ -45,7 +45,8 @@ def _inputs(tmp_path):
     runner.append({"t": "DECISION", "session_id": "S-2026-11-12"})
     runner.append({"t": "SESSION_CLOSED", "session_id": "S-2026-11-12",
                    "result": {"status": "PAPER_COMPLETE"}})
-    return {"paper_account_archive": Path(eod["archive_path"]), "runner_journal": runner_path}
+    return {"paper_account_archive": Path(eod["archive_path"]),
+            "paper_account_journal": account_path, "runner_journal": runner_path}
 
 
 def test_signed_daily_bundle_reproduces_on_copied_workstation(tmp_path):
@@ -90,6 +91,26 @@ def test_daily_bundle_refuses_input_tamper_and_untrusted_signing_key(tmp_path):
     artifact.write_bytes(artifact.read_bytes() + b" ")
     with pytest.raises(DailyBundleError, match="hash mismatch"):
         verify_daily_bundle(bundle)
+
+
+def test_daily_bundle_includes_and_replays_the_account_journal(tmp_path):
+    bundle = tmp_path / "bundle"
+    build_daily_bundle(
+        session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+        artifact_paths=_inputs(tmp_path), output_dir=bundle,
+    )
+    account_journal = next((bundle / "inputs").glob("paper_account_journal.jsonl"))
+    account_journal.write_bytes(account_journal.read_bytes() + b" ")
+    with pytest.raises(DailyBundleError, match="hash mismatch"):
+        verify_daily_bundle(bundle)
+
+
+def test_daily_bundle_requires_account_journal_as_a_first_class_input(tmp_path):
+    artifact_paths = _inputs(tmp_path)
+    artifact_paths.pop("paper_account_journal")
+    with pytest.raises(DailyBundleError, match="account journal"):
+        build_daily_bundle(session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+                           artifact_paths=artifact_paths, output_dir=tmp_path / "bundle")
 
 
 def test_hash_only_bundle_is_explicitly_unsigned(tmp_path):

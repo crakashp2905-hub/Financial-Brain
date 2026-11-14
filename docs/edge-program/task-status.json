@@ -3459,8 +3459,8 @@
         "test_daily_evidence_bundle.py",
         "test_eod_paper_archive.py"
       ],
-      "test_result": "10 passed; Ruff and mypy passed. Finalization tests cover durable terminal-session gating, idempotent close/bundle retry, and refusal before account mutation when the terminal receipt is missing.",
-      "evidence_sha256": "0d98193f278f0b329ef2e7c3752a3ef72bb3adee575f7a7a2166d2cfbc1bc210",
+      "test_result": "12 passed; Ruff and mypy passed. The bundle now requires and replays the account journal, reconciles it to the EOD archive, and tests journal tampering, idempotent finalization, and pre-mutation terminal-session gating.",
+      "evidence_sha256": "775d918273935c5b06b53c912c67cdc152ac25252bce80019644baf6d8e78be6",
       "blockers": [
         "No scheduled daily launcher invokes the orchestration primitive after every completed paper session.",
         "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",

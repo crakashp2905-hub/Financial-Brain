@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 import shutil
 import tempfile
 from datetime import date, datetime
+from decimal import Decimal
 
 from financial_brain.forward_edge.durable import DurableJournal
 
@@ -55,8 +56,8 @@ def _read_inputs(bundle_dir: Path, manifest: dict) -> dict[str, bytes]:
         if _sha(data) != expected:
             raise DailyBundleError(f"bundle input hash mismatch: {role}")
         output[role] = data
-    if not {"paper_account_archive", "runner_journal"}.issubset(output):
-        raise DailyBundleError("bundle needs account archive and runner journal inputs")
+    if not {"paper_account_archive", "paper_account_journal", "runner_journal"}.issubset(output):
+        raise DailyBundleError("bundle needs account archive, account journal, and runner journal inputs")
     return output
 
 
@@ -78,15 +79,51 @@ def render_operator_report(*, session_date: str, session_id: str,
                            inputs: dict[str, bytes]) -> bytes:
     """Render a stable UTF-8 report solely from exported, hash-verified inputs."""
     account = _verified_account(inputs["paper_account_archive"], session_date)
-    with tempfile.NamedTemporaryFile(prefix="financial-brain-report-", suffix=".jsonl", delete=False) as temp:
-        runner_path = Path(temp.name)
-        temp.write(inputs["runner_journal"])
-    try:
-        records = DurableJournal(runner_path).records()
-    except Exception as exc:
-        raise DailyBundleError("runner journal failed its durable hash-chain check") from exc
-    finally:
-        runner_path.unlink(missing_ok=True)
+    with tempfile.TemporaryDirectory(prefix="fb-daily-report-") as temporary:
+        root = Path(temporary)
+        runner_path = root / "runner.jsonl"
+        account_path = root / "account.jsonl"
+        archive_path = root / "account-archive.json"
+        runner_path.write_bytes(inputs["runner_journal"])
+        account_path.write_bytes(inputs["paper_account_journal"])
+        archive_path.write_bytes(inputs["paper_account_archive"])
+        try:
+            from financial_brain.forward_edge.eod_paper_archive import verify_prior_paper_open
+            from financial_brain.kernel.paper_account import PaperAccount
+
+            opening_records = DurableJournal(account_path).records()
+            opening = opening_records[0]
+            if opening.get("t") != "ACCOUNT_OPEN":
+                raise DailyBundleError("paper account journal does not start with ACCOUNT_OPEN")
+            paper_account = PaperAccount(
+                account_path, account_id=str(opening["account"]),
+                initial_cash=Decimal(str(opening["cash"])),
+                currency=str(opening["currency"]),
+            )
+            if (paper_account.journal.seq != account.get("account_journal_seq")
+                    or paper_account.journal.head != account.get("account_journal_head")):
+                raise DailyBundleError("paper account journal head does not match the archived close")
+            verification = verify_prior_paper_open(account=paper_account, archive_path=archive_path)
+            if verification.get("verified") is not True:
+                raise DailyBundleError("account journal does not reconcile to the archived close")
+            reconciled = paper_account.reconcile_total_return()
+            exact_state = {
+                "cash": str(paper_account.cash), "available_cash": str(paper_account.available_cash),
+                "equity": str(paper_account.equity), "realized_pnl": str(paper_account.realized_pnl),
+                "net_realized_pnl": str(paper_account.net_realized_pnl),
+                "fees": str(paper_account.fees), "taxes": str(paper_account.taxes),
+                "orders": paper_account.orders, "return_reconciliation": reconciled,
+            }
+            if any(account.get(key) != value for key, value in exact_state.items()):
+                raise DailyBundleError("paper account journal state differs from the archived close")
+        except DailyBundleError:
+            raise
+        except Exception as exc:
+            raise DailyBundleError("paper account journal does not reconcile to its close archive") from exc
+        try:
+            records = DurableJournal(runner_path).records()
+        except Exception as exc:
+            raise DailyBundleError("runner journal failed its durable hash-chain check") from exc
     selected = [row for row in records if row.get("session_id") == session_id]
     plan = next((row for row in selected if row.get("t") == "SESSION_PLAN"), None)
     if plan is None or plan.get("config", {}).get("exchange_date") != session_date:
@@ -140,7 +177,7 @@ def build_daily_bundle(*, session_date: str, session_id: str, artifact_paths: di
                        output_dir: Path, signing_key=None) -> dict:
     """Export inputs, deterministic report, and content-addressed manifest atomically.
 
-    `artifact_paths` must include roles `paper_account_archive` and `runner_journal`.
+    `artifact_paths` must include account archive, account journal, and runner journal roles.
     An optional cryptography Ed25519 private-key object signs the canonical manifest core.
     """
     try:
@@ -151,8 +188,9 @@ def build_daily_bundle(*, session_date: str, session_id: str, artifact_paths: di
         raise DailyBundleError("session_date must be a canonical ISO exchange date") from exc
     if not isinstance(session_id, str) or not session_id.strip():
         raise DailyBundleError("session id is required")
-    if not isinstance(artifact_paths, dict) or not {"paper_account_archive", "runner_journal"}.issubset(artifact_paths):
-        raise DailyBundleError("account archive and runner journal paths are required")
+    required_roles = {"paper_account_archive", "paper_account_journal", "runner_journal"}
+    if not isinstance(artifact_paths, dict) or not required_roles.issubset(artifact_paths):
+        raise DailyBundleError("account archive, account journal, and runner journal paths are required")
     payloads: dict[str, bytes] = {}
     input_payloads: dict[str, bytes] = {}
     input_manifest = []
@@ -253,6 +291,7 @@ def close_and_bundle_paper_session(*, account, session_date: date, captured_at: 
     )
     artifact_paths = {
         "paper_account_archive": Path(archive["archive_path"]),
+        "paper_account_journal": Path(account.path),
         "runner_journal": runner_path,
     }
     if additional_artifacts:
