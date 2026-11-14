@@ -3,8 +3,8 @@
   "task_id": "PE-0155",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py; ruff check src/financial_brain/forward_edge/daily_evidence_bundle.py tests/test_daily_evidence_bundle.py src/financial_brain/forward_edge/eod_paper_archive.py; python -m mypy src/financial_brain/forward_edge/daily_evidence_bundle.py",
-    "result": "12 passed; Ruff and mypy passed. The bundle now requires and replays the account journal, reconciles it to the EOD archive, and tests journal tampering, idempotent finalization, and pre-mutation terminal-session gating."
+    "command": "python -m pytest -q tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py; ruff check src/financial_brain/forward_edge/daily_evidence_bundle.py tests/test_daily_evidence_bundle.py src/financial_brain/forward_edge/eod_paper_archive.py; python -m mypy src/financial_brain/forward_edge/daily_evidence_bundle.py; python -m mypy src/financial_brain/forward_edge/daily_evidence_bundle.py src/financial_brain/forward_edge/cli.py",
+    "result": "14 passed; Ruff and mypy passed. Tests cover terminal-session gating, retryable CLI close/bundle finalization, replay and exact reconciliation of account journals to EOD archives, cross-workstation verification, signatures, and tampering."
   },
   "implemented": [
     "Portable bundles export account close archive and durable runner journal plus optional evidence inputs with SHA-256 and byte lengths.",
@@ -13,7 +13,8 @@
     "Cross-workstation copy test reproduces identical report bytes and validates with a pinned trusted public-key hash.",
     "Tampering, undeclared files, symbolic links, mismatched trusted keys, and output reuse with another signing key are refused.",
     "close_and_bundle_paper_session validates the runner journal hash chain, matching exchange date, and terminal session record before account close; then creates the account archive and portable bundle with immutable retry behavior.",
-    "Every portable bundle includes the paper-account journal; the verifier replays it, binds its exact sequence/head to the EOD archive, checks order and economic state, and reconciles NAV before report reproduction."
+    "Every portable bundle includes the paper-account journal; the verifier replays it, binds its exact sequence/head to the EOD archive, checks order and economic state, and reconciles NAV before report reproduction.",
+    "The forward-edge CLI exposes daily-finalize: it reconstructs the local paper account from its journal and creates the close archive and evidence bundle after validating durable terminal-session evidence and caller-supplied close marks."
   ],
   "blockers": [
     "No scheduled daily launcher invokes the orchestration primitive after every completed paper session.",
@@ -22,6 +23,7 @@
   ],
   "source_sha256": {
     "src/financial_brain/forward_edge/daily_evidence_bundle.py": "afe9b0f4ce879268ef152b676290a48e24ce25bd2b6c55d67702217687b562ae",
-    "tests/test_daily_evidence_bundle.py": "717e224b64b2a6e3a94df9960c1a491ddacd219bc6c9eac8c90ac8eca325d97a"
+    "tests/test_daily_evidence_bundle.py": "5b2a42d3eda6794031f43577cdddd7310f451ce2784609cd13aed195d3a84853",
+    "src/financial_brain/forward_edge/cli.py": "fec908d3dd61e28b45f29ef33e65ba9bfe3b6f9a6496ad24e1cb6fe2757a627d"
   }
 }

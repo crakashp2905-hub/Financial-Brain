@@ -3,14 +3,15 @@
   "task_id": "PE-0201",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_forward_edge_f06.py tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py; ruff check src/financial_brain/forward_edge/session_ops.py tests/test_forward_edge_f06.py src/financial_brain/forward_edge/daily_evidence_bundle.py tests/test_daily_evidence_bundle.py src/financial_brain/forward_edge/eod_paper_archive.py",
-    "result": "26 passed; Ruff passed. Backup tests validate immutable path-preserving restore, while daily-bundle tests verify account and runner journals against the archived close, replay their evidence, and refuse tampering."
+    "command": "python -m pytest -q tests/test_forward_edge_f06.py tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py; ruff check src/financial_brain/forward_edge/session_ops.py tests/test_forward_edge_f06.py src/financial_brain/forward_edge/daily_evidence_bundle.py tests/test_daily_evidence_bundle.py src/financial_brain/forward_edge/eod_paper_archive.py src/financial_brain/forward_edge/cli.py; python -m mypy src/financial_brain/forward_edge/daily_evidence_bundle.py src/financial_brain/forward_edge/cli.py",
+    "result": "28 passed; Ruff and targeted mypy passed. Tests cover immutable path-preserving restore, daily-finalize CLI retry and gating, account/runner journal replay, close reconciliation, and tamper refusal."
   },
   "implemented": [
     "Versioned offline backup bundles preserve caller-declared dependency paths and verify file hashes, lengths, and path safety.",
     "Daily paper evidence bundles require the account close archive, paper-account journal, and forward-runner journal.",
     "The daily bundle verifier replays the account journal, binds its sequence and head to the EOD archive, compares OMS/account state and reconciled returns, and reproduces the operator report from exported inputs.",
-    "Restored bundles can be copied to an isolated location and verified without the source tree."
+    "Restored bundles can be copied to an isolated location and verified without the source tree.",
+    "A single local daily-finalize CLI command reconstructs the account and performs close plus verified bundle export from explicit owner-supplied marks and durable session evidence."
   ],
   "blockers": [
     "Automatic discovery and packaging of observed quote archives, strategy/configuration inputs, registry and authority state, and all other runtime dependencies are not wired.",
@@ -20,7 +21,8 @@
     "src/financial_brain/forward_edge/session_ops.py": "437c2aa38e69852b1b45cf6447a6b2a67ad786f5aa3de3c7c53f772a2810379a",
     "tests/test_forward_edge_f06.py": "0a86726efbae00466eb57210acfc15219a67caba49a67e0c84d34adfc0ce7184",
     "src/financial_brain/forward_edge/daily_evidence_bundle.py": "afe9b0f4ce879268ef152b676290a48e24ce25bd2b6c55d67702217687b562ae",
-    "tests/test_daily_evidence_bundle.py": "717e224b64b2a6e3a94df9960c1a491ddacd219bc6c9eac8c90ac8eca325d97a",
-    "src/financial_brain/forward_edge/eod_paper_archive.py": "9ab2d486e9f54978203a8576f2a11a9b7615bb2617be2007ff638782e8f41beb"
+    "tests/test_daily_evidence_bundle.py": "5b2a42d3eda6794031f43577cdddd7310f451ce2784609cd13aed195d3a84853",
+    "src/financial_brain/forward_edge/eod_paper_archive.py": "9ab2d486e9f54978203a8576f2a11a9b7615bb2617be2007ff638782e8f41beb",
+    "src/financial_brain/forward_edge/cli.py": "fec908d3dd61e28b45f29ef33e65ba9bfe3b6f9a6496ad24e1cb6fe2757a627d"
   }
 }

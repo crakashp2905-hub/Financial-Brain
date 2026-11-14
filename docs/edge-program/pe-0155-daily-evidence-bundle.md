@@ -9,10 +9,11 @@
 - Bundle creation is idempotent for the same manifest and refuses altered content at an existing output path.
 - `close_and_bundle_paper_session` now checks the durable journal chain, matching exchange date and terminal session record before closing the account. It then creates the EOD archive and portable bundle; retrying the same close inputs reuses the immutable archive and bundle. This is a callable orchestration primitive, not a scheduler.
 - Bundle verification replays the copied account journal into the paper OMS/ledger, binds its exact sequence/head to the EOD close archive, and compares cash, available cash, orders, return reconciliation, and P&L. It also verifies positions, marks, and NAV. The account journal is mandatory; archive-only bundles are rejected.
+- `fb forward daily-finalize` reconstructs the paper account from its journal and invokes close plus bundle creation in one command. It requires explicit observed close marks, capture time, runner journal, and terminal session evidence; it never creates physical orders.
 
 ## Verification
 
-`tests/test_daily_evidence_bundle.py` and `tests/test_eod_paper_archive.py`: 12 passed; Ruff and mypy passed. The cross-workstation fixture copies the bundle, pins the Ed25519 key, verifies all artifacts, and reproduces the human report. Finalization tests cover idempotent retry, account-journal replay and close reconciliation, journal tampering, and refusal before account mutation when there is no durable terminal session. Tampering and untrusted-key cases are refused.
+`tests/test_daily_evidence_bundle.py` and `tests/test_eod_paper_archive.py`: 14 passed; Ruff and mypy passed. The cross-workstation fixture copies the bundle, pins the Ed25519 key, verifies all artifacts, and reproduces the human report. Finalization tests cover idempotent CLI retry, account-journal replay and close reconciliation, journal tampering, and refusal before account mutation when there is no durable terminal session. Tampering and untrusted-key cases are refused.
 
 ## Remaining evidence gap
 

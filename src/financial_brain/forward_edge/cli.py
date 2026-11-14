@@ -159,6 +159,53 @@ def cmd_book_performance_report(input_path: str, output_root: str) -> tuple[dict
     return {**outputs, "physical_orders": False}, EXIT["OK"]
 
 
+def cmd_daily_finalize(*, account_journal_path: str, session_date: str, captured_at: str,
+                       marks_path: str, runner_journal_path: str, session_id: str,
+                       archive_dir: str, bundle_root: str) -> tuple[dict, int]:
+    """Close a local paper account and create its replay-verified portable evidence bundle."""
+    from financial_brain.forward_edge.daily_evidence_bundle import (
+        DailyBundleError,
+        close_and_bundle_paper_session,
+    )
+    from financial_brain.forward_edge.durable import DurableJournal
+    from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
+
+    try:
+        account_path = Path(account_journal_path)
+        records = DurableJournal(account_path).records()
+        if not records:
+            raise ValueError("account journal is empty")
+        opening = records[0]
+        if opening.get("t") != "ACCOUNT_OPEN":
+            raise ValueError("account journal must begin with ACCOUNT_OPEN")
+        marks = json.loads(Path(marks_path).read_text(encoding="utf-8"))
+        if not isinstance(marks, dict):
+            raise ValueError("close marks input must be a symbol-keyed JSON object")
+        account = PaperAccount(
+            account_path, account_id=str(opening["account"]),
+            initial_cash=Decimal(str(opening["cash"])),
+            currency=str(opening["currency"]),
+            fee_schedule=FeeSchedule.from_dict(opening.get("fee_schedule")),
+        )
+        finalized = close_and_bundle_paper_session(
+            account=account, session_date=date.fromisoformat(session_date),
+            captured_at=datetime.fromisoformat(captured_at), marks=marks,
+            archive_dir=Path(archive_dir), runner_journal_path=Path(runner_journal_path),
+            session_id=session_id, bundle_root=Path(bundle_root),
+        )
+    except (OSError, ValueError, KeyError, DailyBundleError) as exc:
+        return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    archive = finalized["account_archive"]
+    bundle = finalized["bundle"]
+    return {
+        "session_id": session_id, "session_date": session_date,
+        "account_archive_sha256": archive["archive_sha256"],
+        "bundle_manifest_sha256": bundle["manifest_sha256"],
+        "bundle_dir": finalized["bundle_dir"],
+        "bundle_verified": bundle["verified"], "physical_orders": False,
+    }, EXIT["OK"]
+
+
 def cmd_eod_reconcile(account_journal_path: str, reference_snapshot_path: str,
                       gate_journal_path: str) -> tuple[dict, int]:
     """Audit the local account and apply an explicit independent EOD snapshot."""
@@ -236,6 +283,15 @@ def main(argv: list[str] | None = None) -> int:
     bp = sub.add_parser("book-performance-report")
     bp.add_argument("--input", required=True, help="JSON object containing a sessions array")
     bp.add_argument("--output-root", required=True, help="root for immutable content-addressed reports")
+    df = sub.add_parser("daily-finalize", help="close a local paper book and export verified evidence")
+    df.add_argument("--account-journal", required=True)
+    df.add_argument("--session-date", required=True, help="exchange session date in YYYY-MM-DD")
+    df.add_argument("--captured-at", required=True, help="aware ISO close-capture timestamp")
+    df.add_argument("--marks", required=True, help="JSON file of owner-provided close mark evidence")
+    df.add_argument("--runner-journal", required=True)
+    df.add_argument("--session-id", required=True)
+    df.add_argument("--archive-dir", required=True)
+    df.add_argument("--bundle-root", required=True)
     er = sub.add_parser("eod-reconcile", help="reconcile paper account against an independent snapshot")
     er.add_argument("--account-journal", required=True, help="durable local paper account journal JSONL")
     er.add_argument("--reference-snapshot", required=True, help="independent OMS/venue snapshot JSON")
@@ -255,6 +311,13 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_daily_export(args.account_archive, args.runner_journal, args.session_id, args.output_dir)
     elif args.cmd == "book-performance-report":
         out, code = cmd_book_performance_report(args.input, args.output_root)
+    elif args.cmd == "daily-finalize":
+        out, code = cmd_daily_finalize(
+            account_journal_path=args.account_journal, session_date=args.session_date,
+            captured_at=args.captured_at, marks_path=args.marks,
+            runner_journal_path=args.runner_journal, session_id=args.session_id,
+            archive_dir=args.archive_dir, bundle_root=args.bundle_root,
+        )
     elif args.cmd == "eod-reconcile":
         out, code = cmd_eod_reconcile(args.account_journal, args.reference_snapshot, args.gate_journal)
     else:

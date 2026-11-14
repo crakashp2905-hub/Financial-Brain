@@ -3453,14 +3453,15 @@
         "src/financial_brain/forward_edge/daily_evidence_bundle.py",
         "tests/test_daily_evidence_bundle.py",
         "docs/edge-program/pe-0155-daily-evidence-bundle.md",
-        "docs/edge-program/pe-0155-daily-evidence-bundle-evidence.json"
+        "docs/edge-program/pe-0155-daily-evidence-bundle-evidence.json",
+        "src/financial_brain/forward_edge/cli.py"
       ],
       "tests": [
         "test_daily_evidence_bundle.py",
         "test_eod_paper_archive.py"
       ],
-      "test_result": "12 passed; Ruff and mypy passed. The bundle now requires and replays the account journal, reconciles it to the EOD archive, and tests journal tampering, idempotent finalization, and pre-mutation terminal-session gating.",
-      "evidence_sha256": "775d918273935c5b06b53c912c67cdc152ac25252bce80019644baf6d8e78be6",
+      "test_result": "14 passed; Ruff and mypy passed. Tests cover terminal-session gating, retryable CLI close/bundle finalization, replay and exact reconciliation of account journals to EOD archives, cross-workstation verification, signatures, and tampering.",
+      "evidence_sha256": "2c637106602eafa0760ebe37f8fdca2e0947631ebd2d315251fabcbd96ba459a",
       "blockers": [
         "No scheduled daily launcher invokes the orchestration primitive after every completed paper session.",
         "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",
@@ -4365,7 +4366,8 @@
         "src/financial_brain/forward_edge/daily_evidence_bundle.py",
         "tests/test_daily_evidence_bundle.py",
         "src/financial_brain/forward_edge/eod_paper_archive.py",
-        "docs/edge-program/pe-0201-offline-backup-restore-evidence.json"
+        "docs/edge-program/pe-0201-offline-backup-restore-evidence.json",
+        "src/financial_brain/forward_edge/cli.py"
       ],
       "tests": [
         "test_backup_restores_to_recorded_hashes_and_detects_corruption",
@@ -4374,12 +4376,12 @@
         "tests/test_daily_evidence_bundle.py",
         "tests/test_eod_paper_archive.py"
       ],
-      "test_result": "26 passed; Ruff passed. Backup tests validate immutable path-preserving restore, while daily-bundle tests verify account and runner journals against the archived close, replay their evidence, and refuse tampering.",
+      "test_result": "28 passed; Ruff and targeted mypy passed. Tests cover immutable path-preserving restore, daily-finalize CLI retry and gating, account/runner journal replay, close reconciliation, and tamper refusal.",
       "blockers": [
         "Automatic discovery and packaging of observed quote archives, strategy/configuration inputs, registry and authority state, and all other runtime dependencies are not wired.",
         "No end-to-end restore drill has reconstructed and resumed a complete owner-authorized observed market session."
       ],
-      "evidence_sha256": "06adb29638ef1269d7a3135c7861d1116ad8284fa022e2e126161f2718a0c9f4"
+      "evidence_sha256": "4cbebf83261dfa6b0c85bc776ed9bb70dc201d5b6597aa911c2a464cd6d917cc"
     },
     {
       "id": "PE-0203",

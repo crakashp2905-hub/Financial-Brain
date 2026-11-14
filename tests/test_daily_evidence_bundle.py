@@ -14,6 +14,7 @@ from financial_brain.forward_edge.daily_evidence_bundle import (
 )
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.eod_paper_archive import close_and_archive_paper_session
+from financial_brain.forward_edge.cli import EXIT, cmd_daily_finalize
 from financial_brain.kernel.oms import State
 from financial_brain.kernel.paper_account import PaperAccount
 
@@ -174,4 +175,55 @@ def test_close_and_bundle_rejects_missing_session_terminal_before_account_mutati
         )
 
     assert account.nav_snapshots == []
+    assert not (tmp_path / "archive" / SESSION.isoformat()).exists()
+
+
+def test_daily_finalize_cli_closes_reconciles_and_exports_bundle_idempotently(tmp_path):
+    account_path = tmp_path / "account.jsonl"
+    PaperAccount(account_path, account_id="bundle-account", initial_cash=Decimal("1000"))
+    runner_path = tmp_path / "runner.jsonl"
+    runner = DurableJournal(runner_path)
+    runner.append({"t": "SESSION_PLAN", "session_id": "S-2026-11-12",
+                   "config": {"exchange_date": SESSION.isoformat()}})
+    runner.append({"t": "SESSION_CLOSED", "session_id": "S-2026-11-12",
+                   "result": {"status": "PAPER_COMPLETE"}})
+    marks_path = tmp_path / "marks.json"
+    marks_path.write_text("{}", encoding="utf-8")
+    args = dict(
+        account_journal_path=str(account_path), session_date=SESSION.isoformat(),
+        captured_at=CAPTURE.isoformat(), marks_path=str(marks_path),
+        runner_journal_path=str(runner_path), session_id="S-2026-11-12",
+        archive_dir=str(tmp_path / "archive"), bundle_root=str(tmp_path / "bundles"),
+    )
+
+    first, code = cmd_daily_finalize(**args)
+    second, retry_code = cmd_daily_finalize(**args)
+
+    assert code == retry_code == EXIT["OK"]
+    assert first == second
+    assert first["bundle_verified"] is True
+    assert first["physical_orders"] is False
+    assert Path(first["bundle_dir"]).is_dir()
+
+
+def test_daily_finalize_cli_refuses_to_close_before_session_terminal_record(tmp_path):
+    account_path = tmp_path / "account.jsonl"
+    PaperAccount(account_path, account_id="bundle-account", initial_cash=Decimal("1000"))
+    runner_path = tmp_path / "runner.jsonl"
+    DurableJournal(runner_path).append({
+        "t": "SESSION_PLAN", "session_id": "S-2026-11-12",
+        "config": {"exchange_date": SESSION.isoformat()},
+    })
+    marks_path = tmp_path / "marks.json"
+    marks_path.write_text("{}", encoding="utf-8")
+
+    result, code = cmd_daily_finalize(
+        account_journal_path=str(account_path), session_date=SESSION.isoformat(),
+        captured_at=CAPTURE.isoformat(), marks_path=str(marks_path),
+        runner_journal_path=str(runner_path), session_id="S-2026-11-12",
+        archive_dir=str(tmp_path / "archive"), bundle_root=str(tmp_path / "bundles"),
+    )
+
+    assert code == EXIT["INCOMPLETE"]
+    assert "terminal record" in result["error"]
     assert not (tmp_path / "archive" / SESSION.isoformat()).exists()
