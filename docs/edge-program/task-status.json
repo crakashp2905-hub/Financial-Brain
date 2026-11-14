@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 191,
-  "unrecorded_tasks": 27,
+  "recorded_tasks": 192,
+  "unrecorded_tasks": 26,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4173,6 +4173,30 @@
       "evidence_sha256": "ce6907c294b41df65e05c41c5a2a6a3549095b0cdfdff120f8d1b5bd34aca287",
       "blockers": [
         "The cockpit trusts upstream provenance and custody classifications; external signature verification and real prospective sessions remain operational inputs."
+      ]
+    },
+    {
+      "id": "PE-0194",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/fixtures.py",
+        "src/financial_brain/forward_edge/cli.py",
+        "tests/fixtures/forward_edge/golden_signatures.json",
+        "tests/test_forward_edge_f13.py",
+        "docs/forward-edge/OPERATIONS.md",
+        "docs/edge-program/pe-0194-offline-demo-evidence.md",
+        "docs/edge-program/pe-0194-offline-demo-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "tests/test_forward_edge_f13.py",
+        "tests/test_forward_fixture_replay.py",
+        "scripts/source_inventory.py --check docs/edge-program/source-inventory.json"
+      ],
+      "test_result": "56 fixture replay and CLI tests passed; Ruff, targeted mypy, golden signature coverage, and source-inventory check passed. One CLI invocation reproduces all five scenarios and asserts each outcome, local-only custody, balanced ledger, and no physical orders.",
+      "evidence_sha256": "0d1ce0c52f132194adc5ae313354223a46d0a7c49a9e2e71f827ad0f6963a5c5",
+      "blockers": [
+        "All demo scenarios are synthetic fixtures; no live feed, real execution, or profitability evidence is claimed."
       ]
     }
   ]

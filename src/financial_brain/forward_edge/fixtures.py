@@ -31,6 +31,7 @@ def fixture_pack() -> dict[str, dict]:
         "win": _make("win", close_price="1520.00"),
         "loss": _make("loss", close_price="1480.00"),
         "no_trade": _make("no_trade", feed={"ok": False, "reasons": ["STALE_QUOTE"]}),
+        "feed_outage": _make("feed_outage", feed={"ok": False, "reasons": ["FEED_OUTAGE"]}),
         "rejection": _make("rejection", price_band=["1000", "1400"]),
         "late_quote": _make("late_quote", quotes=[{"offset_ms": 9000, "bid": "1500.00", "ask": "1500.05", "bid_qty": 100, "ask_qty": 100}]),
         "unknown_order": _make("unknown_order", ack_lost=True),
@@ -41,5 +42,6 @@ def fixture_pack() -> dict[str, dict]:
     }
 
 
-EXPECTED = {"win": "WIN", "loss": "LOSS", "no_trade": "NO_TRADE", "rejection": "REJECTED", "late_quote": "LATE_QUOTE",
+EXPECTED = {"win": "WIN", "loss": "LOSS", "no_trade": "NO_TRADE", "feed_outage": "NO_TRADE",
+            "rejection": "REJECTED", "late_quote": "LATE_QUOTE",
             "unknown_order": "UNKNOWN_ORDER", "adverse_fill": "LOSS", "missed_fill": "MISSED_FILL"}

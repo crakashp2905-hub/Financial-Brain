@@ -43,6 +43,41 @@ def cmd_close(name: str) -> tuple[dict, int]:
     return closed, EXIT["OK"] if closed["status"] == "CLOSED" else EXIT["INCOMPLETE"]
 
 
+def cmd_offline_demo() -> tuple[dict, int]:
+    """Run the five required onboarding scenarios using fixtures only."""
+    required = ("win", "loss", "no_trade", "feed_outage", "unknown_order")
+    pack = fixture_pack()
+    scenarios = []
+    for name in required:
+        result = pipeline.run_session(pack[name])
+        closed = pipeline.close_session(result)
+        scenarios.append({
+            "scenario": name,
+            "outcome": result["outcome"],
+            "reason": result["reason"],
+            "net_pnl_inr": result["net_pnl"],
+            "session_status": closed["status"],
+            "custody": result["custody"],
+            "evidence_class": "SYNTHETIC_FIXTURE",
+            "mode": result["mode"],
+            "physical_orders": False,
+            "ledger_balanced": result["ledger_balanced"],
+        })
+    expected = {"win": "WIN", "loss": "LOSS", "no_trade": "NO_TRADE",
+                "feed_outage": "NO_TRADE", "unknown_order": "UNKNOWN_ORDER"}
+    complete = all(row["outcome"] == expected[row["scenario"]]
+                   and row["session_status"] == "CLOSED"
+                   and row["custody"] == "LOCAL_ONLY"
+                   and row["ledger_balanced"] is True
+                   and row["physical_orders"] is False
+                   for row in scenarios)
+    return ({"schema_version": "1.0", "status": "DEMO_COMPLETE" if complete else "DEMO_INCOMPLETE",
+             "evidence_class": "SYNTHETIC_FIXTURE", "real_money_enabled": False,
+             "promotion_eligible": False, "scenarios": scenarios,
+             "note": "Offline onboarding demo only. Synthetic outcomes are not market observations or alpha evidence."},
+            EXIT["OK"] if complete else EXIT["INCOMPLETE"])
+
+
 def cmd_report(as_of: str) -> tuple[dict, int]:
     sessions = [pipeline.run_session(fx) for fx in fixture_pack().values()]
     by_outcome: dict[str, int] = {}
@@ -115,6 +150,7 @@ def main(argv: list[str] | None = None) -> int:
     pr.add_argument("--no-dry-run", action="store_true")
     cl = sub.add_parser("close")
     cl.add_argument("--fixture", default="win")
+    sub.add_parser("offline-demo", help="run deterministic onboarding scenarios; no network or broker")
     rp = sub.add_parser("report")
     rp.add_argument("--as-of", default="2027-01-04")
     ac = sub.add_parser("asset-class-report")
@@ -131,6 +167,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_paper_run(args.fixture, dry_run=not args.no_dry_run)
     elif args.cmd == "close":
         out, code = cmd_close(args.fixture)
+    elif args.cmd == "offline-demo":
+        out, code = cmd_offline_demo()
     elif args.cmd == "asset-class-report":
         out, code = cmd_asset_class_report(args.input)
     elif args.cmd == "daily-export":

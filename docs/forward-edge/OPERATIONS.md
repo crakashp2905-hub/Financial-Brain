@@ -9,6 +9,7 @@ a broker or needs an API key. Live money stays disabled: `PHYSICAL_ORDERS_ENABLE
 ```bash
 python -m pytest tests/test_forward_edge_*.py -q
 python -m financial_brain.forward_edge.audit
+python -m financial_brain.forward_edge.cli offline-demo
 python -m financial_brain.forward_edge.cli preflight
 python -m financial_brain.forward_edge.cli paper-run --fixture win
 python -m financial_brain.forward_edge.cli close --fixture win
@@ -17,6 +18,10 @@ python -m financial_brain.forward_edge.cli report
 
 The audit exits non-zero while any blocking item is open. The report exits 4 (insufficient evidence). Both are the
 correct results today.
+
+`offline-demo` runs deterministic win, loss, no-trade, feed-outage and unknown-order scenarios in one command. It
+prints each result with `SYNTHETIC_FIXTURE`, `LOCAL_ONLY`, and `physical_orders: false`; the outputs are for onboarding
+and do not count as market observations, alpha evidence, or promotion evidence.
 
 ## Source rights
 

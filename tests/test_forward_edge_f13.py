@@ -130,6 +130,25 @@ def test_report_carries_coverage_benchmark_missing_data_and_never_promotes() -> 
     assert out["independent_forward_sessions"] == 0
 
 
+def test_offline_demo_runs_required_scenarios_with_honest_fixture_labels() -> None:
+    out, code = cli.cmd_offline_demo()
+    assert code == 0 and out["status"] == "DEMO_COMPLETE"
+    assert out["real_money_enabled"] is False and out["promotion_eligible"] is False
+    rows = {row["scenario"]: row for row in out["scenarios"]}
+    assert {name: rows[name]["outcome"] for name in rows} == {
+        "win": "WIN", "loss": "LOSS", "no_trade": "NO_TRADE",
+        "feed_outage": "NO_TRADE", "unknown_order": "UNKNOWN_ORDER",
+    }
+    assert all(row["evidence_class"] == "SYNTHETIC_FIXTURE" and row["custody"] == "LOCAL_ONLY"
+               and row["physical_orders"] is False and row["ledger_balanced"] for row in rows.values())
+
+
+def test_offline_demo_is_available_as_one_cli_command(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["offline-demo"]) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["status"] == "DEMO_COMPLETE" and len(output["scenarios"]) == 5
+
+
 def test_cli_main_prints_json_and_returns_the_code(capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(["paper-run", "--fixture", "loss"]) == 0
     assert json.loads(capsys.readouterr().out)["outcome"] == "LOSS"
