@@ -19,6 +19,7 @@ from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent, entry_allowed
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.net_alpha_policy import NetAlphaPolicyError, NetAlphaThresholdRegistry
+from financial_brain.forward_edge.signal_seal import SignalSealError, seal_decision
 from financial_brain.forward_edge.uncertainty_sizing import (UncertaintySizingError,
                                                               UncertaintySizingRegistry,
                                                               uncertainty_size_multiplier)
@@ -520,8 +521,17 @@ class ForwardSessionRunner:
                 raise RunnerError("decision adapter must return a dictionary with BUY, SELL, or NONE side")
             decision = self._apply_forecast_cost_benefit(config, decision)
             decision = self._apply_uncertainty_sizing(config, decision)
-            journal.append({"t": "DECISION", "session_id": config.session_id,
-                            "decision_at_utc": visible_at.isoformat(), "decision": decision})
+            try:
+                sealed = seal_decision(
+                    session_id=config.session_id, strategy_sha256=config.strategy_sha256,
+                    config_sha256=config.sha256, decision_at=visible_at, decision=decision,
+                    inputs=decision_events, preflight=preflight,
+                    feed_health_sha256=(feed_health_record.get("snapshot_sha256")
+                                        if feed_health_record else None),
+                )
+            except SignalSealError as exc:
+                raise RunnerError(f"decision cannot be sealed against its causal inputs: {exc}") from exc
+            journal.append({"t": "DECISION", "session_id": config.session_id, **sealed})
         risk_record = next((r for r in reversed(existing) if r.get("t") == "RISK_VERDICT"), None)
         risk = risk_record["risk"] if risk_record is not None else None
         if risk is None:
