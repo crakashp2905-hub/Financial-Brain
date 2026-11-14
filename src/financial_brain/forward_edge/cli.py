@@ -159,6 +159,21 @@ def cmd_book_performance_report(input_path: str, output_root: str) -> tuple[dict
     return {**outputs, "physical_orders": False}, EXIT["OK"]
 
 
+def cmd_registered_portfolio_report(registry_path: str, plan_id: str,
+                                   account_root: str) -> tuple[dict, int]:
+    """Report all existing journals in one verified frozen paper-book plan."""
+    from financial_brain.kernel.paper_portfolio import PaperAccountPortfolio, PaperPortfolioError
+    from financial_brain.kernel.registered_paper_books import RegisteredPaperBooks
+
+    try:
+        registry = RegisteredPaperBooks(Path(registry_path))
+        report = PaperAccountPortfolio.from_registered_plan(
+            registry, plan_id=plan_id, account_root=Path(account_root)).report()
+    except (OSError, ValueError, PaperPortfolioError) as exc:
+        return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    return {"plan_id": plan_id, **report}, EXIT["OK"]
+
+
 def cmd_daily_finalize(*, account_journal_path: str, session_date: str, captured_at: str,
                        marks_path: str, runner_journal_path: str, session_id: str,
                        archive_dir: str, bundle_root: str) -> tuple[dict, int]:
@@ -283,6 +298,11 @@ def main(argv: list[str] | None = None) -> int:
     bp = sub.add_parser("book-performance-report")
     bp.add_argument("--input", required=True, help="JSON object containing a sessions array")
     bp.add_argument("--output-root", required=True, help="root for immutable content-addressed reports")
+    portfolio = sub.add_parser(
+        "registered-portfolio-report", help="read-only report for every account in a frozen paper-book plan")
+    portfolio.add_argument("--registry", required=True, help="hash-chained registered paper-book plan journal")
+    portfolio.add_argument("--plan-id", required=True)
+    portfolio.add_argument("--account-root", required=True, help="root containing the allocated account journals")
     df = sub.add_parser("daily-finalize", help="close a local paper book and export verified evidence")
     df.add_argument("--account-journal", required=True)
     df.add_argument("--session-date", required=True, help="exchange session date in YYYY-MM-DD")
@@ -311,6 +331,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_daily_export(args.account_archive, args.runner_journal, args.session_id, args.output_dir)
     elif args.cmd == "book-performance-report":
         out, code = cmd_book_performance_report(args.input, args.output_root)
+    elif args.cmd == "registered-portfolio-report":
+        out, code = cmd_registered_portfolio_report(args.registry, args.plan_id, args.account_root)
     elif args.cmd == "daily-finalize":
         out, code = cmd_daily_finalize(
             account_journal_path=args.account_journal, session_date=args.session_date,

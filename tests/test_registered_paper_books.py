@@ -1,11 +1,13 @@
 import dataclasses
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+import json
 
 import pytest
 
 from financial_brain.kernel.paper_account import FeeSchedule
 from financial_brain.kernel.paper_portfolio import PaperAccountPortfolio, PaperPortfolioError
+from financial_brain.forward_edge.cli import main as forward_cli_main
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.approvals import Approval
 from financial_brain.forward_edge.governance import FamilyEvidence, family_action_scope_sha256
@@ -129,6 +131,30 @@ def test_registered_portfolio_fails_closed_when_any_allocated_book_is_missing(tm
     with pytest.raises(PaperPortfolioError, match="journal is missing: paper-alpha"):
         PaperAccountPortfolio.from_registered_plan(
             registry, plan_id=frozen.plan_id, account_root=account_root)
+
+
+def test_registered_portfolio_cli_reports_all_books_read_only_and_fails_missing(tmp_path, capsys):
+    registry_path = tmp_path / "allocation.journal"
+    registry = RegisteredPaperBooks(registry_path)
+    frozen = plan()
+    registry.register(frozen)
+    account_root = tmp_path / "books"
+    accounts = registry.open_accounts(plan_id=frozen.plan_id, root=account_root, fee_schedule=FEE)
+    journal_heads = {name: account.journal.head for name, account in accounts.items()}
+
+    code = forward_cli_main(["registered-portfolio-report", "--registry", str(registry_path),
+                             "--plan-id", frozen.plan_id, "--account-root", str(account_root)])
+    report = json.loads(capsys.readouterr().out)
+
+    assert code == 0
+    assert set(report["books"]) == {"paper-alpha", "paper-beta", "TOTAL"}
+    assert {name: account.journal.head for name, account in accounts.items()} == journal_heads
+    accounts["beta"].path.unlink()
+    code = forward_cli_main(["registered-portfolio-report", "--registry", str(registry_path),
+                             "--plan-id", frozen.plan_id, "--account-root", str(account_root)])
+    blocked = json.loads(capsys.readouterr().out)
+    assert code == 3
+    assert "journal is missing: paper-beta" in blocked["error"]
 
 
 def test_strategy_order_uses_only_its_registered_book_and_reservation(tmp_path):

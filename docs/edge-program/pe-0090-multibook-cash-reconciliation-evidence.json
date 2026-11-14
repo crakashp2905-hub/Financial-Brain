@@ -19,8 +19,8 @@
     "The scope remains long-only cash equities in one currency; margin, settlement, futures and options accounting are not implemented."
   ],
   "verification": {
-    "command": "python -m pytest -q tests/test_registered_paper_books.py tests/test_paper_account_portfolio.py",
-    "result": "21 passed including source-inventory checks; Ruff and mypy passed for changed modules."
+    "command": "python -m pytest -q tests/test_registered_paper_books.py tests/test_paper_account_portfolio.py tests/test_source_inventory.py",
+    "result": "22 passed including source-inventory checks; Ruff and mypy passed for changed modules. The registered-portfolio-report CLI emitted the full report without changing account journal heads and returned incomplete when one allocated book was removed."
   },
   "scope_note": "This produces a deterministic consolidated audit view for registered paper books. It does not pool buying power or claim cross-asset accounting."
 }
