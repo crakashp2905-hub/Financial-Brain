@@ -226,7 +226,7 @@
         "test_capability_matrix.py"
       ],
       "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (627 Python sources; 611 unassessed; 359 role-unassigned).",
-      "evidence_sha256": "abf4530c81db2205be581a386008c8d0402ba7093e0f66ff679356012347818b",
+      "evidence_sha256": "2f4eac4e6a095bf7a83b7274de9e9b51f04fef51053de9a19d64d32978e0da21",
       "blockers": [
         "Deployment must configure a shared registry path and canonical matching strategy IDs; this has not been verified in the owner environment.",
         "Other direct/manual paper writers, authenticated owner identity, and account closure/release governance are not bound to this control.",
