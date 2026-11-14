@@ -18,7 +18,11 @@ def _canonical(value: Any) -> bytes:
 
 
 def _sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    # These manifests are verified on Windows and Linux. Git normalizes text blobs to LF,
+    # while a Windows worktree may expose CRLF; hash the canonical text bytes so the same
+    # source has the same evidence identity on both platforms.
+    payload = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(payload).hexdigest()
 
 
 def build(matrix: dict[str, Any], root: Path = ROOT) -> dict[str, Any]:
