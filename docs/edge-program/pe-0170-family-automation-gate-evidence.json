@@ -1,0 +1,23 @@
+{
+  "checklist_task": "PE-0170",
+  "status": "DONE",
+  "criterion": "Require explicit per-family evidence gates before initial allocations, capital increases, or automatic paper execution; new strategies cannot bypass frozen-protocol and owner-review requirements.",
+  "implementation": [
+    "src/financial_brain/forward_edge/governance.py",
+    "src/financial_brain/forward_edge/session_runner.py",
+    "src/financial_brain/kernel/registered_paper_books.py"
+  ],
+  "tests": [
+    "tests/test_forward_edge_f11.py",
+    "tests/test_forward_session_runner.py",
+    "tests/test_registered_paper_books.py"
+  ],
+  "test_result": "90 passed; Ruff passed; targeted mypy passed for governance.py, session_runner.py and registered_paper_books.py; source and strategy-variant inventories are current.",
+  "evidence_scope": "Local tests with synthetic family data and synthetic owner approvals. No real family performance or human authorization was represented.",
+  "operational_limits": [
+    "Each new paper-book account requires exactly one per-family allocation authorization; paper automation requires a second exact-scope strategy-enrollment approval.",
+    "Missing, stale, expired, or non-human approval and failed evidence gates fail closed before paper allocation or before PAPER_INTENT/outbox creation.",
+    "The system enforces declared evidence fields and hashes; an authorized human must review the referenced evidence manifest.",
+    "Live broker trading remains disabled and requires separate release controls."
+  ]
+}

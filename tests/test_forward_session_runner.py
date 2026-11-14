@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 
@@ -6,6 +7,8 @@ from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.cockpit import blotter_from_journal
 from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.approvals import Approval
+from financial_brain.forward_edge.governance import FamilyEvidence, family_action_scope_sha256
 from financial_brain.forward_edge.session_clock import SessionClockProvider
 from financial_brain.forward_edge.session_runner import (
     ExecutionOutcomeUnknown,
@@ -33,6 +36,29 @@ def _config(**changes):
                   benchmark_id="NIFTY50", instruments=("NSE:INFY",),
                   capital_inr="1000000", mode=Mode.LIVE_PAPER)
     values.update(changes)
+    if "family_evidence" not in changes and "family_owner_approval" not in changes:
+        evidence = FamilyEvidence(
+            family_id="test-family", status="VERIFIED", strategy_sha256="a" * 64,
+            frozen_protocol_sha256="b" * 64, evidence_manifest_sha256="c" * 64,
+            protocol_frozen=True, protocol_frozen_at=datetime(2025, 1, 1, tzinfo=timezone.utc),
+            cohort_started_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+            verified_sessions=80, receipt_sessions=80, candidate_count=1,
+            multiplicity_adjusted=True, cost_stress_passed=True,
+            matched_control_lcb_bps=Decimal("1"), net_alpha_lcb_bps=Decimal("1"),
+        )
+        capital = Decimal(values["capital_inr"])
+        scope = family_action_scope_sha256(
+            evidence=evidence, action="AUTO_EXECUTION_ENABLE",
+            current_capital_inr=capital, requested_capital_inr=capital,
+            execution_mode="PAPER",
+        )
+        approval = Approval(
+            "STRATEGY_ENROLLMENT", evidence.family_id, scope, "owner:test", "human",
+            datetime(2025, 1, 1, tzinfo=timezone.utc),
+            datetime(2035, 1, 1, tzinfo=timezone.utc),
+        )
+        values["family_evidence"] = evidence
+        values["family_owner_approval"] = approval
     return ForwardRunConfig(**values)
 
 
@@ -97,9 +123,65 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
                             "PREFLIGHT_RESULT", "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT", "SESSION_STATE",
                             "PAPER_INTENT", "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK", "PAPER_ORDER_UPDATE", "PAPER_SKIP",
                             "SESSION_STATE", "SESSION_CLOSED"]
+    records = DurableJournal(tmp_path / "session.jsonl").records()
+    family_gate = next(r["risk"]["family_automation_gate"] for r in records
+                       if r["t"] == "RISK_VERDICT")
+    assert family_gate["required"] is True and family_gate["approved"] is True
     states = [r["state"] for r in DurableJournal(tmp_path / "session.jsonl").records()
               if r["t"] == "SESSION_STATE"]
     assert states == ["PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED"]
+
+
+def test_live_paper_order_is_blocked_without_family_evidence_and_owner_approval(tmp_path):
+    runner = ForwardSessionRunner(tmp_path / "session.jsonl")
+    config = _config(family_evidence=None, family_owner_approval=None)
+    _approve_preflight(runner, config)
+    execution_calls = []
+    result = runner.run(
+        config, [_event()], decision_at=NOW,
+        decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02,
+                               "forecast_horizon_sessions": 1, "forecast_costs_included": True,
+                               "net_alpha_forecast": _net_alpha_forecast()},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *args: execution_calls.append(args) or {},
+    )
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "FAMILY_AUTOMATION_GATE_BLOCKED"
+    assert execution_calls == []
+    records = DurableJournal(tmp_path / "session.jsonl").records()
+    assert not any(row["t"] == "PAPER_INTENT" for row in records)
+    gate = next(row["risk"]["family_automation_gate"] for row in records
+                if row["t"] == "RISK_VERDICT")
+    assert gate["reasons"] == ["FAMILY_EVIDENCE_REQUIRED"]
+
+
+def test_live_paper_order_is_blocked_when_family_owner_approval_is_expired(tmp_path):
+    base = _config()
+    assert base.family_evidence is not None and base.family_owner_approval is not None
+    expired = Approval(
+        base.family_owner_approval.kind, base.family_owner_approval.subject,
+        base.family_owner_approval.scope_sha256, "owner:test", "human",
+        datetime(2025, 1, 1, tzinfo=timezone.utc),
+        datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    config = _config(family_evidence=base.family_evidence, family_owner_approval=expired)
+    runner = ForwardSessionRunner(tmp_path / "expired-approval.jsonl")
+    _approve_preflight(runner, config)
+    calls = []
+    result = runner.run(
+        config, [_event()], decision_at=NOW,
+        decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02,
+                               "forecast_horizon_sessions": 1, "forecast_costs_included": True,
+                               "net_alpha_forecast": _net_alpha_forecast()},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *args: calls.append(args) or {},
+    )
+    assert result["reason"] == "FAMILY_AUTOMATION_GATE_BLOCKED"
+    assert calls == []
+    records = DurableJournal(tmp_path / "expired-approval.jsonl").records()
+    gate = next(row["risk"]["family_automation_gate"] for row in records
+                if row["t"] == "RISK_VERDICT")
+    assert any("approval has expired" in reason for reason in gate["reasons"])
 
 
 def test_order_updates_are_journaled_during_execution_and_render_exact_remaining_qty(tmp_path):
@@ -332,7 +414,7 @@ def test_no_trade_signal_never_reaches_execution_adapter(tmp_path):
 
 
 def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
-    assert _config().sha256 == "282fc38dd14558bbdc403114f0b5828dcea195ff0eeff423ef07ecb718794095"
+    assert _config().sha256 == "ef27774c1b93108583996914c088c5c3320c5e379da6dff480f1ac924c927660"
     assert _config(capital_inr="1000000.00").sha256 == _config(capital_inr="1000000").sha256
     assert _config(ledger_id="LEDGER-2").sha256 != _config().sha256
     assert _config(risk_policy_sha256="d" * 64).sha256 != _config().sha256

@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.approvals import Approval
+from financial_brain.forward_edge.governance import FamilyEvidence, evaluate_family_action
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent, entry_allowed
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.net_alpha_policy import NetAlphaPolicyError, NetAlphaThresholdRegistry
@@ -67,6 +69,8 @@ class ForwardRunConfig:
     uncertainty_sizing_policy_sha256: str | None = None
     forecast_benefit_policy_sha256: str | None = None
     require_feed_health: bool = False
+    family_evidence: FamilyEvidence | None = None
+    family_owner_approval: Approval | None = None
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
@@ -130,6 +134,22 @@ class ForwardRunConfig:
             canonical["uncertainty_sizing_policy_sha256"] = self.uncertainty_sizing_policy_sha256
         if self.forecast_benefit_policy_sha256 is not None:
             canonical["forecast_benefit_policy_sha256"] = self.forecast_benefit_policy_sha256
+        if self.family_evidence is not None:
+            canonical["family_evidence_sha256"] = self.family_evidence.evidence_sha256
+        if self.family_owner_approval is not None:
+            if self.family_evidence is None:
+                raise RunnerError("family owner approval requires family evidence")
+            approval = self.family_owner_approval
+            canonical["family_owner_approval"] = {
+                "kind": approval.kind, "subject": approval.subject,
+                "scope_sha256": approval.scope_sha256, "actor_id": approval.actor_id,
+                "actor_type": approval.actor_type,
+                "approved_at_utc": approval.approved_at_utc.astimezone(timezone.utc).isoformat()
+                if approval.approved_at_utc.tzinfo is not None else None,
+                "expires_at_utc": approval.expires_at_utc.astimezone(timezone.utc).isoformat()
+                if approval.expires_at_utc.tzinfo is not None else None,
+                "adr_ref": approval.adr_ref,
+            }
         if self.require_feed_health:
             canonical["require_feed_health"] = True
         return canonical
@@ -633,6 +653,7 @@ class ForwardSessionRunner:
         if type(risk.get("approved")) is not bool:
             raise RunnerError("risk adapter must return a dictionary with boolean approved")
         gated_risk = self._apply_net_alpha_hurdle(config, decision, risk)
+        gated_risk = self._apply_family_automation_gate(config, decision, gated_risk, visible_at)
         if risk_record is None or gated_risk != risk:
             risk = gated_risk
             journal.append({"t": "RISK_VERDICT", "session_id": config.session_id, "risk": risk})
@@ -897,6 +918,37 @@ class ForwardSessionRunner:
             out["approved"] = False
             out["reason"] = gate["reason"]
         return out
+
+    @staticmethod
+    def _apply_family_automation_gate(config: ForwardRunConfig, decision: dict,
+                                      risk: dict, now: datetime) -> dict:
+        """Require family proof and exact human approval before a paper order intent."""
+        if config.mode is not Mode.LIVE_PAPER or decision.get("side") not in {"BUY", "SELL"}:
+            return risk
+        if config.family_evidence is None:
+            gate = {"required": True, "approved": False,
+                    "reasons": ["FAMILY_EVIDENCE_REQUIRED"], "evidence_sha256": None}
+        else:
+            capital = Decimal(config.capital_inr)
+            verdict = evaluate_family_action(
+                evidence=config.family_evidence,
+                action="AUTO_EXECUTION_ENABLE",
+                current_capital_inr=capital,
+                requested_capital_inr=capital,
+                owner_approval=config.family_owner_approval,
+                now=now,
+                execution_mode="PAPER",
+            )
+            gate = {"required": True, "approved": verdict.approved,
+                    "action": verdict.action, "family_id": verdict.family_id,
+                    "evidence_sha256": verdict.evidence_sha256,
+                    "scope_sha256": verdict.scope_sha256,
+                    "reasons": list(verdict.reasons),
+                    "verdict_sha256": verdict.verdict_sha256}
+        if gate["approved"]:
+            return {**risk, "family_automation_gate": gate}
+        return {**risk, "approved": False, "reason": "FAMILY_AUTOMATION_GATE_BLOCKED",
+                "family_automation_gate": gate}
 
     def _apply_uncertainty_sizing(self, config: ForwardRunConfig, decision: dict) -> dict:
         """Scale paper-entry quantity by a frozen uncertainty policy or abstain on missing evidence."""

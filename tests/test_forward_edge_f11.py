@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 
@@ -53,18 +54,119 @@ def test_promotion_needs_preauthorization_status_and_trusted_receipt_coverage() 
     assert G.promotion_allowed(status="VERIFIED", preauthorized=True, verified_sessions=0) == (False, "NO_TRUSTED_RECEIPT_COVERAGE")
 
 
-def _approval(kind="CAPITAL", actor="owner:akash", typ="human") -> Approval:
-    return Approval(kind, "pilot", SHA, actor, typ, NOW - timedelta(hours=1), NOW + timedelta(hours=1))
+def _approval(kind="CAPITAL", actor="owner:akash", typ="human", subject="pilot", scope=SHA) -> Approval:
+    return Approval(kind, subject, scope, actor, typ, NOW - timedelta(hours=1), NOW + timedelta(hours=1))
 
 
 def test_changing_capital_risk_or_leverage_needs_a_human_and_agents_cannot() -> None:
-    G.authorize_economic_change("CAPITAL", "pilot", SHA, _approval(), NOW)
+    with pytest.raises(G.GovernanceError, match="family evidence gate"):
+        G.authorize_economic_change("CAPITAL", "pilot", SHA, _approval(), NOW)
+    leverage_approval = _approval(kind="LEVERAGE")
+    G.authorize_economic_change("LEVERAGE", "pilot", SHA, leverage_approval, NOW)
     with pytest.raises(G.GovernanceError, match="cannot approve"):
-        G.authorize_economic_change("CAPITAL", "pilot", SHA, _approval(actor="agent:allocator", typ="agent"), NOW)
+        G.authorize_economic_change("LEVERAGE", "pilot", SHA,
+                                    _approval(kind="LEVERAGE", actor="agent:allocator", typ="agent"), NOW)
     with pytest.raises(G.GovernanceError, match="required"):
         G.authorize_economic_change("LEVERAGE", "pilot", SHA, None, NOW)
     with pytest.raises(G.GovernanceError, match="not an economic"):
         G.authorize_economic_change("STRATEGY_ENROLLMENT", "pilot", SHA, _approval(), NOW)
+
+
+def _family_evidence(**overrides) -> G.FamilyEvidence:
+    values = {
+        "family_id": "family:momentum-v1", "status": "VERIFIED",
+        "strategy_sha256": "1" * 64, "frozen_protocol_sha256": "2" * 64,
+        "evidence_manifest_sha256": "3" * 64, "protocol_frozen": True,
+        "protocol_frozen_at": NOW - timedelta(days=100),
+        "cohort_started_at": NOW - timedelta(days=99), "verified_sessions": 80,
+        "receipt_sessions": 80, "candidate_count": 12, "multiplicity_adjusted": True,
+        "cost_stress_passed": True, "matched_control_lcb_bps": Decimal("1.2"),
+        "net_alpha_lcb_bps": Decimal("0.8"),
+    }
+    values.update(overrides)
+    return G.FamilyEvidence(**values)
+
+
+def _family_approval(evidence, action, *, current="100000", requested="110000",
+                     kind=None, actor="owner:akash", actor_type="human", scope=None):
+    action_kind = kind or ("CAPITAL" if action == "CAPITAL_INCREASE" else "STRATEGY_ENROLLMENT")
+    scoped = scope or G.family_action_scope_sha256(
+        evidence=evidence, action=action,
+        current_capital_inr=Decimal(current), requested_capital_inr=Decimal(requested),
+        execution_mode="PAPER",
+    )
+    return Approval(action_kind, evidence.family_id, scoped, actor, actor_type,
+                    NOW - timedelta(hours=1), NOW + timedelta(hours=1))
+
+
+def test_family_gate_binds_capital_increase_to_costed_protocol_evidence_and_human_review():
+    evidence = _family_evidence()
+    approval = _family_approval(evidence, "CAPITAL_INCREASE")
+    verdict = G.evaluate_family_action(
+        evidence=evidence, action="CAPITAL_INCREASE", current_capital_inr=Decimal("100000"),
+        requested_capital_inr=Decimal("110000"), owner_approval=approval, now=NOW,
+    )
+    assert verdict.approved is True
+    assert verdict.reasons == ()
+    assert verdict.scope_sha256 == approval.scope_sha256
+
+
+def test_family_gate_requires_exact_owner_approval_and_never_authorizes_live():
+    evidence = _family_evidence()
+    missing = G.evaluate_family_action(
+        evidence=evidence, action="CAPITAL_INCREASE", current_capital_inr=Decimal("100000"),
+        requested_capital_inr=Decimal("110000"), owner_approval=None, now=NOW,
+    )
+    assert "SCOPED_HUMAN_OWNER_APPROVAL_REQUIRED" in missing.reasons
+
+    agent = _family_approval(evidence, "CAPITAL_INCREASE", actor="agent:allocator", actor_type="agent")
+    blocked_agent = G.evaluate_family_action(
+        evidence=evidence, action="CAPITAL_INCREASE", current_capital_inr=Decimal("100000"),
+        requested_capital_inr=Decimal("110000"), owner_approval=agent, now=NOW,
+    )
+    assert any(reason.startswith("OWNER_APPROVAL_FAILED:") for reason in blocked_agent.reasons)
+
+    stale = _family_approval(evidence, "CAPITAL_INCREASE", scope="4" * 64)
+    blocked_stale = G.evaluate_family_action(
+        evidence=evidence, action="CAPITAL_INCREASE", current_capital_inr=Decimal("100000"),
+        requested_capital_inr=Decimal("110000"), owner_approval=stale, now=NOW,
+    )
+    assert any("stale approval" in reason for reason in blocked_stale.reasons)
+
+    paper_approval = _family_approval(evidence, "AUTO_EXECUTION_ENABLE", current="100000",
+                                      requested="100000")
+    live = G.evaluate_family_action(
+        evidence=evidence, action="AUTO_EXECUTION_ENABLE", current_capital_inr=Decimal("100000"),
+        requested_capital_inr=Decimal("100000"), owner_approval=paper_approval, now=NOW,
+        execution_mode="LIVE",
+    )
+    assert live.approved is False
+    assert "LIVE_MODE_REQUIRES_SEPARATE_RELEASE_GATE" in live.reasons
+
+
+@pytest.mark.parametrize(("changes", "reason"), [
+    ({"status": "SHADOW_ONLY"}, "FAMILY_STATUS_NOT_VERIFIED"),
+    ({"protocol_frozen": False}, "FROZEN_PROTOCOL_NOT_ATTESTED_BEFORE_COHORT"),
+    ({"protocol_frozen_at": NOW}, "FROZEN_PROTOCOL_NOT_ATTESTED_BEFORE_COHORT"),
+    ({"verified_sessions": 59}, "INSUFFICIENT_FAMILY_VERIFIED_SESSIONS"),
+    ({"receipt_sessions": 79}, "FAMILY_RECEIPT_COVERAGE_INCOMPLETE"),
+    ({"candidate_count": 0}, "FAMILY_CANDIDATE_DENOMINATOR_MISSING"),
+    ({"multiplicity_adjusted": False}, "FAMILY_MULTIPLICITY_NOT_ADJUSTED"),
+    ({"cost_stress_passed": False}, "FAMILY_COST_STRESS_FAILED"),
+    ({"matched_control_lcb_bps": Decimal("0")}, "FAMILY_MATCHED_CONTROL_NOT_POSITIVE"),
+    ({"net_alpha_lcb_bps": Decimal("-0.1")}, "FAMILY_NET_ALPHA_NOT_POSITIVE"),
+])
+def test_each_family_evidence_failure_blocks_capital_and_automation(changes, reason):
+    evidence = _family_evidence(**changes)
+    for action in ("CAPITAL_INCREASE", "AUTO_EXECUTION_ENABLE"):
+        current, requested = Decimal("100000"), Decimal("110000") if action == "CAPITAL_INCREASE" else Decimal("100000")
+        approval = _family_approval(evidence, action, current=str(current), requested=str(requested))
+        verdict = G.evaluate_family_action(
+            evidence=evidence, action=action, current_capital_inr=current,
+            requested_capital_inr=requested, owner_approval=approval, now=NOW,
+        )
+        assert verdict.approved is False
+        assert reason in verdict.reasons
 
 
 def test_transitions_are_logged_and_never_deleted() -> None:

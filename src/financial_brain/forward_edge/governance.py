@@ -5,6 +5,8 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
+import re
 
 from financial_brain.forward_edge.approvals import Approval, ApprovalError, validate_approval
 
@@ -81,12 +83,180 @@ ECONOMIC_KINDS = ("CAPITAL", "LEVERAGE", "MICRO_RISK_BUDGET", "LIVE_CASH_ENABLE"
 def authorize_economic_change(kind: str, subject: str, scope_sha256: str, approval: Approval | None, now: datetime) -> None:
     if kind not in ECONOMIC_KINDS:
         raise GovernanceError("not an economic-risk change kind")
+    if kind == "CAPITAL":
+        raise GovernanceError("family evidence gate required; use evaluate_family_action")
     if approval is None:
         raise GovernanceError("a human approval is required")
     try:
         validate_approval(approval, kind=kind, subject=subject, scope_sha256=scope_sha256, now=now)
     except ApprovalError as exc:
         raise GovernanceError(f"change refused: {exc}") from exc
+
+
+# ---- PE-0170 family-specific capital and paper-automation gate ----
+
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+@dataclass(frozen=True)
+class FamilyEvidence:
+    """Hashable family-level evidence needed before a paper-risk increase or automation."""
+
+    family_id: str
+    status: str
+    strategy_sha256: str
+    frozen_protocol_sha256: str
+    evidence_manifest_sha256: str
+    protocol_frozen: bool
+    protocol_frozen_at: datetime
+    cohort_started_at: datetime
+    verified_sessions: int
+    receipt_sessions: int
+    candidate_count: int
+    multiplicity_adjusted: bool
+    cost_stress_passed: bool
+    matched_control_lcb_bps: Decimal
+    net_alpha_lcb_bps: Decimal
+
+    def __post_init__(self) -> None:
+        if not self.family_id.strip():
+            raise GovernanceError("family_id is required")
+        for name in ("strategy_sha256", "frozen_protocol_sha256", "evidence_manifest_sha256"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not _SHA256.fullmatch(value):
+                raise GovernanceError(f"{name} must be a lowercase SHA-256")
+        for label, stamp in (("protocol_frozen_at", self.protocol_frozen_at),
+                             ("cohort_started_at", self.cohort_started_at)):
+            if stamp.tzinfo is None or stamp.utcoffset() is None:
+                raise GovernanceError(f"{label} must be timezone-aware")
+        for name, value in (("matched_control_lcb_bps", self.matched_control_lcb_bps),
+                            ("net_alpha_lcb_bps", self.net_alpha_lcb_bps)):
+            if not isinstance(value, Decimal) or not value.is_finite():
+                raise GovernanceError(f"{name} must be a finite Decimal")
+
+    @property
+    def evidence_sha256(self) -> str:
+        body = {
+            **self.__dict__,
+            "protocol_frozen_at": self.protocol_frozen_at.astimezone(timezone.utc).isoformat(),
+            "cohort_started_at": self.cohort_started_at.astimezone(timezone.utc).isoformat(),
+            "matched_control_lcb_bps": str(self.matched_control_lcb_bps),
+            "net_alpha_lcb_bps": str(self.net_alpha_lcb_bps),
+        }
+        return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
+                                         allow_nan=False).encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
+class FamilyActionVerdict:
+    approved: bool
+    action: str
+    family_id: str
+    evidence_sha256: str
+    scope_sha256: str
+    reasons: tuple[str, ...]
+    verdict_sha256: str
+
+
+def family_action_scope_sha256(*, evidence: FamilyEvidence, action: str,
+                               current_capital_inr: Decimal,
+                               requested_capital_inr: Decimal,
+                               execution_mode: str = "PAPER") -> str:
+    """Bind owner approval to one family, evidence set, action and exact capital scope."""
+    body = {
+        "family_id": evidence.family_id, "family_evidence_sha256": evidence.evidence_sha256,
+        "action": action,
+        "current_capital_inr": format(Decimal(current_capital_inr).normalize(), "f"),
+        "requested_capital_inr": format(Decimal(requested_capital_inr).normalize(), "f"),
+        "execution_mode": execution_mode,
+    }
+    return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
+                           allow_nan=False).encode("utf-8")).hexdigest()
+
+
+def evaluate_family_action(*, evidence: FamilyEvidence, action: str,
+                           current_capital_inr: Decimal,
+                           requested_capital_inr: Decimal,
+                           owner_approval: Approval | None,
+                           now: datetime, execution_mode: str = "PAPER",
+                           min_verified_sessions: int = 60) -> FamilyActionVerdict:
+    """Require frozen, multiplicity-adjusted, costed family proof and scoped human approval.
+
+    This gate only authorizes paper capital changes or paper automation. Live execution is
+    deliberately unavailable here and must pass its separate compliance/rehearsal gate.
+    """
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise GovernanceError("now must be timezone-aware")
+    try:
+        current_capital = Decimal(current_capital_inr)
+        requested_capital = Decimal(requested_capital_inr)
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise GovernanceError("capital amounts must be finite positive decimals") from exc
+    if (not current_capital.is_finite() or current_capital < 0 or
+            not requested_capital.is_finite() or requested_capital <= 0):
+        raise GovernanceError("current capital must be non-negative and requested capital finite positive")
+    if type(min_verified_sessions) is not int or min_verified_sessions < 1:
+        raise GovernanceError("min_verified_sessions must be a positive integer")
+    if action not in {"CAPITAL_INCREASE", "INITIAL_ALLOCATION", "AUTO_EXECUTION_ENABLE"}:
+        raise GovernanceError("unknown family action")
+    if action != "INITIAL_ALLOCATION" and current_capital <= 0:
+        raise GovernanceError("non-initial family action requires positive current capital")
+    reasons: set[str] = set()
+    if execution_mode != "PAPER":
+        reasons.add("LIVE_MODE_REQUIRES_SEPARATE_RELEASE_GATE")
+    if action == "CAPITAL_INCREASE" and requested_capital <= current_capital:
+        reasons.add("REQUEST_IS_NOT_A_CAPITAL_INCREASE")
+    if action == "INITIAL_ALLOCATION" and current_capital != 0:
+        reasons.add("INITIAL_ALLOCATION_REQUIRES_ZERO_PRIOR_CAPITAL")
+    if action == "INITIAL_ALLOCATION" and execution_mode != "PAPER":
+        reasons.add("INITIAL_ALLOCATION_REQUIRES_PAPER_MODE")
+    if action == "AUTO_EXECUTION_ENABLE" and requested_capital > current_capital:
+        reasons.add("AUTO_EXECUTION_CANNOT_INCREASE_CAPITAL")
+    if evidence.status != "VERIFIED":
+        reasons.add("FAMILY_STATUS_NOT_VERIFIED")
+    if evidence.protocol_frozen is not True or not (
+        evidence.protocol_frozen_at.astimezone(timezone.utc)
+        < evidence.cohort_started_at.astimezone(timezone.utc)
+    ):
+        reasons.add("FROZEN_PROTOCOL_NOT_ATTESTED_BEFORE_COHORT")
+    if (type(evidence.verified_sessions) is not int
+            or evidence.verified_sessions < min_verified_sessions):
+        reasons.add("INSUFFICIENT_FAMILY_VERIFIED_SESSIONS")
+    if (type(evidence.receipt_sessions) is not int
+            or evidence.receipt_sessions != evidence.verified_sessions):
+        reasons.add("FAMILY_RECEIPT_COVERAGE_INCOMPLETE")
+    if type(evidence.candidate_count) is not int or evidence.candidate_count < 1:
+        reasons.add("FAMILY_CANDIDATE_DENOMINATOR_MISSING")
+    if evidence.multiplicity_adjusted is not True:
+        reasons.add("FAMILY_MULTIPLICITY_NOT_ADJUSTED")
+    if evidence.cost_stress_passed is not True:
+        reasons.add("FAMILY_COST_STRESS_FAILED")
+    if evidence.matched_control_lcb_bps <= 0:
+        reasons.add("FAMILY_MATCHED_CONTROL_NOT_POSITIVE")
+    if evidence.net_alpha_lcb_bps <= 0:
+        reasons.add("FAMILY_NET_ALPHA_NOT_POSITIVE")
+
+    approval_kind = "CAPITAL" if action == "CAPITAL_INCREASE" else "STRATEGY_ENROLLMENT"
+    scope = family_action_scope_sha256(
+        evidence=evidence, action=action, current_capital_inr=current_capital,
+        requested_capital_inr=requested_capital, execution_mode=execution_mode,
+    )
+    if owner_approval is None:
+        reasons.add("SCOPED_HUMAN_OWNER_APPROVAL_REQUIRED")
+    else:
+        try:
+            validate_approval(owner_approval, kind=approval_kind, subject=evidence.family_id,
+                              scope_sha256=scope, now=now)
+        except ApprovalError as exc:
+            reasons.add(f"OWNER_APPROVAL_FAILED:{exc}")
+    ordered = tuple(sorted(reasons))
+    body = {"approved": not ordered, "action": action, "family_id": evidence.family_id,
+            "evidence_sha256": evidence.evidence_sha256, "scope_sha256": scope,
+            "reasons": ordered}
+    digest = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
+                              allow_nan=False).encode("utf-8")).hexdigest()
+    return FamilyActionVerdict(not ordered, action, evidence.family_id,
+                               evidence.evidence_sha256, scope, ordered, digest)
 
 
 # ---- FE-0130 transition log ----
