@@ -5,6 +5,7 @@ rem Set FB_DAILY_CYCLE_CONFIG to generate a manifest from verified runner close 
 rem FB_DAILY_CYCLE_MANIFEST remains available for an explicitly prepared manifest.
 cd /d "%~dp0.."
 set "PYTHONPATH=%CD%\src"
+if not defined FB_DAILY_CYCLE_CONFIG if not "%~1"=="" set "FB_DAILY_CYCLE_CONFIG=%~1"
 if not exist ".venv\Scripts\python.exe" (
   echo Repository virtual environment is missing: .venv\Scripts\python.exe
   exit /b 64

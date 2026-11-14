@@ -18,7 +18,8 @@
     "The daily-paper-manifest CLI derives one terminal runner session for every frozen-plan strategy/account binding, requires an explicit complete marks map, accepts explicit historical rows, and writes an immutable content-hashed manifest. Ambiguous sessions fail closed.",
     "Optional Kite close-mark derivation uses only hash-consistent kite_connect NSE quote events with valid two-sided depth, raw quote SHA-256, availability/source-age checks, and an explicit maximum age; missing or stale held-symbol quotes fail closed.",
     "The configured daily-paper-run CLI derives close time from verified terminal receipts, generates an immutable manifest from the frozen plan and configured runner journals, rechecks identical inputs on retry, and runs preflight before closing books.",
-    "The Windows paper_daily_finalize.cmd wrapper accepts FB_DAILY_CYCLE_CONFIG for generated runs or FB_DAILY_CYCLE_MANIFEST for explicit runs; generated mode derives the India session date and propagates failures. It does not register a scheduled task."
+    "The Windows paper_daily_finalize.cmd wrapper accepts FB_DAILY_CYCLE_CONFIG for generated runs or FB_DAILY_CYCLE_MANIFEST for explicit runs; generated mode derives the India session date and propagates failures. It does not register a scheduled task.",
+    "A Windows PowerShell installer defines a weekday Task Scheduler task with a WhatIf preview, current interactive-user principal, configured runner, and no broker-order action; registration remains operator-controlled."
   ],
   "blockers": [
     "No Windows Task Scheduler job invokes the wrapper; the owner-managed history_sessions file remains an explicit input.",
@@ -33,8 +34,9 @@
     "src/financial_brain/forward_edge/daily_paper_cycle.py": "b975a6ddedddfdb11f007f0e3576b5573b156093b34d5eb790fc0f3f4359fe1e",
     "tests/test_daily_paper_cycle.py": "daeefa9bc33ecb54c599032bd8d872b67288fcc2cb6df0f03f1033cf848c7476",
     "src/financial_brain/forward_edge/eod_paper_archive.py": "c7009ccb1fe98891aee8faede9863efedde60969f8c9d8b10cafc55b146ddbbe",
-    "scripts/paper_daily_finalize.cmd": "29f59496be63048c0669098c47e256945ad23717bfbc565d5f493c585147a7e8",
-    "docs/forward-edge/daily-paper-cycle.md": "d6e7f39a684daf023f2cffe5be416d4d1d4a512e1e305e70b5d666ede522732e",
-    "docs/edge-program/pe-0157-book-performance-report.md": "ddbbc918d3b7ec41c27e1e0c914b2aa4b27c87ca1bca07f8904e6a0037f52f37"
+    "scripts/paper_daily_finalize.cmd": "0e2166813e4ad4f845458e213cab9daa42302c196ba77611d219f47347413815",
+    "docs/forward-edge/daily-paper-cycle.md": "349fe55d16fd61881088657e886cb347268875d648b36e22fc204d6c78cfdae2",
+    "docs/edge-program/pe-0157-book-performance-report.md": "b22811837b27454fd5ef5e10cc08ff0ce36ec9602ae0b1256a92e25034b1c5ef",
+    "scripts/register_paper_daily_task.ps1": "fa0ff09efb064bb35bec5e4383e317399aba5875e9f4da45177feb9eaa690834"
   }
 }

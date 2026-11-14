@@ -70,7 +70,7 @@ An OS scheduler can invoke this command after the session capture process writes
 }
 ```
 
-Relative paths resolve from the config file. `history_sessions` is optional; without it, the report contains only the selected session and is not a multi-session performance record. The Windows wrapper accepts `FB_DAILY_CYCLE_CONFIG` and derives the exchange date using the Windows India time zone. The wrapper does not register a scheduler task, supply authoritative market inputs, or attest that a local Kite-tagged event came from a provider.
+Relative paths resolve from the config file. `history_sessions` is optional; without it, the report contains only the selected session and is not a multi-session performance record. The Windows wrapper accepts `FB_DAILY_CYCLE_CONFIG` and derives the exchange date using the Windows India time zone. `scripts/register_paper_daily_task.ps1` prepares a weekday Task Scheduler entry for the wrapper, using the current interactive user and local system schedule time (default 16:15). Inspect the proposed registration with `-WhatIf`; actual registration is an explicit operator action. The installer does not supply authoritative market inputs or attest that a local Kite-tagged event came from a provider. The scheduled task runs only while its interactive user is logged on.
 
 ## Windows scheduled-task wrapper
 

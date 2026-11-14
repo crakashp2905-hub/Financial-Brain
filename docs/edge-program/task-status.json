@@ -3466,7 +3466,8 @@
         "tests/test_daily_paper_cycle.py",
         "docs/forward-edge/daily-paper-cycle.md",
         "src/financial_brain/forward_edge/eod_paper_archive.py",
-        "scripts/paper_daily_finalize.cmd"
+        "scripts/paper_daily_finalize.cmd",
+        "scripts/register_paper_daily_task.ps1"
       ],
       "tests": [
         "test_daily_evidence_bundle.py",
@@ -3478,8 +3479,8 @@
         "test_daily_manifest_builder_derives_fresh_close_bid_from_kite_tagged_quote",
         "test_configured_daily_runner_builds_from_verified_close_receipts_and_retries_immutably"
       ],
-      "test_result": "Configured daily-paper-run now derives capture time from verified SESSION_CLOSED receipts, generates/reuses an immutable manifest, derives fresh Kite-tagged close bids, and preflights before close. Combined manifest, configured-run, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suite: 32 passed; Ruff and mypy passed. Synthetic fixtures only; no real Kite capture is established.",
-      "evidence_sha256": "41bb4617e82b6e5bddd7b9bcfde330beb8f1e24839f4b09f6226480c6964115f",
+      "test_result": "Configured daily-paper-run now derives capture time from verified SESSION_CLOSED receipts, generates/reuses an immutable manifest, derives fresh Kite-tagged close bids, and preflights before close. Combined manifest, configured-run, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suite: 32 passed; Ruff and mypy passed; Windows PowerShell syntax parsing and isolated -WhatIf installer smoke passed. No Task Scheduler job was registered. Synthetic fixtures only; no real Kite capture is established.",
+      "evidence_sha256": "dd9640f3807f3e423253bdaa509408d4c4be4bfd5420bc3ff2880a5681e77a5d",
       "blockers": [
         "No Windows Task Scheduler job has been registered or enabled; the owner must provide and maintain the config and schedule.",
         "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",
@@ -3522,7 +3523,8 @@
         "tests/test_daily_paper_cycle.py",
         "docs/forward-edge/daily-paper-cycle.md",
         "src/financial_brain/forward_edge/eod_paper_archive.py",
-        "scripts/paper_daily_finalize.cmd"
+        "scripts/paper_daily_finalize.cmd",
+        "scripts/register_paper_daily_task.ps1"
       ],
       "tests": [
         "test_book_performance_report.py",
@@ -3533,8 +3535,8 @@
         "test_daily_manifest_builder_derives_fresh_close_bid_from_kite_tagged_quote",
         "test_configured_daily_runner_builds_from_verified_close_receipts_and_retries_immutably"
       ],
-      "test_result": "Configured daily-paper-run now derives capture time from verified SESSION_CLOSED receipts, generates/reuses an immutable manifest, derives fresh Kite-tagged close bids, and preflights before close. Combined manifest, configured-run, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suite: 32 passed; Ruff and mypy passed. Synthetic fixtures only; no real Kite capture is established.",
-      "evidence_sha256": "20ab4d35254c4d7fa7ba6a953a827a86cfae3c636b78012c06df755685819405",
+      "test_result": "Configured daily-paper-run now derives capture time from verified SESSION_CLOSED receipts, generates/reuses an immutable manifest, derives fresh Kite-tagged close bids, and preflights before close. Combined manifest, configured-run, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suite: 32 passed; Ruff and mypy passed; Windows PowerShell syntax parsing and isolated -WhatIf installer smoke passed. No Task Scheduler job was registered. Synthetic fixtures only; no real Kite capture is established.",
+      "evidence_sha256": "34f2c5e7ca1e95c36bb7d85f3fdfe97dd158a4bc728574465298149f9483c946",
       "blockers": [
         "No Windows Task Scheduler job invokes the wrapper; the owner-managed history_sessions file remains an explicit input.",
         "No OS scheduler invokes daily-paper-cycle for each market session; multi-session denominators require explicit history_sessions.",

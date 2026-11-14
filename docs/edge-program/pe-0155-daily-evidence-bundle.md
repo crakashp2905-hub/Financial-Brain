@@ -17,6 +17,7 @@
 - Optional Kite mark derivation selects the latest fresh, valid two-sided NSE bid per held position from hash-consistent `kite_connect` quote events and records its raw quote hash and availability time. Missing/stale events fail closed. A local source tag is not independent proof of an actual provider session.
 - `daily-paper-run --config ... --session-date ...` derives capture time from verified `SESSION_CLOSED` receipts, generates an immutable manifest from the configured frozen plan and runner journals, and runs preflight before close. Retries revalidate unchanged inputs and reuse the same date/plan manifest.
 - The Windows wrapper accepts `FB_DAILY_CYCLE_CONFIG` and computes the exchange date in the India time zone. It can run without a manually prebuilt manifest; registration/enabling of the OS task remains an operator action.
+- `scripts/register_paper_daily_task.ps1` validates the config and repo virtual environment, then defines a weekday task for the wrapper under the current interactive user. It supports `-WhatIf`; this task has not been registered in the owner environment.
 - The cycle derives account journal locations from the frozen registry and fails before finalization unless manifest membership exactly matches the plan. It is resumable per book through immutable close archives and bundles.
 - [Daily cycle manifest and operator contract](../forward-edge/daily-paper-cycle.md) documents required inputs, scheduler invocation, and retry behavior.
 
@@ -26,4 +27,4 @@
 
 ## Remaining evidence gap
 
-No Windows Task Scheduler job has been registered or enabled, and the owner must maintain the run config and history input. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until scheduling and owner-controlled key custody are established.
+No Windows Task Scheduler job has been registered or enabled, and the owner must maintain the run config and history input. The task requires its interactive user to be logged on. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until scheduling and owner-controlled key custody are established.
