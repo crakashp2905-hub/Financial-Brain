@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 182,
-  "unrecorded_tasks": 36,
+  "recorded_tasks": 183,
+  "unrecorded_tasks": 35,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3979,6 +3979,29 @@
       ],
       "test_result": "20 cockpit tests passed; Ruff, targeted mypy, and refreshed source inventory passed. Metrics reconcile when present; all registered strategies render and failed/insufficient rows sort first.",
       "evidence_sha256": "2321988f82e0185850e39e9659df7c18e3b0f7abc62794dc6c5eceac929a0c0a",
+      "blockers": []
+    },
+    {
+      "id": "PE-0185",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/cockpit.py",
+        "src/financial_brain/forward_edge/eod_paper_archive.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_portfolio_nav_dashboard.py",
+        "tests/test_eod_paper_archive.py",
+        "docs/edge-program/pe-0185-portfolio-nav-dashboard-evidence.md",
+        "docs/edge-program/pe-0185-portfolio-nav-dashboard-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_portfolio_nav_dashboard.py",
+        "test_eod_paper_archive.py",
+        "test_forward_edge_f10.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "27 dashboard, EOD archive, and cockpit tests passed; Ruff, targeted mypy, and source inventory passed. Archive hashes, cash plus marked inventory, and exact session-to-ledger NAV rows reconcile.",
+      "evidence_sha256": "9e74019b8881fad5ca046fe9c2339195a2ff3f9603df7191f2e4d9ef163c4d97",
       "blockers": []
     }
   ]

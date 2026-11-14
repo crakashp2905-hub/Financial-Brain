@@ -6,6 +6,8 @@ Pages carry the claim tier and the reasons live mode is locked.
 from __future__ import annotations
 
 import re
+import hashlib
+import json
 from datetime import datetime, timezone
 from decimal import Decimal
 from html import escape
@@ -209,6 +211,82 @@ def strategy_comparison(rows: list[dict]) -> str:
     body = "".join(item[3] for item in rendered)
     html = _page("Strategy comparison", f"<p>All {len(rows)} registered outcomes are shown; failed and insufficient rows remain visible.</p>"
                  f"<table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table>")
+    assert_read_only(html)
+    return html
+
+
+def portfolio_nav(archives: list[dict], canonical_nav_rows: list[dict]) -> str:
+    """Render cash plus marked open positions, verifying every session against the account NAV journal."""
+    if not archives:
+        raise CockpitError("portfolio NAV needs at least one archived session")
+
+    def canonical(value: object) -> bytes:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+    def money(value: object, label: str) -> Decimal:
+        try:
+            parsed = Decimal(str(value))
+        except Exception as exc:
+            raise CockpitError(f"{label} must be a finite decimal") from exc
+        if not parsed.is_finite():
+            raise CockpitError(f"{label} must be a finite decimal")
+        return parsed
+
+    ledger_by_date: dict[str, dict] = {}
+    for row in canonical_nav_rows:
+        day = row.get("session_date")
+        if not isinstance(day, str) or day in ledger_by_date:
+            raise CockpitError("canonical NAV ledger has a missing or duplicate session date")
+        ledger_by_date[day] = row
+    archive_by_date: dict[str, dict] = {}
+    for original in archives:
+        row = dict(original)
+        for external in ("archive_path", "archive_sha256", "next_open_reconciliation"):
+            row.pop(external, None)
+        day = row.get("session_date")
+        if not isinstance(day, str) or day in archive_by_date:
+            raise CockpitError("NAV archive has a missing or duplicate session date")
+        claimed = row.get("snapshot_sha256")
+        unsigned = {key: value for key, value in row.items() if key != "snapshot_sha256"}
+        if not isinstance(claimed, str) or hashlib.sha256(canonical(unsigned)).hexdigest() != claimed:
+            raise CockpitError(f"NAV archive hash is invalid for {day}")
+        inventory = row.get("inventory")
+        if not isinstance(inventory, list):
+            raise CockpitError(f"NAV inventory is missing for {day}")
+        inventory_hash = hashlib.sha256(canonical(inventory)).hexdigest()
+        if row.get("inventory_sha256") != inventory_hash:
+            raise CockpitError(f"NAV inventory hash is invalid for {day}")
+        cash, equity = money(row.get("cash"), "cash"), money(row.get("equity"), "equity")
+        open_value = sum((money(item.get("market_value"), "position market value")
+                          for item in inventory if isinstance(item, dict)), Decimal(0))
+        if len(inventory) != sum(isinstance(item, dict) for item in inventory):
+            raise CockpitError(f"NAV inventory row is malformed for {day}")
+        if equity != cash + open_value:
+            raise CockpitError(f"NAV does not reconcile to cash and open positions for {day}")
+        snapshot = row.get("snapshot")
+        ledger = ledger_by_date.get(day)
+        if ledger is None:
+            raise CockpitError(f"NAV session coverage mismatch: canonical ledger row is missing for {day}")
+        if not isinstance(snapshot, dict) or snapshot != ledger:
+            raise CockpitError(f"dashboard NAV does not reproduce the canonical ledger row for {day}")
+        if money(snapshot.get("nav"), "canonical NAV") != equity:
+            raise CockpitError(f"canonical ledger NAV differs from marked equity for {day}")
+        archive_by_date[day] = {"cash": cash, "open_value": open_value, "nav": equity,
+                                "external_flow": money(snapshot.get("external_flow"), "external flow"),
+                                "snapshot_sha256": claimed}
+    if set(archive_by_date) != set(ledger_by_date):
+        missing_archives = sorted(set(ledger_by_date) - set(archive_by_date))
+        missing_ledger = sorted(set(archive_by_date) - set(ledger_by_date))
+        raise CockpitError(f"NAV session coverage mismatch: missing archives={missing_archives}, missing ledger={missing_ledger}")
+    rows = []
+    for day, values in sorted(archive_by_date.items()):
+        rows.append("<tr>" + "</td><td>".join(escape(str(value)) for value in (
+            day, values["cash"], values["open_value"], values["nav"], values["external_flow"],
+            values["snapshot_sha256"])) + "</td></tr>")
+    table = ("<table><thead><tr><th>Session</th><th>Cash</th><th>Open positions</th>"
+             "<th>Portfolio NAV</th><th>External flow</th><th>Archive SHA-256</th></tr></thead><tbody>"
+             + "".join(rows) + "</tbody></table>")
+    html = _page("Portfolio NAV", f"<p>Cash plus marked open positions; all {len(rows)} sessions reconcile to canonical ledger snapshots.</p>{table}")
     assert_read_only(html)
     return html
 
