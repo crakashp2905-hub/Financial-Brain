@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 180,
-  "unrecorded_tasks": 38,
+  "recorded_tasks": 181,
+  "unrecorded_tasks": 37,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3941,6 +3941,26 @@
       ],
       "test_result": "4 approval-scoped rollback tests passed as part of a 23-test focused run; Ruff, targeted mypy, and source/strategy inventory checks passed. Rollback binds alarm evidence and separately authorizes capital changes.",
       "evidence_sha256": "a1297fd49d98e398912a3a12b526ed1d7a1f63760c229fd6fe60e5da17eb64c6",
+      "blockers": []
+    },
+    {
+      "id": "PE-0183",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/cockpit.py",
+        "tests/test_forward_edge_f10.py",
+        "tests/test_premarket_preflight.py",
+        "docs/edge-program/pe-0183-session-overview-evidence.md",
+        "docs/edge-program/pe-0183-session-overview-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_forward_edge_f10.py",
+        "test_premarket_preflight.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "18 cockpit tests passed; combined cockpit, preflight, and inventory run had 40 passed. Ruff and targeted mypy passed. Missing, stale, future, incomplete, and latched controls block readiness.",
+      "evidence_sha256": "3ca18509c9cb9ea2ccae1c1caa31d34f3c1f8132770dbf63821836536d5c3484",
       "blockers": []
     }
   ]

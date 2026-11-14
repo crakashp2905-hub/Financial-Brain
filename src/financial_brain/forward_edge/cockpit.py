@@ -6,6 +6,7 @@ Pages carry the claim tier and the reasons live mode is locked.
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 from decimal import Decimal
 from html import escape
 
@@ -44,6 +45,99 @@ def landing(*, feed_ok: bool, broker: str, market_status: str, risk_gates_clear:
             f" | Broker: {escape(broker)} | Feed: {'OK' if feed_ok else 'DEGRADED'} | Risk gates: "
             f"{'CLEAR' if risk_gates_clear else 'LATCHED'}</p><ul>{items}</ul>")
     html = _page("Session landing", body)
+    assert_read_only(html)
+    return html
+
+
+def session_overview(*, now: datetime, feed: dict, calendar: dict,
+                     active_version: dict | None, broker: dict,
+                     risk_latches: list[str]) -> str:
+    """Render a fail-closed session overview; stale or incomplete evidence blocks readiness."""
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise CockpitError("overview clock must be timezone-aware")
+    now_utc = now.astimezone(timezone.utc)
+    blockers: list[str] = []
+
+    def fresh(item: dict, timestamp_key: str, max_age_key: str, label: str) -> tuple[bool, str]:
+        stamp = item.get(timestamp_key)
+        age_limit = item.get(max_age_key)
+        try:
+            observed = datetime.fromisoformat(stamp) if isinstance(stamp, str) else None
+            if observed is None or observed.tzinfo is None or observed.utcoffset() is None:
+                raise ValueError
+            if type(age_limit) is not int or age_limit < 0:
+                raise ValueError
+            age = (now_utc - observed.astimezone(timezone.utc)).total_seconds()
+        except (TypeError, ValueError):
+            blockers.append(f"{label}_EVIDENCE_MISSING_OR_INVALID")
+            return False, "MISSING / INVALID"
+        if age < 0:
+            blockers.append(f"{label}_TIMESTAMP_IN_FUTURE")
+            return False, "FUTURE TIMESTAMP"
+        if age > age_limit:
+            blockers.append(f"{label}_STALE")
+            return False, f"STALE ({int(age)}s; limit {age_limit}s)"
+        return True, f"FRESH ({int(age)}s)"
+
+    feed_fresh, feed_state = fresh(feed, "last_received_utc", "max_age_seconds", "FEED")
+    feed_complete = feed.get("complete") is True
+    if not feed_complete:
+        blockers.append("FEED_INCOMPLETE")
+        feed_state = "INCOMPLETE / " + feed_state
+    if not feed.get("source") or not feed.get("exchange"):
+        blockers.append("FEED_PROVENANCE_MISSING")
+        feed_state = "INCOMPLETE PROVENANCE / " + feed_state
+
+    calendar_fresh, calendar_state = fresh(
+        calendar, "checked_at_utc", "max_age_seconds", "CALENDAR")
+    if calendar.get("is_session") is not True:
+        blockers.append("CALENDAR_NOT_CONFIRMED_TRADING_SESSION")
+        calendar_state = "CLOSED / UNKNOWN / " + calendar_state
+    if (not calendar.get("version")
+            or not re.fullmatch(r"[0-9a-f]{64}", str(calendar.get("evidence_sha256", "")))):
+        blockers.append("CALENDAR_PROVENANCE_MISSING")
+        calendar_state = "INCOMPLETE PROVENANCE / " + calendar_state
+
+    version_ok = bool(active_version and active_version.get("strategy_id")
+                      and active_version.get("version")
+                      and re.fullmatch(r"[0-9a-f]{64}", str(active_version.get("artifact_sha256", ""))))
+    if not version_ok:
+        blockers.append("ACTIVE_STRATEGY_VERSION_MISSING_OR_INVALID")
+    version_details = "no valid active version"
+    if active_version is not None and version_ok:
+        version_details = f"{active_version.get('strategy_id')} v{active_version.get('version')}"
+
+    broker_fresh, broker_state = fresh(
+        broker, "observed_at_utc", "max_age_seconds", "BROKER_READ_ONLY")
+    broker_evidence_valid = bool(re.fullmatch(r"[0-9a-f]{64}", str(broker.get("evidence_sha256", ""))))
+    if broker.get("read_only") is not True or not broker.get("session_id") or not broker_evidence_valid:
+        blockers.append("BROKER_READ_ONLY_EVIDENCE_INCOMPLETE")
+        broker_state = "INCOMPLETE / " + broker_state
+
+    normalized_latches = [str(latch).strip() for latch in risk_latches if str(latch).strip()]
+    if normalized_latches:
+        blockers.extend(f"RISK_LATCH:{latch}" for latch in normalized_latches)
+
+    ready = (feed_fresh and feed_complete and calendar_fresh and calendar.get("is_session") is True
+             and version_ok and broker_fresh and broker.get("read_only") is True
+             and bool(broker.get("session_id")) and broker_evidence_valid
+             and not normalized_latches and not blockers)
+    verdict = "PAPER SESSION READY" if ready else "NOT READY — TRADING BLOCKED"
+    rows = [
+        ("Feed", feed_state, f"source={feed.get('source') or 'UNKNOWN'}; exchange={feed.get('exchange') or 'UNKNOWN'}"),
+        ("Market calendar", calendar_state, f"session={calendar.get('is_session', 'UNKNOWN')}; version={calendar.get('version') or 'UNKNOWN'}"),
+        ("Active strategy", "FROZEN" if version_ok else "MISSING / INVALID", version_details),
+        ("Broker session", broker_state, f"read-only={broker.get('read_only', 'UNKNOWN')}; session={broker.get('session_id') or 'UNKNOWN'}"),
+        ("Risk latches", "LATCHED" if normalized_latches else "CLEAR",
+         ", ".join(normalized_latches) if normalized_latches else "none recorded"),
+    ]
+    row_html = "".join(f"<tr><th>{escape(name)}</th><td>{escape(state)}</td><td>{escape(detail)}</td></tr>"
+                       for name, state, detail in rows)
+    blocker_html = "".join(f"<li>{escape(reason)}</li>" for reason in sorted(set(blockers)))
+    severity = "promotable" if ready else "failed"
+    html = _page("Session overview", f"<p class='{severity}' id='readiness'>{verdict}</p>"
+                 f"<table><tr><th>Control</th><th>Status</th><th>Details</th></tr>{row_html}</table>"
+                 f"<h2>Readiness blockers</h2><ul>{blocker_html or '<li>None</li>'}</ul>")
     assert_read_only(html)
     return html
 
