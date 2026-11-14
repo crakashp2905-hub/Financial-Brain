@@ -4361,18 +4361,25 @@
       "sources": [
         "src/financial_brain/forward_edge/session_ops.py",
         "tests/test_forward_edge_f06.py",
-        "docs/edge-program/pe-0201-offline-backup-restore-evidence.md"
+        "docs/edge-program/pe-0201-offline-backup-restore-evidence.md",
+        "src/financial_brain/forward_edge/daily_evidence_bundle.py",
+        "tests/test_daily_evidence_bundle.py",
+        "src/financial_brain/forward_edge/eod_paper_archive.py",
+        "docs/edge-program/pe-0201-offline-backup-restore-evidence.json"
       ],
       "tests": [
         "test_backup_restores_to_recorded_hashes_and_detects_corruption",
         "test_backup_preserves_dependency_paths_and_restores_without_source_tree",
-        "test_backup_rejects_overwrite_and_manifest_path_traversal"
+        "test_backup_rejects_overwrite_and_manifest_path_traversal",
+        "tests/test_daily_evidence_bundle.py",
+        "tests/test_eod_paper_archive.py"
       ],
-      "test_result": "Backup now creates an immutable versioned manifest bundle preserving relative paths and per-file hashes; restore validation rejects traversal, duplicate paths, missing/tampered files and empty bundles. Tests copy the bundle to an isolated restore directory, delete the source tree, and validate restored bytes. Session reliability suite: 14 passed; Ruff and mypy passed.",
+      "test_result": "26 passed; Ruff passed. Backup tests validate immutable path-preserving restore, while daily-bundle tests verify account and runner journals against the archived close, replay their evidence, and refuse tampering.",
       "blockers": [
-        "Dependency files must be explicitly supplied; automatic discovery and end-to-end reconstruction of all journals, quote archives, ledgers, manifests and configuration inputs from a real session are not wired into one operator drill."
+        "Automatic discovery and packaging of observed quote archives, strategy/configuration inputs, registry and authority state, and all other runtime dependencies are not wired.",
+        "No end-to-end restore drill has reconstructed and resumed a complete owner-authorized observed market session."
       ],
-      "evidence_sha256": "29c6db177d32e45bfdc4921c975fef88600b2c9bd4c8cac24b37cc3af39a6a86"
+      "evidence_sha256": "06adb29638ef1269d7a3135c7861d1116ad8284fa022e2e126161f2718a0c9f4"
     },
     {
       "id": "PE-0203",
