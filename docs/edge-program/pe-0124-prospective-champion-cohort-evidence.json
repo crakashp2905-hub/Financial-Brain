@@ -4,23 +4,27 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_prospective_cohort.py",
-    "result": "9 passed; Ruff passed for the new module and test file."
+    "result": "15 focused cohort/registry tests passed; the full Windows suite passes (4160 passed, 1 skipped). Ruff and mypy pass. Synthetic software verification only; timestamps and outcome digests remain caller-supplied."
   },
   "implemented": [
     "Champion selection receives development returns only; confirmation outcomes are not part of the selection API.",
     "Development and confirmation schedules must be ordered and non-overlapping.",
     "A content-addressed champion plan must be frozen before the caller-supplied first confirmation observation time.",
     "Confirmation keeps every scheduled date in the denominator and withholds the mean if any scheduled result is missing.",
-    "Synthetic tests cover deterministic selection, missing and unexpected dates, non-finite values, overlap and late freeze rejection."
+    "Synthetic tests cover deterministic selection, missing and unexpected dates, non-finite values, overlap and late freeze rejection.",
+    "Adds ProspectiveCohortRegistry with an append-only hash-chained journal for immutable frozen plans and per-session outcome digests.",
+    "Identical plan registration and session receipts are idempotent; changed plans and conflicting observations are rejected after restart.",
+    "Rejects observations outside the frozen schedule, before the declared first observation timestamp, with malformed dates or invalid content digests."
   ],
   "blockers": [
-    "The plan is not yet persisted in an authoritative durable registry that prevents replacement after confirmation outcomes are observed.",
-    "Freeze and first-observation timestamps are caller-supplied; no independently attested timestamp service is connected.",
+    "Freeze timestamps and outcome digests remain caller-supplied and are not independently attested.",
+    "Outcome receipts are not automatically reconciled against the receipt-verified paper-account ledger.",
     "No prospective market cohort has elapsed; synthetic tests do not establish performance."
   ],
   "source_sha256": {
     "src/financial_brain/forward_edge/prospective_cohort.py": "5df6ee250af783db3d351fb26ef11492de25c49f2c1b03d2fb4b5af7173b3504",
-    "tests/test_prospective_cohort.py": "f0f7343df0df836a4739973d695993b572bcba245e47a57bd953557b132950df",
-    "docs/edge-program/source-inventory.json": "96caa353182a2cb5cc0e5ae61ef44a8e34891bcab8229684d27030b3c699940c"
+    "src/financial_brain/forward_edge/prospective_registry.py": "512f8d4eb469a74f529c3490b5dc9bf5b507b1b104d55ae86304e9090edf8543",
+    "tests/test_prospective_cohort.py": "41e973d6bbb737d4ab9457e8083fb5488536f5d834125da64ce5a7b1bb2e736c",
+    "docs/edge-program/pe-0124-prospective-champion-cohort.md": "21621d20c4f47bbc99dbe944ea5e86589f91d3b57b376983c848b856bb6c0135"
   }
 }

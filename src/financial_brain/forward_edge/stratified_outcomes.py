@@ -11,6 +11,7 @@ import math
 
 from .evidence_stats import StatsError, newey_west_se
 from .prospective_cohort import FrozenChampionPlan
+from .prospective_registry import ProspectiveCohortRegistry
 
 
 class StratificationError(ValueError):
@@ -171,6 +172,56 @@ def stratify_frozen_outcomes(
     return {**report, "stratification_plan_sha256": plan.plan_sha256,
             "cohort_plan_sha256": plan.cohort_plan_sha256,
             "aggregation_policy_sha256": plan.aggregation_policy_sha256}
+
+
+def stratify_registered_outcomes(
+    *,
+    plan: StratificationPlan,
+    cohort_registry: ProspectiveCohortRegistry,
+    cohort_id: str,
+    observations: Sequence[Mapping[str, object]],
+) -> dict:
+    """Resolve the cohort from its durable registry before applying the frozen strata."""
+    try:
+        cohort = cohort_registry.resolve(cohort_id)
+        receipts = cohort_registry.observations(cohort_id)
+    except (TypeError, ValueError) as exc:
+        raise StratificationError("registered prospective cohort could not be resolved") from exc
+    report = stratify_frozen_outcomes(plan=plan, cohort=cohort, observations=observations)
+    digests: dict[str, str] = {}
+    for session in {str(row.get("session", "")) for row in observations}:
+        digests[session] = stratification_session_outcome_sha256(observations, session)
+    receipt_digests = {row["session"]: row["outcome_sha256"] for row in receipts}
+    if receipt_digests != digests:
+        raise StratificationError(
+            "stratified outcome rows do not match the durable cohort observation receipts")
+    return {**report, "registered_observed_sessions": len(receipts)}
+
+
+def stratification_session_outcome_sha256(
+    observations: Sequence[Mapping[str, object]], session: str
+) -> str:
+    """Digest the canonical per-session rows used by the registered stratification report."""
+    rows = []
+    for row in observations:
+        if row.get("session") != session:
+            continue
+        try:
+            item = {
+                "dimension": row["dimension"],
+                "stratum": row["stratum"],
+                "session": row["session"],
+                "net_alpha": float(row["net_alpha"]),  # type: ignore[arg-type]
+                "after_cost_utility": float(row["after_cost_utility"]),  # type: ignore[arg-type]
+            }
+        except (KeyError, TypeError, ValueError) as exc:
+            raise StratificationError("cannot digest malformed stratified outcome rows") from exc
+        rows.append(item)
+    if not rows:
+        raise StratificationError("cannot digest an empty session outcome")
+    rows.sort(key=lambda row: (str(row["dimension"]), str(row["stratum"])))
+    canonical = json.dumps(rows, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _sessions(values: Sequence[str]) -> tuple[str, ...]:

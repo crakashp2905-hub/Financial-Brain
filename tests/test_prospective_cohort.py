@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from dataclasses import replace
 
 import pytest
 
@@ -6,6 +7,10 @@ from financial_brain.forward_edge.prospective_cohort import (
     ProspectiveCohortError,
     confirm_champion,
     freeze_champion,
+)
+from financial_brain.forward_edge.prospective_registry import (
+    ProspectiveCohortRegistry,
+    ProspectiveRegistryError,
 )
 
 
@@ -66,3 +71,75 @@ def test_confirmation_refuses_unscheduled_or_nonfinite_returns():
         confirm_champion(_plan(), confirmation_returns={"2026-01-09": 0.1})
     with pytest.raises(ProspectiveCohortError, match="finite"):
         confirm_champion(_plan(), confirmation_returns={"2026-01-07": float("nan")})
+
+
+def test_durable_registry_recovers_frozen_plan_and_immutable_session_receipt(tmp_path):
+    path = tmp_path / "cohorts.jsonl"
+    plan = _plan()
+    registry = ProspectiveCohortRegistry(path)
+    assert registry.register("main-champion", plan) == plan.plan_sha256
+    sequence_after_register = registry.journal.seq
+    assert registry.register("main-champion", plan) == plan.plan_sha256
+    assert registry.journal.seq == sequence_after_register
+    receipt = registry.record_observation(
+        cohort_id="main-champion", session="2026-01-07",
+        observed_at=datetime(2026, 1, 7, 3, 1, tzinfo=timezone.utc),
+        outcome_sha256="a" * 64,
+    )
+    assert receipt["outcome_sha256"] == "a" * 64
+    assert registry.record_observation(
+        cohort_id="main-champion", session="2026-01-07",
+        observed_at=datetime(2026, 1, 7, 3, 1, tzinfo=timezone.utc),
+        outcome_sha256="a" * 64,
+    ) == receipt
+    assert registry.journal.seq == sequence_after_register + 1
+
+    recovered = ProspectiveCohortRegistry(path)
+    assert recovered.resolve("main-champion") == plan
+    assert recovered.observations("main-champion") == (receipt,)
+
+
+def test_durable_registry_refuses_plan_replacement_and_conflicting_observations(tmp_path):
+    path = tmp_path / "cohorts.jsonl"
+    plan = _plan()
+    registry = ProspectiveCohortRegistry(path)
+    registry.register("main-champion", plan)
+    registry.record_observation(
+        cohort_id="main-champion", session="2026-01-07",
+        observed_at=datetime(2026, 1, 7, 3, 1, tzinfo=timezone.utc),
+        outcome_sha256="a" * 64,
+    )
+    changed = _plan(development_returns={"candidate-a": [0.04, 0.04],
+                                        "candidate-b": [0.01, 0.01]})
+    with pytest.raises(ProspectiveRegistryError, match="immutable"):
+        registry.register("main-champion", changed)
+    with pytest.raises(ProspectiveRegistryError, match="immutable"):
+        registry.record_observation(
+            cohort_id="main-champion", session="2026-01-07",
+            observed_at=datetime(2026, 1, 7, 3, 2, tzinfo=timezone.utc),
+            outcome_sha256="b" * 64,
+        )
+    assert registry.observations("main-champion")[0]["outcome_sha256"] == "a" * 64
+
+
+@pytest.mark.parametrize(
+    "session, observed_at, digest, message",
+    [
+        ("2026-01-09", datetime(2026, 1, 9, tzinfo=timezone.utc), "a" * 64, "outside"),
+        ("2026-01-07", datetime(2026, 1, 7, 2, tzinfo=timezone.utc), "a" * 64, "predates"),
+        ("2026-01-07", datetime(2026, 1, 7, 4, tzinfo=timezone.utc), "bad", "SHA-256"),
+    ],
+)
+def test_durable_registry_rejects_invalid_observation_receipts(
+        tmp_path, session, observed_at, digest, message):
+    registry = ProspectiveCohortRegistry(tmp_path / "cohorts.jsonl")
+    registry.register("main-champion", _plan())
+    with pytest.raises(ProspectiveRegistryError, match=message):
+        registry.record_observation(cohort_id="main-champion", session=session,
+                                    observed_at=observed_at, outcome_sha256=digest)
+
+
+def test_durable_registry_rejects_forged_cohort_plan(tmp_path):
+    registry = ProspectiveCohortRegistry(tmp_path / "cohorts.jsonl")
+    with pytest.raises(ProspectiveRegistryError, match="digest does not match"):
+        registry.register("main-champion", replace(_plan(), plan_sha256="0" * 64))

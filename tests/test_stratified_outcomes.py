@@ -4,11 +4,14 @@ from datetime import datetime, timezone
 import pytest
 
 from financial_brain.forward_edge.prospective_cohort import freeze_champion
+from financial_brain.forward_edge.prospective_registry import ProspectiveCohortRegistry
 from financial_brain.forward_edge.stratified_outcomes import (
     DIMENSIONS,
     StratificationError,
     freeze_stratification_plan,
     stratify_frozen_outcomes,
+    stratify_registered_outcomes,
+    stratification_session_outcome_sha256,
     stratify_outcomes,
 )
 
@@ -181,4 +184,30 @@ def test_frozen_stratification_plan_rejects_invalid_aggregation_digest():
         freeze_stratification_plan(
             cohort=_cohort(), registered_strata=REGISTRY, hac_lags=1,
             familywise_alpha=0.05, aggregation_policy_sha256="not-a-hash",
+        )
+
+
+def test_registered_stratification_verifies_each_durable_session_outcome_digest(tmp_path):
+    cohort = _cohort()
+    plan = _frozen_plan(cohort)
+    registry = ProspectiveCohortRegistry(tmp_path / "cohort.jsonl")
+    registry.register("alpha-confirmation", cohort)
+    rows = _rows()
+    for session in SESSIONS:
+        registry.record_observation(
+            cohort_id="alpha-confirmation", session=session,
+            observed_at=datetime.fromisoformat(session + "T04:00:00+00:00"),
+            outcome_sha256=stratification_session_outcome_sha256(rows, session),
+        )
+    report = stratify_registered_outcomes(
+        plan=plan, cohort_registry=registry, cohort_id="alpha-confirmation",
+        observations=rows,
+    )
+    assert report["registered_observed_sessions"] == len(SESSIONS)
+    changed_rows = [dict(row) for row in rows]
+    changed_rows[0]["net_alpha"] = 0.9
+    with pytest.raises(StratificationError, match="do not match"):
+        stratify_registered_outcomes(
+            plan=plan, cohort_registry=registry, cohort_id="alpha-confirmation",
+            observations=changed_rows,
         )

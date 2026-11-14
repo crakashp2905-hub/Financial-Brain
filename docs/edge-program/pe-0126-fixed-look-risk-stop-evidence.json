@@ -13,13 +13,11 @@
     "Registry package pins a re-derived power-based SampleSizePlan together with the fixed-look policy; alpha, look count, freeze/first-observation timestamps and final required-session count are checked against the registered charter bundle digest.",
     "Efficacy decisions at registered looks before the calculated required session count are withheld as SAMPLE_SIZE_NOT_MET; harm stops remain effective at every observation.",
     "Removed the arbitrary risk_stop_fn callback from the paper account bridge; registered policy evaluation is the supported fixed-look integration.",
-    "Registry package pins a re-derived power-based SampleSizePlan with the fixed-look policy; alpha, look count, freeze/first-observation timestamps and final required-session count are checked against the registered charter bundle digest.",
-    "Efficacy decisions at registered looks before the calculated required session count are withheld as SAMPLE_SIZE_NOT_MET; harm stops remain effective at every observation.",
-    "Removed the arbitrary risk_stop_fn callback from the paper account bridge; registered policy evaluation is the supported fixed-look integration."
+    "Registry package pins a re-derived power-based SampleSizePlan with the fixed-look policy; alpha, look count, freeze/first-observation timestamps and final required-session count are checked against the registered charter bundle digest."
   ],
   "schema_version": "1.0",
   "source_sha256": {
-    "docs/edge-program/pe-0126-fixed-look-risk-stop.md": "44e16df46b76e5f5edd3a4d2f540cb687e2cc910a8549558fb4fa1e33baa7660",
+    "docs/edge-program/pe-0126-fixed-look-risk-stop.md": "414e7ad64980525ec4e2b05a141d648bf84f9c51d08db31297ab6e2358e29b0a",
     "src/financial_brain/forward_edge/charter.py": "7f8af1993709b199481b577fb3266a989b369df7463e2bab504be26a270aad59",
     "src/financial_brain/forward_edge/fixed_look.py": "cc9a83664472775ea8e75ab1ad30368c244befc556e806d1f2a0d5b7c992d36b",
     "src/financial_brain/forward_edge/fixed_look_registry.py": "6211f38dc03562986bf64cc6ba914e2fa7c000204e12b1869501707b8a52891f",
@@ -34,6 +32,6 @@
   "task_id": "PE-0126",
   "test": {
     "command": "python -m pytest -q; python -m ruff check src tests; python -m mypy; python -m pytest -q tests/test_migrations.py; python scripts/validate_capability_matrix.py; python scripts/source_inventory.py --check docs/edge-program/source-inventory.json; python scripts/algo_progress.py --check; python scripts/chart_patterns_matrix.py --check; offline patterns demo",
-    "result": "Full Windows suite: 4149 passed, 1 skipped (1025.80s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Full-suite and focused-run output is synthetic software verification; no live or prospective trading-performance claim."
+    "result": "Full Windows suite: 4160 passed, 1 skipped (884.30s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff, configured mypy, migration, capability-matrix, source-inventory, algorithm/chart matrices and offline pattern demo pass. Synthetic software verification only; no live or prospective trading-performance claim."
   }
 }
