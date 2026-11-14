@@ -50,7 +50,7 @@ def test_feed_health_rejects_future_quote_and_stale_heartbeat():
         FeedHealth(NOW, -1, 0, 0)
 
 
-def test_stale_feed_forces_durable_no_trade_and_session_completeness_counts(tmp_path):
+def test_stale_required_feed_marks_session_incomplete_and_preserves_health_evidence(tmp_path):
     path = tmp_path / "feed-health.jsonl"
     runner = ForwardSessionRunner(path)
     config = _config()
@@ -71,18 +71,19 @@ def test_stale_feed_forces_durable_no_trade_and_session_completeness_counts(tmp_
         risk_fn=lambda _: {"approved": True},
         execution_fn=lambda *args: execution_calls.append(args) or {"status": "FILLED"},
     )
-    assert result["status"] == "NO_TRADE"
-    assert result["reason"] == "STALE_FEED"
+    assert result["status"] == "INCOMPLETE"
+    assert result["reason"] == "FEED_ENDED_EARLY"
     assert decision_calls == [] and execution_calls == []
-    assert result["feed_health"]["gaps"] == 2
-    assert result["feed_health"]["disconnects"] == 1
-    assert result["feed_health"]["duplicates"] == 4
-    assert result["feed_health"]["reconnects"] == 1
-    assert result["feed_health"]["dropped_updates"] == 3
+    health = result["feed_health"]["feed_health"]
+    assert health["gaps"] == 2
+    assert health["disconnects"] == 1
+    assert health["duplicates"] == 4
+    assert health["reconnects"] == 1
+    assert health["dropped_updates"] == 3
     records = DurableJournal(path).records()
     assert sum(row["t"] == "FEED_HEALTH" for row in records) == 1
-    closed = next(row["result"] for row in records if row["t"] == "SESSION_CLOSED")
-    assert closed["feed_health"]["blocking_reasons"] == [
+    incomplete = next(row for row in records if row["t"] == "SESSION_INCOMPLETE")
+    assert incomplete["evidence"]["blocking_reasons"] == [
         "STALE_QUOTE", "STALE_HEARTBEAT", "QUOTE_GAP", "DISCONNECTED", "DROPPED_UPDATES"
     ]
     assert not any(row["t"] in {"PAPER_INTENT", "PAPER_EXECUTION"} for row in records)
