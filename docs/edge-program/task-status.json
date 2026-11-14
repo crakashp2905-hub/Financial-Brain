@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 140,
-  "unrecorded_tasks": 78,
+  "recorded_tasks": 141,
+  "unrecorded_tasks": 77,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3081,6 +3081,32 @@
         "Data inputs are not bound to authoritative development registry.",
         "No independent review or paper strategy registry integration.",
         "No causal or prospective edge evidence."
+      ]
+    },
+    {
+      "id": "PE-0143",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/research/adversarial_review.py",
+        "tests/test_adversarial_review.py",
+        "docs/edge-program/pe-0143-adversarial-preregistration-review.md",
+        "docs/edge-program/pe-0143-adversarial-preregistration-review-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_all_five_adversarial_areas_need_explicit_evidence_and_failures_reject",
+        "test_signed_distinct_reviewer_can_approve_only_before_registration",
+        "test_self_review_and_incomplete_criteria_never_approve",
+        "test_missing_review_evidence_is_rejected",
+        "test_review_journal_is_idempotent_and_immutable"
+      ],
+      "test_result": "22 adversarial-review, hypothesis and evidence-label tests passed; Ruff passed. Five explicit review domains, distinct reviewer, signed pre-registration receipt, reject/needs-revision outcomes, and immutable journal verified.",
+      "evidence_sha256": "2b750ebbd6a1456ca15e468ca0801af5098de0357ee9cfb99d1267d5bd0a22a1",
+      "blockers": [
+        "No approved internal identity provider or pinned reviewer roots.",
+        "Not wired to proposal/registration workflow.",
+        "Synthetic signed fixtures are not independent human reviews."
       ]
     }
   ]

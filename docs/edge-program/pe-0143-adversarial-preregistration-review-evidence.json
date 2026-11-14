@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0143",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_adversarial_review.py tests/test_causal_hypothesis.py tests/test_evidence_labels.py; ruff check src/financial_brain/research/adversarial_review.py tests/test_adversarial_review.py",
+    "result": "22 passed; Ruff passed."
+  },
+  "implemented": [
+    "Requires review findings, rationale, and evidence IDs for leakage, costs, multiple testing, chance fitting, and falsifier quality.",
+    "Requires author-distinct reviewer identity and a trusted receipt over the exact review contents before registration for approval.",
+    "Derives REJECTED, NEEDS_REVISION, or APPROVED from findings and receipt status; missing or late receipts cannot approve.",
+    "Stores review outcomes append-only and immutably and never mutates paper strategy state."
+  ],
+  "blockers": [
+    "No approved internal identity provider or deployment-pinned reviewer trust roots are configured.",
+    "Review archive is not integrated with the hypothesis, trial registration, or production paper workflow.",
+    "Unit-test signatures are synthetic and do not constitute an independent human review."
+  ],
+  "source_sha256": {
+    "src/financial_brain/research/adversarial_review.py": "5ae9b577f05c26ba3bb0c303b317bbe3bc571d455e000642b77f1baea2825536",
+    "tests/test_adversarial_review.py": "f479e71b9bfc658423d6d42dab55560d8b76ea78ffbfbbbb6f9fb8c6c8c5db00"
+  }
+}
