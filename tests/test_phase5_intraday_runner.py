@@ -33,7 +33,8 @@ def fake_quotes(clock, day="2026-10-06", traded=True):
     def q(symbols, kind):
         px = price_at(clock.t)
         hi = max(101.0, px) if clock.t.hour * 60 + clock.t.minute >= 570 else 101.0
-        return {s: {"last_price": px, "last_trade_time": f"{day} 09:20:00" if traded else "2026-10-01 15:29:59",
+        return {s: {"timestamp": clock.now().isoformat(), "last_price": px,
+                    "last_trade_time": f"{day} 09:20:00" if traded else "2026-10-01 15:29:59",
                     "ohlc": {"open": 100.0, "high": hi if clock.t.hour * 60 + clock.t.minute > 570 else 101.0,
                              "low": 99.0, "close": 100.0}} for s in symbols}
     return q
@@ -156,6 +157,56 @@ def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, m
                            risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
     assert finished["status"] == "NO_TRADE"
     assert finished["event_count"] == len(stored)
+
+
+def test_live_runner_rejects_stale_kite_timestamp_before_forward_event_sink(setup, monkeypatch):
+    c = Clock(datetime(2026, 10, 6, 9, 15, 30, tzinfo=R.IST))
+    monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
+    captured = []
+    rejected = []
+
+    def stale_quote(symbols, kind):
+        assert kind == "full"
+        return {symbol: {
+            "timestamp": "2026-10-06T09:14:00+05:30", "last_price": 100.0,
+            "last_trade_time": "2026-10-06T09:14:00+05:30",
+            "ohlc": {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0},
+            "depth": {"buy": [{"price": 99.95, "quantity": 10}],
+                      "sell": [{"price": 100.05, "quantity": 10}]},
+        } for symbol in symbols}
+
+    def close_after_one_poll(_seconds):
+        c.t = c.t.replace(hour=15, minute=31)
+
+    out = R.run_live(
+        quote_fn=stale_quote, now_fn=c.now, sleep_fn=close_after_one_poll,
+        path=setup / "stale-kite.duckdb", strategies=("ORB",),
+        event_sink=captured.extend, preflight_fn=lambda: {"approved": True},
+        preflight_sink=lambda _result: None, rejection_sink=rejected.extend,
+    )
+
+    assert out["status"] == "complete"
+    assert captured == []
+    assert rejected and rejected[0]["reason"] == "STALE_EXCHANGE_TIMESTAMP"
+
+
+def test_stale_kite_quote_cannot_trigger_legacy_paper_entry(setup, monkeypatch):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
+
+    def quotes(symbols, _kind):
+        stamp = c.now() - timedelta(seconds=31) if c.t.hour * 60 + c.t.minute >= 580 else c.now()
+        return {symbol: {"timestamp": stamp.isoformat(), "last_price": price_at(c.t),
+                         "last_trade_time": "2026-10-06 09:40:00",
+                         "ohlc": {"open": 100.0, "high": 101.0 if c.t.minute < 40 else 101.6,
+                                  "low": 99.0, "close": 100.0}}
+                for symbol in symbols}
+
+    R.run_live(quote_fn=quotes, now_fn=c.now, sleep_fn=c.sleep, path=setup / "stale-legacy.duckdb",
+               strategies=("ORB",))
+    con = R.ledger(setup / "stale-legacy.duckdb")
+    rows = con.execute("SELECT entry_ts, entry_px, exit_reason FROM trades WHERE day = '2026-10-06'").fetchall()
+    assert rows == []
 
 
 def test_live_runner_can_opt_in_to_authorized_raw_quote_archive(setup, monkeypatch):
@@ -304,7 +355,8 @@ def test_a_late_start_takes_the_opening_range_from_candles_not_from_the_days_hig
                  "close": 100.0} for k in range(15)]
 
     def quotes(symbols, kind):                          # by now the day's high is 107: the wrong range
-        return {s: {"last_price": 101.6 if c.t.minute < 55 else 106.9, "last_trade_time": "2026-10-06 09:49:00",
+        return {s: {"timestamp": c.now().isoformat(),
+                    "last_price": 101.6 if c.t.minute < 55 else 106.9, "last_trade_time": "2026-10-06 09:49:00",
                     "ohlc": {"open": 100.0, "high": 107.0, "low": 99.0, "close": 100.0}} for s in symbols}
     R.run_live(quote_fn=quotes, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb",
                candles_fn=candles, token_fn=lambda s: 1)

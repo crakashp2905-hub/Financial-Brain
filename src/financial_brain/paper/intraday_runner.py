@@ -33,6 +33,7 @@ from ..costs.calculator import bucket_for
 
 IST = timezone(timedelta(hours=5, minutes=30))
 POLL_SECONDS = 20
+KITE_SOURCE_TIMESTAMP_TOLERANCE = timedelta(seconds=30)
 LEDGER = Path("data") / "paper_live.duckdb"
 REPORTS = Path("data") / "paper_reports"
 UNIVERSE_SIZE = 200
@@ -222,13 +223,38 @@ def opening_from_candles(symbols, day: date, *, candles_fn, token_fn) -> dict[st
     return out
 
 
+def _fresh_kite_quotes(quotes: dict, received_at: datetime, tolerance: timedelta) -> dict:
+    """Fail closed on absent, malformed, future, or stale Kite quote packet timestamps."""
+    from datetime import timezone
+
+    fresh = {}
+    for key, quote in quotes.items():
+        stamp = quote.get("timestamp") if isinstance(quote, dict) else None
+        if isinstance(stamp, str):
+            try:
+                stamp = datetime.fromisoformat(stamp)
+            except ValueError:
+                continue
+        if not isinstance(stamp, datetime):
+            continue
+        if stamp.tzinfo is None or stamp.utcoffset() is None:
+            stamp = stamp.replace(tzinfo=IST)
+        age = received_at.astimezone(timezone.utc) - stamp.astimezone(timezone.utc)
+        if timedelta(0) <= age <= tolerance:
+            fresh[key] = quote
+    return fresh
+
+
 def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None, now_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
              rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
              event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None,
-             raw_archive=None, authority_path: Path | None = None) -> dict:
+             raw_archive=None, authority_path: Path | None = None,
+             source_timestamp_tolerance: timedelta = KITE_SOURCE_TIMESTAMP_TOLERANCE) -> dict:
     from ..providers import kite_data as kd
+    if not isinstance(source_timestamp_tolerance, timedelta) or source_timestamp_tolerance < timedelta(0):
+        raise ValueError("Kite source timestamp tolerance must be a non-negative timedelta")
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
     now = now_fn()
@@ -307,13 +333,16 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             for i in range(0, len(syms), 450):
                 q.update(quote_fn([f"NSE:{s}" for s in syms[i:i + 450]], "full"))   # full: includes the order book
             poll_received_at = now_fn()
+            # Enforce the same source-age policy on the legacy DayEngine path.
+            fresh_q = _fresh_kite_quotes(q, poll_received_at, source_timestamp_tolerance)
             if event_sink is not None:
                 from ..ingest.kite_live import forward_events
                 try:
                     rejections: list[dict] = []
                     events = forward_events(syms, quote_fn=lambda *_args, snapshot=q: snapshot,
                                             received_at=poll_received_at, rejections_out=rejections,
-                                            raw_archive=raw_archive)
+                                            raw_archive=raw_archive,
+                                            source_timestamp_tolerance=source_timestamp_tolerance)
                     event_sink(events)
                     if rejections:
                         if rejection_sink is None:
@@ -349,6 +378,10 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                 return {"day": day, "status": "aborted", "why": str(e)[:200]}
             sleep_fn(poll)
             continue
+        for symbol in syms:
+            if f"NSE:{symbol}" not in fresh_q:
+                last.pop(symbol, None)
+        q = fresh_q
         polls += 1
         quote_at = now
         if qcon is not None:

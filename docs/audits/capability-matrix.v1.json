@@ -62,8 +62,8 @@
       "id": "market-data-availability-lineage",
       "owner_role": "Integration",
       "maturity": "partial",
-      "source": ["src/financial_brain/forward_edge/market_data.py", "src/financial_brain/ingest/kite_live.py"],
-      "tests": ["tests/test_kite_forward_events.py", "tests/test_kite_history_refresh.py"],
+      "source": ["src/financial_brain/forward_edge/market_data.py", "src/financial_brain/ingest/kite_live.py", "src/financial_brain/paper/intraday_runner.py"],
+      "tests": ["tests/test_kite_forward_events.py", "tests/test_kite_history_refresh.py", "tests/test_phase5_intraday_runner.py"],
       "blockers": ["No authorized observed Kite session has been captured", "Provider timestamp semantics, entitlement and real-feed latency remain unverified"]
     }
   ]

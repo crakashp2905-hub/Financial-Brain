@@ -1348,20 +1348,23 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/ingest/kite_live.py",
+        "src/financial_brain/paper/intraday_runner.py",
         "src/financial_brain/forward_edge/market_data.py",
         "tests/test_kite_forward_events.py",
+        "tests/test_phase5_intraday_runner.py",
         "docs/edge-program/pe-0037-kite-source-timestamp-tolerance-evidence.json"
       ],
       "tests": [
         "test_missing_or_invalid_exchange_evidence_fails_closed",
         "test_source_tolerance_rejects_future_and_stale_exchange_timestamps_without_repair",
-        "test_duplicate_symbols_and_naive_receipt_rejected"
+        "test_duplicate_symbols_and_naive_receipt_rejected",
+        "test_live_runner_rejects_stale_kite_timestamp_before_forward_event_sink",
+        "test_stale_kite_quote_cannot_trigger_legacy_paper_entry"
       ],
-      "test_result": "41 passed (exit code 0); Ruff and mypy on Kite event normalization passed. Future/malformed/stale source timestamps fail closed when the explicit tolerance is configured; age is preserved in event lineage.",
-      "evidence_sha256": "ed1cc6a61d14a1599a422404608271ba2da4cfc00c507c8213f26bb3ac7b2f7a",
+      "test_result": "69 passed (exit code 0) across Kite event normalization, historical Kite ingestion, raw quote archive, and live intraday runner tests; repository Ruff passed and mypy passed for changed Python modules. Source inventory and capability evidence checks passed. The 30-second source-age policy is enforced on normalized events and legacy paper strategy inputs, and cached prices are removed whenever the current quote is stale or missing.",
+      "evidence_sha256": "7f1e6682e2df847e2b15f76b8085a1bf582d9ed211a9279039e11c21cb8f60bd",
       "blockers": [
-        "The existing live intraday caller does not yet provide a source-specific maximum-age policy, so old Kite timestamps can still be admitted when the optional tolerance is omitted.",
-        "The provider timestamp's exact semantics can vary between last trade time and quote/depth capture time; policy must account for feed type before this becomes a universal fill gate."
+        "Kite timestamp semantics can vary between last trade time and quote/depth capture time; the 30-second default still needs provider-specific and prospective freshness/latency validation before it is treated as a universal execution gate."
       ]
     },
     {
