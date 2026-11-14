@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "task_id": "PE-0010",
-  "status": "PARTIAL",
+  "status": "DONE",
   "python_version": "3.13.17",
   "lock_source": "uv.lock",
   "exported_hashed_requirements": "requirements-lock.txt",
@@ -23,10 +23,34 @@
     "requirements_export_matches_lock": "passed (1601 lock body lines)",
     "project_wheel_build": "passed (financial_brain-0.1.0-py3-none-any.whl)"
   },
-  "offline_clean_install_verified_on": [],
-  "blockers": [
-    "Fresh offline installation and complete CI remain pending on Ubuntu and Windows."
+  "offline_clean_install_verified_on": [
+    "ubuntu-latest",
+    "windows-latest"
   ],
+  "ci_verification": {
+    "run_id": 43600108119,
+    "run_url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43600108119",
+    "commit_sha": "a12e10820d534f37454adc8293f891bf828d0ed7",
+    "ubuntu_job": "success",
+    "windows_job": "success",
+    "offline_install_windows": "success",
+    "offline_install_ubuntu": "success",
+    "complete_workflow": "success",
+    "artifacts": [
+      {
+        "name": "coverage-ubuntu-latest",
+        "artifact_id": 14115443469,
+        "sha256": "f31cc95786016ff557b0c6c1389e5b44fc8ede9ca71e8ecc4bc69ad8f72b84f7"
+      },
+      {
+        "name": "coverage-windows-latest",
+        "artifact_id": 14115714776,
+        "sha256": "faa07ee587f67021e4ab772c391736dde56cbde63f3cb593e0a8af16b38976e2"
+      }
+    ],
+    "verified_at_utc": "2026-11-14T13:43:27Z"
+  },
+  "blockers": [],
   "limitations": [
     "The current local environment cannot reach PyPI, so a full platform wheelhouse was not downloaded locally. CI must be the evidence for platform-specific offline installs."
   ],

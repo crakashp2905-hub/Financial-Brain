@@ -167,7 +167,7 @@
     },
     {
       "id": "PE-0010",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": [
         ".python-version",
         "requirements-lock.txt",
@@ -185,11 +185,9 @@
         "CI: uv lock --check and hashed export comparison",
         "CI: fresh offline wheelhouse install on Ubuntu and Windows"
       ],
-      "test_result": "Python 3.13.17, hash seed, timezone, and deterministic fixture signatures remain frozen. Added a platform-aware uv.lock, a hash-pinned requirements export, and CI steps that install from the export then create and install a platform-specific wheelhouse in a fresh offline environment. Local uv lock check and export comparison passed for 132 packages; the project wheel built. Offline Windows/Linux installs are pending CI.",
-      "evidence_sha256": "70061520dcc2222495376f7b163e8895e6aa1e0466e7c124df1ff1ca5ef7c751",
-      "blockers": [
-        "Fresh offline wheelhouse install and full CI must pass on Ubuntu and Windows before the lock is considered verified."
-      ]
+      "test_result": "Python 3.13.17, hash seed, timezone, uv lock check, and hashed requirements export are frozen. GitHub Actions run 43600108119 passed completely on commit a12e10820d534f37454adc8293f891bf828d0ed7 on ubuntu-latest and windows-latest, including fresh offline wheelhouse installs, full tests, coverage gates, dependency audit, and dependency inventory. Platform artifacts are recorded in the PE-0010 evidence file.",
+      "evidence_sha256": "c58684ae5f7671f4ffb11321507560c10db78f68700df1948eb21fdcd14d9354",
+      "blockers": []
     },
     {
       "id": "PE-0011",

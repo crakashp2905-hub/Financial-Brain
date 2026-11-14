@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "status": "PARTIAL",
+  "status": "DONE",
   "python_version_file": ".python-version",
   "python_version": "3.13.17",
   "ci_installs_pinned_python": true,
@@ -25,10 +25,20 @@
     "Create a fresh virtual environment and install dependencies with pip --no-index --find-links.",
     "Install the project wheel locally, run pip check, and import the installed package."
   ],
-  "offline_clean_install_verified_on": [],
-  "blockers": [
-    "Ubuntu and Windows CI must pass the fresh offline wheelhouse installation before reproducibility is marked verified."
+  "offline_clean_install_verified_on": [
+    "ubuntu-latest",
+    "windows-latest"
   ],
+  "ci_verification": {
+    "run_id": 43600108119,
+    "run_url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43600108119",
+    "commit_sha": "a12e10820d534f37454adc8293f891bf828d0ed7",
+    "ubuntu_job": "success",
+    "windows_job": "success",
+    "complete_workflow": "success",
+    "verified_at_utc": "2026-11-14T13:43:27Z"
+  },
+  "blockers": [],
   "evidence_sources": [
     ".python-version",
     "pyproject.toml",

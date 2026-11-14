@@ -19,7 +19,11 @@ def test_runtime_pins_and_locked_offline_install_gate_are_explicit():
     assert contract["lock_export"] == "requirements-lock.txt"
     assert contract["requirements_lock_contains_artifact_hashes"] is True
     assert contract["ci_installs_from_dependency_lock"] is True
-    assert contract["offline_clean_install_verified_on"] == []
+    assert contract["offline_clean_install_verified_on"] == ["ubuntu-latest", "windows-latest"]
+    verification = contract["ci_verification"]
+    assert verification["complete_workflow"] == "success"
+    assert verification["ubuntu_job"] == verification["windows_job"] == "success"
+    assert verification["commit_sha"]
     assert "python-version-file: \".python-version\"" in workflow
     assert "PYTHONHASHSEED: \"0\"" in workflow
     assert "TZ: Asia/Kolkata" in workflow
