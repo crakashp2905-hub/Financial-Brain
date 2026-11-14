@@ -57,3 +57,13 @@ def test_task_ledger_inventory_counts_and_authority_evidence_hash_are_current():
     assert f"{inventory['unassessed_count']} unassessed" in task["test_result"]
     assert f"{inventory['unassigned_role_count']} role-unassigned" in task["test_result"]
     assert task["evidence_sha256"] == hashlib.sha256(normalized).hexdigest()
+
+
+def test_kite_task_evidence_hashes_match_committed_utf8_artifacts():
+    task_status = json.loads((ROOT / "docs/edge-program/task-status.json").read_text(encoding="utf-8"))
+    for task_id in ("PE-0035", "PE-0037", "PE-0047"):
+        task = next(row for row in task_status["items"] if row["id"] == task_id)
+        evidence = next(ROOT / source for source in task["sources"]
+                        if source.startswith("docs/edge-program/") and source.endswith(".json"))
+        normalized = evidence.read_bytes().replace(b"\r\n", b"\n")
+        assert task["evidence_sha256"] == hashlib.sha256(normalized).hexdigest()

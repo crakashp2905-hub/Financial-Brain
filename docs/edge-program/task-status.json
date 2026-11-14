@@ -1316,7 +1316,7 @@
         "test_stale_feed_forces_durable_no_trade_and_session_completeness_counts"
       ],
       "test_result": "89 passed (exit code 0) across feed health, forward session, and execution-gate tests; Ruff and mypy passed for the changed session-ops module. PacketDeduper optionally persists packet-ID hashes and feed state in the hash-chained durable journal, restoring duplicate/gap state after restart without quote payloads and rejecting incompatible journal schemas.",
-      "evidence_sha256": "c711bc2386464e37ee78936954ef09e565dd0b5693e0cbaf7125aed4de1836e1",
+      "evidence_sha256": "a159251b26f7eacaaddf6ceb819dee5a28f7fe7ff264580ea5f348bc387a86d5",
       "blockers": [
         "The current Kite REST polling payload has no provider sequence number or disconnect/reconnect callbacks; true source-level gaps and reconnect/drop counters still require a sequenced streaming source and owner-authorized session."
       ]
@@ -1364,7 +1364,7 @@
         "test_stale_kite_quote_cannot_trigger_legacy_paper_entry"
       ],
       "test_result": "69 passed (exit code 0) across Kite event normalization, historical Kite ingestion, raw quote archive, and live intraday runner tests; repository Ruff passed and mypy passed for changed Python modules. Source inventory and capability evidence checks passed. The 30-second source-age policy is enforced on normalized events and legacy paper strategy inputs, and cached prices are removed whenever the current quote is stale or missing.",
-      "evidence_sha256": "7f1e6682e2df847e2b15f76b8085a1bf582d9ed211a9279039e11c21cb8f60bd",
+      "evidence_sha256": "ba5ff02218f49862745cccb38ce3aa885d83f961c2b8f7af6d7698b534d90578",
       "blockers": [
         "Kite timestamp semantics can vary between last trade time and quote/depth capture time; the 30-second default still needs provider-specific and prospective freshness/latency validation before it is treated as a universal execution gate."
       ]
@@ -1545,7 +1545,7 @@
         "test_legacy_paper_lane_requires_exact_registry_eligibility"
       ],
       "test_result": "58 passed (exit code 0) across registry F02 and legacy intraday runner tests; repository Ruff and changed-module mypy passed. The legacy runner attributes output to local-paper only for exact registered paper-capable specs and otherwise defaults to shadow.",
-      "evidence_sha256": "a399c0320431a8bc1cc6203a0587ed38dce2b22d14e96a240ca09138ab5d8631",
+      "evidence_sha256": "c331a96b04095b7f9ad5c88f7c9d23975d016992ab6c17fec303346755f71050",
       "blockers": [
         "Historical paper-book writers and other legacy strategy runners are not all wired into the registry gate.",
         "The static eligibility inventory is not yet exhaustive for all source-linked candidates."
