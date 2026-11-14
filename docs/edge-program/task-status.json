@@ -2,15 +2,15 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 27,
-  "unrecorded_tasks": 191,
+  "recorded_tasks": 86,
+  "unrecorded_tasks": 132,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "054193a524dd35eaa258df0ac352a58fc369e937",
+  "reviewed_main_sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
   "items": [
     {
       "id": "PE-0001",
@@ -27,8 +27,8 @@
       "tests": [
         "test_current_baseline_is_machine_readable_and_does_not_overclaim"
       ],
-      "test_result": "Recorded main SHA, PR graph, actual GitHub branch-protection/ruleset state, Python/CI runtime, source capabilities, freshness and access limitations. Baseline JSON parse and named test exit code 0; PR #30 exact-head Ubuntu and Windows checks passed.",
-      "evidence_sha256": "61daf5c475c233ca2d19de58a6098d63dd5b1cb043e5bb551f1309538c67ccb0",
+      "test_result": "Refreshed baseline after PR #31 merged: records exact main SHA 9170700, PR graph through #31, live branch-protection readback, Python/CI runtime, Kite capabilities, freshness and access limitations. JSON parse and baseline test pass; PR #31 current-head Ubuntu and Windows CI passed.",
+      "evidence_sha256": "bbec8e8daeac23adaa8a293c5f5772f486bcb566cf0e219da8048abe2c8681f0",
       "blockers": []
     },
     {
@@ -82,7 +82,7 @@
         "tests/test_forward_edge_f00.py"
       ],
       "tests": [
-        "test_q4_2026_protected_budget_is_exhausted_at_13_of_13",
+        "test_q4_2026_protected_budget_is_exhausted_at_14_of_14",
         "test_all_13_q4_trials_remain_failed_with_original_reasons",
         "test_protected_records_match_pinned_digests",
         "test_retrospective_edit_of_the_trial_ledger_is_detected"
@@ -104,7 +104,154 @@
         "test_ci_workflow_exposes_platform_checks_and_test_skip_summary",
         "test_label_never_exceeds_the_evidence"
       ],
-      "test_result": "The paper-ready gate now requires successful lint, types, migrations, coverage, Ubuntu and Windows checks plus an explicitly reported nonnegative pytest skip count. CI exposes each check and runs pytest with -ra so skips are summarized. Four focused release/workflow tests passed; Ruff and mypy passed.",
+      "test_result": "The paper-ready gate now requires successful lint, types, migrations, coverage, Ubuntu and Windows checks plus an explicitly reported nonnegative pytest skip count. CI exposes each check and runs pytest with -ra so skips are summarized. Four focused release/workflow tests passed; Ruff and mypy passed; PR #31 Ubuntu and Windows full CI passed.",
+      "evidence_sha256": null,
+      "blockers": []
+    },
+    {
+      "id": "PE-0006",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/main-branch-protection-evidence.json",
+        "https://api.github.com/repos/crakashp2905-hub/Financial-Brain/branches/main/protection",
+        ".github/workflows/ci.yml"
+      ],
+      "tests": [
+        "GitHub branch-protection GET readback",
+        "test_ci_workflow_exposes_platform_checks_and_test_skip_summary",
+        "test_branch_protection_evidence_matches_baseline_contract"
+      ],
+      "test_result": "GitHub main protection is enabled and verified: strict Ubuntu/Windows status checks, one approving review, stale-review dismissal, last-push approval, admin enforcement, and conversation resolution. Force pushes and deletions are disabled. Evidence is read back from the live API at main SHA 9170700.",
+      "evidence_sha256": "0e00fbd72747c9eaa30bf07f0c5ececf7e548f736b8b86241d56099915f89bcd",
+      "blockers": []
+    },
+    {
+      "id": "PE-0007",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/data-source-matrix.json"
+      ],
+      "tests": [
+        "test_source_matrix_labels_rights_latency_and_credential_presence_without_values"
+      ],
+      "test_result": "Machine-readable source inventory covers configured market, company, macro, regulatory, and missing-data domains with access flags, credential presence only, measured-versus-unmeasured latency, retention status, and limitations. Missing US equity quotes and expired-options history are explicit. No secret values are recorded; focused matrix tests pass.",
+      "evidence_sha256": "4c64d02d59b21ce6237fca6c68d14b0155daab00b30be54ed8d6d0ea69f14624",
+      "blockers": []
+    },
+    {
+      "id": "PE-0008",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/mode-capability-matrix.json"
+      ],
+      "tests": [
+        "test_mode_matrix_has_tested_mode_fidelity_and_evidence_for_every_displayed_capability"
+      ],
+      "test_result": "A single matrix covers REAL_FEED, REPLAY, SHADOW, PAPER, BROKER_DRYRUN, and LIVE_CASH. Each row names tested mode, fidelity, and existing evidence paths; real capture, broker dry-run, and live cash limitations remain explicit. Focused matrix tests pass.",
+      "evidence_sha256": "067c8cb32078898fb093b4cc26f320a2aeff77041b670a005e03f8cd01494c4e",
+      "blockers": []
+    },
+    {
+      "id": "PE-0009",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/release-semantics.json",
+        "src/financial_brain/forward_edge/release.py",
+        "src/financial_brain/forward_edge/audit.py"
+      ],
+      "tests": [
+        "test_health_axes_are_separate_and_current_research_does_not_overclaim"
+      ],
+      "test_result": "Exact GREEN/YELLOW/RED semantics are separate for engineering, research, and trading. The current research and trading states remain YELLOW; the contract expressly prevents green CI from implying profitable research or live-trading authorization. Focused semantics test passes.",
+      "evidence_sha256": "aadcde20692ffffe2b11116d3dd288df46f0ce46dc87787ed73c51a29caeaf41",
+      "blockers": []
+    },
+    {
+      "id": "PE-0010",
+      "status": "PARTIAL",
+      "sources": [
+        ".python-version",
+        "requirements-lock.txt",
+        ".github/workflows/ci.yml",
+        "docs/edge-program/reproducible-runtime.json",
+        "tests/test_forward_edge_f13.py"
+      ],
+      "tests": [
+        "test_runtime_pins_are_explicit_and_offline_install_gap_stays_visible",
+        "test_golden_file_covers_every_fixture",
+        "test_session_signatures_match_the_canonical_hashes"
+      ],
+      "test_result": "Python 3.13.17, PYTHONHASHSEED=0, Asia/Kolkata CI environment, and deterministic golden fixture signatures are pinned or tested. The exact dependency lock exists, but CI still installs from broad pyproject extras and no clean offline install has been verified on both platforms.",
+      "evidence_sha256": "faa24ed26e7ddb18a5fb7b7d3ea6f3bfe85b62c6233e9f1ede19c3f7a4cdb5e4",
+      "blockers": [
+        "Switch CI to a complete platform-aware lock and prove a clean offline wheelhouse install plus fixture hashes on Windows and Linux"
+      ]
+    },
+    {
+      "id": "PE-0011",
+      "status": "PARTIAL",
+      "sources": [
+        "scripts/source_inventory.py",
+        "docs/edge-program/source-inventory.json",
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/pipeline.py",
+        "src/financial_brain/kernel/paper_account.py"
+      ],
+      "tests": [
+        "test_inventory_covers_all_python_sources_without_inventing_owners",
+        "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
+      ],
+      "test_result": "Committed inventory captures 550 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 543 unassessed and 300 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
+      "evidence_sha256": "1b34f279de2e17a297690cccfbafb65edaf0fb67d5fa34f480f059ae8145d40c",
+      "blockers": [
+        "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state"
+      ]
+    },
+    {
+      "id": "PE-0012",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/deviation-log.json",
+        "tests/test_edge_program_runtime.py"
+      ],
+      "tests": [
+        "test_deviation_log_records_author_clock_effect_and_rollback_for_every_deviation"
+      ],
+      "test_result": "Each recorded protocol deviation includes author, UTC clock, version context, evidence effect, and rollback. The log preserves live-data, rights/latency, active-WAL backup, multi-engine state, failed-trial, and reproducible-install gaps; schema contract test passes.",
+      "evidence_sha256": "a599e8a543a4d96dfbdc1ac0478d2d899d6c476754975c645bb188fe03336884",
+      "blockers": []
+    },
+    {
+      "id": "PE-0013",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/trials.py",
+        "src/financial_brain/forward_edge/charter.py",
+        "tests/test_forward_edge_f00.py"
+      ],
+      "tests": [
+        "test_q4_2026_protected_budget_is_exhausted_at_14_of_14",
+        "test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval",
+        "test_trial_in_2027q1_needs_only_a_protected_trial_approval"
+      ],
+      "test_result": "Protected Q4 budget is exhausted at 14/14. Tests refuse a new Q4 trial absent both owner approval and budget amendment; Q1 2027 registration follows the new protected approval path.",
+      "evidence_sha256": null,
+      "blockers": []
+    },
+    {
+      "id": "PE-0014",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/modes.py",
+        "tests/test_forward_edge_f00.py"
+      ],
+      "tests": [
+        "test_live_cash_is_unavailable_by_default",
+        "test_flipping_the_build_flag_alone_does_not_enable_cash",
+        "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders"
+      ],
+      "test_result": "Physical orders remain disabled in all simulation modes. Tests verify default live-cash denial, refusal of a forged enabling flag, and that only paper mode emits simulated fills while no mode sends physical orders.",
       "evidence_sha256": null,
       "blockers": []
     },
@@ -140,33 +287,47 @@
     },
     {
       "id": "PE-0017",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": [
+        "src/financial_brain/forward_edge/fixture_replay.py",
         "src/financial_brain/forward_edge/session_runner.py",
-        "tests/test_forward_session_runner.py"
+        "src/financial_brain/forward_edge/execution.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "tests/test_forward_fixture_replay.py",
+        "tests/fixtures/forward_edge/golden_signatures.json",
+        "docs/edge-program/fixture-runner-parity-contract.md",
+        "docs/edge-program/pe-0017-fixture-runner-evidence.json"
       ],
       "tests": [
-        "test_runner_persists_visible_events_decision_risk_and_paper_execution"
+        "test_fixture_outcome_parity_runs_through_durable_forward_runner",
+        "test_fixture_replay_blocked_preflight_matches_no_trade_baseline",
+        "test_fixture_replay_refuses_modes_that_can_leave_paper"
       ],
-      "test_result": "Normalized event stream, decision visibility, risk adapter, and paper execution callback are exercised",
-      "evidence_sha256": null,
-      "blockers": [
-        "fixture adapter and replay parity are not yet wired through the same runner"
-      ]
+      "test_result": "All eight synthetic fixture outcomes pass through ForwardSessionRunner with normalized availability-timestamped QUOTE/TICK events and durable outbox receipts. A lost acknowledgement remains OUTBOX_UNKNOWN with no fill, acknowledgement or close; blocked preflight and prohibited modes fail closed. Fixture replay/F13/F14 suite: 100 passed; Ruff, mypy and diff checks passed.",
+      "evidence_sha256": "4590d1b9f5404e4b1f76bfaacdc789a6d49e864e66352f35359effb3c5961c78",
+      "blockers": []
     },
     {
       "id": "PE-0018",
-      "status": "NOT_STARTED",
+      "status": "DONE",
       "sources": [
         "src/financial_brain/forward_edge/pipeline.py",
-        "src/financial_brain/forward_edge/session_runner.py"
+        "src/financial_brain/forward_edge/fixture_replay.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/kernel/ledger.py",
+        "tests/test_forward_edge_f13.py",
+        "tests/test_forward_fixture_replay.py",
+        "tests/fixtures/forward_edge/golden_signatures.json",
+        "docs/edge-program/fixture-runner-parity-contract.md",
+        "docs/edge-program/pe-0018-fixture-runner-evidence.json"
       ],
-      "tests": [],
-      "test_result": "Existing fixture pipeline still runs independently",
-      "evidence_sha256": null,
-      "blockers": [
-        "fixture pipeline parity refactor is not implemented"
-      ]
+      "tests": [
+        "test_session_signatures_match_the_canonical_hashes",
+        "test_each_failure_class_has_a_complete_example_with_the_expected_outcome"
+      ],
+      "test_result": "The compatibility fixture pipeline now delegates preflight, decision, execution and receipt evidence to ForwardSessionRunner; its accounting projection consumes the returned fill facts. All canonical fixture signatures remain unchanged, preserving report compatibility. Fixture replay/F13/F14 suite: 100 passed; Ruff, mypy and diff checks passed.",
+      "evidence_sha256": "bba86045735c93e6917bd0574d0139b92879475fd3d2d51b41109f0c7f8328e9",
+      "blockers": []
     },
     {
       "id": "PE-0019",
@@ -186,65 +347,197 @@
       ]
     },
     {
-      "id": "PE-0021",
-      "status": "PARTIAL",
+      "id": "PE-0020",
+      "status": "DONE",
       "sources": [
+        "src/financial_brain/forward_edge/book_adapter.py",
+        "src/financial_brain/forward_edge/market_data.py",
         "src/financial_brain/forward_edge/session_runner.py",
-        "src/financial_brain/forward_edge/durable.py"
+        "src/financial_brain/paper/book.py",
+        "tests/test_forward_book_adapter.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/book-horizon-adapter-contract.md",
+        "docs/edge-program/pe-0020-book-horizon-evidence.json"
       ],
       "tests": [
-        "test_runner_persists_visible_events_decision_risk_and_paper_execution",
+        "test_twenty_session_position_survives_overnight_and_is_runner_visible",
+        "test_signal_day_does_not_force_entry_or_expiry_from_intraday_time",
+        "test_twenty_completed_holding_sessions_are_flagged_due_at_daily_close",
+        "test_future_marks_and_horizon_corruption_are_rejected"
+      ],
+      "test_result": "Persisted swing/position/momentum book rows now adapt into normalized BOOK_POSITION events consumed by ForwardSessionRunner. The adapter is read-only and daily-session based; a 20-session position remains active across overnight sessions, an unfilled signal stays ENTRY_PENDING, and an open position at its horizon remains EXIT_DUE for close reconciliation. Focused adapter/book/runner suite: 40 passed; Ruff and mypy passed.",
+      "evidence_sha256": "f08116f1ea599fd31ebf7ef9a788155faedac591ecf97df24d5ae0429aed9edb",
+      "blockers": []
+    },
+    {
+      "id": "PE-0021",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/durable.py",
+        "tests/test_forward_session_crash_matrix.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/forward-session-crash-recovery-contract.md",
+        "docs/edge-program/pe-0021-crash-recovery-evidence.json"
+      ],
+      "tests": [
+        "test_lifecycle_crash_at_each_durable_boundary_recovers_one_economic_event",
+        "test_crash_after_not_applied_reconciliation_does_not_repeat_reconciliation_or_fill",
         "test_pending_outbox_requires_reconciliation_after_unknown_side_effect",
         "test_outbox_retries_only_after_reconciliation_proves_no_effect",
         "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution",
-        "test_market_polls_can_be_durably_appended_before_session_finalization",
-        "test_batch_append_preserves_record_sequence_and_hash_chain"
+        "test_incomplete_session_is_preserved_and_cannot_be_reused",
+        "test_data_rejections_are_immutable_idempotent_and_persisted"
       ],
-      "test_result": "Session records and pending/unknown/reconciled/acknowledged paper outbox outcomes are written to the fsynced hash-chained journal; 33 focused runner/market-poll integration tests pass",
-      "evidence_sha256": null,
-      "blockers": [
-        "full lifecycle boundary crash-injection matrix and venue reconciliation remain incomplete"
-      ]
+      "test_result": "Injected crashes after session plan/state, preflight, market events, decision, risk verdict, paper intent, outbox pending, execution receipt, acknowledgement and close recover to one plan/decision/intent/receipt/ack/close and one fill. Outbox unknown requires reconciliation. A durable NOT_APPLIED reconciliation is reused after a crash without duplicate reconciliation or execution receipt. Combined forward-session crash/runner/clock/Kite/intraday/session-date/book suite: 86 passed; Ruff and mypy passed.",
+      "evidence_sha256": "35af733c32d468427e71fe538312003d38a6c8ac7c4b1717b06233c3243bc90f",
+      "blockers": []
     },
     {
       "id": "PE-0022",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": [
         "src/financial_brain/forward_edge/session_runner.py",
-        "tests/test_forward_session_runner.py"
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "src/financial_brain/forward_edge/execution.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_forward_session_crash_matrix.py",
+        "docs/edge-program/forward-paper-execution-adapter-contract.md",
+        "docs/edge-program/pe-0022-transactional-outbox-evidence.json"
       ],
       "tests": [
         "test_pending_outbox_requires_reconciliation_after_unknown_side_effect",
         "test_outbox_retries_only_after_reconciliation_proves_no_effect",
         "test_execution_without_simulation_receipt_cannot_close_paper_session",
         "test_filled_status_without_fill_facts_cannot_be_acknowledged",
-        "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution"
+        "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution",
+        "test_quote_simulator_uses_first_quote_after_latency_and_caps_visible_size",
+        "test_quote_simulator_refuses_ltp_only_and_invalid_quotes",
+        "test_quote_simulator_abstains_when_feed_health_fails",
+        "test_quote_simulator_is_connected_to_durable_runner",
+        "test_quote_simulator_rejects_fractional_decision_quantity"
       ],
-      "test_result": "18 focused runner tests pass; unknown outcomes require explicit APPLIED/NOT_APPLIED reconciliation; FILLED/PARTIAL requires finite priced fill facts and a simulated receipt; Ruff and mypy pass",
-      "evidence_sha256": null,
-      "blockers": [
-        "the production simulated execution adapter and its receipt provenance are not connected to the runner"
-      ]
+      "test_result": "91 focused forward paper/session tests pass; unknown side effects require explicit reconciliation, and normalized quote executions are receipt-backed and bound to source event hashes. Ruff, mypy, inventory freshness and diff checks pass.",
+      "evidence_sha256": "add18e925a7dcf083eef88301f037c1ae1bc22fdd18a8692398c974a15c44c6a",
+      "blockers": []
     },
     {
       "id": "PE-0023",
       "status": "PARTIAL",
       "sources": [
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
         "src/financial_brain/forward_edge/session_runner.py",
-        "tests/test_forward_session_runner.py"
+        "src/financial_brain/forward_edge/durable.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/oms.py",
+        "src/financial_brain/kernel/ledger.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/forward-paper-account-bridge-contract.md",
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "docs/edge-program/pe-0023-paper-account-bridge-evidence.json"
       ],
       "tests": [
+        "test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently",
+        "test_partial_receipt_releases_unfilled_reservation_after_cancel",
+        "test_buy_sync_requires_explicit_risk_cash_reserve",
+        "test_preflight_exception_is_durable_and_never_executes",
         "test_data_rejections_are_immutable_idempotent_and_persisted",
         "test_preflight_is_immutable_and_blocks_actionable_decisions",
         "test_actionable_decision_without_preflight_is_rejected_and_not_executed",
         "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink",
         "test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows"
       ],
-      "test_result": "Preflight verdicts, Kite source rejection hashes/reasons, decisions, risk, stable paper intents, execution receipts, and outbox acknowledgements persist in the append-only journal; 48 focused integration tests pass",
-      "evidence_sha256": null,
+      "test_result": "Added ForwardPaperSessionService requiring a durable explicit preflight, then running the forward coordinator and idempotently reconciling receipts into the existing PaperAccount OMS and double-entry ledger. Stable fill IDs, effective-dated fee accounting, order state, cash, position, realized P&L, and available conservative unrealized marks are captured. Local mock integration demonstrates restart-safe reconciliation. Combined account bridge/PaperAccount/runner/intraday suite: 50 passed; Ruff, mypy, inventory freshness and diff checks passed.",
+      "evidence_sha256": "8d7baca06ccd139bd7ea008f1d319bee9b186616ff3a56d7db10d4fd38c6a3e7",
       "blockers": [
-        "production runner invocation still needs an approved preflight callback and account-ledger integration; no actual authorized market session has been captured"
+        "No authorized Kite live-market session has yet been captured. The current daily access token is unavailable in this environment; real session evidence requires the owner login and an eligible market session."
       ]
+    },
+    {
+      "id": "PE-0024",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/pe-0024-attempt-identity-evidence.json"
+      ],
+      "tests": [
+        "test_attempts_append_under_one_session_key_without_overwriting_prior_result"
+      ],
+      "test_result": "Attempts share a deterministic per-strategy/cohort/exchange-date/mode key and have unique stable attempt IDs. A second closed attempt appends a new session plan; the earlier attempt records and result remain byte-for-byte unchanged. Reusing an attempt ID for the same session key is rejected. Focused runner/intraday suite: 36 passed; Ruff and mypy passed.",
+      "evidence_sha256": "97775be325e6ab5d7a17fb97dc8b6a0199bf3cbc50c59edfaa665c39ef2444a4",
+      "blockers": []
+    },
+    {
+      "id": "PE-0025",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/session_clock.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "tests/test_forward_session_clock.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_kite_forward_events.py",
+        "docs/edge-program/session-clock-contract.md",
+        "docs/edge-program/pe-0025-session-clock-evidence.json"
+      ],
+      "tests": [
+        "test_one_clock_provider_spans_kite_capture_decision_and_paper_execution",
+        "test_runner_uses_injected_decision_and_simulated_execution_clocks",
+        "test_injected_decision_clock_excludes_later_available_market_event",
+        "test_event_clock_provider_rejects_exchange_skew_and_backwards_local_clock"
+      ],
+      "test_result": "One injected clock runs from Kite event capture through the forward runner. Clock skew/regression fail closed, future events cannot inform an earlier decision, and simulated execution time is durable. Combined session-date/clock/runner/Kite/intraday suite: 59 passed; Ruff and mypy passed.",
+      "evidence_sha256": "dc2cd24e07594fd33ca109f29c34b423c60c8b8be7b34f9e5b1fcfce586a64c9",
+      "blockers": []
+    },
+    {
+      "id": "PE-0026",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/session_ops.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_session_date_ledger.py",
+        "tests/test_forward_session_runner.py",
+        "docs/edge-program/session-date-outcome-contract.md",
+        "docs/edge-program/pe-0026-session-date-outcome-evidence.json"
+      ],
+      "tests": [
+        "test_calendar_holiday_is_persisted_as_no_trade_and_cannot_be_rewritten",
+        "test_special_session_is_planned_and_closes_normally",
+        "test_expired_unresolved_trading_dates_become_incomplete_once",
+        "test_runner_requires_calendar_plan_and_marks_feed_loss_incomplete",
+        "test_runner_persists_a_terminal_no_trade_date",
+        "test_invalid_or_unplanned_outcomes_fail_closed"
+      ],
+      "test_result": "An append-only date ledger pins calendar version, tradability and settlement deadline. Holidays become immutable NO_TRADE; special-session overrides remain eligible; completed and no-trade runner outcomes are recorded; feed loss or premature stop records INCOMPLETE; overdue missing outcomes are swept to INCOMPLETE. Cross-journal recovery is idempotent. Combined session-date/clock/runner/Kite/intraday suite: 59 passed; Ruff and mypy passed.",
+      "evidence_sha256": "91455549290280db7d5153bdec83e9e02212d5e25956c972b21bdcfc75a0cb56",
+      "blockers": []
+    },
+    {
+      "id": "PE-0029",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/session_checkpoints.py",
+        "src/financial_brain/forward_edge/durable.py",
+        "tests/test_session_checkpoints.py",
+        "docs/edge-program/session-checkpoint-contract.md",
+        "docs/edge-program/pe-0029-checkpoint-evidence.json"
+      ],
+      "tests": [
+        "test_atomic_start_end_checkpoint_pair_tracks_both_journal_prefixes",
+        "test_checkpoint_requires_quiesced_writers_and_preserves_torn_source",
+        "test_checkpoint_verification_rejects_changed_journal_prefix",
+        "test_checkpoint_phase_retry_returns_original_snapshot_after_restart",
+        "test_checkpoint_journal_cannot_alias_source_journal"
+      ],
+      "test_result": "Atomic start/end checkpoints bind both event and account journal prefixes; restart retries preserve the original checkpoint; torn/corrupt sources are refused without mutating source; journal paths must be distinct. Five focused tests pass, with Ruff, mypy, and diff checks passing. Caller must quiesce both source writers.",
+      "evidence_sha256": "366969886ef6eab5c64fb5272f02191b7ee41b5a98d39062bfa0d725416851c5",
+      "blockers": []
     },
     {
       "id": "PE-0030",
@@ -252,17 +545,27 @@
       "sources": [
         "src/financial_brain/ingest/kite_live.py",
         "src/financial_brain/forward_edge/market_data.py",
-        "tests/test_kite_forward_events.py"
+        "src/financial_brain/forward_edge/raw_quote_archive.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "src/financial_brain/paper/intraday_runner.py",
+        "tests/test_kite_forward_events.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_raw_quote_archive.py",
+        "tests/test_phase5_intraday_runner.py",
+        "docs/edge-program/pe-0030-market-data-evidence.json"
       ],
       "tests": [
         "test_full_quote_becomes_timestamped_forward_event",
         "test_ltp_only_is_analyzable_but_not_fill_capable",
-        "test_crossed_or_empty_depth_is_not_executable"
+        "test_crossed_or_empty_depth_is_not_executable",
+        "test_kite_event_links_durable_raw_quote_record_under_authorized_archive",
+        "test_simulated_fill_receipt_points_through_event_to_raw_quote_archive",
+        "test_live_runner_can_opt_in_to_authorized_raw_quote_archive"
       ],
-      "test_result": "29 focused Kite and forward market-data tests passed; Ruff and mypy passed",
-      "evidence_sha256": null,
+      "test_result": "The existing Kite adapter and read-only poll loop support normalized availability-timestamped quotes with optional durable raw-object lineage; conservative simulation requires valid visible two-sided depth and binds fills to quote event identity. Synthetic Kite/runner/archive suite: 54 passed; Ruff, mypy and diff checks passed. No live capture is claimed.",
+      "evidence_sha256": "d2aac733f3c4e3f419047b4aa2bf7289d9faff838e6bb49467c6fb8ee22a4cbf",
       "blockers": [
-        "live Kite capture has not yet been observed"
+        "No authorized live-market capture has been observed; observed feed freshness, request latency, depth coverage, and missed-fill rates still need measurement during owner-authorized market sessions."
       ]
     },
     {
@@ -284,17 +587,278 @@
       "id": "PE-0032",
       "status": "PARTIAL",
       "sources": [
-        "src/financial_brain/ingest/kite_live.py",
         "src/financial_brain/forward_edge/market_data.py",
-        "tests/test_kite_forward_events.py"
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/raw_quote_archive.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "src/financial_brain/paper/intraday_runner.py",
+        "tests/test_kite_forward_events.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_raw_quote_archive.py",
+        "tests/test_phase5_intraday_runner.py",
+        "docs/edge-program/raw-kite-quote-archive-contract.md",
+        "docs/edge-program/pe-0032-ingest-lineage-evidence.json"
       ],
       "tests": [
-        "test_full_quote_becomes_timestamped_forward_event"
+        "test_raw_archive_requires_explicit_retention_attestation",
+        "test_kite_event_links_durable_raw_quote_record_under_authorized_archive",
+        "test_simulated_fill_receipt_points_through_event_to_raw_quote_archive",
+        "test_raw_archive_hash_chain_rejects_record_edits",
+        "test_live_runner_can_opt_in_to_authorized_raw_quote_archive"
       ],
-      "test_result": "Raw source payload hash and normalized source/exchange/receive/availability fields are tested",
-      "evidence_sha256": null,
+      "test_result": "Optional RawQuoteArchive persists canonical JSON of parsed Kite SDK quote objects (not HTTP wire bytes) under a hash chain. Normalized QUOTE events reference the archive sequence/chain digest and fill receipts bind to the event digest. Synthetic archive and existing poll-loop tests pass; Ruff, mypy and diff checks pass. No real payload or authorization is included.",
+      "evidence_sha256": "769e26463fbc60a7c58eeb3ecbbdb642db709ade06d5814d27924853a4b852a3",
       "blockers": [
-        "separate ingest clock and durable raw-to-fill lineage are not implemented"
+        "No independently verified data-provider retention-rights record is available; the archive checks only caller-supplied attestation fields.",
+        "No authorized live-market capture has been observed; real session evidence requires owner login and an eligible market session."
+      ]
+    },
+    {
+      "id": "PE-0077",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/execution.py",
+        "tests/test_forward_edge_f05.py",
+        "docs/edge-program/indian-cash-cost-schedule-contract.md",
+        "docs/edge-program/pe-0077-indian-cost-model-evidence.json"
+      ],
+      "tests": [
+        "test_cost_rule_is_selected_by_effective_date_and_side",
+        "test_total_is_rounded_once_from_unrounded_parts",
+        "test_cost_rule_models_all_effective_dated_cash_equity_components_and_hashes_table",
+        "test_cost_rules_reject_invalid_rates_and_ambiguous_effective_dates"
+      ],
+      "test_result": "CostRule now has configurable effective-dated Indian cash-equity components (brokerage, exchange, STT, stamp duty, GST, SEBI, IPFT and clearing), brokerage bounds, and a schedule content hash. Synthetic round-trip calculation and existing cost tests: 22 passed; Ruff, mypy, diff checks pass. Current source-verified rates and PaperAccount bridge integration remain absent.",
+      "evidence_sha256": "276b4f90db81a8e356a53df85eb2c31036dd522277f24b839127ca842765ef0e",
+      "blockers": [
+        "Source-verified rate tables must be supplied and integrated into PaperAccount before rupee-level real-cost reconciliation can be claimed."
+      ]
+    },
+    {
+      "id": "PE-0078",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/paper/intraday.py",
+        "src/financial_brain/paper/execution.py",
+        "tests/test_phase5_intraday_paper.py",
+        "docs/edge-program/pe-0078-cost-attribution-evidence.json"
+      ],
+      "tests": [
+        "test_live_trade_separates_decision_alpha_spread_crossing_and_statutory_charges",
+        "test_with_live_quotes_the_bucket_impact_is_not_charged_on_top_of_the_spread"
+      ],
+      "test_result": "Focused intraday paper suite: 17 passed. The decomposition reconciles decision-price signal P&L, quoted entry/exit crossing in execution P&L, statutory fees, and net P&L; spread impact is not charged twice. Ruff and diff checks passed. Synthetic acceptance only.",
+      "evidence_sha256": "19416e5142bbcd09fa686a498fbe1a8d68bc154d9a7356382f8444c30f6fa3a9",
+      "blockers": []
+    },
+    {
+      "id": "PE-0079",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/execution.py",
+        "tests/test_forward_edge_f05.py",
+        "docs/edge-program/pe-0079-fidelity-isolation-evidence.json"
+      ],
+      "tests": [
+        "fidelities_are_reported_separately_and_never_summed_together"
+      ],
+      "test_result": "Focused three-tier fidelity isolation test: 1 passed. Bar, observed-quote simulation, and observed broker values remain separate; mixed-tier aggregation raises MixedFidelity. Ruff and diff checks passed.",
+      "evidence_sha256": "2c4c0cae2df076cda4acaf829163f2f1934476a36c6e399c4ac18ca796d594ca",
+      "blockers": []
+    },
+    {
+      "id": "PE-0080",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/fills.py",
+        "tests/test_kernel_fills.py",
+        "docs/edge-program/pe-0080-adverse-stop-quote-evidence.json"
+      ],
+      "tests": [
+        "test_stop_and_target_in_same_bar_resolve_adversely",
+        "test_ambiguous_exits_use_adverse_stop_then_cross_the_correct_quote_side"
+      ],
+      "test_result": "Kernel fill suite: 13 passed; Ruff, mypy and diff checks passed. Same-bar stop/target collisions resolve to the adverse stop, then long exits cross at the bid and short exits at the ask using the supplied spread.",
+      "evidence_sha256": "b306a7c10849e2737b1909d021404b2f57ec11a7cc3f0b260d4bf3417338668b",
+      "blockers": []
+    },
+    {
+      "id": "PE-0081",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/execution/oms/quality.py",
+        "tests/test_execution_slippage_calibration.py",
+        "docs/edge-program/pe-0081-slippage-calibration-evidence.json"
+      ],
+      "tests": [
+        "test_slippage_buckets_cover_each_requested_condition_and_keep_missing_explicit",
+        "test_calibration_uses_only_provenance_bearing_observed_broker_fills",
+        "test_simulated_or_under_sampled_buckets_are_uncalibrated_and_emit_no_parameter"
+      ],
+      "test_result": "Execution-quality calibration tests: 21 passed; Ruff, mypy and diff checks passed. Five-dimensional buckets and observed-only calibration guard work; absent/unverified inputs return UNCALIBRATED.",
+      "evidence_sha256": "6a45dc790f229b24abfb5710db11513e04b759839d3596e6182a1e37a7c4d664",
+      "blockers": [
+        "Authorized observed broker fills are unavailable; no actual calibration claim.",
+        "Output is not wired to the execution-model registry or promotion gate."
+      ]
+    },
+    {
+      "id": "PE-0082",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "tests/test_forward_edge_f08.py",
+        "tests/test_forward_edge_f13.py",
+        "docs/edge-program/pe-0082-fill-cost-stress-evidence.json"
+      ],
+      "tests": [
+        "test_each_gate_independently_blocks_promotion",
+        "test_missing_cost_by_fill_rate_grid_blocks_promotion_as_insufficient_evidence",
+        "test_report_carries_coverage_benchmark_missing_data_and_never_promotes"
+      ],
+      "test_result": "Focused evidence gate and fixture report suites: 63 passed; Ruff, mypy and diff checks passed. A full 1x/1.5x/2x cost by 100/75/50% fill-rate matrix is required; missing cells block promotion and any non-positive cell fails the candidate.",
+      "evidence_sha256": "fcf46e9d88d58074adbf1f58bdae9ff05f3684d0900246304af9a57e23a96b6d",
+      "blockers": [
+        "No unified scenario report builder derives the matrix from all intentions, including missed and partial fills.",
+        "No observed forward fills are available to calibrate the grid."
+      ]
+    },
+    {
+      "id": "PE-0083",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/champion.py",
+        "tests/test_champion_executable.py",
+        "docs/edge-program/pe-0083-no-fill-denominator-evidence.json"
+      ],
+      "tests": [
+        "test_no_fill_attempt_stays_in_the_scheduled_intention_denominator",
+        "test_explicit_no_order_cash_cohort_resolves_to_zero_instead_of_disappearing"
+      ],
+      "test_result": "Executable cohort suite: 7 passed; Ruff, mypy and diff checks passed. A NO_FILL remains in selected_n/no_fill_n; cash sessions and zero outcome stay in the scheduled cohort denominator.",
+      "evidence_sha256": "0da82134eb6a3143f9c47be3454327bef6cfcc78e19e0853c87e8335d15e4fc5",
+      "blockers": []
+    },
+    {
+      "id": "PE-0084",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/paper/book.py",
+        "tests/test_phase5_book.py",
+        "docs/edge-program/pe-0084-cost-drag-measures-evidence.json"
+      ],
+      "tests": [
+        "test_the_record_keeps_losers_and_nets_costs_and_the_universe"
+      ],
+      "test_result": "Focused swing-book suite: 11 passed; Ruff and diff checks passed. Summary reports rupee costs, basis points of closed entry notional, and cost drag in fraction/basis points of starting NAV; gross minus costs reconciles to net.",
+      "evidence_sha256": "ddbed9084a23a7463fa32fa868fa1f8d5bdca903a2d0180cab3150711ce3ef7c",
+      "blockers": []
+    },
+    {
+      "id": "PE-0085",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/execution.py",
+        "tests/test_forward_edge_f05.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "docs/edge-program/pe-0085-quote-arrival-shortfall-evidence.json"
+      ],
+      "tests": [
+        "test_quote_arrival_shortfall_measures_only_displayed_quote_depth_not_broker_fills",
+        "test_quote_arrival_shortfall_fails_closed_on_early_quotes_missing_depth_and_broker_labels"
+      ],
+      "test_result": "Forward execution/adapter tests: 29 passed; Ruff and mypy passed. Quote-at-arrival shortfall now flows into the durable execution receipt when a pre-decision baseline quote exists. It remains latency-gated, depth-limited and explicitly SIMULATED_QUOTE with zero broker-fill observations.",
+      "evidence_sha256": "c734ea97770cbf52fd972071f0b4417fe6f761c4d10d24b53d1d22e8ccb30ed6",
+      "blockers": [
+        "No actual observed Kite quote-arrival sample is available; current test fixtures are synthetic."
+      ]
+    },
+    {
+      "id": "PE-0086",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/instruments.py",
+        "src/financial_brain/execution/oms/engine.py",
+        "tests/test_kernel_instruments.py",
+        "tests/test_oms.py",
+        "docs/edge-program/pe-0086-instrument-order-rule-gate-evidence.json"
+      ],
+      "tests": [
+        "test_execution_order_requires_complete_effective_source_specific_rule_set",
+        "test_execution_order_refuses_source_rule_violations",
+        "test_oms_refuses_orders_when_source_specific_instrument_rules_are_not_loaded"
+      ],
+      "test_result": "Instrument/OMS tests: 38 passed; Ruff, mypy and diff checks passed. OMS rejects orders without a versioned, source-identified rule master and validates session, tick, lot and size limits when provided.",
+      "evidence_sha256": "099f708aa2856a1850e81692749fe7012f32c7a5a8e55ceff67176329701864d",
+      "blockers": [
+        "Current official freeze and margin rules are not present; no values fabricated.",
+        "Interactive trading service still needs the complete owner-authorized rule-master loader; until then OMS orders fail closed."
+      ]
+    },
+    {
+      "id": "PE-0087",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/rehearsal.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_forward_edge_f12.py",
+        "docs/edge-program/pe-0087-immutable-paper-fill-provenance-evidence.json"
+      ],
+      "tests": [
+        "test_quote_simulator_uses_first_quote_after_latency_and_caps_visible_size",
+        "test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently",
+        "test_execution_fee_hash_mismatch_is_rejected_before_account_posting",
+        "test_slippage_gap_is_reported_and_execution_models_are_versioned_not_edited"
+      ],
+      "test_result": "49 focused tests passed; Ruff and mypy on changed source modules passed. Paper fills carry immutable execution-model, fee-schedule, latency-model and quote-snapshot hashes through account posting; invalid provenance is rejected.",
+      "evidence_sha256": "ca895b68e24297a1f86e70f66c5afca791daab07df2da07d19d61e510073f43c",
+      "blockers": []
+    },
+    {
+      "id": "PE-0088",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/execution.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "tests/test_execution_quote_perturbations.py",
+        "tests/test_forward_edge_f05.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "tests/test_kite_forward_events.py",
+        "docs/edge-program/pe-0088-execution-perturbation-evidence.json"
+      ],
+      "tests": [
+        "test_wider_spread_and_price_gap_never_improve_buy_fill_price",
+        "test_feed_gap_and_late_pre_cutoff_quote_remain_missed",
+        "test_missing_or_zero_depth_never_creates_a_fill",
+        "test_duplicate_quote_print_does_not_multiply_visible_size_or_fill",
+        "test_duplicate_trade_print_does_not_inflate_passive_order_fill_volume",
+        "test_feed_health_rejects_stale_or_late_batch_without_fill"
+      ],
+      "test_result": "Adversarial quote perturbation tests cover worse spreads, gaps, pre-latency and stale/late feed gating, missing depth, duplicate quote observations, and duplicate passive trade tuples. Exact duplicate trade tuples are collapsed conservatively; 41 focused execution/Kite tests pass. Ruff, mypy on execution.py, and diff checks pass.",
+      "evidence_sha256": "82f5b93ca2e2eed1099656c1442762f70a84ff0284a7345fb390facc9f693679",
+      "blockers": []
+    },
+    {
+      "id": "PE-0089",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/schemas.py",
+        "tests/test_kernel_schemas.py",
+        "docs/edge-program/pe-0089-common-asset-order-event-contract-evidence.json"
+      ],
+      "tests": [
+        "test_common_order_event_contract_supports_cash_futures_and_options",
+        "test_derivative_contracts_and_event_provenance_fail_closed"
+      ],
+      "test_result": "18 forward paper bridge/execution and kernel schema tests passed; Ruff and mypy passed. Cash paper reconciliation now persists idempotent canonical intent, order-state, fill and mark events using the shared event contract.",
+      "evidence_sha256": "b35afc7adf21b7304848daf4b2928720d37d950ea2d855e28ca5cd0b1e25ae4c",
+      "blockers": [
+        "Existing OMS/accounting and futures/options engines have not all been migrated to consume the shared contract; cash PaperAccount remains authoritative and the new contract is currently mirrored into its forward journal.",
+        "Venue-specific contract metadata still requires sourced effective-date rules before executable orders can be accepted."
       ]
     },
     {
@@ -305,17 +869,25 @@
         "src/financial_brain/kernel/ledger.py",
         "src/financial_brain/kernel/oms.py",
         "src/financial_brain/forward_edge/durable.py",
-        "tests/test_paper_account.py"
+        "src/financial_brain/kernel/paper_portfolio.py",
+        "tests/test_paper_account.py",
+        "tests/test_paper_account_portfolio.py",
+        "tests/test_kernel_ledger_guards_ticks.py",
+        "docs/edge-program/pe-0090-multibook-cash-reconciliation-evidence.json"
       ],
       "tests": [
+        "test_portfolio_consolidates_isolated_book_ledgers_and_reconciles_marks",
+        "test_portfolio_keeps_total_nav_unavailable_if_any_book_lacks_a_position_mark",
+        "test_portfolio_refuses_ambiguous_duplicate_book_authority",
         "test_buy_sell_fees_and_restart_reconcile",
         "test_replayed_intent_fill_and_fee_have_one_economic_effect",
         "test_failed_fill_or_fee_does_not_change_journal"
       ],
-      "test_result": "32 focused account, OMS, and ledger tests passed; full Windows suite: 3278 passed, 1 skipped; Ruff and mypy passed",
-      "evidence_sha256": null,
+      "test_result": "27 focused portfolio, account, and ledger tests passed; Ruff and mypy passed. Added a read-only consolidated ledger/NAV view for registered PaperAccounts while preserving per-book capital isolation and withholding total NAV if any book lacks a mark.",
+      "evidence_sha256": "e609f99f71b934718e9b843ebbb13b0e365beea42a0a47f15b75761e563c9828",
       "blockers": [
-        "implementation currently covers one long-only single-currency paper book; aggregation across every strategy book, margin, settlement, and derivative accounting remain"
+        "The operational runner does not yet discover/register every strategy account into this derived view, and account subledgers remain the source of truth rather than one persisted portfolio ledger.",
+        "The scope remains long-only cash equities in one currency; margin, settlement, futures and options accounting are not implemented."
       ]
     },
     {
@@ -358,23 +930,80 @@
       "blockers": []
     },
     {
+      "id": "PE-0093",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/ledger.py",
+        "tests/test_paper_account_corporate_actions.py",
+        "tests/test_paper_account.py",
+        "docs/edge-program/pe-0093-cash-equity-corporate-action-evidence.json"
+      ],
+      "tests": [
+        "test_split_preserves_total_cost_basis_invalidates_old_mark_and_replays",
+        "test_dividend_posts_gross_income_withholding_and_net_cash_once",
+        "test_suspension_blocks_intents_until_a_sourced_resumption",
+        "test_delisting_cash_recovery_realizes_loss_and_zero_recovery_is_supported",
+        "test_actions_without_source_hash_or_with_fractional_split_do_not_mutate_account"
+      ],
+      "test_result": "32 focused corporate-action, account and portfolio tests passed; Ruff and mypy passed. Added source-hash-bound split, dividend/withholding, suspension and delisting cash-settlement events with restart-safe accounting.",
+      "evidence_sha256": "4236e0ea9bad53470954e51060c900dcf1a16f0adadde196b9be3d9ca40a2d1d",
+      "blockers": [
+        "Source hashes and supplied rates are not independently checked against an official corporate-action provider or tax authority; no real source feed is configured.",
+        "Fractional split entitlements require a sourced cash-in-lieu workflow and are currently refused.",
+        "Delisting settlement models only owner-supplied gross cash recovery; event-specific tax, legal settlement, symbol succession and non-cash demerger/rights mechanics remain unsupported."
+      ]
+    },
+    {
+      "id": "PE-0102",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/paper_account_audit.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/ledger.py",
+        "src/financial_brain/forward_edge/durable.py",
+        "tests/test_paper_account_audit.py",
+        "tests/test_paper_account.py",
+        "docs/edge-program/paper-account-audit-contract.md",
+        "docs/edge-program/pe-0102-paper-account-audit-evidence.json"
+      ],
+      "tests": [
+        "test_independent_journal_audit_recomputes_balances_and_daily_nav",
+        "test_independent_audit_rejects_nav_mismatch_in_a_valid_hash_chain",
+        "test_independent_audit_rejects_future_cash_flow_in_nav_snapshot",
+        "test_independent_audit_rejects_pre_fill_mark"
+      ],
+      "test_result": "Independent journal-only audit recomputes cash, positions/cost basis, realized P&L, fees, marked NAV, and persisted daily snapshots. It rejects inconsistent NAV, future cash flows, and pre-fill marks even when journal hash chains are valid. Eleven focused audit/account tests pass; Ruff, mypy, and diff checks pass.",
+      "evidence_sha256": "04b1c38c8b50191dac2279d543f4991d88ae8def33659c9e73c04891444d842c",
+      "blockers": []
+    },
+    {
       "id": "PE-0110",
       "status": "PARTIAL",
       "sources": [
+        "src/financial_brain/evaluation/paper_cohort_adapter.py",
         "src/financial_brain/evaluation/champion.py",
-        "docs/edge-program/executable-cohort-contract.md"
+        "src/financial_brain/forward_edge/durable.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_paper_cohort_adapter.py",
+        "tests/test_champion_executable.py",
+        "docs/edge-program/executable-cohort-contract.md",
+        "docs/edge-program/pe-0110-paper-cohort-adapter-evidence.json"
       ],
       "tests": [
+        "test_journals_normalize_into_executable_cohort_inputs_and_resolve",
+        "test_missing_corporate_action_attestation_is_not_inferred",
+        "test_missing_fill_timestamp_refuses_executable_export",
         "test_executable_cohort_uses_actual_partial_fill_fees_marks_and_cash_days",
         "test_explicit_no_order_cash_cohort_resolves_to_zero_instead_of_disappearing",
-        "test_sell_fills_release_inventory_and_include_sell_fee_in_net_nav",
-        "test_missing_mark_or_unresolved_order_withholds_cohort_return",
-        "test_overlapping_frozen_cohorts_are_rejected"
+        "test_missing_mark_or_unresolved_order_withholds_cohort_return"
       ],
-      "test_result": "Five deterministic contract tests cover partial buy/sell fills, fees, marked NAV, cash days, missing marks, unresolved orders, and overlap rejection. Executable results are stored separately and take precedence over close-to-close diagnostics.",
-      "evidence_sha256": null,
+      "test_result": "A new durable-journal adapter links runner decisions/intents/receipts with PaperAccount OMS orders, booked fills/fees, and marks, then calls resolve_executable. Three adapter and six resolver tests pass; Ruff, mypy, and diff checks pass. Missing corporate-action attestation and missing fill timestamps fail closed.",
+      "evidence_sha256": "0dce419d4c7ad5ffecab115fdb12df23fd1c1c137aaffa42993cf03fc332717f",
       "blockers": [
-        "ForwardSessionRunner and PaperAccount durable events are not yet exported into this resolver's normalized cohort inputs; live prospective cohorts have not elapsed"
+        "No prospective live-market cohort has elapsed. Exchange-calendar and corporate-action-check inputs are supplied by the caller and still require independently sourced/verified evidence."
       ]
     },
     {
@@ -468,8 +1097,19 @@
     {
       "id": "PE-0115",
       "status": "DONE",
-      "sources": ["src/financial_brain/forward_edge/trials.py", "src/financial_brain/forward_edge/charter.py", "tests/test_forward_edge_f00.py"],
-      "tests": ["test_q4_2026_protected_budget_is_exhausted_at_13_of_13", "test_new_protected_trial_refused_when_budget_is_spent", "test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval", "test_protected_trial_cannot_register_without_full_identity_registry", "test_prospective_cohort_cannot_register_without_human_trial_approval", "test_trial_in_2027q1_needs_only_a_protected_trial_approval"],
+      "sources": [
+        "src/financial_brain/forward_edge/trials.py",
+        "src/financial_brain/forward_edge/charter.py",
+        "tests/test_forward_edge_f00.py"
+      ],
+      "tests": [
+        "test_q4_2026_protected_budget_is_exhausted_at_14_of_14",
+        "test_new_protected_trial_refused_when_budget_is_spent",
+        "test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval",
+        "test_protected_trial_cannot_register_without_full_identity_registry",
+        "test_prospective_cohort_cannot_register_without_human_trial_approval",
+        "test_trial_in_2027q1_needs_only_a_protected_trial_approval"
+      ],
       "test_result": "The Q4 2026 13/13 budget refuses a protected cohort without both a human trial approval and governance amendment. Prospective cohorts require exact charter-hash approval and full identity/schedule/durable registry; a direct regression confirms no unapproved cohort is appended. The next research window still requires human approval.",
       "evidence_sha256": null,
       "blockers": []
@@ -477,11 +1117,23 @@
     {
       "id": "PE-0116",
       "status": "PARTIAL",
-      "sources": ["src/financial_brain/forward_edge/exclusions.py", "src/financial_brain/forward_edge/approvals.py", "docs/edge-program/exclusion-review-contract.md"],
-      "tests": ["test_exclusion_requires_a_distinct_scoped_human_reviewer_and_recovers", "test_discretionary_exclusion_or_nonindependent_review_is_rejected", "test_excluded_date_stays_in_fixed_denominator_and_adverse_sensitivity", "test_unreviewed_missing_dates_remain_in_denominator_and_get_adverse_sensitivity", "test_observed_and_excluded_same_date_is_rejected"],
+      "sources": [
+        "src/financial_brain/forward_edge/exclusions.py",
+        "src/financial_brain/forward_edge/approvals.py",
+        "docs/edge-program/exclusion-review-contract.md"
+      ],
+      "tests": [
+        "test_exclusion_requires_a_distinct_scoped_human_reviewer_and_recovers",
+        "test_discretionary_exclusion_or_nonindependent_review_is_rejected",
+        "test_excluded_date_stays_in_fixed_denominator_and_adverse_sensitivity",
+        "test_unreviewed_missing_dates_remain_in_denominator_and_get_adverse_sensitivity",
+        "test_observed_and_excluded_same_date_is_rejected"
+      ],
       "test_result": "A durable append-only log allows only source/timestamp/schema corruption reasons, requires a second distinct human approval scoped to the exact request, revalidates on restart, and refuses outcome edits. Sensitivity reports retain every scheduled day, show approved exclusions and unresolved missing days, include fixed-denominator zero-fill and -100% adverse cases, and disable promotion when exclusions or missing dates exist. Eight focused tests pass.",
       "evidence_sha256": null,
-      "blockers": ["Reviewer actor IDs and human status are supplied by the caller; production identity/authentication must independently verify the reviewer before this can be treated as externally independent review"]
+      "blockers": [
+        "Reviewer actor IDs and human status are supplied by the caller; production identity/authentication must independently verify the reviewer before this can be treated as externally independent review"
+      ]
     },
     {
       "id": "PE-0117",
@@ -497,6 +1149,689 @@
       "test_result": "Persisted daily NAV reconciles cash plus marked open positions and external flows. Flow-adjusted returns account for cash days and later fills/marks; snapshots reject future marks, late flows, duplicate dates and rewrites. Restart reproduces snapshots and returns. Focused account suite: 9 passed; Ruff and mypy passed.",
       "evidence_sha256": null,
       "blockers": []
+    },
+    {
+      "id": "PE-0094",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/futures_paper.py",
+        "tests/test_kernel_futures_paper.py",
+        "docs/edge-program/pe-0094-futures-variation-margin-evidence.json"
+      ],
+      "tests": [
+        "test_daily_variation_margin_recovery_and_idempotent_events",
+        "test_trade_margin_gate_roll_lot_compatibility_and_expiry",
+        "test_margin_rejects_trade_without_appending_and_blocks_stale_order"
+      ],
+      "test_result": "55 passed (exit code 0); Ruff and mypy on the futures paper module passed. CI architecture failure on the initial patch was fixed by replacing its date.today() type check with a wall-clock-free exact date type check. Cash and position reconcile over consecutive settlements, roll and expiry; restart and duplicate-event handling are covered.",
+      "evidence_sha256": "22735a25d85711c7767661bcccfdfe83122ef509402e7580c6c5ed2e8e18f84e",
+      "blockers": []
+    },
+    {
+      "id": "PE-0095",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/options_paper.py",
+        "tests/test_kernel_options_paper.py",
+        "docs/edge-program/pe-0095-options-expiry-settlement-evidence.json"
+      ],
+      "tests": [
+        "test_physical_call_spread_expiry_reconciles_both_legs_margin_cash_and_restart",
+        "test_cash_settled_long_put_pays_intrinsic_and_physical_assignment_creates_shares",
+        "test_naked_short_margin_gate_and_expiry_data_validation_are_fail_closed"
+      ],
+      "test_result": "92 passed (exit code 0); Ruff and mypy on the new options paper module passed. Expiry flows reconcile premium cash, spread reserve, both legs and physical/cash settlement; journal restart and duplicate commands are verified.",
+      "evidence_sha256": "942c35807c310feba52db386ccd5d70764ec11130f7af1ad12138ff94649309f",
+      "blockers": []
+    },
+    {
+      "id": "PE-0027",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/offline_paper.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/cli.py",
+        "tests/test_forward_offline_paper_cli.py",
+        "docs/forward-edge/offline-paper-cli.md",
+        "docs/edge-program/pe-0027-offline-real-paper-cli-evidence.json"
+      ],
+      "tests": [
+        "test_real_paper_archive_cli_runs_without_network_or_physical_orders",
+        "test_resume_after_interrupted_session_reuses_journal_events_and_never_duplicates_fill",
+        "test_archive_requires_same_exchange_date_timezone_and_source_lineage",
+        "test_real_paper_cli_requires_explicit_paper_confirmation",
+        "tests/test_forward_session_runner.py"
+      ],
+      "test_result": "29 passed (exit code 0); Ruff and mypy on the offline CLI module passed. Local archive replay and recovery are fail-closed, network-denied and order-free; no strategy adapter or OMS fills are asserted.",
+      "evidence_sha256": "eb5238777106e0171af014a4cb50a50905ff49c2378b2b1a2b4867b7248e8274",
+      "blockers": [
+        "A registered strategy adapter and canonical paper-account fill/ledger path are not wired; the current command completes as NO_TRADE."
+      ]
+    },
+    {
+      "id": "PE-0028",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/offline_paper.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/cli.py",
+        "tests/test_forward_offline_paper_cli.py",
+        "docs/forward-edge/offline-paper-cli.md",
+        "docs/edge-program/pe-0028-offline-session-resume-evidence.json"
+      ],
+      "tests": [
+        "test_real_paper_archive_cli_runs_without_network_or_physical_orders",
+        "test_resume_after_interrupted_session_reuses_journal_events_and_never_duplicates_fill",
+        "test_archive_requires_same_exchange_date_timezone_and_source_lineage",
+        "test_real_paper_cli_requires_explicit_paper_confirmation",
+        "tests/test_forward_session_runner.py"
+      ],
+      "test_result": "29 passed (exit code 0); Ruff and mypy on the offline CLI module passed. Local archive replay and recovery are fail-closed, network-denied and order-free; no strategy adapter or OMS fills are asserted.",
+      "evidence_sha256": "bf9ef3aaf750b50b8311a8ff5698613a83b52bdea3a24dce9a349c58dfdb6db3",
+      "blockers": [
+        "CLI recovery is demonstrated for no-trade sessions; a strategy-generated fill plus OMS cash/position reconciliation has not yet been connected end to end."
+      ]
+    },
+    {
+      "id": "PE-0033",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/instruments.py",
+        "tests/test_kernel_instruments.py",
+        "docs/edge-program/pe-0033-effective-instrument-order-rules-evidence.json"
+      ],
+      "tests": [
+        "test_rule_lookup_is_effective_dated",
+        "test_execution_order_requires_complete_effective_source_specific_rule_set",
+        "test_execution_order_refuses_source_rule_violations",
+        "test_execution_order_rejects_suspended_or_expired_effective_instrument"
+      ],
+      "test_result": "23 passed (exit code 0); Ruff and mypy on the effective instrument-rule module passed. Historical tick/lot/freeze/session lookup and tradability validation refuse violations without synthetic repair.",
+      "evidence_sha256": "f97c4d672fbd563cbdcb767234055d9731cdde14e5049d25261d9103ea666e08",
+      "blockers": []
+    },
+    {
+      "id": "PE-0034",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/providers/kite_data.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_kite_forward_events.py",
+        "tests/test_phase3_kite.py",
+        "tests/test_phase5_intraday_runner.py",
+        "tests/test_raw_quote_archive.py",
+        "docs/edge-program/pe-0034-read-only-kite-polling-adapter-evidence.json"
+      ],
+      "tests": [
+        "test_full_quote_becomes_timestamped_forward_event",
+        "test_injected_clock_provider_stamps_each_kite_event_after_exchange_time",
+        "test_read_only_provider_error_never_exposes_credentials",
+        "test_live_runner_can_opt_in_to_authorized_raw_quote_archive",
+        "test_kite_event_links_durable_raw_quote_record_under_authorized_archive"
+      ],
+      "test_result": "80 passed (exit code 0); Ruff and mypy on the Kite provider/normalizer passed. Mock and Kite provider paths share timestamped normalized events; no credential or broker-order behavior is exposed.",
+      "evidence_sha256": "3d1162ca4a85401555a1cbcbfc9ae77f4aab2337b1fbae401f18350e069288ec",
+      "blockers": []
+    },
+    {
+      "id": "PE-0035",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/session_ops.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_forward_feed_health.py",
+        "docs/edge-program/pe-0035-durable-feed-health-and-stale-no-trade-evidence.json"
+      ],
+      "tests": [
+        "test_packet_monitor_counts_gaps_duplicates_disconnects_reconnects_and_drops",
+        "test_feed_health_rejects_future_quote_and_stale_heartbeat",
+        "test_stale_feed_forces_durable_no_trade_and_session_completeness_counts"
+      ],
+      "test_result": "49 passed (exit code 0); Ruff and mypy on the feed-health and session-runner modules passed. Fault injection produces STALE_FEED/NO_TRADE without invoking strategy or execution, and session evidence persists all health counters.",
+      "evidence_sha256": "b1c183ccf46fd0fd601fb4f0afa35d19b18aa0fb67c20beae516fb1c7a609467",
+      "blockers": [
+        "The current Kite polling payload has no packet sequence number or provider disconnect/reconnect callbacks, so live gaps/reconnect/drop counts cannot yet be populated automatically from the configured source.",
+        "PacketDeduper's packet-ID/sequence memory itself is process-local; only recorded health snapshots survive restart. Persisted packet-level deduplication is not connected to the capture archive."
+      ]
+    },
+    {
+      "id": "PE-0036",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/raw_quote_archive.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "src/financial_brain/forward_edge/fixture_replay.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "tests/test_raw_quote_archive.py",
+        "docs/edge-program/market-capture-replay-contract.md",
+        "docs/edge-program/pe-0036-time-aligned-market-capture-evidence.json"
+      ],
+      "tests": [
+        "test_market_archive_round_trips_quotes_ticks_and_bars_by_availability",
+        "test_market_archive_requires_kind_and_source_retention_scope",
+        "test_historical_kite_bars_are_available_only_after_retrieval_and_archive_with_rights",
+        "test_historical_kite_bars_reject_invalid_ohlc",
+        "test_simulated_fill_receipt_points_through_event_to_raw_quote_archive"
+      ],
+      "test_result": "109 passed (exit code 0); Ruff and mypy passed for changed modules, and source inventory freshness passed (554 Python files). Quote/depth, authorized normalized ticks and Kite minute bars are archived with source/receipt/availability provenance; historical bars are only available to replay from retrieval time. Receipts include exact quote IDs and fidelity. No complete trade tape or live fills are claimed.",
+      "evidence_sha256": "04d0a6c4d08ca5236c2c906af9ccccbd3e4e98395a3dbc51fe597189e36ed92a",
+      "blockers": []
+    },
+    {
+      "id": "PE-0037",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/ingest/kite_live.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "tests/test_kite_forward_events.py",
+        "docs/edge-program/pe-0037-kite-source-timestamp-tolerance-evidence.json"
+      ],
+      "tests": [
+        "test_missing_or_invalid_exchange_evidence_fails_closed",
+        "test_source_tolerance_rejects_future_and_stale_exchange_timestamps_without_repair",
+        "test_duplicate_symbols_and_naive_receipt_rejected"
+      ],
+      "test_result": "41 passed (exit code 0); Ruff and mypy on Kite event normalization passed. Future/malformed/stale source timestamps fail closed when the explicit tolerance is configured; age is preserved in event lineage.",
+      "evidence_sha256": "ed1cc6a61d14a1599a422404608271ba2da4cfc00c507c8213f26bb3ac7b2f7a",
+      "blockers": [
+        "The existing live intraday caller does not yet provide a source-specific maximum-age policy, so old Kite timestamps can still be admitted when the optional tolerance is omitted.",
+        "The provider timestamp's exact semantics can vary between last trade time and quote/depth capture time; policy must account for feed type before this becomes a universal fill gate."
+      ]
+    },
+    {
+      "id": "PE-0040",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "docs/edge-program/quote-quality-contract.md",
+        "docs/edge-program/pe-0040-quote-quality-evidence.json",
+        "tests/test_forward_edge_f03.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_kite_forward_events.py"
+      ],
+      "tests": [
+        "test_quote_quality_gate_rejects_invalid_books_and_market_states",
+        "test_execution_model_hash_freezes_configured_quote_quality_limits",
+        "test_kite_circuit_limits_are_preserved_and_block_touching_band",
+        "test_no_trade_due_to_quote_quality_reconciles_as_canceled",
+        "test_wider_spread_and_price_gap_never_improve_buy_fill_price",
+        "test_missing_or_zero_depth_never_creates_a_fill"
+      ],
+      "test_result": "111 focused tests passed after updating legacy stress expectations to require NO_TRADE for wide-spread and missing/zero-depth evidence; Ruff and mypy passed. Auction source and automatic effective freeze-rule integration remain incomplete.",
+      "evidence_sha256": "59d72c09f9f789ef0ea99ededfbe2751e7bb190b0cbc3a7c6e196ad35666c919",
+      "blockers": [
+        "Kite REST quote snapshots do not provide authoritative auction phase; a trusted session/auction state source must be connected.",
+        "Feed-specific quote age policy must account for Kite timestamp semantics; the default threshold is not empirically attested.",
+        "Effective-dated instrument freeze limits are configurable in the simulator but are not automatically resolved for every instrument.",
+        "Simulated top-of-book fills do not model queue position or prove live execution quality."
+      ]
+    },
+    {
+      "id": "PE-0041",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/raw_quote_archive.py",
+        "docs/edge-program/market-capture-replay-contract.md",
+        "docs/edge-program/pe-0041-market-data-rights-evidence.json",
+        "tests/test_raw_quote_archive.py",
+        "tests/test_phase5_intraday_runner.py"
+      ],
+      "tests": [
+        "test_raw_quote_capture_requires_exact_source_kind_and_persistence_scope",
+        "test_local_replay_is_explicit_and_redistribution_is_separately_denied",
+        "test_market_archive_requires_kind_and_source_retention_scope",
+        "test_kite_event_links_durable_raw_quote_record_under_authorized_archive"
+      ],
+      "test_result": "64 focused tests passed; Ruff and mypy passed. Archive permission scopes are enforced per persisted source/event, with separate local read/replay/redistribution actions. Actual provider entitlements remain owner-verified.",
+      "evidence_sha256": "e3c2d1ca7d03ed6d80939b4dd8cef4bb70c31fab17115138ff3364df9288c9bf",
+      "blockers": [
+        "No provider or exchange license/terms have been legally adjudicated by the repository; the software can only enforce a scoped owner-supplied attestation.",
+        "Direct filesystem or underlying journal access can bypass application-level checks, so host filesystem permissions are still required."
+      ]
+    },
+    {
+      "id": "PE-0042",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "docs/edge-program/opportunity-coverage-report-contract.md",
+        "docs/edge-program/pe-0042-opportunity-coverage-evidence.json",
+        "tests/test_forward_session_runner.py"
+      ],
+      "tests": [
+        "test_session_report_preserves_coverage_and_lost_opportunity_denominators",
+        "test_session_report_exposes_unavailable_candidate_notional_denominator"
+      ],
+      "test_result": "27 runner tests passed; Ruff and mypy passed. Finalized session reports persist date, configured instrument, candidate, notional, quote, fill/miss and missing-data denominators. Market-wide discovery and prospective coverage are not established.",
+      "evidence_sha256": "31e0c69eaebddbf12a498260e22d5aca2f973afa44accf2313262dc3fb547074",
+      "blockers": [
+        "Coverage denominator is the configured instrument set and strategy output, not every tradable market instrument or every candidate strategy could have produced.",
+        "Candidate notional is unavailable unless the strategy explicitly provides it; real coverage and lost-opportunity rates require prospective market sessions."
+      ]
+    },
+    {
+      "id": "PE-0043",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/historical_divergence.py",
+        "docs/edge-program/live-historical-divergence-contract.md",
+        "docs/edge-program/pe-0043-live-historical-divergence-evidence.json",
+        "tests/test_historical_divergence.py"
+      ],
+      "tests": [
+        "test_historical_divergence_is_logged_unverified_and_never_adjusted",
+        "test_historical_bar_match_is_still_unverified_until_adjudicated",
+        "test_divergence_comparison_fails_closed_on_same_day_or_unknown_historical_source"
+      ],
+      "test_result": "15 divergence and archive tests passed; Ruff and mypy passed. Durable comparison logs retain per-field deltas and both source hashes; no data is modified. Real-feed prospective comparison and adjudication remain unavailable.",
+      "evidence_sha256": "78cc9242809adef6e3aab474fd68449c466be360e325b1afef38eededbfe8fcd",
+      "blockers": [
+        "Prospective authorized capture and next-day historical comparison have not been run or adjudicated on owner data.",
+        "A human/data-quality adjudication workflow to clear UNVERIFIED results is not connected."
+      ]
+    },
+    {
+      "id": "PE-0044",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/capture_replay.py",
+        "docs/edge-program/capture-replay-equivalence-contract.md",
+        "docs/edge-program/pe-0044-capture-replay-equivalence-evidence.json",
+        "tests/test_capture_replay.py"
+      ],
+      "tests": [
+        "test_capture_and_archive_replay_produce_identical_signal_and_intent_hashes",
+        "test_capture_replay_mismatch_is_durably_reported_without_claiming_equivalence"
+      ],
+      "test_result": "29 parity and session-runner tests passed; Ruff and mypy passed. Identical normalized event sequences yielded identical signal and order-intent hashes; input mismatch is durably recorded as non-equivalent. Synthetic/offline scope only.",
+      "evidence_sha256": "26a23909ab22e9df15fd68c06c0d6e9f7057d4efb107199555afcc1990e0be6e",
+      "blockers": []
+    },
+    {
+      "id": "PE-0045",
+      "status": "PARTIAL",
+      "sources": [
+        "scripts/strategy_variant_inventory.py",
+        "docs/edge-program/strategy-variant-inventory.json",
+        "docs/edge-program/strategy-variant-inventory-contract.md",
+        "docs/edge-program/pe-0045-strategy-variant-inventory-evidence.json",
+        "tests/test_strategy_variant_inventory.py"
+      ],
+      "tests": [
+        "test_strategy_inventory_is_deterministic_unique_and_source_hashed",
+        "test_committed_strategy_inventory_is_current",
+        "test_source_hash_is_independent_of_checkout_line_endings"
+      ],
+      "test_result": "3 inventory tests passed; Ruff/mypy and generator --check passed. Hashes normalize checkout line endings; cross-platform source digest test now covers Windows CRLF vs Git/Ubuntu LF. The inventory remains incomplete for 172 unqualified entries and module proxies.",
+      "evidence_sha256": "0cd1e61231bd7653ce368ce57dcd8d9ce7de3aaf6fbe079d28b891066367718c",
+      "blockers": [
+        "Options, futures and ranking portfolios need full executable variant/parameter enumeration rather than module proxies.",
+        "Asset scope and decision clock need explicit qualification for 172 entries.",
+        "The inventory needs integration with the approval registry before complete eligibility governance is achieved."
+      ]
+    },
+    {
+      "id": "PE-0046",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "docs/edge-program/failed-parameter-reuse-contract.md",
+        "docs/edge-program/pe-0046-failed-parameter-reuse-evidence.json",
+        "tests/test_forward_edge_f02.py"
+      ],
+      "tests": [
+        "test_registry_rejects_renamed_retry_of_failed_parameter_hash",
+        "test_every_recorded_trial_maps_to_a_failed_registry_entry",
+        "test_transition_creates_a_new_version_and_keeps_the_old_one"
+      ],
+      "test_result": "26 F02 registry tests passed; Ruff and mypy passed. A failed parameter digest cannot be reused under another ID. Legacy ledger entries lack parameter hashes, so those historical variants cannot yet be exactly matched.",
+      "evidence_sha256": "20e870d9c1ac9d769170e4ecb2f45264d18afb73fb0e0fa807c47a87670b020f",
+      "blockers": [
+        "Original canonical parameter artifacts/hashes are absent for the 13 failed ledger rows.",
+        "Duplicate enforcement requires callers to provide parameter_sha256."
+      ]
+    },
+    {
+      "id": "PE-0047",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "docs/edge-program/unregistered-shadow-only-contract.md",
+        "docs/edge-program/pe-0047-unregistered-shadow-only-evidence.json",
+        "tests/test_forward_edge_f02.py"
+      ],
+      "tests": [
+        "test_unregistered_candidate_defaults_to_shadow_only_observation",
+        "test_only_paper_capable_statuses_get_order_intents",
+        "test_failed_exploratory_and_shadow_families_never_get_order_intents",
+        "test_paper_enrolment_needs_a_human_and_has_a_benchmark"
+      ],
+      "test_result": "26 F02 tests passed; Ruff and mypy passed. Unknown IDs default to SHADOW_ONLY and only the exact registered paper-capable spec can pass the intent gate. Legacy strategy engines remain to be wired through this gate.",
+      "evidence_sha256": "6fde5b29ff0bd547d67403e5d6f4b20157bde5209f12befa7e12e94cc40c5efd",
+      "blockers": [
+        "Not every existing strategy runner and historical paper-book writer consumes the registry status/intent gate.",
+        "The static eligibility inventory is not yet exhaustive for all source-linked candidates."
+      ]
+    },
+    {
+      "id": "PE-0048",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "src/financial_brain/forward_edge/approvals.py",
+        "src/financial_brain/forward_edge/charter.py",
+        "docs/edge-program/human-approved-paper-eligibility-contract.md",
+        "docs/edge-program/pe-0048-paper-eligibility-evidence.json",
+        "tests/test_forward_edge_f02.py"
+      ],
+      "tests": [
+        "test_paper_enrolment_needs_a_human_and_has_a_benchmark",
+        "test_paper_status_without_benchmark_is_refused_at_spec_level",
+        "test_paper_enrolment_rejects_ai_stale_and_unfrozen_evidence"
+      ],
+      "test_result": "27 F02 tests passed; Ruff and mypy passed. Boolean-only enrollment is removed; enrollment binds human approval metadata to a content-addressed charter and pre-observation benchmark. Cryptographic identity, durable receipt and all-writer integration remain incomplete.",
+      "evidence_sha256": "735dc48ad713af00bbb52cb86c613e6748c93e3392209d5c2ffe584e489790f0",
+      "blockers": [
+        "Approval metadata is not cryptographically authenticated as a human signature.",
+        "Approval and eligibility are not durably journaled atomically; legacy paper writers still need registry enforcement."
+      ]
+    },
+    {
+      "id": "PE-0049",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/exploratory_families.py",
+        "src/financial_brain/features/indicators.py",
+        "docs/edge-program/pe-0049-slow-factor-exploratories.md",
+        "docs/edge-program/pe-0049-slow-factor-evidence.json",
+        "tests/test_forward_edge_f02.py"
+      ],
+      "tests": [
+        "test_pe49_slow_factor_exploratories_are_distinct_and_non_promotable"
+      ],
+      "test_result": "28 F02 tests passed; Ruff, mypy and diff checks passed. Separate, non-promotable exploratory specs are parameter-hashed and leave failed M1 immutable.",
+      "evidence_sha256": "69ff09206e6fa116f35e6fa8d67cf50cd6d836320e8441513e1e697b6e8c6ef9",
+      "blockers": [
+        "No point-in-time adapter, frozen prospective charter, costs/benchmark evaluation, or multiplicity/overlap analysis has been completed."
+      ]
+    },
+    {
+      "id": "PE-0050",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/family_overlap.py",
+        "docs/edge-program/pe-0050-low-vol-atr-overlap.md",
+        "docs/edge-program/pe-0050-low-vol-atr-evidence.json",
+        "tests/test_family_overlap.py"
+      ],
+      "tests": [
+        "test_identical_low_risk_ranks_are_flagged_as_overlapping",
+        "test_overlap_uses_only_matched_finite_values_without_imputation",
+        "test_overlap_rejects_weak_or_invalid_inputs"
+      ],
+      "test_result": "3 focused tests passed; Ruff, mypy and diff checks passed. Matched-universe rank and membership redundancy can be measured without imputing missing values. No production Indian equity panel is yet measured.",
+      "evidence_sha256": "d8321297ce7c8bb8633e85ea6c59933faac1aea18ba0fab884cf3695d05f6d38",
+      "blockers": [
+        "No authorized point-in-time Indian equity panel has been assessed for actual low-volatility/ATR overlap.",
+        "Overlap is not alpha or investability evidence; production evaluation still needs eligibility, costs and liquidity controls."
+      ]
+    },
+    {
+      "id": "PE-0051",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/target_portfolio.py",
+        "docs/edge-program/pe-0051-target-portfolio-evidence.md",
+        "docs/edge-program/pe-0051-target-portfolio-evidence.json",
+        "tests/test_target_portfolio.py"
+      ],
+      "tests": [
+        "test_scheduled_rebalance_returns_bounded_target_weights_and_cash",
+        "test_unscheduled_observation_preserves_previous_book",
+        "test_turnover_cost_can_keep_a_paper_book_in_cash",
+        "test_cash_days_count_explicit_cash_and_rejects_bad_ledgers",
+        "test_invalid_covariance_and_previous_cash_floor_fail_closed"
+      ],
+      "test_result": "5 focused tests passed; Ruff and mypy passed. Frozen-date portfolio targets enforce risk, name, cash, turnover and fee constraints and preserve the existing book off schedule.",
+      "evidence_sha256": "ff546b901672795a840b8e4d0ea87e9d6d4d90e4b92755ad755653346cd900ba",
+      "blockers": [
+        "The planner is not yet wired into the forward session runner or paper ledger.",
+        "No prospective Indian-market forecast/covariance cohort or realized cash-day performance evidence exists."
+      ]
+    },
+    {
+      "id": "PE-0052",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/learned_model.py",
+        "src/financial_brain/forward_edge/governance.py",
+        "src/financial_brain/features/library.py",
+        "docs/edge-program/pe-0052-learned-challenger-lineage.md",
+        "docs/edge-program/pe-0052-learned-challenger-evidence.json",
+        "tests/test_phase5_learned_model.py"
+      ],
+      "tests": [
+        "test_train_saves_the_model_with_its_feature_list_and_embargo",
+        "test_prediction_batch_digest_is_order_independent_and_content_sensitive",
+        "test_prediction_cache_requires_matching_model_and_batch_hash",
+        "test_load_rejects_model_artifact_changed_after_manifest"
+      ],
+      "test_result": "5 learned challenger tests passed; Ruff and mypy passed. Training artifacts and prediction batches are content-addressed; tampered model and cache artifacts are rejected.",
+      "evidence_sha256": "ecfd92cd0932ce88a2b92a9116d729120e8568e8012a5aa20c746798ad1dd27a",
+      "blockers": [
+        "Embargo is calendar-day approximate because exact label-end sessions are absent from training rows.",
+        "No signed external attestation or prospective performance evidence is connected."
+      ]
+    },
+    {
+      "id": "PE-0053",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/futures_carry.py",
+        "src/financial_brain/forward_edge/futures.py",
+        "src/financial_brain/evaluation/basis.py",
+        "docs/edge-program/pe-0053-futures-carry-governance.md",
+        "docs/edge-program/pe-0053-futures-carry-evidence.json",
+        "tests/test_futures_carry_governance.py"
+      ],
+      "tests": [
+        "test_positive_gross_basis_is_reduced_by_all_costs_and_never_paper_eligible",
+        "test_incomplete_economics_and_governance_stay_shadow_only",
+        "test_futures_candidates_are_explicitly_shadow_and_cannot_pass_registry_intent_gate"
+      ],
+      "test_result": "3 futures carry governance tests passed; Ruff and mypy passed. Separate carry candidates remain paper-ineligible; incomplete costs/governance fail closed.",
+      "evidence_sha256": "5b8752074986f0420600806b7477b464fe7e40a820e8b43a083c8d2159440581",
+      "blockers": [
+        "No authenticated single-expiry contract, rights, costs, financing, or margin evidence is connected.",
+        "No prospective futures carry performance after actual market costs has been observed."
+      ]
+    },
+    {
+      "id": "PE-0054",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "src/financial_brain/forward_edge/monitoring_candidates.py",
+        "src/financial_brain/patterns/candles.py",
+        "src/financial_brain/patterns/detectors.py",
+        "src/financial_brain/evaluation/chart_setups.py",
+        "docs/edge-program/pe-0054-monitoring-only-families.md",
+        "docs/edge-program/pe-0054-monitoring-only-evidence.json",
+        "tests/test_monitoring_candidates.py"
+      ],
+      "tests": [
+        "test_orb_gap_directional_and_chart_specs_are_shadow_monitoring_only",
+        "test_registry_policy_normalizes_monitoring_family_names",
+        "test_monitoring_signal_rejects_non_monitor_family_and_unregistered_spec",
+        "test_monitoring_family_cannot_be_constructed_as_paper_eligible"
+      ],
+      "test_result": "9 monitoring policy tests passed; Ruff and mypy passed. Listed families fail closed at spec construction and paper-eligibility transition; monitoring emits no quantity.",
+      "evidence_sha256": "f1f1eb85e7f8bb552bcf75d17c7fdbbf540d70144818172a3d5a2b64833e633b",
+      "blockers": [
+        "The 72 chart-pattern variants and all legacy ORB/GAP strategy/book surfaces are not individually integrated with the registry.",
+        "No prospective monitoring evidence has been collected."
+      ]
+    },
+    {
+      "id": "PE-0055",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/research_library.py",
+        "src/financial_brain/evaluation/bounded_search.py",
+        "tests/test_research_library.py",
+        "docs/edge-program/pe-0055-bounded-research-journal.md",
+        "docs/edge-program/pe-0055-bounded-research-evidence.json",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/strategy-variant-inventory.json"
+      ],
+      "tests": [
+        "test_every_declared_variant_must_be_recorded_before_closing_and_recovery",
+        "test_hard_stop_pending_variants_are_aborted_on_explicit_restart_recovery",
+        "test_duplicate_results_and_nonresearch_promotion_are_rejected",
+        "test_variant_budget_and_duplicate_ids_are_rejected",
+        "test_bounded_search_durably_records_one_result_per_frozen_variant"
+      ],
+      "test_result": "Combined strategy-inventory, research-journal and bounded-search suite: 12 passed (exit code 0); Ruff, mypy, strategy inventory --check, and source inventory --check passed. Explicit restart recovery marks pending variants ABORTED before a new bounded search opens.",
+      "evidence_sha256": "44bd95bb35bed2612200e559a076d40a0d7d367e0bfe38a0848216ac610177cb",
+      "blockers": [
+        "Only the daily bounded random search is integrated; other research mechanisms remain outside this journal.",
+        "No full dataset search, independent replay, or prospective paper performance is claimed.",
+        "Cross-process journal locking is not implemented; bounded research journal is single-writer."
+      ]
+    },
+    {
+      "id": "PE-0056",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "src/financial_brain/forward_edge/monitoring_candidates.py",
+        "src/financial_brain/forward_edge/futures_carry.py",
+        "src/financial_brain/forward_edge/exploratory_families.py",
+        "tests/test_forward_edge_f02.py",
+        "tests/test_monitoring_candidates.py",
+        "docs/edge-program/pe-0056-mechanism-hypothesis.md",
+        "docs/edge-program/pe-0056-mechanism-hypothesis-evidence.json",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/strategy-variant-inventory.json"
+      ],
+      "tests": [
+        "test_structured_mechanism_hypothesis_is_required_and_content_addressable",
+        "test_mechanism_hypothesis_rejects_missing_economic_claim_or_falsifier",
+        "test_orb_gap_directional_and_chart_specs_are_shadow_monitoring_only",
+        "test_futures_candidates_are_explicitly_shadow_and_cannot_pass_registry_intent_gate"
+      ],
+      "test_result": "46 passed (exit code 0); Ruff and mypy passed. Strategy-variant inventory --check passes (253 candidates); source inventory --check passes (562 Python files). Strategy registration now requires an immutable, hash-addressable mechanism hypothesis.",
+      "evidence_sha256": "1cc3fab8e25a9978c897008d6c944a058b1d9307f85606e8c4bcb682d90d323d",
+      "blockers": [
+        "The wider 253-entry strategy inventory and legacy algorithms are not all registered with mechanism hypotheses.",
+        "No prospective observations have tested these economic conjectures; no profitability is claimed."
+      ]
+    },
+    {
+      "id": "PE-0057",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/features/metadata.py",
+        "src/financial_brain/features/library.py",
+        "tests/test_phase5_feature_library.py",
+        "docs/edge-program/pe-0057-feature-timing-metadata.md",
+        "docs/edge-program/pe-0057-feature-timing-evidence.json",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/strategy-variant-inventory.json"
+      ],
+      "tests": [
+        "test_every_generated_field_has_causal_horizon_and_availability_metadata",
+        "test_no_feature_looks_ahead"
+      ],
+      "test_result": "Combined feature-library and strategy-inventory suite: 9 passed; Ruff and mypy passed. Source inventory --check passes (563 Python files). Every generated daily price-library field carries a role, construction window, availability policy, refresh cadence and explicit estimated/unestimated horizon state.",
+      "evidence_sha256": "3c8fa9af1037ba26a90470fe107b696fe61648a0d4b1549d065fa1dd0b302984",
+      "blockers": [
+        "Economic holding horizon and predictor half-life remain unestimated pending suitable prospective cohorts.",
+        "Fundamentals, filings, macro, options, and legacy feature libraries are not covered by this metadata contract.",
+        "Actual release delays depend on provider timestamps and data-rights evidence."
+      ]
+    },
+    {
+      "id": "PE-0058",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/version_diff.py",
+        "tests/test_strategy_version_diff.py",
+        "docs/edge-program/pe-0058-strategy-version-diff.md",
+        "docs/edge-program/pe-0058-strategy-version-diff-evidence.json",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/strategy-variant-inventory.json"
+      ],
+      "tests": [
+        "test_diff_exposes_every_checklist_identity_dimension",
+        "test_version_increment_without_identity_change_is_explicit",
+        "test_diff_refuses_cross_strategy_or_skipped_versions",
+        "test_snapshot_rejects_missing_dimension_digest"
+      ],
+      "test_result": "5 passed (exit code 0); Ruff and mypy passed. Strategy-variant inventory --check passes (253 candidates); source inventory --check passes (564 Python files).",
+      "evidence_sha256": "d173a6060d66846baf80b87936055584cd71f6f75262689e2402f1b202428cd8",
+      "blockers": [
+        "Version snapshots are not yet exported by all registry, strategy and execution configuration sources.",
+        "Legacy candidates do not all supply frozen filter, universe and cost-model digests."
+      ]
+    },
+    {
+      "id": "PE-0059",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/registry.py",
+        "tests/test_forward_edge_f02.py",
+        "docs/edge-program/pe-0059-frozen-benchmarks.md",
+        "docs/edge-program/pe-0059-frozen-benchmarks-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_benchmark_must_be_frozen_before_first_forward_result",
+        "test_registered_benchmark_definition_cannot_be_rewritten",
+        "test_paper_enrolment_rejects_ai_stale_and_unfrozen_evidence"
+      ],
+      "test_result": "35 passed (exit code 0); Ruff and mypy passed. Source inventory --check passes (564 Python files). Benchmark identities are content-addressed and immutable in the registry; paper enrollment checks freeze date before charter start.",
+      "evidence_sha256": "f17b360ecceb12de5dcd323c3f752d0a1ecde2dda632d1d6cb4bf47688adbc63",
+      "blockers": [
+        "Benchmark registry is not transactionally coupled to every exploratory result store or legacy research surface.",
+        "No complete cross-surface audit of historical benchmark inspection or post-outcome changes is claimed."
+      ]
+    },
+    {
+      "id": "PE-0060",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/signal_allocator.py",
+        "src/financial_brain/forward_edge/target_portfolio.py",
+        "src/financial_brain/decisions/net_alpha.py",
+        "tests/test_signal_allocator.py",
+        "tests/test_target_portfolio.py",
+        "docs/edge-program/pe-0060-shared-signal-allocator.md",
+        "docs/edge-program/pe-0060-shared-signal-allocator-evidence.json",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/strategy-variant-inventory.json"
+      ],
+      "tests": [
+        "test_signal_to_target_uses_one_costed_alpha_allocator_and_explicit_cash",
+        "test_sell_signal_reduces_existing_position_and_no_signal_is_not_a_new_entry",
+        "test_holds_must_be_observed_and_forecast_horizons_must_match",
+        "test_hurdle_and_covariance_universe_must_be_valid"
+      ],
+      "test_result": "Signal allocator plus target portfolio suite: 9 passed (exit code 0); Ruff and mypy passed. Strategy-variant inventory --check passes (253 candidates); source inventory --check passes (565 Python files).",
+      "evidence_sha256": "fbacf9a64aafdf9d17cca729eb55e39af3a72cd21a4c8409e6cd78ba46276a7f",
+      "blockers": [
+        "The shared allocator is not yet wired into every strategy adapter or the forward paper session/account bridge.",
+        "Forecast calibration and versioned covariance/universe alignment are not yet demonstrated.",
+        "No prospective profitability is claimed."
+      ]
     }
   ]
 }

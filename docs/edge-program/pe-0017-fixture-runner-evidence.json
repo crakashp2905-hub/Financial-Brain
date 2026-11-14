@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0017",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T06:54:09Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/fixture_replay.py": "8a600f96b69b101f25e26296a0ec86ecd79c204e4e61350cef9b8a4e0eeaae84",
+    "src/financial_brain/forward_edge/session_runner.py": "dc338055fb120325f93c5ecaf8a7b9c8f81d9a80e652de41ccba3e62f71ed0f3",
+    "src/financial_brain/forward_edge/execution.py": "6b08a8b90f3961568909d17454b085a63b8bed4cd7bf22c104817487baa9c34f",
+    "src/financial_brain/forward_edge/market_data.py": "f9b4ee1847b48373ea4305dd09247d679ceff97414b6e5ea2455d66bc64df43c",
+    "tests/test_forward_fixture_replay.py": "d5ac64a19bd69c3bb076c9c86b000050926967d77c687c673f58fc75d064b125",
+    "tests/fixtures/forward_edge/golden_signatures.json": "dcd63f152ad9459bc98ad8e010ad7fc30e33a1c4d4ead6a38931199c6ffabeac",
+    "docs/edge-program/fixture-runner-parity-contract.md": "4ba5092e7a575faec956087dcd656d505636682b6351c58a72511f54c053d946"
+  },
+  "acceptance_tests": [
+    "test_fixture_outcome_parity_runs_through_durable_forward_runner",
+    "test_fixture_replay_blocked_preflight_matches_no_trade_baseline",
+    "test_fixture_replay_refuses_modes_that_can_leave_paper"
+  ],
+  "result": "All eight synthetic fixture outcomes pass through ForwardSessionRunner with normalized availability-timestamped QUOTE/TICK events and durable outbox receipts. A lost acknowledgement remains OUTBOX_UNKNOWN with no fill, acknowledgement or close; blocked preflight and prohibited modes fail closed.",
+  "focused_tests": "100 passed across fixture replay, forward-edge F13 golden-signature and F14 durability suites",
+  "ruff": "passed",
+  "mypy": "passed",
+  "diff_check": "passed",
+  "limitations": [
+    "Fixture values are synthetic. This is integration and parity evidence only; it does not establish live-feed capture, fills, or profitability."
+  ]
+}

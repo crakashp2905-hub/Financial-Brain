@@ -121,6 +121,34 @@ def test_total_is_rounded_once_from_unrounded_parts() -> None:
     assert c["brokerage"] + c["exchange"] == D("0.06")  # rounding each part first would give a different total
 
 
+def test_cost_rule_models_all_effective_dated_cash_equity_components_and_hashes_table() -> None:
+    rule = X.CostRule(
+        date(2026, 11, 1), D("3"), D("0.3"), D("1"), D("1.25"), D("0.1"), D("0.18"),
+        sebi_bps=D("0.01"), ipft_bps=D("0.005"), clearing_bps=D("0.02"),
+        brokerage_max_inr=D("20"),
+    )
+    schedule = X.CostSchedule({"NSE_CASH": (rule,)})
+    buy = schedule.charges("NSE_CASH", "BUY", D("100000"), date(2026, 11, 12))
+    sell = schedule.charges("NSE_CASH", "SELL", D("100000"), date(2026, 11, 12))
+    assert buy["brokerage"] == D("20.00")
+    assert buy["sebi"] == D("0.10")
+    assert buy["ipft"] == D("0.05")
+    assert buy["clearing"] == D("0.20")
+    assert buy["stt"] == D("10.00") and buy["stamp"] == D("1.00")
+    assert sell["stt"] == D("12.50") and sell["stamp"] == D("0.00")
+    assert buy["total"] == D("38.55") and sell["total"] == D("40.05")
+    assert buy["total"] + sell["total"] == D("78.60")
+    assert buy["schedule_sha256"] == schedule.sha256
+
+
+def test_cost_rules_reject_invalid_rates_and_ambiguous_effective_dates() -> None:
+    with pytest.raises(X.ExecutionError, match="finite nonnegative"):
+        X.CostRule(date(2026, 1, 1), D("-1"), D("0"), D("0"), D("0"), D("0"), D("0"))
+    rule = X.CostRule(date(2026, 1, 1), D("1"), D("1"), D("0"), D("0"), D("0"), D("0"))
+    with pytest.raises(X.ExecutionError, match="duplicate effective dates"):
+        X.CostSchedule({"S": (rule, rule)})
+
+
 # ---- FE-0061 stress ----
 
 def test_stress_reports_which_scenarios_stay_positive() -> None:
@@ -150,13 +178,52 @@ def test_fx_execution_is_never_allowed() -> None:
 # ---- FE-0065 fidelity ----
 
 def test_fidelities_are_reported_separately_and_never_summed_together() -> None:
-    rs = [X.ExecutionReceipt("o1", "SIMULATED_QUOTE", 10, D("100")), X.ExecutionReceipt("o2", "OBSERVED_BROKER", 5, D("100"))]
-    assert X.totals_by_fidelity(rs) == {"SIMULATED_QUOTE": D("1000"), "OBSERVED_BROKER": D("500")}
+    rs = [
+        X.ExecutionReceipt("o1", "SIMULATED_QUOTE", 10, D("100")),
+        X.ExecutionReceipt("o2", "SIMULATED_BAR", 2, D("101")),
+        X.ExecutionReceipt("o3", "OBSERVED_BROKER", 5, D("100")),
+    ]
+    assert X.totals_by_fidelity(rs) == {
+        "SIMULATED_QUOTE": D("1000"), "SIMULATED_BAR": D("202"), "OBSERVED_BROKER": D("500")
+    }
     with pytest.raises(X.MixedFidelity):
         X.combined_total(rs)
-    assert X.combined_total(rs[:1]) == D("1000")
+    assert X.combined_total([rs[0]]) == D("1000")
+    assert X.combined_total([rs[1]]) == D("202")
+    assert X.combined_total([rs[2]]) == D("500")
     with pytest.raises(X.ExecutionError):
         X.ExecutionReceipt("o3", "GUESSED", 1, D("1"))
+
+
+def test_quote_arrival_shortfall_measures_only_displayed_quote_depth_not_broker_fills() -> None:
+    arrival = X.Quote(T0 + timedelta(milliseconds=25), D("99.9"), D("100.2"), 20, 3)
+    row = X.quote_arrival_shortfall(
+        side="BUY", modeled_price=D("100.1"), requested_qty=5, decision_utc=T0,
+        latency=timedelta(milliseconds=20), quote=arrival, source_sha256="a" * 64,
+    )
+    assert row["benchmark_type"] == "SUBSEQUENT_EXECUTABLE_QUOTE"
+    assert row["fidelity"] == "SIMULATED_QUOTE" and row["broker_fill_observation"] is False
+    assert row["measured_qty"] == 3 and row["depth_coverage"] == pytest.approx(0.6)
+    assert D(row["shortfall_bp"]) == pytest.approx((D("100.2") / D("100.1") - 1) * D("10000"))
+    report = X.quote_arrival_shortfall_report([row])
+    assert report["broker_fill_observations"] == 0 and report["depth_coverage"] == pytest.approx(0.6)
+
+
+def test_quote_arrival_shortfall_fails_closed_on_early_quotes_missing_depth_and_broker_labels() -> None:
+    early = X.Quote(T0 + timedelta(milliseconds=10), D("99.9"), D("100.1"), 10, 10)
+    with pytest.raises(X.ExecutionError, match="order arrival"):
+        X.quote_arrival_shortfall(side="BUY", modeled_price=D("100"), requested_qty=1,
+                                  decision_utc=T0, latency=timedelta(milliseconds=20),
+                                  quote=early, source_sha256="a" * 64)
+    empty = X.Quote(T0 + timedelta(milliseconds=20), D("99.9"), D("100.1"), 0, 0)
+    with pytest.raises(X.ExecutionError, match="displayed quantity"):
+        X.quote_arrival_shortfall(side="SELL", modeled_price=D("100"), requested_qty=1,
+                                  decision_utc=T0, latency=timedelta(milliseconds=20),
+                                  quote=empty, source_sha256="a" * 64)
+    with pytest.raises(X.ExecutionError, match="cannot include broker-fill"):
+        X.quote_arrival_shortfall_report([{"benchmark_type": "OBSERVED_BROKER_FILL",
+                                           "fidelity": "OBSERVED_BROKER",
+                                           "broker_fill_observation": True}])
 
 
 # ---- FE-0066 uncertainty, FE-0067 identity, FE-0068 no-trade ----

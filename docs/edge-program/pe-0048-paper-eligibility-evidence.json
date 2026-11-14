@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0048",
+  "status": "PARTIAL",
+  "scope": "Registry-level paper eligibility gates bound to charter, benchmark, first observation date, and non-agent approval metadata.",
+  "implemented": [
+    "Removed the boolean-only human_approved transition bypass.",
+    "Requires a complete, content-addressed charter matching the registered strategy and code digest.",
+    "Requires the charter's sole benchmark to match an immutable registered benchmark definition frozen before start_on.",
+    "Requires an unexpired STRATEGY_ENROLLMENT approval for the strategy whose scope digest equals the charter hash.",
+    "Rejects AI/non-human actor metadata, stale approval scopes, and incomplete evidence."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f02.py -q",
+    "result": "27 passed (exit code 0); Ruff and mypy passed.",
+    "cases": [
+      "test_paper_enrolment_needs_a_human_and_has_a_benchmark",
+      "test_paper_status_without_benchmark_is_refused_at_spec_level",
+      "test_paper_enrolment_rejects_ai_stale_and_unfrozen_evidence"
+    ]
+  },
+  "limitations": [
+    "Approval actor metadata is not a cryptographically verifiable human signature or authenticated identity.",
+    "Eligibility transition and approval receipt are not yet durably journaled as one atomic event.",
+    "Legacy paper-book writers are not all wired through this registry gate."
+  ]
+}

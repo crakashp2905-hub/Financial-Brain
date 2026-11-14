@@ -5,6 +5,10 @@ on:
   push:
   pull_request:
 
+env:
+  PYTHONHASHSEED: "0"
+  TZ: Asia/Kolkata
+
 jobs:
   test:
     strategy:
@@ -18,18 +22,25 @@ jobs:
           fetch-depth: 0          # the pre-registration audit reads git history
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version-file: ".python-version"
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Charting adapter contracts (no licensed assets)
+        run: node --test tests/js/advanced_charts_datafeed.test.mjs tests/js/advanced_charts_widget.test.mjs
       - name: Install (pyproject only)
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
       - name: Lint
-        run: python -m ruff check src tests
+        run: python -m ruff check src tests scripts
       - name: Validate capability claims
         run: python scripts/validate_capability_matrix.py
       - name: Inventory source ownership gaps
         run: python scripts/source_inventory.py
+      - name: Verify committed old/new engine dependency graph
+        run: python scripts/source_inventory.py --check docs/edge-program/source-inventory.json
       - name: Type check (OMS, evidence standard, pre-registry)
         run: python -m mypy
       - name: Schema migrations
@@ -59,3 +70,25 @@ jobs:
           path: coverage.xml
       - name: Dependency audit
         run: python -m pip_audit --skip-editable
+      - name: Lockfile audit
+        run: python -m pip_audit -r requirements-lock.txt
+
+  # The pinned environment the owner actually runs: install exactly requirements-lock.txt and run the suite. Not a required
+  # check (a pin a platform cannot install should be visible, not block unrelated work), but it must stay green.
+  locked:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install the lockfile exactly
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-lock.txt
+          python -m pip install -e . --no-deps
+      - name: Test suite on the pinned environment
+        run: python -m pytest -q

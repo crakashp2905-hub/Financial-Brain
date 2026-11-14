@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "status": "PARTIAL",
+  "python_version_file": ".python-version",
+  "python_version": "3.13.17",
+  "ci_installs_pinned_python": true,
+  "python_hash_seed": "0",
+  "stochastic_seed_policy": "Per-experiment seeds must be frozen in experiment identity; CI does not claim a global RNG seed for all research code.",
+  "market_timezone": "Asia/Kolkata",
+  "ci_sets_hash_seed_and_timezone": true,
+  "dependency_lock": "requirements-lock.txt",
+  "dependency_lock_contains_exact_versions": true,
+  "ci_installs_from_dependency_lock": false,
+  "fixture_fingerprint_tests": [
+    "test_golden_file_covers_every_fixture",
+    "test_session_signatures_match_the_canonical_hashes"
+  ],
+  "offline_clean_install_verified_on": [],
+  "blockers": [
+    "CI currently installs the broad pyproject development extras rather than the repository lock.",
+    "No clean offline wheelhouse installation has been verified on both Windows and Linux."
+  ],
+  "evidence_sources": [
+    ".python-version",
+    "requirements-lock.txt",
+    ".github/workflows/ci.yml",
+    "tests/test_forward_edge_f13.py"
+  ]
+}

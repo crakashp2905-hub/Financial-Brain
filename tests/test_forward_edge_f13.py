@@ -125,6 +125,7 @@ def test_report_carries_coverage_benchmark_missing_data_and_never_promotes() -> 
     assert out["mode"] == "FIXTURE_REPLAY" and out["evidence_class"] == "HISTORICAL_REPLAY"
     assert out["tier"] == "HISTORICAL_REPLAY" and out["independently_attested"] is False
     assert out["promotion_verdict"] != "PROMOTION_GRADE"
+    assert "EXECUTION_STRESS_MISSING" in out["reasons"]
     assert out["benchmark"] and out["coverage"] and "INDEPENDENT_TIMESTAMP_RECEIPTS_NOT_CONFIGURED" in out["missing_data"]
     assert out["independent_forward_sessions"] == 0
 

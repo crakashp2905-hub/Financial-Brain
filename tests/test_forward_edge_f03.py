@@ -167,6 +167,40 @@ def test_data_gate_reason_codes_are_deterministic_and_complete() -> None:
     assert M.data_gate(age_s=1, spread_bps=5, volume=10, circuit_hit=False, frozen=False, auction_seen=True) == []
 
 
+@pytest.mark.parametrize(("payload_overrides", "clock_age", "intended_qty", "expected"), [
+    ({"ask_price": "99.9"}, timedelta(milliseconds=40), 1, ["CROSSED_BOOK"]),
+    ({"ask_price": "100.0"}, timedelta(milliseconds=40), 1, ["LOCKED_BOOK"]),
+    ({"bid_qty": "0"}, timedelta(milliseconds=40), 1, ["ZERO_DEPTH"]),
+    ({"ask_price": "101.0"}, timedelta(milliseconds=40), 1, ["WIDE_SPREAD"]),
+    ({"auction_active": "true"}, timedelta(milliseconds=40), 1, ["AUCTION_ACTIVE"]),
+    ({"circuit_hit": "true"}, timedelta(milliseconds=40), 1, ["CIRCUIT_OR_HALT"]),
+    ({"circuit_upper": "100.05"}, timedelta(milliseconds=40), 1, ["CIRCUIT_BAND"]),
+    ({"freeze_qty": "2"}, timedelta(milliseconds=40), 10, ["FREEZE_LIMIT"]),
+    ({"volume": "0"}, timedelta(milliseconds=40), 1, ["ZERO_VOLUME"]),
+    ({}, timedelta(seconds=6), 1, ["STALE_QUOTE"]),
+])
+def test_quote_quality_gate_rejects_invalid_books_and_market_states(
+    payload_overrides: dict[str, str], clock_age: timedelta, intended_qty: int, expected: list[str],
+) -> None:
+    payload = {"bid_price": "100.0", "ask_price": "100.05", "bid_qty": "20", "ask_qty": "20",
+               **payload_overrides}
+    event = M.NormalizedEvent(
+        kind="QUOTE", instrument="INFY", event_utc=T0,
+        received_utc=T0 + clock_age, available_utc=T0 + clock_age + timedelta(milliseconds=10),
+        payload=tuple(sorted(payload.items())),
+    )
+
+    assert M.quote_quality_reasons(event, intended_qty=intended_qty) == expected
+
+
+def test_quote_quality_gate_rejects_invalid_policy_bounds() -> None:
+    event = _ev()
+    with pytest.raises(M.DataError, match="max_age_s"):
+        M.quote_quality_reasons(event, max_age_s=-1)
+    with pytest.raises(M.DataError, match="max_spread_bps"):
+        M.quote_quality_reasons(event, max_spread_bps=-1)
+
+
 # ---- FE-0043 prefix invariance and future perturbation ----
 
 def test_feature_is_prefix_invariant_and_ignores_the_future() -> None:

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0059",
+  "status": "PARTIAL",
+  "implemented": [
+    "Benchmark definitions require a stable content SHA and freeze date.",
+    "Registry re-registration of identical benchmark content is idempotent; same-ID rewrites are rejected.",
+    "Paper enrollment refuses a benchmark frozen on or after the charter start date."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f02.py -q",
+    "result": "35 passed (exit code 0); Ruff and mypy passed. Source inventory --check passes (564 Python files).",
+    "cases": [
+      "test_benchmark_must_be_frozen_before_first_forward_result",
+      "test_registered_benchmark_definition_cannot_be_rewritten",
+      "test_paper_enrolment_rejects_ai_stale_and_unfrozen_evidence"
+    ]
+  },
+  "limitations": [
+    "The registry is not transactionally coupled to every exploratory result store or legacy research surface.",
+    "No complete audit of historical benchmark inspection or post-outcome changes across all candidates is claimed."
+  ]
+}

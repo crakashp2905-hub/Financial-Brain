@@ -67,6 +67,20 @@ def resolve_stop_target(bar: OhlcBar, side: Side, stop: float, target: float) ->
     return "NONE", bar.close
 
 
+def resolve_stop_target_executable(
+    bar: OhlcBar, position_side: Side, stop: float, target: float, spread: float
+) -> tuple[str, float]:
+    """Resolve a bar exit conservatively, then cross half the quoted spread to execute it.
+
+    ``position_side`` is BUY for a long position and SELL for a short position. Ambiguous bars retain the
+    adverse stop-first outcome from :func:`resolve_stop_target`; a long exits by selling at the bid and a short
+    exits by buying at the ask. ``spread`` is the full bid/ask width in price units.
+    """
+    outcome, reference = resolve_stop_target(bar, position_side, stop, target)
+    exit_side: Side = "SELL" if position_side == "BUY" else "BUY"
+    return outcome, half_spread_fill(reference, exit_side, spread)
+
+
 def half_spread_fill(reference: float, side: Side, spread: float) -> float:
     if spread < 0:
         raise FillError("spread must be non-negative")

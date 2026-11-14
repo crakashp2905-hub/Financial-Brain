@@ -115,6 +115,10 @@ class DoubleEntryLedger:
                 totals[c] = totals.get(c, Decimal(0)) + net
         return all(v == 0 for v in totals.values())
 
+    def transactions(self) -> tuple[Transaction, ...]:
+        """Return the immutable posting sequence for audits and consolidated read-only views."""
+        return tuple(self._txns[txn_id] for txn_id in self._order)
+
     def __len__(self) -> int:
         return len(self._order)
 

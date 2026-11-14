@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+import hashlib
+import json
 
 from financial_brain.forward_edge.approvals import Approval, ApprovalError, validate_approval
 
@@ -194,18 +196,27 @@ def slippage_report(simulated_bps: list[float], observed_bps: list[float]) -> di
 
 
 class ExecutionModelRegistry:
-    """A model is registered under a version; it is never edited in place."""
+    """Canonical immutable model records addressable by version and content hash."""
 
     def __init__(self) -> None:
-        self._versions: dict[str, dict] = {}
+        self._versions: dict[str, tuple[dict, str]] = {}
 
     def register(self, version: str, params: dict) -> None:
         if version in self._versions:
             raise RehearsalError("version exists; register a new version instead")
-        self._versions[version] = dict(params)
+        try:
+            frozen = json.loads(json.dumps(params, sort_keys=True, separators=(",", ":"), allow_nan=False))
+        except (TypeError, ValueError) as exc:
+            raise RehearsalError("model parameters must be finite canonical JSON") from exc
+        digest = hashlib.sha256(json.dumps(frozen, sort_keys=True, separators=(",", ":"),
+                                           allow_nan=False).encode("utf-8")).hexdigest()
+        self._versions[version] = (frozen, digest)
 
     def get(self, version: str) -> dict:
-        return dict(self._versions[version])
+        return json.loads(json.dumps(self._versions[version][0]))
+
+    def sha256(self, version: str) -> str:
+        return self._versions[version][1]
 
 
 # ---- FE-0141 scaling ----

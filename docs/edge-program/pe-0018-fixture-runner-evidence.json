@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0018",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T06:54:09Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/pipeline.py": "39e22bb79dfacf89a3e8c8fa998526c41e0b5eff816d7351af387c8b16b37b2b",
+    "src/financial_brain/forward_edge/fixture_replay.py": "8a600f96b69b101f25e26296a0ec86ecd79c204e4e61350cef9b8a4e0eeaae84",
+    "src/financial_brain/forward_edge/session_runner.py": "dc338055fb120325f93c5ecaf8a7b9c8f81d9a80e652de41ccba3e62f71ed0f3",
+    "src/financial_brain/kernel/ledger.py": "1bb121a27c4720d8a48e30ac56e565d7ac1060da269bcecd9fa99ffcf3097689",
+    "tests/test_forward_edge_f13.py": "2bcc0d9a0059b53efcc894667b486a74e31e61741c8e1846ef07b275d85624db",
+    "tests/test_forward_fixture_replay.py": "d5ac64a19bd69c3bb076c9c86b000050926967d77c687c673f58fc75d064b125",
+    "tests/fixtures/forward_edge/golden_signatures.json": "dcd63f152ad9459bc98ad8e010ad7fc30e33a1c4d4ead6a38931199c6ffabeac",
+    "docs/edge-program/fixture-runner-parity-contract.md": "4ba5092e7a575faec956087dcd656d505636682b6351c58a72511f54c053d946"
+  },
+  "acceptance_tests": [
+    "test_session_signatures_match_the_canonical_hashes",
+    "test_each_failure_class_has_a_complete_example_with_the_expected_outcome"
+  ],
+  "result": "The compatibility fixture pipeline now delegates preflight, decision, execution and receipt evidence to ForwardSessionRunner; its accounting projection consumes the returned fill facts. All canonical fixture signatures remain unchanged, preserving report compatibility.",
+  "focused_tests": "100 passed across fixture replay, forward-edge F13 golden-signature and F14 durability suites",
+  "ruff": "passed",
+  "mypy": "passed",
+  "diff_check": "passed",
+  "limitations": [
+    "Fixture values are synthetic. This is integration and parity evidence only; it does not establish live-feed capture, fills, or profitability."
+  ]
+}

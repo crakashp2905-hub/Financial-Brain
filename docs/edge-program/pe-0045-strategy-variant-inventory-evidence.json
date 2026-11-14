@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0045",
+  "status": "PARTIAL",
+  "scope": "Deterministic source-linked candidate inventory spanning known strategy/trial catalogue sources.",
+  "implemented": [
+    "Inventories historical trial ledger rows, paper-zoo identifiers/rules, all bounded-search technical variants, source chart-pattern definitions, options/futures/ranking module proxies, and strategy modules.",
+    "Every row has a unique family/name/version/asset/clock key, source SHA-256, parameter-sensitive variant SHA-256, status/category, and granularity label.",
+    "Committed inventory can be checked for staleness against the generating source catalogues."
+  ],
+  "inventory": {
+    "candidate_count": 253,
+    "category_counts": {
+      "historical_trial": 13,
+      "paper_zoo": 60,
+      "technical_search": 81,
+      "chart_pattern": 72,
+      "options": 7,
+      "futures": 4,
+      "ranking_portfolio": 4,
+      "python_strategy_module": 12
+    },
+    "unknown_asset_or_clock_count": 172
+  },
+  "tests": {
+    "command": "python -m pytest tests/test_strategy_variant_inventory.py -q; python -m ruff check scripts/strategy_variant_inventory.py tests/test_strategy_variant_inventory.py",
+    "result": "3 tests passed (exit code 0); Ruff and mypy passed; generated inventory --check passed. Source digests and variant digests now normalize CRLF to Git LF, so inventory verification is consistent across Windows and Ubuntu.",
+    "cases": [
+      "test_strategy_inventory_is_deterministic_unique_and_source_hashed",
+      "test_committed_strategy_inventory_is_current",
+      "test_source_hash_is_independent_of_checkout_line_endings"
+    ]
+  },
+  "limitations": [
+    "Options/futures and ranking coverage includes module proxies rather than every executable parameterized variant.",
+    "172 entries still lack an explicit asset or decision-clock value; they remain UNSPECIFIED rather than guessed.",
+    "The inventory is not wired as a complete approval registry and does not grant paper-order eligibility."
+  ]
+}

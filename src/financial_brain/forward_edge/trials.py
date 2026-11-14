@@ -1,7 +1,7 @@
 """Protected trial budget and append-only trial ledger (FE-0002, FE-0088, FE-0090).
 
-The 2026Q4 protected budget is 13 trials counted from ADR-0004 (``docs/trials/ledger.jsonl``, rows with
-``kind == "trial"``). The budget is spent. A new protected trial is refused unless a human approval of kind
+The 2026Q4 protected budget is 14 trials (ADR-0004 amendment 5) counted from ADR-0004 (``docs/trials/ledger.jsonl``, rows with
+``kind == "trial"``). The budget is spent once the V2 family is recorded. A new protected trial is refused unless a human approval of kind
 ``PROTECTED_TRIAL`` references an ADR; once the budget is exhausted, a ``TRIAL_BUDGET_AMENDMENT`` approval is also
 required. Retrospective edits are detected by pinned SHA-256 digests (``docs/forward-edge/protected-pins.json``).
 """
@@ -20,7 +20,7 @@ from financial_brain.forward_edge.decision_custody import CohortSchedule
 LEDGER_REL = "docs/trials/ledger.jsonl"
 PINS_REL = "docs/forward-edge/protected-pins.json"
 Q4_2026 = (date(2026, 10, 1), date(2026, 12, 31))
-Q4_2026_BUDGET = 13
+Q4_2026_BUDGET = 14
 
 
 class TrialGovernanceError(PermissionError):

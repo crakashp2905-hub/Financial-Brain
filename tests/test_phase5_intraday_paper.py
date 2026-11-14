@@ -179,3 +179,28 @@ def test_with_live_quotes_the_bucket_impact_is_not_charged_on_top_of_the_spread(
     t = e.trades[0]
     no_impact = CostModel().round_trip(turnover=t.entry_px * t.qty, segment=Segment.INTRADAY, include_impact=False)
     assert t.costs == pytest.approx(no_impact["total"])
+
+
+def test_live_trade_separates_decision_alpha_spread_crossing_and_statutory_charges():
+    from financial_brain.costs.india import CostModel, Segment
+
+    e = engine()
+    opened = e.on_price("X", at(9, 40), 101.5, bid=101.45, ask=101.60)[0]
+    closed = e.on_price("X", at(10, 0), 98.9, bid=98.85, ask=98.95)[0]
+
+    signal_pnl = (closed.exit_decision_px - opened.entry_decision_px) * closed.qty
+    execution_pnl = closed.gross_pnl - signal_pnl
+    statutory = CostModel().round_trip(
+        turnover=closed.entry_px * closed.qty,
+        segment=Segment.INTRADAY,
+        bucket=closed.bucket,
+        include_impact=False,
+    )["total"]
+
+    assert execution_pnl == pytest.approx(
+        ((opened.entry_decision_px - opened.entry_px)
+         + (closed.exit_px - closed.exit_decision_px)) * closed.qty
+    )
+    assert execution_pnl < 0  # both the ask entry and bid exit reduce long P&L
+    assert closed.costs == pytest.approx(statutory)  # taxes/fees appear once; no modeled impact is added
+    assert closed.net_pnl == pytest.approx(signal_pnl + execution_pnl - statutory)

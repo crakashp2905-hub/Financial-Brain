@@ -64,6 +64,11 @@ class StrategyRule:
     signal: Callable[[SymbolDay, float, time, dict], tuple | None]
     requires: tuple[str, ...] = ()
     version: str = "unversioned"
+    #: A built-in strategy ("ORB" or "GAP") this rule delegates to, with ``skip`` as an entry filter: ``skip(context)``
+    #: returns a reason to decline the signal, or None to take it. Used by the live-v2 cohort (``learning.activation``); the
+    #: built-in logic, sizing, costs and exits are untouched, so v2 is exactly v1 minus the declined entries.
+    base: str | None = None
+    skip: Callable[[dict], str | None] | None = None
 
 
 @dataclass
@@ -146,6 +151,7 @@ class DayEngine:
         self.quotes: dict[str, tuple] = {}          # symbol -> (bid, ask), the latest live top of book
         self.last: dict[str, float] = {}            # symbol -> latest price, for the market's move since the open
         self.daily_up: bool | None = None           # set by the runner from the previous close; context only
+        self.day_context: dict = {}                 # regime_prev / vix, set by the runner for entry filters that use them
         self.market: dict[str, dict] = {}           # symbol -> {"vwap", "depth_buy", "depth_sell"}: execution context
 
     # ----------------------------------------------------------------- setup
@@ -210,6 +216,8 @@ class DayEngine:
     def _signal(self, strat: str, s: SymbolDay, price: float, clock: time):
         if strat in self.rules:
             rule = self.rules[strat]
+            if rule.base:
+                return self._filtered_builtin(rule, strat, s, price, clock)
             context = self.market.get(s.symbol, {})
             if any(context.get(key) is None for key in rule.requires):
                 self.skipped.append({"symbol": s.symbol, "strategy": strat,
@@ -220,6 +228,9 @@ class DayEngine:
             if signal is not None and (len(signal) not in (2, 3) or signal[0] not in ("long", "short")):
                 raise EngineError(f"{strat}: invalid paper signal")
             return signal
+        return self._builtin_signal(strat, s, price)
+
+    def _builtin_signal(self, strat: str, s: SymbolDay, price: float):
         if strat == "ORB":
             if price > s.or_hi:
                 return ("long", s.or_lo)
@@ -236,6 +247,30 @@ class DayEngine:
                 s.done.add("GAP")          # no gap today: nothing to fade
             return None
         raise EngineError(f"unknown strategy {strat!r}")
+
+    def _filtered_builtin(self, rule: StrategyRule, strat: str, s: SymbolDay, price: float, clock: time):
+        """The built-in signal, declined when an entry filter says so. A declined signal ends the strategy for that name
+        today, exactly as a taken one does, so the trades that remain are the trades v1 would have taken."""
+        sig = self._builtin_signal(rule.base, s, price)
+        if sig is None or rule.skip is None:
+            return sig
+        why = rule.skip(self.decision_context(s, price, clock, sig[0]))
+        if why:
+            s.done.add(strat)
+            self.skipped.append({"symbol": s.symbol, "strategy": strat, "why": why, "filtered": True})
+            return None
+        return sig
+
+    def decision_context(self, s: SymbolDay, price: float, clock: time, side: str) -> dict:
+        """What is known at the moment of a decision, in the vocabulary of ``learning.features`` - the same numbers
+        ``context`` and the fill record on the trade a moment later."""
+        mk = self.market.get(s.symbol) or {}
+        return {"side": side, "price": price, "vwap": mk.get("vwap"), "mkt_ret": self.market_since_open(),
+                "daily_up": self.daily_up, "gap": s.open / s.prev_close - 1.0 if s.open and s.prev_close else None,
+                "or_width": (s.or_hi - s.or_lo) / s.open if s.open else None,
+                "entry_minute": clock.hour * 60 + clock.minute,
+                "spread_bp": self.fill(s.symbol, price, buying=(side == "long"))[1], "bucket": s.bucket, "day": self.day,
+                **self.day_context}
 
     def fill(self, symbol: str, price: float, *, buying: bool) -> tuple[float, float | None]:
         """The price a market order would get, and the quoted spread in bp: the live bid/ask when there is one,

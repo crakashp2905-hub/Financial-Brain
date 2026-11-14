@@ -1,5 +1,5 @@
-import json, pickle, time
-import duckdb, pandas as pd, numpy as np
+import pickle, time
+import duckdb, numpy as np
 from financial_brain.evaluation import edges as E, fundamental_tests as FT, standard as S
 t0 = time.time()
 c = duckdb.connect("data/financial_brain.duckdb", read_only=True)

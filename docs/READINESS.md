@@ -54,7 +54,7 @@ bar will not be moved to change that.
 |---|---|---|
 | minute history including delisted names | PARTIAL | 610 names, 2016-2026, from Kite. Kite has **no** delisted instruments, so intraday results carry survivorship bias, stated in each note |
 | auctions, halts, circuits, special sessions | PARTIAL | a late open is skipped (`intraday_family`); circuits are not modelled |
-| F&O history: expiries, OI, ban list | PARTIAL | `basis_contracts`, F&O snapshots from 2026-10; **no historical ban-list archive** |
+| F&O history: expiries, OI, ban list | DONE (2026-10-18) for bhavcopy, ban list and participant OI | `data/fo_history.duckdb` (123.9M rows, 2015-2026), `fo_ban`/`fo_ban_days` and `participant_positions` from 2012, `ingest/nse_archives.py`; expired option chains are still not archived; **depth and intraday OI are now collected forward** (`fb depth-archive`, weekday 09:10 task, `data/depth_archive.duckdb`; `fb depth-status` shows progress toward the 120 sessions an order-flow test needs; the owner registers the task and checks the Kite data licence) |
 | fills: delay, spread, impact, partial, lots, freeze | PARTIAL | the OMS slicer handles lots and freeze quantities; spread and impact are a flat cost by liquidity bucket; delay is modelled as the next bar |
 | live stream reconciled to an archive | OPEN | |
 | stale feed fails closed | DONE for orders | the risk gate refuses orders without a fresh LTP; the ban list being unreadable refuses every order |
@@ -88,7 +88,7 @@ No strategy clears all of it. **Status: TIME.** Today's standings:
 | cash as a first-class output | DONE (2026-10-15) | `decisions/risk_filters.cash_share`: the terminal states the cash share an equal-slot book would hold after the avoid rules |
 | negative selection before picking winners | DONE (2026-10-15), display only | `decisions/risk_filters`: no momentum longs in CRISIS (IC t -8.4 / -11.1), avoid adv20 < 60% of its 1-year mean (observation tier, registered OOS), edge below cost, no edge. Frozen paper books are **not** changed (ADR-0004) |
 | exposure by group, sector, factor, liquidity | PARTIAL | `portfolio/optimizer.py` (Ledoit-Wolf, sector caps); promoter-group exposure is not wired in |
-| stress tests (2008, COVID, rate shock) | OPEN | |
+| stress tests (2008, COVID, rate shock) | DONE (2026-10-16) for 2016-2024 episodes | `fb stress`: demonetisation, IL&FS, COVID, the 2022 rate shock and the 2024 small-cap fall replayed on held names, plus market -20%, sector rotation and liquidation sessions. 2008 is outside the price archive (starts 2015) |
 | VaR, CVaR, liquidation time | PARTIAL | liquidation time via capacity (`opportunity_card.capacity_inr`); no CVaR report |
 | every live limit has an owner, test, alert and fail-closed path | DONE for the OMS | `execution/oms/risk_gate.py`, `killswitch.py`, `docs/RUNBOOK-LIVE.md` |
 
@@ -142,11 +142,11 @@ None has happened.
 
 | criterion | status |
 |---|---|
-| scheduled jobs, retries, freshness | PARTIAL: Windows tasks and the terminal freshness banner; there are no retries or watchdog (the watchdog is an open owner decision since the 2026-10-14 refresh kill) |
-| backups with restore drills | **OPEN / OWNER**: the lake is gitignored by design ("back it up separately"), and no backup job or drill exists |
-| incident runbook | PARTIAL (`docs/RUNBOOK-LIVE.md` covers broker, OMS and kill switch; data failures and model compromise are not written) |
+| scheduled jobs, retries, freshness | PARTIAL (2026-11-04): Windows tasks, the terminal freshness banner, and `fb preflight` (08:30: network, Kite login, disk, database, data contracts; alerts before the open; the task is registered by the owner with `scripts/register_preflight_task.ps1`). The nightly refresh now runs in the project venv, the environment the tests use (it ran on the system Python with different duckdb/pandas/numpy). The live runner still aborts after 30 minutes of failed quotes, by design (a gap would corrupt stop handling). No watchdog restarts a killed job |
+| backups with restore drills | PARTIAL (2026-11-04): `fb backup` writes dated, verified copies of the paper, OMS, portfolio, quote and knowledge databases to a different physical disk (C:), and `fb backup --verify` re-hashes and reopens them; the raw lake (48.9 GB, 269k files) is mirrored append-only to E:. Both run nightly. **OWNER:** D: and E: are one physical disk, so the lake mirror guards against deletion and corruption, not the disk dying; an external or off-site copy is still needed. The warehouses are not copied (rebuildable from the lake and Kite) |
+| incident runbook | PARTIAL (`docs/RUNBOOK-LIVE.md` covers broker, OMS and kill switch; `docs/RUNBOOK-OPS.md` covers an aborted session, a failed refresh, backup and restore; model compromise is not written) |
 | secrets vaulted and rotated | PARTIAL (`.env` gitignored; no vault, no rotation) |
-| one machine failure cannot lose evidence | **No**: a single Windows machine holds everything |
+| one machine failure cannot lose evidence | **No**: the small evidence databases are on a second disk in the same machine, the lake on the same disk as its mirror. Machine loss still loses everything until an off-machine copy exists (OWNER) |
 
 ## What the next quarter is for
 
@@ -162,8 +162,8 @@ None has happened.
 3. **Engineering:**
    * a research-DB snapshot hash per trial;
    * coverage measurement;
-   * a backup job with a restore drill;
-   * the refresh watchdog;
+   * an off-machine backup copy (the on-machine backup and its verification are done);
+   * a watchdog that restarts a killed job;
    * stress tests.
 
 ## The owner's second list (2026-10-16)
@@ -172,8 +172,9 @@ None has happened.
 |---|---|---|
 | 1. a proven forward edge | **TIME** | the registered tests run on their own; the 2026Q4 budget is spent, so nothing new is added. See section 6 |
 | 2. reproducible engineering | DONE / PARTIAL | dependencies, lockfile, CI, `fb reproduce` and data fingerprints (above). **Look-ahead checks:** `tests/test_fundamental_tests.py` (SUE uses only prior quarters), `test_phase5_preregistry.py` (order of registration). A general automated look-ahead scanner is OPEN |
-| 3. data moat | PARTIAL / OWNER | **in the store:** results 2019-26, insider XBRL from 2026-07, delivery, announcements, ratings, pledges and order wins as separate event types, contracts (`fb data-contracts`). **OPEN (code):** bulk/block deals, shareholding patterns, historical ban list. **OWNER (licensed):** consensus estimates and revisions, delisted-name intraday history, full historical index constituents |
+| 3. data moat | PARTIAL / OWNER | **in the store:** results 2019-26, insider XBRL from 2026-07, delivery, announcements, ratings, pledges and order wins as separate event types, contracts (`fb data-contracts`). **OPEN (code):** bulk/block deals, shareholding patterns, historical ban list. **NEW (2026-11-12):** the order-book and intraday open-interest archive (collection, health check, alerts, readiness gate, tested feature definitions in `evaluation/microstructure.py`). **OWNER (licensed):** consensus estimates and revisions, delisted-name intraday history, full historical index constituents |
 | 4. trader workstation | PARTIAL | the terminal has: the ranked list with its evidence claim; explicit "no trade" (the risk filters and the cash share); catalyst, evidence, regime, net alpha, downside, liquidity and invalidation per name; **new** a calendar (board and results meetings parsed from intimations, ex-dates, F&O expiries); **new** an order-ticket preview with the real risk gate's verdict; post-trade review (`fb journal`). Exposure by sector is shown; by factor and failure mode it is not (OPEN). Macro calendar not collected |
 | 5. execution calibration | DONE (tooling) / **TIME** (evidence) | `fb live quality`: fill rate, partials, rejections, slippage against arrival, latency and the gap to the modelled cost, by liquidity bucket, live and rehearsal kept apart. There are no fills yet. Contract-note reconciliation is OPEN (PDF parsing). Kill-switch drills are in `tests/test_oms.py`; live drills need the owner |
 | 6. portfolio construction | PARTIAL | sizing by volatility, liquidity participation, weight cap and risk per trade (`decisions/plan.py`); cash explicit; capacity per name; **new** `fb stress`: 2016, 2018, 2020, 2022 and 2024 replayed on the held names, market -20% through beta, sector rotation, and liquidation time at 10% of a halved ADV. On the owner's book today COVID would have cost 57%. Not modelled: INR shock (no FX series), factor caps |
 | 7. personal learning loop | DONE (2026-10-16), waiting on trades | `fb journal --import <Console tradebook.csv>`; detectors for overtrading, averaging down, premature exits, event chasing and ignored invalidations (`portfolio/behaviour_review.py`); comparison with the day's approved list (`evaluation/regret.journal_vs_list`); an anti-playbook (a habit with at least 8 trips, losing at t <= -2, printed with how many habits were examined). The journal is empty today: Kite keeps one day of trades, so an export import is the way to fill it |
+| 7b. automatic lessons from the paper record | DONE (2026-11-12), waiting on sessions | `fb learn` (docs/LEARNING-LOOP.md): trade autopsies from the quote archive, an incident ledger with guard coverage, a prospective protocol (nominate on discovery sessions, confirm once on fresh ones, overlap-pruned, decay-watched) whose false-confirmation rate is measured by simulation, a skip-rule shadow, human-only approval, a paper live-v2 cohort proven equal to v1 minus the declined entries, A/B, terminal panel and weekly digest. Nothing changes a live rule |

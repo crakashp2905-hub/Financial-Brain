@@ -32,7 +32,7 @@ G = "test_forward_edge_f01.py"
 
 BASELINE_TESTS = ("test_baseline_records_git_head_sources_and_missing_prerequisites",
                   "test_baseline_write_is_deterministic_for_fixed_clock")
-TRIAL_TESTS = ("test_q4_2026_protected_budget_is_exhausted_at_13_of_13", "test_protected_records_match_pinned_digests",
+TRIAL_TESTS = ("test_q4_2026_protected_budget_is_exhausted_at_14_of_14", "test_protected_records_match_pinned_digests",
                "test_retrospective_edit_of_the_trial_ledger_is_detected",
                "test_new_protected_trial_refused_when_budget_is_spent",
                "test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval",
@@ -69,7 +69,7 @@ BLK_DATA = "BLK-DATA: licensed real-time quote/depth entitlement not available (
 BLK_TSA = "BLK-TSA: no independent timestamp provider or pinned trust root configured (docs/forward-edge/trust-roots.json absent)"
 BLK_COMPLIANCE = "BLK-COMPLIANCE: SEBI retail-algo permissions, exchange algo IDs and static IP need broker/owner evidence"
 BLK_MARKET = "BLK-MARKET: needs observed live NSE/BSE sessions (cannot be produced offline)"
-BLK_GOV = "BLK-GOVERNANCE: 2026Q4 protected budget 13/13 spent; new hypotheses need an ADR amendment or 2027Q1"
+BLK_GOV = "BLK-GOVERNANCE: 2026Q4 protected budget 14/14 spent; new hypotheses need an ADR amendment or 2027Q1"
 BLK_OWNER = "BLK-OWNER: requires the owner's own decision or signature"
 BLK_GITHUB = "BLK-GITHUB: branch main is not protected (GitHub API 404 'Branch not protected', read-only check 2026-11-10)"
 BLK_LINUX = "BLK-LINUX: no Linux runner here (WSL not installed); CI on Linux needs a push, not run by this session"
@@ -78,7 +78,7 @@ BLK_TIME = "BLK-TIME: needs elapsed calendar time of scheduled sessions (>=60 in
 OVERRIDES: dict[str, Entry] = {
     # ---- F00 ----
     "FE-0001": Entry("DONE", BASELINE_TESTS, (), "docs/forward-edge/baseline-2026-11-10.json captured with gh PR list."),
-    "FE-0002": Entry("DONE", TRIAL_TESTS, (), "2026Q4 ledger 13/13; pins guard retrospective edits; no ledger write made."),
+    "FE-0002": Entry("DONE", TRIAL_TESTS, (), "2026Q4 ledger 14/14; pins guard retrospective edits; no ledger write made."),
     "FE-0003": Entry("NOT_STARTED", (), (), "Immutable eligibility registry belongs to F02 (FE-0022..0024)."),
     "FE-0004": Entry("DONE", ("test_charter_hash_is_deterministic_and_sensitive_to_every_field",
                               "test_revision_is_a_new_version_with_a_new_clock",

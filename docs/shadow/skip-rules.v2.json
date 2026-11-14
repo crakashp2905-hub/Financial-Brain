@@ -1,0 +1,6 @@
+{
+  "schema": "fb.shadow.skip_rules.v2",
+  "version": "live-v2",
+  "note": "Empty on purpose. A rule enters only after a lesson was CONFIRMED on sessions it was not found on (fb learn status) and the owner committed a pre-registration for it (fb learn draft writes the draft; commit it as brain/07-Research/PRE-REGISTERED skip rule <id>.md). fb learn register adds it here as SHADOW: judged on trades after active_from, no effect on trading. Only a person at a terminal can make it ACTIVE (fb learn approve), bound to this exact rule, for 180 days. Fields: id, lesson, strategy (ORB or GAP), dimension and value (learning/features.py), prereg, active_from, status (SHADOW, ACTIVE, RETIRED), approval. See docs/LEARNING-LOOP.md.",
+  "rules": []
+}
