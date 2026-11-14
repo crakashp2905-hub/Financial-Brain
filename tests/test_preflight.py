@@ -8,7 +8,8 @@ DAY = date(2026, 11, 4)
 
 def _run(**kw):
     base = dict(resolve=lambda h: True, credentials=lambda: ("k", "t"), free_gb=lambda p: 500.0,
-                contracts=lambda db: [{"table": "eod_prices", "ok": True, "why": ""}], db=Path("data/x.duckdb"))
+                contracts=lambda db: [{"table": "eod_prices", "ok": True, "why": ""}], db=Path("data/x.duckdb"),
+                depth_task=lambda: True)
     return PF.run(today=DAY, **{**base, **kw})
 
 
@@ -41,3 +42,23 @@ def test_a_locked_database_is_reported_not_raised():
     r = _run(contracts=locked)
     assert [x for x in r if x["name"] == "database"][0]["ok"] is False
     assert not any(x["name"] == "contracts" for x in r)
+
+
+def test_an_unregistered_depth_task_has_its_own_alert_and_does_not_look_like_a_session_failure():
+    r = _run(depth_task=lambda: False)
+    assert [x for x in r if x["name"] == "depth_task"][0]["ok"] is False
+    (a,) = PF.alerts(r, DAY)
+    assert a["title"] == "Depth archive is not scheduled" and "register_depth_archive_task" in a["body"]
+    # both at once: two separate alerts, the session one is unchanged
+    both = PF.alerts(_run(depth_task=lambda: False, free_gb=lambda p: 10.0), DAY)
+    assert {x["title"] for x in both} == {"Paper session may not run today", "Depth archive is not scheduled"}
+
+
+def test_the_task_query_never_raises_a_false_alarm_when_it_cannot_ask(monkeypatch):
+    import subprocess
+
+    def boom(*a, **k):
+        raise OSError("no schtasks")
+
+    monkeypatch.setattr(subprocess, "run", boom)
+    assert PF._depth_task_registered() is True

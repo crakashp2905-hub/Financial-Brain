@@ -62,6 +62,18 @@ EXTRA_COLUMNS = (("entry_decision_px", "DOUBLE"), ("exit_decision_px", "DOUBLE")
                  ("entry_walk_bp", "DOUBLE"))
 
 
+def _day_context(fn, day: str) -> dict:
+    """The regime and VIX a live-v2 entry filter may use. Fails open: if it cannot be read, those filters do not apply today and the
+    cohort trades as live-v1 would (a skip rule can only ever remove trades, so not applying it is the safe direction)."""
+    if fn is None:
+        return {}
+    try:
+        return dict(fn(day) or {})
+    except Exception as e:                              # noqa: BLE001 - a lookup failure must not cost the session
+        log.warning("day context unavailable (%s): entry filters that need it do not apply today", str(e)[:120])
+        return {}
+
+
 def cohort_path(base: Path, cohort: str | None, strategies, rules: dict[str, I.StrategyRule] | None) -> tuple[Path, str]:
     """Keep strategy variants in separate ledgers instead of overwriting `(day, mode)`.
 
@@ -219,7 +231,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
              rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
              event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None,
-             raw_archive=None) -> dict:
+             raw_archive=None, day_context_fn=None) -> dict:
     from ..providers import kite_data as kd
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
@@ -234,6 +246,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
     eng = I.DayEngine(day, strategies=strategies, rules=rules)
     eng.daily_up = daily_up(date.fromisoformat(day))
+    eng.day_context = _day_context(day_context_fn, day)
     started = now.isoformat()
     daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
     if rcon is not None:
@@ -444,7 +457,7 @@ def path_of_bar(o, h, l, c):
 
 def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=None, path: Path = LEDGER,
                daily_fn=None, strategies=I.STRATEGIES,
-               rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
+               rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None, day_context_fn=None) -> dict:
     from ..providers import kite_data as kd
     candles_fn = candles_fn or kd.candles
     inst = kd.instruments("NSE") if token_fn is None else None
@@ -454,6 +467,7 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
     uni = universe(n)
     eng = I.DayEngine(day.isoformat(), strategies=strategies, rules=rules)
     eng.daily_up = daily_up(day)
+    eng.day_context = _day_context(day_context_fn, day.isoformat())
     stream = []
     vwap_at: dict = {}
     used = 0

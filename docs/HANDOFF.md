@@ -59,6 +59,21 @@ Phase 1. If session limits hit, autostart after the limit period is over."*
 
 ---
 
+## Latest (2026-11-12) - the learning loop and the depth archive (branch feature/data-and-learning-loop, not yet merged)
+
+* **2026Q4 budget is 14/14** (ADR-0004 amendment 5 spent on the V2 intraday family: 35 of 35 candidates failed; branch
+  `feature/v2-intraday-family`, worktree `D:\Finance-Brain-v2`, local only).
+* **Learning loop** (`fb learn ...`, `docs/LEARNING-LOOP.md`, package `src/financial_brain/learning/`): trade autopsies, incident ledger with
+  guard coverage, a prospective protocol (nominate, confirm once on fresh sessions, decay watch) whose error rate is measured
+  (`fb learn calibrate`), shadow skip rules, human-only approval, a paper `live-v2` cohort (`fb paper-intraday --v2`) proven equal to v1 minus the
+  declined entries, A/B, panel, digest. Nothing changes a live rule. It runs from the nightly refresh (`fb learn run`) only once this branch is
+  merged and the main checkout updated.
+* **Depth/OI archive** (`fb depth-archive`, `fb depth-status`): waits for the login, detects holidays, health report and alerts, 120-session
+  readiness gate. **Not collecting until the owner registers the task** (`powershell -ExecutionPolicy Bypass -File data\register_depth_archive_now.ps1`).
+* Needs the owner: register the Depth Archive and Preflight tasks (Claude cannot: the harness blocks scheduled-task creation), merge PRs #17 and
+  this branch, check Kite's data licence, Telegram bot, an off-machine backup copy.
+* The live paper ledger is locked 09:05-15:30 by the runner: never open it in market hours.
+
 ## Latest (2026-10-15, night) - read docs/READINESS.md
 
 * **2026Q4 trial budget is spent (13/13).** All 13 FAIL: X3 earnings surprise OOS, MF multi-factor book and the I/S

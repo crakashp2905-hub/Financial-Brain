@@ -9,6 +9,8 @@ checks, read-only:
     disk        the data drive has room
     database    the research database opens read-only (no writer holds it)
     contracts   every data contract is met as of the last session (fresh, no future or null dates)
+    depth_task  the weekday 09:10 depth and open-interest archive task is registered (its own alert: it does not
+                affect today's paper session, but an unregistered task collects nothing and every missed week is lost)
 
 A failure raises one alert per distinct set of failures per day (desktop toast, and Telegram when the owner has
 configured it). It cannot know exchange holidays: on a holiday a missing login is expected, so the alert says so.
@@ -17,12 +19,16 @@ from __future__ import annotations
 
 import shutil
 import socket
+import subprocess
+import sys
 from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 
 HOSTS = ("api.kite.trade", "www.nseindia.com")
 MIN_FREE_GB = 50
+DEPTH_TASK = "FinanceBrain Depth Archive"
+SESSION_CHECKS = ("network", "kite", "disk", "database", "contracts")
 RESEARCH_DB = Path("data") / "financial_brain.duckdb"
 
 
@@ -43,6 +49,16 @@ def _free_gb(path: Path) -> float:
     return shutil.disk_usage(path).free / 1e9
 
 
+def _depth_task_registered() -> bool:
+    """Is the 09:10 archive task in the Windows scheduler? Where that cannot be asked, assume yes (no false alarm)."""
+    if sys.platform != "win32":
+        return True
+    try:
+        return subprocess.run(["schtasks", "/Query", "/TN", DEPTH_TASK], capture_output=True, timeout=20).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+
+
 def _contracts(db: Path) -> list[dict]:
     import duckdb
 
@@ -56,7 +72,8 @@ def _contracts(db: Path) -> list[dict]:
 
 def run(*, today: date | None = None, resolve: Callable[[str], bool] = _resolve,
         credentials: Callable[[], object] = _credentials, free_gb: Callable[[Path], float] = _free_gb,
-        contracts: Callable[[Path], list[dict]] = _contracts, db: Path = RESEARCH_DB) -> list[dict]:
+        contracts: Callable[[Path], list[dict]] = _contracts, db: Path = RESEARCH_DB,
+        depth_task: Callable[[], bool] = _depth_task_registered) -> list[dict]:
     out: list[dict] = []
     down = [h for h in HOSTS if not resolve(h)]
     out.append({"name": "network", "ok": not down,
@@ -75,14 +92,23 @@ def run(*, today: date | None = None, resolve: Callable[[str], bool] = _resolve,
                     "detail": "all met" if not bad else "; ".join(f"{c['table']}: {c['why']}" for c in bad)[:300]})
     except Exception as e:                              # noqa: BLE001 - a locked or unreadable database is the finding
         out.append({"name": "database", "ok": False, "detail": f"cannot open read-only: {str(e)[:140]}"})
+    registered = depth_task()
+    out.append({"name": "depth_task", "ok": registered,
+                "detail": "the 09:10 depth archive task is registered" if registered else
+                "the 09:10 depth archive task is not registered, so no order-book or open-interest history is being "
+                "collected; run scripts\\register_depth_archive_task.ps1 once"})
     return out
 
 
 def alerts(results: list[dict], day: date) -> list[dict]:
-    failed = [r for r in results if not r["ok"]]
-    if not failed:
-        return []
-    names = ",".join(r["name"] for r in failed)
-    body = " | ".join(f"{r['name']}: {r['detail']}" for r in failed)
-    return [{"key": f"preflight:{day}:{names}", "title": "Paper session may not run today",
-             "body": f"{body}. Fix before 09:15 (kite: scripts\\kite_login.cmd). Ignore on an exchange holiday."}]
+    out: list[dict] = []
+    failed = [r for r in results if not r["ok"] and r["name"] in SESSION_CHECKS]
+    if failed:
+        names = ",".join(r["name"] for r in failed)
+        body = " | ".join(f"{r['name']}: {r['detail']}" for r in failed)
+        out.append({"key": f"preflight:{day}:{names}", "title": "Paper session may not run today",
+                    "body": f"{body}. Fix before 09:15 (kite: scripts\\kite_login.cmd). Ignore on an exchange holiday."})
+    task = [r for r in results if r["name"] == "depth_task" and not r["ok"]]
+    if task:
+        out.append({"key": f"preflight:{day}:depth_task", "title": "Depth archive is not scheduled", "body": task[0]["detail"]})
+    return out
