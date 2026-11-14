@@ -48,7 +48,8 @@ def _fixture(tmp_path, monkeypatch, *, mock_finalize=True, mock_reports=True):
                                   "authority_strategy_id": allocation.strategy_id,
                                   "authority_account_id": allocation.account_id}})
         journal.append({"t": "SESSION_CLOSED", "session_id": f"s-{allocation.strategy_id}",
-                        "result": {"status": "NO_TRADE"}})
+                        "result": {"status": "NO_TRADE",
+                                   "closed_at_utc": "2026-11-16T10:00:00+00:00"}})
         books.append({
             "strategy_id": allocation.strategy_id,
             "session_id": f"s-{allocation.strategy_id}",
@@ -169,6 +170,44 @@ def test_daily_manifest_builder_derives_book_sessions_and_writes_immutable_hashe
     output_path.write_text(json.dumps(built), encoding="utf-8")
     with pytest.raises(cycle.DailyPaperCycleError, match="manifest hash"):
         cycle.preflight_daily_paper_cycle(output_path)
+
+
+def test_configured_daily_runner_builds_from_verified_close_receipts_and_retries_immutably(
+        tmp_path, monkeypatch, capsys):
+    _manifest, _source_path, _ = _fixture(tmp_path, monkeypatch)
+    registry_path = tmp_path / "registry.jsonl"
+    registry_path.write_text("fixture registry", encoding="utf-8")
+    runner_paths = [tmp_path / "alpha.runner.jsonl", tmp_path / "beta.runner.jsonl"]
+    config = {
+        "schema_version": 1, "registry": str(registry_path), "plan_id": "plan-v1",
+        "account_root": str(tmp_path / "accounts"),
+        "runner_journals": [str(path) for path in runner_paths],
+        "archive_dir": str(tmp_path / "archives"), "bundle_root": str(tmp_path / "bundles"),
+        "report_output_root": str(tmp_path / "reports"), "manifest_root": str(tmp_path / "manifests"),
+        "max_mark_age_seconds": 30,
+    }
+    config_path = tmp_path / "daily-cycle-config.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    calls = []
+
+    def run_cycle(path):
+        calls.append(Path(path))
+        return {"manifest": str(path), "physical_orders": False}
+
+    monkeypatch.setattr(cycle, "run_daily_paper_cycle", run_cycle)
+    first_code = main(["daily-paper-run", "--config", str(config_path), "--session-date", "2026-11-16"])
+    first = json.loads(capsys.readouterr().out)
+    manifest_path = calls[-1]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    second_code = main(["daily-paper-run", "--config", str(config_path), "--session-date", "2026-11-16"])
+    second = json.loads(capsys.readouterr().out)
+
+    assert first_code == second_code == 0
+    assert first == second
+    assert calls == [manifest_path, manifest_path]
+    assert manifest["captured_at"] == "2026-11-16T10:00:00+00:00"
+    assert manifest["mark_policy"] == "KITE_LATEST_VALID_BID_MAX_AGE_S=30.0"
+    assert len(manifest["books"]) == 2
 
 
 def test_daily_manifest_builder_derives_fresh_close_bid_from_kite_tagged_quote(tmp_path, monkeypatch, capsys):

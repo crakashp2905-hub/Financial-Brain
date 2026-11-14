@@ -188,6 +188,20 @@ def cmd_daily_paper_cycle(manifest_path: str) -> tuple[dict, int]:
     return result, EXIT["OK"]
 
 
+def cmd_daily_paper_run_config(config_path: str, session_date: str) -> tuple[dict, int]:
+    """Build a daily manifest from verified close receipts, then preflight and finalize it."""
+    from financial_brain.forward_edge.daily_paper_cycle import (
+        DailyPaperCycleError,
+        run_configured_daily_paper_cycle,
+    )
+
+    try:
+        result = run_configured_daily_paper_cycle(Path(config_path), session_date)
+    except (OSError, ValueError, TypeError, DailyPaperCycleError) as exc:
+        return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    return result, EXIT["OK"]
+
+
 def cmd_daily_paper_preflight(manifest_path: str) -> tuple[dict, int]:
     """Validate a complete daily-cycle manifest without closing or mutating any book."""
     from financial_brain.forward_edge.daily_paper_cycle import (
@@ -360,6 +374,10 @@ def main(argv: list[str] | None = None) -> int:
     cycle = sub.add_parser(
         "daily-paper-cycle", help="finalize all frozen-plan paper books and build the by-book report")
     cycle.add_argument("--manifest", required=True, help="owner-prepared JSON inputs for this session")
+    configured_cycle = sub.add_parser(
+        "daily-paper-run", help="derive, preflight, and finalize a cycle from verified runner journals")
+    configured_cycle.add_argument("--config", required=True, help="owner-managed daily-cycle config JSON")
+    configured_cycle.add_argument("--session-date", required=True, help="NSE exchange session date YYYY-MM-DD")
     preflight = sub.add_parser(
         "daily-paper-preflight", help="validate all daily-cycle evidence without mutating accounts")
     preflight.add_argument("--manifest", required=True, help="owner-prepared JSON inputs for this session")
@@ -415,6 +433,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_registered_portfolio_report(args.registry, args.plan_id, args.account_root)
     elif args.cmd == "daily-paper-cycle":
         out, code = cmd_daily_paper_cycle(args.manifest)
+    elif args.cmd == "daily-paper-run":
+        out, code = cmd_daily_paper_run_config(args.config, args.session_date)
     elif args.cmd == "daily-paper-preflight":
         out, code = cmd_daily_paper_preflight(args.manifest)
     elif args.cmd == "daily-paper-manifest":

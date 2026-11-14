@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_daily_paper_cycle.py tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py tests/test_book_performance_report.py tests/test_source_inventory.py; ruff check src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py tests/test_daily_paper_cycle.py; python -m mypy src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py",
-    "result": "31 passed across manifest generation, Kite-mark derivation, preflight, daily cycle, evidence bundle, EOD archive, book report, and source inventory; Ruff and mypy passed. A synthetic tagged-quote fixture verified bid selection, raw source hash preservation, staleness policy, manifest immutability, and preflight. It does not prove any actual Kite market capture."
+    "result": "Configured daily-paper-run now derives capture time from verified SESSION_CLOSED receipts, generates/reuses an immutable manifest, derives fresh Kite-tagged close bids, and preflights before close. Combined manifest, configured-run, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suite: 32 passed; Ruff and mypy passed. Synthetic fixtures only; no real Kite capture is established."
   },
   "implemented": [
     "Portable bundles export account close archive and durable runner journal plus optional evidence inputs with SHA-256 and byte lengths.",
@@ -17,22 +17,25 @@
     "The forward-edge CLI exposes daily-finalize and daily-paper-cycle; the cycle discovers every account from a frozen plan, finalizes the close archive and bundle, and creates a deterministic by-book report from generated archives plus caller-supplied history.",
     "The cycle is resumable per book and requires unchanged timestamps and marks on retry; account paths are derived from the registered plan.",
     "The forward-edge CLI exposes the read-only daily-paper-preflight command, which validates all registered accounts, close marks, terminal strategy/account bindings and historical report rows before any book is finalized.",
-    "The Windows paper_daily_finalize.cmd wrapper requires FB_DAILY_CYCLE_MANIFEST, runs read-only preflight before the cycle, logs both steps and propagates failure; it does not register a scheduled task.",
     "The daily-paper-manifest CLI derives one terminal runner session for every frozen-plan strategy/account binding, requires an explicit complete marks map, accepts explicit historical rows, and writes an immutable content-hashed manifest. Ambiguous sessions fail closed.",
-    "Optional Kite close-mark derivation uses only hash-consistent kite_connect NSE quote events with valid two-sided depth, raw quote SHA-256, availability/source-age checks, and an explicit maximum age; missing or stale held-symbol quotes fail closed."
+    "Optional Kite close-mark derivation uses only hash-consistent kite_connect NSE quote events with valid two-sided depth, raw quote SHA-256, availability/source-age checks, and an explicit maximum age; missing or stale held-symbol quotes fail closed.",
+    "The configured daily-paper-run CLI derives close time from verified terminal receipts, generates an immutable manifest from the frozen plan and configured runner journals, rechecks identical inputs on retry, and runs preflight before closing books.",
+    "The Windows paper_daily_finalize.cmd wrapper accepts FB_DAILY_CYCLE_CONFIG for generated runs or FB_DAILY_CYCLE_MANIFEST for explicit runs; generated mode derives the India session date and propagates failures. It does not register a scheduled task."
   ],
   "blockers": [
-    "No Windows Task Scheduler job has been registered or enabled, and no process currently generates the owner-managed daily manifest.",
+    "No Windows Task Scheduler job has been registered or enabled; the owner must provide and maintain the config and schedule.",
     "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",
     "Bundle transfer has no managed delivery channel; this implementation exports a self-contained directory."
   ],
   "source_sha256": {
     "src/financial_brain/forward_edge/daily_evidence_bundle.py": "4723f707928dc3226249a4a8c275aeb5774b094f1e756eb25ba5cb6a5ee16ae1",
     "tests/test_daily_evidence_bundle.py": "2264bf568848d11dfc7b8fb4b45982e470a7d85eecca6cba939bbeb3a2bd9ae1",
-    "src/financial_brain/forward_edge/cli.py": "a6a70c0f5673ee0cfd97b3e6917c216f7474315c9c5e72c124233a1690da405e",
-    "src/financial_brain/forward_edge/daily_paper_cycle.py": "d6696cc52ebe2e0b9fe57bf9ee159e3bb9119428b43fe2e5646b1cac1978414a",
-    "tests/test_daily_paper_cycle.py": "1cba7802df7076c4387336a54b27626f6bbefd155965fd4d7ab0efe8a1521fbb",
+    "src/financial_brain/forward_edge/cli.py": "b0ea1b6d27f9ae967c4cf4b92c4b1d8205e8381c40fb2d1e91c48816a05822eb",
+    "src/financial_brain/forward_edge/daily_paper_cycle.py": "b975a6ddedddfdb11f007f0e3576b5573b156093b34d5eb790fc0f3f4359fe1e",
+    "tests/test_daily_paper_cycle.py": "daeefa9bc33ecb54c599032bd8d872b67288fcc2cb6df0f03f1033cf848c7476",
     "src/financial_brain/forward_edge/eod_paper_archive.py": "c7009ccb1fe98891aee8faede9863efedde60969f8c9d8b10cafc55b146ddbbe",
-    "scripts/paper_daily_finalize.cmd": "0518bbe3fafaca980c0dd84d5740e77185bc0b83bac120ef05529099d6c5d380"
+    "scripts/paper_daily_finalize.cmd": "29f59496be63048c0669098c47e256945ad23717bfbc565d5f493c585147a7e8",
+    "docs/forward-edge/daily-paper-cycle.md": "d6e7f39a684daf023f2cffe5be416d4d1d4a512e1e305e70b5d666ede522732e",
+    "docs/edge-program/pe-0155-daily-evidence-bundle.md": "36c9c95283b4b3cea83e80b8c96e193628340e0343504cace54a2ab7c7556f71"
   }
 }

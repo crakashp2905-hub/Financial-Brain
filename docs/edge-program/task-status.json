@@ -224,8 +224,8 @@
         "test_source_capture_start.py",
         "test_capability_matrix.py"
       ],
-      "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (627 Python sources; 611 unassessed; 359 role-unassigned).",
-      "evidence_sha256": "2f4eac4e6a095bf7a83b7274de9e9b51f04fef51053de9a19d64d32978e0da21",
+      "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (628 Python sources; 612 unassessed; 360 role-unassigned).",
+      "evidence_sha256": "4e6b5c9c3582ce98b6ef9beb36849d85c4d561ec08fd9fa456973e64e9b511df",
       "blockers": [
         "Deployment must configure a shared registry path and canonical matching strategy IDs; this has not been verified in the owner environment.",
         "Other direct/manual paper writers, authenticated owner identity, and account closure/release governance are not bound to this control.",
@@ -3475,12 +3475,13 @@
         "test_daily_paper_cycle_real_close_bundle_and_report_integration",
         "test_daily_paper_preflight_is_read_only_and_checks_all_books_before_close",
         "test_daily_manifest_builder_derives_book_sessions_and_writes_immutable_hashed_manifest",
-        "test_daily_manifest_builder_derives_fresh_close_bid_from_kite_tagged_quote"
+        "test_daily_manifest_builder_derives_fresh_close_bid_from_kite_tagged_quote",
+        "test_configured_daily_runner_builds_from_verified_close_receipts_and_retries_immutably"
       ],
-      "test_result": "The builder can derive long-position close marks from the latest fresh, digest-verified Kite-tagged NSE quote in each registered session, preserving raw quote hash and availability time and refusing stale/missing quotes. Combined manifest, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suites: 31 passed; Ruff and mypy passed. Synthetic only; actual Kite capture remains unverified.",
-      "evidence_sha256": "c610b6c6f982f09d7ac2a7db0dab872b4f79d8cd94ec158d79ca4c8fa6bd0ed1",
+      "test_result": "Configured daily-paper-run now derives capture time from verified SESSION_CLOSED receipts, generates/reuses an immutable manifest, derives fresh Kite-tagged close bids, and preflights before close. Combined manifest, configured-run, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suite: 32 passed; Ruff and mypy passed. Synthetic fixtures only; no real Kite capture is established.",
+      "evidence_sha256": "41bb4617e82b6e5bddd7b9bcfde330beb8f1e24839f4b09f6226480c6964115f",
       "blockers": [
-        "No Windows Task Scheduler job has been registered or enabled, and no process generates the owner-managed manifest.",
+        "No Windows Task Scheduler job has been registered or enabled; the owner must provide and maintain the config and schedule.",
         "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",
         "Bundle transfer has no managed delivery channel; this implementation exports a self-contained directory."
       ]
@@ -3529,13 +3530,14 @@
         "test_daily_paper_cycle_real_close_bundle_and_report_integration",
         "test_daily_paper_preflight_is_read_only_and_checks_all_books_before_close",
         "test_daily_manifest_builder_derives_book_sessions_and_writes_immutable_hashed_manifest",
-        "test_daily_manifest_builder_derives_fresh_close_bid_from_kite_tagged_quote"
+        "test_daily_manifest_builder_derives_fresh_close_bid_from_kite_tagged_quote",
+        "test_configured_daily_runner_builds_from_verified_close_receipts_and_retries_immutably"
       ],
-      "test_result": "The builder can derive long-position close marks from the latest fresh, digest-verified Kite-tagged NSE quote in each registered session, preserving raw quote hash and availability time and refusing stale/missing quotes. Combined manifest, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suites: 31 passed; Ruff and mypy passed. Synthetic only; actual Kite capture remains unverified.",
-      "evidence_sha256": "9716511161152e5d415428efe473ecf6a18cbccbbbcf25e5172bd3137e99672e",
+      "test_result": "Configured daily-paper-run now derives capture time from verified SESSION_CLOSED receipts, generates/reuses an immutable manifest, derives fresh Kite-tagged close bids, and preflights before close. Combined manifest, configured-run, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suite: 32 passed; Ruff and mypy passed. Synthetic fixtures only; no real Kite capture is established.",
+      "evidence_sha256": "20ab4d35254c4d7fa7ba6a953a827a86cfae3c636b78012c06df755685819405",
       "blockers": [
-        "No Windows Task Scheduler job invokes the wrapper; historic sessions must be provided in history_sessions.",
-        "No OS scheduler invokes daily-paper-cycle for each market session; multi-session denominators require caller-supplied history_sessions.",
+        "No Windows Task Scheduler job invokes the wrapper; the owner-managed history_sessions file remains an explicit input.",
+        "No OS scheduler invokes daily-paper-cycle for each market session; multi-session denominators require explicit history_sessions.",
         "No prospective market-session cohort has populated this report from observed Kite quotes and account archives.",
         "The report only supports INR account archives; cross-currency book aggregation is not implemented here."
       ]

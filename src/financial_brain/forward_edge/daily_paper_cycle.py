@@ -176,6 +176,8 @@ def build_daily_paper_manifest(*, registry_path: Path, plan_id: str, account_roo
     matching: dict[str, list[dict]] = {strategy_id: [] for strategy_id in expected}
     for journal_path in runner_journals:
         path = Path(journal_path).resolve()
+        if not path.is_file():
+            raise DailyPaperCycleError(f"runner journal is missing: {path}")
         records = DurableJournal(path).records()
         session_ids = {row.get("session_id") for row in records
                        if row.get("t") in {"SESSION_CLOSED", "SESSION_INCOMPLETE"}}
@@ -209,6 +211,8 @@ def build_daily_paper_manifest(*, registry_path: Path, plan_id: str, account_roo
             assert max_mark_age_seconds is not None
             account_path = registry.account_path(
                 plan_id=plan_id, account_id=expected[strategy_id].account_id, root=Path(account_root))
+            if not account_path.is_file():
+                raise DailyPaperCycleError(f"registered account journal is missing: {strategy_id}")
             account_rows = DurableJournal(account_path).records()
             if not account_rows or account_rows[0].get("t") != "ACCOUNT_OPEN":
                 raise DailyPaperCycleError(f"registered account journal is missing its opening record: {strategy_id}")
@@ -268,6 +272,135 @@ def build_daily_paper_manifest(*, registry_path: Path, plan_id: str, account_roo
             raise
     return {"manifest_path": str(target), "manifest_sha256": manifest["manifest_sha256"],
             "book_count": len(books), "physical_orders": False}
+
+
+def run_configured_daily_paper_cycle(config_path: Path, session_date: str) -> dict:
+    """Generate and run a daily close from operator-owned configuration and verified journals.
+
+    Capture time comes from the hash-chain-verified SESSION_CLOSED receipts, making retries
+    reuse the same immutable manifest and timestamp.
+    """
+    config_file = Path(config_path).resolve()
+    try:
+        config = json.loads(config_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise DailyPaperCycleError("daily-cycle config is unreadable JSON") from exc
+    required = {"schema_version", "registry", "plan_id", "account_root", "runner_journals",
+                "archive_dir", "bundle_root", "report_output_root", "manifest_root",
+                "max_mark_age_seconds"}
+    optional = {"history_sessions"}
+    if (not isinstance(config, dict) or set(config) - required - optional
+            or required - set(config) or type(config.get("schema_version")) is not int
+            or config.get("schema_version") != 1):
+        raise DailyPaperCycleError("daily-cycle config has an unsupported schema or fields")
+    try:
+        day = date.fromisoformat(session_date)
+        if day.isoformat() != session_date:
+            raise ValueError
+    except (TypeError, ValueError) as exc:
+        raise DailyPaperCycleError("session date must be a canonical YYYY-MM-DD value") from exc
+
+    def resolve_path(key: str) -> Path:
+        value = config.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise DailyPaperCycleError(f"daily-cycle config path {key} is required")
+        candidate = Path(value)
+        return (config_file.parent / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
+
+    runner_values = config.get("runner_journals")
+    if (not isinstance(runner_values, list) or not runner_values
+            or any(not isinstance(value, str) or not value.strip() for value in runner_values)):
+        raise DailyPaperCycleError("runner_journals must be a non-empty array of paths")
+    runner_paths = []
+    for value in runner_values:
+        candidate = Path(value)
+        runner_paths.append((config_file.parent / candidate).resolve()
+                            if not candidate.is_absolute() else candidate.resolve())
+
+    registry_path = resolve_path("registry")
+    if not registry_path.is_file():
+        raise DailyPaperCycleError("configured paper-book registry journal is missing")
+    plan_id = config.get("plan_id")
+    if not isinstance(plan_id, str) or not plan_id:
+        raise DailyPaperCycleError("plan_id must be a non-empty string")
+    registry = RegisteredPaperBooks(registry_path)
+    plan = next((item for item in registry.plans if item.plan_id == plan_id), None)
+    if plan is None:
+        raise DailyPaperCycleError("configured frozen paper-book plan is not registered")
+    expected = {allocation.strategy_id: allocation for allocation in plan.books}
+    closes: dict[str, list[datetime]] = {strategy_id: [] for strategy_id in expected}
+    for runner_path in runner_paths:
+        if not runner_path.is_file():
+            raise DailyPaperCycleError(f"runner journal is missing: {runner_path}")
+        records = DurableJournal(runner_path).records()
+        planned_sessions = {}
+        for row in records:
+            if row.get("t") != "SESSION_PLAN" or not isinstance(row.get("config"), dict):
+                continue
+            cfg = row["config"]
+            strategy_id = cfg.get("authority_strategy_id")
+            if not isinstance(strategy_id, str):
+                continue
+            allocation = expected.get(strategy_id)
+            session_id = row.get("session_id")
+            if (cfg.get("exchange_date") == session_date and allocation is not None
+                    and cfg.get("authority_account_id") == allocation.account_id
+                    and isinstance(session_id, str) and session_id):
+                planned_sessions[session_id] = strategy_id
+        for row in records:
+            session_id = row.get("session_id")
+            if not isinstance(session_id, str):
+                continue
+            strategy_id = planned_sessions.get(session_id)
+            if row.get("t") != "SESSION_CLOSED" or strategy_id is None:
+                continue
+            result = row.get("result")
+            timestamp = result.get("closed_at_utc") if isinstance(result, dict) else None
+            try:
+                if not isinstance(timestamp, str):
+                    raise ValueError
+                closed_at = datetime.fromisoformat(timestamp)
+                if closed_at.tzinfo is None or closed_at.utcoffset() is None:
+                    raise ValueError
+            except (TypeError, ValueError) as exc:
+                raise DailyPaperCycleError(
+                    f"closed runner session for {strategy_id} has no timezone-aware close receipt") from exc
+            if closed_at.astimezone(ZoneInfo("Asia/Kolkata")).date() != day:
+                raise DailyPaperCycleError(f"closed runner session for {strategy_id} is outside the exchange date")
+            closes[strategy_id].append(closed_at)
+    for strategy_id, timestamps in closes.items():
+        if len(timestamps) != 1:
+            raise DailyPaperCycleError(
+                f"expected exactly one timestamped closed runner session for {strategy_id}; found {len(timestamps)}")
+    captured_at = max(timestamp for timestamps in closes.values() for timestamp in timestamps)
+    safe_plan_id = hashlib.sha256(plan_id.encode("utf-8")).hexdigest()[:24]
+    manifest_path = resolve_path("manifest_root") / session_date / f"{safe_plan_id}.json"
+    history_path = None
+    history_value = config.get("history_sessions")
+    if history_value is not None:
+        if not isinstance(history_value, str) or not history_value.strip():
+            raise DailyPaperCycleError("history_sessions must be a path when provided")
+        history_candidate = Path(history_value)
+        history_path = ((config_file.parent / history_candidate).resolve()
+                        if not history_candidate.is_absolute() else history_candidate.resolve())
+    try:
+        if isinstance(config["max_mark_age_seconds"], bool):
+            raise ValueError
+        max_age = float(config["max_mark_age_seconds"])
+        if not isfinite(max_age) or max_age <= 0:
+            raise ValueError
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise DailyPaperCycleError("max_mark_age_seconds must be finite and positive") from exc
+
+    build_daily_paper_manifest(
+        registry_path=registry_path, plan_id=plan_id, account_root=resolve_path("account_root"),
+        runner_journals=runner_paths, session_date=session_date,
+        captured_at=captured_at.isoformat(), marks_map_path=None, derive_kite_marks=True,
+        max_mark_age_seconds=max_age, archive_dir=resolve_path("archive_dir"),
+        bundle_root=resolve_path("bundle_root"), report_output_root=resolve_path("report_output_root"),
+        output_path=manifest_path, history_sessions_path=history_path,
+    )
+    return run_daily_paper_cycle(manifest_path)
 
 
 def _prepare_daily_paper_cycle(manifest_path: Path) -> tuple[dict, list[dict]]:

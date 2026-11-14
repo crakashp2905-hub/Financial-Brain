@@ -15,6 +15,8 @@
 - `scripts/paper_daily_finalize.cmd` is a Windows Task Scheduler-ready wrapper. It requires an explicit operator-managed manifest path, runs preflight before finalization, logs both results, and propagates failure. It does not register or enable a scheduled task.
 - `daily-paper-manifest` derives per-book session IDs and runner paths from verified journals, binds them to the selected frozen plan, and writes a content-hashed immutable manifest. It refuses missing or ambiguous strategy sessions; the owner still supplies close marks and prior history.
 - Optional Kite mark derivation selects the latest fresh, valid two-sided NSE bid per held position from hash-consistent `kite_connect` quote events and records its raw quote hash and availability time. Missing/stale events fail closed. A local source tag is not independent proof of an actual provider session.
+- `daily-paper-run --config ... --session-date ...` derives capture time from verified `SESSION_CLOSED` receipts, generates an immutable manifest from the configured frozen plan and runner journals, and runs preflight before close. Retries revalidate unchanged inputs and reuse the same date/plan manifest.
+- The Windows wrapper accepts `FB_DAILY_CYCLE_CONFIG` and computes the exchange date in the India time zone. It can run without a manually prebuilt manifest; registration/enabling of the OS task remains an operator action.
 - The cycle derives account journal locations from the frozen registry and fails before finalization unless manifest membership exactly matches the plan. It is resumable per book through immutable close archives and bundles.
 - [Daily cycle manifest and operator contract](../forward-edge/daily-paper-cycle.md) documents required inputs, scheduler invocation, and retry behavior.
 
@@ -24,4 +26,4 @@
 
 ## Remaining evidence gap
 
-No Windows Task Scheduler job has been registered or enabled, and no process generates the operator manifest yet, so automatic completion after each actual paper session remains unverified. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until scheduling and owner-controlled key custody are established.
+No Windows Task Scheduler job has been registered or enabled, and the owner must maintain the run config and history input. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until scheduling and owner-controlled key custody are established.

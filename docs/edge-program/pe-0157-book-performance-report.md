@@ -11,10 +11,11 @@
 - The CLI accepts a JSON `sessions` evidence array and writes deterministic JSON and operator text into an immutable report-hash directory; identical reruns reuse it and altered output is refused.
 - The `daily-paper-cycle` launcher now finalizes every registered book in a frozen plan and feeds each generated, verified EOD account archive and the matching durable runner journal into this report. Explicit `history_sessions` are retained in the report denominator and are never inferred.
 - `daily-paper-preflight` validates the whole daily input set and historical report rows without account mutation before an operator or scheduler runs the close cycle.
-- The Windows `paper_daily_finalize.cmd` wrapper provides an explicit scheduler entry point with preflight, logging, manifest requirement, and nonzero failure propagation; the scheduled task itself is not installed.
+- The Windows `paper_daily_finalize.cmd` wrapper provides an explicit scheduler entry point with preflight, logging, and nonzero failure propagation. `FB_DAILY_CYCLE_CONFIG` generates an immutable manifest from verified close receipts; an explicit manifest remains supported. The scheduled task itself is not installed.
 - The `daily-paper-manifest` command derives exactly one terminal strategy/account session per frozen-plan book from durable runner journals and emits an immutable hash-checked manifest; it refuses ambiguous matches.
 - The manifest builder can derive conservative held-position close marks from the newest fresh Kite-tagged quote in that book's verified runner session, with raw quote digest, exchange clock, two-sided depth, and configured staleness checks; it never falls back to stale values.
 - The cycle manifest and retry contract are documented in [daily-paper-cycle.md](../forward-edge/daily-paper-cycle.md).
+- `daily-paper-run --config ... --session-date ...` derives a stable capture timestamp from verified close records and drives manifest generation, preflight, and cycle finalization. Prior report history remains an explicit owner-maintained input.
 
 ## Verification
 

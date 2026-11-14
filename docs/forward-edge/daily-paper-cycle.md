@@ -50,6 +50,28 @@ The cycle is resumable per book, not an atomic multi-account transaction. EOD ar
 
 An OS scheduler can invoke this command after the session capture process writes a complete manifest. This repository does not install or enable a Windows Task Scheduler or systemd job, and no prospective Kite session is implied by a successful fixture test.
 
+## Configured scheduled run
+
+`daily-paper-run --config <path> --session-date YYYY-MM-DD` derives the capture time from matching hash-chain-verified `SESSION_CLOSED` receipts, creates the immutable manifest, runs preflight, and finalizes the cycle. The manifest is stored under `manifest_root/<session-date>/<plan-id-hash>.json`. Retries recompute the same inputs and reuse the same manifest; changed inputs fail the immutability check. The owner-managed config contains paths and policy only:
+
+```json
+{
+  "schema_version": 1,
+  "registry": "data/forward/books.jsonl",
+  "plan_id": "paper-plan-2026-11",
+  "account_root": "data/forward/accounts",
+  "runner_journals": ["data/forward/runners/momentum.jsonl"],
+  "archive_dir": "data/forward/archives",
+  "bundle_root": "data/forward/bundles",
+  "report_output_root": "data/forward/reports",
+  "manifest_root": "data/forward/manifests",
+  "max_mark_age_seconds": 30,
+  "history_sessions": "data/forward/history-sessions.json"
+}
+```
+
+Relative paths resolve from the config file. `history_sessions` is optional; without it, the report contains only the selected session and is not a multi-session performance record. The Windows wrapper accepts `FB_DAILY_CYCLE_CONFIG` and derives the exchange date using the Windows India time zone. The wrapper does not register a scheduler task, supply authoritative market inputs, or attest that a local Kite-tagged event came from a provider.
+
 ## Windows scheduled-task wrapper
 
-`scripts/paper_daily_finalize.cmd` changes to the repository root, requires the repository `.venv`, reads an operator-managed `FB_DAILY_CYCLE_MANIFEST` path, runs `daily-paper-preflight`, and only then runs `daily-paper-cycle`. It logs both commands to `data/paper_reports/daily-cycle-YYYY-MM-DD.log` and returns a nonzero exit code when either phase fails. `scripts/run_hidden.vbs` can wrap this command for Task Scheduler. Configure the environment variable and schedule only after the session capture process has durably written the manifest and marks; this repository does not create the Windows task or fabricate those inputs.
+`scripts/paper_daily_finalize.cmd` changes to the repository root, requires the repository `.venv`, logs to `data/paper_reports/daily-cycle-YYYY-MM-DD.log`, and returns nonzero on failure. With `FB_DAILY_CYCLE_CONFIG`, it invokes `daily-paper-run` to derive the manifest from verified closed runner sessions, preflight, and finalize. With `FB_DAILY_CYCLE_MANIFEST`, it runs `daily-paper-preflight` followed by `daily-paper-cycle`. `scripts/run_hidden.vbs` can wrap the command for Task Scheduler. The repository still does not create or enable the Windows task or fabricate provider evidence.
