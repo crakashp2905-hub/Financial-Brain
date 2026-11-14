@@ -1,0 +1,101 @@
+{
+ "trial": "V2 intraday chart candle and indicator family (40 candidates)",
+ "script": "scripts\\trials\\v2_intraday_family.py",
+ "commit": "6a103b2072fe23427625f6d7bcd2cba586bee8a6",
+ "lockfile": "47f613e2e061e88a",
+ "data": {
+  "market_regime": {
+   "rows": 5812,
+   "last": "2026-11-11",
+   "schema": [
+    [
+     "business_date",
+     "DATE"
+    ],
+    [
+     "version",
+     "VARCHAR"
+    ],
+    [
+     "regime",
+     "VARCHAR"
+    ],
+    [
+     "raw_regime",
+     "VARCHAR"
+    ],
+    [
+     "reasons",
+     "VARCHAR"
+    ],
+    [
+     "nifty_close",
+     "DOUBLE"
+    ],
+    [
+     "ma50",
+     "DOUBLE"
+    ],
+    [
+     "ma200",
+     "DOUBLE"
+    ],
+    [
+     "drawdown",
+     "DOUBLE"
+    ],
+    [
+     "ret20",
+     "DOUBLE"
+    ],
+    [
+     "rv20",
+     "DOUBLE"
+    ],
+    [
+     "vix",
+     "DOUBLE"
+    ],
+    [
+     "breadth_200",
+     "DOUBLE"
+    ],
+    [
+     "breadth_50",
+     "DOUBLE"
+    ],
+    [
+     "advances",
+     "BIGINT"
+    ],
+    [
+     "declines",
+     "BIGINT"
+    ],
+    [
+     "computed_at",
+     "TIMESTAMP WITH TIME ZONE"
+    ]
+   ],
+   "hash": "890f51e0c1d3f99e"
+  }
+ },
+ "external_inputs": {
+  "data/basis_contracts.parquet": {
+   "bytes": 638172,
+   "mtime_ns": 1791352736710873700,
+   "verified_snapshot": false
+  },
+  "data/minute_history.duckdb": {
+   "bytes": 39893872640,
+   "mtime_ns": 1792070582426112500,
+   "verified_snapshot": false
+  },
+  "data/edges/nifty50_minute.parquet": {
+   "bytes": 25603433,
+   "mtime_ns": 1794406471202047700,
+   "verified_snapshot": false
+  }
+ },
+ "taken_at": "2026-11-11T21:31:53"
+}
