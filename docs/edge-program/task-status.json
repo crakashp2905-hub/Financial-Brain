@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 118,
-  "unrecorded_tasks": 100,
+  "recorded_tasks": 121,
+  "unrecorded_tasks": 97,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2464,7 +2464,7 @@
         "test_canonical_custody_pipeline_binds_full_manifest_and_schedule"
       ],
       "test_result": "21 passed, 3 skipped because cryptography is not installed in the local environment; Ruff and mypy passed for both affected modules. Canonical classifier wiring is exercised with a mocked signature primitive; optional Ed25519 integration tests skip locally.",
-      "evidence_sha256": "e464878a4a20a13772adb3456218532c8b131b16413cf17beabbbd5a619ddec6",
+      "evidence_sha256": "1ce0a1b95678206898c37f9ddb4498d53ef489e5375e399e828fe72c813be10d",
       "blockers": [
         "No authoritative explicit exchange-session schedule is available; PE-0103 still stores date ranges.",
         "No owner-approved external timestamp service or production trust root is configured."
@@ -2487,7 +2487,7 @@
         "test_bundle_refuses_duplicate_or_out_of_schedule_sessions"
       ],
       "test_result": "15 focused forward decision-custody tests passed; Ruff and mypy passed for decision_custody.py. Exported replay hashes match, altered equity hashes are detected, and custody-status mismatches are reported.",
-      "evidence_sha256": "4056395927af6dbfd0ceb615a6a1496f0c758e39d94849471af030f94cace0fc",
+      "evidence_sha256": "eeaa5390f8c0820c9b0ed0f38fc17f2211e31a52f9ba9e44a0cba3d23eef7a53",
       "blockers": []
     },
     {
@@ -2507,7 +2507,7 @@
         "test_nav_contract_rejects_missing_or_duplicate_dates_and_nonpositive_budgets"
       ],
       "test_result": "3 matched benchmark contract tests passed; Ruff and mypy passed for matched_performance.py. Missing dates and unequal risk budgets are rejected.",
-      "evidence_sha256": "61d82b92b9b7c577fc02ceaa5ad0cf45f44472a60ac4e325dbfe04fecd9d205b",
+      "evidence_sha256": "639b78a97e7e093c7c9be9adc0321e557f0f95b339fa5af8ba1cb413939eaecd",
       "blockers": []
     },
     {
@@ -2528,7 +2528,7 @@
         "test_report_rejects_extra_unscheduled_data_and_duplicate_schedule"
       ],
       "test_result": "3 performance-summary tests passed; Ruff and mypy passed for performance_report.py. Reports declare the denominator and assumptions and withhold metrics when the return path has missing sessions.",
-      "evidence_sha256": "008d5e5b1bd7390cc0c4e0c5c996bf93e9ae315ad187b1b40cf85e138df3fbc4",
+      "evidence_sha256": "5b3961ad9c682f89acda59cba7a911ec85bb566f32c3730fa95b730a009348ef",
       "blockers": []
     },
     {
@@ -2548,10 +2548,68 @@
         "test_policy_and_sample_contracts_fail_closed"
       ],
       "test_result": "3 dependence-policy tests passed; Ruff and mypy passed for dependence.py. The policy hash, temporal ordering guard, effective sample size and deterministic block-bootstrap interval are verified.",
-      "evidence_sha256": "e2801a5864e95550543b7627cc025f9ea4199879070f89151f24e378d28e2258",
+      "evidence_sha256": "6db8a3f1272244ea2da6f49dbe6f311772e0ecc4012b67ccd2890767f1fe25ff",
       "blockers": [
         "The timestamp ordering is supplied by the caller and is not externally attested or bound to a live cohort registry.",
         "No prospective forward cohort has yet validated the declared lags and block policy against elapsed market outcomes."
+      ]
+    },
+    {
+      "id": "PE-0121",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/refinements.py",
+        "tests/test_forward_edge_f15.py",
+        "docs/edge-program/pe-0121-two-way-trade-clustering.md",
+        "docs/edge-program/pe-0121-two-way-trade-clustering-evidence.json"
+      ],
+      "tests": [
+        "test_two_way_clustering_reduces_to_one_way_when_one_dimension_is_unique",
+        "test_two_way_clustering_exceeds_naive_when_both_dates_and_names_carry_shocks"
+      ],
+      "test_result": "14 forward-edge refinement tests passed; Ruff passed. Date/instrument clustering is tested against one-way and iid baselines.",
+      "evidence_sha256": "b28605de1a47b1c5d1f86cc89bf19fd9fb2668c2721962b6e05cac2f81850975",
+      "blockers": []
+    },
+    {
+      "id": "PE-0122",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "tests/test_registered_multiplicity.py",
+        "docs/edge-program/pe-0122-registered-familywise-adjustment.md",
+        "docs/edge-program/pe-0122-registered-familywise-adjustment-evidence.json"
+      ],
+      "tests": [
+        "test_familywise_adjustment_counts_unrun_and_failed_registered_trials",
+        "test_familywise_adjustment_rejects_registry_and_p_value_mismatch"
+      ],
+      "test_result": "25 multiplicity and evidence-statistics tests passed; Ruff passed. Missing p-values count as p=1 within the full frozen family.",
+      "evidence_sha256": "0249a3d8e0131e31cc88a104575b664b4bf2e3aaff30e23caf31808e7098ab40",
+      "blockers": [
+        "The family ID list is supplied by the caller and is not yet automatically bound to the complete preregistration/trial registry at evaluation time.",
+        "No governance-approved, current full search-family snapshot is wired into promotion reporting."
+      ]
+    },
+    {
+      "id": "PE-0123",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/family_validation.py",
+        "tests/test_family_validation.py",
+        "docs/edge-program/pe-0123-spa-reality-check.md",
+        "docs/edge-program/pe-0123-spa-reality-check-evidence.json"
+      ],
+      "tests": [
+        "test_on_noise_pbo_averages_a_half_and_spa_rarely_rejects",
+        "test_one_real_strategy_is_found",
+        "test_reality_check_reports_full_family_null_seed_and_block_sensitivity",
+        "test_reality_check_rejects_degenerate_or_missing_family_inputs"
+      ],
+      "test_result": "4 family-validation tests passed; Ruff passed. SPA/Reality Check metadata and block-length sensitivity are tested; complete registry binding remains outstanding.",
+      "evidence_sha256": "f422bad324ff8c1a503da91e7f1b923584992157034a3d268fbe413363c779aa",
+      "blockers": [
+        "The caller supplies the candidate matrix; its columns are not yet enforced against the authoritative full development search registry. A caller could omit tried candidates and understate selection bias."
       ]
     }
   ]

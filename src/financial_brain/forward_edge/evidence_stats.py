@@ -6,8 +6,11 @@ no single-regime concentration, an adequate predeclared sample design, and an IN
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from enum import Enum
 from math import sqrt
+from collections.abc import Mapping, Sequence
 
 import numpy as np
 
@@ -102,6 +105,55 @@ def holm_adjust(pvalues: dict[str, float]) -> dict[str, float]:
         running = max(running, min(1.0, (m - i) * p))
         out[name] = running
     return out
+
+
+def adjust_registered_family(
+    registered_trial_ids: Sequence[str],
+    p_values: Mapping[str, float | None],
+) -> dict:
+    """Apply Holm correction across a frozen family, counting missing/failed trials as p=1.
+
+    The registered identifier list is the denominator. A missing p-value does not
+    disappear from the family; it is reported as unavailable and assigned p=1 for
+    correction. Unknown p-value keys are rejected because they were not registered.
+    """
+    ids = list(registered_trial_ids)
+    if not ids or any(not isinstance(value, str) or not value.strip() for value in ids):
+        raise StatsError("registered family needs non-empty trial ids")
+    if len(ids) != len(set(ids)):
+        raise StatsError("registered trial ids must be unique")
+    unknown = sorted(set(p_values) - set(ids))
+    if unknown:
+        raise StatsError(f"p-values supplied for unregistered trials: {unknown}")
+    raw: dict[str, float] = {}
+    missing = []
+    for trial_id in ids:
+        value = p_values.get(trial_id)
+        if value is None:
+            missing.append(trial_id)
+            raw[trial_id] = 1.0
+            continue
+        p = float(value)
+        if not np.isfinite(p) or not 0 <= p <= 1:
+            raise StatsError(f"invalid p-value for {trial_id}")
+        raw[trial_id] = p
+    adjusted = holm_adjust(raw)
+    family = sorted(ids)
+    family_sha256 = hashlib.sha256(json.dumps(
+        family, separators=(",", ":"), ensure_ascii=True).encode("utf-8")).hexdigest()
+    return {
+        "method": "holm_step_down_familywise_v1",
+        "family_size": len(ids),
+        "family_sha256": family_sha256,
+        "tested_count": len(ids) - len(missing),
+        "missing_p_value_count": len(missing),
+        "missing_trial_ids": sorted(missing),
+        "trials": {trial_id: {
+            "raw_p_value": p_values.get(trial_id),
+            "p_value_used_for_adjustment": raw[trial_id],
+            "adjusted_p_value": adjusted[trial_id],
+        } for trial_id in family},
+    }
 
 
 # ---- FE-0095 / FE-0096 ----
