@@ -3482,10 +3482,10 @@
         "test_session_coverage.py",
         "test_session_date_ledger.py"
       ],
-      "test_result": "9 passed; Ruff passed.",
-      "evidence_sha256": "6b0ceb73b4e20a54cde2da9d2c45ae2bdadf5db513124cc4fd70ea3e843cfa67",
+      "test_result": "10 passed; Ruff and mypy passed.",
+      "evidence_sha256": "26d4fe74dba56991254de2c094263bcd067211803637b276cc28f23811331351",
       "blockers": [
-        "The frozen schedule is caller-supplied and not locked in an authoritative registry before session observations.",
+        "Owner-approved cohort construction and independent confirmation that every intended eligible session is included are not configured.",
         "Daily scheduled report generation is not yet automated.",
         "No prospective cohort period has validated daily denominators in operation."
       ]
