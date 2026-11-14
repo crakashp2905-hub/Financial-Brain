@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0140",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_trade_data_quality.py tests/test_forward_feed_health.py tests/test_forward_edge_f03.py; ruff check src/financial_brain/forward_edge/trade_data_quality.py tests/test_trade_data_quality.py",
+    "result": "40 passed; Ruff passed."
+  },
+  "implemented": [
+    "Uses a threshold policy frozen before the observation window for quote staleness, spread, and volatility.",
+    "Matches feed-gap intervals only when they overlap the decision-to-entry window and retains event IDs.",
+    "Requires complete feed coverage and quote/volatility evidence IDs before labeling a trade CLEAN_OBSERVED.",
+    "Separates system issue, clean observed, and incomplete populations with net INR and losing-trade counts.",
+    "Explicitly disclaims causal attribution and strategy promotion from data-quality strata."
+  ],
+  "blockers": [
+    "Trades and health events are caller-supplied; no live durable journal integration is present.",
+    "The classification report is not surfaced in daily paper results or the operator cockpit.",
+    "Observational stratification cannot establish that system conditions caused losses or prove a clean-data edge."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/trade_data_quality.py": "788ef4981bb3dc3fe9c6eee101cb3b7bea22ce8af533b6cd5b7c26b21b69815c",
+    "tests/test_trade_data_quality.py": "14893df0b640e60168391b22bc3cab8f161771041930ca09aa0e55bf03eea69b"
+  }
+}

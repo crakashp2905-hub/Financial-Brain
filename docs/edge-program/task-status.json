@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 137,
-  "unrecorded_tasks": 81,
+  "recorded_tasks": 138,
+  "unrecorded_tasks": 80,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3001,6 +3001,32 @@
         "No verified development dataset run or central data-provenance binding.",
         "Cost assumptions are caller-supplied and not calibrated by this package.",
         "Bar data cannot reveal intrabar path; adverse stop-first penalty is a model assumption."
+      ]
+    },
+    {
+      "id": "PE-0140",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/trade_data_quality.py",
+        "tests/test_trade_data_quality.py",
+        "docs/edge-program/pe-0140-trade-data-quality-strata.md",
+        "docs/edge-program/pe-0140-trade-data-quality-strata-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_trades_after_feed_gap_are_separated_from_clean_outcomes_with_event_ids",
+        "test_abnormal_spread_high_volatility_and_stale_quote_flags_are_independent",
+        "test_missing_market_health_coverage_is_incomplete_not_clean",
+        "test_gap_after_entry_does_not_contaminate_preentry_classification",
+        "test_policy_must_be_frozen_before_observation_and_bad_timestamps_rejected"
+      ],
+      "test_result": "40 market-quality, feed-health and F03 tests passed; Ruff passed. Pre-entry data-quality strata retain evidence IDs and separate incomplete coverage.",
+      "evidence_sha256": "92e0642bc276589a19531aac5e54181551eb659443781b52acebc47edb13adbb",
+      "blockers": [
+        "No subscription to the durable quote/feed health journal.",
+        "Not surfaced in daily results or cockpit.",
+        "No causal inference from observational strata."
       ]
     }
   ]
