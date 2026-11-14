@@ -841,15 +841,18 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/kernel/schemas.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
         "tests/test_kernel_schemas.py",
+        "tests/test_forward_paper_account_bridge.py",
         "docs/edge-program/pe-0089-common-asset-order-event-contract-evidence.json"
       ],
       "tests": [
         "test_common_order_event_contract_supports_cash_futures_and_options",
-        "test_derivative_contracts_and_event_provenance_fail_closed"
+        "test_derivative_contracts_and_event_provenance_fail_closed",
+        "canonical intent event carries stable strategy ID and separate source digest"
       ],
-      "test_result": "18 forward paper bridge/execution and kernel schema tests passed; Ruff and mypy passed. Cash paper reconciliation now persists idempotent canonical intent, order-state, fill and mark events using the shared event contract.",
-      "evidence_sha256": "b35afc7adf21b7304848daf4b2928720d37d950ea2d855e28ca5cd0b1e25ae4c",
+      "test_result": "Cash paper reconciliation emits idempotent typed intent, order-state, fill and mark events. Canonical IntentEvent.strategy_id now contains the stable registered strategy ID; source_sha256 contains the strategy code digest. Bridge/schema/source-inventory targeted suite: 27 passed; Ruff and mypy passed. This remains a durable mirror, not a full OMS migration. Full cross-platform CI for this follow-up is pending.",
+      "evidence_sha256": "9d9a2c1ccf3ea208747bf253d1f2075285a080786f2635efab4358f033389fca",
       "blockers": [
         "Existing OMS/accounting and futures/options engines have not all been migrated to consume the shared contract; cash PaperAccount remains authoritative and the new contract is currently mirrored into its forward journal.",
         "Venue-specific contract metadata still requires sourced effective-date rules before executable orders can be accepted."
@@ -3210,7 +3213,7 @@
         "test_forward_paper_service_rejects_unregistered_journal_with_matching_id_and_capital"
       ],
       "test_result": "The LIVE_PAPER service requires the exact configured registered book plan and validates effective strategy allocation, account ID, canonical journal path, and opening cash before preflight or journal writes. Receipt reconciliation submits intents via the registered-book family evidence/approval gate. Focused bridge, registry, and source inventory suite: 30 passed; Ruff and mypy passed. Full cross-platform CI for this update is pending.",
-      "evidence_sha256": "a0d635ea46144a8dc4435f6ea12622897cf0c7add33b193bbb5c6a77c4c59bcc",
+      "evidence_sha256": "cc6367f0a603d3c3d7ff49a441b5382dbb6c23f3a25fa210ebacb0d95aa658ed",
       "blockers": [
         "Registration and allocation-change evidence IDs are not authenticated by an approved owner-identity service.",
         "Account closure and released-capital reconciliation are not implemented; capital recycling remains blocked.",

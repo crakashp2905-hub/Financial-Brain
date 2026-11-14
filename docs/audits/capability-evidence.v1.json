@@ -26,16 +26,16 @@
       }
     },
     {
-      "artifact_sha256": "5987642dd07162d6a99231248fdfd1da9557c2b23bedb8a66303af6684a9cb1c",
+      "artifact_sha256": "0c57cc412e2113a001de6112f0892626034d1f2db33affaa514170c4c199cbf4",
       "id": "forward-paper-account-authority",
       "maturity": "partial",
       "sources": {
-        "src/financial_brain/forward_edge/paper_account_bridge.py": "8adc42b87cb9132a4211351e2d65f211f60d0f8cb300ded748787d4b89a35418",
+        "src/financial_brain/forward_edge/paper_account_bridge.py": "6c128bf800081bba66a69de50b4c757392ccb2c9776968bd8a22d99e05cf80c0",
         "src/financial_brain/forward_edge/session_runner.py": "fb32ffa0b045bb2e15a157acd2edc2a0eddba0f0935383a5667bb315b540daa9"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_forward_paper_account_bridge.py": "3ce9459b9c7384466f84253ab4a522fbbfc48d9aa77bbd2940902da288f21847",
+        "tests/test_forward_paper_account_bridge.py": "29243294e087444a769e13b3f555d962e04723b0c7fd800ad0b34489e9fe1fe8",
         "tests/test_forward_session_runner.py": "60049055c34fffa8b16e5bc17a9cb35559c0ba9af680e396fb6634df870e2786"
       }
     },
@@ -108,7 +108,7 @@
       }
     }
   ],
-  "manifest_sha256": "bb7861d63ad38a5b384a8429c3731da068736da10c2720e7b73568982e287b8a",
+  "manifest_sha256": "a8e557a07cb5a65d78424b03677cbcd0db13d72f18bc56663ba937f6fe8608dc",
   "matrix_sha256": "5afd1967e7eca837e030105a73e21c2d46c8d44787395efdc2cb4122c8b9950d",
   "schema_version": "fb.capability-evidence.v1"
 }

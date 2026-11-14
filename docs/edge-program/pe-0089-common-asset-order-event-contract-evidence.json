@@ -3,19 +3,26 @@
   "task_id": "PE-0089",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_forward_paper_account_bridge.py tests/test_forward_paper_execution_adapter.py tests/test_kernel_schemas.py",
-    "result": "18 passed (exit code 0); Ruff and mypy on changed source modules passed."
+    "command": "pytest tests/test_forward_paper_account_bridge.py tests/test_kernel_schemas.py tests/test_source_inventory.py -q; ruff check src/financial_brain/forward_edge/paper_account_bridge.py tests/test_forward_paper_account_bridge.py; mypy src/financial_brain/forward_edge/paper_account_bridge.py",
+    "result": "27 passed; Ruff and mypy passed. The new assertion verifies canonical IntentEvent.strategy_id is the registered strategy ID, while source_sha256 remains the strategy-code digest."
   },
   "implemented": [
     "Introduced immutable asset-aware InstrumentRef, IntentEvent, OrderEvent, FillEvent and MarkEvent contracts with common IDs, UTC timestamps, source hashes and execution-fidelity labels.",
     "Cash equity/ETF, futures and options require compatible contract fields; derivative quantities respect lot-size multiples.",
     "Added deterministic canonical JSON event serialization and SHA-256 identity for cross-engine journal/transport use.",
     "ForwardPaperSessionService now durably emits typed intent, order-state, fill and mark events from cash-equity paper reconciliation, with event-ID idempotency and conflict rejection.",
-    "Legacy schemas remain available so adoption can be incremental without breaking existing callers."
+    "Legacy schemas remain available so adoption can be incremental without breaking existing callers.",
+    "Canonical intent events now carry the stable registered strategy ID in strategy_id and keep the content-addressed implementation digest in source_sha256."
   ],
   "blockers": [
     "Existing OMS/accounting and futures/options engines have not all been migrated to consume the shared contract; cash PaperAccount remains the authoritative cash ledger and canonical events are currently a durable mirror.",
     "Venue-specific contract metadata still requires sourced effective-date rules before executable orders can be accepted."
   ],
-  "scope_note": "This package establishes and validates the shared contract; it does not enable derivatives execution or replace existing ledgers."
+  "scope_note": "This package establishes and validates the shared contract; it does not enable derivatives execution or replace existing ledgers.",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "6c128bf800081bba66a69de50b4c757392ccb2c9776968bd8a22d99e05cf80c0",
+    "src/financial_brain/kernel/schemas.py": "dad2b2ed47c830c8270ebf7ef88e3df130557b8c8af87512c0025c0abb8bee29",
+    "tests/test_forward_paper_account_bridge.py": "29243294e087444a769e13b3f555d962e04723b0c7fd800ad0b34489e9fe1fe8",
+    "tests/test_kernel_schemas.py": "5994a6f2b2c250cde034c08097803e64a80c8d44c0075ba1f97e9bbb3124b4ab"
+  }
 }

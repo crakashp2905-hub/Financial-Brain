@@ -221,6 +221,8 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
     assert [payload["event_type"] for payload in payloads] == [
         "IntentEvent", "OrderEvent", "OrderEvent", "FillEvent", "MarkEvent"
     ]
+    assert payloads[0]["event"]["strategy_id"] == "test-momentum"
+    assert payloads[0]["event"]["strategy_id"] != STRATEGY_SHA
     assert len({row["event_sha256"] for row in event_rows}) == len(event_rows)
     assert len(event_rows) == len(first["account_reconciliation"]["canonical_event_sha256s"])
     assert account.ledger.balance("cash:paper-main", "INR") == account.cash

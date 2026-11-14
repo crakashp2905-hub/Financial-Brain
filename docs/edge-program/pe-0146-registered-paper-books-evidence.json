@@ -20,8 +20,8 @@
   ],
   "source_sha256": {
     "src/financial_brain/kernel/registered_paper_books.py": "17be756b22e8af5030f2964a3d2bcff76be56dd65841ded1b9c8258bbd143878",
-    "src/financial_brain/forward_edge/paper_account_bridge.py": "8adc42b87cb9132a4211351e2d65f211f60d0f8cb300ded748787d4b89a35418",
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "6c128bf800081bba66a69de50b4c757392ccb2c9776968bd8a22d99e05cf80c0",
     "tests/test_registered_paper_books.py": "29f12b7baca3ed3df1daff41e57d38523ea9da8cef047b57bba96c77e994b570",
-    "tests/test_forward_paper_account_bridge.py": "3ce9459b9c7384466f84253ab4a522fbbfc48d9aa77bbd2940902da288f21847"
+    "tests/test_forward_paper_account_bridge.py": "29243294e087444a769e13b3f555d962e04723b0c7fd800ad0b34489e9fe1fe8"
   }
 }

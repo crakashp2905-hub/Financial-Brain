@@ -273,7 +273,7 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
         unrealized = None
     canonical_events = _persist_canonical_events(
         journal_path=Path(runner_journal_path), config=config, result=result,
-        account_id=account.account_id, mark=mark,
+        account_id=account.account_id, strategy_id=strategy_id, mark=mark,
     )
     row = {
         "t": "ACCOUNT_RECONCILIATION", "session_id": config.session_id,
@@ -320,7 +320,7 @@ def _require_distinct_authority_journals(runner_journal_path: Path, account_jour
 
 
 def _persist_canonical_events(*, journal_path: Path, config: ForwardRunConfig, result: dict,
-                              account_id: str, mark: dict | None) -> list[dict]:
+                              account_id: str, strategy_id: str, mark: dict | None) -> list[dict]:
     """Mirror the cash-paper lifecycle into the shared immutable cross-asset event contract."""
     decision, receipt = result["decision"], result["execution"]
     symbol = str(decision["instrument"])
@@ -340,7 +340,7 @@ def _persist_canonical_events(*, journal_path: Path, config: ForwardRunConfig, r
                                            allow_nan=False).encode("utf-8")).hexdigest()
     events: list[TradingEvent] = [IntentEvent(
         event_id=f"{intent_id}:intent", order_id=intent_id, account_id=account_id,
-        strategy_id=config.strategy_sha256, instrument=instrument, side=side,
+        strategy_id=strategy_id, instrument=instrument, side=side,
         quantity=int(decision["quantity"]), occurred_at=decided_at,
         source_sha256=config.strategy_sha256,
     ), OrderEvent(
