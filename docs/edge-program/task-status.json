@@ -4309,14 +4309,14 @@
       ],
       "tests": [
         "tests/test_capability_evidence_audit.py",
-        "CI run 43590775883 (Ubuntu and Windows; prior revision, Ubuntu evidence audit failed)",
-        "CI run 43590906463 (Ubuntu and Windows; prior revision, in progress at latest check)"
+        "Full Windows local CI-equivalent suite at 4bbf251: 4,143 passed, 1 skipped"
       ],
-      "test_result": "Latest complete Ubuntu and Windows CI runs 43617026883 (push) and 43617031014 (pull_request) passed at commit c2c1603e9c2fa57c077f22f38fd8dbe709153740, including full tests, post-suite evidence manifest verification, and task-evidence digest checks. PR #32 remains open pending independent approval.",
+      "test_result": "At local commit 4bbf251, full Windows suite: 4,143 passed, 1 skipped (opt-in MCP protocol integration). Ruff, capability matrix, source inventory, mypy, migrations, algorithm/pattern matrices, offline pattern demo, critical and pattern coverage floors, and capability evidence audit passed. Local pip-audit unavailable because pip_audit is not installed; clean wheelhouse install and Linux CI for these local commits remain unverified. PR #32 remote head is still 49dc9de and awaits push plus independent approval.",
       "blockers": [
+        "Local commits d6dad5e through 4bbf251 are not pushed; git transport fails while starting the DNS resolver, so CI cannot run on this revision.",
         "PR #32 still needs independent approval and merge to main; self-approval is not performed."
       ],
-      "evidence_sha256": "5908c1743458e8fa40bfba30077e94e3e0da6ac04e142e5e60dfd2a9ca2ef872"
+      "evidence_sha256": "b3fbf5e6e7fe6f72c01833dfcfa9e5dfeeb780b1f28fdb74782cdc5ea98c18eb"
     },
     {
       "id": "PE-0196",

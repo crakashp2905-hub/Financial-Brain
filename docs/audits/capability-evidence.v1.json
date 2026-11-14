@@ -26,18 +26,18 @@
       }
     },
     {
-      "artifact_sha256": "57af4622f8e520657b278196aef3d76b3dc530f59a6ef4278827de99e322090d",
+      "artifact_sha256": "3d3dbb9afcc4567b38faabf5da2fa6572c61814e37a803f5f08f76f2ccf544d8",
       "id": "forward-paper-account-authority",
       "maturity": "partial",
       "sources": {
-        "src/financial_brain/forward_edge/paper_account_bridge.py": "1ad5256958f743e0b66683f7cd396aba13ce4fe4d9a73045cf1748a4fa6336a0",
+        "src/financial_brain/forward_edge/paper_account_bridge.py": "c41d5345dc2c50230146d66dff9b2d57077cc7c10bb6c1a6c146ce5a86efe603",
         "src/financial_brain/forward_edge/session_runner.py": "cf9b840888123a5e150c10ed90d17d5b2bfc478aa5288e7c7ef76761f5cf44af",
         "src/financial_brain/kernel/paper_authority.py": "e4f0a17131d3bc331edba0454e113206130d4428101e117e88f2533ffc6cbe7c",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_forward_paper_account_bridge.py": "f22b77b79eef63120c793ea46f137cf806efeff85faa18f613058f73413bc902",
+        "tests/test_forward_paper_account_bridge.py": "46c386f715a7226bc96b9793d6fcdc4952c0dec55ccf69b6797034fcbd217f04",
         "tests/test_forward_session_runner.py": "a4ab35fcb52835b037fdc3d13ace2a8811375f6e72b40562f6af6c0d81f6bc82",
         "tests/test_paper_execution_authority.py": "8026404c4ed069cf68e3456a4aae1b6e057c5079fa3bd156ee47f7ac11e02c93",
         "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782"
@@ -100,7 +100,7 @@
       }
     },
     {
-      "artifact_sha256": "adbe55e7f5f1f4519d4adb0083c3fa6a7cf4b1483f2447e17624f18b20704378",
+      "artifact_sha256": "02b4dcb315fe2a8c2cd3c38550bb915181e88a4f1bd825ffc46c1a471cab568b",
       "id": "registered-paper-book-isolation",
       "maturity": "partial",
       "sources": {
@@ -114,11 +114,11 @@
         "tests/test_forward_edge_f02.py": "50f9b0d149f605a273463f042aeea2e9ffc0faefc17d5b688be1937af055cebc",
         "tests/test_paper_account_portfolio.py": "e6a8cb44ecb97046ddd9f387db1d166be6d0c8d83cd8b9c56e145376eec30c45",
         "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782",
-        "tests/test_registered_paper_books.py": "29f12b7baca3ed3df1daff41e57d38523ea9da8cef047b57bba96c77e994b570"
+        "tests/test_registered_paper_books.py": "751f464ce876d6de790970716333010c63b5f5216ff2da251092c7af4a01c317"
       }
     }
   ],
-  "manifest_sha256": "0513ce703452ac86ec20263f0f6b959fda7cd831cf266db75d7464c432a3ee49",
+  "manifest_sha256": "57c8257291d21d930e6f1d2e13eb4f1ab4850e9c30ce486a61ec074addf4c59c",
   "matrix_sha256": "72b9b5b162e4b9239fa078da05a6aa12464900147cf8cb4e7252ba779b2237d2",
   "schema_version": "fb.capability-evidence.v1"
 }
