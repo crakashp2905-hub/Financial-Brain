@@ -10,6 +10,7 @@ from financial_brain.forward_edge.degradation_monitor import (
     FrozenThresholds,
     RollingObservation,
 )
+from financial_brain.forward_edge.durable import DurableJournal
 
 
 UTC = timezone.utc
@@ -116,3 +117,42 @@ def test_observations_must_be_complete_and_inside_the_frozen_cohort():
                                            late.window_end, late.window_end - timedelta(seconds=1),
                                            late.net_alpha_bps, late.slippage_bps, late.fill_coverage,
                                            late.drift_score, late.sample_count, late.evidence_ids))
+
+
+def test_durable_alarm_journal_recovers_counts_latch_and_duplicate_guard(tmp_path):
+    p = policy()
+    journal = DurableJournal(tmp_path / "alarms.jsonl")
+    monitor = DegradationMonitor(p, journal=journal)
+    first = monitor.observe(observation(p, "bad-1", alpha=-2))
+    assert first.action == Action.CONTINUE
+
+    restarted = DegradationMonitor(p, journal=DurableJournal(journal.path))
+    second = restarted.observe(observation(p, "bad-2", alpha=-2, offset=2))
+    assert second.action == Action.PAUSE
+    recovered = DegradationMonitor(p, journal=DurableJournal(journal.path))
+    assert recovered.events == (first, second)
+    assert recovered.observe(observation(p, "recovery", offset=3)).action == Action.PAUSE
+    with pytest.raises(DegradationError, match="already recorded"):
+        recovered.observe(observation(p, "recovery", offset=3))
+    assert [row["t"] for row in DurableJournal(journal.path).records()] == [
+        "DEGRADATION_ALARM", "DEGRADATION_ALARM", "DEGRADATION_ALARM",
+    ]
+
+
+def test_failed_durable_alarm_append_does_not_advance_monitor_state(tmp_path, monkeypatch):
+    p = policy()
+    journal = DurableJournal(tmp_path / "alarms.jsonl")
+    monitor = DegradationMonitor(p, journal=journal)
+
+    def fail(_record):
+        raise OSError("disk unavailable")
+
+    monkeypatch.setattr(journal, "append", fail)
+    obs = observation(p, "retryable", alpha=-2)
+    with pytest.raises(OSError, match="disk unavailable"):
+        monitor.observe(obs)
+    assert monitor.events == ()
+
+    monkeypatch.undo()
+    assert monitor.observe(obs).action == Action.CONTINUE
+    assert len(monitor.events) == 1

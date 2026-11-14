@@ -12,6 +12,8 @@ import hashlib
 import json
 import math
 
+from financial_brain.forward_edge.durable import DurableJournal
+
 
 class DegradationError(ValueError):
     """Invalid policy, observation, or journal transition."""
@@ -110,11 +112,16 @@ def _metric(value: float | None, name: str) -> float:
 
 
 class DegradationMonitor:
-    """Append-only in-memory monitor; persist returned events in the caller's durable journal."""
+    """Frozen-threshold monitor with optional hash-chained alarm persistence."""
 
-    def __init__(self, policy: FrozenThresholds, prior_events: tuple[AlarmEvent, ...] = ()) -> None:
+    def __init__(self, policy: FrozenThresholds, prior_events: tuple[AlarmEvent, ...] = (),
+                 *, journal: DurableJournal | None = None) -> None:
         self.policy = policy
-        self._events = list(prior_events)
+        self._journal = journal
+        journal_events = self._read_journal_events(journal) if journal is not None else ()
+        if prior_events and journal_events:
+            raise DegradationError("supply prior events or a journal, not both")
+        self._events = list(journal_events or prior_events)
         self._ids: set[str] = set()
         self._breaches = 0
         self._severe = 0
@@ -131,6 +138,28 @@ class DegradationMonitor:
                 self._latched = Action.RETIRE
             elif event.action == Action.PAUSE and self._latched != Action.RETIRE:
                 self._latched = Action.PAUSE
+
+    @staticmethod
+    def _read_journal_events(journal: DurableJournal) -> tuple[AlarmEvent, ...]:
+        events: list[AlarmEvent] = []
+        for record in journal.records():
+            if record.get("t") != "DEGRADATION_ALARM":
+                continue
+            try:
+                events.append(AlarmEvent(
+                    observation_id=record["observation_id"],
+                    strategy_id=record["strategy_id"],
+                    strategy_version=record["strategy_version"],
+                    policy_sha256=record["policy_sha256"],
+                    action=Action(record["action"]),
+                    reasons=tuple(record["reasons"]),
+                    consecutive_breaches=record["consecutive_breaches"],
+                    consecutive_severe_breaches=record["consecutive_severe_breaches"],
+                    observation_sha256=record["observation_sha256"],
+                ))
+            except (KeyError, TypeError, ValueError) as exc:
+                raise DegradationError("durable degradation alarm record is invalid") from exc
+        return tuple(events)
 
     @property
     def events(self) -> tuple[AlarmEvent, ...]:
@@ -185,12 +214,12 @@ class DegradationMonitor:
             if severe:
                 reasons.append("rolling net alpha crossed frozen retirement threshold")
 
-        self._breaches = self._breaches + 1 if breached else 0
-        self._severe = self._severe + 1 if severe else 0
+        next_breaches = self._breaches + 1 if breached else 0
+        next_severe = self._severe + 1 if severe else 0
         action = self._latched
-        if self._severe >= policy.retire_after_severe_breaches:
+        if next_severe >= policy.retire_after_severe_breaches:
             action = Action.RETIRE
-        elif missing or self._breaches >= policy.pause_after_breaches:
+        elif missing or next_breaches >= policy.pause_after_breaches:
             if action != Action.RETIRE:
                 action = Action.PAUSE
         elif action == Action.CONTINUE:
@@ -198,7 +227,6 @@ class DegradationMonitor:
         # Pause/retire are latched. Recovery requires a separately reviewed policy/cohort.
         if self._latched == Action.PAUSE and action == Action.CONTINUE:
             action = Action.PAUSE
-        self._latched = action
         def digest_metric(value: float | None) -> float | str | None:
             if value is None:
                 return None
@@ -217,7 +245,19 @@ class DegradationMonitor:
         digest = hashlib.sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":"),
                                            allow_nan=False).encode()).hexdigest()
         event = AlarmEvent(observation.observation_id, policy.strategy_id, policy.strategy_version,
-                           policy.policy_sha256, action, tuple(reasons), self._breaches, self._severe, digest)
+                           policy.policy_sha256, action, tuple(reasons), next_breaches, next_severe, digest)
+        if self._journal is not None:
+            self._journal.append({
+                "t": "DEGRADATION_ALARM", "observation_id": event.observation_id,
+                "strategy_id": event.strategy_id, "strategy_version": event.strategy_version,
+                "policy_sha256": event.policy_sha256, "action": event.action.value,
+                "reasons": list(event.reasons), "consecutive_breaches": event.consecutive_breaches,
+                "consecutive_severe_breaches": event.consecutive_severe_breaches,
+                "observation_sha256": event.observation_sha256,
+            })
+        self._breaches = next_breaches
+        self._severe = next_severe
+        self._latched = action
         self._events.append(event)
         self._ids.add(observation.observation_id)
         return event
