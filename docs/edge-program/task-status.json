@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 160,
-  "unrecorded_tasks": 58,
+  "recorded_tasks": 161,
+  "unrecorded_tasks": 57,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3534,6 +3534,26 @@
       ],
       "test_result": "6 passed; Ruff passed; source inventory --check passed (611 Python files).",
       "evidence_sha256": "f11ca73e9e1b8a36d2617acb8ee0322454ad539db0973020d729c4325a17e279",
+      "blockers": []
+    },
+    {
+      "id": "PE-0163",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/regime/asof.py",
+        "tests/test_regime_asof.py",
+        "docs/edge-program/pe-0163-point-in-time-regime-evidence.md",
+        "docs/edge-program/pe-0163-point-in-time-regime-evidence.json",
+        "src/financial_brain/evaluation/script_mechanisms.py",
+        "tests/test_script_mechanisms.py",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_regime_asof.py",
+        "test_script_mechanisms.py"
+      ],
+      "test_result": "12 passed across as-of and daily mechanism suites; Ruff passed; source inventory --check passed (612 Python files).",
+      "evidence_sha256": "615389e3b99028201cb353e37a6789ec037ff830e3f41f8e51a072807e7d4b03",
       "blockers": []
     }
   ]
