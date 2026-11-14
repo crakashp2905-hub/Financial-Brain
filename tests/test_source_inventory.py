@@ -1,4 +1,6 @@
 """Inventory includes every Python source while preserving unknown status."""
+import hashlib
+import json
 from pathlib import Path
 
 from scripts.source_inventory import build, canonical_bytes
@@ -41,3 +43,16 @@ def test_inventory_captures_old_and_new_engine_dependency_graph_roots():
     assert all(edge["from"] != edge["to"] for edge in edges)
     assert any(edge["from"] == "src/financial_brain/paper/intraday_runner.py" for edge in edges)
     assert any(edge["from"] == "src/financial_brain/forward_edge/session_runner.py" for edge in edges)
+
+
+def test_task_ledger_inventory_counts_and_evidence_hash_match_current_snapshot():
+    inventory_path = ROOT / "docs/edge-program/source-inventory.json"
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    task_status = json.loads((ROOT / "docs/edge-program/task-status.json").read_text(encoding="utf-8"))
+    task = next(row for row in task_status["items"] if row["id"] == "PE-0011")
+    normalized = inventory_path.read_bytes().replace(b"\r\n", b"\n")
+
+    assert f"{inventory['source_count']} Python sources" in task["test_result"]
+    assert f"{inventory['unassessed_count']} unassessed" in task["test_result"]
+    assert f"{inventory['unassigned_role_count']} role-unassigned" in task["test_result"]
+    assert task["evidence_sha256"] == hashlib.sha256(normalized).hexdigest()

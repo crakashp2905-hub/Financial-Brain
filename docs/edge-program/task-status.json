@@ -204,8 +204,8 @@
         "test_inventory_covers_all_python_sources_without_inventing_owners",
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
       ],
-      "test_result": "Committed inventory captures 550 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 543 unassessed and 300 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
-      "evidence_sha256": "1b34f279de2e17a297690cccfbafb65edaf0fb67d5fa34f480f059ae8145d40c",
+      "test_result": "Committed inventory covers 626 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It currently records 619 unassessed and 358 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
+      "evidence_sha256": "04a5e55093c527df873a5e990f07c32390ef37ae415bdd8cfc1667c25afdf5e3",
       "blockers": [
         "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state"
       ]
