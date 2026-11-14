@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 186,
-  "unrecorded_tasks": 32,
+  "recorded_tasks": 187,
+  "unrecorded_tasks": 31,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4065,6 +4065,26 @@
       ],
       "test_result": "6 drilldown tests passed; Ruff, targeted mypy, refreshed source inventory, and inventory check passed. All eight stages require journal IDs and hashes, and displayed fields bind exactly to verified records.",
       "evidence_sha256": "1fd4393c7f2185917bfa21cbaba7a662b990f18f9c3e88ef389b78b3e46bc865",
+      "blockers": []
+    },
+    {
+      "id": "PE-0189",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/cockpit.py",
+        "tests/test_research_vs_champions_view.py",
+        "tests/test_forward_edge_f10.py",
+        "docs/edge-program/pe-0189-research-vs-champions-evidence.md",
+        "docs/edge-program/pe-0189-research-vs-champions-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_research_vs_champions_view.py",
+        "test_forward_edge_f10.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "22 cockpit tests passed; Ruff, targeted mypy, refreshed source inventory, and inventory check passed. Provisional rankings cannot receive champion styling; incomplete forward evidence remains visible and non-champion.",
+      "evidence_sha256": "e6da2e9fb1f09853269d5298b9cdfe9c0f8f56c925781c5a167c91ec419bdbeb",
       "blockers": []
     }
   ]

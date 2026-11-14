@@ -215,6 +215,53 @@ def strategy_comparison(rows: list[dict]) -> str:
     return html
 
 
+def research_vs_champions(*, provisional: list[dict], forward_champions: list[dict]) -> str:
+    """Separate diagnostic research ranks from independently evidenced executable champions."""
+    def rank_key(row: dict) -> tuple[Decimal, str]:
+        try:
+            score = Decimal(str(row.get("ranking_score")))
+        except Exception:
+            score = Decimal("-Infinity")
+        if not score.is_finite():
+            score = Decimal("-Infinity")
+        return -score, str(row.get("strategy_id") or "")
+
+    ranked = sorted(provisional, key=rank_key)
+    research_rows = "".join(
+        f"<tr><td>{index}</td><td>{escape(str(row.get('strategy_id') or 'UNKNOWN'))}</td>"
+        f"<td>{escape(str(row.get('ranking_score', 'UNKNOWN')))}</td>"
+        f"<td>{escape(str(row.get('horizon_sessions', 'UNKNOWN')))}</td>"
+        f"<td>{escape(str(row.get('sample', 'UNKNOWN')))}</td><td>PROVISIONAL — RESEARCH ONLY</td></tr>"
+        for index, row in enumerate(ranked, 1)
+    )
+    champion_rows = []
+    for row in forward_champions:
+        status = str(row.get("status", "UNKNOWN")).upper()
+        sessions, receipts = row.get("verified_sessions"), row.get("receipt_sessions")
+        digest = str(row.get("evidence_sha256", ""))
+        verified = (status == "VERIFIED" and row.get("executable_forward") is True
+                    and type(sessions) is int and sessions > 0 and type(receipts) is int and receipts == sessions
+                    and bool(re.fullmatch(r"[0-9a-f]{64}", digest)))
+        label = "VERIFIED EXECUTABLE FORWARD CHAMPION" if verified else "NOT A VERIFIED EXECUTABLE CHAMPION"
+        klass = "promotable" if verified else "failed"
+        champion_rows.append(
+            f"<tr class='{klass}'><td>{escape(str(row.get('strategy_id') or 'UNKNOWN'))}</td>"
+            f"<td>{escape(label)}</td><td>{escape(str(sessions if sessions is not None else 'UNKNOWN'))}</td>"
+            f"<td>{escape(str(receipts if receipts is not None else 'UNKNOWN'))}</td>"
+            f"<td>{escape(digest or 'MISSING')}</td></tr>"
+        )
+    html = _page("Research and forward champion status",
+                 "<h2>Provisional research ranking</h2><p>Exploratory diagnostic only. No row in this section is a tradable edge or champion.</p>"
+                 f"<table><thead><tr><th>Rank</th><th>Strategy</th><th>Diagnostic score</th><th>Horizon sessions</th>"
+                 f"<th>Sample</th><th>Status</th></tr></thead><tbody>{research_rows}</tbody></table>"
+                 "<h2>Verified executable forward champions</h2><p>Only rows with VERIFIED status, executable-forward attestation,"
+                 " complete session receipt coverage, and a valid evidence digest can receive this label.</p>"
+                 "<table><thead><tr><th>Strategy</th><th>Status</th><th>Verified sessions</th><th>Receipt sessions</th>"
+                 f"<th>Evidence SHA-256</th></tr></thead><tbody>{''.join(champion_rows)}</tbody></table>")
+    assert_read_only(html)
+    return html
+
+
 def portfolio_nav(archives: list[dict], canonical_nav_rows: list[dict]) -> str:
     """Render cash plus marked open positions, verifying every session against the account NAV journal."""
     if not archives:
