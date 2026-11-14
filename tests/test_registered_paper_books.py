@@ -5,6 +5,7 @@ from decimal import Decimal
 import pytest
 
 from financial_brain.kernel.paper_account import FeeSchedule
+from financial_brain.kernel.paper_portfolio import PaperAccountPortfolio, PaperPortfolioError
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.approvals import Approval
 from financial_brain.forward_edge.governance import FamilyEvidence, family_action_scope_sha256
@@ -99,6 +100,35 @@ def test_registered_plan_opens_distinct_persistent_accounts_and_cash(tmp_path):
     restored = reopened.open_accounts(plan_id=original.plan_id, root=tmp_path / "books", fee_schedule=FEE)
     assert restored["alpha"].cash == Decimal("600")
     assert restored["beta"].cash == Decimal("400")
+
+
+def test_portfolio_discovers_every_registered_account_without_creating_missing_books(tmp_path):
+    registry = RegisteredPaperBooks(tmp_path / "allocation.journal")
+    frozen = plan()
+    registry.register(frozen)
+    account_root = tmp_path / "books"
+    registry.open_accounts(plan_id=frozen.plan_id, root=account_root, fee_schedule=FEE)
+
+    portfolio = PaperAccountPortfolio.from_registered_plan(
+        registry, plan_id=frozen.plan_id, account_root=account_root)
+
+    report = portfolio.report()
+    assert set(portfolio.books) == {"paper-alpha", "paper-beta"}
+    assert report["books"]["TOTAL"]["initial_cash"] == "1000"
+    assert report["ledger_trial_balance_ok"] is True
+
+
+def test_registered_portfolio_fails_closed_when_any_allocated_book_is_missing(tmp_path):
+    registry = RegisteredPaperBooks(tmp_path / "allocation.journal")
+    frozen = plan()
+    registry.register(frozen)
+    account_root = tmp_path / "books"
+    accounts = registry.open_accounts(plan_id=frozen.plan_id, root=account_root, fee_schedule=FEE)
+    accounts["alpha"].path.unlink()
+
+    with pytest.raises(PaperPortfolioError, match="journal is missing: paper-alpha"):
+        PaperAccountPortfolio.from_registered_plan(
+            registry, plan_id=frozen.plan_id, account_root=account_root)
 
 
 def test_strategy_order_uses_only_its_registered_book_and_reservation(tmp_path):

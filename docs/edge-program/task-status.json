@@ -884,8 +884,10 @@
         "src/financial_brain/kernel/oms.py",
         "src/financial_brain/forward_edge/durable.py",
         "src/financial_brain/kernel/paper_portfolio.py",
+        "src/financial_brain/kernel/registered_paper_books.py",
         "tests/test_paper_account.py",
         "tests/test_paper_account_portfolio.py",
+        "tests/test_registered_paper_books.py",
         "tests/test_kernel_ledger_guards_ticks.py",
         "docs/edge-program/pe-0090-multibook-cash-reconciliation-evidence.json"
       ],
@@ -893,14 +895,16 @@
         "test_portfolio_consolidates_isolated_book_ledgers_and_reconciles_marks",
         "test_portfolio_keeps_total_nav_unavailable_if_any_book_lacks_a_position_mark",
         "test_portfolio_refuses_ambiguous_duplicate_book_authority",
+        "test_portfolio_discovers_every_registered_account_without_creating_missing_books",
+        "test_registered_portfolio_fails_closed_when_any_allocated_book_is_missing",
         "test_buy_sell_fees_and_restart_reconcile",
         "test_replayed_intent_fill_and_fee_have_one_economic_effect",
         "test_failed_fill_or_fee_does_not_change_journal"
       ],
-      "test_result": "27 focused portfolio, account, and ledger tests passed; Ruff and mypy passed. Added a read-only consolidated ledger/NAV view for registered PaperAccounts while preserving per-book capital isolation and withholding total NAV if any book lacks a mark.",
-      "evidence_sha256": "e609f99f71b934718e9b843ebbb13b0e365beea42a0a47f15b75761e563c9828",
+      "test_result": "Added registry-backed discovery of every paper account in a frozen plan from existing hash-chain journals, validating identity and opening capital before the read-only aggregate. Missing books fail closed without being created. Portfolio and registry suites plus source-inventory checks: 21 passed; Ruff and mypy passed.",
+      "evidence_sha256": "1b14dfe5cf74a22e6301e4564cdf3b7ee1a2ad48b88579cda41d907004f33b84",
       "blockers": [
-        "The operational runner does not yet discover/register every strategy account into this derived view, and account subledgers remain the source of truth rather than one persisted portfolio ledger.",
+        "The operational daily runner does not yet invoke this registry-backed discovery/report path automatically; account subledgers remain the source of truth rather than one persisted portfolio ledger.",
         "The scope remains long-only cash equities in one currency; margin, settlement, futures and options accounting are not implemented."
       ]
     },

@@ -6,10 +6,13 @@ portfolio view from those append-only subledgers; it does not pool buying power 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
 
+from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.kernel.ledger import DoubleEntryLedger, Entry, Transaction
-from financial_brain.kernel.paper_account import PaperAccount, PaperAccountError
+from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount, PaperAccountError
+from financial_brain.kernel.registered_paper_books import RegisteredPaperBooks
 
 
 class PaperPortfolioError(ValueError):
@@ -34,6 +37,50 @@ class PaperAccountPortfolio:
             raise PaperPortfolioError("portfolio books must use one currency until FX translation is implemented")
         self.books = dict(sorted(books.items()))
         self.currency = next(iter(currencies))
+
+    @classmethod
+    def from_registered_plan(cls, registry: RegisteredPaperBooks, *, plan_id: str,
+                             account_root: Path) -> PaperAccountPortfolio:
+        """Discover every account in a frozen plan from its existing durable journal.
+
+        This is intentionally read-only: an absent account, malformed opening record, or
+        mismatch against frozen capital is an error; reporting never creates a new book.
+        """
+        plan = next((item for item in registry.plans if item.plan_id == plan_id), None)
+        if plan is None:
+            raise PaperPortfolioError("portfolio plan is not present in the verified registry")
+        accounts: dict[str, PaperAccount] = {}
+        try:
+            for allocation in plan.books:
+                path = registry.account_path(
+                    plan_id=plan_id, account_id=allocation.account_id, root=Path(account_root))
+                if not path.is_file():
+                    raise PaperPortfolioError(
+                        f"registered paper account journal is missing: {allocation.account_id}")
+                rows = DurableJournal(path).records()
+                if not rows or rows[0].get("t") != "ACCOUNT_OPEN":
+                    raise PaperPortfolioError(
+                        f"registered paper account has no valid opening record: {allocation.account_id}")
+                opening = rows[0]
+                if opening.get("account") != allocation.account_id:
+                    raise PaperPortfolioError("account journal identity differs from frozen allocation")
+                try:
+                    opening_cash = Decimal(str(opening["cash"]))
+                    allocated_cash = Decimal(allocation.capital_inr)
+                except (KeyError, InvalidOperation, ValueError) as exc:
+                    raise PaperPortfolioError("account opening capital is invalid") from exc
+                if not opening_cash.is_finite() or opening_cash != allocated_cash:
+                    raise PaperPortfolioError("account opening capital differs from frozen allocation")
+                schedule = FeeSchedule.from_dict(opening.get("fee_schedule"))
+                account = PaperAccount(
+                    path, account_id=allocation.account_id, initial_cash=opening_cash,
+                    currency=str(opening.get("currency", "")), fee_schedule=schedule)
+                accounts[account.account_id] = account
+        except PaperPortfolioError:
+            raise
+        except (PaperAccountError, OSError, ValueError, KeyError, TypeError) as exc:
+            raise PaperPortfolioError(f"registered account journal failed validation: {exc}") from exc
+        return cls(accounts)
 
     def consolidated_ledger(self) -> DoubleEntryLedger:
         """Rebuild a derived trial-balance view with book-namespaced accounts and transaction IDs."""
