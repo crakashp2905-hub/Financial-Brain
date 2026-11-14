@@ -1648,6 +1648,56 @@ def cmd_preregs(args) -> int:
     return 1 if any(r["status"] in PR.VIOLATIONS for r in rows) else 0
 
 
+def cmd_preflight(args) -> int:
+    """Pre-open health check; alerts (desktop, and Telegram if configured) when today's paper session may not run."""
+    import datetime as _dt
+    from pathlib import Path as _P
+
+    from . import alerts as AL
+    from . import preflight as PF
+    results = PF.run(db=_P(load().db_path))
+    for r in results:
+        print(f"{'OK  ' if r['ok'] else 'FAIL'} {r['name']:10s} {r['detail']}")
+    found = PF.alerts(results, _dt.date.today())
+    if found and not args.no_alert:
+        AL.send(found)
+        if AL.telegram_configured():
+            AL.send(found, notify=AL.telegram, path=AL.TELEGRAM_SENT)
+    return 0 if not found else 1
+
+
+def cmd_backup(args) -> int:
+    """Back up the irreplaceable databases (dated, verified) and optionally mirror the raw lake. Run when idle."""
+    import os
+    from pathlib import Path as _P
+
+    from . import backup as BK
+    dest = args.dest or os.environ.get("FB_BACKUP_DIR")
+    if not dest:
+        print("no destination: pass --dest or set FB_BACKUP_DIR")
+        return 2
+    dest = _P(dest)
+    if args.verify:
+        snap = BK.latest_snapshot(dest)
+        problems = BK.verify(snap) if snap else ["no snapshot found"]
+        print(f"verify {snap}: {'OK' if not problems else '; '.join(problems)}")
+        return 0 if not problems else 1
+    out = BK.backup(dest, keep=args.keep)
+    for name, meta in out["files"].items():
+        print(f"copied  {name:24s} {meta['bytes'] / 1e6:9.1f} MB  {sum(meta['tables'].values()):>12,} rows")
+    for name, why in out["skipped"].items():
+        print(f"SKIPPED {name}: {why}")
+    problems = BK.verify(dest / out["day"])
+    print(f"verify {out['day']}: {'OK' if not problems else '; '.join(problems)}  (drive {out['dest_drive']})")
+    rc = 0 if not problems and not out["skipped"] else 1
+    lake = args.lake or os.environ.get("FB_BACKUP_LAKE_DIR")
+    if lake and args.with_lake:
+        code = BK.mirror_lake(load().lake, _P(lake))
+        print(f"lake mirror to {lake}: robocopy exit {code} ({'ok' if code < 8 else 'FAILED'})")
+        rc = rc or (0 if code < 8 else 1)
+    return rc
+
+
 def cmd_data_contracts(args) -> int:
     """Each source's contract (source, time carried, revision policy, limits) and whether it is met today."""
     import duckdb
@@ -2889,6 +2939,18 @@ def main(argv: list[str] | None = None) -> int:
 
     g = sub.add_parser("preregs", help="audit pre-registrations against git (before the result, unchanged after)")
     g.set_defaults(fn=cmd_preregs)
+
+    g = sub.add_parser("preflight", help="pre-open check: network, Kite login, disk, database, data contracts")
+    g.add_argument("--no-alert", action="store_true", help="print only; send no notification")
+    g.set_defaults(fn=cmd_preflight)
+
+    g = sub.add_parser("backup", help="dated, verified backup of the irreplaceable databases (+ lake mirror)")
+    g.add_argument("--dest", help="backup folder (default: FB_BACKUP_DIR)")
+    g.add_argument("--keep", type=int, default=7, help="dated snapshots to keep")
+    g.add_argument("--verify", action="store_true", help="verify the latest snapshot instead of writing one")
+    g.add_argument("--with-lake", action="store_true", help="also mirror the raw lake (never deletes)")
+    g.add_argument("--lake", help="lake mirror folder (default: FB_BACKUP_LAKE_DIR)")
+    g.set_defaults(fn=cmd_backup)
 
     g = sub.add_parser("data-contracts", help="every source's contract and whether it is met today")
     g.set_defaults(fn=cmd_data_contracts)

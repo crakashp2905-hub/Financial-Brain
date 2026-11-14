@@ -1,16 +1,20 @@
-# Exact environment the full suite runs in (1,428 tests: all pass, the torch LSTM test skips): a clean venv, `pip install -e .[dev]` on Windows 11, Python 3.13.5,
-# 2026-10-15. Recreate a result with: git checkout <commit>; pip install -r requirements-lock.txt; pip install -e . --no-deps
-ast_serialize==0.13.0
+# Exact environment the full suite runs in: a clean venv, `pip install -e .[dev]` with duckdb capped below 2, on Windows 11, Python 3.13.5,
+# 2026-11-04: 1,692 passed, 3 skipped (the torch learners); pip-audit: no known vulnerabilities (also checked in CI, job 'test' and 'locked').
+# Recreate a result with: git checkout <commit>; pip install -r requirements-lock.txt; pip install -e . --no-deps
+# Refresh it only the same way: new clean venv, install, freeze, run the suite and pip-audit, then replace this file.
+ast_serialize==0.13.1
 boolean.py==5.0
 CacheControl==0.14.4
-certifi==2026.7.22
+certifi==2026.10.23
 charset-normalizer==3.5.2
 cloudpickle==3.1.2
 colorama==0.4.6
+coverage==7.17.1
 cyclonedx-python-lib==11.12.0
 defusedxml==0.7.1
 duckdb==1.5.6
-filelock==4.2.0
+filelock==4.2.7
+flatbuffers==25.12.19
 idna==3.20
 iniconfig==2.3.1
 joblib==1.6.0
@@ -19,39 +23,46 @@ license-expression==30.4.4
 lightgbm==4.7.0
 markdown-it-py==4.2.0
 mdurl==0.1.2
-msgpack==1.2.3
-mypy==2.4.0
-mypy_extensions==1.1.0
-narwhals==2.27.1
+msgpack==1.2.4
+mypy==2.4.1
+mypy_extensions==1.2.0
+narwhals==2.28.0
+networkx==3.7
 numpy==2.5.4
+onnxruntime==1.31.1
 packageurl-python==0.17.6
 packaging==26.3
-pandas==3.0.6
+pandas==3.1.0
 pathspec==1.1.1
 pip-requirements-parser==32.0.1
 pip_api==0.0.35
 pip_audit==2.10.1
-platformdirs==4.13.0
+platformdirs==4.14.3
 pluggy==1.7.0
+protobuf==7.36.2
+psutil==7.2.2
 py-serializable==2.1.0
-pyarrow==26.0.0
+pyarrow==26.0.1
 Pygments==2.21.0
-pymupdf==1.28.2
+pymupdf==2.1
+pymupdf4llm==2.1
+pymupdf_layout==2.1
 pyparsing==3.3.3
-pypdf==6.20.1
-pytest==9.1.1
-python-dateutil==2.9.0.post0
-pytz==2026.5
+pypdf==6.21.4
+pytest==9.2.0
+python-dateutil==4.0.0
+pytz==2026.6
+PyYAML==6.0.3
 requests==2.34.2
 rich==15.0.0
-ruff==0.17.1
+ruff==0.17.3
 scikit-learn==1.9.1
 scipy==1.18.1
-six==1.17.0
 sortedcontainers==2.4.0
+tabulate==0.10.0
 threadpoolctl==3.7.0
 tomli==2.5.0
 tomli_w==1.2.0
 typing_extensions==4.16.0
-tzdata==2026.5
+tzdata==2026.6
 urllib3==2.8.0

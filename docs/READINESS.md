@@ -54,7 +54,7 @@ bar will not be moved to change that.
 |---|---|---|
 | minute history including delisted names | PARTIAL | 610 names, 2016-2026, from Kite. Kite has **no** delisted instruments, so intraday results carry survivorship bias, stated in each note |
 | auctions, halts, circuits, special sessions | PARTIAL | a late open is skipped (`intraday_family`); circuits are not modelled |
-| F&O history: expiries, OI, ban list | PARTIAL | `basis_contracts`, F&O snapshots from 2026-10; **no historical ban-list archive** |
+| F&O history: expiries, OI, ban list | DONE (2026-10-18) for bhavcopy, ban list and participant OI | `data/fo_history.duckdb` (123.9M rows, 2015-2026), `fo_ban`/`fo_ban_days` and `participant_positions` from 2012, `ingest/nse_archives.py`; expired option chains and depth are still not archived |
 | fills: delay, spread, impact, partial, lots, freeze | PARTIAL | the OMS slicer handles lots and freeze quantities; spread and impact are a flat cost by liquidity bucket; delay is modelled as the next bar |
 | live stream reconciled to an archive | OPEN | |
 | stale feed fails closed | DONE for orders | the risk gate refuses orders without a fresh LTP; the ban list being unreadable refuses every order |
@@ -88,7 +88,7 @@ No strategy clears all of it. **Status: TIME.** Today's standings:
 | cash as a first-class output | DONE (2026-10-15) | `decisions/risk_filters.cash_share`: the terminal states the cash share an equal-slot book would hold after the avoid rules |
 | negative selection before picking winners | DONE (2026-10-15), display only | `decisions/risk_filters`: no momentum longs in CRISIS (IC t -8.4 / -11.1), avoid adv20 < 60% of its 1-year mean (observation tier, registered OOS), edge below cost, no edge. Frozen paper books are **not** changed (ADR-0004) |
 | exposure by group, sector, factor, liquidity | PARTIAL | `portfolio/optimizer.py` (Ledoit-Wolf, sector caps); promoter-group exposure is not wired in |
-| stress tests (2008, COVID, rate shock) | OPEN | |
+| stress tests (2008, COVID, rate shock) | DONE (2026-10-16) for 2016-2024 episodes | `fb stress`: demonetisation, IL&FS, COVID, the 2022 rate shock and the 2024 small-cap fall replayed on held names, plus market -20%, sector rotation and liquidation sessions. 2008 is outside the price archive (starts 2015) |
 | VaR, CVaR, liquidation time | PARTIAL | liquidation time via capacity (`opportunity_card.capacity_inr`); no CVaR report |
 | every live limit has an owner, test, alert and fail-closed path | DONE for the OMS | `execution/oms/risk_gate.py`, `killswitch.py`, `docs/RUNBOOK-LIVE.md` |
 
@@ -142,11 +142,11 @@ None has happened.
 
 | criterion | status |
 |---|---|
-| scheduled jobs, retries, freshness | PARTIAL: Windows tasks and the terminal freshness banner; there are no retries or watchdog (the watchdog is an open owner decision since the 2026-10-14 refresh kill) |
-| backups with restore drills | **OPEN / OWNER**: the lake is gitignored by design ("back it up separately"), and no backup job or drill exists |
-| incident runbook | PARTIAL (`docs/RUNBOOK-LIVE.md` covers broker, OMS and kill switch; data failures and model compromise are not written) |
+| scheduled jobs, retries, freshness | PARTIAL (2026-11-04): Windows tasks, the terminal freshness banner, and `fb preflight` (08:30: network, Kite login, disk, database, data contracts; alerts before the open; the task is registered by the owner with `scripts/register_preflight_task.ps1`). The nightly refresh now runs in the project venv, the environment the tests use (it ran on the system Python with different duckdb/pandas/numpy). The live runner still aborts after 30 minutes of failed quotes, by design (a gap would corrupt stop handling). No watchdog restarts a killed job |
+| backups with restore drills | PARTIAL (2026-11-04): `fb backup` writes dated, verified copies of the paper, OMS, portfolio, quote and knowledge databases to a different physical disk (C:), and `fb backup --verify` re-hashes and reopens them; the raw lake (48.9 GB, 269k files) is mirrored append-only to E:. Both run nightly. **OWNER:** D: and E: are one physical disk, so the lake mirror guards against deletion and corruption, not the disk dying; an external or off-site copy is still needed. The warehouses are not copied (rebuildable from the lake and Kite) |
+| incident runbook | PARTIAL (`docs/RUNBOOK-LIVE.md` covers broker, OMS and kill switch; `docs/RUNBOOK-OPS.md` covers an aborted session, a failed refresh, backup and restore; model compromise is not written) |
 | secrets vaulted and rotated | PARTIAL (`.env` gitignored; no vault, no rotation) |
-| one machine failure cannot lose evidence | **No**: a single Windows machine holds everything |
+| one machine failure cannot lose evidence | **No**: the small evidence databases are on a second disk in the same machine, the lake on the same disk as its mirror. Machine loss still loses everything until an off-machine copy exists (OWNER) |
 
 ## What the next quarter is for
 
@@ -162,8 +162,8 @@ None has happened.
 3. **Engineering:**
    * a research-DB snapshot hash per trial;
    * coverage measurement;
-   * a backup job with a restore drill;
-   * the refresh watchdog;
+   * an off-machine backup copy (the on-machine backup and its verification are done);
+   * a watchdog that restarts a killed job;
    * stress tests.
 
 ## The owner's second list (2026-10-16)
