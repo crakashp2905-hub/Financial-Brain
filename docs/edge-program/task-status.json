@@ -211,10 +211,10 @@
         "test_session_evidence_and_paper_account_authority_journals_cannot_alias",
         "test_portfolio_refuses_ambiguous_duplicate_book_authority"
       ],
-      "test_result": "The forward paper path rejects aliasing the session evidence journal and authoritative PaperAccount journal before writes; reconciliation repeats the check. PaperAccountPortfolio refuses duplicate account objects/IDs and shared journals. The generated inventory covers 626 Python sources (619 unassessed, 358 role-unassigned). Combined bridge/account/portfolio/source-inventory suite: 31 passed; Ruff, mypy, and inventory freshness checks passed. Legacy intraday DuckDB remains a separate, unmapped engine.",
-      "evidence_sha256": "70b47dceb49cb821c51c27e8f944c6ab5bdf0d2b1f869aa3f75fcd7f51bc80ed",
+      "test_result": "The forward paper path rejects aliasing the session evidence journal and authoritative PaperAccount journal before writes; reconciliation repeats the check. PaperAccountPortfolio refuses duplicate account objects/IDs and shared journals. The generated inventory covers 626 Python sources (613 unassessed, 358 role-unassigned). Combined bridge/account/portfolio/source-inventory suite: 31 passed; Ruff, mypy, and inventory freshness checks passed. Legacy intraday DuckDB remains a separate, unmapped engine.",
+      "evidence_sha256": "0eda65d8151779dff510a60a3dc7b6512c8ae323712f04164b2da0a49316928d",
       "blockers": [
-        "Legacy intraday DuckDB is not bound to a shared strategy/book authority registry, so overlapping authority across legacy and forward-paper engines is not prevented; 619 source modules remain unassessed and 358 lack owner-role assignments."
+        "Legacy intraday DuckDB is not bound to a shared strategy/book authority registry, so overlapping authority across legacy and forward-paper engines is not prevented; 613 source modules remain unassessed and 358 lack owner-role assignments."
       ]
     },
     {
