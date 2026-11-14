@@ -48,16 +48,22 @@ jobs:
         run: python -m financial_brain.patterns.demo --offline
       - name: Test suite (with skip summary)
         run: python -m coverage run --source=financial_brain -m pytest -q -ra
+      - name: Verify capability source, test and evidence hashes
+        run: python scripts/audit_capability_evidence.py --check
       - name: Critical-module coverage
         run: python -m coverage report --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*"
       - name: Chart-pattern package coverage floor
         run: python -m coverage report --include="*/patterns/*" --fail-under=85
       - name: Coverage XML
         run: python -m coverage xml
+      - name: Dependency audit
+        run: python -m pip_audit --skip-editable
+      - name: Generate dependency and license inventory
+        run: python scripts/dependency_inventory.py --summary --output dependency-inventory.json
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.os }}
-          path: coverage.xml
-      - name: Dependency audit
-        run: python -m pip_audit --skip-editable
+          path: |
+            coverage.xml
+            dependency-inventory.json

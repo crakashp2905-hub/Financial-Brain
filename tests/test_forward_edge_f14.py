@@ -137,6 +137,29 @@ def test_rollover_refuses_archive_overwrite_and_active_journal_alias(tmp_path: P
     assert occupied.read_bytes() == b"preserve-existing-archive"
 
 
+def test_archive_manifest_chains_segments_and_detects_tampered_middle_record(tmp_path: Path) -> None:
+    journal = U.DurableJournal(tmp_path / "live.log")
+    broker = U.SimBroker()
+    U.run_session(journal, broker, KEY)
+    catalog_path = tmp_path / "archive" / "MANIFEST.jsonl"
+    for number in range(1, 4):
+        U.rollover(journal, tmp_path / "archive" / f"segment-{number}.log", catalog_path)
+        journal.append({"t": "CHECKPOINT", "number": number})
+
+    catalog = U.ArchiveManifest(catalog_path)
+    assert [row["segment"] for row in catalog.verify()] == [
+        "segment-1.log", "segment-2.log", "segment-3.log"
+    ]
+    lines = catalog_path.read_text(encoding="utf-8").splitlines()
+    middle = json.loads(lines[1])
+    middle["record"]["state_sha256"] = "f" * 64
+    lines[1] = json.dumps(middle, sort_keys=True, separators=(",", ":"))
+    catalog_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    with pytest.raises(U.JournalCorrupt, match="manifest record 2"):
+        catalog.verify()
+
+
 def test_a_crash_between_compaction_steps_never_loses_the_old_segment(tmp_path: Path) -> None:
     j = U.DurableJournal(tmp_path / "live.log")
     U.run_session(j, U.SimBroker(), KEY)

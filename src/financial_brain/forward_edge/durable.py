@@ -230,13 +230,79 @@ def recover(journal: DurableJournal, broker: SimBroker, key: str) -> dict:
 
 # ---- rollover, backup, restore (FE-0021) ----
 
-def rollover(journal: DurableJournal, archive_path: Path) -> str:
+class ArchiveManifest:
+    """Append-only hash chain covering every archived journal segment and folded state."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = Path(path)
+
+    def verify(self) -> list[dict]:
+        if not self.path.exists():
+            return []
+        prev = "GENESIS"
+        records = []
+        for index, line in enumerate(self.path.read_text(encoding="utf-8").splitlines(), start=1):
+            try:
+                row = json.loads(line)
+                body = row["record"]
+                digest = hashlib.sha256((prev + _canon(body)).encode("utf-8")).hexdigest()
+                if row["seq"] != index or row["prev"] != prev or row["hash"] != digest:
+                    raise JournalCorrupt(f"archive manifest record {index} is corrupt or out of chain")
+                relative = Path(body["segment"])
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise JournalCorrupt(f"archive manifest record {index} has unsafe segment path")
+                segment = (self.path.parent / relative).resolve()
+                if self.path.parent.resolve() not in segment.parents or not segment.is_file():
+                    raise JournalCorrupt(f"archive manifest record {index} references a missing segment")
+                if hashlib.sha256(segment.read_bytes()).hexdigest() != body["segment_sha256"]:
+                    raise JournalCorrupt(f"archive segment {body['segment']} failed hash verification")
+                prev = digest
+                records.append(body)
+            except JournalCorrupt:
+                raise
+            except (ValueError, KeyError, TypeError) as exc:
+                raise JournalCorrupt(f"archive manifest record {index} is invalid") from exc
+        return records
+
+    def append(self, segment: Path, state_sha256: str) -> None:
+        if len(state_sha256) != 64 or any(char not in "0123456789abcdef" for char in state_sha256):
+            raise ValueError("archived state digest must be lowercase SHA-256 hex")
+        existing = self.verify()
+        root = self.path.parent.resolve()
+        try:
+            relative = Path(segment).resolve().relative_to(root).as_posix()
+        except ValueError as exc:
+            raise ValueError("archive segment must be beneath the archive manifest directory") from exc
+        if any(row["segment"] == relative for row in existing):
+            raise FileExistsError(f"archive segment is already catalogued: {relative}")
+        prev = "GENESIS" if not existing else self._head()
+        body = {"segment": relative, "segment_sha256": hashlib.sha256(Path(segment).read_bytes()).hexdigest(),
+                "state_sha256": state_sha256}
+        row = {"seq": len(existing) + 1, "prev": prev, "hash": hashlib.sha256(
+            (prev + _canon(body)).encode("utf-8")).hexdigest(), "record": body}
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("ab") as stream:
+            stream.write((_canon(row) + "\n").encode("utf-8"))
+            stream.flush()
+            os.fsync(stream.fileno())
+
+    def _head(self) -> str:
+        rows = [json.loads(line) for line in self.path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        return rows[-1]["hash"] if rows else "GENESIS"
+
+def rollover(journal: DurableJournal, archive_path: Path, manifest_path: Path | None = None) -> str:
     """Compact: archive the old segment, atomically start a new one whose first record is a state snapshot."""
     archive_path = Path(archive_path)
     if archive_path.resolve() == journal.path.resolve():
         raise ValueError("archive path must differ from the active journal")
     if archive_path.exists():
         raise FileExistsError(f"archive segment already exists: {archive_path}")
+    catalog = ArchiveManifest(manifest_path or archive_path.parent / "MANIFEST.jsonl")
+    catalog.verify()
+    try:
+        archive_path.resolve().relative_to(catalog.path.parent.resolve())
+    except ValueError as exc:
+        raise ValueError("archive segment must be beneath its manifest directory") from exc
     st = fold(journal)
     before = state_hash(st)
     clean = {k: v for k, v in st.items() if not k.startswith("_")}
@@ -254,6 +320,7 @@ def rollover(journal: DurableJournal, archive_path: Path) -> str:
     after = state_hash(fold(journal))
     if after != before:
         raise JournalCorrupt("state hash changed across rollover")
+    catalog.append(archive_path, before)
     return after
 
 

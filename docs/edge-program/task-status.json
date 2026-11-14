@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 199,
-  "unrecorded_tasks": 19,
+  "recorded_tasks": 206,
+  "unrecorded_tasks": 12,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4279,17 +4279,14 @@
       "sources": [
         "src/financial_brain/forward_edge/durable.py",
         "tests/test_forward_edge_f14.py",
-        "docs/edge-program/pe-0200-journal-rotation-evidence.md",
         "docs/edge-program/pe-0200-journal-rotation-evidence.md"
       ],
       "tests": [
         "tests/test_forward_edge_f14.py"
       ],
-      "test_result": "Rollover refuses active-journal alias and existing archive destination. Regression test proves both files remain unchanged on rejection; existing tests verify state hash and restore equivalence. Journal replay rejects terminated hash-chain corruption. Focused suite: 78 passed; Ruff and mypy passed.",
-      "blockers": [
-        "A durable multi-segment catalog/manifest chain linking archive rotations is not implemented."
-      ],
-      "evidence_sha256": "1ead5fdd688439ae3c97d3fb00cdff241daf55a16ffa420ddbc7ac772255b061"
+      "test_result": "Journal rollover writes immutable numbered segments and appends a fsynced MANIFEST.jsonl record binding segment SHA-256 and folded state SHA-256 in a cross-segment hash chain. Existing archives cannot be overwritten; active-journal aliases and out-of-catalog paths fail closed. Verification rejects changed middle manifest rows, missing segments, segment tampering and broken chains. Durability, archive and crash-recovery suite: 72 passed; Ruff and mypy passed.",
+      "blockers": [],
+      "evidence_sha256": "b6f4971f1b5e71a288862af296fc39ab425e67e0bdc891b01dbadebffe3608ad"
     },
     {
       "id": "PE-0201",
@@ -4329,6 +4326,152 @@
         "Owner-authorized Kite session and explicit least-privilege account/IP configuration are not observable here; secret scanning of the complete repository and runtime logs still need an operational drill."
       ],
       "evidence_sha256": "e63c66f6dd1e7bebf55d263cc1f79ac5e5a1d51d018c8085ea27dd386961ba29"
+    },
+    {
+      "id": "PE-0199",
+      "status": "DONE",
+      "sources": [
+        "tests/test_forward_edge_f06.py",
+        "tests/test_forward_feed_health.py",
+        "tests/test_paper_account_corporate_actions.py",
+        "tests/test_forward_edge_f03.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_kernel_instruments.py",
+        "tests/test_capture_replay.py",
+        "tests/test_forward_session_clock.py",
+        "tests/test_session_date_ledger.py",
+        "docs/edge-program/pe-0199-market-fault-matrix-evidence.md"
+      ],
+      "tests": [
+        "tests/test_forward_edge_f06.py",
+        "tests/test_forward_feed_health.py",
+        "tests/test_paper_account_corporate_actions.py",
+        "tests/test_forward_edge_f03.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_kernel_instruments.py",
+        "tests/test_capture_replay.py",
+        "tests/test_forward_session_clock.py",
+        "tests/test_session_date_ledger.py"
+      ],
+      "test_result": "Reliability matrix passed 133 tests across packet gaps/duplicates/disconnect/reconnect and stale heartbeat; clock skew and availability ordering; holidays/special sessions; split/dividend/delisting and invalid corporate-action sources; duplicate/expired instruments; replay mismatch; stale-feed and incomplete-session recovery. Faults preserve explicit blockers and avoid fabricated fills or zero-loss closure.",
+      "blockers": [
+        "Inputs were synthetic; live Kite failure modes and exchange-session observations remain unmeasured."
+      ],
+      "evidence_sha256": "fe0d87b1a710115ce022fb771f2e98e266d09735728f4098ea088c3c1c8216ad"
+    },
+    {
+      "id": "PE-0204",
+      "status": "PARTIAL",
+      "sources": [
+        "requirements-lock.txt",
+        ".github/workflows/ci.yml",
+        "scripts/dependency_inventory.py",
+        "tests/test_dependency_inventory.py",
+        "docs/edge-program/dependency-reproducibility.md",
+        "docs/edge-program/pe-0204-dependency-license-evidence.md"
+      ],
+      "tests": [
+        "tests/test_dependency_inventory.py"
+      ],
+      "test_result": "Added lock/environment inventory with package license metadata as a CI artifact, documented per-platform local wheelhouse and --no-index install steps, and retained setup-python pip cache. Two inventory tests, Ruff and mypy passed. Local inventory: 55 lock entries, 9 missing, 34 version mismatches, 9 unknown/absent licenses; this is not a clean lockfile reproduction.",
+      "blockers": [
+        "Offline install has not been run on clean Windows/Linux; unknown licenses need manual review; no compatibility conclusion is made."
+      ],
+      "evidence_sha256": "bef5ffad778731d0839fef270061defdc1b65b7ac1eb6b82209e2d22933d6120"
+    },
+    {
+      "id": "PE-0205",
+      "status": "PARTIAL",
+      "sources": [
+        ".github/pull_request_template.md",
+        "docs/edge-program/pe-0205-independent-review-evidence.md"
+      ],
+      "tests": [],
+      "test_result": "Added a PR template requiring financial behavior impact, non-author reviewer/disposition, scenario failures, test and evidence hashes, known gaps, and rollback/compatibility notes. This makes review evidence explicit for return/account-balance changes.",
+      "blockers": [
+        "Template presence does not enforce an actual independent approval. Repository branch protection cannot be changed or verified with current credentials; each financial-impact PR needs a human review and merge gate."
+      ],
+      "evidence_sha256": "99e3c03367bb3f4d80c942e842bdfb32c2bbb2c0973517a6b098f7fac01cbcfd"
+    },
+    {
+      "id": "PE-0206",
+      "status": "PARTIAL",
+      "sources": [
+        "scripts/audit_capability_evidence.py",
+        "docs/audits/capability-evidence.v1.json",
+        "tests/test_capability_evidence_audit.py",
+        ".github/workflows/ci.yml",
+        "docs/edge-program/pe-0206-capability-evidence-audit.md"
+      ],
+      "tests": [
+        "tests/test_capability_evidence_audit.py",
+        "full pytest suite in CI before evidence-manifest check"
+      ],
+      "test_result": "Added a hash-pinned evidence manifest binding each curated capability to exact source and test contents plus capability-matrix digest. CI checks manifest freshness after full pytest; changing promoted source/test or maturity without refreshing hashes fails. Two audit tests, Ruff and mypy passed locally.",
+      "blockers": [
+        "CI for the new post-suite verifier is pending; the curated matrix covers five capabilities, not every feature in the platform."
+      ],
+      "evidence_sha256": "89a1f2c078d355152c155a2b6d43ec2f810586796651240ccd6e137c49d4f6e8"
+    },
+    {
+      "id": "PE-0202",
+      "status": "PARTIAL",
+      "sources": [
+        "scripts/benchmark_forward_edge.py",
+        "tests/test_forward_edge_benchmark.py",
+        "docs/edge-program/pe-0202-performance-benchmark.md"
+      ],
+      "tests": [
+        "tests/test_forward_edge_benchmark.py"
+      ],
+      "test_result": "Added a reproducible harness for an owner-supplied JSONL event workload: per-record durable append latency, events/s, journal bytes/s, recovery throughput/time, process RSS when psutil is present, Python allocation peak and optional validated daily-report render latency. Dataset bytes and SHA-256 are recorded and labeled UNATTESTED_LOCAL_INPUT. Two harness tests passed; Ruff and mypy passed.",
+      "blockers": [
+        "No representative local market/event dataset exists in the inspected checkout (data/lake and data/curated empty), so no operational measurements, alert thresholds or capacity limits are published."
+      ],
+      "evidence_sha256": "f194525a4851198378cbce0334dc0e83275972cbdf3f09b36ee6c1fe6ed519fe"
+    },
+    {
+      "id": "PE-0038",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/session_ops.py",
+        "src/financial_brain/kernel/instruments.py",
+        "tests/test_forward_edge_f03.py",
+        "tests/test_forward_edge_f06.py",
+        "tests/test_session_date_ledger.py",
+        "docs/edge-program/pe-0038-calendar-evidence.md"
+      ],
+      "tests": [
+        "tests/test_forward_edge_f03.py",
+        "tests/test_forward_edge_f06.py",
+        "tests/test_session_date_ledger.py"
+      ],
+      "test_result": "Versioned calendar input handles weekdays, holidays and special-session dates; injected session clocks and effective-dated instrument rules fail closed. Calendar holiday/special-session and trading-window cases are covered in the reliability suite (133 passed).",
+      "blockers": [
+        "No authoritative, maintained NSE/BSE full holiday/special session dataset is bundled, and venue/product-specific windows are not comprehensively sourced for every instrument."
+      ],
+      "evidence_sha256": "6dede68fa5dffffabfffa9f205182a471893bc406527f8abb8a082abb25b182a"
+    },
+    {
+      "id": "PE-0039",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/instruments.py",
+        "tests/test_paper_account_corporate_actions.py",
+        "tests/test_kernel_instruments.py",
+        "docs/edge-program/pe-0039-corporate-action-succession-evidence.md"
+      ],
+      "tests": [
+        "tests/test_paper_account_corporate_actions.py",
+        "tests/test_kernel_instruments.py"
+      ],
+      "test_result": "Paper accounting supports sourced splits, dividends, suspension/resumption and delisting recovery; effective-dated instrument rules and duplicate identity rejection are tested (133-test reliability suite).",
+      "blockers": [
+        "A complete point-in-time issuer/ISIN/symbol succession graph with sourced effective dates and historical replay is not implemented; corporate-action tests use controlled synthetic records."
+      ],
+      "evidence_sha256": "49d89eabfa3aee6a7f905c8d8186483253b5c799338cf999b1d746d8d482783d"
     }
   ]
 }
