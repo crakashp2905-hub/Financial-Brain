@@ -35,12 +35,19 @@ class OptionContract:
     short_margin_per_lot: Decimal
     source_id: str
     source_sha256: str
+    market: str = "NFO"
+    underlying_kind: str = "STOCK"
+    exercise_style: str = "EUROPEAN"
 
     def __post_init__(self) -> None:
         if not self.contract_id.strip() or not self.underlying.strip() or not self.source_id.strip():
             raise OptionsPaperError("contract identity and source id are required")
         if self.kind not in {"CALL", "PUT"} or self.settlement not in {"CASH", "PHYSICAL"}:
             raise OptionsPaperError("kind must be CALL/PUT and settlement must be CASH/PHYSICAL")
+        if self.market not in {"NFO", "BFO"} or self.underlying_kind not in {"INDEX", "STOCK"}:
+            raise OptionsPaperError("market must be NFO/BFO and underlying_kind INDEX/STOCK")
+        if self.exercise_style not in {"EUROPEAN", "AMERICAN"}:
+            raise OptionsPaperError("exercise_style must be EUROPEAN or AMERICAN")
         if not isinstance(self.expiry, date):
             raise OptionsPaperError("contract expiry must be a date")
         for name, value in (("strike", self.strike), ("short margin", self.short_margin_per_lot)):
@@ -57,6 +64,8 @@ class OptionContract:
             "strike": str(self.strike), "expiry": self.expiry.isoformat(), "lot_size": self.lot_size,
             "settlement": self.settlement, "short_margin_per_lot": str(self.short_margin_per_lot),
             "source_id": self.source_id, "source_sha256": self.source_sha256,
+            "market": self.market, "underlying_kind": self.underlying_kind,
+            "exercise_style": self.exercise_style,
         }
 
 
@@ -97,6 +106,26 @@ class OptionsPaperAccount:
     @property
     def option_positions(self) -> dict[str, int]:
         return {key: lots for key, lots in self._lots.items() if lots}
+
+    @property
+    def open_option_positions(self) -> dict[str, tuple[OptionContract, int]]:
+        return {key: (self._contracts[key], lots) for key, lots in self._lots.items() if lots}
+
+    @property
+    def legacy_expiry_events(self) -> tuple[str, ...]:
+        """Historical settlements created before India expiry preflight became mandatory."""
+        return tuple(self._legacy_expiry_events)
+
+    def preflight_india_expiry(self, *, settlement_prices: dict[str, Decimal],
+                               session_date: date, settlement_source_sha256: str,
+                               delivery_margins=None):
+        from .india_options_expiry import preflight_india_expiry
+
+        return preflight_india_expiry(
+            self, settlement_prices=settlement_prices, session_date=session_date,
+            settlement_source_sha256=settlement_source_sha256,
+            delivery_margins=delivery_margins,
+        )
 
     @property
     def underlying_positions(self) -> dict[str, int]:
@@ -166,19 +195,28 @@ class OptionsPaperAccount:
         self._commit(row)
 
     def settle_expiry(self, event_id: str, *, settlement_prices: dict[str, Decimal],
-                      session_date: date, source_sha256: str) -> None:
+                      session_date: date, source_sha256: str, readiness=None) -> None:
         """Exercise/assign ITM options, book expiry cash obligations, and mark physical shares at settlement."""
         self._validate_event_id(event_id)
         self._validate_source(source_sha256)
         prices = {symbol: Decimal(value) for symbol, value in settlement_prices.items()}
         if not prices or any(not value.is_finite() or value <= 0 for value in prices.values()):
             raise OptionsPaperError("positive finite settlement prices are required")
+        from .india_options_expiry import readiness_matches
+        from dataclasses import asdict
+
+        readiness_payload = asdict(readiness) if readiness is not None else None
+        if readiness_payload is not None:
+            readiness_payload["session_date"] = readiness.session_date.isoformat()
         row = self._event_row("OPTION_EXPIRY", event_id, {
             "session_date": session_date.isoformat(), "settlement_prices": {k: str(v) for k, v in sorted(prices.items())},
-            "source_sha256": source_sha256,
+            "source_sha256": source_sha256, "india_expiry_preflight": readiness_payload,
         })
         if self._is_duplicate(row):
             return
+        if not readiness_matches(self, readiness, settlement_prices=prices,
+                                 session_date=session_date, settlement_source_sha256=source_sha256):
+            raise OptionsPaperError("valid India expiry preflight is required before settlement")
         if self._last_event_date is not None and session_date < self._last_event_date:
             raise OptionsPaperError("option events must be recorded in effective-date order")
         expiring = [key for key, lots in self._lots.items() if lots and self._contracts[key].expiry == session_date]
@@ -202,12 +240,15 @@ class OptionsPaperAccount:
         self._underlying: dict[str, int] = {}
         self._underlying_marks: dict[str, Decimal] = {}
         self._expired: set[str] = set()
+        self._legacy_expiry_events: list[str] = []
         self._last_event_date: date | None = None
         self._event_requests: dict[str, str] = {}
         for row in rows[1:]:
             if row.get("t") == "OPTION_TRADE":
                 self._apply_trade(row)
             elif row.get("t") == "OPTION_EXPIRY":
+                if row.get("india_expiry_preflight") is None:
+                    self._legacy_expiry_events.append(row["event_id"])
                 self._apply_expiry(row)
             else:
                 raise OptionsPaperError(f"unknown options journal event: {row.get('t')}")
@@ -246,6 +287,11 @@ class OptionsPaperAccount:
         self._check_request(event_id, digest)
         day = date.fromisoformat(row["session_date"])
         prices = {key: Decimal(value) for key, value in row["settlement_prices"].items()}
+        if row.get("india_expiry_preflight") is not None:
+            from .india_options_expiry import verify_stored_readiness
+
+            if not verify_stored_readiness(self, row):
+                raise OptionsPaperError("durable India expiry preflight does not reconcile")
         contracts = [key for key, lots in self._lots.items() if lots and self._contracts[key].expiry == day]
         if not contracts or self._last_event_date is not None and day < self._last_event_date:
             raise OptionsPaperError("expiry event has no eligible open contracts or is stale")
@@ -396,7 +442,9 @@ def _contract_from_dict(value: dict) -> OptionContract:
         strike=Decimal(value["strike"]), expiry=date.fromisoformat(value["expiry"]),
         lot_size=int(value["lot_size"]), settlement=value["settlement"],
         short_margin_per_lot=Decimal(value["short_margin_per_lot"]), source_id=value["source_id"],
-        source_sha256=value["source_sha256"],
+        source_sha256=value["source_sha256"], market=value.get("market", "NFO"),
+        underlying_kind=value.get("underlying_kind", "STOCK"),
+        exercise_style=value.get("exercise_style", "EUROPEAN"),
     )
 
 

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 164,
-  "unrecorded_tasks": 54,
+  "recorded_tasks": 165,
+  "unrecorded_tasks": 53,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3616,6 +3616,27 @@
       ],
       "test_result": "17 passed across spread lifecycle and option leg suites; Ruff passed; source inventory --check passed (614 Python files).",
       "evidence_sha256": "07a8175cc4d38f1ddae132f6b59a6952b26242fd093aee86efd038ac07ab4fe0",
+      "blockers": []
+    },
+    {
+      "id": "PE-0167",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/india_options_expiry.py",
+        "src/financial_brain/kernel/options_paper.py",
+        "tests/test_india_options_expiry.py",
+        "tests/test_kernel_options_paper.py",
+        "docs/edge-program/india-options-expiry-rules.v1.json",
+        "docs/edge-program/pe-0167-options-expiry-evidence.md",
+        "docs/edge-program/pe-0167-options-expiry-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_india_options_expiry.py",
+        "test_kernel_options_paper.py"
+      ],
+      "test_result": "9 passed across expiry preflight, rule table parity, options settlement, durable journal restart, and stale-readiness checks; Ruff and targeted mypy passed; source inventory check passed (615 Python files).",
+      "evidence_sha256": "559b229d56bc04405e07c08a20be8890f2f6f0f15eb20bd18ac9a5394ab634bd",
       "blockers": []
     }
   ]
