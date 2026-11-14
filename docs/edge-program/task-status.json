@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 157,
-  "unrecorded_tasks": 61,
+  "recorded_tasks": 158,
+  "unrecorded_tasks": 60,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3483,6 +3483,23 @@
       ],
       "test_result": "30 passed; Ruff passed.",
       "evidence_sha256": "5c0d64a62285cd23ec0d87fcfc3209ec2e461b4c251b6f7226c645f16169a43d",
+      "blockers": []
+    },
+    {
+      "id": "PE-0160",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/orb_fade_hypothesis.py",
+        "tests/test_orb_fade_hypothesis.py",
+        "docs/edge-program/pe-0160-orb-inverse-fade-hypothesis.md",
+        "docs/edge-program/pe-0160-orb-inverse-fade-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_orb_fade_hypothesis.py"
+      ],
+      "test_result": "7 passed; Ruff passed; source inventory --check passed (609 Python files).",
+      "evidence_sha256": "3f41e2e9b8fc0c3e5d54ed925fd8a9e80602df0d135a16866d249a2d7290c8c6",
       "blockers": []
     }
   ]
