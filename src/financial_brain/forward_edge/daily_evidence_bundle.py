@@ -8,6 +8,7 @@ import os
 from pathlib import Path, PurePosixPath
 import shutil
 import tempfile
+from datetime import date, datetime
 
 from financial_brain.forward_edge.durable import DurableJournal
 
@@ -212,6 +213,57 @@ def build_daily_bundle(*, session_date: str, session_id: str, artifact_paths: di
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
         raise
+
+
+def close_and_bundle_paper_session(*, account, session_date: date, captured_at: datetime,
+                                   marks: dict[str, dict], archive_dir: Path,
+                                   runner_journal_path: Path, session_id: str,
+                                   bundle_root: Path, signing_key=None,
+                                   additional_artifacts: dict[str, Path] | None = None) -> dict:
+    """Close a paper book and create its portable evidence bundle as one retryable step.
+
+    This is an orchestration primitive for a daily launcher, not a scheduler. The caller
+    supplies observed close marks and a stable capture timestamp; a retry after a crash must
+    reuse those values. Account close archives and bundle output are immutable/idempotent.
+    """
+    from financial_brain.forward_edge.eod_paper_archive import close_and_archive_paper_session
+
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise DailyBundleError("session id is required")
+    runner_path = Path(runner_journal_path)
+    if not runner_path.is_file():
+        raise DailyBundleError("runner journal must exist before paper-session finalization")
+    try:
+        records = DurableJournal(runner_path).records()
+    except Exception as exc:
+        raise DailyBundleError("runner journal failed its durable hash-chain check") from exc
+    session_rows = [row for row in records if row.get("session_id") == session_id]
+    plan = next((row for row in session_rows if row.get("t") == "SESSION_PLAN"), None)
+    terminal = next((row for row in reversed(session_rows)
+                     if row.get("t") in {"SESSION_CLOSED", "SESSION_INCOMPLETE"}), None)
+    if (plan is None or plan.get("config", {}).get("exchange_date") != session_date.isoformat()
+            or terminal is None):
+        raise DailyBundleError("matching dated session must have a durable terminal record before close")
+    archive = close_and_archive_paper_session(
+        account=account, session_date=session_date, captured_at=captured_at,
+        marks=marks, archive_dir=Path(archive_dir),
+    )
+    artifact_paths = {
+        "paper_account_archive": Path(archive["archive_path"]),
+        "runner_journal": runner_path,
+    }
+    if additional_artifacts:
+        overlap = set(artifact_paths).intersection(additional_artifacts)
+        if overlap:
+            raise DailyBundleError(f"additional artifact roles are reserved: {', '.join(sorted(overlap))}")
+        artifact_paths.update({role: Path(path) for role, path in additional_artifacts.items()})
+    output_dir = Path(bundle_root) / session_date.isoformat() / account.account_id
+    bundle = build_daily_bundle(
+        session_date=session_date.isoformat(), session_id=session_id,
+        artifact_paths=artifact_paths, output_dir=output_dir, signing_key=signing_key,
+    )
+    return {"account_archive": archive, "bundle": bundle, "bundle_dir": str(output_dir),
+            "physical_orders": False}
 
 
 def verify_daily_bundle(bundle_dir: Path, *, trusted_public_key_sha256: str | None = None) -> dict:

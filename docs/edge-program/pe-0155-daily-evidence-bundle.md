@@ -7,11 +7,12 @@
 - A different workstation can independently validate the EOD archive hash, runner journal hash chain, manifest and all input hashes, then regenerate and byte-compare the report. The bundle rejects undeclared files and symlinks.
 - Optional Ed25519 signing is supported when a caller supplies an owner-controlled key. The verifier reports unsigned/hash-only, valid-but-unpinned, or trusted-key signature state; callers must pin the expected public-key hash to authenticate the signer.
 - Bundle creation is idempotent for the same manifest and refuses altered content at an existing output path.
+- `close_and_bundle_paper_session` now checks the durable journal chain, matching exchange date and terminal session record before closing the account. It then creates the EOD archive and portable bundle; retrying the same close inputs reuses the immutable archive and bundle. This is a callable orchestration primitive, not a scheduler.
 
 ## Verification
 
-`tests/test_daily_evidence_bundle.py` and `tests/test_eod_paper_archive.py`: 8 passed; Ruff passed. The cross-workstation fixture copies the bundle, pins the Ed25519 key, verifies all artifacts, and reproduces the human report. Tampering and untrusted-key cases are refused.
+`tests/test_daily_evidence_bundle.py` and `tests/test_eod_paper_archive.py`: 10 passed; Ruff passed. The cross-workstation fixture copies the bundle, pins the Ed25519 key, verifies all artifacts, and reproduces the human report. Finalization tests cover idempotent retry and refusal before account mutation when there is no durable terminal session. Tampering and untrusted-key cases are refused.
 
 ## Remaining evidence gap
 
-The module is callable but is not yet run by a scheduled daily launcher. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until daily orchestration and key custody are wired.
+No scheduled daily launcher invokes the new orchestration primitive yet, so automatic completion after each actual paper session remains unverified. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until launcher integration and owner-controlled key custody are established.

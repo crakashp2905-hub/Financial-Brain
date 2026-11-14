@@ -9,6 +9,7 @@ import pytest
 from financial_brain.forward_edge.daily_evidence_bundle import (
     DailyBundleError,
     build_daily_bundle,
+    close_and_bundle_paper_session,
     verify_daily_bundle,
 )
 from financial_brain.forward_edge.durable import DurableJournal
@@ -110,3 +111,46 @@ def test_existing_bundle_is_not_reused_for_a_different_signing_key(tmp_path):
         build_daily_bundle(session_date=SESSION.isoformat(), session_id="S-2026-11-12",
                            artifact_paths=artifact_paths, output_dir=target,
                            signing_key=crypto.Ed25519PrivateKey.generate())
+
+
+def test_close_and_bundle_finalizes_only_durable_terminal_session_and_is_retryable(tmp_path):
+    account = PaperAccount(tmp_path / "account.jsonl", account_id="bundle-account",
+                           initial_cash=Decimal("1000"))
+    runner_path = tmp_path / "runner.jsonl"
+    runner = DurableJournal(runner_path)
+    runner.append({"t": "SESSION_PLAN", "session_id": "S-2026-11-12",
+                   "config": {"exchange_date": SESSION.isoformat()}})
+    runner.append({"t": "SESSION_CLOSED", "session_id": "S-2026-11-12",
+                   "result": {"status": "PAPER_COMPLETE"}})
+    kwargs = dict(
+        account=account, session_date=SESSION, captured_at=CAPTURE,
+        marks={}, archive_dir=tmp_path / "archive", runner_journal_path=runner_path,
+        session_id="S-2026-11-12", bundle_root=tmp_path / "bundles",
+    )
+
+    first = close_and_bundle_paper_session(**kwargs)
+    second = close_and_bundle_paper_session(**kwargs)
+
+    assert first["bundle"] == second["bundle"]
+    assert Path(first["bundle_dir"]).is_dir()
+    assert verify_daily_bundle(Path(first["bundle_dir"]))["report_reproduced"] is True
+    assert first["account_archive"]["snapshot_sha256"] == second["account_archive"]["snapshot_sha256"]
+
+
+def test_close_and_bundle_rejects_missing_session_terminal_before_account_mutation(tmp_path):
+    account = PaperAccount(tmp_path / "account.jsonl", account_id="bundle-account",
+                           initial_cash=Decimal("1000"))
+    runner_path = tmp_path / "runner.jsonl"
+    runner = DurableJournal(runner_path)
+    runner.append({"t": "SESSION_PLAN", "session_id": "S-2026-11-12",
+                   "config": {"exchange_date": SESSION.isoformat()}})
+
+    with pytest.raises(DailyBundleError, match="terminal record"):
+        close_and_bundle_paper_session(
+            account=account, session_date=SESSION, captured_at=CAPTURE, marks={},
+            archive_dir=tmp_path / "archive", runner_journal_path=runner_path,
+            session_id="S-2026-11-12", bundle_root=tmp_path / "bundles",
+        )
+
+    assert account.nav_snapshots == []
+    assert not (tmp_path / "archive" / SESSION.isoformat()).exists()
