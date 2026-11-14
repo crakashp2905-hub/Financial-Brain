@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 122,
-  "unrecorded_tasks": 96,
+  "recorded_tasks": 123,
+  "unrecorded_tasks": 95,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2634,6 +2634,31 @@
         "No durable authoritative cohort registry prevents plan replacement after confirmation observations.",
         "Freeze and first-observation timestamps are caller-supplied without independent attestation.",
         "No prospective market cohort has elapsed; synthetic tests do not establish performance."
+      ]
+    },
+    {
+      "id": "PE-0125",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/confirmation_bounds.py",
+        "tests/test_confirmation_bounds.py",
+        "docs/edge-program/pe-0125-confidence-bounds.md",
+        "docs/edge-program/pe-0125-confidence-bounds-evidence.json"
+      ],
+      "tests": [
+        "test_confirmation_requires_positive_bounds_for_both_net_alpha_and_utility",
+        "test_positive_point_estimate_with_nonpositive_lower_bound_is_not_confirmed",
+        "test_missing_scheduled_values_are_not_dropped_or_confirmed",
+        "test_degenerate_variance_does_not_create_a_zero_width_confirmation",
+        "test_extra_dates_bad_schedule_and_nonfinite_values_are_rejected"
+      ],
+      "test_result": "5 focused lower-bound tests passed; Ruff passed. Both daily net alpha and after-cost utility use the frozen dependence policy; incomplete or degenerate samples cannot be confirmed.",
+      "evidence_sha256": "a0bc2dccf6805682867ebb5dfaa74066742b6a7a7ac759d7c0616349f21caa8c",
+      "blockers": [
+        "The report is not yet enforced by the authoritative strategy promotion gate.",
+        "Adequate sample size is not yet bound to the prospective cohort design.",
+        "After-cost utility accounting lineage is caller-supplied and not verified by this API.",
+        "No independently attested forward market cohort has elapsed."
       ]
     }
   ]
