@@ -437,6 +437,78 @@ def execution_fill_table(receipts: list[dict]) -> str:
     return html
 
 
+def trade_drilldown(*, trade_id: str, events: list[dict]) -> str:
+    """Render source-to-attribution evidence only when every stage binds to a verified journal record."""
+    required_stages = ("source_quote", "signal", "risk", "intent", "fill", "ledger", "exit", "attribution")
+    if not isinstance(trade_id, str) or not trade_id.strip():
+        raise CockpitError("trade drilldown needs a stable trade ID")
+    if not isinstance(events, list):
+        raise CockpitError("trade drilldown events must be a list")
+
+    def canon(value: object) -> bytes:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+    mapped: dict[str, dict] = {}
+    for event in events:
+        stage = event.get("stage")
+        if stage not in required_stages or stage in mapped:
+            raise CockpitError("trade drilldown has an unknown or duplicate evidence stage")
+        journal_id, claimed, record = event.get("journal_id"), event.get("record_sha256"), event.get("record")
+        if not isinstance(journal_id, str) or not journal_id.strip() or not isinstance(record, dict):
+            raise CockpitError(f"{stage} must link to a stable journal ID and record")
+        if not isinstance(claimed, str) or not re.fullmatch(r"[0-9a-f]{64}", claimed):
+            raise CockpitError(f"{stage} journal record needs a SHA-256")
+
+        if {"seq", "prev", "hash", "rec"}.issubset(record):
+            payload = record["rec"]
+            try:
+                expected = hashlib.sha256((record["prev"] + canon(payload).decode("utf-8")).encode("utf-8")).hexdigest()
+            except (TypeError, ValueError) as exc:
+                raise CockpitError(f"{stage} durable journal record is invalid") from exc
+            valid = record.get("hash") == expected == claimed
+        elif "snapshot_sha256" in record:
+            unsigned = {key: value for key, value in record.items() if key != "snapshot_sha256"}
+            expected = hashlib.sha256(canon(unsigned)).hexdigest()
+            payload, valid = record, record.get("snapshot_sha256") == expected == claimed
+        else:
+            payload = record
+            valid = hashlib.sha256(canon(payload)).hexdigest() == claimed
+        if not valid:
+            raise CockpitError(f"{stage} journal record hash does not match")
+        fields = event.get("fields", payload)
+        if not isinstance(fields, dict) or any(key not in payload or payload[key] != value for key, value in fields.items()):
+            raise CockpitError(f"{stage} displayed fields do not match the immutable journal record")
+        mapped[stage] = {"journal_id": journal_id, "record_sha256": claimed,
+                         "record": record, "fields": fields}
+
+    missing = [stage for stage in required_stages if stage not in mapped]
+    if missing:
+        raise CockpitError(f"trade drilldown is missing journal-linked stages: {', '.join(missing)}")
+    rows = []
+    for stage in required_stages:
+        event = mapped[stage]
+        anchor = f"record-{event['record_sha256']}"
+        link = f"<a href='#{anchor}'>{escape(event['journal_id'])}</a>"
+        for key, value in sorted(event["fields"].items()):
+            shown = escape(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str))
+            rows.append(f"<tr><th>{escape(stage.replace('_', ' ').title())} · {escape(str(key))}</th>"
+                        f"<td><a href='#{anchor}'>{shown}</a></td><td>{link}</td></tr>")
+        if not event["fields"]:
+            rows.append(f"<tr><th>{escape(stage.replace('_', ' ').title())}</th><td>Record present</td><td>{link}</td></tr>")
+    details = []
+    for stage in required_stages:
+        event = mapped[stage]
+        anchor = f"record-{event['record_sha256']}"
+        raw = escape(json.dumps(event["record"], sort_keys=True, indent=2, default=str))
+        details.append(f"<section id='{anchor}'><h3>{escape(stage)} · {escape(event['journal_id'])}</h3>"
+                       f"<p>SHA-256: {event['record_sha256']}</p><pre>{raw}</pre></section>")
+    html = _page(f"Trade drilldown {trade_id}", f"<p>Trade: {escape(trade_id)}. Every field links to its hash-verified immutable journal record.</p>"
+                 "<table><thead><tr><th>Stage / field</th><th>Value</th><th>Journal ID</th></tr></thead><tbody>"
+                 + "".join(rows) + "</tbody></table><h2>Journal records</h2>" + "".join(details))
+    assert_read_only(html)
+    return html
+
+
 # ---- FE-0118 ----
 
 def pnl_table(gross: Decimal, fees: Decimal, slippage: Decimal, net: Decimal, benchmark: Decimal, ledger_net: Decimal) -> str:
