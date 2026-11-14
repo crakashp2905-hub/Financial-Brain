@@ -205,14 +205,14 @@ def test_verified_needs_custody() -> None:
 def test_every_recorded_trial_maps_to_a_failed_registry_entry() -> None:
     rows = [json.loads(line) for line in (REPO / "docs/trials/ledger.jsonl").read_text(encoding="utf-8").splitlines()]
     trials = [r for r in rows if r.get("kind") == "trial"]
-    assert len(trials) == 13
+    assert len(trials) == 14  # 2026Q4 ledger rows, including trial 14 (V2 intraday family)
     reg = Registry()
     for i, row in enumerate(trials):
         lineage = hashlib.sha256(json.dumps(row, sort_keys=True).encode("utf-8")).hexdigest()
         reg.register(_spec(strategy_id=f"TRIAL-{i + 1:02d}", family=row["name"], code_sha256=lineage,
                            source_lineage=f"docs/trials/ledger.jsonl#trial-{i + 1}", status=Status.FAILED,
                            exclusion_reason=f"ledger verdict {row['verdict']} ({','.join(row['failed'])})"))
-    assert len(reg) == 13
+    assert len(reg) == 14  # one registry entry per 2026Q4 ledger row
     assert all(reg.get(f"TRIAL-{i + 1:02d}").status is Status.FAILED for i in range(13))
 
 

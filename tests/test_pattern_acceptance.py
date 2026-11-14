@@ -110,8 +110,7 @@ def test_dual_rating_never_claims_market_edge() -> None:
 def test_protected_records_are_byte_unchanged() -> None:
     baseline = json.loads(PROTECTED.read_text(encoding="utf-8"))["files"]
     for rel, expected in baseline.items():
-        # Line endings differ between a Windows checkout (CRLF) and a Linux one (LF); hash the LF form so the record is the same everywhere.
-        actual = hashlib.sha256((ROOT / rel).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+        actual = hashlib.sha256((ROOT / rel).read_bytes()).hexdigest()
         assert actual == expected, f"protected record changed: {rel}"
 
 

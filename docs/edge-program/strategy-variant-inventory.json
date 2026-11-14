@@ -1,9 +1,9 @@
 {
-  "candidate_count": 253,
+  "candidate_count": 254,
   "category_counts": {
     "chart_pattern": 72,
     "futures": 4,
-    "historical_trial": 13,
+    "historical_trial": 14,
     "options": 7,
     "paper_zoo": 60,
     "python_strategy_module": 12,
@@ -2360,7 +2360,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "1a1ba960c750b5c8f87d0e54e5f1e3e4080659c25a930b6d124b40a20a659f9d",
       "version": 1
@@ -2379,7 +2379,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "14f387f85b43f3002422fd59375e26d81405d493558cb4049807041250a7709a",
       "version": 1
@@ -2399,7 +2399,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "1436536943e4cb31960a9831876c0ef3ea118d8cb63e16b456a3cd49ef4b220a",
       "version": 1
@@ -2418,7 +2418,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "d00b89014620dfdb16f37b4939096159336df998389b70e014a1509f1df897c2",
       "version": 1
@@ -2438,7 +2438,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "41ed4f354ecdc3c0588275eaca052befc8d79c73a6658c512f7398b0b7d23f30",
       "version": 1
@@ -2458,7 +2458,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "1131cea8cd3bbf1f7eea577486df0af7e45dc8c6038104969b187982a4e96e62",
       "version": 1
@@ -2478,7 +2478,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "5ba4d2bfbfa04faeb9b49f85f7e4d84383de3d3358de171352e8c6708d10c46c",
       "version": 1
@@ -2497,7 +2497,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "282500c4196a0d658598166529861a68fcab4a73a74b00ec33d961f31a0045a8",
       "version": 1
@@ -2516,7 +2516,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "14c1d8ed11c0af779b78262abf93a721542ccd491d071c9da67af0981806383c",
       "version": 1
@@ -2535,7 +2535,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "81ba855e1fba468989e44b289a667c1b0c42e6731a10f5f4ec8b91e3994973bc",
       "version": 1
@@ -2555,7 +2555,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "56a2b4dc1537ca08983ac898a4b0f34a3c337be5da75f4142ee41dd0a7ecd47f",
       "version": 1
@@ -2575,9 +2575,28 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "8e1d1a652ccf4eeb108f75702e87dc24d392ccb4375ed06d72d679ea2677590c",
+      "version": 1
+    },
+    {
+      "asset": "UNSPECIFIED",
+      "catalogue_granularity": "RECORDED_TRIAL",
+      "category": "historical_trial",
+      "clock": "UNSPECIFIED",
+      "family": "historical:v2",
+      "name": "V2 intraday chart candle and indicator family (40 candidates)",
+      "parameters": {
+        "failed_gates": [
+          "G3"
+        ],
+        "verdict": "FAIL"
+      },
+      "source": "docs/trials/ledger.jsonl",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
+      "status": "FAIL",
+      "variant_sha256": "dc186121cc16c4e4e827e7ca3bb60d4a54851179de7f7a8f95a53dcdf745d93a",
       "version": 1
     },
     {
@@ -2595,7 +2614,7 @@
         "verdict": "FAIL"
       },
       "source": "docs/trials/ledger.jsonl",
-      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+      "source_sha256": "568781e1644ff174b96d2350bdd4d4f25ee9338f960af6520bfb0f34f71723ce",
       "status": "FAIL",
       "variant_sha256": "41ddd6fabede014ea855236ddf0cb77ffe178a7e98a871a13827a52066194ebb",
       "version": 1
@@ -4432,5 +4451,5 @@
     "asset",
     "clock"
   ],
-  "unknown_asset_or_clock_count": 172
+  "unknown_asset_or_clock_count": 173
 }
