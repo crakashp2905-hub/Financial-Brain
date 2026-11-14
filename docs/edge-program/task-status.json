@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 129,
-  "unrecorded_tasks": 89,
+  "recorded_tasks": 130,
+  "unrecorded_tasks": 88,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2801,6 +2801,29 @@
         "Attribution rows and protocol digest are caller-supplied, not held in the authoritative evidence registry.",
         "Report is not wired to the promotion gate.",
         "Removal sensitivity is additive diagnostic accounting, not a portfolio replay."
+      ]
+    },
+    {
+      "id": "PE-0132",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/edge_confirmation.py",
+        "tests/test_edge_confirmation.py",
+        "docs/edge-program/pe-0132-edge-confirmation-gate.md",
+        "docs/edge-program/pe-0132-edge-confirmation-gate-evidence.json"
+      ],
+      "tests": [
+        "test_favorable_synthetic_metrics_cannot_confirm_without_signed_prospective_evidence",
+        "test_protocol_digest_binds_charter_schedule_power_inference_risk_execution_and_integrity",
+        "test_failed_or_missing_release_gates_never_return_edge_confirmed",
+        "test_signed_full_evidence_can_clear_the_gate_when_all_requirements_pass"
+      ],
+      "test_result": "4 focused tests passed; Ruff passed. Unreceipted zero and favorable synthetic scenarios remain NOT_CONFIRMED; changing a signed outcome invalidates the release attestation.",
+      "evidence_sha256": "3f024c21004e7351b67cdabf138af6d8d4ebbb3627d461faade0d38d737eb6f0",
+      "blockers": [
+        "Approved independent provider and deployment-pinned trust roots are not configured.",
+        "No authoritative immutable preregistration registry or real prospective market cohort is connected.",
+        "The gate is not wired into the authoritative strategy promotion and paper-trading lifecycle."
       ]
     }
   ]

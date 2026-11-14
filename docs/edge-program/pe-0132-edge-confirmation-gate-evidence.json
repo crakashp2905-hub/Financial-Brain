@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0132",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_edge_confirmation.py; ruff check src/financial_brain/forward_edge/edge_confirmation.py tests/test_edge_confirmation.py",
+    "result": "4 passed; Ruff passed."
+  },
+  "implemented": [
+    "Hashes the frozen charter, schedule, sample-size plan, dependence policy, and risk/execution/integrity policies.",
+    "Requires a verified pre-observation registration receipt and pre-entry decision plus post-session outcome receipts for every scheduled session.",
+    "Requires at least 60 independently verified scheduled sessions and the power-plan sample size, positive robust lower bounds, cost/fill stress, fills, risk, integrity, and complete falsification gates.",
+    "Binds the exact session receipts, outcomes, timestamps, scenario economics, trust-root material, and evidence digests into the independently attested release bundle.",
+    "Rejects unreceipted zero and favorable synthetic metrics and rejects reuse of a release receipt after an outcome is changed."
+  ],
+  "blockers": [
+    "No approved independent timestamp provider or deployment-pinned trust roots are configured; a caller-provided key map is not proof of deployment authority.",
+    "No authoritative immutable preregistration registry is connected to prevent replacement of the plan or evidence outside this function.",
+    "No real prospective market cohort, validated costs/fills, or external custody receipts exist; the signed test fixture is synthetic software evidence only.",
+    "The gate is not wired into the authoritative strategy promotion and paper-trading lifecycle."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/edge_confirmation.py": "05a034f55c352ae5acf7f02bf3a8a9f7781ab1fecccb927ff039687e6a9a68f8",
+    "tests/test_edge_confirmation.py": "601214f879d3a342b858fca8313f124ba9d2c2237cb3b93cde182d71111fcc4e"
+  }
+}
