@@ -11,6 +11,7 @@ from financial_brain.forward_edge.approvals import Approval
 from financial_brain.forward_edge.charter import EvaluationIdentity, ExperimentCharter
 from financial_brain.forward_edge.governance import FamilyEvidence, family_action_scope_sha256
 from financial_brain.forward_edge.durable import DurableJournal
+import financial_brain.forward_edge.paper_account_bridge as paper_bridge
 from financial_brain.forward_edge.paper_account_bridge import (
     ForwardPaperSessionService,
     PaperAccountBridgeError,
@@ -430,6 +431,51 @@ def test_crash_after_durable_fill_and_cost_post_restarts_without_duplicate_econo
                                   if row.get("t") == "OUTBOX_ACK")
     assert recovered_receipt_hash == reference_receipt_hash
     assert len([row for row in recovered_runner_rows if row.get("t") == "ACCOUNT_RECONCILIATION"]) == 1
+
+
+def test_restart_after_runner_close_recovers_mark_events_before_account_sync(tmp_path, monkeypatch):
+    service, config, account, runner_path, account_path = _service(tmp_path)
+    events = [_event(DECISION_AT + timedelta(seconds=1)),
+              _event(DECISION_AT + timedelta(seconds=2), bid="102", ask="102.05")]
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+    kwargs = dict(
+        preflight_fn=lambda: {"approved": True, "checks": {"cash": True}},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02,
+                                     "forecast_horizon_sessions": 1, "forecast_costs_included": True,
+                                     "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033,
+                                         "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001},
+                                     "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+    reconcile = paper_bridge.reconcile_paper_account
+
+    def crash_before_account_sync(**_kwargs):
+        raise RuntimeError("simulated crash before account sync")
+
+    monkeypatch.setattr(paper_bridge, "reconcile_paper_account", crash_before_account_sync)
+    with pytest.raises(RuntimeError, match="before account sync"):
+        service.run(config, events, **kwargs)
+    monkeypatch.setattr(paper_bridge, "reconcile_paper_account", reconcile)
+
+    restarted_account = PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
+                                     fee_schedule=SCHEDULE)
+    restarted_service = ForwardPaperSessionService(
+        ForwardSessionRunner(runner_path), restarted_account,
+        strategy_spec=service.strategy_spec, registry=service.registry,
+        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
+        paper_account_root=service.paper_account_root,
+    )
+    recovered = restarted_service.run(config, [], **kwargs)
+
+    assert recovered["status"] == "PAPER_COMPLETE"
+    assert recovered["account_reconciliation"]["mark"]["price"] == "102"
+    assert recovered["account_reconciliation"]["mark"]["observed_at_utc"] == events[-1].available_utc.isoformat()
+    assert restarted_account.position("NSE:INFY").quantity == 2
+    assert restarted_account.cash == Decimal("9799.80")
+    rows = DurableJournal(runner_path).records()
+    assert len([row for row in rows if row.get("t") == "ACCOUNT_RECONCILIATION"]) == 1
 
 
 def test_partial_receipt_releases_unfilled_reservation_after_cancel(tmp_path):

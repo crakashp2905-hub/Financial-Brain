@@ -474,10 +474,11 @@
         "test_preflight_is_immutable_and_blocks_actionable_decisions",
         "test_actionable_decision_without_preflight_is_rejected_and_not_executed",
         "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink",
-        "test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows"
+        "test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows",
+        "test_restart_after_runner_close_recovers_mark_events_before_account_sync"
       ],
-      "test_result": "Added ForwardPaperSessionService requiring a durable explicit preflight, then running the forward coordinator and idempotently reconciling receipts into the existing PaperAccount OMS and double-entry ledger. Stable fill IDs, effective-dated fee accounting, order state, cash, position, realized P&L, and available conservative unrealized marks are captured. Local mock integration demonstrates restart-safe reconciliation. Combined account bridge/PaperAccount/runner/intraday suite: 50 passed; Ruff, mypy, inventory freshness and diff checks passed.",
-      "evidence_sha256": "8d7baca06ccd139bd7ea008f1d319bee9b186616ff3a56d7db10d4fd38c6a3e7",
+      "test_result": "A hash-chain-verified recovery rebuilds the normalized quote stream from durable runner events before account reconciliation. A new crash-window regression proves restart after runner close but before account sync restores the latest post-fill mark without duplicating paper economics. Account bridge, forward session runner and crash matrix: 89 passed; Ruff and mypy passed.",
+      "evidence_sha256": "6def6f4c9a9303366b125e757b2fe8335733906863e03d596bdad7ea99edc19e",
       "blockers": [
         "No authorized Kite live-market session has yet been captured. The current daily access token is unavailable in this environment; real session evidence requires the owner login and an eligible market session."
       ]

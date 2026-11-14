@@ -172,14 +172,42 @@ class ForwardPaperSessionService:
             reconcile_execution_fn=reconcile_execution_fn,
         )
         if result.get("status") == "PAPER_COMPLETE":
+            reconciled_events = _persisted_session_events(
+                self.runner.journal_path, config.session_id)
             evidence = reconcile_paper_account(
                 runner_journal_path=self.runner.journal_path, config=config, result=result,
-                account=self.account, events=captured_events, paper_books=self.paper_books,
+                account=self.account, events=reconciled_events, paper_books=self.paper_books,
                 paper_book_plan_id=self.paper_book_plan_id,
                 strategy_id=self.strategy_spec.strategy_id,
             )
             return {**result, "account_reconciliation": evidence}
         return result
+
+
+def _persisted_session_events(journal_path: Path, session_id: str) -> list[NormalizedEvent]:
+    """Rebuild the session event stream from its durable runner journal after restart."""
+    rows = [row for row in DurableJournal(Path(journal_path)).records()
+            if row.get("t") == "MARKET_EVENT" and row.get("session_id") == session_id]
+    events: dict[str, NormalizedEvent] = {}
+    try:
+        for row in rows:
+            value = row["event"]
+            event = NormalizedEvent(
+                kind=value["kind"], instrument=value["instrument"],
+                event_utc=datetime.fromisoformat(value["event_utc"]),
+                received_utc=datetime.fromisoformat(value["received_utc"]),
+                available_utc=datetime.fromisoformat(value["available_utc"]),
+                payload=tuple(tuple(item) for item in value["payload"]),
+                ingested_utc=datetime.fromisoformat(value["ingested_utc"])
+                if value.get("ingested_utc") else None,
+            )
+            digest = event.content_sha256()
+            if digest != row.get("event_sha256"):
+                raise ValueError("event digest differs from its journal record")
+            events[digest] = event
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PaperAccountBridgeError("persisted session event journal cannot be replayed") from exc
+    return sorted(events.values(), key=lambda event: (event.available_utc, event.content_sha256()))
 
 
 def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConfig,
