@@ -157,6 +157,13 @@ def test_duplicate_or_unverified_session_dates_do_not_inflate_sample_size() -> N
     assert "INDEPENDENT_SESSION_RECEIPTS_INCOMPLETE" in result["reasons"]
 
 
+def test_noncanonical_session_date_is_rejected() -> None:
+    policy = _frozen()
+    evidence = _evidence(policy)
+    evidence["eligible_session_dates"][0] = "20261115"
+    assert "INVALID:eligible_session_dates" in evaluate_promotion(policy, evidence)["reasons"]
+
+
 def test_decision_ledger_is_immutable_chained_and_never_grants_cash_permission(tmp_path) -> None:
     policy = _frozen()
     ledger = PromotionDecisionLedger(tmp_path / "promotion.jsonl")

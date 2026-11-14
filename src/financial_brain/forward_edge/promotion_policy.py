@@ -147,6 +147,9 @@ def evaluate_promotion(policy: FrozenPromotionPolicy, evidence: dict) -> dict:
         except ValueError:
             reasons.append(f"INVALID:{field}")
             return None
+        if any(parsed_day.isoformat() != value for parsed_day, value in zip(parsed, values)):
+            reasons.append(f"INVALID:{field}")
+            return None
         if len(parsed) != len(set(parsed)):
             reasons.append(f"DUPLICATE:{field}")
             return None
