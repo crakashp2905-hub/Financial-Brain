@@ -215,7 +215,10 @@ def cmd_daily_paper_manifest(args: argparse.Namespace) -> tuple[dict, int]:
             account_root=Path(args.account_root),
             runner_journals=[Path(path) for path in args.runner_journal],
             session_date=args.session_date, captured_at=args.captured_at,
-            marks_map_path=Path(args.marks_map), archive_dir=Path(args.archive_dir),
+            marks_map_path=Path(args.marks_map) if args.marks_map else None,
+            derive_kite_marks=args.derive_kite_marks,
+            max_mark_age_seconds=args.max_mark_age_seconds,
+            archive_dir=Path(args.archive_dir),
             bundle_root=Path(args.bundle_root), report_output_root=Path(args.report_output_root),
             output_path=Path(args.output),
             history_sessions_path=Path(args.history_sessions) if args.history_sessions else None,
@@ -369,7 +372,12 @@ def main(argv: list[str] | None = None) -> int:
                           help="verified runner journal; repeat for each journal source")
     manifest.add_argument("--session-date", required=True)
     manifest.add_argument("--captured-at", required=True, help="aware ISO-8601 close capture timestamp")
-    manifest.add_argument("--marks-map", required=True, help="JSON map from registered strategy IDs to owner mark files")
+    marks = manifest.add_mutually_exclusive_group(required=True)
+    marks.add_argument("--marks-map", help="JSON map from registered strategy IDs to owner mark files")
+    marks.add_argument("--derive-kite-marks", action="store_true",
+                       help="derive conservative close marks from Kite-tagged durable quote events")
+    manifest.add_argument("--max-mark-age-seconds", type=float,
+                          help="required staleness ceiling when --derive-kite-marks is used")
     manifest.add_argument("--archive-dir", required=True)
     manifest.add_argument("--bundle-root", required=True)
     manifest.add_argument("--report-output-root", required=True)

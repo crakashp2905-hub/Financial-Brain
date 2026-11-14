@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -10,6 +10,8 @@ import financial_brain.forward_edge.daily_paper_cycle as cycle
 from financial_brain.forward_edge.cli import main
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.daily_evidence_bundle import verify_daily_bundle
+from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.kernel.oms import State
 from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
 
 
@@ -167,6 +169,65 @@ def test_daily_manifest_builder_derives_book_sessions_and_writes_immutable_hashe
     output_path.write_text(json.dumps(built), encoding="utf-8")
     with pytest.raises(cycle.DailyPaperCycleError, match="manifest hash"):
         cycle.preflight_daily_paper_cycle(output_path)
+
+
+def test_daily_manifest_builder_derives_fresh_close_bid_from_kite_tagged_quote(tmp_path, monkeypatch, capsys):
+    manifest, _source_path, _ = _fixture(tmp_path, monkeypatch)
+    beta_account_path = tmp_path / "accounts" / "paper-beta.jsonl"
+    beta_account = PaperAccount(
+        beta_account_path, account_id="paper-beta", initial_cash=Decimal("1000"),
+        fee_schedule=FeeSchedule("test-fees", date(2026, 1, 1), Decimal("1"), Decimal("1")))
+    beta_account.submit_intent(client_id="buy-beta", symbol="NSE:INFY", side="BUY", quantity=1,
+                               limit=Decimal("100"), reserve=Decimal("102"))
+    beta_account.move("buy-beta", State.SUBMITTED)
+    beta_account.move("buy-beta", State.ACCEPTED)
+    beta_account.record_fill("buy-beta", fill_id="fill-beta", quantity=1, price=Decimal("100"),
+                             filled_on=date(2026, 11, 16))
+
+    event = NormalizedEvent(
+        "QUOTE", "NSE:INFY", datetime(2026, 11, 16, 10, 0, tzinfo=timezone.utc),
+        datetime(2026, 11, 16, 10, 3, tzinfo=timezone.utc),
+        datetime(2026, 11, 16, 10, 4, tzinfo=timezone.utc),
+        tuple(sorted({"source": "kite_connect", "exchange": "NSE", "raw_sha256": "a" * 64,
+                      "exchange_timestamp_age_ms": "1000", "bid_price": "101", "ask_price": "101.10",
+                      "bid_qty": "5", "ask_qty": "7"}.items())),
+    )
+    runner_path = tmp_path / "beta-kite.runner.jsonl"
+    runner = DurableJournal(runner_path)
+    runner.append({"t": "SESSION_PLAN", "session_id": "s-beta",
+                   "config": {"exchange_date": "2026-11-16", "authority_strategy_id": "beta",
+                              "authority_account_id": "paper-beta"}})
+    runner.append({"t": "MARKET_EVENT", "session_id": "s-beta", "event_sha256": event.content_sha256(),
+                   "event": {"kind": event.kind, "instrument": event.instrument,
+                             "event_utc": event.event_utc.isoformat(),
+                             "received_utc": event.received_utc.isoformat(),
+                             "available_utc": event.available_utc.isoformat(),
+                             "payload": [list(item) for item in event.payload]}})
+    runner.append({"t": "SESSION_CLOSED", "session_id": "s-beta", "result": {"status": "NO_TRADE"}})
+    manifest["books"][1]["runner_journal"] = str(runner_path)
+    output_path = tmp_path / "derived-kite-manifest.json"
+    args = [
+        "daily-paper-manifest", "--registry", manifest["registry"],
+        "--plan-id", manifest["plan_id"], "--account-root", manifest["account_root"],
+        "--session-date", manifest["session_date"], "--captured-at", "2026-11-16T10:05:00+00:00",
+        "--derive-kite-marks", "--max-mark-age-seconds", "300",
+        "--archive-dir", str(tmp_path / "archives"), "--bundle-root", str(tmp_path / "bundles"),
+        "--report-output-root", manifest["report_output_root"], "--output", str(output_path),
+    ]
+    for row in manifest["books"]:
+        args.extend(["--runner-journal", row["runner_journal"]])
+
+    code = main(args)
+    result = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert result["book_count"] == 2
+    built = json.loads(output_path.read_text(encoding="utf-8"))
+    beta = next(row for row in built["books"] if row["strategy_id"] == "beta")
+    derived_marks = json.loads(Path(beta["marks"]).read_text(encoding="utf-8"))
+    assert derived_marks["NSE:INFY"]["price"] == "101"
+    assert derived_marks["NSE:INFY"]["source_sha256"] == "a" * 64
+    assert "KITE_LATEST_VALID_BID_MAX_AGE_S=300.0" == built["mark_policy"]
+    assert cycle.preflight_daily_paper_cycle(output_path)["ready"] is True
 
 
 def test_daily_paper_cycle_real_close_bundle_and_report_integration(tmp_path, monkeypatch, capsys):

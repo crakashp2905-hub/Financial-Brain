@@ -16,7 +16,7 @@ python -m financial_brain.forward_edge.cli daily-paper-manifest `
   --output data/forward/daily-cycle.json
 ```
 
-The marks map is a JSON object keyed by every registered strategy ID; each value is the path to that book's owner-observed close-mark JSON file. Optional prior rows can be supplied with `--history-sessions`. The generated manifest is content-hashed and immutable at its output path; edits are detected by preflight. The hash detects accidental changes, not authorship or authorization.
+Use either `--marks-map` or `--derive-kite-marks --max-mark-age-seconds <limit>`. The marks map is a JSON object keyed by every registered strategy ID; each value is the path to that book's owner-observed close-mark JSON file. Kite derivation selects the latest two-sided, positive-depth NSE bid in the session, verifies the normalized-event digest and raw quote hash shape, and enforces the configured source age and quote availability age. It refuses held symbols without a qualifying quote. The generated mark files retain the Kite source hash and availability time. A Kite source tag is provenance evidence in the local journal, not independent proof of a real provider session. Optional prior rows can be supplied with `--history-sessions`. The generated manifest is content-hashed and immutable at its output path; edits are detected by preflight. The hash detects accidental changes, not authorship or authorization.
 
 ## Manifest contract
 

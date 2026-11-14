@@ -13,6 +13,7 @@
 - `daily-paper-preflight` validates the whole daily input set and historical report rows without account mutation before an operator or scheduler runs the close cycle.
 - The Windows `paper_daily_finalize.cmd` wrapper provides an explicit scheduler entry point with preflight, logging, manifest requirement, and nonzero failure propagation; the scheduled task itself is not installed.
 - The `daily-paper-manifest` command derives exactly one terminal strategy/account session per frozen-plan book from durable runner journals and emits an immutable hash-checked manifest; it refuses ambiguous matches.
+- The manifest builder can derive conservative held-position close marks from the newest fresh Kite-tagged quote in that book's verified runner session, with raw quote digest, exchange clock, two-sided depth, and configured staleness checks; it never falls back to stale values.
 - The cycle manifest and retry contract are documented in [daily-paper-cycle.md](../forward-edge/daily-paper-cycle.md).
 
 ## Verification

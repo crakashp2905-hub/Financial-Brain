@@ -5,8 +5,10 @@ import json
 import hashlib
 from datetime import date, datetime
 from decimal import Decimal
+from math import isfinite
 import os
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from financial_brain.forward_edge.book_performance_report import (
     BookPerformanceError,
@@ -16,6 +18,7 @@ from financial_brain.forward_edge.book_performance_report import (
 from financial_brain.forward_edge.cli import EXIT, cmd_daily_finalize
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.eod_paper_archive import EodArchiveError, validate_close_evidence
+from financial_brain.forward_edge.market_data import NormalizedEvent
 from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
 from financial_brain.kernel.registered_paper_books import RegisteredPaperBooks
 
@@ -28,11 +31,110 @@ def _canonical(value: dict) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
+def _derive_kite_close_marks(*, account: PaperAccount, runner_rows: list[dict], session_id: str,
+                             session_date: date, captured_at: datetime,
+                             max_age_seconds: float) -> dict[str, dict]:
+    """Derive conservative long liquidation marks from provenance-bearing Kite quote events."""
+    if not isfinite(max_age_seconds) or max_age_seconds <= 0:
+        raise DailyPaperCycleError("Kite mark max age must be a finite positive number of seconds")
+    held = {position.symbol for position in account.positions}
+    if not held:
+        return {}
+    candidates: dict[str, list[tuple[datetime, str, dict]]] = {symbol: [] for symbol in held}
+    for row in runner_rows:
+        if row.get("t") != "MARKET_EVENT" or row.get("session_id") != session_id:
+            continue
+        try:
+            value = row["event"]
+            event = NormalizedEvent(
+                kind=value["kind"], instrument=value["instrument"],
+                event_utc=datetime.fromisoformat(value["event_utc"]),
+                received_utc=datetime.fromisoformat(value["received_utc"]),
+                available_utc=datetime.fromisoformat(value["available_utc"]),
+                payload=tuple((str(key), str(item)) for key, item in value["payload"]),
+                ingested_utc=datetime.fromisoformat(value["ingested_utc"])
+                if value.get("ingested_utc") else None,
+            )
+            event_hash = event.content_sha256()
+            if event_hash != row.get("event_sha256"):
+                continue
+        except (KeyError, TypeError, ValueError):
+            continue
+        if event.kind != "QUOTE" or event.instrument not in held:
+            continue
+        if event.available_utc > captured_at or event.available_utc.astimezone(
+                ZoneInfo("Asia/Kolkata")).date() != session_date:
+            continue
+        payload = dict(event.payload)
+        raw_hash = payload.get("raw_sha256")
+        if payload.get("source") != "kite_connect" or payload.get("exchange") != "NSE":
+            continue
+        if (not isinstance(raw_hash, str) or len(raw_hash) != 64
+                or any(char not in "0123456789abcdef" for char in raw_hash)):
+            continue
+        try:
+            bid, ask = Decimal(payload["bid_price"]), Decimal(payload["ask_price"])
+            bid_qty, ask_qty = int(payload["bid_qty"]), int(payload["ask_qty"])
+        except (KeyError, ValueError, TypeError, ArithmeticError):
+            continue
+        if (not bid.is_finite() or not ask.is_finite() or bid <= 0 or ask < bid
+                or bid_qty <= 0 or ask_qty <= 0):
+            continue
+        try:
+            source_age_seconds = float(payload["exchange_timestamp_age_ms"]) / 1000
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not isfinite(source_age_seconds) or source_age_seconds < 0:
+            continue
+        event_to_available = (event.available_utc - event.event_utc).total_seconds()
+        available_to_capture = (captured_at.astimezone(event.available_utc.tzinfo)
+                                - event.available_utc).total_seconds()
+        if max(source_age_seconds, event_to_available, available_to_capture) > max_age_seconds:
+            continue
+        mark = {"price": str(bid), "observed_at": event.available_utc.isoformat(),
+                "source_id": f"kite_connect:{event.instrument}:{event.event_utc.isoformat()}",
+                "source_sha256": raw_hash}
+        candidates[event.instrument].append((event.available_utc, event_hash, mark))
+
+    marks = {}
+    for symbol, rows in candidates.items():
+        if not rows:
+            raise DailyPaperCycleError(f"no valid Kite close quote found for held position {symbol}")
+        observed_at, _digest, mark = max(rows, key=lambda row: (row[0], row[1]))
+        marks[symbol] = mark
+    return marks
+
+
+def _write_immutable_json(path: Path, value: dict) -> None:
+    requested = Path(path)
+    if requested.is_symlink():
+        raise DailyPaperCycleError("generated close-mark file must not be a symbolic link")
+    target = requested.resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = (json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n").encode("utf-8")
+    if target.exists():
+        if target.is_symlink() or target.read_bytes() != payload:
+            raise DailyPaperCycleError("derived close-mark file exists with different content")
+        return
+    temporary = target.with_suffix(target.suffix + ".tmp")
+    try:
+        with temporary.open("xb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
 def build_daily_paper_manifest(*, registry_path: Path, plan_id: str, account_root: Path,
                                runner_journals: list[Path], session_date: str,
-                               captured_at: str, marks_map_path: Path, archive_dir: Path,
+                               captured_at: str, marks_map_path: Path | None, archive_dir: Path,
                                bundle_root: Path, report_output_root: Path,
-                               output_path: Path, history_sessions_path: Path | None = None) -> dict:
+                               output_path: Path, history_sessions_path: Path | None = None,
+                               derive_kite_marks: bool = False,
+                               max_mark_age_seconds: float | None = None) -> dict:
     """Derive a complete per-book session manifest from registered plans and verified journals.
 
     Owner-supplied close marks and prior history are explicit inputs; session IDs and account
@@ -51,10 +153,17 @@ def build_daily_paper_manifest(*, registry_path: Path, plan_id: str, account_roo
     plan = next((item for item in registry.plans if item.plan_id == plan_id), None)
     if plan is None:
         raise DailyPaperCycleError("requested frozen paper-book plan is not registered")
-    marks_mapping = json.loads(Path(marks_map_path).read_text(encoding="utf-8"))
     expected = {allocation.strategy_id: allocation for allocation in plan.books}
-    if not isinstance(marks_mapping, dict) or set(marks_mapping) != set(expected):
-        raise DailyPaperCycleError("marks map must contain one explicit file path for every registered strategy")
+    marks_mapping = None
+    if derive_kite_marks:
+        if marks_map_path is not None or max_mark_age_seconds is None:
+            raise DailyPaperCycleError("derived Kite marks require max_mark_age_seconds and cannot use a marks map")
+    else:
+        if marks_map_path is None:
+            raise DailyPaperCycleError("owner-provided marks map is required unless Kite mark derivation is enabled")
+        marks_mapping = json.loads(Path(marks_map_path).read_text(encoding="utf-8"))
+        if not isinstance(marks_mapping, dict) or set(marks_mapping) != set(expected):
+            raise DailyPaperCycleError("marks map must contain one explicit file path for every registered strategy")
     history: list[dict] = []
     if history_sessions_path is not None:
         history_value = json.loads(Path(history_sessions_path).read_text(encoding="utf-8"))
@@ -86,7 +195,8 @@ def build_daily_paper_manifest(*, registry_path: Path, plan_id: str, account_roo
                 continue
             if session_id not in terminal_ids:
                 raise DailyPaperCycleError(f"runner session {session_id} for {strategy_id} is not terminal")
-            matching[strategy_id].append({"session_id": session_id, "runner_journal": str(path)})
+            matching[strategy_id].append({"session_id": session_id, "runner_journal": str(path),
+                                          "runner_rows": records})
 
     books = []
     for strategy_id in sorted(expected):
@@ -94,9 +204,32 @@ def build_daily_paper_manifest(*, registry_path: Path, plan_id: str, account_roo
         if len(sessions) != 1:
             raise DailyPaperCycleError(
                 f"expected exactly one terminal session for {strategy_id} on {session_date}; found {len(sessions)}")
-        marks_path = Path(marks_mapping[strategy_id]).resolve()
-        if not marks_path.is_file():
-            raise DailyPaperCycleError(f"owner-provided close marks are missing for {strategy_id}")
+        marks_path: Path
+        if derive_kite_marks:
+            assert max_mark_age_seconds is not None
+            account_path = registry.account_path(
+                plan_id=plan_id, account_id=expected[strategy_id].account_id, root=Path(account_root))
+            account_rows = DurableJournal(account_path).records()
+            if not account_rows or account_rows[0].get("t") != "ACCOUNT_OPEN":
+                raise DailyPaperCycleError(f"registered account journal is missing its opening record: {strategy_id}")
+            opening = account_rows[0]
+            account = PaperAccount(
+                account_path, account_id=expected[strategy_id].account_id,
+                initial_cash=Decimal(str(opening["cash"])), currency=str(opening["currency"]),
+                fee_schedule=FeeSchedule.from_dict(opening.get("fee_schedule")))
+            marks = _derive_kite_close_marks(
+                account=account, runner_rows=sessions[0]["runner_rows"],
+                session_id=sessions[0]["session_id"], session_date=date.fromisoformat(session_date),
+                captured_at=capture, max_age_seconds=float(max_mark_age_seconds))
+            safe_id = hashlib.sha256(strategy_id.encode("utf-8")).hexdigest()[:24]
+            marks_path = (Path(output_path).resolve().parent / "derived-close-marks"
+                          / session_date / f"{safe_id}.json")
+            _write_immutable_json(marks_path, marks)
+        else:
+            assert marks_mapping is not None
+            marks_path = Path(marks_mapping[strategy_id]).resolve()
+            if not marks_path.is_file():
+                raise DailyPaperCycleError(f"owner-provided close marks are missing for {strategy_id}")
         books.append({
             "strategy_id": strategy_id, "session_id": sessions[0]["session_id"],
             "runner_journal": sessions[0]["runner_journal"], "marks": str(marks_path),
@@ -108,6 +241,8 @@ def build_daily_paper_manifest(*, registry_path: Path, plan_id: str, account_roo
         "captured_at": capture.isoformat(), "registry": str(registry_path),
         "plan_id": plan_id, "account_root": str(Path(account_root).resolve()),
         "books": books, "history_sessions": history,
+        "mark_policy": (f"KITE_LATEST_VALID_BID_MAX_AGE_S={max_mark_age_seconds}"
+                        if derive_kite_marks else "OWNER_PROVIDED_CLOSE_MARKS"),
         "report_output_root": str(Path(report_output_root).resolve()),
     }
     manifest = {**core, "manifest_sha256": hashlib.sha256(_canonical(core)).hexdigest()}
