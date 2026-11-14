@@ -4265,11 +4265,11 @@
         "CI run 43590775883 (Ubuntu and Windows; prior revision, Ubuntu evidence audit failed)",
         "CI run 43590906463 (Ubuntu and Windows; prior revision, in progress at latest check)"
       ],
-      "test_result": "The LF/CRLF-stable capability evidence hash fix and post-suite evidence audit passed in complete Ubuntu and Windows CI run 43601378017 at commit 2c61abe6cbc50e2efa864fb8c883a734431894ef. PR #32 remains open and unmerged without an independent approval.",
+      "test_result": "Latest complete Ubuntu and Windows CI runs 43617026883 (push) and 43617031014 (pull_request) passed at commit c2c1603e9c2fa57c077f22f38fd8dbe709153740, including full tests, post-suite evidence manifest verification, and task-evidence digest checks. PR #32 remains open pending independent approval.",
       "blockers": [
         "PR #32 still needs independent approval and merge to main; self-approval is not performed."
       ],
-      "evidence_sha256": "94d70218d7388f0a4db7b98e1bf1fa93b2ef221be595ac140b353f08b10c0c9c"
+      "evidence_sha256": "5908c1743458e8fa40bfba30077e94e3e0da6ac04e142e5e60dfd2a9ca2ef872"
     },
     {
       "id": "PE-0196",
@@ -4426,11 +4426,11 @@
       "tests": [
         "tests/test_dependency_inventory.py"
       ],
-      "test_result": "The lock-aware inventory parser, full dependency audit, and clean offline installs passed on Ubuntu and Windows in complete CI run 43601378017 at commit 2c61abe6cbc50e2efa864fb8c883a734431894ef. Both platform artifacts include the machine-readable dependency inventory; artifact identities and digests are recorded in the PE-0204 evidence report. Three focused inventory tests and Ruff pass locally. The earlier local mismatch counts came from an unrelated environment and are withdrawn; no license compatibility claim is made.",
+      "test_result": "The lock-aware inventory parser, full dependency audit, clean offline installs, and full tests passed on Ubuntu and Windows in runs 43617026883 and 43617031014 at commit c2c1603e9c2fa57c077f22f38fd8dbe709153740. Platform artifact identities and digests from the earlier complete run remain recorded in the PE-0204 report. The earlier local mismatch counts are withdrawn; no license compatibility claim is made.",
       "blockers": [
         "License identifiers and compatibility still require a documented manual review."
       ],
-      "evidence_sha256": "98fc1a9a249235c26b6f42428f8da978aaac8b661dadcadd942ac5b02cd46df4"
+      "evidence_sha256": "71f107ba746d49fb1d40ce0026424dff4a5a7e9dd7271d0e31898d8b6a6c37a3"
     },
     {
       "id": "PE-0205",
@@ -4471,11 +4471,11 @@
         "tests/test_kite_history_refresh.py",
         "full pytest suite in CI before evidence-manifest check"
       ],
-      "test_result": "The eight-domain hash-pinned capability matrix passed full Ubuntu/Windows CI run #609 at commit bf19b2fb56a8917a685cedf0a5c91582461af5f0. Current follow-up registered-book account-path enforcement has refreshed the manifest but needs its own CI run.",
+      "test_result": "The refreshed eight-domain hash-pinned capability matrix, post-suite manifest audit, registry-gated legacy paper lane, and Kite timestamp integration passed full Ubuntu/Windows runs 43617026883 and 43617031014 at commit c2c1603e9c2fa57c077f22f38fd8dbe709153740.",
       "blockers": [
         "The matrix remains curated rather than exhaustive across all platform capabilities; independent market evidence, entitlements and custody are not supplied by file hashes."
       ],
-      "evidence_sha256": "0e86b2e6a7d5ad1ca8ad4378c1a724b3704d19665c7abd059534c7a59d742f02"
+      "evidence_sha256": "1208c491944f265fb42e2b93b46798e769e634e94aaef73ebc257a60eb09c3f2"
     },
     {
       "id": "PE-0202",

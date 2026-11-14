@@ -14,6 +14,6 @@ The last PR check for the checklist branch passed the full test suite but failed
 
 ## Remaining acceptance
 
-The line-ending fix and capability-manifest audit passed in the complete cross-platform [CI run #598](https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43601378017) at commit `2c61abe6cbc50e2efa864fb8c883a734431894ef`. Both platform jobs completed the full suite and post-suite evidence audit successfully.
+The line-ending fix, task-evidence hash checks, capability-manifest audit, and full suite passed on both platforms in [CI run #43617026883](https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43617026883) (push) and [CI run #43617031014](https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43617031014) (pull request) at commit `c2c1603e9c2fa57c077f22f38fd8dbe709153740`.
 
 PE-0195 remains **PARTIAL** because PR #32 is not merged to `main` and has no independent approving review. Branch protection remains in force. No self-approval or bypass is performed.
