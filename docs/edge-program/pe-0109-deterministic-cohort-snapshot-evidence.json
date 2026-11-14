@@ -19,6 +19,6 @@
   "source_sha256": {
     "src/financial_brain/forward_edge/decision_custody.py": "acf212970da75bbb7c1440224087bff9d1010cbc408b0134fe42867d9932c218",
     "tests/test_forward_edge_f04.py": "53a865c38e15c216d0f2398202d098098542bad1239f43458f84efe41b2c36bb",
-    "docs/edge-program/source-inventory.json": "3071acf3a0aee43f4bc6fa35c62351765c4963a1c899816e9f63df7a4bcb1930"
+    "docs/edge-program/source-inventory.json": "e08bede3c00df4af79cf49503e9de84b3786d052b7d7f15551fbff915badf877"
   }
 }

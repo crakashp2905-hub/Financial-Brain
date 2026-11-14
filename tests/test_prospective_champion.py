@@ -134,6 +134,35 @@ def test_canonical_custody_verifier_requires_pinned_signature_and_scheduled_day(
         "independently_verified_days"] == 1
 
 
+def test_canonical_custody_pipeline_binds_full_manifest_and_schedule(monkeypatch):
+    monkeypatch.setattr(champion, "record", _fake_record)
+    verified_receipts = []
+
+    def trusted_test_root(receipt, roots):
+        verified_receipts.append((receipt, roots))
+        return True
+
+    monkeypatch.setattr(custody, "_signature_ok", trusted_test_root)
+    ledger = duckdb.connect()
+    prospective.record(_research(), ledger, TODAY, now=NOW)
+    prospective.attach_manifest(ledger, TODAY, _manifest(ledger))
+    manifest_row = prospective._manifest_row(ledger, TODAY.isoformat())
+    assert manifest_row is not None
+    digest = manifest_row[1]
+    anchored = NOW.replace(minute=1)
+    prospective.attach_anchor(ledger, TODAY, provider="test-tsa", key_id="test-key",
+                              anchored_at_utc=anchored, receipt="test-signature")
+    roots = {("test-tsa", "test-key"): custody.TrustRoot(
+        "test-tsa", "test-key", "not-used-by-mocked-signature-check")}
+
+    assert prospective.verified_days(ledger, trust_roots=roots,
+                                     scheduled_days={TODAY.isoformat()}) == {TODAY.isoformat()}
+    assert prospective.verified_days(ledger, trust_roots=roots,
+                                     scheduled_days={"2026-10-30"}) == set()
+    assert verified_receipts[0][0].digest_sha256 == digest
+    assert verified_receipts[0][1] == roots
+
+
 def test_manifest_mutation_or_pick_only_legacy_anchor_never_verifies(monkeypatch):
     monkeypatch.setattr(champion, "record", _fake_record)
     ledger = duckdb.connect()

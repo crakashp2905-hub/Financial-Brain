@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 115,
-  "unrecorded_tasks": 103,
+  "recorded_tasks": 118,
+  "unrecorded_tasks": 100,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2460,10 +2460,11 @@
       "tests": [
         "test_external_anchor_is_required_and_reverified",
         "test_canonical_custody_verifier_requires_pinned_signature_and_scheduled_day",
-        "test_manifest_mutation_or_pick_only_legacy_anchor_never_verifies"
+        "test_manifest_mutation_or_pick_only_legacy_anchor_never_verifies",
+        "test_canonical_custody_pipeline_binds_full_manifest_and_schedule"
       ],
-      "test_result": "5 passed, 3 skipped because cryptography is not installed in the local environment; Ruff and mypy passed for prospective.py. Canonical signed-receipt verification and frozen scheduled-date filtering are implemented.",
-      "evidence_sha256": "a3eab53ee6e4d7f9ac373b0c0092190efc7601ad08cdd46cceb445c93c68c809",
+      "test_result": "21 passed, 3 skipped because cryptography is not installed in the local environment; Ruff and mypy passed for both affected modules. Canonical classifier wiring is exercised with a mocked signature primitive; optional Ed25519 integration tests skip locally.",
+      "evidence_sha256": "e464878a4a20a13772adb3456218532c8b131b16413cf17beabbbd5a619ddec6",
       "blockers": [
         "No authoritative explicit exchange-session schedule is available; PE-0103 still stores date ranges.",
         "No owner-approved external timestamp service or production trust root is configured."
@@ -2486,8 +2487,72 @@
         "test_bundle_refuses_duplicate_or_out_of_schedule_sessions"
       ],
       "test_result": "15 focused forward decision-custody tests passed; Ruff and mypy passed for decision_custody.py. Exported replay hashes match, altered equity hashes are detected, and custody-status mismatches are reported.",
-      "evidence_sha256": "c055fae4c9671e1355edf66d34499c7c54c6a2f01b1b50dc52e3d2efe187f665",
+      "evidence_sha256": "4056395927af6dbfd0ceb615a6a1496f0c758e39d94849471af030f94cace0fc",
       "blockers": []
+    },
+    {
+      "id": "PE-0118",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/matched_performance.py",
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "tests/test_matched_performance.py",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/pe-0118-matched-net-benchmark.md",
+        "docs/edge-program/pe-0118-matched-net-benchmark-evidence.json"
+      ],
+      "tests": [
+        "test_matched_net_alpha_uses_same_sessions_budget_and_flow_adjusted_nav",
+        "test_matched_net_alpha_refuses_date_and_risk_budget_mismatches",
+        "test_nav_contract_rejects_missing_or_duplicate_dates_and_nonpositive_budgets"
+      ],
+      "test_result": "3 matched benchmark contract tests passed; Ruff and mypy passed for matched_performance.py. Missing dates and unequal risk budgets are rejected.",
+      "evidence_sha256": "61d82b92b9b7c577fc02ceaa5ad0cf45f44472a60ac4e325dbfe04fecd9d205b",
+      "blockers": []
+    },
+    {
+      "id": "PE-0119",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/performance_report.py",
+        "src/financial_brain/evaluation/performance.py",
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "tests/test_performance_report.py",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/pe-0119-performance-summary.md",
+        "docs/edge-program/pe-0119-performance-summary-evidence.json"
+      ],
+      "tests": [
+        "test_report_declares_sample_denominator_and_assumptions",
+        "test_missing_session_stays_in_denominator_and_withholds_metrics",
+        "test_report_rejects_extra_unscheduled_data_and_duplicate_schedule"
+      ],
+      "test_result": "3 performance-summary tests passed; Ruff and mypy passed for performance_report.py. Reports declare the denominator and assumptions and withhold metrics when the return path has missing sessions.",
+      "evidence_sha256": "008d5e5b1bd7390cc0c4e0c5c996bf93e9ae315ad187b1b40cf85e138df3fbc4",
+      "blockers": []
+    },
+    {
+      "id": "PE-0120",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/dependence.py",
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "tests/test_dependence_policy.py",
+        "docs/edge-program/source-inventory.json",
+        "docs/edge-program/pe-0120-frozen-dependence-policy.md",
+        "docs/edge-program/pe-0120-frozen-dependence-policy-evidence.json"
+      ],
+      "tests": [
+        "test_policy_is_hashable_and_must_precede_observations",
+        "test_dependence_summary_reports_effective_sample_and_fixed_bootstrap",
+        "test_policy_and_sample_contracts_fail_closed"
+      ],
+      "test_result": "3 dependence-policy tests passed; Ruff and mypy passed for dependence.py. The policy hash, temporal ordering guard, effective sample size and deterministic block-bootstrap interval are verified.",
+      "evidence_sha256": "e2801a5864e95550543b7627cc025f9ea4199879070f89151f24e378d28e2258",
+      "blockers": [
+        "The timestamp ordering is supplied by the caller and is not externally attested or bound to a live cohort registry.",
+        "No prospective forward cohort has yet validated the declared lags and block policy against elapsed market outcomes."
+      ]
     }
   ]
 }
