@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0124",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_prospective_cohort.py",
+    "result": "9 passed; Ruff passed for the new module and test file."
+  },
+  "implemented": [
+    "Champion selection receives development returns only; confirmation outcomes are not part of the selection API.",
+    "Development and confirmation schedules must be ordered and non-overlapping.",
+    "A content-addressed champion plan must be frozen before the caller-supplied first confirmation observation time.",
+    "Confirmation keeps every scheduled date in the denominator and withholds the mean if any scheduled result is missing.",
+    "Synthetic tests cover deterministic selection, missing and unexpected dates, non-finite values, overlap and late freeze rejection."
+  ],
+  "blockers": [
+    "The plan is not yet persisted in an authoritative durable registry that prevents replacement after confirmation outcomes are observed.",
+    "Freeze and first-observation timestamps are caller-supplied; no independently attested timestamp service is connected.",
+    "No prospective market cohort has elapsed; synthetic tests do not establish performance."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/prospective_cohort.py": "5df6ee250af783db3d351fb26ef11492de25c49f2c1b03d2fb4b5af7173b3504",
+    "tests/test_prospective_cohort.py": "f0f7343df0df836a4739973d695993b572bcba245e47a57bd953557b132950df"
+  }
+}

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 121,
-  "unrecorded_tasks": 97,
+  "recorded_tasks": 122,
+  "unrecorded_tasks": 96,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2610,6 +2610,30 @@
       "evidence_sha256": "f422bad324ff8c1a503da91e7f1b923584992157034a3d268fbe413363c779aa",
       "blockers": [
         "The caller supplies the candidate matrix; its columns are not yet enforced against the authoritative full development search registry. A caller could omit tried candidates and understate selection bias."
+      ]
+    },
+    {
+      "id": "PE-0124",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/prospective_cohort.py",
+        "tests/test_prospective_cohort.py",
+        "docs/edge-program/pe-0124-prospective-champion-cohort.md",
+        "docs/edge-program/pe-0124-prospective-champion-cohort-evidence.json"
+      ],
+      "tests": [
+        "test_selection_is_development_only_and_plan_hash_is_reproducible",
+        "test_confirmation_never_promotes_on_partial_scheduled_data",
+        "test_complete_confirmation_reports_the_frozen_candidate_only",
+        "test_invalid_or_contaminated_selection_plan_is_refused",
+        "test_confirmation_refuses_unscheduled_or_nonfinite_returns"
+      ],
+      "test_result": "9 focused prospective cohort tests passed; Ruff passed. Selection is development-only, date schedules are non-overlapping, the plan freeze precedes first confirmation observation, and incomplete confirmation retains the scheduled denominator.",
+      "evidence_sha256": "2d75c9c08280ddf33ff07a80ddbe33ecf56673c5b9d372ece36f549e1a51cbc5",
+      "blockers": [
+        "No durable authoritative cohort registry prevents plan replacement after confirmation observations.",
+        "Freeze and first-observation timestamps are caller-supplied without independent attestation.",
+        "No prospective market cohort has elapsed; synthetic tests do not establish performance."
       ]
     }
   ]
