@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
@@ -310,24 +311,76 @@ def completeness_report(session_id: str, present: set[str], incidents: list[str]
 # ---- FE-0077 backup and restore ----
 
 def backup(files: list[Path], dest: Path) -> dict[str, str]:
-    dest.mkdir(parents=True, exist_ok=True)
-    manifest = {}
-    for f in files:
-        shutil.copyfile(f, dest / f.name)
-        manifest[f.name] = hashlib.sha256(f.read_bytes()).hexdigest()
-    (dest / "BACKUP_MANIFEST.json").write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
-    return manifest
+    """Create a verified dependency-set bundle while preserving each relative path.
+
+    All source files must share one base directory. Existing bundles are immutable; callers
+    must choose a new destination instead of silently replacing previous evidence.
+    """
+    source_paths = [Path(f).resolve() for f in files]
+    if not source_paths or len(set(source_paths)) != len(source_paths):
+        raise SessionError("backup requires a non-empty set of unique source files")
+    if any(not path.is_file() for path in source_paths):
+        raise SessionError("backup source set contains a missing or non-file dependency")
+    common = Path(os.path.commonpath([str(path.parent) for path in source_paths]))
+    entries: list[dict[str, object]] = []
+    for path in sorted(source_paths):
+        try:
+            relative = path.relative_to(common).as_posix()
+        except ValueError as exc:
+            raise SessionError("backup dependencies must share a common base directory") from exc
+        if relative.startswith("../") or relative in {".", "BACKUP_MANIFEST.json"}:
+            raise SessionError("backup dependency path is not safe")
+        payload = path.read_bytes()
+        entries.append({"path": relative, "sha256": hashlib.sha256(payload).hexdigest(), "size_bytes": len(payload)})
+    manifest = {"schema_version": "fb.offline-backup.v1", "files": entries}
+    manifest_bytes = json.dumps(manifest, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8") + b"\n"
+    destination = Path(dest)
+    if destination.exists():
+        raise SessionError("backup destination already exists; bundles are immutable")
+    destination.mkdir(parents=True)
+    try:
+        for path, entry in zip(sorted(source_paths), entries):
+            relative = str(entry["path"])
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, target)
+        (destination / "BACKUP_MANIFEST.json").write_bytes(manifest_bytes)
+    except BaseException:
+        shutil.rmtree(destination, ignore_errors=True)
+        raise
+    return {str(entry["path"]): str(entry["sha256"]) for entry in entries}
 
 
 def verify_restore(restored_dir: Path) -> list[str]:
-    manifest = json.loads((restored_dir / "BACKUP_MANIFEST.json").read_text(encoding="utf-8"))
+    root = Path(restored_dir).resolve()
+    try:
+        manifest = json.loads((root / "BACKUP_MANIFEST.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ["missing or invalid BACKUP_MANIFEST.json"]
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != "fb.offline-backup.v1" or not isinstance(manifest.get("files"), list):
+        return ["invalid backup manifest schema"]
     problems = []
-    for name, digest in sorted(manifest.items()):
-        p = restored_dir / name
+    seen = set()
+    for entry in manifest["files"]:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str) or not isinstance(entry.get("sha256"), str):
+            problems.append("invalid manifest file entry")
+            continue
+        name, digest = entry["path"], entry["sha256"]
+        relative = Path(name)
+        if relative.is_absolute() or ".." in relative.parts or name in seen or name == "BACKUP_MANIFEST.json":
+            problems.append(f"unsafe or duplicate path {name}")
+            continue
+        seen.add(name)
+        p = (root / relative).resolve()
+        if root not in p.parents:
+            problems.append(f"unsafe path {name}")
+            continue
         if not p.exists():
             problems.append(f"missing {name}")
         elif hashlib.sha256(p.read_bytes()).hexdigest() != digest:
             problems.append(f"mismatch {name}")
+    if not seen:
+        problems.append("backup manifest has no file entries")
     return problems
 
 

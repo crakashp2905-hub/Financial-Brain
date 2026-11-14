@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 197,
-  "unrecorded_tasks": 21,
+  "recorded_tasks": 198,
+  "unrecorded_tasks": 20,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4290,6 +4290,25 @@
         "A durable multi-segment catalog/manifest chain linking archive rotations is not implemented."
       ],
       "evidence_sha256": "1ead5fdd688439ae3c97d3fb00cdff241daf55a16ffa420ddbc7ac772255b061"
+    },
+    {
+      "id": "PE-0201",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/session_ops.py",
+        "tests/test_forward_edge_f06.py",
+        "docs/edge-program/pe-0201-offline-backup-restore-evidence.md"
+      ],
+      "tests": [
+        "test_backup_restores_to_recorded_hashes_and_detects_corruption",
+        "test_backup_preserves_dependency_paths_and_restores_without_source_tree",
+        "test_backup_rejects_overwrite_and_manifest_path_traversal"
+      ],
+      "test_result": "Backup now creates an immutable versioned manifest bundle preserving relative paths and per-file hashes; restore validation rejects traversal, duplicate paths, missing/tampered files and empty bundles. Tests copy the bundle to an isolated restore directory, delete the source tree, and validate restored bytes. Session reliability suite: 14 passed; Ruff and mypy passed.",
+      "blockers": [
+        "Dependency files must be explicitly supplied; automatic discovery and end-to-end reconstruction of all journals, quote archives, ledgers, manifests and configuration inputs from a real session are not wired into one operator drill."
+      ],
+      "evidence_sha256": "29c6db177d32e45bfdc4921c975fef88600b2c9bd4c8cac24b37cc3af39a6a86"
     }
   ]
 }

@@ -1,6 +1,8 @@
 """F06 - session automation and reliability (FE-0069 .. FE-0078). Offline, injected clock."""
 from __future__ import annotations
 
+import json
+import shutil
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -132,6 +134,37 @@ def test_backup_restores_to_recorded_hashes_and_detects_corruption(tmp_path: Pat
     assert S.verify_restore(bk) == []
     (bk / "ledger.jsonl").write_text("corrupt", encoding="utf-8")
     assert S.verify_restore(bk) == ["mismatch ledger.jsonl"]
+
+
+def test_backup_preserves_dependency_paths_and_restores_without_source_tree(tmp_path: Path) -> None:
+    source = tmp_path / "live"
+    (source / "journals").mkdir(parents=True)
+    (source / "quotes").mkdir()
+    (source / "journals" / "session.jsonl").write_text("journal\n", encoding="utf-8")
+    (source / "quotes" / "session.jsonl").write_text("quotes\n", encoding="utf-8")
+    bundle = tmp_path / "offline-bundle"
+
+    result = S.backup([source / "journals" / "session.jsonl", source / "quotes" / "session.jsonl"], bundle)
+    assert set(result) == {"journals/session.jsonl", "quotes/session.jsonl"}
+    assert S.verify_restore(bundle) == []
+    restored = tmp_path / "isolated-restore"
+    shutil.copytree(bundle, restored)
+    shutil.rmtree(source)
+    assert S.verify_restore(restored) == []
+    assert (restored / "journals" / "session.jsonl").read_text(encoding="utf-8") == "journal\n"
+
+
+def test_backup_rejects_overwrite_and_manifest_path_traversal(tmp_path: Path) -> None:
+    source = tmp_path / "live.jsonl"
+    source.write_text("ok\n", encoding="utf-8")
+    bundle = tmp_path / "bundle"
+    S.backup([source], bundle)
+    with pytest.raises(S.SessionError, match="already exists"):
+        S.backup([source], bundle)
+    manifest = json.loads((bundle / "BACKUP_MANIFEST.json").read_text(encoding="utf-8"))
+    manifest["files"][0]["path"] = "../escape.jsonl"
+    (bundle / "BACKUP_MANIFEST.json").write_text(json.dumps(manifest), encoding="utf-8")
+    assert any("unsafe" in problem for problem in S.verify_restore(bundle))
 
 
 # ---- FE-0078 ----
