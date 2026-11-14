@@ -41,10 +41,38 @@ class SampleSizePlan:
     frozen_at_utc: str
     first_observation_at_utc: str
 
+    def as_dict(self) -> dict:
+        return asdict(self)
+
     def sha256(self) -> str:
         payload = json.dumps(asdict(self), sort_keys=True, separators=(",", ":"),
                              allow_nan=False)
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def from_dict(cls, value: dict) -> "SampleSizePlan":
+        expected = set(cls.__dataclass_fields__)
+        if not isinstance(value, dict) or set(value) != expected:
+            raise SampleSizeError("malformed sample-size plan")
+        try:
+            rebuilt = design_sample_size(
+                design_id=value["design_id"],
+                detectable_daily_benefit=value["detectable_daily_benefit"],
+                daily_volatility=value["daily_volatility"],
+                target_power=value["target_power"],
+                familywise_alpha=value["familywise_alpha"],
+                planned_looks=value["planned_looks"],
+                dependence_design_effect=value["dependence_design_effect"],
+                expected_observation_rate=value["expected_observation_rate"],
+                session_floor=value["session_floor"],
+                frozen_at_utc=value["frozen_at_utc"],
+                first_observation_at_utc=value["first_observation_at_utc"],
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise SampleSizeError("malformed sample-size plan") from exc
+        if rebuilt.as_dict() != value:
+            raise SampleSizeError("sample-size plan differs from its derived requirements")
+        return rebuilt
 
 
 def design_sample_size(

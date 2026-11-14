@@ -15,6 +15,7 @@ from financial_brain.forward_edge.governance import FamilyEvidence, family_actio
 from financial_brain.forward_edge.durable import DurableJournal
 import financial_brain.forward_edge.paper_account_bridge as paper_bridge
 from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
+from financial_brain.forward_edge.sample_size import design_sample_size
 from financial_brain.forward_edge.paper_account_bridge import (
     ForwardPaperSessionService,
     PaperAccountBridgeError,
@@ -220,9 +221,17 @@ def test_live_paper_service_stale_health_fails_closed_before_strategy(tmp_path):
 def test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart(tmp_path):
     service, config, account, _runner_path, account_path = _service(tmp_path)
     policy = FixedLookPolicy(
-        policy_id="trial-risk-v1", checkpoints=(20, 40), familywise_alpha=0.05,
+        policy_id="trial-risk-v1", checkpoints=(20, 40, 60), familywise_alpha=0.05,
         max_drawdown_floor=-0.15, frozen_at_utc="2026-01-01T00:00:00Z",
         first_observation_at_utc="2026-01-02T00:00:00Z",
+    )
+    sample_size_plan = design_sample_size(
+        design_id="trial-risk-sample-v1", detectable_daily_benefit=0.04,
+        daily_volatility=0.10, target_power=0.8, familywise_alpha=policy.familywise_alpha,
+        planned_looks=len(policy.checkpoints), dependence_design_effect=1.0,
+        expected_observation_rate=1.0, session_floor=10,
+        frozen_at_utc=policy.frozen_at_utc,
+        first_observation_at_utc=policy.first_observation_at_utc,
     )
     identity = EvaluationIdentity(
         strategy_code_sha256=service.strategy_spec.code_sha256, model_code_sha256="1" * 64,
@@ -230,7 +239,8 @@ def test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart(tm
         data_rights_sha256="3" * 64, market_calendar_id="NSE-test",
         market_calendar_sha256="4" * 64, universe_sha256="5" * 64,
         execution_cost_id="paper-cost-v1", execution_cost_sha256="6" * 64,
-        risk_policy_sha256=policy.sha256(), benchmarks=(("NIFTY50", "f" * 64),),
+        risk_policy_sha256=FixedLookRegistry.bundle_sha256(policy, sample_size_plan),
+        benchmarks=(("NIFTY50", "f" * 64),),
     )
     charter = ExperimentCharter(
         charter_id="trial-risk-v1", version=1, strategy_id=service.strategy_spec.strategy_id,
@@ -242,7 +252,8 @@ def test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart(tm
     schedule = CohortSchedule(charter.sha256(), (Cohort("risk-test", "2026-11-12", "2027-03-31"),))
     charter_registry.register(charter, schedule)
     fixed_look_registry = FixedLookRegistry(tmp_path / "risk-look.jsonl", charter_registry)
-    fixed_look_registry.register(policy, charter_id=charter.charter_id)
+    fixed_look_registry.register(policy, sample_size_plan=sample_size_plan,
+                                 charter_id=charter.charter_id)
     strategy_calls = []
     result = service.run(
         config, [_event(DECISION_AT + timedelta(seconds=1))],

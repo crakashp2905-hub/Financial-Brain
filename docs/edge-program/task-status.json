@@ -2729,14 +2729,16 @@
       "id": "PE-0126",
       "status": "PARTIAL",
       "sources": [
+        "docs/edge-program/pe-0126-fixed-look-risk-stop.md",
+        "src/financial_brain/forward_edge/charter.py",
         "src/financial_brain/forward_edge/fixed_look.py",
         "src/financial_brain/forward_edge/fixed_look_registry.py",
-        "src/financial_brain/forward_edge/charter.py",
         "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/forward_edge/sample_size.py",
         "tests/test_fixed_look.py",
         "tests/test_fixed_look_registry.py",
         "tests/test_forward_paper_account_bridge.py",
-        "docs/edge-program/pe-0126-fixed-look-risk-stop.md"
+        "tests/test_sample_size.py"
       ],
       "tests": [
         "test_unscheduled_interim_display_cannot_produce_an_efficacy_decision",
@@ -2747,15 +2749,17 @@
         "test_policy_is_frozen_before_first_observation_and_hashes_all_look_controls",
         "test_invalid_look_observations_are_rejected",
         "test_registered_policy_is_recovered_and_evaluated_from_frozen_charter",
+        "test_registered_early_look_withholds_efficacy_until_required_sample_size",
         "test_registry_rejects_policy_that_does_not_match_charter_risk_hash",
+        "test_registry_rederives_sample_size_instead_of_trusting_dataclass_fields",
         "test_registry_rejects_policy_after_charter_revision",
         "test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart"
       ],
-      "test_result": "FixedLookRegistry durably binds each fixed-look risk policy to the registered charter revision risk hash; historical registration replays, while policy resolution fails after charter revision. ForwardPaperSessionService evaluates registered observations and persists harm breaches to the paper-account latch; integration proves strategy/risk/execution callbacks remain blocked after account restart. Focused charter/fixed-look/registry/bridge suite: 89 passed. Full Windows suite: 4147 passed, 1 skipped. Ruff, configured mypy, migrations, capability matrix, source inventory, algo/chart matrices, and offline pattern demo passed. Synthetic tests only.",
-      "evidence_sha256": "bc5106e2575f7bac41bce1a2e5f51827a9e94e65bfb6c3ad171a2a2ae5333b56",
+      "test_result": "Full Windows suite: 4149 passed, 1 skipped (1025.80s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff and mypy passed for changed modules. Registered policy and re-derived sample-size plan are pinned together; early efficacy is withheld until the calculated sample count. Synthetic software verification only.",
+      "evidence_sha256": "7c799468f536fb59342333cdae4bef97136b5b560127e64561cb825b4f232758",
       "blockers": [
-        "Production session configuration does not yet require the registry or bind its observation callback to receipt-derived cohort metrics; a legacy arbitrary callback path remains for compatibility.",
-        "The fixed-look schedule is not automatically joined to the power-based sample-size plan or prospective performance evidence; no live result is claimed."
+        "Production session configuration does not yet require the registry or bind its observation callback to receipt-derived, independently attested cohort metrics.",
+        "The fixed-look package is not yet enforced by the authoritative promotion gate, and no prospective market-performance result is claimed."
       ]
     },
     {

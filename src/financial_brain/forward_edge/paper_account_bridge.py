@@ -108,7 +108,6 @@ class ForwardPaperSessionService:
             reconcile_execution_fn: Callable[[str], dict] | None = None,
             feed_health: FeedHealth | None = None,
             feed_health_observed_at: datetime | None = None,
-            risk_stop_fn: Callable[[], dict] | None = None,
             fixed_look_registry: FixedLookRegistry | None = None,
             fixed_look_policy_id: str | None = None,
             fixed_look_observation_fn: Callable[[], dict] | None = None) -> dict:
@@ -168,9 +167,7 @@ class ForwardPaperSessionService:
         risk_stop_block: str | None = None
         registered_risk_configured = any(value is not None for value in (
             fixed_look_registry, fixed_look_policy_id, fixed_look_observation_fn))
-        if risk_stop_fn is not None and registered_risk_configured:
-            risk_stop_block = "FIXED_LOOK_CONFIGURATION_INVALID"
-        elif registered_risk_configured and (
+        if registered_risk_configured and (
                 fixed_look_registry is None or fixed_look_policy_id is None
                 or fixed_look_observation_fn is None):
             risk_stop_block = "FIXED_LOOK_CONFIGURATION_INVALID"
@@ -182,15 +179,9 @@ class ForwardPaperSessionService:
             except Exception as exc:  # noqa: BLE001 - evidence callback failures block orders
                 candidate = None
                 risk_stop_block = f"FIXED_LOOK_REGISTRY_EVALUATION_FAILED:{type(exc).__name__}"
-        elif risk_stop_fn is not None:
-            try:
-                candidate = risk_stop_fn()
-            except Exception as exc:  # noqa: BLE001 - evidence callback failures block orders
-                candidate = None
-                risk_stop_block = f"FIXED_LOOK_EVIDENCE_CALLBACK_FAILED:{type(exc).__name__}"
         else:
             candidate = None
-        if risk_stop_fn is not None or registered_risk_configured:
+        if registered_risk_configured:
             if risk_stop_block is None:
                 required = {"status", "orders_permission", "completed_sessions", "policy_id", "policy_sha256"}
                 try:
