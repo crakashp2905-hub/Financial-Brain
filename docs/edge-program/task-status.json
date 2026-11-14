@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 134,
-  "unrecorded_tasks": 84,
+  "recorded_tasks": 135,
+  "unrecorded_tasks": 83,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2925,6 +2925,32 @@
       "blockers": [
         "No frozen paper control-book outcomes or authoritative binding of control inputs.",
         "Observational matched comparisons do not establish causal filter benefit."
+      ]
+    },
+    {
+      "id": "PE-0137",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/ablation_plan.py",
+        "tests/test_ablation_plan.py",
+        "docs/edge-program/pe-0137-frozen-training-ablation-archive.md",
+        "docs/edge-program/pe-0137-frozen-training-ablation-archive-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_full_grid_retains_negative_zero_and_positive_outcomes_for_every_cell",
+        "test_every_combination_uses_same_schedule_and_missing_cells_are_rejected",
+        "test_holdout_access_nontraining_splits_and_unknown_grid_cells_are_rejected",
+        "test_plan_requires_exact_axes_full_budget_and_predeclared_freeze",
+        "test_hash_chain_archives_all_results_and_rejects_retroactive_replacement"
+      ],
+      "test_result": "13 tests passed including existing frozen-horizon and bounded-search tests; Ruff passed. Complete supplied TRAINING matrix is retained and final-window rows are rejected.",
+      "evidence_sha256": "7346935da24c63fb92571685d757dee828182625edc494fef5916070b62ab9f5",
+      "blockers": [
+        "No adapter executes the portfolio simulator for the five-axis grid.",
+        "Caller-declared data digest is not validated against an authoritative dataset manifest.",
+        "No full five-axis run is archived."
       ]
     }
   ]
