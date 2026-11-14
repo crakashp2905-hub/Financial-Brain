@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 143,
-  "unrecorded_tasks": 75,
+  "recorded_tasks": 144,
+  "unrecorded_tasks": 74,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3161,6 +3161,34 @@
         "Authoritative live service probes are not wired.",
         "Daily launcher/session orchestration does not invoke this automatically.",
         "No real-market preflight run has been observed or attested."
+      ]
+    },
+    {
+      "id": "PE-0146",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/registered_paper_books.py",
+        "tests/test_registered_paper_books.py",
+        "docs/edge-program/pe-0146-registered-paper-books.md",
+        "docs/edge-program/pe-0146-registered-paper-books-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_registered_plan_opens_distinct_persistent_accounts_and_cash",
+        "test_strategy_order_uses_only_its_registered_book_and_reservation",
+        "test_unregistered_or_late_allocation_changes_are_rejected",
+        "test_plan_rejects_duplicate_accounts_and_unbudgeted_capital",
+        "test_plan_books_must_cover_the_frozen_eligible_strategy_manifest",
+        "test_plan_changes_cannot_reassign_or_resize_an_existing_account",
+        "test_transfer_api_never_moves_cash_between_books"
+      ],
+      "test_result": "7 registered paper-book tests passed; Ruff passed. Frozen eligibility coverage, distinct persistent accounts, capital reservation isolation, plan registration/change linkage, budget constraints, cross-book order rejection, and disabled transfers verified.",
+      "evidence_sha256": "2e1bd3cdf7d2242be5b5f9d1205837b4cc702693ae6c4c21b03b3ae41d6228b5",
+      "blockers": [
+        "Registry is not connected to formal strategy eligibility or every forward-session order path.",
+        "Registration evidence is not authenticated by approved identity service.",
+        "Account closure and released-capital reconciliation are not implemented; capital recycling remains blocked."
       ]
     }
   ]
