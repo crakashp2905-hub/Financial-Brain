@@ -83,7 +83,7 @@ class ForwardRunConfig:
             raise RunnerError("attempt_id must be a nonempty stable token")
         if len(set(self.instruments)) != len(self.instruments) or any(not i for i in self.instruments):
             raise RunnerError("instruments must be nonempty and unique")
-        if self.mode not in (Mode.LIVE_PAPER, Mode.SHADOW, Mode.RESEARCH_REPLAY):
+        if self.mode not in (Mode.FIXTURE_REPLAY, Mode.LIVE_PAPER, Mode.SHADOW, Mode.RESEARCH_REPLAY):
             raise RunnerError("forward runner only accepts replay, shadow, or paper mode")
         if type(self.require_feed_health) is not bool:
             raise RunnerError("require_feed_health must be a boolean")
