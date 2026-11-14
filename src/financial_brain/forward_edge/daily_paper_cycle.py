@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from datetime import date, datetime
 from decimal import Decimal
+import os
 from pathlib import Path
 
 from financial_brain.forward_edge.book_performance_report import (
@@ -22,6 +24,117 @@ class DailyPaperCycleError(ValueError):
     """A daily manifest is incomplete or its evidence does not match the frozen book plan."""
 
 
+def _canonical(value: dict) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+
+def build_daily_paper_manifest(*, registry_path: Path, plan_id: str, account_root: Path,
+                               runner_journals: list[Path], session_date: str,
+                               captured_at: str, marks_map_path: Path, archive_dir: Path,
+                               bundle_root: Path, report_output_root: Path,
+                               output_path: Path, history_sessions_path: Path | None = None) -> dict:
+    """Derive a complete per-book session manifest from registered plans and verified journals.
+
+    Owner-supplied close marks and prior history are explicit inputs; session IDs and account
+    bindings are taken only from hash-chain-verified runner journals.
+    """
+    try:
+        if date.fromisoformat(session_date).isoformat() != session_date:
+            raise ValueError
+        capture = datetime.fromisoformat(captured_at)
+        if capture.tzinfo is None or capture.utcoffset() is None:
+            raise ValueError
+    except (TypeError, ValueError) as exc:
+        raise DailyPaperCycleError("session date and captured_at must be canonical and timezone-aware") from exc
+    registry_path = Path(registry_path).resolve()
+    registry = RegisteredPaperBooks(registry_path)
+    plan = next((item for item in registry.plans if item.plan_id == plan_id), None)
+    if plan is None:
+        raise DailyPaperCycleError("requested frozen paper-book plan is not registered")
+    marks_mapping = json.loads(Path(marks_map_path).read_text(encoding="utf-8"))
+    expected = {allocation.strategy_id: allocation for allocation in plan.books}
+    if not isinstance(marks_mapping, dict) or set(marks_mapping) != set(expected):
+        raise DailyPaperCycleError("marks map must contain one explicit file path for every registered strategy")
+    history: list[dict] = []
+    if history_sessions_path is not None:
+        history_value = json.loads(Path(history_sessions_path).read_text(encoding="utf-8"))
+        supplied_history = history_value.get("sessions") if isinstance(history_value, dict) else history_value
+        if (not isinstance(supplied_history, list)
+                or any(not isinstance(item, dict) for item in supplied_history)):
+            raise DailyPaperCycleError("history file must contain a sessions array or a JSON array")
+        history = supplied_history
+
+    matching: dict[str, list[dict]] = {strategy_id: [] for strategy_id in expected}
+    for journal_path in runner_journals:
+        path = Path(journal_path).resolve()
+        records = DurableJournal(path).records()
+        session_ids = {row.get("session_id") for row in records
+                       if row.get("t") in {"SESSION_CLOSED", "SESSION_INCOMPLETE"}}
+        terminal_ids = {session_id for session_id in session_ids if isinstance(session_id, str)}
+        for record in records:
+            if record.get("t") != "SESSION_PLAN":
+                continue
+            session_id = record.get("session_id")
+            config = record.get("config")
+            if not isinstance(config, dict) or config.get("exchange_date") != session_date:
+                continue
+            strategy_id = config.get("authority_strategy_id")
+            if strategy_id not in expected:
+                continue
+            allocation = expected[strategy_id]
+            if config.get("authority_account_id") != allocation.account_id:
+                continue
+            if session_id not in terminal_ids:
+                raise DailyPaperCycleError(f"runner session {session_id} for {strategy_id} is not terminal")
+            matching[strategy_id].append({"session_id": session_id, "runner_journal": str(path)})
+
+    books = []
+    for strategy_id in sorted(expected):
+        sessions = matching[strategy_id]
+        if len(sessions) != 1:
+            raise DailyPaperCycleError(
+                f"expected exactly one terminal session for {strategy_id} on {session_date}; found {len(sessions)}")
+        marks_path = Path(marks_mapping[strategy_id]).resolve()
+        if not marks_path.is_file():
+            raise DailyPaperCycleError(f"owner-provided close marks are missing for {strategy_id}")
+        books.append({
+            "strategy_id": strategy_id, "session_id": sessions[0]["session_id"],
+            "runner_journal": sessions[0]["runner_journal"], "marks": str(marks_path),
+            "archive_dir": str(Path(archive_dir).resolve()),
+            "bundle_root": str(Path(bundle_root).resolve()),
+        })
+    core = {
+        "schema_version": "1.0", "session_date": session_date,
+        "captured_at": capture.isoformat(), "registry": str(registry_path),
+        "plan_id": plan_id, "account_root": str(Path(account_root).resolve()),
+        "books": books, "history_sessions": history,
+        "report_output_root": str(Path(report_output_root).resolve()),
+    }
+    manifest = {**core, "manifest_sha256": hashlib.sha256(_canonical(core)).hexdigest()}
+    requested_target = Path(output_path)
+    if requested_target.is_symlink():
+        raise DailyPaperCycleError("daily manifest output must not be a symbolic link")
+    target = requested_target.resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = (json.dumps(manifest, sort_keys=True, indent=2, allow_nan=False) + "\n").encode("utf-8")
+    if target.exists():
+        if target.is_symlink() or target.read_bytes() != payload:
+            raise DailyPaperCycleError("daily manifest output is immutable and already contains different inputs")
+    else:
+        temporary = target.with_suffix(target.suffix + ".tmp")
+        try:
+            with temporary.open("xb") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, target)
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
+    return {"manifest_path": str(target), "manifest_sha256": manifest["manifest_sha256"],
+            "book_count": len(books), "physical_orders": False}
+
+
 def _prepare_daily_paper_cycle(manifest_path: Path) -> tuple[dict, list[dict]]:
     """Validate every account and input before the cycle performs its first close mutation."""
     try:
@@ -30,6 +143,12 @@ def _prepare_daily_paper_cycle(manifest_path: Path) -> tuple[dict, list[dict]]:
         raise DailyPaperCycleError("daily-cycle manifest is missing or invalid JSON") from exc
     if not isinstance(manifest, dict):
         raise DailyPaperCycleError("daily-cycle manifest must be an object")
+    supplied_hash = manifest.get("manifest_sha256")
+    if supplied_hash is not None:
+        unsigned = {key: value for key, value in manifest.items() if key != "manifest_sha256"}
+        if (not isinstance(supplied_hash, str)
+                or hashlib.sha256(_canonical(unsigned)).hexdigest() != supplied_hash):
+            raise DailyPaperCycleError("daily-cycle manifest hash does not match its contents")
     required = ("session_date", "captured_at", "registry", "plan_id", "account_root",
                 "books", "report_output_root")
     missing = [name for name in required if name not in manifest]

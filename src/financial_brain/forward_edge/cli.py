@@ -202,6 +202,29 @@ def cmd_daily_paper_preflight(manifest_path: str) -> tuple[dict, int]:
     return result, EXIT["OK"]
 
 
+def cmd_daily_paper_manifest(args: argparse.Namespace) -> tuple[dict, int]:
+    """Derive the manifest's per-book identity rows from registered plans and runner journals."""
+    from financial_brain.forward_edge.daily_paper_cycle import (
+        DailyPaperCycleError,
+        build_daily_paper_manifest,
+    )
+
+    try:
+        result = build_daily_paper_manifest(
+            registry_path=Path(args.registry), plan_id=args.plan_id,
+            account_root=Path(args.account_root),
+            runner_journals=[Path(path) for path in args.runner_journal],
+            session_date=args.session_date, captured_at=args.captured_at,
+            marks_map_path=Path(args.marks_map), archive_dir=Path(args.archive_dir),
+            bundle_root=Path(args.bundle_root), report_output_root=Path(args.report_output_root),
+            output_path=Path(args.output),
+            history_sessions_path=Path(args.history_sessions) if args.history_sessions else None,
+        )
+    except (OSError, ValueError, TypeError, DailyPaperCycleError) as exc:
+        return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    return result, EXIT["OK"]
+
+
 def cmd_daily_finalize(*, account_journal_path: str, session_date: str, captured_at: str,
                        marks_path: str, runner_journal_path: str, session_id: str,
                        archive_dir: str, bundle_root: str) -> tuple[dict, int]:
@@ -337,6 +360,21 @@ def main(argv: list[str] | None = None) -> int:
     preflight = sub.add_parser(
         "daily-paper-preflight", help="validate all daily-cycle evidence without mutating accounts")
     preflight.add_argument("--manifest", required=True, help="owner-prepared JSON inputs for this session")
+    manifest = sub.add_parser(
+        "daily-paper-manifest", help="derive immutable per-book session bindings from verified runner journals")
+    manifest.add_argument("--registry", required=True)
+    manifest.add_argument("--plan-id", required=True)
+    manifest.add_argument("--account-root", required=True)
+    manifest.add_argument("--runner-journal", action="append", required=True,
+                          help="verified runner journal; repeat for each journal source")
+    manifest.add_argument("--session-date", required=True)
+    manifest.add_argument("--captured-at", required=True, help="aware ISO-8601 close capture timestamp")
+    manifest.add_argument("--marks-map", required=True, help="JSON map from registered strategy IDs to owner mark files")
+    manifest.add_argument("--archive-dir", required=True)
+    manifest.add_argument("--bundle-root", required=True)
+    manifest.add_argument("--report-output-root", required=True)
+    manifest.add_argument("--output", required=True, help="immutable output manifest path")
+    manifest.add_argument("--history-sessions", help="optional JSON file containing prior session rows")
     df = sub.add_parser("daily-finalize", help="close a local paper book and export verified evidence")
     df.add_argument("--account-journal", required=True)
     df.add_argument("--session-date", required=True, help="exchange session date in YYYY-MM-DD")
@@ -371,6 +409,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_daily_paper_cycle(args.manifest)
     elif args.cmd == "daily-paper-preflight":
         out, code = cmd_daily_paper_preflight(args.manifest)
+    elif args.cmd == "daily-paper-manifest":
+        out, code = cmd_daily_paper_manifest(args)
     elif args.cmd == "daily-finalize":
         out, code = cmd_daily_finalize(
             account_journal_path=args.account_journal, session_date=args.session_date,

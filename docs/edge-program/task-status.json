@@ -3473,10 +3473,11 @@
         "test_eod_paper_archive.py",
         "test_daily_paper_cycle.py",
         "test_daily_paper_cycle_real_close_bundle_and_report_integration",
-        "test_daily_paper_preflight_is_read_only_and_checks_all_books_before_close"
+        "test_daily_paper_preflight_is_read_only_and_checks_all_books_before_close",
+        "test_daily_manifest_builder_derives_book_sessions_and_writes_immutable_hashed_manifest"
       ],
-      "test_result": "Daily-paper-preflight validates all frozen-plan accounts, journals, marks, order states, and runner bindings before any close. The scheduler-ready wrapper requires the manifest and returns 64 if absent; otherwise it runs preflight before the resumable cycle. Combined cycle, bundle, EOD, report, and source-inventory suites: 29 passed; Ruff and mypy passed. Synthetic integration only; no live-market result is claimed.",
-      "evidence_sha256": "5ce1f43baa678e385a25ea2135ff4dfd050c237e7ccaf44d428aca2008aff256",
+      "test_result": "The daily-paper-manifest command derives one terminal strategy/account session per frozen-plan book from verified runner journals and writes an immutable content-hashed manifest. Read-only preflight verifies the result before close. Combined manifest, preflight, cycle, bundle, EOD, report, and inventory suites: 30 passed; Ruff and mypy passed. Synthetic evidence only; no observed market result is claimed.",
+      "evidence_sha256": "73d7dd175192b7e8f347ab9c8f6cfde875aa03fa570c6684c892b486fa765630",
       "blockers": [
         "No Windows Task Scheduler job has been registered or enabled, and no process generates the owner-managed manifest.",
         "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",
@@ -3525,10 +3526,11 @@
         "test_book_performance_report.py",
         "test_daily_paper_cycle.py",
         "test_daily_paper_cycle_real_close_bundle_and_report_integration",
-        "test_daily_paper_preflight_is_read_only_and_checks_all_books_before_close"
+        "test_daily_paper_preflight_is_read_only_and_checks_all_books_before_close",
+        "test_daily_manifest_builder_derives_book_sessions_and_writes_immutable_hashed_manifest"
       ],
-      "test_result": "Daily-paper-preflight validates all frozen-plan accounts, journals, marks, order states, and runner bindings before any close. The scheduler-ready wrapper requires the manifest and returns 64 if absent; otherwise it runs preflight before the resumable cycle. Combined cycle, bundle, EOD, report, and source-inventory suites: 29 passed; Ruff and mypy passed. Synthetic integration only; no live-market result is claimed.",
-      "evidence_sha256": "cdcf2a0ed0c6a182cd81805b8c742065197b1d57d6a1d87b41df19b580787bc5",
+      "test_result": "The daily-paper-manifest command derives one terminal strategy/account session per frozen-plan book from verified runner journals and writes an immutable content-hashed manifest. Read-only preflight verifies the result before close. Combined manifest, preflight, cycle, bundle, EOD, report, and inventory suites: 30 passed; Ruff and mypy passed. Synthetic evidence only; no observed market result is claimed.",
+      "evidence_sha256": "6ddfff681b29ba2b800ccfdb419eb1605fa45708edffab6d16c28c417e3f8736",
       "blockers": [
         "No Windows Task Scheduler job invokes the wrapper; historic sessions must be provided in history_sessions.",
         "No OS scheduler invokes daily-paper-cycle for each market session; multi-session denominators require caller-supplied history_sessions.",

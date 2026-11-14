@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_daily_paper_cycle.py tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py tests/test_book_performance_report.py tests/test_source_inventory.py; ruff check src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py tests/test_daily_paper_cycle.py; python -m mypy src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py",
-    "result": "29 passed across daily-cycle, read-only preflight, evidence-bundle, EOD-archive, book-report, and source-inventory suites; Ruff and mypy passed. A two-account synthetic integration verifies both bundles and the immutable report. Preflight leaves account journals unchanged; the Windows wrapper was smoke-checked to refuse a missing manifest with exit code 64. No observed Kite-market result is claimed."
+    "result": "30 passed across manifest builder, read-only preflight, daily cycle, evidence bundle, EOD archive, book report, and source inventory; Ruff and mypy passed. The builder derived exactly one terminal session per registered strategy/account, wrote an immutable manifest, and preflight accepted it; repeat output was identical and edits failed hash verification. No live-market result is claimed."
   },
   "implemented": [
     "Per-book reports keep CLOSED, NO_TRADE, INCOMPLETE and UNRECORDED session outcomes in an explicit denominator.",
@@ -15,7 +15,8 @@
     "The forward CLI accepts a JSON sessions array and writes deterministic JSON and operator text under an immutable report-hash directory; identical reruns reuse outputs and changed outputs are refused.",
     "The daily-paper-cycle CLI finalizes every book in a frozen plan, then supplies newly verified archives and runner journal rows to the by-book report along with explicit caller-supplied prior sessions.",
     "The forward-edge CLI exposes the read-only daily-paper-preflight command, which validates all registered accounts, close marks, terminal strategy/account bindings and historical report rows before any book is finalized.",
-    "The Windows paper_daily_finalize.cmd wrapper requires FB_DAILY_CYCLE_MANIFEST, runs read-only preflight before the cycle, logs both steps and propagates failure; it does not register a scheduled task."
+    "The Windows paper_daily_finalize.cmd wrapper requires FB_DAILY_CYCLE_MANIFEST, runs read-only preflight before the cycle, logs both steps and propagates failure; it does not register a scheduled task.",
+    "The daily-paper-manifest CLI derives one terminal runner session for every frozen-plan strategy/account binding, requires an explicit complete marks map, accepts explicit historical rows, and writes an immutable content-hashed manifest. Ambiguous sessions fail closed."
   ],
   "blockers": [
     "No Windows Task Scheduler job invokes the wrapper, and the owner-managed history_sessions/manifest are not generated automatically.",
@@ -25,9 +26,9 @@
   ],
   "source_sha256": {
     "src/financial_brain/forward_edge/book_performance_report.py": "bbf62f845f2f763029b2de59fbe170cc2186d939d64a03b1e009ed809f21d175",
-    "src/financial_brain/forward_edge/cli.py": "2ba0bb4b1e71db0efd1a4b0e27c9cef11bd9979968bd5382a62c5d13c3d47527",
-    "src/financial_brain/forward_edge/daily_paper_cycle.py": "484ac0499faf54307c647d57b29962f4ae126a135f72f4b73038fe8be75d3b13",
-    "tests/test_daily_paper_cycle.py": "e76ea08e5648f38e3b99ace3980cab2f0c081fa7ce40ec202bcac39aeac65407",
+    "src/financial_brain/forward_edge/cli.py": "e80e0a91c98fa7947063e4378ad5b8c6fa04959b39c32d76f0447bd4b2737ddd",
+    "src/financial_brain/forward_edge/daily_paper_cycle.py": "7a6c6d2e174b9b08a4a22dd090b949e69ba7a59f97e25eeeec27272494d079a5",
+    "tests/test_daily_paper_cycle.py": "61bb9cda78e3385156e6fd11fdbe2564045bd6e5369545d657000e221724fa5d",
     "tests/test_book_performance_report.py": "1c0115fba9032e24b55e08eccb708993a821043ca28e4aa615575465f5db3b0a",
     "src/financial_brain/forward_edge/eod_paper_archive.py": "c7009ccb1fe98891aee8faede9863efedde60969f8c9d8b10cafc55b146ddbbe",
     "scripts/paper_daily_finalize.cmd": "0518bbe3fafaca980c0dd84d5740e77185bc0b83bac120ef05529099d6c5d380"

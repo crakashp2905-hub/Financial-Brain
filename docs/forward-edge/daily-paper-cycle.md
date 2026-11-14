@@ -4,9 +4,23 @@
 
 Run `python -m financial_brain.forward_edge.cli daily-paper-preflight --manifest <path>` first. Preflight reopens every existing account from its durable journal, validates the account against frozen allocated capital, checks every close mark and outstanding order state, verifies every dated runner session and strategy/account binding, and validates the supplied historical report rows. It does not write to account journals or close books. The cycle repeats these checks immediately before it begins.
 
+Generate the manifest bindings with `daily-paper-manifest`. It scans one or more verified runner journals and requires exactly one terminal session for each strategy/account in the selected plan and exchange date. It does not guess among duplicate sessions.
+
+```text
+python -m financial_brain.forward_edge.cli daily-paper-manifest `
+  --registry data/forward/books.jsonl --plan-id paper-plan-2026-11 `
+  --account-root data/forward/accounts --runner-journal data/forward/runners.jsonl `
+  --session-date <exchange-date> --captured-at <observed-close-timestamp> `
+  --marks-map data/forward/close-marks-map.json --archive-dir data/forward/archives `
+  --bundle-root data/forward/bundles --report-output-root data/forward/reports `
+  --output data/forward/daily-cycle.json
+```
+
+The marks map is a JSON object keyed by every registered strategy ID; each value is the path to that book's owner-observed close-mark JSON file. Optional prior rows can be supplied with `--history-sessions`. The generated manifest is content-hashed and immutable at its output path; edits are detected by preflight. The hash detects accidental changes, not authorship or authorization.
+
 ## Manifest contract
 
-The manifest is an operator-owned JSON file. It contains:
+The manifest is an immutable generated JSON file or an operator-managed JSON file. It contains:
 
 ```json
 {

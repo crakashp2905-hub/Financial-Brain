@@ -132,6 +132,43 @@ def test_daily_paper_preflight_is_read_only_and_checks_all_books_before_close(tm
     assert [DurableJournal(path).head for path in account_paths] == before
 
 
+def test_daily_manifest_builder_derives_book_sessions_and_writes_immutable_hashed_manifest(
+        tmp_path, monkeypatch, capsys):
+    manifest, _source_path, _ = _fixture(tmp_path, monkeypatch)
+    marks_map_path = tmp_path / "marks-map.json"
+    marks_map_path.write_text(json.dumps({
+        row["strategy_id"]: row["marks"] for row in manifest["books"]}), encoding="utf-8")
+    output_path = tmp_path / "built-daily-manifest.json"
+    args = [
+        "daily-paper-manifest", "--registry", manifest["registry"],
+        "--plan-id", manifest["plan_id"], "--account-root", manifest["account_root"],
+        "--session-date", manifest["session_date"], "--captured-at", manifest["captured_at"],
+        "--marks-map", str(marks_map_path), "--archive-dir", str(tmp_path / "archives"),
+        "--bundle-root", str(tmp_path / "bundles"), "--report-output-root", manifest["report_output_root"],
+        "--output", str(output_path),
+    ]
+    for row in manifest["books"]:
+        args.extend(["--runner-journal", row["runner_journal"]])
+
+    code = main(args)
+    result = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert result["book_count"] == 2
+    built = json.loads(output_path.read_text(encoding="utf-8"))
+    assert built["manifest_sha256"] == result["manifest_sha256"]
+    assert {row["session_id"] for row in built["books"]} == {"s-alpha", "s-beta"}
+    assert cycle.preflight_daily_paper_cycle(output_path)["ready"] is True
+
+    repeated_code = main(args)
+    repeated = json.loads(capsys.readouterr().out)
+    assert repeated_code == 0
+    assert repeated["manifest_sha256"] == result["manifest_sha256"]
+    built["plan_id"] = "edited"
+    output_path.write_text(json.dumps(built), encoding="utf-8")
+    with pytest.raises(cycle.DailyPaperCycleError, match="manifest hash"):
+        cycle.preflight_daily_paper_cycle(output_path)
+
+
 def test_daily_paper_cycle_real_close_bundle_and_report_integration(tmp_path, monkeypatch, capsys):
     manifest, manifest_path, _ = _fixture(
         tmp_path, monkeypatch, mock_finalize=False, mock_reports=False)

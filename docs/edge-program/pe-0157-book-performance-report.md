@@ -12,6 +12,7 @@
 - The `daily-paper-cycle` launcher now finalizes every registered book in a frozen plan and feeds each generated, verified EOD account archive and the matching durable runner journal into this report. Explicit `history_sessions` are retained in the report denominator and are never inferred.
 - `daily-paper-preflight` validates the whole daily input set and historical report rows without account mutation before an operator or scheduler runs the close cycle.
 - The Windows `paper_daily_finalize.cmd` wrapper provides an explicit scheduler entry point with preflight, logging, manifest requirement, and nonzero failure propagation; the scheduled task itself is not installed.
+- The `daily-paper-manifest` command derives exactly one terminal strategy/account session per frozen-plan book from durable runner journals and emits an immutable hash-checked manifest; it refuses ambiguous matches.
 - The cycle manifest and retry contract are documented in [daily-paper-cycle.md](../forward-edge/daily-paper-cycle.md).
 
 ## Verification
