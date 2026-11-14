@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 130,
-  "unrecorded_tasks": 88,
+  "recorded_tasks": 131,
+  "unrecorded_tasks": 87,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2824,6 +2824,33 @@
         "Approved independent provider and deployment-pinned trust roots are not configured.",
         "No authoritative immutable preregistration registry or real prospective market cohort is connected.",
         "The gate is not wired into the authoritative strategy promotion and paper-trading lifecycle."
+      ]
+    },
+    {
+      "id": "PE-0133",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/paper/loss_attribution.py",
+        "tests/test_loss_attribution.py",
+        "docs/edge-program/pe-0133-daily-pnl-bridge.md",
+        "docs/edge-program/pe-0133-daily-pnl-bridge-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_losing_day_reconciles_all_effects_to_portfolio_loss",
+        "test_multiple_trades_reconcile_by_day_and_keep_days_separate",
+        "test_missing_component_is_not_filled_with_zero_and_residual_is_withheld",
+        "test_nonzero_residual_cannot_be_labeled_reconciled",
+        "test_nonfinite_or_non_numeric_effects_are_rejected",
+        "test_duplicate_trade_id_and_invalid_tolerance_are_rejected"
+      ],
+      "test_result": "15 passed across the new bridge and existing loss-review tests; Ruff passed. Arithmetic reconciles complete supplied bridges and withholds incomplete days.",
+      "evidence_sha256": "b233c5778e714902584c1c393ed0b03db9294d232348ca1507686b266be88397",
+      "blockers": [
+        "Current paper ledger does not capture all component effects or frozen forecast baseline.",
+        "No authoritative daily bridge integration verifies all losing days.",
+        "Caller-supplied counterfactual effects are not independently causal evidence."
       ]
     }
   ]

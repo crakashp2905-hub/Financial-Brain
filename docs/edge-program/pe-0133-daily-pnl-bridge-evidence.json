@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0133",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_loss_attribution.py tests/test_phase5_loss_review.py; ruff check src/financial_brain/paper/loss_attribution.py tests/test_loss_attribution.py",
+    "result": "15 passed across the new bridge and existing loss-review tests; Ruff passed."
+  },
+  "implemented": [
+    "Aggregates signed forecast gross, selection, spread, impact, charges, timing, and risk-sizing effects by day.",
+    "Requires unique trade identity and finite numeric components; duplicate, malformed, and nonfinite values fail closed.",
+    "Marks a day reconciled only when all effects are present and sum to realized net within the declared tolerance.",
+    "Exposes missing trade IDs, leaves missing effects null, and reports a nonzero arithmetic residual instead of hiding it."
+  ],
+  "blockers": [
+    "The intraday paper ledger does not yet persist all bridge effects or a frozen forecast-gross baseline.",
+    "There is no authoritative bridge integration that proves each paper portfolio loss day has complete trade-level inputs.",
+    "The bridge validates accounting arithmetic only; caller-supplied counterfactual selection, timing, and sizing effects are not causal evidence."
+  ],
+  "source_sha256": {
+    "src/financial_brain/paper/loss_attribution.py": "7ae5bc97528e3784581b53ec45629a72eea5661e19b6664e4786973794a124ad",
+    "tests/test_loss_attribution.py": "6312a27d00fa08023887a5ab446b48ca7b2054133e097ac4922c48c09d733534"
+  }
+}
