@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 190,
-  "unrecorded_tasks": 28,
+  "recorded_tasks": 191,
+  "unrecorded_tasks": 27,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4150,6 +4150,30 @@
       "test_result": "44 daily-report and forward CLI tests passed; Ruff and targeted mypy passed; refreshed source inventory and inventory check passed. JSON, CSV, and HTML totals match and repeated output bytes are deterministic.",
       "evidence_sha256": "822bf84f3d71e11d363c0f754e62a7a320a4d46e6f27cda48655b36e92d97ba7",
       "blockers": []
+    },
+    {
+      "id": "PE-0193",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/cockpit.py",
+        "tests/test_research_vs_champions_view.py",
+        "tests/test_profitability_evidence_view.py",
+        "tests/test_forward_edge_f10.py",
+        "docs/edge-program/pe-0193-explicit-insufficient-evidence.md",
+        "docs/edge-program/pe-0193-explicit-insufficient-evidence-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "tests/test_research_vs_champions_view.py",
+        "tests/test_profitability_evidence_view.py",
+        "tests/test_forward_edge_f10.py",
+        "scripts/source_inventory.py --check docs/edge-program/source-inventory.json"
+      ],
+      "test_result": "28 cockpit tests passed; Ruff, targeted mypy, refreshed source inventory, and inventory check passed. Missing and synthetic evidence stays insufficient; only observed-forward rows with verified custody, full session/receipt coverage, and a valid digest can receive positive labels.",
+      "evidence_sha256": "ce6907c294b41df65e05c41c5a2a6a3549095b0cdfdff120f8d1b5bd34aca287",
+      "blockers": [
+        "The cockpit trusts upstream provenance and custody classifications; external signature verification and real prospective sessions remain operational inputs."
+      ]
     }
   ]
 }

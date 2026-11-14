@@ -23,13 +23,28 @@ def test_only_complete_verified_executable_receipt_coverage_gets_champion_label(
         provisional=[],
         forward_champions=[
             {"strategy_id": "verified", "status": "VERIFIED", "executable_forward": True,
-             "verified_sessions": 60, "receipt_sessions": 60, "evidence_sha256": "a" * 64},
+             "evidence_source": "OBSERVED_FORWARD", "custody_status": "VERIFIED",
+             "scheduled_sessions": 60, "verified_sessions": 60, "receipt_sessions": 60,
+             "evidence_sha256": "a" * 64},
             {"strategy_id": "missing-receipts", "status": "VERIFIED", "executable_forward": True,
-             "verified_sessions": 60, "receipt_sessions": 59, "evidence_sha256": "b" * 64},
+             "evidence_source": "OBSERVED_FORWARD", "custody_status": "VERIFIED",
+             "scheduled_sessions": 60, "verified_sessions": 60, "receipt_sessions": 59,
+             "evidence_sha256": "b" * 64},
             {"strategy_id": "research-only", "status": "EXPLORATORY", "executable_forward": True,
-             "verified_sessions": 100, "receipt_sessions": 100, "evidence_sha256": "c" * 64},
+             "evidence_source": "OBSERVED_FORWARD", "custody_status": "VERIFIED",
+             "scheduled_sessions": 100, "verified_sessions": 100, "receipt_sessions": 100,
+             "evidence_sha256": "c" * 64},
+            {"strategy_id": "all-green-fixture", "status": "VERIFIED", "executable_forward": True,
+             "evidence_source": "SYNTHETIC_FIXTURE", "custody_status": "LOCAL_ONLY",
+             "scheduled_sessions": 60, "verified_sessions": 60, "receipt_sessions": 60,
+             "evidence_sha256": "d" * 64},
         ],
     )
     assert "VERIFIED EXECUTABLE FORWARD CHAMPION" in html
-    assert html.count("NOT A VERIFIED EXECUTABLE CHAMPION") == 2
-    assert "missing-receipts" in html and "research-only" in html
+    assert html.count("INSUFFICIENT EVIDENCE — NOT A VERIFIED EXECUTABLE CHAMPION") == 3
+    assert "missing-receipts" in html and "research-only" in html and "all-green-fixture" in html
+
+
+def test_empty_forward_champion_population_is_explicitly_insufficient():
+    html = cockpit.research_vs_champions(provisional=[], forward_champions=[])
+    assert "INSUFFICIENT EVIDENCE — no forward observations supplied" in html

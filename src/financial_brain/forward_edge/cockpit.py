@@ -239,15 +239,24 @@ def research_vs_champions(*, provisional: list[dict], forward_champions: list[di
     for row in forward_champions:
         status = str(row.get("status", "UNKNOWN")).upper()
         sessions, receipts = row.get("verified_sessions"), row.get("receipt_sessions")
+        scheduled = row.get("scheduled_sessions")
         digest = str(row.get("evidence_sha256", ""))
         verified = (status == "VERIFIED" and row.get("executable_forward") is True
-                    and type(sessions) is int and sessions > 0 and type(receipts) is int and receipts == sessions
+                    and row.get("evidence_source") == "OBSERVED_FORWARD"
+                    and row.get("custody_status") == "VERIFIED"
+                    and type(scheduled) is int and scheduled > 0
+                    and type(sessions) is int and sessions == scheduled
+                    and type(receipts) is int and receipts == scheduled
                     and bool(re.fullmatch(r"[0-9a-f]{64}", digest)))
-        label = "VERIFIED EXECUTABLE FORWARD CHAMPION" if verified else "NOT A VERIFIED EXECUTABLE CHAMPION"
+        label = ("VERIFIED EXECUTABLE FORWARD CHAMPION" if verified
+                 else "INSUFFICIENT EVIDENCE — NOT A VERIFIED EXECUTABLE CHAMPION")
         klass = "promotable" if verified else "failed"
         champion_rows.append(
             f"<tr class='{klass}'><td>{escape(str(row.get('strategy_id') or 'UNKNOWN'))}</td>"
-            f"<td>{escape(label)}</td><td>{escape(str(sessions if sessions is not None else 'UNKNOWN'))}</td>"
+            f"<td>{escape(label)}</td><td>{escape(str(row.get('evidence_source') or 'UNKNOWN'))}</td>"
+            f"<td>{escape(str(row.get('custody_status') or 'UNKNOWN'))}</td>"
+            f"<td>{escape(str(scheduled if scheduled is not None else 'UNKNOWN'))}</td>"
+            f"<td>{escape(str(sessions if sessions is not None else 'UNKNOWN'))}</td>"
             f"<td>{escape(str(receipts if receipts is not None else 'UNKNOWN'))}</td>"
             f"<td>{escape(digest or 'MISSING')}</td></tr>"
         )
@@ -256,9 +265,12 @@ def research_vs_champions(*, provisional: list[dict], forward_champions: list[di
                  f"<table><thead><tr><th>Rank</th><th>Strategy</th><th>Diagnostic score</th><th>Horizon sessions</th>"
                  f"<th>Sample</th><th>Status</th></tr></thead><tbody>{research_rows}</tbody></table>"
                  "<h2>Verified executable forward champions</h2><p>Only rows with VERIFIED status, executable-forward attestation,"
-                 " complete session receipt coverage, and a valid evidence digest can receive this label.</p>"
-                 "<table><thead><tr><th>Strategy</th><th>Status</th><th>Verified sessions</th><th>Receipt sessions</th>"
-                 f"<th>Evidence SHA-256</th></tr></thead><tbody>{''.join(champion_rows)}</tbody></table>")
+                 " observed-forward evidence source, independently verified custody, a complete scheduled-session denominator,"
+                 " and a valid evidence digest can receive this label. Missing observations are insufficient evidence.</p>"
+                 f"<p id='forward-evidence-status'>{'INSUFFICIENT EVIDENCE — no forward observations supplied' if not forward_champions else 'Forward rows require complete verified evidence'}</p>"
+                 "<table><thead><tr><th>Strategy</th><th>Status</th><th>Evidence source</th><th>Custody</th>"
+                 "<th>Scheduled sessions</th><th>Verified sessions</th><th>Receipt sessions</th><th>Evidence SHA-256</th></tr></thead>"
+                 f"<tbody>{''.join(champion_rows)}</tbody></table>")
     assert_read_only(html)
     return html
 
@@ -302,9 +314,21 @@ def profitability_evidence(rows: list[dict]) -> str:
         adjusted = row.get("familywise_adjusted") is True
         if not adjusted:
             missing.append("verified multiplicity adjustment")
+        if row.get("evidence_source") != "OBSERVED_FORWARD":
+            missing.append("observed-forward evidence source")
+        if row.get("custody_status") != "VERIFIED":
+            missing.append("independently verified custody")
+        scheduled, verified_sessions, receipt_sessions = (
+            row.get("scheduled_sessions"), row.get("verified_sessions"), row.get("receipt_sessions"))
+        if (type(scheduled) is not int or scheduled <= 0
+                or type(verified_sessions) is not int or verified_sessions != scheduled
+                or type(receipt_sessions) is not int or receipt_sessions != scheduled):
+            missing.append("complete verified session and receipt coverage")
+        if not re.fullmatch(r"[0-9a-f]{64}", str(row.get("evidence_sha256", ""))):
+            missing.append("valid forward evidence digest")
         positive = not missing and lower is not None and lower > 0 and net_lcb is not None and net_lcb > 0
         status = ("POSITIVE ADJUSTED LOWER BOUND — NOT A GUARANTEE" if positive
-                  else "INSUFFICIENT / NON-POSITIVE EVIDENCE")
+                  else "INSUFFICIENT EVIDENCE")
         detail = "; ".join(missing) if missing else "all required evidence fields present"
         cells = (
             row.get("strategy_id", "UNKNOWN"), status,
@@ -315,7 +339,10 @@ def profitability_evidence(rows: list[dict]) -> str:
             row.get("matched_benchmark_id", "UNKNOWN"),
             row.get("matched_benchmark_net_alpha", "UNKNOWN"),
             row.get("estimated_capacity_inr", "UNKNOWN"),
-            row.get("win_rate", "UNKNOWN"), row.get("total_net_rupees", "UNKNOWN"), detail,
+            row.get("win_rate", "UNKNOWN"), row.get("total_net_rupees", "UNKNOWN"),
+            row.get("evidence_source", "UNKNOWN"), row.get("custody_status", "UNKNOWN"),
+            row.get("scheduled_sessions", "UNKNOWN"), row.get("verified_sessions", "UNKNOWN"),
+            row.get("receipt_sessions", "UNKNOWN"), row.get("evidence_sha256", "MISSING"), detail,
         )
         rendered.append((0 if status.startswith("INSUFFICIENT") else 1,
                          "<tr class='failed'><td>" + "</td><td>".join(escape(str(value)) for value in cells)
@@ -323,9 +350,13 @@ def profitability_evidence(rows: list[dict]) -> str:
     rendered.sort(key=lambda item: item[0])
     headers = ("Strategy", "Evidence status", "Claim", "CI level %", "CI lower", "CI upper", "Net alpha LCB",
                "Multiplicity count", "Adjusted alpha", "Matched benchmark", "Benchmark net alpha",
-               "Estimated capacity INR", "Win rate (descriptive)", "Total net rupees (descriptive)", "Evidence gaps")
+               "Estimated capacity INR", "Win rate (descriptive)", "Total net rupees (descriptive)",
+               "Evidence source", "Custody", "Scheduled sessions", "Verified sessions", "Receipt sessions",
+               "Evidence SHA-256", "Evidence gaps")
     table = "<table><thead><tr>" + "".join(f"<th>{escape(header)}</th>" for header in headers) + "</tr></thead><tbody>"
     body = "".join(item[1] for item in rendered)
+    if not rendered:
+        body = f"<tr class='failed'><td colspan='{len(headers)}'>INSUFFICIENT EVIDENCE — no observations supplied</td></tr>"
     html = _page("Profitability evidence", "<p>No strategy is labeled proven from win rate or cumulative rupees."
                  " A positive adjusted lower bound is still uncertain and conditional on the stated evidence.</p>"
                  f"{table}{body}</tbody></table>")
