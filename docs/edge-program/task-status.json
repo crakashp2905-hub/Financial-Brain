@@ -10,7 +10,7 @@
     "EXTERNAL_BLOCKED": "requires real provider access, owner action, or elapsed market sessions",
     "NOT_STARTED": "no implementation evidence recorded"
   },
-  "reviewed_main_sha": "054193a524dd35eaa258df0ac352a58fc369e937",
+  "reviewed_main_sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
   "items": [
     {
       "id": "PE-0001",
@@ -55,7 +55,7 @@
     },
     {
       "id": "PE-0003",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": [
         "scripts/edge_asset_backup.py",
         "tests/test_edge_asset_backup.py",
@@ -64,13 +64,12 @@
       "tests": [
         "test_duckdb_snapshot_restores_and_matches_checksum",
         "test_active_duckdb_wal_is_recorded_as_blocked_without_copy",
-        "test_snapshot_rejects_paths_outside_repo"
+        "test_snapshot_rejects_paths_outside_repo",
+        "test_wal_created_during_snapshot_removes_partial_copy"
       ],
-      "test_result": "Backup tooling refuses active DuckDB WALs, rejects paths outside the repo, hashes copied files, restores to a separate location, verifies checksums and opens restored databases read-only. The local run backed up and restored 11 paper/archive/strategy-manifest artifacts; focused suite: 3 passed. PE-0003 remains incomplete because the active paper_live database could not be safely copied.",
-      "evidence_sha256": "1a61376ef7f56203d89ee2871f94a657186f3e521c7f7c52106824893bc18071",
-      "blockers": [
-        "data/paper_live.duckdb had a changing WAL at capture time; rerun backup after its writer/session closes cleanly"
-      ]
+      "test_result": "Backup tooling refuses active DuckDB WALs both before and during copying, rejects paths outside the repo, hashes copied files, restores to a separate location, verifies checksums and opens restored databases read-only. The original run restored 11 existing paper/archive/strategy-manifest artifacts; a follow-up run backed up and read-only restored data/paper_live.duckdb (29,110,272 bytes; SHA-256 a1c3f18af1950ceee62f14f41e31573ac33c75f6dd5f609c5c633eaceb8e9f98). Focused backup suite: 4 passed; Ruff and mypy passed. Three optional named sources remain absent and are explicitly recorded in the evidence artifact.",
+      "evidence_sha256": "4de5e3a453cf5d374eda798f5d40ebe6d0c702f239180bb8147d392a99566f87",
+      "blockers": []
     },
     {
       "id": "PE-0004",
