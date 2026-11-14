@@ -16,6 +16,12 @@ from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunner,
     RunnerError,
 )
+from financial_brain.forward_edge.degradation_monitor import (
+    Action as DegradationAction,
+    DegradationMonitor,
+    FrozenThresholds,
+    RollingObservation,
+)
 from financial_brain.forward_edge.uncertainty_sizing import (
     UncertaintySizingPolicy,
     UncertaintySizingRegistry,
@@ -1000,3 +1006,92 @@ def test_runner_requires_frozen_benefit_policy_identity_for_configured_paper(tmp
     runner = ForwardSessionRunner(tmp_path / "missing-benefit-policy.jsonl", forecast_benefit_registry=registry)
     with pytest.raises(RunnerError, match="frozen forecast-benefit"):
         runner.begin(_config())
+
+
+def _degradation_policy():
+    return FrozenThresholds(
+        strategy_id="test-strategy", strategy_version="paper-v1",
+        frozen_at=NOW - timedelta(days=3), cohort_starts_at=NOW - timedelta(days=2),
+        pause_net_alpha_bps=0.0, retire_net_alpha_bps=-20.0,
+        max_slippage_bps=12.0, min_fill_coverage=0.75, max_drift_score=0.30,
+        min_observations=1, pause_after_breaches=1, retire_after_severe_breaches=3,
+    )
+
+
+def _degradation_observation(policy, observation_id, *, alpha=5.0):
+    end = NOW + timedelta(minutes=1)
+    return RollingObservation(
+        observation_id=observation_id, policy_sha256=policy.policy_sha256,
+        window_start=policy.cohort_starts_at, window_end=end,
+        observed_at=end + timedelta(minutes=1), net_alpha_bps=alpha,
+        slippage_bps=5.0, fill_coverage=1.0, drift_score=0.0,
+        sample_count=1, evidence_ids=(f"evidence:{observation_id}",),
+    )
+
+
+def test_runner_persists_closed_session_degradation_observation(tmp_path):
+    policy = _degradation_policy()
+    config = _config(degradation_policy_sha256=policy.policy_sha256)
+    journal_path = tmp_path / "session.jsonl"
+    runner = ForwardSessionRunner(journal_path)
+    result = runner.run(
+        config, [], decision_at=NOW,
+        decision_fn=lambda _: {"side": "NONE", "reason": "NO_SIGNAL"},
+        risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: pytest.fail("no intent"),
+        degradation_policy=policy,
+    )
+    assert result["status"] == "NO_TRADE"
+    alarm = runner.record_degradation_observation(
+        config, policy, _degradation_observation(policy, config.session_id),
+    )
+    assert alarm.action == DegradationAction.CONTINUE
+    assert any(r["t"] == "DEGRADATION_ALARM" and r["observation_id"] == config.session_id
+               for r in DurableJournal(journal_path).records())
+
+
+def test_durable_degradation_pause_blocks_next_runner_candidate(tmp_path):
+    policy = _degradation_policy()
+    journal_path = tmp_path / "session.jsonl"
+    monitor = DegradationMonitor(policy, journal=DurableJournal(journal_path))
+    assert monitor.observe(_degradation_observation(policy, "prior-session", alpha=-1.0)).action == \
+        DegradationAction.PAUSE
+
+    config = _config(session_id="S-2", exchange_date="2026-11-13",
+                     degradation_policy_sha256=policy.policy_sha256)
+    runner = ForwardSessionRunner(journal_path)
+    result = runner.run(
+        config, [], decision_at=NOW + timedelta(days=1),
+        decision_fn=lambda _: {"side": "BUY", "position_effect": "INCREASE"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("paused strategy must not create an intent"),
+        degradation_policy=policy,
+    )
+    assert result["status"] == "NO_TRADE"
+    assert result["reason"] == "DEGRADATION_PAUSE"
+    assert result["decision"]["side"] == "NO_TRADE"
+    assert result["decision"]["rejected_candidate"]["position_effect"] == "INCREASE"
+    records = DurableJournal(journal_path).records()
+    assert not any(r.get("t") == "PAPER_INTENT" and r.get("session_id") == config.session_id
+                   for r in records)
+
+
+def test_durable_degradation_pause_still_allows_explicit_position_close(tmp_path):
+    policy = _degradation_policy()
+    journal_path = tmp_path / "session.jsonl"
+    monitor = DegradationMonitor(policy, journal=DurableJournal(journal_path))
+    monitor.observe(_degradation_observation(policy, "prior-session", alpha=-1.0))
+    config = _config(session_id="S-2", exchange_date="2026-11-13",
+                     degradation_policy_sha256=policy.policy_sha256)
+    runner = ForwardSessionRunner(journal_path)
+    _approve_preflight(runner, config)
+    result = runner.run(
+        config, [], decision_at=NOW + timedelta(days=1),
+        decision_fn=lambda _: {"side": "SELL", "position_effect": "CLOSE", "quantity": 1},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "close-missed",
+                                 "fidelity": "SIMULATED_QUOTE"},
+        degradation_policy=policy,
+    )
+    assert result["status"] == "PAPER_COMPLETE"
+    assert result["decision"]["position_effect"] == "CLOSE"
+    assert result["execution"]["status"] == "MISSED"

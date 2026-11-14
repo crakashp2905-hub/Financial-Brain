@@ -12,14 +12,17 @@ and consecutive breach counts. Thresholds are immutable, and the monitor has no
 strategy-parameter mutation interface. An optional `DurableJournal` sink writes
 each alarm into the hash-chained paper journal before returning it; reopening the
 monitor recovers the breach counts, duplicate guard, and latched pause/retirement
-state. A failed journal append leaves in-memory monitor state unchanged.
+state. A failed journal append leaves in-memory monitor state unchanged. The
+forward session runner binds a rolling observation to a completed paper session
+and withholds new or increasing exposure in later sessions when its registered
+policy is latched at `PAUSE` or `RETIRE`. Explicit `REDUCE` and `CLOSE` decisions
+remain eligible so a paused strategy can exit existing exposure.
 
-Validation: `python -m pytest -q tests/test_degradation_monitor.py` (9 passed)
-and `ruff check src/financial_brain/forward_edge/degradation_monitor.py
-tests/test_degradation_monitor.py` (passed).
+Validation: `python -m pytest -q tests/test_degradation_monitor.py
+tests/test_forward_session_runner.py` (64 passed), Ruff, and mypy passed.
 
-Remaining work: integrate the monitor with prospective paper observations and
-the session runner's candidate lifecycle; establish production policy and identity roots; run
-the monitor on real forward-attested cohorts; verify alarm delivery and pause
-enforcement in an end-to-end session. This package makes no claim of observed
+Remaining work: schedule a trusted rolling-metric adapter after every forward
+paper session; establish production policy and identity roots; run the monitor
+on real forward-attested cohorts; verify alarm delivery and pause enforcement in
+an owner-authorized market session. This package makes no claim of observed
 alpha, realized performance, or production activation.

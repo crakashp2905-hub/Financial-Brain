@@ -3,8 +3,8 @@
   "task_id": "PE-0144",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_degradation_monitor.py; python -m ruff check src/financial_brain/forward_edge/degradation_monitor.py tests/test_degradation_monitor.py",
-    "result": "9 passed; Ruff passed."
+    "command": "python -m pytest -q tests/test_degradation_monitor.py tests/test_forward_session_runner.py; python -m ruff check src/financial_brain/forward_edge/degradation_monitor.py src/financial_brain/forward_edge/session_runner.py tests/test_degradation_monitor.py tests/test_forward_session_runner.py; python -m mypy src/financial_brain/forward_edge/degradation_monitor.py src/financial_brain/forward_edge/session_runner.py",
+    "result": "64 tests passed; Ruff and mypy passed."
   },
   "implemented": [
     "Threshold policy must be frozen before the cohort start and is content-addressed.",
@@ -13,10 +13,12 @@
     "Persistent severe net-alpha breaches escalate to RETIRE; pause and retirement remain latched.",
     "Returned alarm events are immutable and contain reasons, policy identity, and observation digest; no strategy parameter mutation is exposed.",
     "Optional DurableJournal persistence writes alarms to its hash chain before returning and restores event IDs, breach counters, and latched state after restart.",
-    "A failed journal append does not advance monitor state, allowing safe retry of the same observation."
+    "A failed journal append does not advance monitor state, allowing safe retry of the same observation.",
+    "ForwardSessionRunner binds rolling observations to matching closed LIVE_PAPER sessions and persists alarms in the same journal.",
+    "A policy-latched PAUSE or RETIRE withholds new/increasing exposure in later sessions while allowing explicit REDUCE/CLOSE decisions."
   ],
   "blockers": [
-    "Monitor is not wired to the forward session runner or candidate lifecycle.",
+    "A trusted scheduled rolling-metric adapter does not yet generate observations after every forward paper session; the recording API is caller-triggered.",
     "Production thresholds, trusted identity roots, alarm delivery, and prospective market-cohort evidence are not configured or verified."
   ],
   "source_sha256": {}

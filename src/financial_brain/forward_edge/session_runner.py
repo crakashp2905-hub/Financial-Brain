@@ -16,6 +16,14 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.degradation_monitor import (
+    Action as DegradationAction,
+    AlarmEvent,
+    DegradationError,
+    DegradationMonitor,
+    FrozenThresholds,
+    RollingObservation,
+)
 from financial_brain.forward_edge.approvals import Approval
 from financial_brain.forward_edge.governance import FamilyEvidence, evaluate_family_action
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent, entry_allowed
@@ -71,6 +79,7 @@ class ForwardRunConfig:
     net_alpha_policy_sha256: str | None = None
     uncertainty_sizing_policy_sha256: str | None = None
     forecast_benefit_policy_sha256: str | None = None
+    degradation_policy_sha256: str | None = None
     require_feed_health: bool = False
     family_evidence: FamilyEvidence | None = None
     family_owner_approval: Approval | None = None
@@ -116,6 +125,10 @@ class ForwardRunConfig:
                 len(self.forecast_benefit_policy_sha256) != 64
                 or any(ch not in "0123456789abcdef" for ch in self.forecast_benefit_policy_sha256)):
             raise RunnerError("forecast-benefit policy identity must be a SHA-256 digest")
+        if self.degradation_policy_sha256 is not None and (
+                len(self.degradation_policy_sha256) != 64
+                or any(ch not in "0123456789abcdef" for ch in self.degradation_policy_sha256)):
+            raise RunnerError("degradation policy identity must be a SHA-256 digest")
         try:
             if date.fromisoformat(self.exchange_date).isoformat() != self.exchange_date:
                 raise ValueError
@@ -148,6 +161,8 @@ class ForwardRunConfig:
             canonical["uncertainty_sizing_policy_sha256"] = self.uncertainty_sizing_policy_sha256
         if self.forecast_benefit_policy_sha256 is not None:
             canonical["forecast_benefit_policy_sha256"] = self.forecast_benefit_policy_sha256
+        if self.degradation_policy_sha256 is not None:
+            canonical["degradation_policy_sha256"] = self.degradation_policy_sha256
         if self.family_evidence is not None:
             canonical["family_evidence_sha256"] = self.family_evidence.evidence_sha256
         if self.family_owner_approval is not None:
@@ -171,11 +186,13 @@ class ForwardRunConfig:
     @property
     def session_key(self) -> str:
         """Stable identity for one strategy/cohort/date/mode, shared by its immutable attempts."""
-        body = json.dumps({"exchange_date": self.exchange_date, "cohort_id": self.cohort_id,
-                           "strategy_sha256": self.strategy_sha256, "mode": self.mode.value,
-                           "authority_strategy_id": self.authority_strategy_id,
-                           "authority_account_id": self.authority_account_id},
-                          sort_keys=True, separators=(",", ":"))
+        identity = {"exchange_date": self.exchange_date, "cohort_id": self.cohort_id,
+                    "strategy_sha256": self.strategy_sha256, "mode": self.mode.value,
+                    "authority_strategy_id": self.authority_strategy_id,
+                    "authority_account_id": self.authority_account_id}
+        if self.degradation_policy_sha256 is not None:
+            identity["degradation_policy_sha256"] = self.degradation_policy_sha256
+        body = json.dumps(identity, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(body.encode()).hexdigest()
 
     @property
@@ -536,13 +553,50 @@ class ForwardSessionRunner:
         journal.append(normalized)
         return 1
 
+    def record_degradation_observation(self, config: ForwardRunConfig, policy: FrozenThresholds,
+                                       observation: RollingObservation) -> AlarmEvent:
+        """Persist a completed paper session's degradation observation in its durable journal.
+
+        Observation IDs are bound to closed session IDs so alarm history is restart-safe and
+        can gate later sessions for the same registered strategy.
+        """
+        if config.mode is not Mode.LIVE_PAPER:
+            raise RunnerError("degradation observations are only accepted for LIVE_PAPER sessions")
+        if config.degradation_policy_sha256 != policy.policy_sha256:
+            raise RunnerError("degradation policy does not match the frozen session configuration")
+        if policy.strategy_id != config.authority_strategy_id:
+            raise RunnerError("degradation policy strategy does not match paper authority")
+        if observation.observation_id != config.session_id:
+            raise RunnerError("degradation observation ID must match its closed session ID")
+        journal = DurableJournal(self.journal_path)
+        session_records = [r for r in journal.records() if r.get("session_id") == config.session_id]
+        if not any(r.get("t") == "SESSION_CLOSED"
+                   and r.get("result", {}).get("config_sha256") == config.sha256
+                   for r in session_records):
+            raise RunnerError("degradation observations require the matching closed paper session")
+        try:
+            return DegradationMonitor(policy, journal=journal).observe(observation)
+        except DegradationError as exc:
+            raise RunnerError(f"degradation observation rejected: {exc}") from exc
+
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
             decision_at: datetime | None = None,
             decision_fn: Callable[[list[NormalizedEvent]], dict],
             risk_fn: Callable[[dict], dict],
             execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
-            reconcile_execution_fn: Callable[[str], dict] | None = None) -> dict:
+            reconcile_execution_fn: Callable[[str], dict] | None = None,
+            degradation_policy: FrozenThresholds | None = None) -> dict:
         from financial_brain.forward_edge.market_data import decision_visible
+
+        if (degradation_policy is None) != (config.degradation_policy_sha256 is None):
+            raise RunnerError("configured degradation policy and run-time policy must be supplied together")
+        if degradation_policy is not None:
+            if config.mode is not Mode.LIVE_PAPER:
+                raise RunnerError("degradation pause enforcement is restricted to LIVE_PAPER sessions")
+            if degradation_policy.policy_sha256 != config.degradation_policy_sha256:
+                raise RunnerError("run-time degradation policy differs from frozen session configuration")
+            if degradation_policy.strategy_id != config.authority_strategy_id:
+                raise RunnerError("degradation policy strategy does not match paper authority")
 
         if config.mode is Mode.LIVE_PAPER:
             if not config.authority_strategy_id or not config.authority_account_id:
@@ -558,6 +612,8 @@ class ForwardSessionRunner:
                 raise RunnerError(f"paper execution authority conflict: {exc}") from exc
         self.begin(config)
         journal = DurableJournal(self.journal_path)
+        degradation_monitor = (DegradationMonitor(degradation_policy, journal=journal)
+                               if degradation_policy is not None else None)
         records = journal.records()
         existing = [r for r in records if r.get("session_id") == config.session_id]
         prior_decision = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
@@ -658,6 +714,23 @@ class ForwardSessionRunner:
                     else "FEED_HEALTH_UNSAFE"
                 decision = {"side": "NONE", "reason": reason,
                             "feed_health_reasons": feed_health_reasons}
+            elif degradation_monitor is not None and degradation_policy is not None \
+                    and degradation_monitor.action in {
+                    DegradationAction.PAUSE, DegradationAction.RETIRE}:
+                action = degradation_monitor.action.value
+                candidate = decision_fn(decision_events)
+                if not isinstance(candidate, dict) or candidate.get("side") not in (
+                        "BUY", "SELL", "NONE", "NO_TRADE"):
+                    raise RunnerError("decision adapter must return a dictionary with BUY, SELL, or NONE side")
+                # A paused strategy may still reduce or close existing exposure. Any
+                # candidate without an explicit reducing effect is withheld.
+                if candidate.get("position_effect") in {"REDUCE", "CLOSE"}:
+                    decision = candidate
+                else:
+                    decision = {"side": "NO_TRADE", "reason": f"DEGRADATION_{action}",
+                                "position_effect": "REDUCE",
+                                "degradation_policy_sha256": degradation_policy.policy_sha256,
+                                "rejected_candidate": candidate}
             else:
                 decision = decision_fn(decision_events)
             if not isinstance(decision, dict) or decision.get("side") not in ("BUY", "SELL", "NONE", "NO_TRADE"):

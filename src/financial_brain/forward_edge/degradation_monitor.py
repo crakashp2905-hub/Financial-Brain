@@ -118,7 +118,8 @@ class DegradationMonitor:
                  *, journal: DurableJournal | None = None) -> None:
         self.policy = policy
         self._journal = journal
-        journal_events = self._read_journal_events(journal) if journal is not None else ()
+        journal_events = (self._read_journal_events(journal, policy.policy_sha256)
+                          if journal is not None else ())
         if prior_events and journal_events:
             raise DegradationError("supply prior events or a journal, not both")
         self._events = list(journal_events or prior_events)
@@ -140,10 +141,11 @@ class DegradationMonitor:
                 self._latched = Action.PAUSE
 
     @staticmethod
-    def _read_journal_events(journal: DurableJournal) -> tuple[AlarmEvent, ...]:
+    def _read_journal_events(journal: DurableJournal, policy_sha256: str) -> tuple[AlarmEvent, ...]:
         events: list[AlarmEvent] = []
         for record in journal.records():
-            if record.get("t") != "DEGRADATION_ALARM":
+            if (record.get("t") != "DEGRADATION_ALARM"
+                    or record.get("policy_sha256") != policy_sha256):
                 continue
             try:
                 events.append(AlarmEvent(
@@ -164,6 +166,11 @@ class DegradationMonitor:
     @property
     def events(self) -> tuple[AlarmEvent, ...]:
         return tuple(self._events)
+
+    @property
+    def action(self) -> Action:
+        """Current latched action, including a state recovered from the journal."""
+        return self._latched
 
     def observe(self, observation: RollingObservation) -> AlarmEvent:
         policy = self.policy

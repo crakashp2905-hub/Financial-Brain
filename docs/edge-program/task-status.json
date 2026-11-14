@@ -3171,7 +3171,9 @@
         "docs/edge-program/pe-0144-frozen-degradation-alarms.md",
         "docs/edge-program/pe-0144-frozen-degradation-alarms-evidence.json",
         "docs/edge-program/task-status.json",
-        "docs/edge-program/source-inventory.json"
+        "docs/edge-program/source-inventory.json",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_forward_session_runner.py"
       ],
       "tests": [
         "test_policy_is_frozen_before_cohort_and_hash_is_stable",
@@ -3182,13 +3184,16 @@
         "test_incomplete_or_nonfinite_metrics_never_continue",
         "test_observations_must_be_complete_and_inside_the_frozen_cohort",
         "test_durable_alarm_journal_recovers_counts_latch_and_duplicate_guard",
-        "test_failed_durable_alarm_append_does_not_advance_monitor_state"
+        "test_failed_durable_alarm_append_does_not_advance_monitor_state",
+        "test_runner_persists_closed_session_degradation_observation",
+        "test_durable_degradation_pause_blocks_next_runner_candidate",
+        "test_durable_degradation_pause_still_allows_explicit_position_close"
       ],
-      "test_result": "9 degradation-monitor tests passed; Ruff passed. Frozen threshold policy, fail-closed metrics, pause/retirement latches, and window validation are covered. Optional DurableJournal alarm persistence recovers IDs, counters, and latched state after restart; append failure leaves monitor state retryable.",
-      "evidence_sha256": "cd1913eb1db127b508be5c5e06d1f3b453aad6af526a34254c0c91a71879e514",
+      "test_result": "64 tests across degradation-monitor and forward-session-runner suites passed; Ruff and mypy passed. DurableJournal recovery preserves alarm IDs, breach counters and latches; ForwardSessionRunner binds observations to closed LIVE_PAPER sessions, withholds new/increasing exposure under PAUSE/RETIRE, and permits explicit REDUCE/CLOSE decisions.",
+      "evidence_sha256": "b5d8bfaab1e8d69c0e4c338ce797aac278256b3cc01c0c0244e824ba5a008e7c",
       "blockers": [
-        "Not wired to the forward session runner or candidate lifecycle.",
-        "Production thresholds, trusted identity roots, alarm delivery, and prospective market-cohort evidence are not configured or verified."
+        "Production thresholds, trusted identity roots, alarm delivery, and prospective market-cohort evidence are not configured or verified.",
+        "A trusted scheduled rolling-metric adapter does not yet generate observations after every forward paper session; the recording API is caller-triggered."
       ]
     },
     {
