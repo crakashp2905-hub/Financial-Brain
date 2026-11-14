@@ -44,10 +44,15 @@ hash-chained journal. The resume command reconstructs the frozen config and even
 crashed before persisting any events, pass the original `--archive`; when an archive hash was already frozen, a
 different file is rejected. Unknown/missing execution receipts remain subject to the runner's reconciliation gate.
 
-This implementation covers offline orchestration and no-trade recovery. It does not yet connect the Kite runner,
-approved strategy adapters, the canonical paper-account OMS/ledger, or a full fill/position reconciliation path.
+This CLI path covers offline orchestration and no-trade recovery. It does not yet connect the Kite runner, executable
+strategy adapters, the canonical paper-account OMS/ledger, or a full fill/position reconciliation path.
 
 Paper-capable strategies must enter the registry through the guarded `SHADOW_ONLY` to `PAPER_ELIGIBLE`
 transition, with a frozen matching benchmark/charter and scoped human approval. `Registry.register()` rejects a
 strategy constructed directly as `PAPER_ELIGIBLE`, `FROZEN_CHALLENGER`, or `VERIFIED`; direct status construction
 must not be used to bypass enrollment evidence. Unapproved strategies remain observation-only.
+
+The separate `ForwardPaperSessionService` now requires the exact registered paper-capable `StrategySpec` and
+rechecks its status, code digest and frozen benchmark before any preflight or journal write. It then delegates to
+the durable forward runner and reconciles completed receipts through `PaperAccount`. This service-level guard does
+not turn archived replay into observed paper trading, and the offline CLI does not invoke the service yet.

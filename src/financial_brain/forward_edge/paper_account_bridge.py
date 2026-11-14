@@ -10,6 +10,8 @@ from collections.abc import Callable, Iterable
 
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.registry import Registry, StrategySpec, order_intent_allowed
 from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner, RunnerError
 from financial_brain.kernel.schemas import (
     AssetClass,
@@ -34,9 +36,27 @@ class PaperAccountBridgeError(ValueError):
 class ForwardPaperSessionService:
     """Run explicit preflight, durable forward session, and idempotent account reconciliation."""
 
-    def __init__(self, runner: ForwardSessionRunner, account: PaperAccount) -> None:
+    def __init__(self, runner: ForwardSessionRunner, account: PaperAccount, *,
+                 strategy_spec: StrategySpec, registry: Registry) -> None:
         self.runner = runner
         self.account = account
+        self.strategy_spec = strategy_spec
+        self.registry = registry
+
+    def _validate_strategy(self, config: ForwardRunConfig) -> None:
+        """Bind the paper service to the exact guarded registry identity before any session writes."""
+        if config.mode is not Mode.LIVE_PAPER:
+            raise PaperAccountBridgeError("paper account service accepts LIVE_PAPER sessions only")
+        try:
+            registered = self.registry.get(self.strategy_spec.strategy_id)
+        except KeyError as exc:
+            raise PaperAccountBridgeError("paper strategy is not registered") from exc
+        if registered != self.strategy_spec or not order_intent_allowed(self.strategy_spec, self.registry):
+            raise PaperAccountBridgeError("paper strategy is not the exact registered paper-capable version")
+        if config.strategy_sha256 != self.strategy_spec.code_sha256:
+            raise PaperAccountBridgeError("session strategy digest does not match the registered strategy")
+        if config.benchmark_id != self.strategy_spec.benchmark_id:
+            raise PaperAccountBridgeError("session benchmark does not match the frozen strategy benchmark")
 
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
             preflight_fn: Callable[[], dict], decision_fn: Callable[[list[NormalizedEvent]], dict],
@@ -44,6 +64,7 @@ class ForwardPaperSessionService:
             decision_at: datetime | None = None,
             reconcile_execution_fn: Callable[[str], dict] | None = None) -> dict:
         """Persist one preflight, run the session, then reconcile its receipt to PaperAccount."""
+        self._validate_strategy(config)
         existing_preflight = next((row for row in DurableJournal(self.runner.journal_path).records()
                                    if row.get("t") == "PREFLIGHT_RESULT"
                                    and row.get("session_id") == config.session_id), None)

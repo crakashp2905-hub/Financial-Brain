@@ -1180,7 +1180,9 @@
         "tests/test_forward_offline_paper_cli.py",
         "tests/test_forward_edge_f02.py",
         "docs/forward-edge/offline-paper-cli.md",
-        "docs/edge-program/pe-0027-offline-real-paper-cli-evidence.json"
+        "docs/edge-program/pe-0027-offline-real-paper-cli-evidence.json",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "tests/test_forward_paper_account_bridge.py"
       ],
       "tests": [
         "test_real_paper_archive_cli_runs_without_network_or_physical_orders",
@@ -1190,11 +1192,11 @@
         "test_paper_capable_status_cannot_be_registered_without_guarded_enrollment",
         "test_only_paper_capable_statuses_get_order_intents"
       ],
-      "test_result": "51 registry, monitoring-candidate and offline CLI tests passed; Ruff and mypy passed. Direct paper-capable status registration is rejected and guarded enrollment is tested; offline CLI still returns NO_TRADE because the registered adapter and canonical OMS/accounting path are not wired.",
+      "test_result": "50 paper-bridge and registry tests passed; Ruff and mypy passed. ForwardPaperSessionService now rejects an unregistered, revoked or identity-mismatched strategy before preflight or journal writes; the separate LIVE_PAPER service tests cover fills, accounting and restart recovery. The offline archive CLI remains NO_TRADE and is not wired to that service.",
       "blockers": [
-        "A registered strategy adapter and canonical paper-account fill/ledger path are not wired; the current command completes as NO_TRADE."
+        "The offline archive CLI has no strategy adapter and is not connected to the registered paper-account service; it remains NO_TRADE. Live observed market sessions and approved production adapters are not evidenced."
       ],
-      "evidence_sha256": "beeb291fc530812e3351f36a8e63ba34eb8052676f7b50cd98b5bd145088f7ab"
+      "evidence_sha256": "2ec5d6947934f0e30be0ed9fba204e136cc75e4b594ab9b20450d79a63edcd43"
     },
     {
       "id": "PE-0028",
@@ -1205,7 +1207,11 @@
         "src/financial_brain/cli.py",
         "tests/test_forward_offline_paper_cli.py",
         "docs/forward-edge/offline-paper-cli.md",
-        "docs/edge-program/pe-0028-offline-session-resume-evidence.json"
+        "docs/edge-program/pe-0028-offline-session-resume-evidence.json",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/forward_edge/registry.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_forward_edge_f02.py"
       ],
       "tests": [
         "test_real_paper_archive_cli_runs_without_network_or_physical_orders",
@@ -1214,11 +1220,11 @@
         "test_real_paper_cli_requires_explicit_paper_confirmation",
         "tests/test_forward_session_runner.py"
       ],
-      "test_result": "29 passed (exit code 0); Ruff and mypy on the offline CLI module passed. Local archive replay and recovery are fail-closed, network-denied and order-free; no strategy adapter or OMS fills are asserted.",
-      "evidence_sha256": "bf9ef3aaf750b50b8311a8ff5698613a83b52bdea3a24dce9a349c58dfdb6db3",
+      "test_result": "50 paper-bridge and registry tests passed; Ruff and mypy passed. ForwardPaperSessionService now rejects an unregistered, revoked or identity-mismatched strategy before preflight or journal writes; the separate LIVE_PAPER service tests cover fills, accounting and restart recovery. The offline archive CLI remains NO_TRADE and is not wired to that service.",
       "blockers": [
-        "CLI recovery is demonstrated for no-trade sessions; a strategy-generated fill plus OMS cash/position reconciliation has not yet been connected end to end."
-      ]
+        "The offline archive CLI has no strategy adapter and is not connected to the registered paper-account service; it remains NO_TRADE. Live observed market sessions and approved production adapters are not evidenced."
+      ],
+      "evidence_sha256": "f32f7ac069c7fa1981afa0592d241ef705e0221feda703e587305a862b375e33"
     },
     {
       "id": "PE-0033",
