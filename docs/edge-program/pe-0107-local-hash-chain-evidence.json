@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0107",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f04.py tests/test_forward_edge_f14.py",
+    "result": "62 passed; Ruff and mypy passed for the custody module."
+  },
+  "implemented": [
+    "Local session and manifest evidence can use the append-only, fsynced, hash-chained DurableJournal.",
+    "Mutation of a persisted canonical decision manifest is detected on reopen.",
+    "Without a trusted receipt, even an intact local hash chain remains LOCAL_ONLY and is not counted as independent verification."
+  ],
+  "blockers": [],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/durable.py": "0f32847d2bf0d192780c69a20d7e928a8efcd1830c26814d9cccdc7fd8d70d04",
+    "src/financial_brain/forward_edge/decision_custody.py": "36c95ddb50a0eb23f8c107add3015976d6061ba857533343d167698a738be38f",
+    "tests/test_forward_edge_f04.py": "f5d3d83cbd5b41a981ee694d85601cdb7fb6c59aa86173c1c847790fed407410",
+    "tests/test_forward_edge_f14.py": "6314537ba1334c4c445abd5cab33cf1affac1a1cb79854a428cdffd5db1270ce"
+  }
+}

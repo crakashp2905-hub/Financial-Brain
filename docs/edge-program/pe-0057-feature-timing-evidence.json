@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0057",
+  "status": "PARTIAL",
+  "implemented": [
+    "The daily deep feature library attaches metadata to every generated non-date column.",
+    "Predictors, liquidity context, and future outcome labels are distinguished; labels become available only after their future horizon matures.",
+    "Construction lookbacks, source-availability policy, and refresh cadence are explicit.",
+    "Economic holding horizons and predictive half-lives are explicitly unestimated rather than inferred from lookback windows.",
+    "Metadata rows are content-addressed; regression tests ensure complete coverage of generated columns."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_phase5_feature_library.py -q",
+    "result": "Combined feature-library and strategy-inventory suite: 9 passed; Ruff and mypy passed. Source inventory --check passes (563 Python files).",
+    "cases": [
+      "test_every_generated_field_has_causal_horizon_and_availability_metadata",
+      "test_no_feature_looks_ahead"
+    ]
+  },
+  "limitations": [
+    "No empirical signal half-life or economic holding horizon is claimed.",
+    "Metadata does not yet cover non-price fundamentals, filings, macro, options, or every legacy feature surface.",
+    "Availability semantics still depend on each provider's actual source timestamps and rights."
+  ]
+}

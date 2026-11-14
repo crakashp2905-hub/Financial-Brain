@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0065",
+  "status": "PARTIAL",
+  "implemented": [
+    "Development-only residual calibration estimates an upper-quantile standardized-error multiplier and never deflates declared uncertainty.",
+    "Policy identity binds strategy, cohort, development-data digest, protocol digest, validation start, confidence level, and pre-validation freeze time.",
+    "A durable registry refuses conflicting policy replacement.",
+    "The shared signal allocator requires both the frozen policy and complete per-name uncertainty inputs, then applies a bounded haircut to expected net alpha.",
+    "When configured with the durable registry, the forward runner requires the cohort policy, enforces its validation start, and scales whole-share entry quantity before risk checks; missing uncertainty and sub-share outcomes abstain."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_uncertainty_sizing.py tests/test_signal_allocator.py tests/test_forward_session_runner.py -q",
+    "result": "51 passed; mypy and Ruff passed for changed modules and tests.",
+    "cases": [
+      "test_uncertainty_calibration_uses_development_data_and_never_deflates_error",
+      "test_uncertainty_calibration_rejects_validation_rows_and_duplicate_decisions",
+      "test_sizing_multiplier_is_bounded_and_falls_as_uncertainty_rises",
+      "test_frozen_uncertainty_policy_cannot_be_replaced",
+      "test_frozen_uncertainty_haircut_reduces_costed_signal_weight",
+      "test_uncertainty_input_without_frozen_policy_fails_closed",
+      "test_paper_runner_applies_frozen_uncertainty_haircut_to_order_quantity",
+      "test_uncertainty_policy_fails_closed_on_missing_error_or_subunit_size",
+      "test_paper_runner_rejects_unbound_or_prevalidation_uncertainty_policy"
+    ]
+  },
+  "limitations": [
+    "No real development observations or reviewed calibration protocol are available; the tests use synthetic rows.",
+    "A runner constructed without the optional uncertainty registry remains in legacy compatibility mode and does not enforce this policy.",
+    "The empirical standardized-error quantile is a development diagnostic, not evidence of calibrated uncertainty, positive alpha, or profitability."
+  ]
+}

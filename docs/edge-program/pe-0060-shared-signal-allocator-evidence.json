@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0060",
+  "status": "PARTIAL",
+  "implemented": [
+    "Common signal adapter routes named actions and cost-itemized NetAlpha forecasts through the shared target portfolio optimizer.",
+    "Expected net alpha remains separate from the allocator's covariance risk penalty.",
+    "Additions below the per-horizon net-alpha hurdle abstain; SELL signals carry a negative target score.",
+    "Existing positions require explicit observations, horizons must match, and residual cash is explicit.",
+    "Output is labeled research-only and does not submit orders."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_signal_allocator.py tests/test_target_portfolio.py -q",
+    "result": "9 passed (exit code 0); Ruff and mypy passed.",
+    "cases": [
+      "test_signal_to_target_uses_one_costed_alpha_allocator_and_explicit_cash",
+      "test_sell_signal_reduces_existing_position_and_no_signal_is_not_a_new_entry",
+      "test_holds_must_be_observed_and_forecast_horizons_must_match",
+      "test_hurdle_and_covariance_universe_must_be_valid"
+    ]
+  },
+  "limitations": [
+    "All strategy adapters and the forward paper session are not yet wired to this common allocator.",
+    "Forecast calibration, versioned covariance and production universe alignment remain unverified.",
+    "No prospective profitability is claimed."
+  ]
+}

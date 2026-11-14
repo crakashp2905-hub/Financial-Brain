@@ -1,0 +1,17 @@
+{
+  "checklist_task": "PE-0164",
+  "status": "DONE",
+  "criterion": "Net futures P&L reconciles across OI-scheduled roll, expiry, variation margin, and explicit overnight funding.",
+  "implementation": [
+    "src/financial_brain/evaluation/futures_roll_schedule.py",
+    "src/financial_brain/kernel/futures_paper.py"
+  ],
+  "tests": [
+    "tests/test_futures_lifecycle.py",
+    "tests/test_kernel_futures_paper.py",
+    "tests/test_forward_edge_f07.py"
+  ],
+  "test_result": "19 passed; Ruff passed; source inventory check passed (613 Python files).",
+  "evidence_scope": "Synthetic contract/OI/price inputs. No live OI, funding quote, trading fee, or profitability claim.",
+  "remaining_operational_evidence": "Run against authorized per-contract OI, settlement and contract-master snapshots; supply funding and execution cost evidence for prospective paper sessions."
+}

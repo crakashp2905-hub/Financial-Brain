@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0083",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_champion_executable.py",
+    "result": "7 passed (exit code 0); Ruff, mypy for champion.py, and diff checks passed."
+  },
+  "verified": [
+    "A scheduled NO_FILL order remains counted in selected_n and no_fill_n even though it contributes no filled trade.",
+    "No-fill-only cohorts retain their scheduled cash-session denominator and resolve to zero return rather than disappearing.",
+    "Partial fills and rejected orders remain separately reported in the same executable cohort ledger."
+  ],
+  "limitations": [
+    "Acceptance uses synthetic cohort evidence and does not establish live order attempts or profitability.",
+    "The frozen session schedule and complete session evidence must be supplied by the caller; missing evidence withholds cohort returns."
+  ],
+  "source_sha256": {
+    "src/financial_brain/evaluation/champion.py": "25987d1d353f65e44a68d493893c70dcb23ac023cae14b290eceef401e76581f",
+    "tests/test_champion_executable.py": "3ff769ca2b3da6f06dc457cf928fd216711b25915b4fd7e06c714b163bba1273"
+  }
+}

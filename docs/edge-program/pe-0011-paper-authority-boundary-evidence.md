@@ -1,0 +1,13 @@
+# PE-0011 paper authority boundary
+
+## Enforced forward-paper boundary
+
+For `ForwardPaperSessionService`, the `ForwardSessionRunner` journal is the durable session/outbox evidence stream. The `PaperAccount` journal is the authoritative source for OMS orders, cash, positions, fees and double-entry accounting. They must resolve to different paths: the service rejects an alias before preflight or any session write, and reconciliation repeats the check before posting account events. `PaperAccountPortfolio` also rejects duplicate account objects, mismatched book IDs, shared durable journals and mixed currencies when building a cross-book view.
+
+`PaperExecutionAuthorityRegistry` adds a transactional cross-engine interlock. It durably binds `(strategy_id, exchange_date)` to one engine and account, makes identical retries idempotent, and rejects a conflicting engine/account before the runner or paper service writes. The legacy intraday runner claims each selected strategy before opening its DuckDB ledger. The forward service validates the registered strategy/account before preflight writes, and `ForwardSessionRunner` independently requires those frozen authority IDs and claims before opening its session, so direct runner callers cannot bypass the cross-engine check. The in-house engines must use the same stable strategy identifier and authority DB. By default, both resolve `paper_authority.sqlite3` from their common data root; deployments with split roots can set `FINANCIAL_BRAIN_PAPER_AUTHORITY_DB` or inject the same registry. Claims remain for the exchange date after a crash to fail closed.
+
+Tests cover cross-engine and cross-account conflict, idempotency, atomic multi-strategy reservation, refusal before legacy ledger creation, refusal before forward preflight/account writes, and direct-runner refusal before session writes. The regression `test_session_evidence_and_paper_account_authority_journals_cannot_alias` separately confirms that authority/evidence journals cannot alias.
+
+## Remaining isolation gap
+
+The interlock is an accidental-overlap control, not authenticated owner authorization. Production roots must resolve to the same SQLite file and use canonical matching strategy IDs; no deployment proof currently verifies those settings. Other direct/manual writers that bypass these two runner entry points are outside the interlock, and account closure/release governance is not implemented. The source inventory explicitly maps this new capability but still contains 611 unassessed Python sources (359 lack a role hint). Therefore PE-0011 remains PARTIAL and no system-wide single-authority claim is made.

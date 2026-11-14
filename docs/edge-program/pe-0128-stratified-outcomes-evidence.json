@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0128",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_stratified_outcomes.py",
+    "result": "9 passed; Ruff passed for the new module and test file."
+  },
+  "implemented": [
+    "Requires registered bucket labels for volatility, market regime, liquidity, market-cap band and transaction-cost bucket.",
+    "Reports every registered bucket against the full scheduled-session denominator, including empty strata and missing dates.",
+    "Computes simultaneous Newey-West uncertainty bands with Bonferroni allocation across all strata and both outcome metrics.",
+    "Separates positive, negative and uncertain subgroup results and explicitly forbids treating positive strata as a global profitability claim."
+  ],
+  "blockers": [
+    "The required stratum registry and labels are caller-supplied, not bound to the prospective cohort registry.",
+    "Instrument aggregation and portfolio utility weights must be frozen by the caller and are not independently verified.",
+    "No real prospective cohort observations are available to populate or validate these summaries."
+  ],
+  "source_sha256": {}
+}

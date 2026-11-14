@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0146",
+  "status": "PARTIAL",
+  "test": {
+    "command": "pytest tests/test_forward_paper_account_bridge.py tests/test_registered_paper_books.py tests/test_source_inventory.py -q; ruff check src/financial_brain/forward_edge/paper_account_bridge.py tests/test_forward_paper_account_bridge.py; mypy src/financial_brain/forward_edge/paper_account_bridge.py",
+    "result": "30 passed; Ruff and mypy passed. Local focused validation only; full cross-platform CI for this change is pending."
+  },
+  "implemented": [
+    "Append-only frozen allocation plans bind the eligible-strategy set to unique account IDs, INR capital, an effective time, and scoped family-capital approval evidence.",
+    "Separate persistent account journals remain isolated; successor plans cannot reassign or resize existing accounts or exceed the cumulative budget.",
+    "ForwardPaperSessionService requires a registered paper-book registry, configured plan, and paper-account root. Before any session writes it resolves the strategy allocation at the decision timestamp and checks plan ID, account ID, canonical journal path, and opening cash against the frozen allocation.",
+    "Paper receipt reconciliation submits its OMS intent through RegisteredPaperBooks.submit_intent, enforcing the matching family evidence and owner approval for that frozen strategy allocation.",
+    "Regression coverage rejects mismatched account opening capital and a separate unregistered journal even when account ID and capital match, without additional account-journal writes; crash/replay, partial-fill, cross-book and no-transfer checks remain passing."
+  ],
+  "blockers": [
+    "Registration and allocation-change evidence IDs still need authentication by an approved owner-identity service.",
+    "Safe account closure and released-capital reconciliation are not implemented; capital recycling remains blocked.",
+    "Legacy or directly constructed PaperAccount writers outside ForwardPaperSessionService can still bypass this registered-book order path."
+  ],
+  "source_sha256": {
+    "src/financial_brain/kernel/registered_paper_books.py": "17be756b22e8af5030f2964a3d2bcff76be56dd65841ded1b9c8258bbd143878",
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "d4a670e4cef957b3847aef5a582c3b372363288787d7e45421f94adcd2007fe2",
+    "tests/test_registered_paper_books.py": "29f12b7baca3ed3df1daff41e57d38523ea9da8cef047b57bba96c77e994b570",
+    "tests/test_forward_paper_account_bridge.py": "5ba02907488ea1f4c39cf54b52d14beca97e7c605bf631faef10c87946728284"
+  }
+}

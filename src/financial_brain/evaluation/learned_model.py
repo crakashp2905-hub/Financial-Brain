@@ -1,16 +1,16 @@
-"""The learned-combination model as a live challenger (qualified in ``Result of the deep feature library``).
+"""The learned-combination challenger; loadable artifacts require an offline maturity manifest.
 
-``train_final`` fits the pre-registered LightGBM once on the whole library panel (rows whose 20-session outcome ended
-at least 30 days before the last date - the same embargo as the walk-forward test) and saves the model with the exact
-feature list it was trained on. ``score_day`` computes the library for the most liquid names as of one close, ranks
-each feature across those names (as in training) and predicts. It never retrains on live data: a refit is a new
-version, pre-registered first.
+``run_offline_training_job`` hashes the versioned input, feature schema, code and seed, trains only on complete
+outcomes with known maturity timestamps, and emits the manifest required by ``load``. ``train_final`` is its
+low-level fitter and does not by itself create a loadable model. ``score_day`` scores without retraining.
 """
 from __future__ import annotations
 
 import json
-from datetime import timedelta
+import hashlib
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -26,7 +26,12 @@ class LearnedModelError(RuntimeError):
 
 
 def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int = 30,
-                model_path: Path = MODEL, meta_path: Path = META) -> dict:
+                model_path: Path = MODEL, meta_path: Path = META, seed: int = 0) -> dict:
+    """Low-level fitter. Use ``offline_training.run_offline_training_job`` for loadable artifacts."""
+    if not features or len(set(features)) != len(features):
+        raise LearnedModelError("feature list must be non-empty and unique")
+    if embargo_days < 1 or not isinstance(seed, int):
+        raise LearnedModelError("training embargo and integer seed are required")
     import lightgbm as lgb
     from . import deep_library as DL
     p = panel.dropna(subset=["fwd20"])
@@ -34,10 +39,29 @@ def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int =
     p = p[p["d"] <= cutoff]
     X = p.groupby("d")[features].rank(pct=True).to_numpy(np.float32)
     y = p.groupby("d")["fwd20"].rank(pct=True).to_numpy()
-    m = lgb.LGBMRegressor(**DL.GBM_PARAMS).fit(X, y)
+    params: dict[str, Any] = {**DL.GBM_PARAMS, "random_state": seed, "n_jobs": 1,
+                             "deterministic": True, "force_col_wise": True}
+    m = lgb.LGBMRegressor(**params).fit(X, y)
     m.booster_.save_model(str(model_path))
-    meta = {"version": VERSION, "features": features, "trained_through": str(cutoff), "rows": int(len(p)),
-            "params": DL.GBM_PARAMS}
+    feature_source_sha256 = _file_sha256(Path(__file__).parents[1] / "features" / "library.py")
+    feature_schema_sha256 = hashlib.sha256(json.dumps(
+        {"features": features, "implementation_sha256": feature_source_sha256},
+        sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    data_sha256 = _training_data_sha256(p, features)
+    model_sha256 = _file_sha256(model_path)
+    code_sha256 = _file_sha256(Path(__file__))
+    identity_params = {k: str(v) for k, v in sorted(params.items())}
+    identity_params["model_artifact_sha256"] = model_sha256
+    from ..forward_edge.governance import model_id
+    stable_model_id = model_id(data_sha256=data_sha256, feature_schema_sha256=feature_schema_sha256,
+                               params=identity_params, seed=seed, code_sha256=code_sha256)
+    meta = {"version": VERSION, "model_id": stable_model_id, "features": features,
+            "feature_schema_sha256": feature_schema_sha256, "training_data_sha256": data_sha256,
+            "feature_source_sha256": feature_source_sha256, "model_sha256": model_sha256,
+            "code_sha256": code_sha256, "seed": seed,
+            "trained_through": str(cutoff), "embargo_days": embargo_days,
+            "embargo_semantics": "calendar-day proxy; label-end timestamps unavailable",
+            "rows": int(len(p)), "params": params, "identity_params": identity_params}
     meta_path.write_text(json.dumps(meta, indent=1), encoding="utf-8")
     return meta
 
@@ -45,12 +69,218 @@ def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int =
 def load(model_path: Path = MODEL, meta_path: Path = META):
     import lightgbm as lgb
     if not model_path.exists() or not meta_path.exists():
-        raise LearnedModelError("no trained model - run train_final first")
-    return lgb.Booster(model_file=str(model_path)), json.loads(meta_path.read_text(encoding="utf-8"))
+        raise LearnedModelError("no trained model - run the matured offline training job first")
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    required = ("model_id", "feature_schema_sha256", "training_data_sha256", "feature_source_sha256", "model_sha256")
+    if any(not meta.get(key) for key in required):
+        raise LearnedModelError("model predates the content-addressed lineage manifest; retrain the challenger")
+    if meta.get("model_sha256") and _file_sha256(model_path) != meta["model_sha256"]:
+        raise LearnedModelError("model file digest differs from the registered training manifest")
+    _read_offline_training_manifest(meta, meta_path)
+    return lgb.Booster(model_file=str(model_path)), meta
+
+
+def _read_offline_training_manifest(meta: dict, meta_path: Path) -> dict:
+    manifest_name = meta.get("offline_training_manifest_file")
+    if not isinstance(manifest_name, str) or not manifest_name or Path(manifest_name).name != manifest_name:
+        raise LearnedModelError("model lacks the required matured offline-training manifest")
+    manifest_path = Path(meta_path).parent / manifest_name
+    if not manifest_path.is_file():
+        raise LearnedModelError("offline-training manifest is missing")
+    try:
+        training_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise LearnedModelError("offline-training manifest cannot be read") from exc
+    claimed_manifest_sha256 = training_manifest.get("manifest_sha256")
+    manifest_body = {key: value for key, value in training_manifest.items() if key != "manifest_sha256"}
+    actual_manifest_sha256 = hashlib.sha256(json.dumps(
+        manifest_body, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+    if claimed_manifest_sha256 != actual_manifest_sha256 \
+            or claimed_manifest_sha256 != meta.get("offline_training_manifest_sha256"):
+        raise LearnedModelError("offline-training manifest digest does not match model metadata")
+    if (training_manifest.get("model_id") != meta.get("model_id")
+            or training_manifest.get("model_sha256") != meta.get("model_sha256")
+            or training_manifest.get("feature_schema_sha256") != meta.get("feature_schema_sha256")
+            or training_manifest.get("code_sha256") != meta.get("offline_training_code_sha256")):
+        raise LearnedModelError("offline-training manifest does not match the registered model lineage")
+    if (training_manifest.get("schema_version") != "fb.offline-training-job.v3"
+            or training_manifest.get("maturity_contract") !=
+            "label_matured_at_utc is known and <= trained_as_of_utc"
+            or training_manifest.get("outcome_completeness_contract") !=
+            "only MATURED or SETTLED outcomes enter training; OPEN and PENDING_SETTLEMENT are quarantined"
+            or training_manifest.get("temporal_split_contract") !=
+            "expanding folds; purge labels overlapping validation; exclude embargo-adjacent sessions; feature availability and revision <= row decision; label maturity and revision <= fit cutoff; only MATURED or SETTLED outcomes"
+            or training_manifest.get("features") != meta.get("features")
+            or training_manifest.get("seed") != meta.get("seed")
+            or not training_manifest.get("dataset_version")
+            or not training_manifest.get("feature_schema_version")):
+        raise LearnedModelError("offline-training manifest does not satisfy the matured job contract")
+    environment = training_manifest.get("environment")
+    params = training_manifest.get("training_parameters")
+    if (not isinstance(environment, dict)
+            or any(not environment.get(key) for key in ("python", "numpy", "pandas", "lightgbm"))
+            or environment.get("threads") != 1 or environment.get("deterministic") is not True
+            or not isinstance(params, dict) or params.get("n_jobs") != 1
+            or params.get("deterministic") is not True or params.get("force_col_wise") is not True):
+        raise LearnedModelError("offline-training manifest lacks a deterministic single-thread environment")
+    for field in ("dataset_sha256", "fit_dataset_sha256", "code_sha256",
+                  "feature_schema_sha256", "model_sha256", "model_id"):
+        digest = training_manifest.get(field)
+        if not isinstance(digest, str) or len(digest) != 64 \
+                or any(character not in "0123456789abcdef" for character in digest):
+            raise LearnedModelError(f"offline-training manifest has invalid {field}")
+    try:
+        as_of = pd.Timestamp(training_manifest["trained_as_of_utc"])
+        mature = pd.Timestamp(training_manifest["max_eligible_label_matured_at_utc"])
+        counts_valid = (type(training_manifest["input_rows"]) is int
+                        and type(training_manifest["eligible_matured_rows"]) is int
+                        and type(training_manifest["quarantined_rows"]) is int
+                        and training_manifest["input_rows"] >= training_manifest["eligible_matured_rows"] > 0
+                        and training_manifest["quarantined_rows"] ==
+                        training_manifest["input_rows"] - training_manifest["eligible_matured_rows"])
+    except (KeyError, TypeError, ValueError):
+        raise LearnedModelError("offline-training manifest has invalid maturity timestamps or row counts") from None
+    if (as_of.tzinfo is None or mature.tzinfo is None or mature > as_of
+            or not counts_valid):
+        raise LearnedModelError("offline-training manifest includes invalid or immature training outcomes")
+    folds = training_manifest.get("temporal_folds")
+    split_parameters = training_manifest.get("temporal_split_parameters")
+    if (not isinstance(folds, list) or not folds or not isinstance(split_parameters, dict)
+            or type(split_parameters.get("n_splits")) is not int
+            or type(split_parameters.get("embargo_sessions")) is not int
+            or training_manifest.get("final_training_fold") != folds[-1].get("fold")
+            or training_manifest.get("fitted_rows") != folds[-1].get("train_count")
+            or training_manifest.get("reserved_validation_rows") != folds[-1].get("validation_count")):
+        raise LearnedModelError("offline-training manifest lacks its purged validation split")
+    for fold in folds:
+        try:
+            validation_start = pd.Timestamp(fold["validation_start_decision_at_utc"])
+            latest_maturity = pd.Timestamp(fold["max_train_label_matured_at_utc"])
+            latest_revision = pd.Timestamp(fold["max_train_label_revision_at_utc"])
+            valid_counts = (type(fold["train_count"]) is int and fold["train_count"] > 0
+                            and type(fold["validation_count"]) is int and fold["validation_count"] > 0
+                            and type(fold["embargo_sessions"]) is int
+                            and type(fold["embargoed_session_count"]) is int
+                            and fold["embargoed_session_count"] >= 0)
+            valid_hashes = all(isinstance(fold[key], str) and len(fold[key]) == 64
+                               and all(c in "0123456789abcdef" for c in fold[key])
+                               for key in ("train_rows_sha256", "validation_rows_sha256"))
+        except (KeyError, TypeError, ValueError):
+            raise LearnedModelError("offline-training split metadata is invalid") from None
+        if (validation_start.tzinfo is None or latest_maturity.tzinfo is None
+                or latest_revision.tzinfo is None or latest_maturity >= validation_start
+                or latest_revision >= validation_start or not valid_counts or not valid_hashes):
+            raise LearnedModelError("offline-training split leaks labels or has invalid membership")
+    return training_manifest
+
+
+def _file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _training_data_sha256(panel: pd.DataFrame, features: list[str]) -> str:
+    """Digest the exact ordered, label-bearing training rows with stable date/float encodings."""
+    required = {"d", "lineage", "fwd20", *features}
+    missing = required - set(panel.columns)
+    if missing:
+        raise LearnedModelError(f"training data missing lineage fields: {sorted(missing)}")
+    if panel.duplicated(["d", "lineage"]).any():
+        raise LearnedModelError("training rows must be unique by date and lineage")
+    rows = []
+    for row in panel.sort_values(["d", "lineage"], kind="mergesort")[
+            ["d", "lineage", *features, "fwd20"]].itertuples(index=False, name=None):
+        day, lineage, *values = row
+        encoded = [day.isoformat() if hasattr(day, "isoformat") else str(day), str(lineage)]
+        encoded.extend(None if pd.isna(value) else float(value).hex() for value in values)
+        rows.append(encoded)
+    body = json.dumps(rows, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def _validate_inference_frame(frame: pd.DataFrame) -> pd.Timestamp:
+    required = {"decision_at_utc", "feature_available_at_utc", "feature_revision_at_utc"}
+    if not required.issubset(frame.columns) or frame.empty:
+        raise LearnedModelError("inference schema requires decision, feature-availability, and feature-revision timestamps")
+    parsed: dict[str, list[pd.Timestamp]] = {}
+    for column in required:
+        values = []
+        for raw in frame[column]:
+            try:
+                value = pd.Timestamp(raw)
+            except (TypeError, ValueError) as exc:
+                raise LearnedModelError(f"{column} must contain aware timestamps") from exc
+            if value.tzinfo is None or value.utcoffset() is None:
+                raise LearnedModelError(f"{column} must contain aware timestamps")
+            values.append(value.tz_convert("UTC"))
+        parsed[column] = values
+    decisions = parsed["decision_at_utc"]
+    if len(set(decisions)) != 1:
+        raise LearnedModelError("one inference frame must represent exactly one decision timestamp")
+    decision = decisions[0]
+    for available, revised in zip(parsed["feature_available_at_utc"], parsed["feature_revision_at_utc"]):
+        if available > decision or revised > decision or revised < available:
+            raise LearnedModelError("future feature availability or revision cannot enter inference")
+    return decision
+
+
+def prediction_batch_sha256(frame: pd.DataFrame, *, as_of, model_digest: str) -> str:
+    """Content hash a prediction batch independent of input row order or display formatting."""
+    if "lineage" not in frame or "pred" not in frame or not model_digest:
+        raise LearnedModelError("prediction batch needs lineage, predictions and model identity")
+    decision = _validate_inference_frame(frame)
+    try:
+        batch_as_of = pd.Timestamp(as_of)
+    except (TypeError, ValueError) as exc:
+        raise LearnedModelError("prediction batch as_of must be the aware decision timestamp") from exc
+    if batch_as_of.tzinfo is None or batch_as_of.tz_convert("UTC") != decision:
+        raise LearnedModelError("prediction batch as_of differs from its feature decision timestamp")
+    if frame["lineage"].isna().any() or frame["lineage"].duplicated().any():
+        raise LearnedModelError("prediction batch lineages must be present and unique")
+    rows = []
+    columns = ["lineage", "pred", "feature_available_at_utc", "feature_revision_at_utc"]
+    for row in frame[columns].sort_values("lineage", kind="mergesort").itertuples(index=False):
+        score = float(row.pred)
+        if not np.isfinite(score):
+            raise LearnedModelError("prediction batch contains a non-finite score")
+        rows.append([str(row.lineage), score.hex(), pd.Timestamp(row.feature_available_at_utc).tz_convert("UTC").isoformat(),
+                     pd.Timestamp(row.feature_revision_at_utc).tz_convert("UTC").isoformat()])
+    body = json.dumps({"as_of": decision.isoformat(), "model_id": model_digest, "predictions": rows},
+                      sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def _valid_prediction_cache(frame: pd.DataFrame, *, as_of, meta: dict, model_path: Path,
+                            meta_path: Path | None = None) -> bool:
+    """Accept only cache rows matching the current model artifact and their own content digest."""
+    required = {"prediction_batch_sha256", "model_id", "feature_schema_sha256", "lineage", "pred",
+                "decision_at_utc", "feature_available_at_utc", "feature_revision_at_utc"}
+    if not required.issubset(frame.columns) or not model_path.exists():
+        return False
+    if (_file_sha256(model_path) != meta.get("model_sha256") or not meta.get("model_id")
+            or meta_path is None):
+        return False
+    try:
+        _read_offline_training_manifest(meta, meta_path)
+    except LearnedModelError:
+        return False
+    if frame["model_id"].nunique() != 1 or frame["model_id"].iloc[0] != meta["model_id"]:
+        return False
+    if frame["feature_schema_sha256"].nunique() != 1 \
+            or frame["feature_schema_sha256"].iloc[0] != meta.get("feature_schema_sha256"):
+        return False
+    if frame["prediction_batch_sha256"].nunique() != 1:
+        return False
+    return frame["prediction_batch_sha256"].iloc[0] == prediction_batch_sha256(
+        frame, as_of=as_of, model_digest=meta["model_id"])
 
 
 def score_frame(frame: pd.DataFrame, booster, features: list[str]) -> pd.Series:
-    """``frame``: one row per name for one day, with the features. Ranked per feature across the names, as trained."""
+    """Score one cross section only when its features were available/revised by the decision timestamp."""
+    _validate_inference_frame(frame)
     X = frame[features].rank(pct=True).to_numpy(np.float32)
     return pd.Series(booster.predict(X), index=frame.index)
 
@@ -96,26 +326,43 @@ def drivers(booster, ranked: np.ndarray, features: list[str], *, up: int = 5, do
 CACHE = Path("data") / "learned_scores"
 
 
-def score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_path: Path = META,
+def score_day(rcon, day, *, decision_at_utc: datetime | None = None, names: int = 500,
+              model_path: Path = MODEL, meta_path: Path = META,
               cache: Path | None = CACHE) -> pd.DataFrame:
     """Cached per day (``data/learned_scores/DAY.parquet``), so the competition, the books and the terminal score once."""
+    if (not isinstance(decision_at_utc, datetime) or decision_at_utc.tzinfo is None
+            or decision_at_utc.utcoffset() is None):
+        raise LearnedModelError("inference requires an explicit timezone-aware decision_at_utc")
+    decision = pd.Timestamp(decision_at_utc).tz_convert("UTC")
     if cache is not None:
         f = cache / f"{pd.Timestamp(day).date()}.parquet"
         if f.exists():
-            return pd.read_parquet(f)
-    out = _score_day(rcon, day, names=names, model_path=model_path, meta_path=meta_path)
+            cached = pd.read_parquet(f)
+            metadata = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
+            if _valid_prediction_cache(cached, as_of=decision, meta=metadata,
+                                       model_path=model_path, meta_path=meta_path):
+                return cached
+    out = _score_day(rcon, day, decision_at_utc=decision.to_pydatetime(), names=names,
+                     model_path=model_path, meta_path=meta_path)
     if cache is not None:
         cache.mkdir(parents=True, exist_ok=True)
         out.to_parquet(cache / f"{pd.Timestamp(day).date()}.parquet")
     return out
 
 
-def _score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_path: Path = META) -> pd.DataFrame:
+def _score_day(rcon, day, *, decision_at_utc: datetime, names: int = 500,
+               model_path: Path = MODEL, meta_path: Path = META) -> pd.DataFrame:
     from ..features import library as LB
     from ..features import technical as TE
     booster, meta = load(model_path, meta_path)
-    lins = [r[0] for r in rcon.execute("""SELECT lineage FROM features WHERE business_date = ? AND adv20 > 0
-                                          ORDER BY adv20 DESC LIMIT ?""", [day, names]).fetchall()]
+    try:
+        timing_rows = rcon.execute("""SELECT lineage, feature_available_at_utc, feature_revision_at_utc
+                                      FROM features WHERE business_date = ? AND adv20 > 0
+                                      ORDER BY adv20 DESC LIMIT ?""", [day, names]).fetchall()
+    except Exception as exc:  # noqa: BLE001 - fail closed when the inference source lacks PIT metadata
+        raise LearnedModelError("features relation must provide availability and revision timestamps") from exc
+    timing = {row[0]: (row[1], row[2]) for row in timing_rows}
+    lins = list(timing)
     rcon.execute(TE.BARS_SQL)
     bars = rcon.execute("""SELECT lineage, d, o, h, l, c, v FROM _tbars WHERE lineage IN (SELECT UNNEST(?))
                            AND d <= ? AND d > ?::DATE - INTERVAL 700 DAY ORDER BY lineage, d""", [lins, day, day]).df()
@@ -131,14 +378,25 @@ def _score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_pa
         last = f.iloc[-1]
         if last["d"] != pd.Timestamp(day).date():
             continue                                    # no bar on the day: not scored
-        rows.append({"lineage": lin, **{k: last.get(k, np.nan) for k in meta["features"]}})
+        if lin not in timing:
+            raise LearnedModelError(f"feature provenance is missing for lineage {lin}")
+        available, revised = timing[lin]
+        rows.append({"lineage": lin, "decision_at_utc": decision_at_utc,
+                     "feature_available_at_utc": available, "feature_revision_at_utc": revised,
+                     **{k: last.get(k, np.nan) for k in meta["features"]}})
     frame = pd.DataFrame(rows)
     if frame.empty:
         raise LearnedModelError(f"no names scored on {day}")
     frame["pred"] = score_frame(frame, booster, meta["features"])
+    batch_hash = prediction_batch_sha256(frame.assign(lineage=frame["lineage"], pred=frame["pred"]),
+                                         as_of=pd.Timestamp(decision_at_utc), model_digest=meta["model_id"])
+    frame["prediction_batch_sha256"] = batch_hash
+    frame["model_id"] = meta["model_id"]
+    frame["feature_schema_sha256"] = meta["feature_schema_sha256"]
     frame["why"] = drivers(booster, frame[meta["features"]].rank(pct=True).to_numpy(np.float32), meta["features"])
     tick = dict(rcon.execute("SELECT lineage, ticker FROM adjusted_prices WHERE business_date = ? AND lineage IN (SELECT UNNEST(?))",
                              [day, list(frame["lineage"])]).fetchall())
     frame["ticker"] = frame["lineage"].map(tick)
-    cols = ["lineage", "ticker", "pred", "why"] + [f for f in meta["features"] if f in frame.columns]
+    cols = ["lineage", "ticker", "pred", "why", "decision_at_utc", "feature_available_at_utc",
+            "feature_revision_at_utc"] + [f for f in meta["features"] if f in frame.columns]
     return frame[cols].sort_values("pred", ascending=False).reset_index(drop=True)   # features kept for percentiles

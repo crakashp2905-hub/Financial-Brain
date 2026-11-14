@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "observed_at": "2026-11-13T04:12:02Z",
+  "scope": "Mode capability inventory; implementation tests do not imply a live observation, broker authorization, or profitable strategy.",
+  "modes": [
+    {
+      "mode": "REAL_FEED",
+      "status": "PARTIAL",
+      "capability": "Read-only Kite Connect quote and historical-data adapters normalize source clocks, quote fidelity, and available depth.",
+      "tested_mode": "Mocked provider contract tests; no fresh authorized market capture evidenced.",
+      "fidelity": "Adapter and payload fidelity tested; live source freshness and request latency unverified.",
+      "source_ids": ["kite-connect"],
+      "evidence_paths": ["src/financial_brain/providers/kite_data.py", "src/financial_brain/ingest/kite_live.py", "src/financial_brain/forward_edge/market_data.py", "tests/test_kite_forward_events.py"],
+      "limitations": ["LTP-only observations cannot support executable fills.", "No current live quote evidence or independently attested session."]
+    },
+    {
+      "mode": "REPLAY",
+      "status": "IMPLEMENTED_TESTED",
+      "capability": "Run deterministic synthetic fixtures and historical datasets through research and replay workflows.",
+      "tested_mode": "FIXTURE_REPLAY and historical replay unit suites.",
+      "fidelity": "Fixture outcomes are synthetic; historical replay is limited by source coverage and modeled execution.",
+      "source_ids": [],
+      "evidence_paths": ["src/financial_brain/forward_edge/pipeline.py", "src/financial_brain/forward_edge/fixtures.py", "tests/test_forward_edge_f00.py", "tests/test_champion_executable.py"],
+      "limitations": ["Replay is not prospective evidence and cannot be relabeled as live paper."]
+    },
+    {
+      "mode": "SHADOW",
+      "status": "IMPLEMENTED_TESTED",
+      "capability": "Evaluate signals without producing fills or sending physical orders.",
+      "tested_mode": "SHADOW mode unit contract; no observed market session recorded in this artifact.",
+      "fidelity": "Mode and no-fill guarantees are tested; actual feed continuity and shadow coverage are not evidenced.",
+      "source_ids": ["kite-connect"],
+      "evidence_paths": ["src/financial_brain/forward_edge/modes.py", "tests/test_forward_edge_f00.py::test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders"],
+      "limitations": ["No shadow-session opportunity denominator or independent timestamp evidence is attached."]
+    },
+    {
+      "mode": "PAPER",
+      "status": "PARTIAL",
+      "capability": "Run simulated orders through durable OMS/accounting paper books and persist marked NAV snapshots.",
+      "tested_mode": "LOCAL_PAPER and deterministic replay tests; active local paper database was not inspected as outcome evidence.",
+      "fidelity": "Paper accounting and quote contracts are tested; actual captured sessions and fill realism are not independently verified.",
+      "source_ids": ["kite-connect"],
+      "evidence_paths": ["src/financial_brain/kernel/paper_account.py", "src/financial_brain/forward_edge/session_runner.py", "tests/test_paper_account.py", "tests/test_paper_nav_returns.py"],
+      "limitations": ["Long-only, single-currency cash accounting; margin and derivatives are not included.", "No independently attested completed live-market session is evidenced."]
+    },
+    {
+      "mode": "BROKER_DRYRUN",
+      "status": "BLOCKED",
+      "capability": "Mode resolver requires verified broker compliance before a dry-run session can be granted.",
+      "tested_mode": "Negative test confirms grant is refused without a verified compliance record.",
+      "fidelity": "Gate behavior tested; no broker dry-run adapter or rehearsal was observed.",
+      "source_ids": [],
+      "evidence_paths": ["src/financial_brain/forward_edge/modes.py", "tests/test_forward_edge_f00.py::test_broker_dryrun_needs_verified_compliance"],
+      "limitations": ["No authorized broker rehearsal or reconciled broker status."]
+    },
+    {
+      "mode": "LIVE_CASH",
+      "status": "DISABLED",
+      "capability": "Physical order policy is hard-disabled; mode grant fails closed even if a runtime flag is forged.",
+      "tested_mode": "Forged build flag and missing-approval negative tests; no physical order route exists in the paper kernel.",
+      "fidelity": "Disablement and authorization-gate behavior tested; no live orders were sent.",
+      "source_ids": [],
+      "evidence_paths": ["src/financial_brain/forward_edge/modes.py", "tests/test_forward_edge_f00.py::test_live_cash_is_unavailable_by_default", "tests/test_forward_edge_f00.py::test_flipping_the_build_flag_alone_does_not_enable_cash", "tests/test_forward_edge_f00.py::test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders"],
+      "limitations": ["Live cash is not approved or enabled."]
+    }
+  ]
+}

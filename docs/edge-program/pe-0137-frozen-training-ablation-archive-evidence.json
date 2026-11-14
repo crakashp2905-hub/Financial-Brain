@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0137",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_ablation_plan.py tests/test_horizon_search.py tests/test_bounded_search.py; ruff check src/financial_brain/evaluation/ablation_plan.py tests/test_ablation_plan.py",
+    "result": "13 passed; Ruff passed."
+  },
+  "implemented": [
+    "Freezes a bounded complete Cartesian grid for entry, exit, horizon, portfolio width, and turnover before outcomes.",
+    "Restricts outcomes to the declared TRAINING development window and protects the final window from evaluation input.",
+    "Requires every parameter combination to have outcomes for the same dates and decision identities.",
+    "Retains exact positive, zero, and negative outcome rows and records all grid-cell summaries.",
+    "Archives the plan and complete outcomes in a hash-chained journal with immutable replay checks."
+  ],
+  "blockers": [
+    "No adapter executes the project portfolio simulator across every frozen five-axis combination; the archive accepts supplied outcomes.",
+    "The development-data digest is declared by the caller and is not resolved against an authoritative dataset manifest.",
+    "No complete five-axis ablation run is included in repository evidence."
+  ],
+  "source_sha256": {
+    "src/financial_brain/evaluation/ablation_plan.py": "84eb293fc45a4cd91747502d41a00c8accd0620bb16193140c5903b464dd4bec",
+    "tests/test_ablation_plan.py": "c74f4f87bc7dd73fc5a812e02b3f4954b82a762912afa8558a764dc4da86f073"
+  }
+}

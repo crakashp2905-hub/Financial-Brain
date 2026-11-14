@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "rulebook_id": "india-exchange-traded-fx-paper-v1",
+  "rulebook_sha256": "cdaf36568960b5da69df44868c8c55ff8b3f344c0697f30800e89805ef377e10",
+  "jurisdiction": "IN",
+  "effective_from": "2024-05-03",
+  "supported_venues": ["BSE", "MSEI", "NSE"],
+  "pairs": ["EUR-INR", "EUR-USD", "GBP-INR", "GBP-USD", "JPY-INR", "USD-INR", "USD-JPY"],
+  "products": ["CALL", "FUTURE", "PUT"],
+  "constraints": {
+    "inr_pair_purpose": "HEDGE_CONTRACTED_EXPOSURE",
+    "inr_exposure_must_be_unhedged_and_cover_simulated_quantity": true,
+    "options_exercise_style": "EUROPEAN",
+    "options_underlying": "SPOT_RATE",
+    "maximum_tenor_months": 12,
+    "settlement_currency": "INR",
+    "venue_authorization_evidence_required": true,
+    "contract_specification_effective_dates_required": true,
+    "venue_authorization_effective_dates_and_recent_check_required": true
+  },
+  "sources": [
+    "https://rbi.org.in/scripts/FS_Notification.aspx?Id=12594&Mode=0&fn=6",
+    "https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=57628",
+    "https://www.sebi.gov.in/reports-and-statistics/publications/aug-2026/SEBI%20ANNUAL%20REPORT%202025_26.pdf"
+  ],
+  "source_scope": "RBI Master Direction applies from 2024-05-03. Venue identities are a reviewed India exchange allowlist; current venue authorization is still supplied as separately dated, source-hashed runtime evidence. This is a paper-control rule snapshot, not legal advice or a live authorization feed."
+}

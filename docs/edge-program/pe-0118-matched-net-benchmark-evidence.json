@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0118",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_matched_performance.py",
+    "result": "3 passed; Ruff and mypy passed for matched_performance.py."
+  },
+  "implemented": [
+    "Daily net returns are computed from NAV and interval cash flows, retaining zero-return cash sessions.",
+    "Strategy and benchmark return streams must have the exact same dates; missing or duplicate dates fail closed.",
+    "The matcher requires the same positive declared INR risk budget for every paired session and emits per-session net alpha.",
+    "Sample count and paired return values are returned without comparing unmatched rupee P&L."
+  ],
+  "limitations": [
+    "NAV inputs must already include actual marks, fees, charges, financing and other account effects; the helper does not invent these inputs.",
+    "No real forward strategy/benchmark session was available in this test; this is software acceptance evidence only."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/matched_performance.py": "3440ddc81904d1b559ce84f3172e46d54e4c5be837fced4533d6c13a2954008b",
+    "src/financial_brain/forward_edge/evidence_stats.py": "d66e5fc822b97d4e022f4821e0362aa64396aa7b0703ac47900ee52aac1e445a",
+    "tests/test_matched_performance.py": "95a93b71e8dee3f052a7cd974a3826a4125f2e1ec2bae824d3d0b0b25fbcb634",
+    "docs/edge-program/source-inventory.json": "b99322699ae9afa7e52f1a5afcfdf58c6f551ef8af359aea1b803ef83c3d93e6"
+  }
+}

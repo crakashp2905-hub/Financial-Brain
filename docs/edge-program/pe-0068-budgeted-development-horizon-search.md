@@ -1,0 +1,5 @@
+# PE-0068 budgeted development horizon comparison
+
+Added a fixed-grid, content-addressed search plan for economic holding horizons 20, 40, and 60. The three-horizon search budget and protocol/data hashes are frozen before the development start; the development window must end before confirmatory data begins. Evaluation accepts `DEVELOPMENT` rows only, verifies the frozen dataset digest, requires matched decision identities at all horizons, rejects duplicate/extra trials, and reports each horizon's sample count, mean net holding-period alpha, and annualized mean. The exploratory development leader is explicitly not a promotion decision. Results are append-only and immutable.
+
+The package remains `PARTIAL`: tests use synthetic records and no new authorized development dataset was evaluated. The existing historical horizon research is not reopened by this package. Any real comparison must use development-only data, the declared three-horizon budget, and an appropriate protocol; confirmatory rows are refused before scoring.

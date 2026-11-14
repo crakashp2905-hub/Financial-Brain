@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0130",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_queue_fill_scenarios.py",
+    "result": "10 passed; Ruff passed for the new module and test file."
+  },
+  "implemented": [
+    "Reports no fill, queue best/mid/worst case and full fill for every frozen intention.",
+    "Calculates explicit fill quantities and fractions from supplied trade-through volume and low/high queue-ahead bounds.",
+    "Reports queue-position net P&L bounds from both queue endpoints; economic best/worst scenarios account for losses and need not be monotone in fill rate.",
+    "Hashes the frozen intention population and exposes gross P&L, costs and net results per intention and aggregate scenario."
+  ],
+  "blockers": [
+    "Queue intervals and trade-through volumes are supplied by the caller; no licensed observed depth/trade evidence is connected.",
+    "Partial-fill gross P&L and execution costs scale linearly from full-fill values and do not capture fill-dependent adverse selection or nonlinear minimum fees.",
+    "Scenario output is not wired to the authoritative alpha promotion gate."
+  ],
+  "source_sha256": {}
+}

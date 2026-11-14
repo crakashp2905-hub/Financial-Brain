@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0145",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_premarket_preflight.py; ruff check src/financial_brain/forward_edge/premarket_preflight.py tests/test_premarket_preflight.py",
+    "result": "19 passed; Ruff passed."
+  },
+  "implemented": [
+    "Covers market calendar, data entitlement, read-only broker session, disk capacity, archive write probe, effective cost schedule, strategy identity/version, approved risk configuration, and clock skew.",
+    "Missing, invalid, stale, or out-of-policy inputs create explicit failed checks and operator-visible reason codes.",
+    "Any failed mandatory check returns status NO_TRADE and approved=false in a JSON-compatible record accepted by ForwardSessionRunner.record_preflight.",
+    "The immutable report is content-addressed together with its policy, check results, and input snapshot."
+  ],
+  "blockers": [
+    "No authoritative live service probes are connected for calendar, entitlement, broker session, archive, or clock evidence.",
+    "Daily paper launcher and session orchestration do not yet invoke this preflight automatically.",
+    "No real-market preflight run has been observed or attested."
+  ],
+  "source_sha256": {}
+}

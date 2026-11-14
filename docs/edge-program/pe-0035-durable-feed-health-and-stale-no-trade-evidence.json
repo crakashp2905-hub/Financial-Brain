@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0035",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_feed_health.py tests/test_forward_session_runner.py tests/test_forward_edge_f03.py",
+    "result": "89 passed (exit code 0) across feed health, forward session, and execution-gate tests; Ruff and mypy passed for the changed session-ops module."
+  },
+  "implemented": [
+    "The feed monitor tracks packet-ID duplicates, sequence gaps, last available packet, successful heartbeat, disconnects, reconnects and dropped updates.",
+    "PacketDeduper can persist packet-ID hashes and feed counters in the crash-safe hash-chained DurableJournal, restoring duplicate/gap state after restart without persisting quote payloads.",
+    "Feed-health snapshots are immutable/idempotent and stored in the durable forward-session journal before decisions.",
+    "The session runner forces NO_TRADE on stale quote/heartbeat, gaps, disconnects, or drops, and places all counters/reason codes in the closed session result.",
+    "Fault-injection tests verify no strategy or execution adapter runs on stale feed, and restart-safe journal facts preserve the counters in the session record."
+  ],
+  "blockers": [
+    "The current Kite polling payload has no packet sequence number or provider disconnect/reconnect callbacks, so live gaps/reconnect/drop counts cannot yet be populated automatically from the configured source.",
+    "The current Kite REST polling payload has no provider sequence number or disconnect/reconnect callbacks, so true source-level gaps and reconnect/drop counters cannot yet be populated automatically. The durable deduper must still be wired to an authorized sequenced streaming source."
+  ],
+  "scope_note": "Injection-driven fail-closed health gating, durable session evidence, and restart-safe packet deduplication are implemented. Automated health collection from a sequenced Kite stream remains incomplete."
+}

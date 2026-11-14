@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0138",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_signal_decay.py tests/test_phase5_half_life.py; ruff check src/financial_brain/evaluation/signal_decay.py tests/test_signal_decay.py",
+    "result": "9 passed; Ruff passed."
+  },
+  "implemented": [
+    "Computes peak information horizon and interpolated half-life for every registered family.",
+    "Reports net alpha, turnover, and turnover-to-absolute-net-alpha by horizon with explicit undefined status near zero alpha.",
+    "Requires a matched decision/session schedule across every horizon and rejects access to protected final-window dates.",
+    "Retains the observation rows and hash; never changes an existing decision horizon."
+  ],
+  "blockers": [
+    "Observations and development dataset digest are caller-supplied, not resolved from an authoritative registry.",
+    "Horizon change is not connected to an independently verified preregistered new strategy version.",
+    "No real forward-market decay cohort is included; test data is synthetic."
+  ],
+  "source_sha256": {
+    "src/financial_brain/evaluation/signal_decay.py": "4b3aeb929b6fba40e08648804ed025fc0ec0263137a769f940d520066c937b5b",
+    "tests/test_signal_decay.py": "15cb2098c6d5ab261775bbf4af4b19bedc713f7c42d7a095f8d3abb8b597e914"
+  }
+}

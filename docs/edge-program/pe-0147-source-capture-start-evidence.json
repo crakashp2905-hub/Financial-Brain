@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0147",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_source_capture_start.py; ruff check src/financial_brain/forward_edge/source_capture_start.py tests/test_source_capture_start.py",
+    "result": "5 passed; Ruff passed."
+  },
+  "implemented": [
+    "Captures a unique source session ID and verifies capture start precedes the earliest decision time.",
+    "Persists the capture-start marker before the first market event, with monotonic immutable replay semantics.",
+    "Records measured clock skew, clock evidence ID, initial quote-health facts/reasons, and source entitlement evidence with validity windows.",
+    "Missing or expired source entitlements are visible and block the capture receipt's entry-eligibility indicator."
+  ],
+  "blockers": [
+    "Live Kite capture startup is not wired to invoke the receipt API.",
+    "Clock and entitlement evidence is supplied by callers and is not independently authenticated.",
+    "No actual observed source-capture session has been produced."
+  ],
+  "source_sha256": {}
+}

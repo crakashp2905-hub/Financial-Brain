@@ -1,0 +1,19 @@
+{
+  "checklist_task": "PE-0183",
+  "status": "DONE",
+  "criterion": "Display feed health, market calendar, active version, read-only broker state, and risk latches; stale or incomplete sources block readiness.",
+  "implementation": [
+    "src/financial_brain/forward_edge/cockpit.py"
+  ],
+  "tests": [
+    "tests/test_forward_edge_f10.py",
+    "tests/test_premarket_preflight.py"
+  ],
+  "test_result": "18 cockpit tests passed; combined cockpit, preflight, and inventory run had 40 passed. Ruff and targeted mypy passed.",
+  "evidence_scope": "Synthetic current/stale/missing source evidence and risk-latch render cases.",
+  "operational_limits": [
+    "Rendering only; caller supplies evidence and owns provider/calendar verification.",
+    "Readiness is a paper-session data-quality verdict, not an edge, profitability, or live-trading claim.",
+    "No broker actions or risk-latch clearing are exposed by this view."
+  ]
+}

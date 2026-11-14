@@ -1,0 +1,19 @@
+{
+  "checklist_task": "PE-0189",
+  "status": "DONE",
+  "criterion": "Separate provisional research rankings from verified executable forward champions; a diagnostic ranking cannot receive a tradable-edge badge.",
+  "implementation": [
+    "src/financial_brain/forward_edge/cockpit.py"
+  ],
+  "tests": [
+    "tests/test_research_vs_champions_view.py",
+    "tests/test_forward_edge_f10.py"
+  ],
+  "test_result": "2 focused separation/badge tests passed; combined cockpit run had 22 passed. Ruff and targeted mypy passed. All provisional rows are labeled research-only; incomplete forward rows remain visible without champion status.",
+  "evidence_scope": "Synthetic provisional rankings and verified/incomplete forward-evidence rows.",
+  "operational_limits": [
+    "The function displays supplied statuses and receipt-coverage assertions; it is not an independent evidence verifier.",
+    "Profitability and executable edge must be established by upstream prospective evidence.",
+    "The display does not promote a strategy or authorize capital."
+  ]
+}

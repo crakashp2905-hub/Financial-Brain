@@ -94,7 +94,9 @@ def test_required_sessions_scale_with_noise_and_target_precision() -> None:
 
 GOOD_KW = dict(eligible_independent_sessions=120, tier=ClaimTier.INDEPENDENT_FORWARD,
                net_by_cost_multiplier={1.0: 0.004, 1.5: 0.003, 2.0: 0.002}, best_block=0.35,
-               sample_design_predeclared=True, falsification_status="NO_FALSIFICATION_FOUND")
+               sample_design_predeclared=True, falsification_status="NO_FALSIFICATION_FOUND",
+               net_by_cost_and_fill={(c, f): 0.001 for c in E.EXECUTION_STRESS_COSTS
+                                      for f in E.EXECUTION_STRESS_FILL_RATES})
 
 
 def test_a_clear_effect_with_everything_in_order_is_promotion_grade() -> None:
@@ -121,6 +123,9 @@ def test_positive_mean_with_interval_including_zero_is_not_promoted() -> None:
         ({"sample_design_predeclared": False}, "SAMPLE_DESIGN_NOT_PREDECLARED"),
         ({"best_block": 0.9}, "REGIME_CONCENTRATION"),
         ({"net_by_cost_multiplier": {1.0: 0.004, 1.5: 0.001, 2.0: -0.001}}, "FAILS_COST_STRESS"),
+        ({"net_by_cost_and_fill": {(c, f): ( -0.001 if (c, f) == (2.0, 0.5) else 0.001)
+                                    for c in E.EXECUTION_STRESS_COSTS
+                                    for f in E.EXECUTION_STRESS_FILL_RATES}}, "FAILS_EXECUTION_STRESS"),
         ({"falsification_status": "INSUFFICIENT_EVIDENCE"}, "FALSIFICATION_INSUFFICIENT_EVIDENCE"),
     ],
 )
@@ -128,6 +133,14 @@ def test_each_gate_independently_blocks_promotion(override: dict, reason: str) -
     x = _ar1(250, 0.1, seed=11, mu=0.004)
     v = E.promotion_verdict(daily_net_alpha=x, **{**GOOD_KW, **override})
     assert v["verdict"] != "PROMOTION_GRADE" and reason in v["reasons"]
+
+
+def test_missing_cost_by_fill_rate_grid_blocks_promotion_as_insufficient_evidence():
+    x = _ar1(250, 0.1, seed=11, mu=0.004)
+    v = E.promotion_verdict(daily_net_alpha=x, **{**GOOD_KW, "net_by_cost_and_fill": None})
+    assert v["verdict"] == "INSUFFICIENT_EVIDENCE"
+    assert "EXECUTION_STRESS_MISSING" in v["reasons"]
+    assert v["execution_stress"]["status"] == "MISSING"
 
 
 def test_a_losing_strategy_fails_rather_than_staying_insufficient() -> None:
@@ -163,3 +176,18 @@ def test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail() -
     full = {c: True for c in E.FALSIFICATION_CHECKS}
     assert E.falsification_report(full)["status"] == "NO_FALSIFICATION_FOUND"
     assert E.falsification_report({**full, "lookahead": False})["status"] == "FAIL"
+
+
+@pytest.mark.parametrize("check", E.CRITICAL_FALSIFICATION_CHECKS)
+def test_every_critical_falsification_failure_blocks_a_clean_report(check: str) -> None:
+    complete = {name: True for name in E.FALSIFICATION_CHECKS}
+    report = E.falsification_report({**complete, check: False})
+    assert report["status"] == "FAIL"
+    assert report["failed"] == [check]
+
+
+def test_falsification_report_rejects_unknown_or_non_boolean_results() -> None:
+    with pytest.raises(E.StatsError, match="unknown falsification checks"):
+        E.falsification_report({"stale_qoute": True})
+    with pytest.raises(E.StatsError, match="boolean or null"):
+        E.falsification_report({"stale_quote": 1})

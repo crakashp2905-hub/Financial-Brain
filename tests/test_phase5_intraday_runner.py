@@ -4,6 +4,7 @@ import pytest
 
 from financial_brain.paper import intraday_runner as R
 from financial_brain.providers import kite_data as KD
+from financial_brain.kernel.paper_authority import PaperAuthorityError, PaperExecutionAuthorityRegistry
 
 
 class Clock:
@@ -32,7 +33,8 @@ def fake_quotes(clock, day="2026-10-06", traded=True):
     def q(symbols, kind):
         px = price_at(clock.t)
         hi = max(101.0, px) if clock.t.hour * 60 + clock.t.minute >= 570 else 101.0
-        return {s: {"last_price": px, "last_trade_time": f"{day} 09:20:00" if traded else "2026-10-01 15:29:59",
+        return {s: {"timestamp": clock.now().isoformat(), "last_price": px,
+                    "last_trade_time": f"{day} 09:20:00" if traded else "2026-10-01 15:29:59",
                     "ohlc": {"open": 100.0, "high": hi if clock.t.hour * 60 + clock.t.minute > 570 else 101.0,
                              "low": 99.0, "close": 100.0}} for s in symbols}
     return q
@@ -55,8 +57,70 @@ def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger
     assert out["status"] == "complete"
     con = R.ledger(setup / "l.duckdb")
     rows = con.execute("SELECT strategy, side, exit_reason, mode FROM trades").fetchall()
-    assert ("ORB", "long", "target", "live") in rows
+    assert ("ORB", "long", "target", "shadow") in rows
+    assert con.execute("SELECT COUNT(*) FROM trades WHERE strategy = 'ORB' AND mode = 'live'").fetchone()[0] == 0
     assert (setup / "reports" / "2026-10-06-live.md").exists()
+    report = (setup / "reports" / "2026-10-06-live.md").read_text(encoding="utf-8")
+    assert "EXPLORATORY_SHADOW" in report and "excluded from formal paper-book/champion allocation" in report
+
+
+def test_legacy_intraday_runner_rejects_forward_engine_claim_before_creating_ledger(setup):
+    path = setup / "l.duckdb"
+    authority_path = setup / "paper_authority.sqlite3"
+    PaperExecutionAuthorityRegistry(authority_path).claim(
+        strategy_id="ORB", exchange_date="2026-10-06",
+        engine_id="forward_paper", account_id="registered-book",
+    )
+    clock = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+
+    with pytest.raises(PaperAuthorityError, match="already claimed"):
+        R.run_live(quote_fn=fake_quotes(clock), now_fn=clock.now, sleep_fn=clock.sleep,
+                   path=path, strategies=("ORB",), authority_path=authority_path)
+
+    assert not path.exists()
+
+
+def test_legacy_paper_lane_requires_exact_registry_eligibility():
+    from types import SimpleNamespace
+
+    class FakeRegistry:
+        def __init__(self, specs):
+            self.specs = specs
+
+        def get(self, strategy_id):
+            return self.specs[strategy_id]
+
+    eligible = SimpleNamespace(strategy_id="CUSTOM", can_place_paper_intents=True)
+    ineligible = SimpleNamespace(strategy_id="FAILED", can_place_paper_intents=False)
+    registry = FakeRegistry({"CUSTOM": eligible, "FAILED": ineligible, "ORB": eligible})
+
+    assert R.live_recording_mode("CUSTOM") == "shadow"  # absent registry fails closed
+    assert R.live_recording_mode("UNKNOWN", registry) == "shadow"
+    assert R.live_recording_mode("FAILED", registry) == "shadow"
+    assert R.live_recording_mode("ORB", registry) == "shadow"  # monitoring-only family
+    assert R.live_recording_mode("CUSTOM", registry) == "live"
+
+
+def test_new_orb_gap_monitoring_is_shadow_and_historical_failed_live_rows_remain_queryable(setup):
+    from financial_brain.paper.intraday import Trade
+
+    path = setup / "l.duckdb"
+    con = R.ledger(path)
+    R.save(con, Trade("old-orb", "2026-10-05", "ORB", "X", "long", 1,
+                      "2026-10-05T09:40:00", 100, 98, 104,
+                      exit_ts="2026-10-05T10:00:00", exit_px=99, exit_reason="stop",
+                      gross_pnl=-1, costs=2, net_pnl=-3,
+                      shortfall_bp=2, spread_bp=1), "live")
+    con.close()
+
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=path)
+    con = R.ledger(path)
+    assert con.execute("SELECT mode, net_pnl FROM trades WHERE trade_id = 'old-orb'").fetchone() == ("live", -3)
+    assert con.execute("SELECT COUNT(*) FROM trades WHERE day = '2026-10-06' AND strategy IN ('ORB','GAP') "
+                       "AND mode != 'shadow'").fetchone()[0] == 0
+    assert R.evidence(con, mode="live")[0]["trades"] == 1
+    assert any(row["trades"] >= 1 for row in R.evidence(con, mode="shadow"))
 
 
 def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, monkeypatch):
@@ -74,7 +138,8 @@ def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, m
                               strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
                               constraints_sha256="c" * 64, ledger_id="PAPER-LEDGER-1",
                               benchmark_id="NIFTY50", instruments=("NSE:X", "NSE:Y"), capital_inr="1000000",
-                              mode=Mode.LIVE_PAPER)
+                              mode=Mode.LIVE_PAPER, authority_strategy_id="test-strategy",
+                              authority_account_id="test-account")
     forward.begin(config)
 
     def quote(symbols, kind):
@@ -113,6 +178,96 @@ def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, m
                            risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
     assert finished["status"] == "NO_TRADE"
     assert finished["event_count"] == len(stored)
+
+
+def test_live_runner_rejects_stale_kite_timestamp_before_forward_event_sink(setup, monkeypatch):
+    c = Clock(datetime(2026, 10, 6, 9, 15, 30, tzinfo=R.IST))
+    monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
+    captured = []
+    rejected = []
+
+    def stale_quote(symbols, kind):
+        assert kind == "full"
+        return {symbol: {
+            "timestamp": "2026-10-06T09:14:00+05:30", "last_price": 100.0,
+            "last_trade_time": "2026-10-06T09:14:00+05:30",
+            "ohlc": {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0},
+            "depth": {"buy": [{"price": 99.95, "quantity": 10}],
+                      "sell": [{"price": 100.05, "quantity": 10}]},
+        } for symbol in symbols}
+
+    def close_after_one_poll(_seconds):
+        c.t = c.t.replace(hour=15, minute=31)
+
+    out = R.run_live(
+        quote_fn=stale_quote, now_fn=c.now, sleep_fn=close_after_one_poll,
+        path=setup / "stale-kite.duckdb", strategies=("ORB",),
+        event_sink=captured.extend, preflight_fn=lambda: {"approved": True},
+        preflight_sink=lambda _result: None, rejection_sink=rejected.extend,
+    )
+
+    assert out["status"] == "complete"
+    assert captured == []
+    assert rejected and rejected[0]["reason"] == "STALE_EXCHANGE_TIMESTAMP"
+
+
+def test_stale_kite_quote_cannot_trigger_legacy_paper_entry(setup, monkeypatch):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
+
+    def quotes(symbols, _kind):
+        stamp = c.now() - timedelta(seconds=31) if c.t.hour * 60 + c.t.minute >= 580 else c.now()
+        return {symbol: {"timestamp": stamp.isoformat(), "last_price": price_at(c.t),
+                         "last_trade_time": "2026-10-06 09:40:00",
+                         "ohlc": {"open": 100.0, "high": 101.0 if c.t.minute < 40 else 101.6,
+                                  "low": 99.0, "close": 100.0}}
+                for symbol in symbols}
+
+    R.run_live(quote_fn=quotes, now_fn=c.now, sleep_fn=c.sleep, path=setup / "stale-legacy.duckdb",
+               strategies=("ORB",))
+    con = R.ledger(setup / "stale-legacy.duckdb")
+    rows = con.execute("SELECT entry_ts, entry_px, exit_reason FROM trades WHERE day = '2026-10-06'").fetchall()
+    assert rows == []
+
+
+def test_live_runner_can_opt_in_to_authorized_raw_quote_archive(setup, monkeypatch):
+    from datetime import timezone
+    from financial_brain.forward_edge.raw_quote_archive import RawQuoteArchive
+
+    c = Clock(datetime(2026, 10, 6, 9, 15, tzinfo=R.IST))
+    monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
+    archive = RawQuoteArchive(setup / "raw-quotes.jsonl", retention_attestation={
+        "approved": True, "authorization_id": "test-local-retention", "controller": "test-owner",
+        "purpose": "LOCAL_PERSONAL_PAPER_RESEARCH", "evidence_sha256": "e" * 64,
+        "approved_at_utc": datetime(2026, 10, 6, 9, 0, tzinfo=timezone.utc).isoformat(),
+        "permitted_actions": ["persist", "local_read"],
+        "permitted_event_kinds": ["QUOTE"], "permitted_sources": ["kite_connect"],
+    })
+    captured = []
+
+    def quotes(symbols, kind):
+        assert kind == "full"
+        return {symbol: {"timestamp": c.now().isoformat(), "last_price": 100.0,
+                         "depth": {"buy": [{"price": 99.95, "quantity": 10}],
+                                   "sell": [{"price": 100.05, "quantity": 10}]}}
+                for symbol in symbols}
+
+    def close_after_one_poll(_seconds):
+        c.t = c.t.replace(hour=15, minute=31)
+
+    out = R.run_live(
+        quote_fn=quotes, now_fn=c.now, sleep_fn=close_after_one_poll, path=setup / "raw-run.duckdb",
+        event_sink=captured.extend, preflight_fn=lambda: {"approved": True},
+        preflight_sink=lambda _result: None, rejection_sink=lambda _rows: None,
+        raw_archive=archive,
+    )
+
+    assert out["status"] == "complete"
+    assert len(captured) == 1 and archive.verify()
+    event_payload = dict(captured[0].payload)
+    raw = archive.records()[0]
+    assert event_payload["raw_archive_sha256"] == archive.journal.head
+    assert event_payload["raw_sha256"] == raw["payload_sha256"]
 
 
 def test_live_view_tracks_open_then_closed_trades_without_a_database_reader(setup):
@@ -221,7 +376,8 @@ def test_a_late_start_takes_the_opening_range_from_candles_not_from_the_days_hig
                  "close": 100.0} for k in range(15)]
 
     def quotes(symbols, kind):                          # by now the day's high is 107: the wrong range
-        return {s: {"last_price": 101.6 if c.t.minute < 55 else 106.9, "last_trade_time": "2026-10-06 09:49:00",
+        return {s: {"timestamp": c.now().isoformat(),
+                    "last_price": 101.6 if c.t.minute < 55 else 106.9, "last_trade_time": "2026-10-06 09:49:00",
                     "ohlc": {"open": 100.0, "high": 107.0, "low": 99.0, "close": 100.0}} for s in symbols}
     R.run_live(quote_fn=quotes, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb",
                candles_fn=candles, token_fn=lambda s: 1)

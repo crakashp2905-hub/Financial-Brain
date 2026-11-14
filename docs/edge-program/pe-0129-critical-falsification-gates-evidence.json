@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0129",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f08.py tests/test_pattern_study.py",
+    "result": "52 passed; Ruff passed for evidence_stats.py and test_forward_edge_f08.py."
+  },
+  "implemented": [
+    "The falsification contract includes look-ahead, survivorship, delisting, corporate actions, stale quote, missing fills and factor overlap.",
+    "Existing rejected-trade and missed-fill checks remain in the report.",
+    "Any false check returns FAIL; absent checks return INSUFFICIENT_EVIDENCE; promotion_verdict blocks statuses other than NO_FALSIFICATION_FOUND.",
+    "Unknown check names and non-boolean outcomes are rejected; tests fail each critical check independently."
+  ],
+  "blockers": [
+    "Falsification outcomes remain caller-supplied assertions rather than results derived from registered data-backed tests.",
+    "The report and promotion verdict are not bound by an authoritative immutable evidence object; callers can supply a clean status string separately."
+  ],
+  "source_sha256": {}
+}

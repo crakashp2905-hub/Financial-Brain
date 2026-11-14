@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0159",
+  "status": "DONE",
+  "test": {
+    "command": "pytest -q tests/test_phase5_intraday_runner.py tests/test_paper_live_view.py tests/test_paper_capabilities.py tests/test_monitoring_candidates.py; ruff check src/financial_brain/paper/intraday_runner.py src/financial_brain/paper/board.py src/financial_brain/paper/live_view.py tests/test_phase5_intraday_runner.py tests/test_paper_live_view.py",
+    "result": "30 passed; Ruff passed."
+  },
+  "implemented": [
+    "New ORB/GAP outcomes from the observed-quote intraday runner are persisted with shadow mode and classify as EXPLORATORY_SHADOW.",
+    "The live local-paper lane receives no new ORB/GAP outcomes, preventing them from entering the formal paper-book/champion allocation path.",
+    "Existing historical live rows remain unchanged and queryable.",
+    "The board, report, and live viewer explain the SHADOW-only boundary and retain evidence-failed status."
+  ],
+  "blockers": [],
+  "source_sha256": {
+    "tests/test_paper_live_view.py": "6ef5665fec5ef5ce166fd8a363fc4a784051bce8d8ff4226f7565161e4687958",
+    "tests/test_phase5_intraday_runner.py": "bc8043bab40e20227ec730795d769e68ff8fe9a565525d03fc617963560b1c88",
+    "src/financial_brain/paper/intraday_runner.py": "41caca5672ff799ea76a2c28261afd51d10806980582ab0a6b8918e93e35a228",
+    "src/financial_brain/paper/live_view.py": "7ff0531128b31007eab51abac7ab97bb2ce0692014c6cb4abda2b49b8ef7f889",
+    "src/financial_brain/paper/board.py": "eaee66e7380fa4aa558e55e9e91232965a1d4a0e0984ad1b276411d5d4772ba7"
+  }
+}

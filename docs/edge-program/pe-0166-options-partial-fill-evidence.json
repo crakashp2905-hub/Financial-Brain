@@ -1,0 +1,14 @@
+{
+  "checklist_task": "PE-0166",
+  "status": "DONE",
+  "criterion": "Partial fills, legging exposure, sourced margin, non-fills, and unresolved closeout/tail-risk cases remain in paper account performance.",
+  "implementation": "src/financial_brain/paper/options_spread_lifecycle.py",
+  "tests": [
+    "tests/test_options_spread_lifecycle.py",
+    "tests/test_options_leg_evidence.py",
+    "tests/test_paper_options_spread.py"
+  ],
+  "test_result": "17 passed across spread lifecycle and option leg suites; Ruff passed; source inventory check passed (614 Python files).",
+  "evidence_scope": "Synthetic fills, quotes, margin and stress prices only. Scenario P&L includes entry fees, not assignment or settlement charges.",
+  "remaining_operational_evidence": "Supply authorized exchange margin and execution data; compare prospective paper fills, partial closeouts, and uncaptured-leg exposure."
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "measurement": "coverage.py statement coverage after the complete pytest suite",
+  "domains": {
+    "oms": {
+      "minimum_percent": 60.0,
+      "patterns": ["src/financial_brain/execution/oms/**/*.py"]
+    },
+    "custody": {
+      "minimum_percent": 60.0,
+      "patterns": [
+        "src/financial_brain/forward_edge/custody.py",
+        "src/financial_brain/forward_edge/decision_custody.py"
+      ]
+    },
+    "market_data": {
+      "minimum_percent": 60.0,
+      "patterns": [
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/providers/kite_data.py",
+        "src/financial_brain/ingest/kite_live.py"
+      ]
+    },
+    "accounting": {
+      "minimum_percent": 60.0,
+      "patterns": [
+        "src/financial_brain/kernel/ledger.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/forward_edge/eod_paper_archive.py"
+      ]
+    },
+    "evaluation": {
+      "minimum_percent": 60.0,
+      "patterns": [
+        "src/financial_brain/evaluation/champion.py",
+        "src/financial_brain/evaluation/prospective.py",
+        "src/financial_brain/forward_edge/edge_confirmation.py",
+        "src/financial_brain/forward_edge/evidence_stats.py"
+      ]
+    },
+    "risk": {
+      "minimum_percent": 60.0,
+      "patterns": [
+        "src/financial_brain/risk/**/*.py",
+        "src/financial_brain/forward_edge/portfolio_risk.py",
+        "src/financial_brain/forward_edge/pretrade_gates.py"
+      ]
+    }
+  }
+}

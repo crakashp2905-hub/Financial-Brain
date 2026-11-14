@@ -8,6 +8,10 @@ BASE = {
     "decision_utc": "2027-01-04T03:46:00+00:00",
     "entry_earliest_utc": "2027-01-04T04:00:00+00:00",
     "side": "BUY", "instrument": "INE009A01021", "quantity": 10, "tick": "0.05",
+    "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1,
+    "forecast_costs_included": True,
+    "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01,
+                           "fees": 0.001, "spread": 0.001, "impact": 0.001},
     "strategy_sha256": "a" * 64, "snapshot_sha256": "b" * 64, "risk_sha256": "c" * 64, "benchmark_id": "FIXTURE_CASH",
     "quotes": [{"offset_ms": 300, "bid": "1500.00", "ask": "1500.05", "bid_qty": 100, "ask_qty": 100}],
     "latency_ms": 200, "max_wait_ms": 5000, "fee_bps": "3", "close_price": "1520.00",
@@ -27,6 +31,7 @@ def fixture_pack() -> dict[str, dict]:
         "win": _make("win", close_price="1520.00"),
         "loss": _make("loss", close_price="1480.00"),
         "no_trade": _make("no_trade", feed={"ok": False, "reasons": ["STALE_QUOTE"]}),
+        "feed_outage": _make("feed_outage", feed={"ok": False, "reasons": ["FEED_OUTAGE"]}),
         "rejection": _make("rejection", price_band=["1000", "1400"]),
         "late_quote": _make("late_quote", quotes=[{"offset_ms": 9000, "bid": "1500.00", "ask": "1500.05", "bid_qty": 100, "ask_qty": 100}]),
         "unknown_order": _make("unknown_order", ack_lost=True),
@@ -37,5 +42,6 @@ def fixture_pack() -> dict[str, dict]:
     }
 
 
-EXPECTED = {"win": "WIN", "loss": "LOSS", "no_trade": "NO_TRADE", "rejection": "REJECTED", "late_quote": "LATE_QUOTE",
+EXPECTED = {"win": "WIN", "loss": "LOSS", "no_trade": "NO_TRADE", "feed_outage": "NO_TRADE",
+            "rejection": "REJECTED", "late_quote": "LATE_QUOTE",
             "unknown_order": "UNKNOWN_ORDER", "adverse_fill": "LOSS", "missed_fill": "MISSED_FILL"}

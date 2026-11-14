@@ -6,8 +6,11 @@ no single-regime concentration, an adequate predeclared sample design, and an IN
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from enum import Enum
 from math import sqrt
+from collections.abc import Mapping, Sequence
 
 import numpy as np
 
@@ -104,6 +107,55 @@ def holm_adjust(pvalues: dict[str, float]) -> dict[str, float]:
     return out
 
 
+def adjust_registered_family(
+    registered_trial_ids: Sequence[str],
+    p_values: Mapping[str, float | None],
+) -> dict:
+    """Apply Holm correction across a frozen family, counting missing/failed trials as p=1.
+
+    The registered identifier list is the denominator. A missing p-value does not
+    disappear from the family; it is reported as unavailable and assigned p=1 for
+    correction. Unknown p-value keys are rejected because they were not registered.
+    """
+    ids = list(registered_trial_ids)
+    if not ids or any(not isinstance(value, str) or not value.strip() for value in ids):
+        raise StatsError("registered family needs non-empty trial ids")
+    if len(ids) != len(set(ids)):
+        raise StatsError("registered trial ids must be unique")
+    unknown = sorted(set(p_values) - set(ids))
+    if unknown:
+        raise StatsError(f"p-values supplied for unregistered trials: {unknown}")
+    raw: dict[str, float] = {}
+    missing = []
+    for trial_id in ids:
+        value = p_values.get(trial_id)
+        if value is None:
+            missing.append(trial_id)
+            raw[trial_id] = 1.0
+            continue
+        p = float(value)
+        if not np.isfinite(p) or not 0 <= p <= 1:
+            raise StatsError(f"invalid p-value for {trial_id}")
+        raw[trial_id] = p
+    adjusted = holm_adjust(raw)
+    family = sorted(ids)
+    family_sha256 = hashlib.sha256(json.dumps(
+        family, separators=(",", ":"), ensure_ascii=True).encode("utf-8")).hexdigest()
+    return {
+        "method": "holm_step_down_familywise_v1",
+        "family_size": len(ids),
+        "family_sha256": family_sha256,
+        "tested_count": len(ids) - len(missing),
+        "missing_p_value_count": len(missing),
+        "missing_trial_ids": sorted(missing),
+        "trials": {trial_id: {
+            "raw_p_value": p_values.get(trial_id),
+            "p_value_used_for_adjustment": raw[trial_id],
+            "adjusted_p_value": adjusted[trial_id],
+        } for trial_id in family},
+    }
+
+
 # ---- FE-0095 / FE-0096 ----
 
 def drawdown_stats(returns: list[float]) -> dict[str, float]:
@@ -133,6 +185,33 @@ def required_sessions(sigma: float, target_halfwidth: float, z: float = 1.96) ->
 
 def stress_robust(net_by_multiplier: dict[float, float], required: tuple[float, ...] = (1.0, 1.5, 2.0)) -> bool:
     return all(net_by_multiplier.get(m, float("-inf")) > 0 for m in required)
+
+
+EXECUTION_STRESS_COSTS = (1.0, 1.5, 2.0)
+EXECUTION_STRESS_FILL_RATES = (1.0, 0.75, 0.5)
+
+
+def execution_stress_gate(net_by_cost_and_fill: dict[tuple[float, float], float] | None) -> dict:
+    """Require all 1x/1.5x/2x cost and 100/75/50% fill-rate scenarios before promotion.
+
+    Scenario economics must be computed from the frozen intention-to-trade population by the caller. Missing
+    cells are evidence gaps; non-finite or non-positive net outcomes fail the gate. This function never invents
+    fill outcomes or extrapolates them from the filled-only sample.
+    """
+    required = [(cost, fill) for cost in EXECUTION_STRESS_COSTS for fill in EXECUTION_STRESS_FILL_RATES]
+    if net_by_cost_and_fill is None:
+        return {"status": "MISSING", "missing": [f"{c:g}x@{f:.0%}" for c, f in required], "failed": []}
+    missing, failed = [], []
+    for cost, fill in required:
+        key = (cost, fill)
+        value = net_by_cost_and_fill.get(key)
+        label = f"{cost:g}x@{fill:.0%}"
+        if value is None or not np.isfinite(value):
+            missing.append(label)
+        elif value <= 0:
+            failed.append(label)
+    status = "FAIL" if failed else ("MISSING" if missing else "PASS")
+    return {"status": status, "missing": missing, "failed": failed}
 
 
 def best_block_share(returns: list[float], blocks: int) -> float:
@@ -212,11 +291,21 @@ def label_rows(rows: list[dict]) -> list[dict]:
 
 # ---- FE-0103 falsification ----
 
-FALSIFICATION_CHECKS = ("lookahead", "survivorship", "delisting", "factor_overlap", "rejected_trades", "missed_fills")
+CRITICAL_FALSIFICATION_CHECKS = (
+    "lookahead", "survivorship", "delisting", "corporate_actions", "stale_quote",
+    "missing_fills", "factor_overlap",
+)
+FALSIFICATION_CHECKS = CRITICAL_FALSIFICATION_CHECKS + ("rejected_trades", "missed_fills")
 
 
 def falsification_report(results: dict[str, bool | None]) -> dict:
     """True = check passed, False = check failed, None/absent = no evidence. No evidence is INSUFFICIENT, never a win."""
+    unknown = sorted(set(results) - set(FALSIFICATION_CHECKS))
+    if unknown:
+        raise StatsError(f"unknown falsification checks: {unknown}")
+    invalid = sorted(key for key, value in results.items() if value is not None and type(value) is not bool)
+    if invalid:
+        raise StatsError(f"falsification outcomes must be boolean or null: {invalid}")
     failed = [c for c in FALSIFICATION_CHECKS if results.get(c) is False]
     missing = [c for c in FALSIFICATION_CHECKS if results.get(c) is None]
     status = "FAIL" if failed else ("INSUFFICIENT_EVIDENCE" if missing else "NO_FALSIFICATION_FOUND")
@@ -227,7 +316,9 @@ def falsification_report(results: dict[str, bool | None]) -> dict:
 
 def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sessions: int, tier: ClaimTier,
                       net_by_cost_multiplier: dict[float, float], best_block: float, sample_design_predeclared: bool,
-                      falsification_status: str, min_sessions: int = 60, lags: int = 5, z: float = 1.96,
+                      falsification_status: str,
+                      net_by_cost_and_fill: dict[tuple[float, float], float] | None = None,
+                      min_sessions: int = 60, lags: int = 5, z: float = 1.96,
                       max_block_share: float = 0.6) -> dict:
     reasons: list[str] = []
     n = len(daily_net_alpha)
@@ -247,10 +338,17 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         reasons.append("REGIME_CONCENTRATION")
     if not stress_robust(net_by_cost_multiplier):
         reasons.append("FAILS_COST_STRESS")
+    execution_stress = execution_stress_gate(net_by_cost_and_fill)
+    if execution_stress["status"] == "MISSING":
+        reasons.append("EXECUTION_STRESS_MISSING")
+    elif execution_stress["status"] == "FAIL":
+        reasons.append("FAILS_EXECUTION_STRESS")
     if lcb is None or lcb <= 0:
         reasons.append("LOWER_BOUND_NOT_POSITIVE")
     if not reasons:
-        return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": []}
-    hard_fail = mean <= 0 and n >= 3 or "FAILS_COST_STRESS" in reasons or "FALSIFICATION_FAIL" in reasons
+        return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": [],
+                "execution_stress": execution_stress}
+    hard_fail = (mean <= 0 and n >= 3 or "FAILS_COST_STRESS" in reasons
+                 or "FAILS_EXECUTION_STRESS" in reasons or "FALSIFICATION_FAIL" in reasons)
     return {"verdict": "FAIL" if hard_fail else "INSUFFICIENT_EVIDENCE", "mean": mean, "lower_bound": lcb,
-            "reasons": reasons}
+            "reasons": reasons, "execution_stress": execution_stress}

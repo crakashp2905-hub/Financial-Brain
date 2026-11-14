@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0120",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_dependence_policy.py",
+    "result": "3 passed; Ruff and mypy passed for dependence.py."
+  },
+  "implemented": [
+    "Frozen dependence policy hashes the HAC lags, stationary-bootstrap block length, resample count, seed, alpha, and timing fields.",
+    "Policy construction rejects naive timestamps and a freeze time at or after the first observation.",
+    "Summary reports observation count, effective sample size, Newey-West and iid standard errors, fixed bootstrap confidence interval, and policy digest."
+  ],
+  "blockers": [
+    "The timestamp ordering is supplied by the caller and is not externally attested or bound to a live cohort registry.",
+    "No prospective forward cohort has yet validated the declared lags and block policy against elapsed market outcomes."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/dependence.py": "b9ceda39a6c92040182216e9c3ca04200567308abf6e7859fa2bed71f44b9d98",
+    "src/financial_brain/forward_edge/evidence_stats.py": "d66e5fc822b97d4e022f4821e0362aa64396aa7b0703ac47900ee52aac1e445a",
+    "tests/test_dependence_policy.py": "701666b6486a85e70d68b200bd3910bd48541f3e084517ac5b0f54496337f0d8",
+    "docs/edge-program/source-inventory.json": "b99322699ae9afa7e52f1a5afcfdf58c6f551ef8af359aea1b803ef83c3d93e6"
+  }
+}

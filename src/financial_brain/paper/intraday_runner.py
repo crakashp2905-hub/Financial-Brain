@@ -33,6 +33,7 @@ from ..costs.calculator import bucket_for
 
 IST = timezone(timedelta(hours=5, minutes=30))
 POLL_SECONDS = 20
+KITE_SOURCE_TIMESTAMP_TOLERANCE = timedelta(seconds=30)
 LEDGER = Path("data") / "paper_live.duckdb"
 REPORTS = Path("data") / "paper_reports"
 UNIVERSE_SIZE = 200
@@ -42,6 +43,22 @@ HOLIDAY_CHECK = time(9, 25)
 #: What the pre-registered backtest said each strategy should earn, net, per trade (bp of notional). Live and
 #: replay results are compared to these; a strategy is not "learned" from noise, it is checked against them.
 BACKTEST_NET_BP = {"ORB": -18.0, "GAP": None}
+# PE-0159: failed/insufficient intraday candidates remain observable, but new
+# simulator outcomes must not enter the formal local-paper/champion lane.
+SHADOW_ONLY_LIVE_MONITORS = frozenset({"ORB", "GAP"})
+
+
+def live_recording_mode(strategy: str, registry=None) -> str:
+    """Only an exact registered paper-capable strategy can enter the formal local-paper lane."""
+    from ..forward_edge.registry import order_intent_allowed
+
+    if strategy.strip().upper() in SHADOW_ONLY_LIVE_MONITORS or registry is None:
+        return "shadow"
+    try:
+        spec = registry.get(strategy)
+    except KeyError:
+        return "shadow"
+    return "live" if order_intent_allowed(spec, registry) else "shadow"
 
 log = logging.getLogger("paper_intraday")
 
@@ -141,8 +158,12 @@ def daily_view(before: date | None = None):
         log.warning("daily view unavailable: %s", str(e)[:120])
         return None, None, None
     try:
-        asof = (rcon.execute("SELECT MAX(business_date) FROM features WHERE business_date < ?", [before]).fetchone()[0]
-                if before else rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0])
+        row = (rcon.execute("SELECT MAX(business_date) FROM features WHERE business_date < ?", [before]).fetchone()
+               if before else rcon.execute("SELECT MAX(business_date) FROM features").fetchone())
+        asof = row[0] if row is not None else None
+        if asof is None:
+            rcon.close()
+            return None, None, None
         cs = S.cross_section(rcon, asof)
         events = {r[0] for r in rcon.execute("""
             SELECT DISTINCT l.lineage FROM announcements a JOIN security_lineage l ON l.isin = a.isin
@@ -210,12 +231,39 @@ def opening_from_candles(symbols, day: date, *, candles_fn, token_fn) -> dict[st
     return out
 
 
+def _fresh_kite_quotes(quotes: dict, received_at: datetime, tolerance: timedelta) -> dict:
+    """Fail closed on absent, malformed, future, or stale Kite quote packet timestamps."""
+    from datetime import timezone
+
+    fresh = {}
+    for key, quote in quotes.items():
+        stamp = quote.get("timestamp") if isinstance(quote, dict) else None
+        if isinstance(stamp, str):
+            try:
+                stamp = datetime.fromisoformat(stamp)
+            except ValueError:
+                continue
+        if not isinstance(stamp, datetime):
+            continue
+        if stamp.tzinfo is None or stamp.utcoffset() is None:
+            stamp = stamp.replace(tzinfo=IST)
+        age = received_at.astimezone(timezone.utc) - stamp.astimezone(timezone.utc)
+        if timedelta(0) <= age <= tolerance:
+            fresh[key] = quote
+    return fresh
+
+
 def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None, now_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
              rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
-             event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None) -> dict:
+             event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None,
+             raw_archive=None, authority_path: Path | None = None,
+             source_timestamp_tolerance: timedelta = KITE_SOURCE_TIMESTAMP_TOLERANCE,
+             strategy_registry=None) -> dict:
     from ..providers import kite_data as kd
+    if not isinstance(source_timestamp_tolerance, timedelta) or source_timestamp_tolerance < timedelta(0):
+        raise ValueError("Kite source timestamp tolerance must be a non-negative timedelta")
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
     now = now_fn()
@@ -223,6 +271,15 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     if now.time() > CLOSE or now.weekday() >= 5:
         return {"day": day, "status": "not_a_session", "why": "after the close or a weekend: nothing recorded"}
     path, fingerprint = cohort_path(path, cohort, strategies, rules)
+    from ..kernel.paper_authority import (
+        PaperExecutionAuthorityRegistry, configured_paper_authority_path,
+    )
+    authority_registry = PaperExecutionAuthorityRegistry(
+        authority_path or configured_paper_authority_path(path.parent))
+    authority_registry.claim_many([{
+        "strategy_id": str(strategy), "exchange_date": day,
+        "engine_id": "legacy_intraday", "account_id": str(path.resolve()),
+    } for strategy in strategies])
     con = ledger(path)
     uni = universe(n)
     syms = [u["tradingsymbol"] for u in uni]
@@ -285,12 +342,16 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             for i in range(0, len(syms), 450):
                 q.update(quote_fn([f"NSE:{s}" for s in syms[i:i + 450]], "full"))   # full: includes the order book
             poll_received_at = now_fn()
+            # Enforce the same source-age policy on the legacy DayEngine path.
+            fresh_q = _fresh_kite_quotes(q, poll_received_at, source_timestamp_tolerance)
             if event_sink is not None:
                 from ..ingest.kite_live import forward_events
                 try:
-                    rejections = []
+                    rejections: list[dict] = []
                     events = forward_events(syms, quote_fn=lambda *_args, snapshot=q: snapshot,
-                                            received_at=poll_received_at, rejections_out=rejections)
+                                            received_at=poll_received_at, rejections_out=rejections,
+                                            raw_archive=raw_archive,
+                                            source_timestamp_tolerance=source_timestamp_tolerance)
                     event_sink(events)
                     if rejections:
                         if rejection_sink is None:
@@ -326,6 +387,10 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                 return {"day": day, "status": "aborted", "why": str(e)[:200]}
             sleep_fn(poll)
             continue
+        for symbol in syms:
+            if f"NSE:{symbol}" not in fresh_q:
+                last.pop(symbol, None)
+        q = fresh_q
         polls += 1
         quote_at = now
         if qcon is not None:
@@ -402,16 +467,16 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             for sym, px in last.items():
                 bid, ask = book.get(sym, (None, None))
                 for t in eng.on_price(sym, now.replace(tzinfo=None), px, bid=bid, ask=ask):
-                    save(con, t, "live")
+                    save(con, t, live_recording_mode(t.strategy, strategy_registry))
             if clock >= I.TIME_EXIT and not eng.closed_for_day:
                 for t in eng.end_of_day(now.replace(tzinfo=None), last):
-                    save(con, t, "live")
+                    save(con, t, live_recording_mode(t.strategy, strategy_registry))
         publish(path, eng, now=now, status="Paper session running", polls=polls,
                 prices=last, quote_at=quote_at)
         sleep_fn(poll)
     if session_issue is None and not eng.closed_for_day:
         for t in eng.end_of_day(now_fn().replace(tzinfo=None), last):
-            save(con, t, "live")
+            save(con, t, live_recording_mode(t.strategy, strategy_registry))
     status = ("session_unavailable" if session_issue is not None else
               "capture_incomplete" if capture_failures else "complete")
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,
@@ -582,6 +647,7 @@ def write_report(con, day: str, mode: str, eng: I.DayEngine, *, cohort: str | No
                      else "Historical replay; not prospective or independently attested evidence.")
     lines = [f"# Paper trading {day} ({mode}, {I.VERSION}, cohort {cohort or 'default'})", "",
              f"Evidence class: `{evidence_class.value}`. {evidence_note}", "",
+             "New ORB/GAP observations from this runner are stored as `EXPLORATORY_SHADOW`, excluded from formal paper-book/champion allocation. Existing historical `live` rows remain queryable and are not rewritten.", "",
              f"Paper capabilities: {capabilities} (paper-only; required market inputs are enforced by the runner.)", "",
              "Paper only: no order was placed. Costs are the intraday schedule; quoted/assumed spread is in the fills. Intraday profit is "
              "taxed as business income at your slab rate, not modelled per trade here.", ""]

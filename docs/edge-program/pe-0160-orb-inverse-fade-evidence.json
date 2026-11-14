@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0160",
+  "status": "DONE",
+  "test": {
+    "command": "pytest -q tests/test_orb_fade_hypothesis.py; ruff check src/financial_brain/forward_edge/orb_fade_hypothesis.py tests/test_orb_fade_hypothesis.py",
+    "result": "7 passed; Ruff passed."
+  },
+  "implemented": [
+    "A content-addressed failed-break fade hypothesis has its own mechanism, payer, regimes, falsifier, timestamp contract, and intraday exit rule.",
+    "Candidate generation rejects naive, future, or not-yet-available timestamps and emits no quantity or order intent.",
+    "A dedicated cost budget requires entry/exit spread, fee, tax, impact and hashed effective-date fee schedule, then applies 1x/1.5x/2x stress with a 2x gross-to-cost hurdle.",
+    "The candidate is not added to the strategy registry or evidence ledger and is permanently labeled exploratory in this implementation."
+  ],
+  "blockers": [],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/orb_fade_hypothesis.py": "bbbc9ee13f6587492be0f72a49e24b8689144ffe8c0431cddfd6b878dadd7293",
+    "tests/test_orb_fade_hypothesis.py": "6e468c3342899fc72bfe0e3e8ddaca9a0ecb52f75fbb9b76a75b90ef232c7a8d"
+  }
+}

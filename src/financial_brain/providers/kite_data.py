@@ -1,4 +1,4 @@
-"""Kite Connect, read only: instruments, intraday candles, quotes.
+"""Kite Connect, read only: instruments, intraday candles, quotes and account status.
 
 ## Why this exists, and what it unlocks
 
@@ -8,13 +8,13 @@ session's opening range and this archive is daily. Kite's historical API serves 
 bars**, which makes them testable for the first time. That, not realism, is the concrete
 reason to connect.
 
-## No order can be placed from this package
+## No order can be submitted from this package
 
-There is no order endpoint here, in ``kite.py``, or anywhere else in ``providers``. That
-is the first gate in [[Kite readiness]], and it is a *structural* claim rather than a
-promise about behaviour: ``ENDPOINTS`` below is the complete set of paths this module will
-build, every one a GET, and ``_get`` refuses anything outside it. A reader asking "can this
-system place an order" can answer it by reading twenty lines.
+The package can read current order status through GET ``/orders`` for reconciliation, but
+it has no order-submission endpoint. That is a *structural* claim rather than a promise
+about behaviour: ``ENDPOINTS`` below is the complete set of paths this module will build,
+every request is GET, and ``_get`` refuses anything outside the allowlist. Mutation routes
+such as ``/orders/regular`` are not permitted here.
 
 The account's own IP allowlist is a second, independent barrier the owner controls. Two
 locks, neither relying on the other.
@@ -40,6 +40,7 @@ import csv
 import io
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -51,18 +52,34 @@ API = "https://api.kite.trade"
 MIN_INTERVAL_S = 1 / 3          # Kite's documented ceiling for historical data
 MAX_QUOTE_SYMBOLS = 500         # Kite's documented cap per quote call
 
-#: Every path this module will build. All GET, none transactional. `_get` refuses any
-#: URL that does not start with one of these, so a typo cannot become a POST to /orders.
+#: Route families served by this read-only module. `_is_read_endpoint` validates exact
+#: route shapes; a prefix alone is insufficient because path traversal can escape it.
 ENDPOINTS = (
     "/instruments",             # the tradable universe and its instrument tokens
     "/instruments/historical/",  # candles: minute, day, and the intervals between
     "/quote",                   # full quote including depth
     "/quote/ohlc",              # open/high/low/close and last price
     "/quote/ltp",               # last traded price only
+    "/orders",                  # current account order status (GET only)
+    "/portfolio/positions",     # current account positions (GET only)
+    "/portfolio/holdings",      # current account holdings (GET only)
 )
 
 INTERVALS = ("minute", "3minute", "5minute", "10minute", "15minute", "30minute",
              "60minute", "day")
+
+
+def _is_read_endpoint(path: str) -> bool:
+    """Allow only known GET routes with validated path components and no embedded query."""
+    parsed = urllib.parse.urlsplit(path)
+    if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment or parsed.path != path:
+        return False
+    if path in {"/instruments", "/quote", "/quote/ohlc", "/quote/ltp", "/orders",
+                "/portfolio/positions", "/portfolio/holdings"}:
+        return True
+    if re.fullmatch(r"/instruments/[A-Z][A-Z0-9_-]{0,15}", path):
+        return True
+    return re.fullmatch(r"/instruments/historical/[1-9][0-9]*/(?:minute|3minute|5minute|10minute|15minute|30minute|60minute|day)", path) is not None
 
 _clock = threading.Lock()
 _last_call = 0.0
@@ -103,9 +120,18 @@ def _throttle() -> None:
         _last_call = time.monotonic()
 
 
+def _redact_credentials(value: object, key: str, token: str) -> str:
+    """Return provider diagnostics without echoing the API key or daily access token."""
+    message = str(value)
+    for secret in (key, token):
+        if secret:
+            message = message.replace(secret, "[REDACTED]")
+    return message
+
+
 def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
     """The only way this module talks to Kite. GET, allowlisted path, throttled."""
-    if not any(path.startswith(p) for p in ENDPOINTS):
+    if not _is_read_endpoint(path):
         raise KiteDataError(f"refusing {path!r}: not a read endpoint this module serves")
     key, token = credentials()
     url = f"{API}{path}"
@@ -120,8 +146,9 @@ def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
             raw = r.read()
     except urllib.error.HTTPError as e:
         if e.code in (401, 403):
-            raise KiteAuthError(f"Kite session rejected (HTTP {e.code}) on {path}") from e
-        raise KiteDataError(f"{e.code} from {path}: {e.read()[:200]!r}") from e
+            raise KiteAuthError(f"Kite session rejected (HTTP {e.code}) on {path}") from None
+        detail = _redact_credentials(e.read()[:200].decode("utf-8", errors="replace"), key, token)
+        raise KiteDataError(f"{e.code} from {path}: {detail}") from None
     except OSError as e:
         raise KiteDataError(f"{path}: {e}") from e
 
@@ -130,13 +157,15 @@ def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
     body = json.loads(raw)
     if body.get("status") != "success":
         if body.get("error_type") == "TokenException":
-            raise KiteAuthError(f"Kite session rejected on {path}")
-        raise KiteDataError(f"Kite error on {path}: {body.get('message', body)}")
+            raise KiteAuthError(f"Kite session rejected on {path}") from None
+        raise KiteDataError(f"Kite error on {path}: {_redact_credentials(body.get('message', body), key, token)}") from None
     return body
 
 
 def instruments(exchange: str = "NSE") -> list[dict]:
     """The tradable universe, with the instrument tokens every other call needs."""
+    if exchange and not re.fullmatch(r"[A-Z][A-Z0-9_-]{0,15}", exchange):
+        raise KiteDataError("exchange must be a simple uppercase venue code")
     body = _get(f"/instruments/{exchange}" if exchange else "/instruments")
     raw = body.get("raw", b"")
     return list(csv.DictReader(io.StringIO(raw.decode("utf-8", errors="replace"))))
@@ -166,7 +195,7 @@ def candles(instrument_token: int, start: date | datetime, as_of: date | datetim
     if interval not in INTERVALS:
         raise KiteDataError(f"interval must be one of {INTERVALS}")
     fmt = "%Y-%m-%d %H:%M:%S" if isinstance(start, datetime) else "%Y-%m-%d"
-    params = {"from": start.strftime(fmt), "to": as_of.strftime(fmt)}
+    params: dict[str, str | int] = {"from": start.strftime(fmt), "to": as_of.strftime(fmt)}
     if continuous:
         params["continuous"] = 1            # futures: expired contracts stitched into one series (day interval)
     if oi:
@@ -202,3 +231,11 @@ def quote_url(symbols: list[str], kind: str = "ohlc") -> str:
     paths = {"ltp": "/quote/ltp", "ohlc": "/quote/ohlc", "full": "/quote"}
     query = "&".join(f"i={urllib.parse.quote(s)}" for s in symbols)
     return f"{API}{paths[kind]}?{query}"
+
+
+def account_status() -> dict:
+    """Read current orders, positions and holdings using GET-only allowlisted endpoints."""
+    orders_body = _get("/orders").get("data", [])
+    positions_body = _get("/portfolio/positions").get("data", {})
+    holdings_body = _get("/portfolio/holdings").get("data", [])
+    return {"orders": orders_body, "positions": positions_body, "holdings": holdings_body}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0082",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_execution_stress_report.py tests/test_forward_edge_f08.py tests/test_forward_edge_f13.py",
+    "result": "65 passed in the focused execution stress, evidence gate and report suites; Ruff and mypy passed."
+  },
+  "implemented": [
+    "A deterministic report builds the full 1.0x/1.5x/2.0x cost by 100%/75%/50% fill-rate grid from every frozen intention.",
+    "Missed and partial opportunities must remain in the input population; duplicate IDs and missing gross/cost inputs are rejected.",
+    "The report exposes scenario net P&L and NAV return, a content hash of the frozen intention population, and the existing robust-economics gate.",
+    "Output is explicitly labelled SCENARIO_STRESS with a uniform fill-scaling assumption; it cannot be presented as observed execution."
+  ],
+  "blockers": [
+    "Observed forward fill outcomes are unavailable, so scenario scaling is not yet calibrated to actual fills."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/execution_stress.py": "4e04fb9390f16b1d4aef6d80f431b1bef6313c68c95d6765634c7a8c27fcc462",
+    "tests/test_execution_stress_report.py": "1fdf0755d48024024d26d0e2dd0e68b3a78812500a9f4afaf2036beeed250020",
+    "src/financial_brain/forward_edge/evidence_stats.py": "d66e5fc822b97d4e022f4821e0362aa64396aa7b0703ac47900ee52aac1e445a"
+  }
+}

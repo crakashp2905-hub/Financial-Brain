@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0097",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_pnl_attribution.py tests/test_paper_account_income.py tests/test_paper_account.py",
+    "result": "15 passed; Ruff and mypy passed for the new module."
+  },
+  "implemented": [
+    "A strict return bridge requires realized and unrealized price P&L, carry, cash yield, financing, tax, slippage and trading fees, including explicit zero values.",
+    "Every component requires a source hash, uses one reporting currency, and is reconciled against NAV change net of external flows under a declared rounding tolerance.",
+    "Missing components, unprovenanced inputs, currency mismatches, negative cost values and unexplained residuals fail closed."
+  ],
+  "blockers": [
+    "The bridge is not yet derived automatically from durable PaperAccount fills, positions, marks and corporate-action events.",
+    "Execution slippage and carry sources need to be joined to the same canonical paper-account attribution feed."
+  ],
+  "source_sha256": {
+    "src/financial_brain/kernel/pnl_attribution.py": "a39bac8b419b0c811731e27ad8d8a7d30676d7a352de0c21b2f5028aaf04c57a",
+    "tests/test_pnl_attribution.py": "9f8f39dbd04261fa3bb1fce5b5d94f40f73384e18eee35ce6d66f6cc0227104b"
+  }
+}

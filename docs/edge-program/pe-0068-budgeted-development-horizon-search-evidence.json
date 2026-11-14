@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0068",
+  "status": "PARTIAL",
+  "implemented": [
+    "The fixed 20/40/60 grid and budget of three trials must be frozen before development begins.",
+    "The evaluator accepts only development rows within the frozen dates and matching the exact data digest; confirmatory/holdout rows and extra horizons are rejected.",
+    "All horizons must have matched decision identities and every tried horizon is reported with count, mean holding-period net alpha, and annualized mean.",
+    "The durable result record is append-only and immutable; the exploratory leader is not a promotion decision."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_horizon_search.py -q",
+    "result": "4 passed; mypy and Ruff passed.",
+    "cases": [
+      "test_fixed_budget_compares_every_horizon_on_matched_development_decisions",
+      "test_search_rejects_holdout_rows_extra_trials_and_unmatched_cohorts",
+      "test_search_rejects_data_not_matching_frozen_digest_and_unbudgeted_grid",
+      "test_registry_records_plan_and_all_trials_immutably"
+    ]
+  },
+  "limitations": [
+    "Synthetic fixtures only; no actual economic horizon comparison is reported.",
+    "The existing historical analysis and protected confirmatory data were not reopened.",
+    "An approved in-house development dataset and reviewed search protocol remain necessary."
+  ]
+}

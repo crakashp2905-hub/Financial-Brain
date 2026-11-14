@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0049",
+  "status": "PARTIAL",
+  "implemented": [
+    "Declared separate exploratory 12-1 cross-sectional momentum and 52-week-high specs with distinct IDs and parameter hashes.",
+    "Both specs are explicitly EXPLORATORY and cannot place paper intents.",
+    "They do not alter, reclassify, or inherit the failed cost-aware M1 ledger result.",
+    "Existing factor feature definitions and source lineage are recorded."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f02.py -q",
+    "result": "28 passed (exit code 0); Ruff, mypy and git diff --check passed.",
+    "cases": ["test_pe49_slow_factor_exploratories_are_distinct_and_non_promotable"]
+  },
+  "limitations": [
+    "These are declarations, not a point-in-time portfolio adapter or execution path.",
+    "No frozen prospective trial, overlap/multiplicity analysis, or new Indian-market evidence has been run.",
+    "The approved data snapshot, universe, costs and benchmark must be frozen in a new charter before evaluation."
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0150",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_pretrade_gates.py tests/test_decision_sealing.py tests/test_forward_session_runner.py; ruff check src/financial_brain/forward_edge/pretrade_gates.py src/financial_brain/forward_edge/session_runner.py tests/test_pretrade_gates.py tests/test_decision_sealing.py tests/test_forward_session_runner.py",
+    "result": "58 passed; Ruff passed."
+  },
+  "implemented": [
+    "Content-addressed premarket-frozen policy covers quote freshness/spread, displayed size, ADV participation/freshness, costs versus expected net alpha, projected exposure, and model confidence.",
+    "The evaluator returns named fail-closed checks, reason codes, evidence identities, and a canonical verdict digest suitable for the runner risk callback.",
+    "The runner durably records explicit no-trade/rejected and missed/rejected execution outcomes as immutable PAPER_SKIP records with decision, risk, preflight, signal and source-input attribution.",
+    "Replay rejects a changed skip record and does not call execution for pre-trade risk refusals."
+  ],
+  "blockers": [
+    "Frozen gate policies and evidence sources are not automatically bound to every strategy/session.",
+    "Authoritative ADV/cost feeds, exposure-book integration, calibrated confidence, and formal eligibility wiring remain unverified."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/pretrade_gates.py": "29f0287483356ffd817156c0d6496fa40794444c0487a5d297c882ce431cff31",
+    "src/financial_brain/forward_edge/session_runner.py": "842c53e8aea1bf37d53d58ed696c8f17ea33b2f260d6e00bedf31113bdf30422",
+    "tests/test_pretrade_gates.py": "9c717375ed7f1f0630fb9af405be2f208ee7771877a0ee450fe848d178d0748a",
+    "tests/test_forward_session_runner.py": "86e07ac22a509d563092eb85400b7a1b765fba3a08bba1dbfe3f253c6272fe7f"
+  }
+}

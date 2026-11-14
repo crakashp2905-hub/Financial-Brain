@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0122",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_registered_multiplicity.py tests/test_forward_edge_f08.py",
+    "result": "25 passed; Ruff passed for evidence_stats.py and the multiplicity tests."
+  },
+  "implemented": [
+    "Holm family-wise adjustment can consume an immutable ordered set of registered trial IDs and returns a hash of the complete family.",
+    "Unrun/failed candidates with missing p-values remain in the family and receive p=1 for adjustment; unknown, duplicate, or invalid trials are rejected.",
+    "A test with 100 registered trials confirms the best candidate is adjusted across all 100, not only the 2 with reported p-values."
+  ],
+  "blockers": [
+    "The family ID list is supplied by the caller and is not yet automatically bound to the complete preregistration/trial registry at evaluation time.",
+    "No governance-approved, current full search-family snapshot is wired into promotion reporting."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/evidence_stats.py": "b0639d4941dac944d98386a35092981b948857cabcc9c970ad37a3de301c530b",
+    "tests/test_registered_multiplicity.py": "0e4b51ef281daed95e15489dc346013e872216dc717d4e4ead45f553a2118f67",
+    "docs/edge-program/source-inventory.json": "b99322699ae9afa7e52f1a5afcfdf58c6f551ef8af359aea1b803ef83c3d93e6"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0119",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_performance_report.py",
+    "result": "3 passed; Ruff and mypy passed for performance_report.py."
+  },
+  "implemented": [
+    "Cohort summary reports annualized return, annualized volatility, Sharpe, Sortino, maximum drawdown and profit factor from daily net returns.",
+    "Mean daily net alpha is reported from the matched alpha input; one-way turnover mean and total are included when complete.",
+    "Every report declares scheduled denominator, observed and missing sessions, sample start/end and calendar duration, periods per year, annual risk-free rate, and annualization convention.",
+    "Missing returns keep their scheduled dates in the denominator and withhold the core performance metrics; unscheduled rows are rejected."
+  ],
+  "limitations": [
+    "This report requires net NAV returns and matched-alpha values from upstream evidence; it does not validate the source market data or cost ledger."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/performance_report.py": "899a4eea4990c708a246584db017821455d4e5472ad8c30b44d1321bbc612f12",
+    "src/financial_brain/evaluation/performance.py": "a5a37f5006db81092fe07acaafd3e35257c131f7a4e026ed4bf764500d10359c",
+    "src/financial_brain/forward_edge/evidence_stats.py": "d66e5fc822b97d4e022f4821e0362aa64396aa7b0703ac47900ee52aac1e445a",
+    "tests/test_performance_report.py": "d7d36877371f7c16a530d974118e01a4daeffe0e40d2ec0a47a06509eea0e2dd",
+    "docs/edge-program/source-inventory.json": "b99322699ae9afa7e52f1a5afcfdf58c6f551ef8af359aea1b803ef83c3d93e6"
+  }
+}

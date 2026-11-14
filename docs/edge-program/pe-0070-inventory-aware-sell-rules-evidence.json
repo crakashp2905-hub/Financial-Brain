@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0070",
+  "status": "DONE",
+  "implemented": [
+    "HOLD and NO_SIGNAL are zero-score non-entry signals even if their attached forecast is positive.",
+    "SELL on a flat instrument does not create a short position; SELL on a held name is handled by the long-only turnover-constrained target optimizer.",
+    "Target turnover cost is zero when target inventory is unchanged; paper-account statutory fees are charged on completed fills only."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_signal_allocator.py tests/test_target_portfolio.py tests/test_paper_account.py -q",
+    "result": "26 passed; exit code 0.",
+    "additional_checks": [
+      "python -m mypy src/financial_brain/forward_edge/signal_allocator.py — Success: no issues found in 1 source file.",
+      "python -m ruff check src/financial_brain/forward_edge/signal_allocator.py tests/test_signal_allocator.py tests/test_target_portfolio.py — All checks passed."
+    ],
+    "cases": [
+      "test_hold_and_unheld_sell_do_not_open_a_position_or_create_turnover_cost",
+      "test_sell_signal_reduces_existing_position_and_no_signal_is_not_a_new_entry",
+      "test_no_trade_band_ignores_small_fee_drift_but_reports_material_rebalance",
+      "test_effective_fee_schedule_uses_filled_notional_and_reconciles_nav"
+    ]
+  },
+  "limitations": [
+    "Deterministic tests establish allocation and accounting mechanics only, not signal profitability.",
+    "Actual market fill quality and live cost reconciliation remain unverified."
+  ]
+}

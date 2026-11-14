@@ -1,6 +1,7 @@
 """F10 - trader cockpit (FE-0114 .. FE-0123). Static read-only pages; nothing here can submit an order."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from decimal import Decimal as D
 
 import pytest
@@ -19,6 +20,73 @@ def test_landing_page_says_at_once_whether_the_run_is_trustworthy() -> None:
     enabled = C.landing(feed_ok=True, broker="ENABLED", market_status="OPEN", risk_gates_clear=True, mode="LIVE_PAPER",
                         tier="LOCAL_PAPER", reasons=[])
     assert ">NOT TRUSTWORTHY<" in enabled
+
+
+def _overview_inputs():
+    now = datetime(2026, 11, 14, 4, 0, tzinfo=timezone.utc)
+    return {
+        "now": now,
+        "feed": {"source": "kite", "exchange": "NSE", "complete": True,
+                 "last_received_utc": now.isoformat(), "max_age_seconds": 5},
+        "calendar": {"is_session": True, "version": "nse-2026.11", "evidence_sha256": "a" * 64,
+                     "checked_at_utc": now.isoformat(), "max_age_seconds": 3600},
+        "active_version": {"strategy_id": "momentum", "version": "3", "artifact_sha256": "b" * 64},
+        "broker": {"read_only": True, "session_id": "kite-readonly-1", "evidence_sha256": "c" * 64,
+                   "observed_at_utc": now.isoformat(), "max_age_seconds": 60},
+        "risk_latches": [],
+    }
+
+
+def test_session_overview_requires_fresh_complete_evidence_and_clear_latches():
+    inputs = _overview_inputs()
+    ready = C.session_overview(**inputs)
+    assert "PAPER SESSION READY" in ready
+    assert "Feed" in ready and "Market calendar" in ready and "Broker session" in ready
+
+    inputs["feed"] = {**inputs["feed"], "complete": False,
+                       "last_received_utc": "2026-11-14T03:59:00+00:00"}
+    inputs["risk_latches"] = ["MAX_DRAWDOWN"]
+    blocked = C.session_overview(**inputs)
+    assert "NOT READY — TRADING BLOCKED" in blocked
+    assert "FEED_INCOMPLETE" in blocked and "FEED_STALE" in blocked
+    assert "RISK_LATCH:MAX_DRAWDOWN" in blocked
+
+
+def test_session_overview_never_calls_missing_sources_ready():
+    inputs = _overview_inputs()
+    inputs["calendar"] = {"is_session": True, "version": "", "evidence_sha256": "",
+                           "checked_at_utc": None, "max_age_seconds": 60}
+    inputs["active_version"] = None
+    blocked = C.session_overview(**inputs)
+    assert "NOT READY — TRADING BLOCKED" in blocked
+    assert "CALENDAR_EVIDENCE_MISSING_OR_INVALID" in blocked
+    assert "ACTIVE_STRATEGY_VERSION_MISSING_OR_INVALID" in blocked
+
+
+def test_strategy_comparison_reconciles_costs_and_shows_failed_rows_first():
+    html = C.strategy_comparison([
+        {"strategy_id": "candidate", "status": "VERIFIED", "sufficient": True, "sample": 60,
+         "gross": "120", "costs": "20", "net": "100", "benchmark_net": "60", "alpha": "40",
+         "ci_lower": "5", "ci_upper": "70", "drawdown": "12", "turnover": "3.5",
+         "fidelity": "OBSERVED",},
+        {"strategy_id": "failed", "status": "FAILED", "sufficient": False, "sample": 12,
+         "gross": "-30", "costs": "20", "net": "-50", "benchmark_net": "0", "alpha": "-50",
+         "ci_lower": "-80", "ci_upper": "-20", "drawdown": "40", "turnover": "9",
+         "fidelity": "SIMULATED",},
+        {"strategy_id": "thin", "status": "CANDIDATE", "sufficient": False, "sample": 3},
+    ])
+    assert html.index("failed") < html.index("thin") < html.index("candidate")
+    for column in ("Gross", "Costs", "Net", "Benchmark Net", "Alpha", "Ci Lower", "Ci Upper",
+                   "Drawdown", "Turnover", "Fidelity", "Sample"):
+        assert column in html
+    assert "All 3 registered outcomes are shown" in html
+
+
+def test_strategy_comparison_rejects_inconsistent_net_or_alpha():
+    bad = {"strategy_id": "bad", "status": "VERIFIED", "sufficient": True, "sample": 10,
+           "gross": 100, "costs": 10, "net": 95, "benchmark_net": 20, "alpha": 75}
+    with pytest.raises(C.CockpitError, match="gross minus costs"):
+        C.strategy_comparison([bad])
 
 
 def test_failed_strategies_are_visually_distinct_from_promotable_candidates() -> None:

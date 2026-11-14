@@ -1,0 +1,19 @@
+{
+  "checklist_task": "PE-0186",
+  "status": "DONE",
+  "criterion": "Show exact rejected/abstained/missed/no-signal counts with reason codes and keep all planned dates in the coverage denominator.",
+  "implementation": [
+    "src/financial_brain/forward_edge/cockpit.py"
+  ],
+  "tests": [
+    "tests/test_opportunity_coverage_dashboard.py",
+    "tests/test_forward_edge_f10.py"
+  ],
+  "test_result": "4 opportunity-coverage tests passed; combined dashboard run had 24 passed. Ruff and targeted mypy passed. Empty planned sessions remain UNRECORDED and are never inferred as NO_SIGNAL.",
+  "evidence_scope": "Synthetic planned-session denominator and rejected, abstained, missed, no-signal, and missing-event cases.",
+  "operational_limits": [
+    "Completeness depends on the caller providing the full schedule and event set.",
+    "Missing events are explicit unrecorded coverage gaps, not measured no-signal decisions.",
+    "The page is read-only and does not calculate strategy performance."
+  ]
+}

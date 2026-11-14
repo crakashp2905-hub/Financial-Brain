@@ -1,0 +1,22 @@
+{
+  "checklist_task": "PE-0185",
+  "status": "DONE",
+  "criterion": "Show cumulative portfolio NAV including cash and open positions; reproduce the canonical ledger NAV snapshot for every session.",
+  "implementation": [
+    "src/financial_brain/forward_edge/cockpit.py",
+    "src/financial_brain/forward_edge/eod_paper_archive.py",
+    "src/financial_brain/kernel/paper_account.py"
+  ],
+  "tests": [
+    "tests/test_portfolio_nav_dashboard.py",
+    "tests/test_eod_paper_archive.py",
+    "tests/test_forward_edge_f10.py"
+  ],
+  "test_result": "27 dashboard, EOD archive, and cockpit tests passed; Ruff and targeted mypy passed. Archive/inventory digests, cash plus marked inventory, and exact per-session journal rows are checked.",
+  "evidence_scope": "Synthetic immutable EOD archives and canonical account NAV snapshots, including cash-only and marked open-position sessions.",
+  "operational_limits": [
+    "Requires complete archives and canonical account NAV rows for the identical session set.",
+    "Missing or stale marks are refused by the EOD archive/account layer.",
+    "This is paper account reporting, not a broker statement or live account valuation."
+  ]
+}

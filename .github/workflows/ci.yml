@@ -5,6 +5,10 @@ on:
   push:
   pull_request:
 
+env:
+  PYTHONHASHSEED: "0"
+  TZ: Asia/Kolkata
+
 jobs:
   test:
     strategy:
@@ -18,18 +22,47 @@ jobs:
           fetch-depth: 0          # the pre-registration audit reads git history
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version-file: ".python-version"
           cache: pip
-      - name: Install (pyproject only)
+          cache-dependency-path: requirements-lock.txt
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.16"
+      - name: Install from verified lock
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          uv lock --check
+          uv export --locked --extra dev --format requirements-txt --no-emit-project --output-file .requirements-lock.generated.txt
+          python -c "from pathlib import Path; lines=lambda p: Path(p).read_text(encoding='utf-8').splitlines()[2:]; assert lines('.requirements-lock.generated.txt') == lines('requirements-lock.txt'), 'requirements-lock.txt is stale versus uv.lock'"
+          python -m pip install --require-hashes -r requirements-lock.txt
+          python -m pip install --no-deps --no-build-isolation -e .
+      - name: Build platform wheelhouse
+        run: |
+          python -m pip download --require-hashes --only-binary=:all: --dest wheelhouse -r requirements-lock.txt
+          python -m pip wheel --no-deps --no-build-isolation --wheel-dir wheelhouse .
+      - name: Fresh offline wheelhouse install (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m venv .venv-offline
+          .\.venv-offline\Scripts\python.exe -m pip install --no-index --find-links wheelhouse --require-hashes -r requirements-lock.txt
+          .\.venv-offline\Scripts\python.exe -m pip install --no-index --find-links wheelhouse --no-deps financial-brain==0.1.0
+          .\.venv-offline\Scripts\python.exe -m pip check
+          .\.venv-offline\Scripts\python.exe -c "import financial_brain; print(financial_brain.__file__)"
+      - name: Fresh offline wheelhouse install (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          python -m venv .venv-offline
+          ./.venv-offline/bin/python -m pip install --no-index --find-links wheelhouse --require-hashes -r requirements-lock.txt
+          ./.venv-offline/bin/python -m pip install --no-index --find-links wheelhouse --no-deps financial-brain==0.1.0
+          ./.venv-offline/bin/python -m pip check
+          ./.venv-offline/bin/python -c "import financial_brain; print(financial_brain.__file__)"
       - name: Lint
         run: python -m ruff check src tests
       - name: Validate capability claims
         run: python scripts/validate_capability_matrix.py
       - name: Inventory source ownership gaps
         run: python scripts/source_inventory.py
+      - name: Verify committed old/new engine dependency graph
+        run: python scripts/source_inventory.py --check docs/edge-program/source-inventory.json
       - name: Type check (OMS, evidence standard, pre-registry)
         run: python -m mypy
       - name: Schema migrations
@@ -40,22 +73,30 @@ jobs:
         run: python scripts/chart_patterns_matrix.py --check
       - name: Chart-pattern offline demo (network denied)
         run: python -m financial_brain.patterns.demo --offline
-      - name: Chart-pattern completion matrix is current
-        run: python scripts/chart_patterns_matrix.py --check
-      - name: Chart-pattern offline demo (network denied)
-        run: python -m financial_brain.patterns.demo --offline
       - name: Test suite (with skip summary)
         run: python -m coverage run --source=financial_brain -m pytest -q -ra
+      - name: Generate full-suite coverage report
+        run: python -m coverage json -o coverage.json
+      - name: Enforce critical trading-domain coverage floors
+        run: python scripts/check_critical_coverage.py --coverage coverage.json --output critical-coverage.json
+      - name: Verify capability source, test and evidence hashes
+        run: python scripts/audit_capability_evidence.py --check
       - name: Critical-module coverage
         run: python -m coverage report --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*"
       - name: Chart-pattern package coverage floor
         run: python -m coverage report --include="*/patterns/*" --fail-under=85
       - name: Coverage XML
         run: python -m coverage xml
+      - name: Dependency audit
+        run: python -m pip_audit --skip-editable
+      - name: Generate dependency and license inventory
+        run: python scripts/dependency_inventory.py --summary --output dependency-inventory.json
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.os }}
-          path: coverage.xml
-      - name: Dependency audit
-        run: python -m pip_audit --skip-editable
+          path: |
+            coverage.xml
+            coverage.json
+            critical-coverage.json
+            dependency-inventory.json

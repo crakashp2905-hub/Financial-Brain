@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0085",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f05.py tests/test_forward_paper_execution_adapter.py",
+    "result": "29 passed (exit code 0); Ruff, mypy for execution.py, and diff checks passed."
+  },
+  "implemented": [
+    "Model price is compared with the side-correct executable bid/ask available no earlier than decision time plus modeled latency.",
+    "Only displayed top-of-book quantity is measured; partial depth coverage is reported without extrapolating a full-order fill.",
+    "Each result carries the source quote SHA-256, quote benchmark type, and SIMULATED_QUOTE fidelity.",
+    "Reports hard-code broker_fill_observations=0 and reject rows labeled as broker fills.",
+    "The quote simulator now persists the arrival shortfall diagnostic inside its durable execution receipt when a pre-decision executable quote is present."
+  ],
+  "blockers": [
+    "Tests use synthetic quote events; no real observed Kite quote-arrival shortfall sample has been captured or measured."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/execution.py": "7f1afee31a151f9a22833a926032460eec485ac7bc1fdeb899dfe6b32dd30555",
+    "tests/test_forward_edge_f05.py": "a0a45944057ce819cfccfca7c9f82f2346dd395852f01193e8c07548a504eb41",
+    "src/financial_brain/forward_edge/paper_execution_adapter.py": "f72ae54d32e11661533ecb7731b5bc4babb26da3e0e84231312be067884e4ea0",
+    "tests/test_forward_paper_execution_adapter.py": "fa46e44cb496a56da1f5e6e468d37e347fce9890bee42c79dc137142f9c8fbac"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0074",
+  "status": "DONE",
+  "implemented": [
+    "Marketable buys use post-latency ask and sells use post-latency bid, rounded against the trader to the instrument tick.",
+    "Fill quantity is capped by visible ask/bid size and an order limit or price band can reject the fill.",
+    "Missing post-latency quote or displayed depth produces an explicit MISSED result; LTP, mid-price and decision-bar close are not fill substitutes."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f05.py -q",
+    "result": "25 passed; exit code 0.",
+    "additional_checks": [
+      "python -m mypy src/financial_brain/forward_edge/execution.py — Success: no issues found in 1 source file.",
+      "python -m ruff check src/financial_brain/forward_edge/execution.py tests/test_forward_edge_f05.py — All checks passed."
+    ],
+    "cases": [
+      "test_one_tick_worse_post_decision_quote_worsens_both_sides_of_fill_economics",
+      "test_fill_never_uses_a_quote_before_decision_plus_latency",
+      "test_visible_size_caps_the_fill_and_limit_protects_the_buyer"
+    ]
+  },
+  "limitations": [
+    "Quote fixtures are synthetic; no broker fills or prospective market calibration are established."
+  ]
+}

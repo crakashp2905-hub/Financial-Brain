@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0095",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_kernel_options_paper.py tests/test_kernel_options_extra.py tests/test_kernel_options.py tests/test_paper_options_spread.py tests/test_paper_options_runner.py tests/test_paper_options_forward.py tests/test_paper_options.py tests/test_options_vertical.py tests/test_options_real.py tests/test_options_quotes.py tests/test_options_audit.py tests/test_kernel_futures_paper.py tests/test_kernel_futures_analytics.py tests/test_kernel_sdk_validation_futures_fx.py tests/test_kernel_portfolio.py tests/test_kernel_ledger_guards_ticks.py",
+    "result": "92 passed (exit code 0); Ruff and mypy on the new options paper module passed."
+  },
+  "implemented": [
+    "Option premium buys/sells post signed cash and P&L entries to a durable double-entry journal.",
+    "Short naked positions reserve owner-supplied margin per lot; same-underlying, same-kind, same-expiry protective verticals reserve strike-width exposure. Rejected margin-expanding trades do not append.",
+    "Expiry handles cash-settled intrinsic value and physically exercised/assigned calls and puts, with cash obligations, underlying positions, settlement marks, and trial balance reconciled.",
+    "Multi-leg physical call-spread expiry test reconciles both legs, margin reserve, cash and realized result; cash-settled put and physical short-put assignment scenarios also pass.",
+    "Contract and settlement source hashes are retained; event IDs are idempotent; restart reproduces cash, positions, P&L and ledger balance."
+  ],
+  "blockers": [],
+  "scope_note": "Satisfies PE-0095's paper expiry acceptance tests. Margin values are sourced caller inputs and spread width reserves are conservative paper estimates, not verified exchange/broker margin. The module is not connected to live market capture, the common forward runner, external option contract masters, taxes/fees, intraday option marking, or a claim of profitability; those are separate integration and evidence tasks. Open option positions with no option mark report equity/P&L as unavailable."
+}

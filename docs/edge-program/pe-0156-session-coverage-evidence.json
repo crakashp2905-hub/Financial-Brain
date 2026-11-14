@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0156",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_session_coverage.py tests/test_session_date_ledger.py; ruff check src/financial_brain/forward_edge/session_coverage.py src/financial_brain/forward_edge/session_ops.py tests/test_session_coverage.py tests/test_session_date_ledger.py",
+    "result": "9 passed; Ruff passed."
+  },
+  "implemented": [
+    "Frozen schedules hash expected exchange session IDs/dates, calendar version, and settlement deadlines.",
+    "Calendar validation distinguishes tradable sessions, special weekend sessions, weekends, and holidays.",
+    "Session-date ledger outcomes remain separate as CLOSED, NO_TRADE, INCOMPLETE, overdue MISSING, future PENDING, UNPLANNED, PLAN_MISMATCH, and UNQUALIFIED.",
+    "Unqualified, no-trade, completed, pending, and planned denominators are independently reported.",
+    "Human-readable and machine-readable report lists excluded non-trading and unscheduled tradable dates and carries a canonical report hash."
+  ],
+  "blockers": [
+    "The frozen schedule is caller-supplied and not locked in an authoritative registry before session observations.",
+    "Daily scheduled report generation is not yet automated.",
+    "No prospective cohort period has validated daily denominators in operation."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/session_coverage.py": "8f4388269155232346a223096b054b1b9b7e1fa864a1492ad452cf86246c3bc5",
+    "src/financial_brain/forward_edge/session_ops.py": "c2f2356a2df32e2567c1dd0bd09ec8008122297a53572017406c3468d4490230",
+    "tests/test_session_coverage.py": "8a6a49811527177e2e73cf562dbe7fde996dbccf24aefd38d03c6dae7506fcd0",
+    "tests/test_session_date_ledger.py": "37f9cb4c9be51f80069258f58fa067fa10e9a5321a5bcf0606dd3e94fe422de7"
+  }
+}

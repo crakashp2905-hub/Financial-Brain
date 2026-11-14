@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0104",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f04.py tests/test_forward_edge_f00.py",
+    "result": "62 passed; Ruff and mypy passed for the custody module."
+  },
+  "implemented": [
+    "Canonical manifests bind strategy version, source snapshot, decision time, earliest entry time, side, instrument, quantity, risk policy, benchmark and evidence tier.",
+    "Manifest decision time must precede earliest entry; journal recording must occur after decision and before entry; overwrites are refused.",
+    "A fixed canonical SHA-256 golden digest protects cross-platform serialization."
+  ],
+  "blockers": [
+    "An external trusted timestamp receipt remains a separate optional attestation work item; local manifest timing alone is not independent evidence."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/decision_custody.py": "ce833ff9aa84ebaa35076b85d868e0b6d15ad56777906f5b9dcc3f8c8eed6f46",
+    "tests/test_forward_edge_f04.py": "c65d029a64910b62d332066960b5e5c3fc90693f6fb008fdd3bbc0662dfd69a6",
+    "tests/test_forward_edge_f00.py": "a43c4c83ef0b893742f8e5809ff4b088c7745fc92ffcccb859cc3301817116db"
+  }
+}

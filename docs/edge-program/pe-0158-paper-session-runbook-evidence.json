@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0158",
+  "status": "DONE",
+  "test": {
+    "command": "pytest -q tests/test_paper_session_runbook.py tests/test_forward_edge_f13.py tests/test_forward_offline_paper_cli.py; ruff check tests/test_paper_session_runbook.py",
+    "result": "45 passed; Ruff passed. Manual fixture CLI sequence returned 0, 2, 0, 0, 4 as documented."
+  },
+  "implemented": [
+    "Operator steps cover premarket, intraday, close, and exception handling in Asia/Kolkata with explicit exchange-date and timestamp rules.",
+    "Documented safety gates and fail-closed responses cover preflight, stale/missing feed, partial/unknown orders, missing marks, and restart recovery.",
+    "Offline fixture sequence and archived replay syntax, outcomes, exit codes, required inputs, and limitations are explicit.",
+    "Regression test verifies the sequence's JSON outputs, fixture-only status, insufficient-evidence report result, and disabled physical orders."
+  ],
+  "blockers": [],
+  "source_sha256": {
+    "tests/test_paper_session_runbook.py": "57aeccc3373bb773ef821637ca1fb3e925e31e8da8a1a44042ee9bbc930c36f5",
+    "docs/edge-program/paper-session-runbook.md": "af0c5d7ad455d431e6eba9c131bb45caf8a2b89e34aef45555f866c8b01e93c5"
+  }
+}

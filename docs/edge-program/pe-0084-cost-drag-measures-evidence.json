@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0084",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_phase5_book.py",
+    "result": "11 passed (exit code 0); Ruff and diff checks passed."
+  },
+  "verified": [
+    "Closed-book trading costs are reported in rupees and basis points per traded entry notional.",
+    "Cost drag is reported as a fraction and basis points of starting NAV.",
+    "Gross rupee P&L less rupee costs reconciles to net rupee P&L in the book fixture."
+  ],
+  "limitations": [
+    "The book's notional denominator is closed-position entry notional; it is explicitly labelled and does not claim venue turnover or order fill coverage.",
+    "The focused test uses synthetic journal rows and does not establish real-market costs or profitability."
+  ],
+  "source_sha256": {
+    "src/financial_brain/paper/book.py": "fcbc9d9f4549b3ec209462db863aaf871b41bfe219eb4d84e0c222ee019f135c",
+    "tests/test_phase5_book.py": "64f09d157cd14e5ce5973330e8e41214a6fcc5730f4725d1201a95e2d2b19837"
+  }
+}

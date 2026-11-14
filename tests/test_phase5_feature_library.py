@@ -68,3 +68,20 @@ def test_the_library_is_deep():
     assert len(names) >= 155                                    # plus rel_20 / rel_60 when a market series is given
     for fam in ("fvg_", "fib_", "ichi_", "psar_", "supertrend", "ha_", "pivot", "gartley", "gann", "poc_", "avwap", "c_"):
         assert any(n.startswith(fam) for n in names), fam
+
+
+def test_every_generated_field_has_causal_horizon_and_availability_metadata():
+    frame = LB.compute(bars(400))
+    metadata = frame.attrs["feature_metadata"]
+    by_name = {item["name"]: item for item in metadata}
+    assert set(by_name) == set(frame.columns) - {"d"}
+    assert all(item["availability_policy"] for item in metadata)
+    assert all(item["refresh_cadence"] for item in metadata)
+    assert all(len(item["metadata_sha256"]) == 64 for item in metadata)
+    assert by_name["fwd5"]["role"] == "OUTCOME_LABEL"
+    assert by_name["fwd5"]["availability_policy"] == "AFTER_FUTURE_SESSIONS_MATURE"
+    assert by_name["mom_12_1"]["construction_horizon_sessions"] == 252
+    assert by_name["mom_12_1"]["economic_horizon_sessions"] is None
+    assert by_name["mom_12_1"]["economic_horizon_status"] == "UNESTIMATED"
+    assert by_name["rsi_14"]["expected_signal_half_life_sessions"] is None
+    assert by_name["rsi_14"]["half_life_status"] == "UNMEASURED"

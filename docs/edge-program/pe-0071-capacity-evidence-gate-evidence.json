@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0071",
+  "status": "PARTIAL",
+  "implemented": [
+    "Order capacity is the tighter of dated ADV times a participation cap and fresh visible depth, reduced by a configured safety factor.",
+    "Missing source hashes, missing evidence, stale ADV, stale/future depth and over-cap orders fail closed with explicit NO_TRADE reasons.",
+    "Capacity evidence returns its source hashes and observation timestamps for audit."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f09.py -q",
+    "result": "17 passed; exit code 0.",
+    "additional_checks": [
+      "python -m mypy src/financial_brain/forward_edge/portfolio_risk.py — Success: no issues found in 1 source file.",
+      "python -m ruff check src/financial_brain/forward_edge/portfolio_risk.py tests/test_forward_edge_f09.py — All checks passed."
+    ],
+    "case": "test_order_capacity_requires_fresh_hashed_adv_and_depth_and_applies_safety_margin"
+  },
+  "limitations": [
+    "The gate is not yet wired into every paper-runner and strategy-adapter path.",
+    "No authorized live ADV/depth evidence was available; no executable capacity result is claimed."
+  ]
+}
