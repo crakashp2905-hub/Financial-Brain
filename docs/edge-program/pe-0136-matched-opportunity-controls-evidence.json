@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0136",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_opportunity_controls.py tests/test_matched_performance.py; ruff check src/financial_brain/forward_edge/opportunity_controls.py tests/test_opportunity_controls.py",
+    "result": "8 passed; Ruff passed."
+  },
+  "implemented": [
+    "Matches on the same session within frozen size, liquidity-spread, and risk-budget relative calipers.",
+    "Uses deterministic no-replacement matching and reports matched net-return differences.",
+    "Retains every treated opportunity and explicit reasons for no contemporaneous control, caliper rejection, or exhausted controls.",
+    "States observational confounding and explicitly disclaims causal filter benefit and promotion inference."
+  ],
+  "blockers": [
+    "Treated and no-trade/control outcomes and their matching attributes are caller-provided, not read from frozen paper books.",
+    "No authoritative registry binds the matching protocol and control outcomes.",
+    "The report is descriptive; real forward cohorts and dependence-aware inferential analysis remain necessary."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/opportunity_controls.py": "d5e5d99f982c98980857b01193266450a0e4a8630554fbd20fc1defb5bf39d86",
+    "tests/test_opportunity_controls.py": "482dd72ca6bb168e723b7893f1966e40503209b9230816fcd67e864c0e7ba063"
+  }
+}

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 133,
-  "unrecorded_tasks": 85,
+  "recorded_tasks": 134,
+  "unrecorded_tasks": 84,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2901,6 +2901,31 @@
       "test_result": "6 tests passed across new loss-economics and existing daily-report tests; Ruff passed. Daily paper output shows counts, INR and notional-weighted rates by category.",
       "evidence_sha256": "d4cde6ccc7e30f6d8b8c52098a047e48446227458ba2c12dbebb942c74a55622",
       "blockers": []
+    },
+    {
+      "id": "PE-0136",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/opportunity_controls.py",
+        "tests/test_opportunity_controls.py",
+        "docs/edge-program/pe-0136-matched-opportunity-controls.md",
+        "docs/edge-program/pe-0136-matched-opportunity-controls-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_matches_same_session_size_liquidity_and_risk_and_reports_net_difference",
+        "test_no_same_date_control_is_retained_as_unmatched_not_dropped",
+        "test_caliper_misses_and_control_exhaustion_are_explicit",
+        "test_control_is_never_reused_and_each_treated_opportunity_is_preserved",
+        "test_invalid_inputs_and_empty_treated_population_are_rejected"
+      ],
+      "test_result": "8 tests passed including existing matched-performance checks; Ruff passed. Same-session controls respect frozen calipers, no reuse, and preserve unmatched candidates.",
+      "evidence_sha256": "ccaecef9d1b3124c2bdd486dee737dc67e55c013eede021aa7cd2353fb681643",
+      "blockers": [
+        "No frozen paper control-book outcomes or authoritative binding of control inputs.",
+        "Observational matched comparisons do not establish causal filter benefit."
+      ]
     }
   ]
 }
