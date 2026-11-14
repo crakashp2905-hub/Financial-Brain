@@ -4232,20 +4232,22 @@
       "id": "PE-0196",
       "status": "PARTIAL",
       "sources": [
-        "docs/edge-program/critical-coverage-policy.json",
         "scripts/check_critical_coverage.py",
         "tests/test_critical_coverage.py",
-        "docs/edge-program/pe-0196-critical-coverage-baseline.md"
+        "docs/edge-program/critical-coverage-policy.json",
+        "docs/edge-program/pe-0196-critical-coverage-baseline.md",
+        ".github/workflows/ci.yml"
       ],
       "tests": [
         "tests/test_critical_coverage.py",
-        "193-test diagnostic coverage subset"
+        "complete 4,085-test Windows suite; one opt-in protocol test skipped",
+        "six-domain full-suite coverage report"
       ],
-      "test_result": "Added deterministic coverage-domain evaluator and regression/missing-record tests. Measured subset: OMS 80.93%, custody 35.34%, market data 47.55%, accounting 44.48%, evaluation 38.33%, risk 51.62%. Five proposed 60% floors fail this diagnostic subset; no enforcement step was added to CI. Full-suite cross-platform baseline and calibrated floors remain required.",
+      "test_result": "The Windows full suite passed 4,085 tests with one opt-in test skipped. Full-suite domain coverage: OMS 83.81%, custody 89.86%, market data 90.71%, accounting 82.17%, evaluation 88.69%, risk 83.50%. Added a CLI-generated JSON artifact and a 60% per-domain CI gate; focused coverage-check tests pass. Awaiting first clean Ubuntu/Windows CI run with the new gate.",
       "blockers": [
-        "Critical coverage floors are not enforced. Collect full-suite reports on clean Ubuntu/Windows, fill material test gaps, then add calibrated regression thresholds."
+        "The new coverage gate has not yet completed a clean Ubuntu and Windows CI run."
       ],
-      "evidence_sha256": "6b85bbe3a62a6b29fe7255231db18e87dfa2a9458138864b43b51f50623a8108"
+      "evidence_sha256": "2331dca657821b543dc2d1be1c88baa7f6a0531d36dab85942cf47b509e975ac"
     },
     {
       "id": "PE-0197",

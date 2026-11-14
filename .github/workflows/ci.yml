@@ -48,6 +48,10 @@ jobs:
         run: python -m financial_brain.patterns.demo --offline
       - name: Test suite (with skip summary)
         run: python -m coverage run --source=financial_brain -m pytest -q -ra
+      - name: Generate full-suite coverage report
+        run: python -m coverage json -o coverage.json
+      - name: Enforce critical trading-domain coverage floors
+        run: python scripts/check_critical_coverage.py --coverage coverage.json --output critical-coverage.json
       - name: Verify capability source, test and evidence hashes
         run: python scripts/audit_capability_evidence.py --check
       - name: Critical-module coverage
@@ -66,4 +70,6 @@ jobs:
           name: coverage-${{ matrix.os }}
           path: |
             coverage.xml
+            coverage.json
+            critical-coverage.json
             dependency-inventory.json

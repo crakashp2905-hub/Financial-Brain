@@ -62,11 +62,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--coverage", type=Path, default=ROOT / "coverage.json")
     parser.add_argument("--policy", type=Path, default=POLICY)
+    parser.add_argument("--root", type=Path, default=ROOT, help="repository root used to resolve policy patterns")
+    parser.add_argument("--output", type=Path, help="write the deterministic domain report as JSON")
     args = parser.parse_args(argv)
     report = json.loads(args.coverage.read_text(encoding="utf-8"))
     policy = json.loads(args.policy.read_text(encoding="utf-8"))
-    result = evaluate(report, policy)
-    print(json.dumps(result, indent=2, sort_keys=True))
+    result = evaluate(report, policy, args.root)
+    rendered = json.dumps(result, indent=2, sort_keys=True) + "\n"
+    if args.output:
+        args.output.write_text(rendered, encoding="utf-8", newline="\n")
+    print(rendered, end="")
     return 0 if result["status"] == "PASS" else 1
 
 
