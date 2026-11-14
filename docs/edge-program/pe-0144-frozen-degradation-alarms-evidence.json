@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0144",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_degradation_monitor.py; ruff check src/financial_brain/forward_edge/degradation_monitor.py tests/test_degradation_monitor.py",
+    "result": "7 passed; Ruff passed."
+  },
+  "implemented": [
+    "Threshold policy must be frozen before the cohort start and is content-addressed.",
+    "Rolling net alpha, slippage, fill coverage, and drift are checked against frozen thresholds.",
+    "Missing evidence, non-finite metrics, and insufficient observations fail closed to PAUSE.",
+    "Persistent severe net-alpha breaches escalate to RETIRE; pause and retirement remain latched.",
+    "Returned alarm events are immutable and contain reasons, policy identity, and observation digest; no strategy parameter mutation is exposed."
+  ],
+  "blockers": [
+    "Monitor is not wired to the forward session runner or candidate lifecycle.",
+    "Event persistence is delegated to a caller and is not connected to the durable paper journal.",
+    "Production thresholds, trusted identity roots, alarm delivery, and prospective market-cohort evidence are not configured or verified."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/degradation_monitor.py": "a1ee4b7e017502262f9df3b6f0969b54e22f783d6b7b76aa98b37d8f84b66adc",
+    "tests/test_degradation_monitor.py": "cb94d86c6aab032b75a371e0154707a85b895b2bc33f50037e891ec5b040c297"
+  }
+}

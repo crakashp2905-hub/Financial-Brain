@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 141,
-  "unrecorded_tasks": 77,
+  "recorded_tasks": 142,
+  "unrecorded_tasks": 76,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3107,6 +3107,34 @@
         "No approved internal identity provider or pinned reviewer roots.",
         "Not wired to proposal/registration workflow.",
         "Synthetic signed fixtures are not independent human reviews."
+      ]
+    },
+    {
+      "id": "PE-0144",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/degradation_monitor.py",
+        "tests/test_degradation_monitor.py",
+        "docs/edge-program/pe-0144-frozen-degradation-alarms.md",
+        "docs/edge-program/pe-0144-frozen-degradation-alarms-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_policy_is_frozen_before_cohort_and_hash_is_stable",
+        "test_healthy_window_continues_and_breach_pauses_at_frozen_threshold",
+        "test_pause_requires_persistent_breach_but_missing_evidence_fails_closed",
+        "test_repeated_severe_alpha_retires_candidate",
+        "test_duplicate_or_foreign_policy_observations_are_rejected",
+        "test_incomplete_or_nonfinite_metrics_never_continue",
+        "test_observations_must_be_complete_and_inside_the_frozen_cohort"
+      ],
+      "test_result": "7 degradation-monitor tests passed; Ruff passed. Frozen threshold identity, alpha/slippage/fill/drift breach handling, evidence fail-closed behavior, persistent pause/retirement, latches, duplicate rejection, and cohort window validation verified.",
+      "evidence_sha256": "c6e16ea76ecaca65b5b7b69018b5eadd8a522d7fbce64f0449e768218428bc2b",
+      "blockers": [
+        "Not wired to the forward session runner or candidate lifecycle.",
+        "Alarm events are not persisted by the durable paper journal.",
+        "Production thresholds, trusted identity roots, alarm delivery, and prospective market-cohort evidence are not configured or verified."
       ]
     }
   ]
