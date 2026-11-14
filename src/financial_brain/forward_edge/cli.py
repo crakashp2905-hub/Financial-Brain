@@ -83,6 +83,27 @@ def cmd_asset_class_report(path: str) -> tuple[dict, int]:
     return report, EXIT["OK"] if report["aggregate_pnl_reportable"] else EXIT["INCOMPLETE"]
 
 
+def cmd_daily_export(account_archive_path: str, runner_journal_path: str,
+                     session_id: str, output_dir: str) -> tuple[dict, int]:
+    """Write deterministic JSON, CSV, and HTML files from verified paper evidence."""
+    from financial_brain.forward_edge.daily_report import (
+        DailyReportError,
+        build_daily_report,
+        write_daily_reports,
+    )
+
+    try:
+        archive = json.loads(Path(account_archive_path).read_text(encoding="utf-8"))
+        report = build_daily_report(account_archive=archive,
+                                    runner_journal_path=Path(runner_journal_path),
+                                    session_id=session_id)
+        paths = write_daily_reports(report, Path(output_dir))
+    except (OSError, json.JSONDecodeError, DailyReportError) as exc:
+        return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    return {"report_sha256": report["report_sha256"], "outputs": {
+        name: str(path) for name, path in sorted(paths.items())}, "physical_orders": False}, EXIT["OK"]
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb forward")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -98,6 +119,11 @@ def main(argv: list[str] | None = None) -> int:
     rp.add_argument("--as-of", default="2027-01-04")
     ac = sub.add_parser("asset-class-report")
     ac.add_argument("--input", required=True, help="JSON with scheduled_sessions and class snapshots")
+    de = sub.add_parser("daily-export")
+    de.add_argument("--account-archive", required=True, help="immutable EOD paper account archive JSON")
+    de.add_argument("--runner-journal", required=True, help="hash-chained forward runner journal JSONL")
+    de.add_argument("--session-id", required=True)
+    de.add_argument("--output-dir", required=True, help="directory for report.json, report.csv, report.html")
     args = p.parse_args(argv)
     if args.cmd == "preflight":
         out, code = cmd_preflight(None, args.fail)
@@ -107,6 +133,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_close(args.fixture)
     elif args.cmd == "asset-class-report":
         out, code = cmd_asset_class_report(args.input)
+    elif args.cmd == "daily-export":
+        out, code = cmd_daily_export(args.account_archive, args.runner_journal, args.session_id, args.output_dir)
     else:
         out, code = cmd_report(args.as_of)
     print(json.dumps(out, indent=2, sort_keys=True, default=str))

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 189,
-  "unrecorded_tasks": 29,
+  "recorded_tasks": 190,
+  "unrecorded_tasks": 28,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4129,6 +4129,26 @@
       ],
       "test_result": "22 paper-risk and incident-review tests passed; Ruff, targeted mypy, refreshed source inventory, and inventory check passed. AI/non-human reset actors fail; human reset is auditable; UI cannot mutate the latch.",
       "evidence_sha256": "998c3d0d354c54efa6dc12532363bba9e531812aac9184a2378e7fdfd881ab8e",
+      "blockers": []
+    },
+    {
+      "id": "PE-0192",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/daily_report.py",
+        "src/financial_brain/forward_edge/cli.py",
+        "tests/test_daily_report_formats.py",
+        "docs/edge-program/pe-0192-versioned-daily-reports-evidence.md",
+        "docs/edge-program/pe-0192-versioned-daily-reports-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "tests/test_daily_report_formats.py",
+        "tests/test_forward_edge_f13.py",
+        "scripts/source_inventory.py --check docs/edge-program/source-inventory.json"
+      ],
+      "test_result": "44 daily-report and forward CLI tests passed; Ruff and targeted mypy passed; refreshed source inventory and inventory check passed. JSON, CSV, and HTML totals match and repeated output bytes are deterministic.",
+      "evidence_sha256": "822bf84f3d71e11d363c0f754e62a7a320a4d46e6f27cda48655b36e92d97ba7",
       "blockers": []
     }
   ]
