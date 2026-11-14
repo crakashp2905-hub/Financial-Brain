@@ -12,15 +12,16 @@
     "Validates each account journal hash chain, account identity, and opening cash against its frozen plan allocation before aggregation.",
     "Consolidates immutable double-entry transactions under book-namespaced accounts and transaction IDs, and verifies both total trial balance and each book cash balance.",
     "Reports per-book and total initial cash, cash, reservations, available cash, fees, realized P&L and NAV; total NAV is withheld whenever any book lacks a current position mark.",
-    "Rejects duplicate account objects, mismatched book identifiers, shared journal paths and mixed currencies; explicitly prevents cross-book cash netting."
+    "Rejects duplicate account objects, mismatched book identifiers, shared journal paths and mixed currencies; explicitly prevents cross-book cash netting.",
+    "The daily close cycle now automatically discovers every allocated account from its frozen plan and writes an immutable consolidated portfolio report after per-book close/report generation; retries verify and reuse the same report digest."
   ],
   "blockers": [
-    "The operational daily runner does not yet invoke this registry-backed discovery/report path automatically; account subledgers remain the source of truth rather than one persisted portfolio ledger.",
-    "The scope remains long-only cash equities in one currency; margin, settlement, futures and options accounting are not implemented."
+    "The consolidated portfolio report is a derived artifact; per-account subledgers remain authoritative rather than a single persisted portfolio ledger.",
+    "The scope remains long-only cash equities in one currency; margin, settlement, futures, and options accounting are not implemented."
   ],
   "verification": {
-    "command": "python -m pytest -q tests/test_registered_paper_books.py tests/test_paper_account_portfolio.py tests/test_source_inventory.py",
-    "result": "22 passed including source-inventory checks; Ruff and mypy passed for changed modules. The registered-portfolio-report CLI emitted the full report without changing account journal heads and returned incomplete when one allocated book was removed."
+    "command": "python -m pytest -q tests/test_daily_paper_cycle.py tests/test_paper_account_portfolio.py tests/test_registered_paper_books.py tests/test_source_inventory.py; ruff check src/financial_brain/forward_edge/daily_paper_cycle.py tests/test_daily_paper_cycle.py; python -m mypy src/financial_brain/forward_edge/daily_paper_cycle.py",
+    "result": "29 passed across daily-cycle, paper-portfolio, registered-book, and source-inventory suites; Ruff and mypy passed. Daily-cycle integration verifies an immutable portfolio report, no cross-book netting, cash totals, and retry digest stability."
   },
   "scope_note": "This produces a deterministic consolidated audit view for registered paper books. It does not pool buying power or claim cross-asset accounting."
 }

@@ -582,6 +582,31 @@ def run_daily_paper_cycle(manifest_path: Path) -> dict:
         report_files = write_book_performance_report(report, Path(manifest["report_output_root"]))
     except (BookPerformanceError, OSError, ValueError) as exc:
         raise DailyPaperCycleError(f"daily per-book report could not be written: {exc}") from exc
+    from financial_brain.kernel.paper_portfolio import PaperAccountPortfolio, PaperPortfolioError
+
+    try:
+        registry = RegisteredPaperBooks(Path(manifest["registry"]))
+        portfolio = PaperAccountPortfolio.from_registered_plan(
+            registry, plan_id=manifest["plan_id"], account_root=Path(manifest["account_root"]))
+        portfolio_core = {
+            "session_date": manifest["session_date"],
+            "plan_id": manifest["plan_id"],
+            "strategy_accounts": {
+                allocation.strategy_id: allocation.account_id
+                for plan in registry.plans if plan.plan_id == manifest["plan_id"]
+                for allocation in plan.books
+            },
+            "portfolio": portfolio.report(),
+        }
+        portfolio_sha256 = hashlib.sha256(_canonical(portfolio_core)).hexdigest()
+        safe_plan_id = hashlib.sha256(manifest["plan_id"].encode("utf-8")).hexdigest()[:24]
+        portfolio_path = (Path(manifest["report_output_root"]) / "portfolio"
+                          / manifest["session_date"] / f"{safe_plan_id}.json")
+        _write_immutable_json(portfolio_path, {**portfolio_core, "report_sha256": portfolio_sha256})
+        portfolio_report = {"path": str(portfolio_path.resolve()), "report_sha256": portfolio_sha256,
+                            **portfolio_core["portfolio"]}
+    except (PaperPortfolioError, OSError, ValueError, TypeError) as exc:
+        raise DailyPaperCycleError(f"registered-plan portfolio reconciliation failed: {exc}") from exc
     return {"session_date": manifest["session_date"], "plan_id": manifest["plan_id"], "finalized_books": finalized,
-            "report": report_files, "physical_orders": False}
+            "report": report_files, "portfolio_report": portfolio_report, "physical_orders": False}
 

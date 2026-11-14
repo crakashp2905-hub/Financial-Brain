@@ -101,6 +101,16 @@ def test_daily_paper_cycle_finalizes_every_registered_book_and_builds_report(tmp
     assert {row["book_id"] for row in reports["sessions"]} == {"alpha", "beta"}
     assert all(row["account_archive"]["session_date"] == "2026-11-16"
                for row in reports["sessions"])
+    portfolio_report = output["portfolio_report"]
+    assert portfolio_report["ledger_trial_balance_ok"] is True
+    assert portfolio_report["cross_book_cash_netting"] is False
+    assert portfolio_report["books"]["TOTAL"]["cash"] == "2000"
+    assert Path(portfolio_report["path"]).is_file()
+
+    retry_code = main(["daily-paper-cycle", "--manifest", str(manifest_path)])
+    retry_output = json.loads(capsys.readouterr().out)
+    assert retry_code == 0
+    assert retry_output["portfolio_report"]["report_sha256"] == portfolio_report["report_sha256"]
 
 
 def test_daily_paper_cycle_requires_exact_frozen_plan_membership_before_close(tmp_path, monkeypatch):

@@ -890,7 +890,10 @@
         "tests/test_registered_paper_books.py",
         "tests/test_forward_paper_account_bridge.py",
         "tests/test_kernel_ledger_guards_ticks.py",
-        "docs/edge-program/pe-0090-multibook-cash-reconciliation-evidence.json"
+        "docs/edge-program/pe-0090-multibook-cash-reconciliation-evidence.json",
+        "src/financial_brain/forward_edge/daily_paper_cycle.py",
+        "tests/test_daily_paper_cycle.py",
+        "docs/forward-edge/daily-paper-cycle.md"
       ],
       "tests": [
         "test_portfolio_consolidates_isolated_book_ledgers_and_reconciles_marks",
@@ -901,13 +904,14 @@
         "test_registered_portfolio_cli_reports_all_books_read_only_and_fails_missing",
         "test_buy_sell_fees_and_restart_reconcile",
         "test_replayed_intent_fill_and_fee_have_one_economic_effect",
-        "test_failed_fill_or_fee_does_not_change_journal"
+        "test_failed_fill_or_fee_does_not_change_journal",
+        "test_daily_paper_cycle_finalizes_every_registered_book_and_builds_report"
       ],
-      "test_result": "Added registry-backed discovery of every paper account in a frozen plan from existing hash-chain journals, validating identity and opening capital before the read-only aggregate. The registered-portfolio-report CLI leaves journal heads unchanged and fails closed on a missing account. Portfolio, registry, and source-inventory suites: 22 passed; Ruff and mypy passed.",
-      "evidence_sha256": "1903076a87e1233c3287e926ff1665cf11de12f51831fc53e094564243d1ad4d",
+      "test_result": "Daily-paper-cycle automatically writes an immutable registered-plan portfolio reconciliation after closing all books, with ledger balance, per-book/total cash, reserves, fees, realized P&L and NAV availability; no cross-book cash netting. Cycle, paper-portfolio, registered-book, and source-inventory suite: 29 passed; Ruff and mypy passed. Retry integration verifies the report digest is stable.",
+      "evidence_sha256": "7a17158150103a2becfc323f3707d8135edd49b1fa9e3a1549e656864380dde9",
       "blockers": [
-        "The operational daily runner does not yet invoke this registry-backed discovery/report path automatically; account subledgers remain the source of truth rather than one persisted portfolio ledger.",
-        "The scope remains long-only cash equities in one currency; margin, settlement, futures and options accounting are not implemented."
+        "The consolidated portfolio report is a derived artifact; per-account subledgers remain authoritative rather than a single persisted portfolio ledger.",
+        "The scope remains long-only cash equities in one currency; margin, settlement, futures, and options accounting are not implemented."
       ]
     },
     {

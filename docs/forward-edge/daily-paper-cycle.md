@@ -1,6 +1,6 @@
 # Registered paper-book daily cycle
 
-`python -m financial_brain.forward_edge.cli daily-paper-cycle --manifest <path>` finalizes the accounts in one frozen `RegisteredPaperBooks` plan, creates each paper close archive and portable evidence bundle, then writes the by-book performance report.
+`python -m financial_brain.forward_edge.cli daily-paper-cycle --manifest <path>` finalizes the accounts in one frozen `RegisteredPaperBooks` plan, creates each paper close archive and portable evidence bundle, then writes the by-book performance report and an immutable registered-plan portfolio reconciliation under `report_output_root/portfolio/<session-date>/<plan-id-hash>.json`. The portfolio report reopens every allocated account from its journal, validates opening capital and ledger balance, and reports cash, reserves, fees, realized P&L, and NAV availability without pooling cash. The per-account journals remain authoritative; this report is a derived view.
 
 Run `python -m financial_brain.forward_edge.cli daily-paper-preflight --manifest <path>` first. Preflight reopens every existing account from its durable journal, validates the account against frozen allocated capital, checks every close mark and outstanding order state, verifies every dated runner session and strategy/account binding, and validates the supplied historical report rows. It does not write to account journals or close books. The cycle repeats these checks immediately before it begins.
 
