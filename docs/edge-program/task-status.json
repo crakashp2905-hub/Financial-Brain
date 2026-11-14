@@ -2788,6 +2788,7 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/forward_edge/stratified_outcomes.py",
+        "src/financial_brain/forward_edge/prospective_cohort.py",
         "tests/test_stratified_outcomes.py",
         "docs/edge-program/pe-0128-stratified-outcomes.md",
         "docs/edge-program/pe-0128-stratified-outcomes-evidence.json"
@@ -2798,13 +2799,17 @@
         "test_missing_session_is_not_dropped_and_withholds_group_bounds",
         "test_more_registered_strata_widen_the_simultaneous_interval",
         "test_bad_stratum_rows_are_rejected",
-        "test_registry_requires_all_dimensions_and_hac_must_fit_schedule"
+        "test_registry_requires_all_dimensions_and_hac_must_fit_schedule",
+        "test_frozen_stratification_plan_binds_labels_schedule_and_aggregation_to_cohort",
+        "test_frozen_stratification_plan_rejects_different_cohort_identity",
+        "test_frozen_stratification_plan_rejects_forged_hash_and_late_freeze",
+        "test_frozen_stratification_plan_rejects_invalid_aggregation_digest"
       ],
-      "test_result": "9 stratification tests passed; Ruff passed. All five strata are reported with simultaneous dependence-aware intervals; empty/missing buckets remain visible and prevent global overclaims.",
-      "evidence_sha256": "38e08dc36dd688a6cee5d92e7ecb156c6e6986c766010db2c91e1050091529e2",
+      "test_result": "13 stratification tests pass; Ruff and configured mypy pass. Frozen-plan checks are exercised with prospective-cohort tests (22 combined tests). These are synthetic software checks, not market evidence.",
+      "evidence_sha256": "bb25b154594233b477dd822455ad35377c9314fcf54c17b6df03b2627e31789d",
       "blockers": [
-        "Stratum labels are not bound to the frozen prospective cohort registry.",
-        "Aggregation and portfolio utility weights are caller-supplied and not independently verified.",
+        "The frozen champion plan is content-addressed but is not stored in a durable authoritative cohort registry or backed by an independent timestamp receipt.",
+        "The aggregation-policy digest is caller-supplied; its underlying weights and instrument-level outcome calculations are not independently resolved or recomputed.",
         "No real prospective cohort observations are available."
       ]
     },

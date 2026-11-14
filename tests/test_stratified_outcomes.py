@@ -1,8 +1,14 @@
+from dataclasses import replace
+from datetime import datetime, timezone
+
 import pytest
 
+from financial_brain.forward_edge.prospective_cohort import freeze_champion
 from financial_brain.forward_edge.stratified_outcomes import (
     DIMENSIONS,
     StratificationError,
+    freeze_stratification_plan,
+    stratify_frozen_outcomes,
     stratify_outcomes,
 )
 
@@ -20,6 +26,24 @@ def _rows(labels=None):
         for day, alpha, utility in zip(SESSIONS, [0.010, 0.011, 0.009, 0.0105],
                                        [0.004, 0.0045, 0.0035, 0.0042], strict=True)
     ]
+
+
+def _cohort():
+    return freeze_champion(
+        development_returns={"alpha": [0.01, 0.02]},
+        development_sessions=["2025-12-30", "2025-12-31"],
+        confirmation_sessions=SESSIONS,
+        frozen_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        first_confirmation_observation_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+    )
+
+
+def _frozen_plan(cohort=None):
+    cohort = cohort or _cohort()
+    return freeze_stratification_plan(
+        cohort=cohort, registered_strata=REGISTRY, hac_lags=1,
+        familywise_alpha=0.05, aggregation_policy_sha256="a" * 64,
+    )
 
 
 def test_all_registered_dimensions_report_simultaneous_net_uncertainty_bands():
@@ -108,3 +132,53 @@ def test_registry_requires_all_dimensions_and_hac_must_fit_schedule():
     with pytest.raises(StratificationError, match="smaller"):
         stratify_outcomes(scheduled_sessions=SESSIONS, registered_strata=REGISTRY,
                           observations=[], hac_lags=4)
+
+
+def test_frozen_stratification_plan_binds_labels_schedule_and_aggregation_to_cohort():
+    cohort = _cohort()
+    plan = _frozen_plan(cohort)
+    report = stratify_frozen_outcomes(plan=plan, cohort=cohort, observations=_rows())
+    assert report["status"] == "STRATIFIED"
+    assert report["cohort_plan_sha256"] == cohort.plan_sha256
+    assert report["stratification_plan_sha256"] == plan.plan_sha256
+    assert report["aggregation_policy_sha256"] == "a" * 64
+
+
+def test_frozen_stratification_plan_rejects_different_cohort_identity():
+    original = _cohort()
+    plan = _frozen_plan(original)
+    other = freeze_champion(
+        development_returns={"beta": [0.02, 0.03]},
+        development_sessions=["2025-12-30", "2025-12-31"],
+        confirmation_sessions=SESSIONS,
+        frozen_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        first_confirmation_observation_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+    )
+    with pytest.raises(StratificationError, match="differs from its frozen cohort"):
+        stratify_frozen_outcomes(plan=plan, cohort=other, observations=_rows())
+
+
+def test_frozen_stratification_plan_rejects_forged_hash_and_late_freeze():
+    plan = _frozen_plan()
+    forged = replace(plan, plan_sha256="0" * 64)
+    with pytest.raises(StratificationError, match="digest is invalid"):
+        stratify_frozen_outcomes(plan=forged, cohort=_cohort(), observations=_rows())
+    late = replace(_cohort(), first_confirmation_observation_at_utc="2025-12-31T12:00:00+00:00")
+    with pytest.raises(StratificationError, match="frozen before its first observation"):
+        freeze_stratification_plan(
+            cohort=late, registered_strata=REGISTRY, hac_lags=1,
+            familywise_alpha=0.05, aggregation_policy_sha256="a" * 64,
+        )
+    with pytest.raises(StratificationError, match="HAC lags"):
+        freeze_stratification_plan(
+            cohort=_cohort(), registered_strata=REGISTRY, hac_lags=4,
+            familywise_alpha=0.05, aggregation_policy_sha256="a" * 64,
+        )
+
+
+def test_frozen_stratification_plan_rejects_invalid_aggregation_digest():
+    with pytest.raises(StratificationError, match="aggregation policy"):
+        freeze_stratification_plan(
+            cohort=_cohort(), registered_strata=REGISTRY, hac_lags=1,
+            familywise_alpha=0.05, aggregation_policy_sha256="not-a-hash",
+        )

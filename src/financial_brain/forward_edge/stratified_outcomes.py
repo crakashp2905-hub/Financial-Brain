@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from datetime import date
+from dataclasses import asdict, dataclass
+from datetime import date, datetime, timezone
+import hashlib
+import json
 from statistics import NormalDist
 import math
 
 from .evidence_stats import StatsError, newey_west_se
+from .prospective_cohort import FrozenChampionPlan
 
 
 class StratificationError(ValueError):
@@ -14,6 +18,159 @@ class StratificationError(ValueError):
 
 
 DIMENSIONS = ("volatility", "market_regime", "liquidity", "market_cap", "transaction_cost")
+
+
+@dataclass(frozen=True)
+class StratificationPlan:
+    """Frozen, content-addressed subgroup design bound to a confirmation cohort."""
+
+    cohort_plan_sha256: str
+    scheduled_sessions: tuple[str, ...]
+    registered_strata: tuple[tuple[str, tuple[str, ...]], ...]
+    hac_lags: int
+    familywise_alpha: float
+    aggregation_policy_sha256: str
+    frozen_at_utc: str
+    first_observation_at_utc: str
+    plan_sha256: str
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+    def sha256(self) -> str:
+        return _plan_digest(self)
+
+
+def _plan_payload(plan: StratificationPlan) -> dict:
+    value = asdict(plan)
+    value.pop("plan_sha256")
+    return value
+
+
+def _plan_digest(plan: StratificationPlan) -> str:
+    canonical = json.dumps(_plan_payload(plan), sort_keys=True, separators=(",", ":"),
+                           allow_nan=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _aware_utc(value: str, label: str) -> str:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except (TypeError, ValueError) as exc:
+        raise StratificationError(f"{label} must be an ISO timezone-aware timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise StratificationError(f"{label} must be an ISO timezone-aware timestamp")
+    return parsed.astimezone(timezone.utc).isoformat()
+
+
+def _validate_cohort(cohort: FrozenChampionPlan) -> None:
+    development = _sessions(cohort.development_sessions)
+    confirmation = _sessions(cohort.confirmation_sessions)
+    if set(development) & set(confirmation) or confirmation[0] <= development[-1]:
+        raise StratificationError("cohort development and confirmation schedules are invalid")
+    if (not isinstance(cohort.champion_id, str) or not cohort.champion_id.strip()
+            or any(len(value) != 64 or any(char not in "0123456789abcdef" for char in value)
+                   for value in (cohort.development_returns_sha256, cohort.plan_sha256))):
+        raise StratificationError("cohort identity digests are invalid")
+    frozen = _aware_utc(cohort.frozen_at_utc, "cohort frozen time")
+    first = _aware_utc(cohort.first_confirmation_observation_at_utc,
+                       "first confirmation observation time")
+    if datetime.fromisoformat(frozen) >= datetime.fromisoformat(first):
+        raise StratificationError("cohort must be frozen before its first observation")
+    payload = {
+        "champion_id": cohort.champion_id,
+        "development_sessions": development,
+        "confirmation_sessions": confirmation,
+        "development_returns_sha256": cohort.development_returns_sha256,
+        "frozen_at_utc": cohort.frozen_at_utc,
+        "first_confirmation_observation_at_utc": cohort.first_confirmation_observation_at_utc,
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    if hashlib.sha256(canonical.encode("utf-8")).hexdigest() != cohort.plan_sha256:
+        raise StratificationError("frozen cohort digest is invalid")
+
+
+def freeze_stratification_plan(
+    *,
+    cohort: FrozenChampionPlan,
+    registered_strata: Mapping[str, Sequence[str]],
+    hac_lags: int,
+    familywise_alpha: float,
+    aggregation_policy_sha256: str,
+) -> StratificationPlan:
+    """Freeze strata and their aggregation-policy identity before cohort outcomes exist."""
+    if not isinstance(cohort, FrozenChampionPlan):
+        raise StratificationError("stratification plan requires a frozen confirmation cohort")
+    _validate_cohort(cohort)
+    sessions = _sessions(cohort.confirmation_sessions)
+    strata = _registered_strata(registered_strata)
+    if type(hac_lags) is not int or not 0 <= hac_lags < len(sessions):
+        raise StratificationError("HAC lags must be nonnegative and smaller than the schedule")
+    if (isinstance(familywise_alpha, bool) or not isinstance(familywise_alpha, (int, float))
+            or not math.isfinite(familywise_alpha) or not 0 < familywise_alpha < 1):
+        raise StratificationError("familywise alpha must be between zero and one")
+    if (not isinstance(aggregation_policy_sha256, str)
+            or len(aggregation_policy_sha256) != 64
+            or any(char not in "0123456789abcdef" for char in aggregation_policy_sha256)):
+        raise StratificationError("aggregation policy must have a lowercase SHA-256 digest")
+    frozen = _aware_utc(cohort.frozen_at_utc, "cohort frozen time")
+    first = _aware_utc(cohort.first_confirmation_observation_at_utc,
+                       "first confirmation observation time")
+    if datetime.fromisoformat(frozen) >= datetime.fromisoformat(first):
+        raise StratificationError("cohort must be frozen before its first observation")
+    frozen_strata = tuple((key, strata[key]) for key in DIMENSIONS)
+    payload = {
+        "cohort_plan_sha256": cohort.plan_sha256,
+        "scheduled_sessions": sessions,
+        "registered_strata": frozen_strata,
+        "hac_lags": hac_lags,
+        "familywise_alpha": float(familywise_alpha),
+        "aggregation_policy_sha256": aggregation_policy_sha256,
+        "frozen_at_utc": frozen,
+        "first_observation_at_utc": first,
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return StratificationPlan(
+        cohort_plan_sha256=cohort.plan_sha256,
+        scheduled_sessions=sessions,
+        registered_strata=frozen_strata,
+        hac_lags=hac_lags,
+        familywise_alpha=float(familywise_alpha),
+        aggregation_policy_sha256=aggregation_policy_sha256,
+        frozen_at_utc=frozen,
+        first_observation_at_utc=first,
+        plan_sha256=digest,
+    )
+
+
+def stratify_frozen_outcomes(
+    *,
+    plan: StratificationPlan,
+    cohort: FrozenChampionPlan,
+    observations: Sequence[Mapping[str, object]],
+) -> dict:
+    """Evaluate outcomes only under the frozen cohort-bound subgroup design."""
+    if not isinstance(plan, StratificationPlan) or plan.sha256() != plan.plan_sha256:
+        raise StratificationError("stratification plan digest is invalid")
+    if not isinstance(cohort, FrozenChampionPlan):
+        raise StratificationError("evaluation requires the frozen confirmation cohort")
+    _validate_cohort(cohort)
+    if (plan.cohort_plan_sha256 != cohort.plan_sha256
+            or plan.scheduled_sessions != tuple(cohort.confirmation_sessions)
+            or plan.frozen_at_utc != cohort.frozen_at_utc
+            or plan.first_observation_at_utc != cohort.first_confirmation_observation_at_utc):
+        raise StratificationError("stratification plan differs from its frozen cohort")
+    report = stratify_outcomes(
+        scheduled_sessions=plan.scheduled_sessions,
+        registered_strata=dict(plan.registered_strata),
+        observations=observations,
+        hac_lags=plan.hac_lags,
+        familywise_alpha=plan.familywise_alpha,
+    )
+    return {**report, "stratification_plan_sha256": plan.plan_sha256,
+            "cohort_plan_sha256": plan.cohort_plan_sha256,
+            "aggregation_policy_sha256": plan.aggregation_policy_sha256}
 
 
 def _sessions(values: Sequence[str]) -> tuple[str, ...]:
@@ -72,8 +229,8 @@ def stratify_outcomes(
             dimension = str(row["dimension"])
             label = str(row["stratum"])
             session = str(row["session"])
-            alpha = float(row["net_alpha"])
-            utility = float(row["after_cost_utility"])
+            alpha = float(row["net_alpha"])  # type: ignore[arg-type]
+            utility = float(row["after_cost_utility"])  # type: ignore[arg-type]
         except (KeyError, TypeError, ValueError) as exc:
             raise StratificationError("each observation needs dimension, stratum, session and outcomes") from exc
         if dimension not in strata or label not in strata[dimension]:
@@ -116,7 +273,8 @@ def stratify_outcomes(
                 if se <= 0:
                     status = "UNDEFINED_VARIANCE"
                 else:
-                    lower, upper = mean - critical * se, mean + critical * se
+                    observed_mean = sum(sample) / len(sample)
+                    lower, upper = observed_mean - critical * se, observed_mean + critical * se
                     status = "POSITIVE" if lower > 0 else (
                         "NEGATIVE" if upper < 0 else "UNCERTAIN"
                     )
