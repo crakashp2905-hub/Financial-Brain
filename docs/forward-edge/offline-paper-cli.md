@@ -46,3 +46,8 @@ different file is rejected. Unknown/missing execution receipts remain subject to
 
 This implementation covers offline orchestration and no-trade recovery. It does not yet connect the Kite runner,
 approved strategy adapters, the canonical paper-account OMS/ledger, or a full fill/position reconciliation path.
+
+Paper-capable strategies must enter the registry through the guarded `SHADOW_ONLY` to `PAPER_ELIGIBLE`
+transition, with a frozen matching benchmark/charter and scoped human approval. `Registry.register()` rejects a
+strategy constructed directly as `PAPER_ELIGIBLE`, `FROZEN_CHALLENGER`, or `VERIFIED`; direct status construction
+must not be used to bypass enrollment evidence. Unapproved strategies remain observation-only.

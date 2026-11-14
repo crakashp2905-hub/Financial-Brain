@@ -170,6 +170,8 @@ class Registry:
     def register(self, spec: StrategySpec) -> StrategySpec:
         if spec.strategy_id in self._specs:
             raise RegistryError(f"{spec.strategy_id} is already registered; use transition()")
+        if spec.status in PAPER_CAPABLE:
+            raise RegistryError("paper-capable strategies must enter through the guarded enrollment transition")
         if spec.parameter_sha256 is not None and any(
             old.parameter_sha256 == spec.parameter_sha256
             and (old.status is Status.FAILED or any("->FAILED:" in row or "FAILED->" in row

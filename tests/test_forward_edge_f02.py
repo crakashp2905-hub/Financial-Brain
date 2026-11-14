@@ -150,6 +150,13 @@ def test_paper_enrolment_needs_a_human_and_has_a_benchmark() -> None:
     assert frozen.status is Status.FROZEN_CHALLENGER
 
 
+@pytest.mark.parametrize("status", [Status.PAPER_ELIGIBLE, Status.FROZEN_CHALLENGER, Status.VERIFIED])
+def test_paper_capable_status_cannot_be_registered_without_guarded_enrollment(status: Status) -> None:
+    registry = Registry()
+    with pytest.raises(RegistryError, match="guarded enrollment"):
+        registry.register(_spec(status=status, benchmark_id="NIFTY_CASH"))
+
+
 def test_paper_status_without_benchmark_is_refused_at_spec_level() -> None:
     reg = Registry()
     reg.register(_spec(status=Status.SHADOW_ONLY))  # no benchmark
@@ -195,7 +202,12 @@ def test_transition_creates_a_new_version_and_keeps_the_old_one() -> None:
 
 def test_verified_needs_custody() -> None:
     reg = Registry()
-    reg.register(_spec(status=Status.FROZEN_CHALLENGER, benchmark_id="NIFTY_CASH"))
+    reg.register(_spec(status=Status.SHADOW_ONLY, benchmark_id="NIFTY_CASH"))
+    charter, benchmark, approval, now = _enrolment_evidence()
+    reg.register_benchmark(benchmark)
+    reg.transition("M1", Status.PAPER_ELIGIBLE, reason="preregistered", approval=approval,
+                   charter=charter, now=now)
+    reg.transition("M1", Status.FROZEN_CHALLENGER, reason="frozen charter")
     with pytest.raises(RegistryError, match="independently verified"):
         reg.transition("M1", Status.VERIFIED, reason="x")
 
@@ -245,9 +257,12 @@ def test_failed_exploratory_and_shadow_families_never_get_order_intents(status: 
 
 
 def test_only_paper_capable_statuses_get_order_intents() -> None:
-    spec = _spec(status=Status.PAPER_ELIGIBLE, benchmark_id="NIFTY_CASH")
     registry = Registry()
-    registry.register(spec)
+    registry.register(_spec(status=Status.SHADOW_ONLY, benchmark_id="NIFTY_CASH"))
+    charter, benchmark, approval, now = _enrolment_evidence()
+    registry.register_benchmark(benchmark)
+    spec = registry.transition("M1", Status.PAPER_ELIGIBLE, reason="preregistered", approval=approval,
+                               charter=charter, now=now)
     assert R.order_intent_allowed(spec, registry) is True
 
 
