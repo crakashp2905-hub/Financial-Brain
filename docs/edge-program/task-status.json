@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 158,
-  "unrecorded_tasks": 60,
+  "recorded_tasks": 159,
+  "unrecorded_tasks": 59,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3500,6 +3500,23 @@
       ],
       "test_result": "7 passed; Ruff passed; source inventory --check passed (609 Python files).",
       "evidence_sha256": "3f41e2e9b8fc0c3e5d54ed925fd8a9e80602df0d135a16866d249a2d7290c8c6",
+      "blockers": []
+    },
+    {
+      "id": "PE-0161",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/intraday_selectivity.py",
+        "tests/test_intraday_selectivity.py",
+        "docs/edge-program/pe-0161-intraday-training-selectivity.md",
+        "docs/edge-program/pe-0161-intraday-training-selectivity-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_intraday_selectivity.py"
+      ],
+      "test_result": "4 passed; Ruff passed; source inventory --check passed (610 Python files).",
+      "evidence_sha256": "2abd658af3b04ce91d228a0089a35a37c79c88d3dc8213d999b0807027e7d249",
       "blockers": []
     }
   ]
