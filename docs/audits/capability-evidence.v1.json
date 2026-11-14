@@ -26,18 +26,18 @@
       }
     },
     {
-      "artifact_sha256": "e09a5ba559fdb70601c74adb6af02282e0c4b3680d0cd708e3ae5a791db32cb5",
+      "artifact_sha256": "57af4622f8e520657b278196aef3d76b3dc530f59a6ef4278827de99e322090d",
       "id": "forward-paper-account-authority",
       "maturity": "partial",
       "sources": {
-        "src/financial_brain/forward_edge/paper_account_bridge.py": "daffe085e22efd35fdc2c49b7d721b5365206e06adea22bc1f6511283f147536",
-        "src/financial_brain/forward_edge/session_runner.py": "4f9b562c7f2f3838bbfe1b718b6db1093e009222211900ed1330919813161ad7",
+        "src/financial_brain/forward_edge/paper_account_bridge.py": "1ad5256958f743e0b66683f7cd396aba13ce4fe4d9a73045cf1748a4fa6336a0",
+        "src/financial_brain/forward_edge/session_runner.py": "cf9b840888123a5e150c10ed90d17d5b2bfc478aa5288e7c7ef76761f5cf44af",
         "src/financial_brain/kernel/paper_authority.py": "e4f0a17131d3bc331edba0454e113206130d4428101e117e88f2533ffc6cbe7c",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_forward_paper_account_bridge.py": "e179c900aed2d46979c6762f19117143af5376a2d3994892651911dc4728215f",
+        "tests/test_forward_paper_account_bridge.py": "f22b77b79eef63120c793ea46f137cf806efeff85faa18f613058f73413bc902",
         "tests/test_forward_session_runner.py": "a4ab35fcb52835b037fdc3d13ace2a8811375f6e72b40562f6af6c0d81f6bc82",
         "tests/test_paper_execution_authority.py": "8026404c4ed069cf68e3456a4aae1b6e057c5079fa3bd156ee47f7ac11e02c93",
         "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782"
@@ -118,7 +118,7 @@
       }
     }
   ],
-  "manifest_sha256": "2dfa5349128e70fbeb2001a0d88feaa774cadd32632b36379c894324c6b5fefe",
+  "manifest_sha256": "0513ce703452ac86ec20263f0f6b959fda7cd831cf266db75d7464c432a3ee49",
   "matrix_sha256": "72b9b5b162e4b9239fa078da05a6aa12464900147cf8cb4e7252ba779b2237d2",
   "schema_version": "fb.capability-evidence.v1"
 }

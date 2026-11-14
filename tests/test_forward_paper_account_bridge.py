@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.approvals import Approval
 from financial_brain.forward_edge.charter import EvaluationIdentity, ExperimentCharter
@@ -30,6 +30,8 @@ from financial_brain.kernel.registered_paper_books import (
 
 
 DECISION_AT = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
+FEED_HEALTH = FeedHealth(DECISION_AT - timedelta(seconds=1), 0, 0, 0,
+                         last_heartbeat_utc=DECISION_AT - timedelta(seconds=1))
 SCHEDULE = FeeSchedule("paper-cost-v1", date(2026, 1, 1), Decimal("10"), Decimal("10"))
 MODEL_EVIDENCE = {"fee_schedule_sha256": SCHEDULE.sha256}
 STRATEGY_SHA = "a" * 64
@@ -98,6 +100,7 @@ def _config():
         strategy_sha256=STRATEGY_SHA, risk_policy_sha256="b" * 64,
         constraints_sha256="c" * 64, ledger_id="account-ledger", benchmark_id="NIFTY50",
         instruments=("NSE:INFY",), capital_inr=str(capital), mode=Mode.LIVE_PAPER,
+        require_feed_health=True,
         authority_strategy_id="test-momentum", authority_account_id="paper-main",
         family_evidence=family, family_owner_approval=approval,
     )
@@ -161,6 +164,55 @@ def test_session_evidence_and_paper_account_authority_journals_cannot_alias(tmp_
     assert account.journal.records() == before
 
 
+def test_live_paper_service_requires_health_snapshot_before_preflight(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    preflight_calls = []
+    with pytest.raises(PaperAccountBridgeError, match="requires a feed-health snapshot"):
+        service.run(
+            config, [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: preflight_calls.append(True) or {"approved": True},
+            decision_fn=lambda _: {"side": "NONE"}, risk_fn=lambda _: {"approved": True},
+            execution_fn=lambda *_: {}, decision_at=DECISION_AT,
+        )
+    assert preflight_calls == []
+    assert account.cash == Decimal("10000")
+    assert not runner_path.exists()
+
+
+def test_registered_live_paper_service_cannot_disable_feed_health_gate(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    with pytest.raises(PaperAccountBridgeError, match="requires feed-health gating"):
+        service.run(
+            replace(config, require_feed_health=False), [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: {"approved": True}, decision_fn=lambda _: {"side": "NONE"},
+            risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {},
+            decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+            feed_health_observed_at=DECISION_AT,
+        )
+    assert not runner_path.exists()
+    assert account.cash == Decimal("10000")
+
+
+def test_live_paper_service_stale_health_fails_closed_before_strategy(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    stale = FeedHealth(DECISION_AT - timedelta(seconds=30), 0, 0, 0,
+                       last_heartbeat_utc=DECISION_AT - timedelta(seconds=30))
+    calls = []
+    result = service.run(
+        config, [_event(DECISION_AT + timedelta(seconds=1))],
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _: calls.append("decision") or pytest.fail("stale feed must block decisions"),
+        risk_fn=lambda _: calls.append("risk") or {"approved": True},
+        execution_fn=lambda *_: calls.append("execution") or {}, decision_at=DECISION_AT,
+        feed_health=stale, feed_health_observed_at=DECISION_AT,
+    )
+    assert result["status"] == "INCOMPLETE"
+    assert result["reason"] == "FEED_ENDED_EARLY"
+    assert calls == []
+    assert account.cash == Decimal("10000")
+    assert not any(row.get("t") == "PAPER_INTENT" for row in DurableJournal(runner_path).records())
+
+
 def test_forward_paper_service_requires_account_opening_capital_to_match_frozen_plan(tmp_path):
     mismatched, config, wrong_account, _runner_path, _account_path = _service(
         tmp_path, account_cash=Decimal("9999"))
@@ -201,6 +253,7 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
         decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
     )
 
     first = service.run(config, events, **kwargs)
@@ -262,6 +315,7 @@ def test_forward_paper_service_rejects_legacy_intraday_authority_before_writing(
             preflight_fn=lambda: preflight_calls.append(True) or {"approved": True},
             decision_fn=lambda _events: {}, risk_fn=lambda _decision: {},
             execution_fn=lambda *_: {}, decision_at=DECISION_AT,
+            feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
         )
 
     assert preflight_calls == []
@@ -326,6 +380,7 @@ def test_crash_after_durable_fill_and_cost_post_restarts_without_duplicate_econo
                                      "instrument": "NSE:INFY", "quantity": 2},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
     )
     reference_dir = tmp_path / "reference"
     reference_dir.mkdir()
@@ -387,6 +442,7 @@ def test_partial_receipt_releases_unfilled_reservation_after_cancel(tmp_path):
         decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 3},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
     )
 
     assert result["execution"]["status"] == "PARTIAL"
@@ -423,6 +479,7 @@ def test_canceled_partial_receipt_reconciles_fills_and_releases_remaining_reserv
         decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 3},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=canceled_execution, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
     )
 
     assert result["execution"]["status"] == "CANCELED"
@@ -442,7 +499,7 @@ def test_quote_quality_no_trade_reconciles_as_canceled_without_cash_or_position_
         decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE),
-        decision_at=DECISION_AT,
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
     )
 
     assert result["execution"]["status"] == "NO_TRADE"
@@ -462,7 +519,7 @@ def test_buy_sync_requires_explicit_risk_cash_reserve(tmp_path):
             decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
             risk_fn=lambda _decision: {"approved": True},
             execution_fn=MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE),
-            decision_at=DECISION_AT,
+            decision_at=DECISION_AT, feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
         )
 
     assert account.cash == Decimal("10000")
@@ -487,6 +544,7 @@ def test_execution_fee_hash_mismatch_is_rejected_before_account_posting(tmp_path
             decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
             risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
             execution_fn=wrong_fee_execution, decision_at=DECISION_AT,
+            feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
         )
 
     assert account.cash == Decimal("10000")
@@ -503,6 +561,7 @@ def test_preflight_exception_is_durable_and_never_executes(tmp_path):
         decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
         risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
         execution_fn=lambda *_: calls.append(True) or {}, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
     )
 
     assert result["status"] == "REJECTED"

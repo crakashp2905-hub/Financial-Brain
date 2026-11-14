@@ -3427,16 +3427,22 @@
         "tests/test_forward_session_runner.py",
         "tests/test_forward_session_crash_matrix.py",
         "docs/edge-program/pe-0154-feed-clock-fail-closed.md",
-        "docs/edge-program/pe-0154-feed-clock-fail-closed-evidence.json"
+        "docs/edge-program/pe-0154-feed-clock-fail-closed-evidence.json",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_forward_feed_health.py"
       ],
       "tests": [
         "test_forward_session_runner.py",
-        "test_forward_session_crash_matrix.py"
+        "test_forward_session_crash_matrix.py",
+        "test_live_paper_service_requires_health_snapshot_before_preflight",
+        "test_live_paper_service_stale_health_fails_closed_before_strategy",
+        "test_registered_live_paper_service_cannot_disable_feed_health_gate"
       ],
-      "test_result": "61 passed; Ruff passed.",
-      "evidence_sha256": "e68848018a4fe733fd6dce9379de2c4e8341cbc044a4bdb7bcb9f15341724f39",
+      "test_result": "80 tests across runner, crash-matrix, feed-health, and paper-account bridge suites passed; Ruff and mypy passed. The registered account bridge requires and journals feed health before preflight, rejects disabled health gating and stale snapshots, reuses identical snapshots idempotently, and fails closed before decision, risk, or execution.",
+      "evidence_sha256": "d1c4810f737b9039bbf6a6a6370b88f53455ad87773fc819a1e7fedc1818e451",
       "blockers": [
-        "Feed-health requirement is opt-in until the observed Kite/session orchestrator is wired to require it globally.",
+        "Direct ForwardSessionRunner callers can still configure require_feed_health=false, and the Kite poller is not wired to enforce health through the registered account service for every observed paper session.",
         "Continuous live health monitoring and fault injection across a forward market session remain unverified."
       ]
     },

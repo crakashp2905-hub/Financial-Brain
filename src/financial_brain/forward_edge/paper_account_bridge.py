@@ -9,7 +9,7 @@ from pathlib import Path
 from collections.abc import Callable, Iterable
 
 from financial_brain.forward_edge.durable import DurableJournal
-from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.registry import Registry, StrategySpec, order_intent_allowed
 from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner, RunnerError
@@ -104,7 +104,9 @@ class ForwardPaperSessionService:
             preflight_fn: Callable[[], dict], decision_fn: Callable[[list[NormalizedEvent]], dict],
             risk_fn: Callable[[dict], dict], execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
             decision_at: datetime | None = None,
-            reconcile_execution_fn: Callable[[str], dict] | None = None) -> dict:
+            reconcile_execution_fn: Callable[[str], dict] | None = None,
+            feed_health: FeedHealth | None = None,
+            feed_health_observed_at: datetime | None = None) -> dict:
         """Persist one preflight, run the session, then reconcile its receipt to PaperAccount."""
         if decision_at is None:
             existing_decision = next((row for row in DurableJournal(self.runner.journal_path).records()
@@ -114,6 +116,21 @@ class ForwardPaperSessionService:
                            if existing_decision is not None
                            else self.runner.clock_provider.decision_time())
         allocation = self._validate_strategy(config, decision_at)
+        if not config.require_feed_health:
+            raise PaperAccountBridgeError("LIVE_PAPER account service requires feed-health gating")
+        prior_feed_health = []
+        if self.runner.journal_path.exists():
+            prior_feed_health = [row for row in DurableJournal(self.runner.journal_path).records()
+                                 if row.get("session_id") == config.session_id
+                                 and row.get("t") == "FEED_HEALTH"]
+        if not prior_feed_health and (feed_health is None or feed_health_observed_at is None):
+            raise PaperAccountBridgeError(
+                "LIVE_PAPER account service requires a feed-health snapshot before preflight")
+        if (feed_health is None) != (feed_health_observed_at is None):
+            raise PaperAccountBridgeError("feed-health snapshot and observed time must be supplied together")
+        if feed_health is not None:
+            if not isinstance(feed_health, FeedHealth):
+                raise PaperAccountBridgeError("feed-health snapshot must be a validated FeedHealth value")
         try:
             self.authority_registry.claim(
                 strategy_id=self.strategy_spec.strategy_id,
@@ -123,6 +140,13 @@ class ForwardPaperSessionService:
             )
         except ValueError as exc:
             raise PaperAccountBridgeError(f"paper execution authority conflict: {exc}") from exc
+        if feed_health is not None:
+            if feed_health_observed_at is None:
+                raise PaperAccountBridgeError("feed-health observed time is required")
+            try:
+                self.runner.record_feed_health(config, feed_health, observed_at=feed_health_observed_at)
+            except RunnerError as exc:
+                raise PaperAccountBridgeError(f"invalid paper feed-health snapshot: {exc}") from exc
         existing_preflight = next((row for row in DurableJournal(self.runner.journal_path).records()
                                    if row.get("t") == "PREFLIGHT_RESULT"
                                    and row.get("session_id") == config.session_id), None)

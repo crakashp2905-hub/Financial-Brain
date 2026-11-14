@@ -478,13 +478,13 @@ class ForwardSessionRunner:
         self.begin(config)
         journal = DurableJournal(self.journal_path)
         rows = [r for r in journal.records() if r.get("session_id") == config.session_id]
-        if any(r.get("t") in {"DECISION", "SESSION_CLOSED"} for r in rows):
-            raise RunnerError("feed health must be recorded before the session decision")
         samples = [r for r in rows if r.get("t") == "FEED_HEALTH"]
-        if samples and observed < datetime.fromisoformat(samples[-1]["health"]["observed_at_utc"]):
-            raise RunnerError("feed-health sample timestamps must be monotonic")
         if samples and samples[-1].get("snapshot_sha256") == digest:
             return
+        if any(r.get("t") in {"DECISION", "SESSION_CLOSED"} for r in rows):
+            raise RunnerError("feed health must be recorded before the session decision")
+        if samples and observed < datetime.fromisoformat(samples[-1]["health"]["observed_at_utc"]):
+            raise RunnerError("feed-health sample timestamps must be monotonic")
         journal.append({"t": "FEED_HEALTH", "session_id": config.session_id,
                         "snapshot_sha256": digest, "health": payload})
 

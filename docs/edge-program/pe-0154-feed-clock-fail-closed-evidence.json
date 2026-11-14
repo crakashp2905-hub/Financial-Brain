@@ -3,23 +3,28 @@
   "task_id": "PE-0154",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_forward_session_runner.py tests/test_forward_session_crash_matrix.py; ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_session_runner.py tests/test_forward_session_crash_matrix.py",
-    "result": "61 passed; Ruff passed."
+    "command": "python -m pytest -q tests/test_forward_session_runner.py tests/test_forward_session_crash_matrix.py tests/test_forward_feed_health.py tests/test_forward_paper_account_bridge.py; python -m ruff check src/financial_brain/forward_edge/paper_account_bridge.py src/financial_brain/forward_edge/session_runner.py tests/test_forward_paper_account_bridge.py; python -m mypy src/financial_brain/forward_edge/paper_account_bridge.py src/financial_brain/forward_edge/session_runner.py",
+    "result": "80 passed; Ruff and mypy passed."
   },
   "implemented": [
     "Observed-session configurations can require feed-health evidence.",
     "Absent required health, stale quotes or heartbeat, gaps/disconnects/drops and unsafe timestamps produce durable INCOMPLETE evidence and block strategy, risk and execution callbacks.",
     "Untrusted decision clock is recorded as an incomplete session before any strategy or order intent.",
     "Execution-clock failure after durable intent leaves OUTBOX_UNKNOWN and no fill acknowledgment or session close.",
-    "Pre-entry feed outage preserves account and existing risk state and cannot be counted as successful zero-loss session."
+    "Pre-entry feed outage preserves account and existing risk state and cannot be counted as successful zero-loss session.",
+    "Registered ForwardPaperSessionService requires a configured feed-health gate and a durable feed-health snapshot before preflight; a stale snapshot blocks strategy, risk, and execution.",
+    "An identical health snapshot is idempotent across a closed-session retry; changed health cannot be appended retroactively after decision."
   ],
   "blockers": [
-    "Feed-health requirement is opt-in until the observed Kite/session orchestrator is wired to require it globally.",
+    "Direct ForwardSessionRunner callers can still configure require_feed_health=false, and the Kite poller is not wired to enforce health through the registered account service for every observed paper session.",
     "Continuous live health monitoring and fault injection across a forward market session remain unverified."
   ],
   "source_sha256": {
-    "src/financial_brain/forward_edge/session_runner.py": "6fd75096818066320214b820d1af8e08c83fa598fc4d3c8c5066e93bcf9f1d28",
-    "tests/test_forward_session_runner.py": "7aa5d184f028bb36bb382740a4ff15d7b113869b79c3018e9a66e5cdda4de363",
-    "tests/test_forward_session_crash_matrix.py": "7d0d1cc6339a2e4acef2934876468cfcace03c5b9af3f3c475b704d55b1f1d66"
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "1ad5256958f743e0b66683f7cd396aba13ce4fe4d9a73045cf1748a4fa6336a0",
+    "src/financial_brain/forward_edge/session_runner.py": "cf9b840888123a5e150c10ed90d17d5b2bfc478aa5288e7c7ef76761f5cf44af",
+    "tests/test_forward_paper_account_bridge.py": "f22b77b79eef63120c793ea46f137cf806efeff85faa18f613058f73413bc902",
+    "tests/test_forward_feed_health.py": "0bd723c239d1feec8310e6dfbf48d0e753617952ff32bcdadeaff19a2c86b258",
+    "tests/test_forward_session_runner.py": "a4ab35fcb52835b037fdc3d13ace2a8811375f6e72b40562f6af6c0d81f6bc82",
+    "tests/test_forward_session_crash_matrix.py": "6ac27ed9c77b7772e9a3f5b95682872ade483d838d3ef2a7fe087ad172427239"
   }
 }
