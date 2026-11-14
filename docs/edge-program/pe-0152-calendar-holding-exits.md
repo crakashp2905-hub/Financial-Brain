@@ -9,7 +9,7 @@
 
 ## Verification
 
-`tests/test_forward_book_adapter.py`: 6 passed; Ruff passed. Coverage includes weekend traversal, scheduled/due/overdue dates, deterministic SELL-to-close intents, missing calendar horizon, non-session as-of date, and stale schedule clock rejection.
+`tests/test_forward_book_adapter.py` and `tests/test_forward_paper_account_bridge.py`: 13 passed; Ruff passed. Coverage includes weekend traversal, scheduled/due/overdue dates, deterministic SELL-to-close intents, missing calendar horizon, non-session as-of date, stale schedule clock rejection, and accounting reconciliation of canceled partial fills with reservation release.
 
 ## Remaining evidence gap
 

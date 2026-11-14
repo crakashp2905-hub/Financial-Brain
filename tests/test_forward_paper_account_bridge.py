@@ -110,6 +110,32 @@ def test_partial_receipt_releases_unfilled_reservation_after_cancel(tmp_path):
     assert account.oms.order(result["intent_id"]).reserved == 0
 
 
+def test_canceled_partial_receipt_reconciles_fills_and_releases_remaining_reservation(tmp_path):
+    service, config, account, _, _ = _service(tmp_path)
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+
+    def canceled_execution(*args):
+        receipt = simulator(*args)
+        assert receipt["status"] == "PARTIAL"
+        receipt["status"] = "CANCELED"
+        receipt["reason"] = "OPERATOR_CANCEL"
+        return receipt
+
+    result = service.run(
+        config, [_event(DECISION_AT + timedelta(seconds=1), ask_qty=1)],
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 3},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=canceled_execution, decision_at=DECISION_AT,
+    )
+
+    assert result["execution"]["status"] == "CANCELED"
+    assert account.position("NSE:INFY").quantity == 1
+    assert account.oms.order(result["intent_id"]).state is State.CANCELED
+    assert account.oms.order(result["intent_id"]).remaining == 2
+    assert account.oms.order(result["intent_id"]).reserved == 0
+
+
 def test_quote_quality_no_trade_reconciles_as_canceled_without_cash_or_position_changes(tmp_path):
     service, config, account, _, _ = _service(tmp_path)
     locked = _event(DECISION_AT + timedelta(seconds=1), bid="100", ask="100")

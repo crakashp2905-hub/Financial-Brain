@@ -3318,15 +3318,18 @@
       "sources": [
         "src/financial_brain/forward_edge/holding_period_schedule.py",
         "src/financial_brain/forward_edge/book_adapter.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
         "tests/test_forward_book_adapter.py",
+        "tests/test_forward_paper_account_bridge.py",
         "docs/edge-program/pe-0152-calendar-holding-exits.md",
         "docs/edge-program/pe-0152-calendar-holding-exits-evidence.json"
       ],
       "tests": [
-        "test_forward_book_adapter.py"
+        "test_forward_book_adapter.py",
+        "test_forward_paper_account_bridge.py"
       ],
-      "test_result": "6 passed; Ruff passed.",
-      "evidence_sha256": "7bacee95035e5f7128a1617e0dc020af238482c4a32bb9d24b404ed4d41c6c3f",
+      "test_result": "13 passed; Ruff passed.",
+      "evidence_sha256": "4af175ed26007cd5730e7329786541bc62a3fba7fe8ec9e16baeff450f2fd38f",
       "blockers": [
         "Authoritative exchange calendar provider and its effective-dated update process are not connected.",
         "Scheduled exit intents are not yet automatically routed through every runner risk, paper execution, and accounting adapter.",

@@ -125,8 +125,10 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
         raise PaperAccountBridgeError("FILLED receipt quantity does not equal the decision quantity")
     if status == "PARTIAL" and not 0 < fill_qty < quantity:
         raise PaperAccountBridgeError("PARTIAL receipt needs a positive quantity below the decision quantity")
-    if status not in {"FILLED", "PARTIAL", "MISSED", "REJECTED", "NO_TRADE"}:
+    if status not in {"FILLED", "PARTIAL", "MISSED", "REJECTED", "NO_TRADE", "CANCELED"}:
         raise PaperAccountBridgeError("receipt has an unsupported simulated outcome")
+    if status == "CANCELED" and fill_qty >= quantity:
+        raise PaperAccountBridgeError("CANCELED receipt must leave some requested quantity unfilled")
     if status in {"MISSED", "REJECTED", "NO_TRADE"} and fills:
         raise PaperAccountBridgeError("non-fill receipt cannot carry fill facts")
 

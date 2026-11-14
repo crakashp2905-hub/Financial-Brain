@@ -3,15 +3,16 @@
   "task_id": "PE-0152",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_forward_book_adapter.py; ruff check src/financial_brain/forward_edge/holding_period_schedule.py src/financial_brain/forward_edge/book_adapter.py tests/test_forward_book_adapter.py",
-    "result": "6 passed; Ruff passed."
+    "command": "python -m pytest -q tests/test_forward_book_adapter.py tests/test_forward_paper_account_bridge.py; ruff check affected schedule, book adapter, account bridge, and tests",
+    "result": "13 passed; Ruff passed."
   },
   "implemented": [
     "Exchange-session calendar is content-addressed and validates unique ordered dates.",
     "Frozen holding horizon resolves from entry session across weekends/holidays; midnight does not reset it.",
     "Book adapter emits original scheduled exit date and SCHEDULED/DUE/OVERDUE state into normalized position events.",
     "Deterministic SELL-to-close intents are generated only for due or overdue positions and preserve the originating position identity.",
-    "Missing session coverage, inconsistent holding counters, and pre-session schedule clocks fail closed."
+    "Missing session coverage, inconsistent holding counters, and pre-session schedule clocks fail closed.",
+    "Cash-equity bridge reconciles canceled partial-fill receipts, books exact fills, and releases the remaining paper reservation."
   ],
   "blockers": [
     "Authoritative exchange calendar provider and its effective-dated update process are not connected.",
@@ -21,6 +22,8 @@
   "source_sha256": {
     "src/financial_brain/forward_edge/holding_period_schedule.py": "02fd115f99602d396533b4c26922c3704e344a596c4b5644a07dcdbbc2b84272",
     "src/financial_brain/forward_edge/book_adapter.py": "eb4cc2b976572eed91038d2b73a24ef34888d6de3324d41974c023cf35ea0663",
-    "tests/test_forward_book_adapter.py": "4bea3ae857c2a00793797f10ca295a4e4aafe4b412fc7c381de5f1f82e7ff66d"
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "27fa307d42e1ea8622478680b21cfdf7b6aedd3901cfbd7fe121c2abaff454a7",
+    "tests/test_forward_book_adapter.py": "4bea3ae857c2a00793797f10ca295a4e4aafe4b412fc7c381de5f1f82e7ff66d",
+    "tests/test_forward_paper_account_bridge.py": "af9a70abaec5a2328f5116312fef845193341139e8b3b3ac0b6e81c3d0abf6e6"
   }
 }
