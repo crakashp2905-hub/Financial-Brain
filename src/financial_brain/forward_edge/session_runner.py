@@ -66,6 +66,7 @@ class ForwardRunConfig:
     net_alpha_policy_sha256: str | None = None
     uncertainty_sizing_policy_sha256: str | None = None
     forecast_benefit_policy_sha256: str | None = None
+    require_feed_health: bool = False
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
@@ -80,6 +81,8 @@ class ForwardRunConfig:
             raise RunnerError("instruments must be nonempty and unique")
         if self.mode not in (Mode.LIVE_PAPER, Mode.SHADOW, Mode.RESEARCH_REPLAY):
             raise RunnerError("forward runner only accepts replay, shadow, or paper mode")
+        if type(self.require_feed_health) is not bool:
+            raise RunnerError("require_feed_health must be a boolean")
         if (isinstance(self.minimum_forecast_net_alpha, bool)
                 or not isinstance(self.minimum_forecast_net_alpha, (int, float))
                 or not math.isfinite(self.minimum_forecast_net_alpha)
@@ -127,6 +130,8 @@ class ForwardRunConfig:
             canonical["uncertainty_sizing_policy_sha256"] = self.uncertainty_sizing_policy_sha256
         if self.forecast_benefit_policy_sha256 is not None:
             canonical["forecast_benefit_policy_sha256"] = self.forecast_benefit_policy_sha256
+        if self.require_feed_health:
+            canonical["require_feed_health"] = True
         return canonical
 
     @property
@@ -164,7 +169,7 @@ class ForwardSessionRunner:
         self.uncertainty_sizing_registry = uncertainty_sizing_registry
         self.forecast_benefit_registry = forecast_benefit_registry
 
-    def mark_incomplete(self, session_id: str, reason: str) -> None:
+    def mark_incomplete(self, session_id: str, reason: str, *, evidence: dict | None = None) -> None:
         """Close a nonterminal session as incomplete without fabricating an outcome."""
         if not session_id or not reason.strip():
             raise RunnerError("session id and incomplete reason are required")
@@ -176,15 +181,15 @@ class ForwardSessionRunner:
             raise RunnerError("closed session cannot become incomplete")
         prior = next((r for r in records if r.get("t") == "SESSION_INCOMPLETE"), None)
         if prior is not None:
-            if prior.get("reason") != reason.strip():
+            if prior.get("reason") != reason.strip() or prior.get("evidence") != evidence:
                 raise RunnerError("incomplete session reason is immutable")
             self._record_date_outcome("INCOMPLETE", reason.strip(), session_id)
             return
         self._ensure_state(journal, session_id, "INCOMPLETE")
         result = {"session_id": session_id, "status": "INCOMPLETE", "reason": reason.strip(),
-                  "physical_orders": False}
+                  "evidence": evidence, "physical_orders": False}
         journal.append({"t": "SESSION_INCOMPLETE", "session_id": session_id,
-                        "reason": reason.strip(), "result": result})
+                        "reason": reason.strip(), "evidence": evidence, "result": result})
         self._record_date_outcome("INCOMPLETE", reason.strip(), session_id)
 
     def _record_date_outcome(self, status: str, reason: str, session_id: str) -> None:
@@ -500,6 +505,7 @@ class ForwardSessionRunner:
             reconcile_execution_fn: Callable[[str], dict] | None = None) -> dict:
         from financial_brain.forward_edge.market_data import decision_visible
 
+        self.begin(config)
         journal = DurableJournal(self.journal_path)
         records = journal.records()
         existing = [r for r in records if r.get("session_id") == config.session_id]
@@ -512,8 +518,10 @@ class ForwardSessionRunner:
             else:
                 visible_at = self.clock_provider.decision_time(decision_at)
         except ClockError as exc:
-            raise RunnerError(str(exc)) from exc
-        self.begin(config)
+            evidence = {"clock_trusted": False, "phase": "DECISION_CLOCK",
+                        "clock_error_type": type(exc).__name__}
+            self.mark_incomplete(config.session_id, "DECISION_CLOCK_FAILURE", evidence=evidence)
+            raise RunnerError(f"decision clock failed; session marked incomplete: {exc}") from exc
         closed = next((r for r in reversed(existing) if r.get("t") == "SESSION_CLOSED"), None)
         if closed is not None:
             self._record_date_outcome(closed["result"]["status"], closed["result"].get("reason", "SESSION_CLOSED"),
@@ -568,7 +576,26 @@ class ForwardSessionRunner:
             )
             allowed, feed_health_reasons = entry_allowed(health, visible_at)
         else:
-            allowed = True
+            allowed = not config.require_feed_health
+            if not allowed:
+                feed_health_reasons = ["FEED_HEALTH_MISSING"]
+        if not allowed:
+            reason = "FEED_ENDED_EARLY" if any(code in feed_health_reasons for code in (
+                "STALE_QUOTE", "STALE_HEARTBEAT", "NO_QUOTES", "FUTURE_QUOTE",
+                "FUTURE_HEARTBEAT", "FEED_HEALTH_MISSING")) else "FEED_HEALTH_UNSAFE"
+            evidence = {
+                "feed_health_sha256": feed_health_record.get("snapshot_sha256")
+                if feed_health_record else None,
+                "feed_health": feed_health_facts,
+                "blocking_reasons": feed_health_reasons,
+                "last_available_utc": last_available.isoformat() if last_available else None,
+                "entry_blocked": True,
+            }
+            self.mark_incomplete(config.session_id, reason, evidence=evidence)
+            return {"session_id": config.session_id, "config_sha256": config.sha256,
+                    "status": "INCOMPLETE", "reason": reason,
+                    "event_count": len(observed), "decision_event_count": 0,
+                    "feed_health": evidence, "physical_orders": False}
         decision_record = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
         decision = decision_record["decision"] if decision_record is not None else None
         if decision_record is not None and decision_record.get("decision_at_utc") != visible_at.isoformat():

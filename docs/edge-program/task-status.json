@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 151,
-  "unrecorded_tasks": 67,
+  "recorded_tasks": 152,
+  "unrecorded_tasks": 66,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3358,6 +3358,27 @@
         "No scheduled daily launcher invokes the close workflow yet.",
         "Authoritative close-price feed and data entitlement are not bound to the service.",
         "No prospective EOD-to-next-open market cycle has been recorded."
+      ]
+    },
+    {
+      "id": "PE-0154",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_forward_session_crash_matrix.py",
+        "docs/edge-program/pe-0154-feed-clock-fail-closed.md",
+        "docs/edge-program/pe-0154-feed-clock-fail-closed-evidence.json"
+      ],
+      "tests": [
+        "test_forward_session_runner.py",
+        "test_forward_session_crash_matrix.py"
+      ],
+      "test_result": "61 passed; Ruff passed.",
+      "evidence_sha256": "e68848018a4fe733fd6dce9379de2c4e8341cbc044a4bdb7bcb9f15341724f39",
+      "blockers": [
+        "Feed-health requirement is opt-in until the observed Kite/session orchestrator is wired to require it globally.",
+        "Continuous live health monitoring and fault injection across a forward market session remain unverified."
       ]
     }
   ]

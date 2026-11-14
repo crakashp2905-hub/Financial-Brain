@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0154",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_session_runner.py tests/test_forward_session_crash_matrix.py; ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_session_runner.py tests/test_forward_session_crash_matrix.py",
+    "result": "61 passed; Ruff passed."
+  },
+  "implemented": [
+    "Observed-session configurations can require feed-health evidence.",
+    "Absent required health, stale quotes or heartbeat, gaps/disconnects/drops and unsafe timestamps produce durable INCOMPLETE evidence and block strategy, risk and execution callbacks.",
+    "Untrusted decision clock is recorded as an incomplete session before any strategy or order intent.",
+    "Execution-clock failure after durable intent leaves OUTBOX_UNKNOWN and no fill acknowledgment or session close.",
+    "Pre-entry feed outage preserves account and existing risk state and cannot be counted as successful zero-loss session."
+  ],
+  "blockers": [
+    "Feed-health requirement is opt-in until the observed Kite/session orchestrator is wired to require it globally.",
+    "Continuous live health monitoring and fault injection across a forward market session remain unverified."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/session_runner.py": "6fd75096818066320214b820d1af8e08c83fa598fc4d3c8c5066e93bcf9f1d28",
+    "tests/test_forward_session_runner.py": "7aa5d184f028bb36bb382740a4ff15d7b113869b79c3018e9a66e5cdda4de363",
+    "tests/test_forward_session_crash_matrix.py": "7d0d1cc6339a2e4acef2934876468cfcace03c5b9af3f3c475b704d55b1f1d66"
+  }
+}

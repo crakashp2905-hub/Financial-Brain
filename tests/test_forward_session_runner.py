@@ -2,10 +2,11 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.cockpit import blotter_from_journal
 from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.session_clock import SessionClockProvider
 from financial_brain.forward_edge.session_runner import (
     ExecutionOutcomeUnknown,
     ForwardRunConfig,
@@ -513,7 +514,9 @@ def test_runner_rejects_physical_or_naive_clock_modes(tmp_path):
         ForwardSessionRunner(journal_path).run(
             _config(), [], decision_at=datetime(2026, 11, 12), decision_fn=lambda _: {},
             risk_fn=lambda _: {"approved": False}, execution_fn=lambda *_: {})
-    assert DurableJournal(journal_path).records() == []
+    records = DurableJournal(journal_path).records()
+    assert any(row["t"] == "SESSION_INCOMPLETE" for row in records)
+    assert not any(row["t"] in {"DECISION", "PAPER_INTENT", "SESSION_CLOSED"} for row in records)
 
 
 def test_non_boolean_risk_approval_is_rejected_without_execution(tmp_path):
@@ -691,6 +694,81 @@ def test_incomplete_session_is_preserved_and_cannot_be_reused(tmp_path):
         runner.run(_config(), [_event()], decision_at=NOW,
                    decision_fn=lambda _: {"side": "NONE"}, risk_fn=lambda _: {"approved": True},
                    execution_fn=lambda *_: {})
+
+
+def test_stale_feed_marks_session_incomplete_and_never_calls_strategy_or_execution(tmp_path):
+    path = tmp_path / "stale-feed-incomplete.jsonl"
+    runner = ForwardSessionRunner(path)
+    config = _config(require_feed_health=True)
+    _approve_preflight(runner, config)
+    runner.record_feed_health(
+        config,
+        FeedHealth(last_available_utc=NOW - timedelta(seconds=10), gaps=0, disconnects=0,
+                   dropped_updates=0, last_heartbeat_utc=NOW - timedelta(seconds=10)),
+        observed_at=NOW,
+    )
+    should_not_run = lambda *_: pytest.fail("feed outage must block new decisions and orders")
+    result = runner.run(config, [_event()], decision_at=NOW,
+                        decision_fn=should_not_run, risk_fn=should_not_run,
+                        execution_fn=should_not_run)
+    records = DurableJournal(path).records()
+    incomplete = next(row for row in records if row["t"] == "SESSION_INCOMPLETE")
+    assert result["status"] == "INCOMPLETE"
+    assert result["reason"] == "FEED_ENDED_EARLY"
+    assert incomplete["evidence"]["blocking_reasons"] == ["STALE_QUOTE", "STALE_HEARTBEAT"]
+    assert not any(row["t"] in {"DECISION", "PAPER_INTENT", "SESSION_CLOSED"} for row in records)
+    assert [row["state"] for row in records if row["t"] == "SESSION_STATE"][-1] == "INCOMPLETE"
+
+
+def test_required_but_missing_feed_health_is_not_a_successful_no_trade(tmp_path):
+    runner = ForwardSessionRunner(tmp_path / "missing-health.jsonl")
+    config = _config(require_feed_health=True)
+    _approve_preflight(runner, config)
+    blocked = lambda *_: pytest.fail("missing required feed health must fail closed")
+    result = runner.run(config, [_event()], decision_at=NOW,
+                        decision_fn=blocked, risk_fn=blocked, execution_fn=blocked)
+    assert result["status"] == "INCOMPLETE"
+    assert result["reason"] == "FEED_ENDED_EARLY"
+    assert result["feed_health"]["blocking_reasons"] == ["FEED_HEALTH_MISSING"]
+
+
+def test_untrusted_decision_clock_creates_incomplete_evidence_without_trade(tmp_path):
+    path = tmp_path / "bad-clock.jsonl"
+    runner = ForwardSessionRunner(path, SessionClockProvider(lambda: datetime(2026, 11, 12, 9, 0)))
+    blocked = lambda *_: pytest.fail("untrusted clock must fail before decision or execution")
+    with pytest.raises(RunnerError, match="marked incomplete"):
+        runner.run(_config(), [_event()], decision_fn=blocked, risk_fn=blocked, execution_fn=blocked)
+    records = DurableJournal(path).records()
+    incomplete = next(row for row in records if row["t"] == "SESSION_INCOMPLETE")
+    assert incomplete["evidence"] == {
+        "clock_trusted": False, "phase": "DECISION_CLOCK", "clock_error_type": "ClockError",
+    }
+    assert not any(row["t"] in {"DECISION", "PAPER_INTENT", "SESSION_CLOSED"} for row in records)
+
+
+def test_execution_clock_failure_keeps_outbox_unknown_and_never_closes_as_zero_loss(tmp_path):
+    path = tmp_path / "execution-clock-failure.jsonl"
+    runner = ForwardSessionRunner(path, SessionClockProvider(lambda: datetime(2026, 11, 12, 9, 0)))
+    config = _config()
+    _approve_preflight(runner, config)
+    forecast = {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01,
+                "fees": 0.001, "spread": 0.001, "impact": 0.001}
+    with pytest.raises(RunnerError, match="timezone-aware"):
+        runner.run(
+            config, [_event()], decision_at=NOW,
+            decision_fn=lambda _: {"side": "BUY", "expected_net_alpha": 0.02,
+                                   "forecast_horizon_sessions": 1,
+                                   "forecast_costs_included": True,
+                                   "net_alpha_forecast": forecast},
+            risk_fn=lambda _: {"approved": True},
+            execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "clockless",
+                                     "fidelity": "SIMULATED_QUOTE"},
+        )
+    records = DurableJournal(path).records()
+    assert any(row["t"] == "OUTBOX_UNKNOWN" for row in records)
+    assert any(row["t"] == "PAPER_INTENT" for row in records)
+    assert not any(row["t"] in {"PAPER_EXECUTION", "OUTBOX_ACK", "SESSION_CLOSED"}
+                   for row in records)
 
 
 def test_invalid_state_transition_fails_closed(tmp_path):
