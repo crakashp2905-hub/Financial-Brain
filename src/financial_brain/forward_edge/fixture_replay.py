@@ -132,12 +132,12 @@ def _receipt(decision: dict, intent_id: str, events: list[NormalizedEvent], fx: 
 
 
 def run_fixture_on_forward_runner(fx: dict, journal_path: Path | None = None,
-                                  *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE") -> dict:
+                                  *, mode: Mode = Mode.FIXTURE_REPLAY, broker: str = "NONE") -> dict:
     """Replay one synthetic session through ``ForwardSessionRunner`` and return normalized outcome facts."""
     decision_at = datetime.fromisoformat(fx["decision_utc"]).astimezone(timezone.utc)
     session_mode = resolve_mode(mode, now=decision_at)
-    if session_mode.mode is not Mode.LIVE_PAPER or broker != "NONE":
-        raise ModeError("fixture replay emits fills only in LIVE_PAPER mode with no named broker")
+    if session_mode.mode is not Mode.FIXTURE_REPLAY or broker != "NONE":
+        raise ModeError("fixture replay emits deterministic fixture receipts only in FIXTURE_REPLAY with no broker")
     constraints = _sha({key: value for key, value in fx.items()
                         if key not in {"session_id", "decision_utc"}})
     config = ForwardRunConfig(

@@ -100,6 +100,8 @@ python -m financial_brain.forward_edge.cli report
 
 Expected exit codes, in command order: `0`, `2`, `0`, `0`, `4`. The report's exit `4` is the expected
 `INSUFFICIENT_EVIDENCE` result. Its fixture win and loss numbers are synthetic test values, not observed performance.
+Fixture runs use the separate `FIXTURE_REPLAY` mode and deterministic synthetic receipts; they do not create `LIVE_PAPER`
+trades and do not satisfy any family-evidence or forward-session gate.
 Verify the output says `physical_orders: false`, `independent_forward_sessions: 0`, and
 `real_money_enabled: false`; the report must list real-quote and timestamp-custody gaps. The test
 `tests/test_paper_session_runbook.py` exercises these command outcomes offline.

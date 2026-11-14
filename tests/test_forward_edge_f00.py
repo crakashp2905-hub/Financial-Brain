@@ -265,7 +265,7 @@ def test_broker_dryrun_needs_verified_compliance() -> None:
 
 def test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders() -> None:
     assert SessionMode(Mode.LIVE_PAPER).may_emit_paper_fill is True
-    for mode in (Mode.RESEARCH_REPLAY, Mode.SHADOW, Mode.BROKER_DRYRUN):
+    for mode in (Mode.FIXTURE_REPLAY, Mode.RESEARCH_REPLAY, Mode.SHADOW, Mode.BROKER_DRYRUN):
         assert SessionMode(mode).may_emit_paper_fill is False
     for mode in Mode:
         assert SessionMode(mode).may_send_physical_order is False

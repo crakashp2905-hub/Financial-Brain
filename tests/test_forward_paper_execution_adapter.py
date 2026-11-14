@@ -5,6 +5,8 @@ import pytest
 
 from financial_brain.forward_edge.market_data import NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.approvals import Approval
+from financial_brain.forward_edge.governance import FamilyEvidence, family_action_scope_sha256
 from financial_brain.forward_edge.paper_execution_adapter import MarketableQuoteSimulator
 from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
 
@@ -122,11 +124,27 @@ def test_quote_simulator_rejects_fractional_decision_quantity():
 
 
 def test_quote_simulator_is_connected_to_durable_runner(tmp_path):
+    capital = Decimal("100000")
+    family = FamilyEvidence(
+        family_id="test-family", status="VERIFIED", strategy_sha256="a" * 64,
+        frozen_protocol_sha256="b" * 64, evidence_manifest_sha256="c" * 64,
+        protocol_frozen=True, protocol_frozen_at=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        cohort_started_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+        verified_sessions=80, receipt_sessions=80, candidate_count=1,
+        multiplicity_adjusted=True, cost_stress_passed=True,
+        matched_control_lcb_bps=Decimal("1"), net_alpha_lcb_bps=Decimal("1"),
+    )
+    scope = family_action_scope_sha256(
+        evidence=family, action="AUTO_EXECUTION_ENABLE", current_capital_inr=capital,
+        requested_capital_inr=capital, execution_mode="PAPER")
+    approval = Approval("STRATEGY_ENROLLMENT", family.family_id, scope, "owner:test", "human",
+                        datetime(2025, 1, 1, tzinfo=timezone.utc), datetime(2035, 1, 1, tzinfo=timezone.utc))
     config = ForwardRunConfig(
         session_id="quote-sim-session", exchange_date="2026-11-12", cohort_id="cohort-a",
         strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
         constraints_sha256="c" * 64, ledger_id="ledger-a", benchmark_id="NIFTY50",
-        instruments=("NSE:INFY",), capital_inr="100000", mode=Mode.LIVE_PAPER,
+        instruments=("NSE:INFY",), capital_inr=str(capital), mode=Mode.LIVE_PAPER,
+        family_evidence=family, family_owner_approval=approval,
     )
     runner = ForwardSessionRunner(tmp_path / "session.jsonl")
     runner.record_preflight(config, {"approved": True, "status": "PASS"})

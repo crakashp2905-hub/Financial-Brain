@@ -37,7 +37,7 @@ def _canon(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str, allow_nan=False)
 
 
-def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE") -> dict:
+def run_session(fx: dict, *, mode: Mode = Mode.FIXTURE_REPLAY, broker: str = "NONE") -> dict:
     """Run one fixture through the durable session runner, then its accounting projection.
 
     The fixture pack is synthetic. The runner owns decision visibility, preflight, execution

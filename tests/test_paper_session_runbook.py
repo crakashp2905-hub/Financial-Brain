@@ -13,7 +13,7 @@ def test_documented_offline_premarket_session_close_and_report_sequence(capsys):
 
     assert cli.main(["paper-run", "--fixture", "win"]) == 0
     simulated = json.loads(capsys.readouterr().out)
-    assert simulated["mode"] == "LIVE_PAPER"
+    assert simulated["mode"] == "FIXTURE_REPLAY"
     assert simulated["physical_orders"] is False
     assert simulated["broker"] == "NONE"
 
