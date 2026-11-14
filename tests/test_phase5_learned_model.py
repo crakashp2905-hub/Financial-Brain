@@ -25,6 +25,7 @@ def timestamped(panel_data):
     frame = panel_data.copy()
     decisions = pd.to_datetime(frame["d"]).dt.tz_localize("UTC") + pd.Timedelta(hours=10)
     frame["decision_at_utc"] = decisions
+    frame["outcome_status"] = "MATURED"
     frame["feature_available_at_utc"] = decisions - pd.Timedelta(seconds=1)
     frame["feature_revision_at_utc"] = decisions - pd.Timedelta(seconds=1)
     frame["label_matured_at_utc"] = decisions + pd.Timedelta(days=20)
@@ -90,6 +91,26 @@ def test_offline_job_quarantines_unknown_and_not_yet_mature_outcomes(tmp_path):
     assert manifest["input_rows"] == len(p) + 2
     assert manifest["eligible_matured_rows"] == len(p)
     assert manifest["quarantined_rows"] == 2
+
+
+def test_offline_job_quarantines_open_trades_and_pending_settlement(tmp_path):
+    source = timestamped(panel(n_dates=120, n=50))
+    as_of = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    open_trade, pending_settlement = source.iloc[[0]].copy(), source.iloc[[1]].copy()
+    open_trade.loc[:, "lineage"] = "OPEN"
+    pending_settlement.loc[:, "lineage"] = "PENDING_SETTLEMENT"
+    open_trade.loc[:, "outcome_status"] = "OPEN"
+    pending_settlement.loc[:, "outcome_status"] = "PENDING_SETTLEMENT"
+    rows = pd.concat([source, open_trade, pending_settlement], ignore_index=True)
+    manifest = OT.run_offline_training_job(
+        rows, ["a", "b"], dataset_version="library-outcomes-v1",
+        feature_schema_version="features-v1", trained_as_of=as_of,
+        model_path=tmp_path / "m.txt", meta_path=tmp_path / "m.json", seed=5,
+    )
+    assert manifest["eligible_matured_rows"] == len(source)
+    assert manifest["quarantined_rows"] == 2
+    assert manifest["open_outcome_rows"] == 1
+    assert manifest["pending_settlement_rows"] == 1
 
 
 def test_offline_job_rejects_unversioned_or_naive_timestamp_data(tmp_path):
@@ -185,8 +206,9 @@ def test_prediction_cache_requires_matching_model_and_batch_hash(tmp_path):
             "offline_training_manifest_file": manifest_name,
             "offline_training_code_sha256": code_sha256, "features": ["a", "b"], "seed": 0}
     manifest = {
-        "schema_version": "fb.offline-training-job.v2",
+        "schema_version": "fb.offline-training-job.v3",
         "maturity_contract": "label_matured_at_utc is known and <= trained_as_of_utc",
+        "outcome_completeness_contract": "only MATURED or SETTLED outcomes enter training; OPEN and PENDING_SETTLEMENT are quarantined",
         "dataset_version": "test-data-v1", "feature_schema_version": "test-schema-v1",
         "features": meta["features"], "seed": meta["seed"],
         "training_parameters": {"n_jobs": 1, "deterministic": True, "force_col_wise": True},
@@ -198,7 +220,7 @@ def test_prediction_cache_requires_matching_model_and_batch_hash(tmp_path):
         "trained_as_of_utc": "2026-11-02T00:00:00+00:00",
         "max_eligible_label_matured_at_utc": "2026-11-01T00:00:00+00:00",
         "input_rows": 2, "eligible_matured_rows": 2, "quarantined_rows": 0,
-        "temporal_split_contract": "expanding folds; purge labels overlapping validation; exclude embargo-adjacent sessions; feature availability and revision <= row decision; label maturity and revision <= fit cutoff",
+        "temporal_split_contract": "expanding folds; purge labels overlapping validation; exclude embargo-adjacent sessions; feature availability and revision <= row decision; label maturity and revision <= fit cutoff; only MATURED or SETTLED outcomes",
         "temporal_split_parameters": {"n_splits": 1, "embargo_sessions": 1},
         "temporal_folds": [{
             "fold": 1, "train_count": 1, "validation_count": 1,

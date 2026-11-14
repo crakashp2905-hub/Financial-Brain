@@ -103,11 +103,13 @@ def _read_offline_training_manifest(meta: dict, meta_path: Path) -> dict:
             or training_manifest.get("feature_schema_sha256") != meta.get("feature_schema_sha256")
             or training_manifest.get("code_sha256") != meta.get("offline_training_code_sha256")):
         raise LearnedModelError("offline-training manifest does not match the registered model lineage")
-    if (training_manifest.get("schema_version") != "fb.offline-training-job.v2"
+    if (training_manifest.get("schema_version") != "fb.offline-training-job.v3"
             or training_manifest.get("maturity_contract") !=
             "label_matured_at_utc is known and <= trained_as_of_utc"
+            or training_manifest.get("outcome_completeness_contract") !=
+            "only MATURED or SETTLED outcomes enter training; OPEN and PENDING_SETTLEMENT are quarantined"
             or training_manifest.get("temporal_split_contract") !=
-            "expanding folds; purge labels overlapping validation; exclude embargo-adjacent sessions; feature availability and revision <= row decision; label maturity and revision <= fit cutoff"
+            "expanding folds; purge labels overlapping validation; exclude embargo-adjacent sessions; feature availability and revision <= row decision; label maturity and revision <= fit cutoff; only MATURED or SETTLED outcomes"
             or training_manifest.get("features") != meta.get("features")
             or training_manifest.get("seed") != meta.get("seed")
             or not training_manifest.get("dataset_version")

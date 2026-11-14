@@ -1,0 +1,19 @@
+{
+  "checklist_task": "PE-0176",
+  "status": "DONE",
+  "criterion": "Train only on properly matured, complete outcomes; quarantine open trades and pending settlements.",
+  "implementation": [
+    "src/financial_brain/evaluation/offline_training.py",
+    "src/financial_brain/evaluation/learned_model.py"
+  ],
+  "tests": [
+    "tests/test_phase5_learned_model.py"
+  ],
+  "test_result": "12 learned-model tests passed; Ruff and targeted mypy passed. Explicit OPEN and PENDING_SETTLEMENT rows are excluded from fit and validation eligibility and counted in the manifest.",
+  "evidence_scope": "Synthetic maturity/status fixtures only.",
+  "operational_limits": [
+    "Upstream producers must provide truthful outcome status and label maturity/revision timestamps.",
+    "Incomplete and unknown outcome states are quarantined and cannot contribute training labels.",
+    "No real-market performance or settlement-feed accuracy is claimed."
+  ]
+}

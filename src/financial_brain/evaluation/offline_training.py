@@ -17,6 +17,12 @@ class OfflineTrainingError(ValueError):
     """Invalid, immature, or unversioned offline training input."""
 
 
+COMPLETE_OUTCOME_STATUSES = frozenset({"MATURED", "SETTLED"})
+OUTCOME_COMPLETENESS_CONTRACT = (
+    "only MATURED or SETTLED outcomes enter training; OPEN and PENDING_SETTLEMENT are quarantined"
+)
+
+
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -39,17 +45,18 @@ def _required_timestamp(value: Any, *, column: str) -> pd.Timestamp:
 
 
 def _canonical_dataset_sha256(frame: pd.DataFrame, *, features: list[str]) -> str:
-    columns = ["d", "lineage", "decision_at_utc", "label_matured_at_utc",
+    columns = ["d", "lineage", "decision_at_utc", "outcome_status", "label_matured_at_utc",
                "feature_available_at_utc", "feature_revision_at_utc", "label_revision_at_utc",
                "dataset_version", "feature_schema_version", *features, "fwd20"]
     ordered = frame.sort_values(["d", "lineage"], kind="mergesort")
     rows: list[list[Any]] = []
     for row in ordered[columns].itertuples(index=False, name=None):
-        day, lineage, decision, matured, feature_available, feature_revision, label_revision, \
+        day, lineage, decision, outcome_status, matured, feature_available, feature_revision, label_revision, \
             dataset_version, schema_version, *values = row
         encoded: list[Any] = [
             day.isoformat() if hasattr(day, "isoformat") else str(day),
-            str(lineage), decision.isoformat(), matured.isoformat() if matured is not None else None,
+            str(lineage), decision.isoformat(), str(outcome_status),
+            matured.isoformat() if matured is not None else None,
             feature_available.isoformat(), feature_revision.isoformat(),
             label_revision.isoformat() if label_revision is not None else None,
             str(dataset_version), str(schema_version),
@@ -81,7 +88,7 @@ def purged_embargo_splits(
     if not isinstance(trained_as_of, datetime) or trained_as_of.tzinfo is None \
             or trained_as_of.utcoffset() is None:
         raise OfflineTrainingError("trained_as_of must be timezone-aware")
-    required = {"d", "lineage", "decision_at_utc", "label_matured_at_utc",
+    required = {"d", "lineage", "decision_at_utc", "outcome_status", "label_matured_at_utc",
                 "feature_available_at_utc", "feature_revision_at_utc", "label_revision_at_utc"}
     if missing := required - set(panel.columns):
         raise OfflineTrainingError(f"split panel missing columns: {sorted(missing)}")
@@ -102,6 +109,8 @@ def purged_embargo_splits(
                 for x in frame["label_matured_at_utc"]]
     label_revision = [_timestamp(x, column="label_revision_at_utc", allow_missing=True)
                       for x in frame["label_revision_at_utc"]]
+    outcome_status = frame["outcome_status"].map(
+        lambda value: "" if pd.isna(value) else str(value).strip().upper())
     as_of = pd.Timestamp(trained_as_of).tz_convert("UTC")
     for i, decided in enumerate(decision):
         if (feature_available[i] > decided or feature_revision[i] > decided
@@ -129,14 +138,16 @@ def purged_embargo_splits(
         train_rows: list[int] = []
         for i in candidate_train:
             matured_at, revised_at = maturity[i], label_revision[i]
-            if (matured_at is not None and revised_at is not None and matured_at < val_start
+            if (outcome_status.iloc[i] in COMPLETE_OUTCOME_STATUSES
+                    and matured_at is not None and revised_at is not None and matured_at < val_start
                     and revised_at < val_start and matured_at <= as_of and revised_at <= as_of):
                 train_rows.append(i)
         validation_rows: list[int] = []
         for session in val_sessions:
             for i in positions_by_session[session]:
                 matured_at, revised_at = maturity[i], label_revision[i]
-                if (matured_at is not None and revised_at is not None
+                if (outcome_status.iloc[i] in COMPLETE_OUTCOME_STATUSES
+                        and matured_at is not None and revised_at is not None
                         and matured_at <= as_of and revised_at <= as_of):
                     validation_rows.append(i)
         if not train_rows or not validation_rows:
@@ -207,7 +218,7 @@ def run_offline_training_job(
         raise OfflineTrainingError("dataset_version is required")
     if not isinstance(feature_schema_version, str) or not feature_schema_version.strip():
         raise OfflineTrainingError("feature_schema_version is required")
-    reserved = {"d", "lineage", "decision_at_utc", "label_matured_at_utc",
+    reserved = {"d", "lineage", "decision_at_utc", "outcome_status", "label_matured_at_utc",
                 "feature_available_at_utc", "feature_revision_at_utc", "label_revision_at_utc",
                 "dataset_version", "feature_schema_version", "fwd20"}
     if (not features or len(features) != len(set(features))
@@ -219,7 +230,7 @@ def run_offline_training_job(
             or trained_as_of.utcoffset() is None):
         raise OfflineTrainingError("trained_as_of must be timezone-aware")
     as_of = pd.Timestamp(trained_as_of).tz_convert("UTC")
-    required = {"d", "lineage", "decision_at_utc", "label_matured_at_utc",
+    required = {"d", "lineage", "decision_at_utc", "outcome_status", "label_matured_at_utc",
                 "feature_available_at_utc", "feature_revision_at_utc", "label_revision_at_utc",
                 "dataset_version", "feature_schema_version", "fwd20", *features}
     missing = required - set(panel.columns)
@@ -236,6 +247,8 @@ def run_offline_training_job(
     if parsed_dates.isna().any() or frame["lineage"].isna().any():
         raise OfflineTrainingError("training rows require date and lineage identity")
     frame["d"] = parsed_dates.dt.date
+    frame["outcome_status"] = frame["outcome_status"].map(
+        lambda value: "" if pd.isna(value) else str(value).strip().upper())
     if frame["lineage"].astype(str).str.strip().eq("").any():
         raise OfflineTrainingError("training row lineage cannot be empty")
     if frame.duplicated(["d", "lineage"]).any():
@@ -268,7 +281,8 @@ def run_offline_training_job(
     observed = decision_series <= as_of
     matured = maturity_series.notna() & (maturity_series <= as_of)
     label_known = label_revision_series.notna() & (label_revision_series <= as_of)
-    eligible_mask = observed & matured & label_known & finite
+    outcome_complete = frame["outcome_status"].isin(COMPLETE_OUTCOME_STATUSES)
+    eligible_mask = observed & matured & label_known & finite & outcome_complete
     eligible = frame.loc[eligible_mask].copy()
     if eligible.empty:
         raise OfflineTrainingError("no complete outcome has matured by trained_as_of")
@@ -311,7 +325,7 @@ def run_offline_training_job(
         meta_path=Path(meta_path), seed=seed,
     )
     manifest = {
-        "schema_version": "fb.offline-training-job.v2",
+        "schema_version": "fb.offline-training-job.v3",
         "dataset_version": dataset_version,
         "dataset_sha256": source_dataset_sha256,
         "fit_dataset_sha256": fit_dataset_sha256,
@@ -328,7 +342,8 @@ def run_offline_training_job(
         },
         "trained_as_of_utc": as_of.isoformat(),
         "maturity_contract": "label_matured_at_utc is known and <= trained_as_of_utc",
-        "temporal_split_contract": "expanding folds; purge labels overlapping validation; exclude embargo-adjacent sessions; feature availability and revision <= row decision; label maturity and revision <= fit cutoff",
+        "outcome_completeness_contract": OUTCOME_COMPLETENESS_CONTRACT,
+        "temporal_split_contract": "expanding folds; purge labels overlapping validation; exclude embargo-adjacent sessions; feature availability and revision <= row decision; label maturity and revision <= fit cutoff; only MATURED or SETTLED outcomes",
         "temporal_split_parameters": {"n_splits": n_splits, "embargo_sessions": embargo_sessions},
         "temporal_folds": [{key: value for key, value in fold.items()
                             if key not in {"train_rows", "validation_rows"}} for fold in split_folds],
@@ -338,6 +353,9 @@ def run_offline_training_job(
         "reserved_validation_rows": int(final_fold["validation_count"]),
         "final_training_fold": int(final_fold["fold"]),
         "quarantined_rows": int(len(frame) - len(eligible)),
+        "complete_outcome_statuses": sorted(COMPLETE_OUTCOME_STATUSES),
+        "open_outcome_rows": int((frame["outcome_status"] == "OPEN").sum()),
+        "pending_settlement_rows": int((frame["outcome_status"] == "PENDING_SETTLEMENT").sum()),
         "max_eligible_label_matured_at_utc": max(eligible["label_matured_at_utc"]).isoformat(),
         "model_id": model_meta["model_id"],
         "model_sha256": model_meta["model_sha256"],
