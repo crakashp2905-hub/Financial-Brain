@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 125,
-  "unrecorded_tasks": 93,
+  "recorded_tasks": 126,
+  "unrecorded_tasks": 92,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2707,6 +2707,31 @@
       "test_result": "13 sample-size design tests passed; Ruff passed. Tests establish benefit/volatility/power/look/dependence/missingness adjustments, and that 60 is a floor rather than a sufficient-sample claim.",
       "evidence_sha256": "1748592f72229ad26ef3d8759613f2308da1e21974d7763af47cc7f4332c3f1e",
       "blockers": []
+    },
+    {
+      "id": "PE-0128",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/stratified_outcomes.py",
+        "tests/test_stratified_outcomes.py",
+        "docs/edge-program/pe-0128-stratified-outcomes.md",
+        "docs/edge-program/pe-0128-stratified-outcomes-evidence.json"
+      ],
+      "tests": [
+        "test_all_registered_dimensions_report_simultaneous_net_uncertainty_bands",
+        "test_registered_empty_regime_is_visible_and_keeps_full_denominator",
+        "test_missing_session_is_not_dropped_and_withholds_group_bounds",
+        "test_more_registered_strata_widen_the_simultaneous_interval",
+        "test_bad_stratum_rows_are_rejected",
+        "test_registry_requires_all_dimensions_and_hac_must_fit_schedule"
+      ],
+      "test_result": "9 stratification tests passed; Ruff passed. All five strata are reported with simultaneous dependence-aware intervals; empty/missing buckets remain visible and prevent global overclaims.",
+      "evidence_sha256": "38e08dc36dd688a6cee5d92e7ecb156c6e6986c766010db2c91e1050091529e2",
+      "blockers": [
+        "Stratum labels are not bound to the frozen prospective cohort registry.",
+        "Aggregation and portfolio utility weights are caller-supplied and not independently verified.",
+        "No real prospective cohort observations are available."
+      ]
     }
   ]
 }
