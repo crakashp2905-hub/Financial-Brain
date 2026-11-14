@@ -1,10 +1,8 @@
-"""The learned-combination model as a live challenger (qualified in ``Result of the deep feature library``).
+"""The learned-combination challenger; loadable artifacts require an offline maturity manifest.
 
-``train_final`` fits the pre-registered LightGBM once on the whole library panel (rows whose 20-session outcome ended
-at least 30 days before the last date - the same embargo as the walk-forward test) and saves the model with the exact
-feature list it was trained on. ``score_day`` computes the library for the most liquid names as of one close, ranks
-each feature across those names (as in training) and predicts. It never retrains on live data: a refit is a new
-version, pre-registered first.
+``run_offline_training_job`` hashes the versioned input, feature schema, code and seed, trains only on complete
+outcomes with known maturity timestamps, and emits the manifest required by ``load``. ``train_final`` is its
+low-level fitter and does not by itself create a loadable model. ``score_day`` scores without retraining.
 """
 from __future__ import annotations
 
@@ -29,6 +27,7 @@ class LearnedModelError(RuntimeError):
 
 def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int = 30,
                 model_path: Path = MODEL, meta_path: Path = META, seed: int = 0) -> dict:
+    """Low-level fitter. Use ``offline_training.run_offline_training_job`` for loadable artifacts."""
     if not features or len(set(features)) != len(features):
         raise LearnedModelError("feature list must be non-empty and unique")
     if embargo_days < 1 or not isinstance(seed, int):
@@ -40,7 +39,8 @@ def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int =
     p = p[p["d"] <= cutoff]
     X = p.groupby("d")[features].rank(pct=True).to_numpy(np.float32)
     y = p.groupby("d")["fwd20"].rank(pct=True).to_numpy()
-    params: dict[str, Any] = {**DL.GBM_PARAMS, "random_state": seed}
+    params: dict[str, Any] = {**DL.GBM_PARAMS, "random_state": seed, "n_jobs": 1,
+                             "deterministic": True, "force_col_wise": True}
     m = lgb.LGBMRegressor(**params).fit(X, y)
     m.booster_.save_model(str(model_path))
     feature_source_sha256 = _file_sha256(Path(__file__).parents[1] / "features" / "library.py")
@@ -69,14 +69,77 @@ def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int =
 def load(model_path: Path = MODEL, meta_path: Path = META):
     import lightgbm as lgb
     if not model_path.exists() or not meta_path.exists():
-        raise LearnedModelError("no trained model - run train_final first")
+        raise LearnedModelError("no trained model - run the matured offline training job first")
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     required = ("model_id", "feature_schema_sha256", "training_data_sha256", "feature_source_sha256", "model_sha256")
     if any(not meta.get(key) for key in required):
         raise LearnedModelError("model predates the content-addressed lineage manifest; retrain the challenger")
     if meta.get("model_sha256") and _file_sha256(model_path) != meta["model_sha256"]:
         raise LearnedModelError("model file digest differs from the registered training manifest")
+    _read_offline_training_manifest(meta, meta_path)
     return lgb.Booster(model_file=str(model_path)), meta
+
+
+def _read_offline_training_manifest(meta: dict, meta_path: Path) -> dict:
+    manifest_name = meta.get("offline_training_manifest_file")
+    if not isinstance(manifest_name, str) or not manifest_name or Path(manifest_name).name != manifest_name:
+        raise LearnedModelError("model lacks the required matured offline-training manifest")
+    manifest_path = Path(meta_path).parent / manifest_name
+    if not manifest_path.is_file():
+        raise LearnedModelError("offline-training manifest is missing")
+    try:
+        training_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise LearnedModelError("offline-training manifest cannot be read") from exc
+    claimed_manifest_sha256 = training_manifest.get("manifest_sha256")
+    manifest_body = {key: value for key, value in training_manifest.items() if key != "manifest_sha256"}
+    actual_manifest_sha256 = hashlib.sha256(json.dumps(
+        manifest_body, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+    if claimed_manifest_sha256 != actual_manifest_sha256 \
+            or claimed_manifest_sha256 != meta.get("offline_training_manifest_sha256"):
+        raise LearnedModelError("offline-training manifest digest does not match model metadata")
+    if (training_manifest.get("model_id") != meta.get("model_id")
+            or training_manifest.get("model_sha256") != meta.get("model_sha256")
+            or training_manifest.get("feature_schema_sha256") != meta.get("feature_schema_sha256")
+            or training_manifest.get("code_sha256") != meta.get("offline_training_code_sha256")):
+        raise LearnedModelError("offline-training manifest does not match the registered model lineage")
+    if (training_manifest.get("schema_version") != "fb.offline-training-job.v1"
+            or training_manifest.get("maturity_contract") !=
+            "label_matured_at_utc is known and <= trained_as_of_utc"
+            or training_manifest.get("features") != meta.get("features")
+            or training_manifest.get("seed") != meta.get("seed")
+            or not training_manifest.get("dataset_version")
+            or not training_manifest.get("feature_schema_version")):
+        raise LearnedModelError("offline-training manifest does not satisfy the matured job contract")
+    environment = training_manifest.get("environment")
+    params = training_manifest.get("training_parameters")
+    if (not isinstance(environment, dict)
+            or any(not environment.get(key) for key in ("python", "numpy", "pandas", "lightgbm"))
+            or environment.get("threads") != 1 or environment.get("deterministic") is not True
+            or not isinstance(params, dict) or params.get("n_jobs") != 1
+            or params.get("deterministic") is not True or params.get("force_col_wise") is not True):
+        raise LearnedModelError("offline-training manifest lacks a deterministic single-thread environment")
+    for field in ("dataset_sha256", "fit_dataset_sha256", "code_sha256",
+                  "feature_schema_sha256", "model_sha256", "model_id"):
+        digest = training_manifest.get(field)
+        if not isinstance(digest, str) or len(digest) != 64 \
+                or any(character not in "0123456789abcdef" for character in digest):
+            raise LearnedModelError(f"offline-training manifest has invalid {field}")
+    try:
+        as_of = pd.Timestamp(training_manifest["trained_as_of_utc"])
+        mature = pd.Timestamp(training_manifest["max_eligible_label_matured_at_utc"])
+        counts_valid = (type(training_manifest["input_rows"]) is int
+                        and type(training_manifest["eligible_matured_rows"]) is int
+                        and type(training_manifest["quarantined_rows"]) is int
+                        and training_manifest["input_rows"] >= training_manifest["eligible_matured_rows"] > 0
+                        and training_manifest["quarantined_rows"] ==
+                        training_manifest["input_rows"] - training_manifest["eligible_matured_rows"])
+    except (KeyError, TypeError, ValueError):
+        raise LearnedModelError("offline-training manifest has invalid maturity timestamps or row counts") from None
+    if (as_of.tzinfo is None or mature.tzinfo is None or mature > as_of
+            or not counts_valid):
+        raise LearnedModelError("offline-training manifest includes invalid or immature training outcomes")
+    return training_manifest
 
 
 def _file_sha256(path: Path) -> str:
@@ -123,12 +186,18 @@ def prediction_batch_sha256(frame: pd.DataFrame, *, as_of, model_digest: str) ->
     return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
-def _valid_prediction_cache(frame: pd.DataFrame, *, as_of, meta: dict, model_path: Path) -> bool:
+def _valid_prediction_cache(frame: pd.DataFrame, *, as_of, meta: dict, model_path: Path,
+                            meta_path: Path | None = None) -> bool:
     """Accept only cache rows matching the current model artifact and their own content digest."""
     required = {"prediction_batch_sha256", "model_id", "feature_schema_sha256", "lineage", "pred"}
     if not required.issubset(frame.columns) or not model_path.exists():
         return False
-    if _file_sha256(model_path) != meta.get("model_sha256") or not meta.get("model_id"):
+    if (_file_sha256(model_path) != meta.get("model_sha256") or not meta.get("model_id")
+            or meta_path is None):
+        return False
+    try:
+        _read_offline_training_manifest(meta, meta_path)
+    except LearnedModelError:
         return False
     if frame["model_id"].nunique() != 1 or frame["model_id"].iloc[0] != meta["model_id"]:
         return False
@@ -197,7 +266,7 @@ def score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_pat
             cached = pd.read_parquet(f)
             metadata = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
             if _valid_prediction_cache(cached, as_of=pd.Timestamp(day).date(), meta=metadata,
-                                       model_path=model_path):
+                                       model_path=model_path, meta_path=meta_path):
                 return cached
     out = _score_day(rcon, day, names=names, model_path=model_path, meta_path=meta_path)
     if cache is not None:

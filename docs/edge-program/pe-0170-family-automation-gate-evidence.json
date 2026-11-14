@@ -10,9 +10,13 @@
   "tests": [
     "tests/test_forward_edge_f11.py",
     "tests/test_forward_session_runner.py",
-    "tests/test_registered_paper_books.py"
+    "tests/test_registered_paper_books.py",
+    "tests/test_forward_edge_f00.py",
+    "tests/test_forward_edge_f13.py",
+    "tests/test_forward_fixture_replay.py",
+    "tests/test_paper_session_runbook.py"
   ],
-  "test_result": "90 passed; Ruff passed; targeted mypy passed for governance.py, session_runner.py and registered_paper_books.py; source and strategy-variant inventories are current.",
+  "test_result": "215 focused family-gate, runner, registry, and fixture-mode tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (618 Python files, 253 source-linked candidates). Full local suite: 3970 passed, 1 skipped. GitHub CI run #521 passed on Ubuntu and Windows after fixture mode was admitted by the runner.",
   "evidence_scope": "Local tests with synthetic family data and synthetic owner approvals. No real family performance or human authorization was represented.",
   "operational_limits": [
     "Each new paper-book account requires exactly one per-family allocation authorization; paper automation requires a second exact-scope strategy-enrollment approval.",

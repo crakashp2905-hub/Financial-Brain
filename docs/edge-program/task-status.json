@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 168,
-  "unrecorded_tasks": 50,
+  "recorded_tasks": 169,
+  "unrecorded_tasks": 49,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3693,11 +3693,35 @@
         "test_forward_edge_f11.py",
         "test_forward_session_runner.py",
         "test_registered_paper_books.py",
+        "test_forward_edge_f00.py",
+        "test_forward_edge_f13.py",
+        "test_forward_fixture_replay.py",
+        "test_paper_session_runbook.py",
         "test_source_inventory.py",
         "test_strategy_variant_inventory.py"
       ],
-      "test_result": "90 passed; Ruff and targeted mypy passed; source and strategy-variant inventory freshness checks passed (617 Python files).",
-      "evidence_sha256": "ea7bf3f759b36ccbc1ee68c16e4994e8e7a35ed018439359a5189165d4ef7f7b",
+      "test_result": "215 focused family-gate, runner, registry, and fixture-mode tests passed; full local suite 3970 passed and 1 skipped; Ruff, targeted mypy, and source/strategy inventory checks passed (618 Python files); GitHub CI #521 passed on Ubuntu and Windows.",
+      "evidence_sha256": "8f20c1689dee5784bbcb1e6a035c30d70242c032a2d393f8618c6d0de78bf96f",
+      "blockers": []
+    },
+    {
+      "id": "PE-0171",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/offline_training.py",
+        "src/financial_brain/evaluation/learned_model.py",
+        "tests/test_phase5_learned_model.py",
+        "docs/edge-program/pe-0171-matured-offline-training-evidence.md",
+        "docs/edge-program/pe-0171-matured-offline-training-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_phase5_learned_model.py",
+        "test_source_inventory.py",
+        "test_strategy_variant_inventory.py"
+      ],
+      "test_result": "7 learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventories passed (618 Python files).",
+      "evidence_sha256": "02914bac4f2e9b65c9fc30333525699b13b58ca52e47f20f8b602caa5a90b178",
       "blockers": []
     }
   ]

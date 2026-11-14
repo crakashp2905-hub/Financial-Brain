@@ -1,0 +1,21 @@
+{
+  "checklist_task": "PE-0171",
+  "status": "DONE",
+  "criterion": "Build reproducible offline training jobs from timestamped, versioned, matured outcomes; the training manifest hashes code, feature schema, dataset and seed.",
+  "implementation": [
+    "src/financial_brain/evaluation/offline_training.py",
+    "src/financial_brain/evaluation/learned_model.py"
+  ],
+  "tests": [
+    "tests/test_phase5_learned_model.py",
+    "tests/test_source_inventory.py",
+    "tests/test_strategy_variant_inventory.py"
+  ],
+  "test_result": "7 learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventories passed (618 Python files).",
+  "evidence_scope": "Synthetic learned-model panels and timestamps. No real market dataset, financial outcome provenance, profitability, or forward model quality is claimed.",
+  "operational_limits": [
+    "Rows with unknown or future maturity, incomplete values, unversioned datasets, or naive timestamps cannot enter fitting.",
+    "The model loader and cache verifier reject artifacts without a matching offline job manifest.",
+    "Feature-level point-in-time availability checks are a separate PE-0175 acceptance item."
+  ]
+}
