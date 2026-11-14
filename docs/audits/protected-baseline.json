@@ -2,11 +2,11 @@
   "description": "SHA-256 of protected research records. Append-only ledgers are excluded; these must never change.",
   "files": {
     "brain/07-Research/Chart patterns and candles - what is testable and how.md": "f770f825245ed8b7773dfd02d10609aadada6fc3e65972088710175961d48985",
-    "brain/07-Research/Source notes - Bulkowski Encyclopedia of Chart Patterns.md": "8c4a622507fee6fe84ee79cf7f35037edef0546569eba91e54c5a0e969e7d2c1",
-    "brain/07-Research/Source notes - Nison Japanese Candlestick Charting Techniques.md": "2ca5044cee9a9df6c00982e38a2bc76841bbc977ca60057ff1ae23290952e690",
-    "docs/sources/pattern-catalogue.v1.json": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c",
-    "docs/trials/manifests/is_minute_family.json": "17fbbc26df14f15e14db74af1411cc1602a85dbe1328a6db5f398c25a6ef2411",
-    "docs/trials/manifests/mf.json": "a321e5240e27a199e1f46b05715a993f8be1bf7ac7eb961d79072a22906ce4a1",
-    "docs/trials/manifests/x3.json": "f39e619e330f3415356809b189fbb73799d614f7c396554e2e6c775727138b23"
+    "brain/07-Research/Source notes - Bulkowski Encyclopedia of Chart Patterns.md": "8a75f859a9025eadc5c0305fceb39d93933dbf07b536e5d5c9d5154f5d021b67",
+    "brain/07-Research/Source notes - Nison Japanese Candlestick Charting Techniques.md": "9355ce9fd045881d136b2e9b7ed09a73cd4f9a2af60e207d64fc5da7922fd78b",
+    "docs/sources/pattern-catalogue.v1.json": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+    "docs/trials/manifests/is_minute_family.json": "a345734510f51cbbf984acd0cd43690243d341d07b8c9ddc6b5cd8ed92437f26",
+    "docs/trials/manifests/mf.json": "20cf2ad9801db62e6a108014e39c27b75eac9a29b5abf485ece089d508f402de",
+    "docs/trials/manifests/x3.json": "234974220c510238dd16d1f1291efcb41ae60c06988be0bc454e0799396b2524"
   }
 }
