@@ -19,7 +19,7 @@ policy is latched at `PAUSE` or `RETIRE`. Explicit `REDUCE` and `CLOSE` decision
 remain eligible so a paused strategy can exit existing exposure.
 
 Validation: `python -m pytest -q tests/test_degradation_monitor.py
-tests/test_forward_session_runner.py` (64 passed), Ruff, and mypy passed.
+tests/test_forward_session_runner.py` (65 passed), Ruff, and mypy passed.
 
 Remaining work: schedule a trusted rolling-metric adapter after every forward
 paper session; establish production policy and identity roots; run the monitor

@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_degradation_monitor.py tests/test_forward_session_runner.py; python -m ruff check src/financial_brain/forward_edge/degradation_monitor.py src/financial_brain/forward_edge/session_runner.py tests/test_degradation_monitor.py tests/test_forward_session_runner.py; python -m mypy src/financial_brain/forward_edge/degradation_monitor.py src/financial_brain/forward_edge/session_runner.py",
-    "result": "64 tests passed; Ruff and mypy passed."
+    "result": "65 tests passed; Ruff and mypy passed."
   },
   "implemented": [
     "Threshold policy must be frozen before the cohort start and is content-addressed.",
@@ -14,7 +14,7 @@
     "Returned alarm events are immutable and contain reasons, policy identity, and observation digest; no strategy parameter mutation is exposed.",
     "Optional DurableJournal persistence writes alarms to its hash chain before returning and restores event IDs, breach counters, and latched state after restart.",
     "A failed journal append does not advance monitor state, allowing safe retry of the same observation.",
-    "ForwardSessionRunner binds rolling observations to matching closed LIVE_PAPER sessions and persists alarms in the same journal.",
+    "ForwardSessionRunner binds rolling observations to matching closed LIVE_PAPER sessions, strategy authority, and exact strategy digest, then persists alarms in the same journal.",
     "A policy-latched PAUSE or RETIRE withholds new/increasing exposure in later sessions while allowing explicit REDUCE/CLOSE decisions."
   ],
   "blockers": [

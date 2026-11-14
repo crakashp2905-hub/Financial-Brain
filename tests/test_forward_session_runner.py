@@ -1008,9 +1008,9 @@ def test_runner_requires_frozen_benefit_policy_identity_for_configured_paper(tmp
         runner.begin(_config())
 
 
-def _degradation_policy():
+def _degradation_policy(strategy_version="a" * 64):
     return FrozenThresholds(
-        strategy_id="test-strategy", strategy_version="paper-v1",
+        strategy_id="test-strategy", strategy_version=strategy_version,
         frozen_at=NOW - timedelta(days=3), cohort_starts_at=NOW - timedelta(days=2),
         pause_net_alpha_bps=0.0, retire_net_alpha_bps=-20.0,
         max_slippage_bps=12.0, min_fill_coverage=0.75, max_drift_score=0.30,
@@ -1047,6 +1047,20 @@ def test_runner_persists_closed_session_degradation_observation(tmp_path):
     assert alarm.action == DegradationAction.CONTINUE
     assert any(r["t"] == "DEGRADATION_ALARM" and r["observation_id"] == config.session_id
                for r in DurableJournal(journal_path).records())
+
+
+def test_runner_rejects_degradation_policy_for_another_strategy_version(tmp_path):
+    policy = _degradation_policy("other-version")
+    config = _config(degradation_policy_sha256=policy.policy_sha256)
+    journal_path = tmp_path / "session.jsonl"
+    runner = ForwardSessionRunner(journal_path)
+    with pytest.raises(RunnerError, match="strategy digest"):
+        runner.run(
+            config, [], decision_at=NOW,
+            decision_fn=lambda _: {"side": "NONE"}, risk_fn=lambda _: {"approved": True},
+            execution_fn=lambda *_: {}, degradation_policy=policy,
+        )
+    assert not journal_path.exists()
 
 
 def test_durable_degradation_pause_blocks_next_runner_candidate(tmp_path):

@@ -566,6 +566,8 @@ class ForwardSessionRunner:
             raise RunnerError("degradation policy does not match the frozen session configuration")
         if policy.strategy_id != config.authority_strategy_id:
             raise RunnerError("degradation policy strategy does not match paper authority")
+        if policy.strategy_version != config.strategy_sha256:
+            raise RunnerError("degradation policy version does not match the frozen strategy digest")
         if observation.observation_id != config.session_id:
             raise RunnerError("degradation observation ID must match its closed session ID")
         journal = DurableJournal(self.journal_path)
@@ -597,6 +599,8 @@ class ForwardSessionRunner:
                 raise RunnerError("run-time degradation policy differs from frozen session configuration")
             if degradation_policy.strategy_id != config.authority_strategy_id:
                 raise RunnerError("degradation policy strategy does not match paper authority")
+            if degradation_policy.strategy_version != config.strategy_sha256:
+                raise RunnerError("degradation policy version does not match the frozen strategy digest")
 
         if config.mode is Mode.LIVE_PAPER:
             if not config.authority_strategy_id or not config.authority_account_id:

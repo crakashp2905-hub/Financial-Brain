@@ -3187,10 +3187,11 @@
         "test_failed_durable_alarm_append_does_not_advance_monitor_state",
         "test_runner_persists_closed_session_degradation_observation",
         "test_durable_degradation_pause_blocks_next_runner_candidate",
-        "test_durable_degradation_pause_still_allows_explicit_position_close"
+        "test_durable_degradation_pause_still_allows_explicit_position_close",
+        "test_runner_rejects_degradation_policy_for_another_strategy_version"
       ],
-      "test_result": "64 tests across degradation-monitor and forward-session-runner suites passed; Ruff and mypy passed. DurableJournal recovery preserves alarm IDs, breach counters and latches; ForwardSessionRunner binds observations to closed LIVE_PAPER sessions, withholds new/increasing exposure under PAUSE/RETIRE, and permits explicit REDUCE/CLOSE decisions.",
-      "evidence_sha256": "b5d8bfaab1e8d69c0e4c338ce797aac278256b3cc01c0c0244e824ba5a008e7c",
+      "test_result": "65 tests across degradation-monitor and forward-session-runner suites passed; Ruff and mypy passed. DurableJournal recovery preserves alarm IDs, breach counters and latches; ForwardSessionRunner binds observations to closed LIVE_PAPER sessions and exact strategy authority/digest, withholds new/increasing exposure under PAUSE/RETIRE, and permits explicit REDUCE/CLOSE decisions.",
+      "evidence_sha256": "816725255786ab1a0c51cfdad7c8332833e6aa950b1fb504ef708f959fec38c3",
       "blockers": [
         "Production thresholds, trusted identity roots, alarm delivery, and prospective market-cohort evidence are not configured or verified.",
         "A trusted scheduled rolling-metric adapter does not yet generate observations after every forward paper session; the recording API is caller-triggered."
