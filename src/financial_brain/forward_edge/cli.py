@@ -140,6 +140,25 @@ def cmd_daily_export(account_archive_path: str, runner_journal_path: str,
         name: str(path) for name, path in sorted(paths.items())}, "physical_orders": False}, EXIT["OK"]
 
 
+def cmd_book_performance_report(input_path: str, output_root: str) -> tuple[dict, int]:
+    """Build and persist a content-addressed per-book report from explicit session evidence."""
+    from financial_brain.forward_edge.book_performance_report import (
+        BookPerformanceError,
+        build_book_performance_report,
+        write_book_performance_report,
+    )
+
+    try:
+        payload = json.loads(Path(input_path).read_text(encoding="utf-8"))
+        if not isinstance(payload, dict) or not isinstance(payload.get("sessions"), list):
+            raise ValueError("input JSON must contain a sessions array")
+        report = build_book_performance_report(payload["sessions"])
+        outputs = write_book_performance_report(report, Path(output_root))
+    except (OSError, json.JSONDecodeError, ValueError, BookPerformanceError) as exc:
+        return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    return {**outputs, "physical_orders": False}, EXIT["OK"]
+
+
 def cmd_eod_reconcile(account_journal_path: str, reference_snapshot_path: str,
                       gate_journal_path: str) -> tuple[dict, int]:
     """Audit the local account and apply an explicit independent EOD snapshot."""
@@ -214,6 +233,9 @@ def main(argv: list[str] | None = None) -> int:
     de.add_argument("--runner-journal", required=True, help="hash-chained forward runner journal JSONL")
     de.add_argument("--session-id", required=True)
     de.add_argument("--output-dir", required=True, help="directory for report.json, report.csv, report.html")
+    bp = sub.add_parser("book-performance-report")
+    bp.add_argument("--input", required=True, help="JSON object containing a sessions array")
+    bp.add_argument("--output-root", required=True, help="root for immutable content-addressed reports")
     er = sub.add_parser("eod-reconcile", help="reconcile paper account against an independent snapshot")
     er.add_argument("--account-journal", required=True, help="durable local paper account journal JSONL")
     er.add_argument("--reference-snapshot", required=True, help="independent OMS/venue snapshot JSON")
@@ -231,6 +253,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_asset_class_report(args.input)
     elif args.cmd == "daily-export":
         out, code = cmd_daily_export(args.account_archive, args.runner_journal, args.session_id, args.output_dir)
+    elif args.cmd == "book-performance-report":
+        out, code = cmd_book_performance_report(args.input, args.output_root)
     elif args.cmd == "eod-reconcile":
         out, code = cmd_eod_reconcile(args.account_journal, args.reference_snapshot, args.gate_journal)
     else:

@@ -3,8 +3,8 @@
   "task_id": "PE-0155",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py; ruff check src/financial_brain/forward_edge/daily_evidence_bundle.py tests/test_daily_evidence_bundle.py src/financial_brain/forward_edge/eod_paper_archive.py",
-    "result": "10 passed; Ruff passed. Finalization tests cover durable terminal-session gating, idempotent close/bundle retry, and refusal before account mutation when the terminal receipt is missing."
+    "command": "python -m pytest -q tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py; ruff check src/financial_brain/forward_edge/daily_evidence_bundle.py tests/test_daily_evidence_bundle.py src/financial_brain/forward_edge/eod_paper_archive.py; python -m mypy src/financial_brain/forward_edge/daily_evidence_bundle.py",
+    "result": "10 passed; Ruff and mypy passed. Finalization tests cover durable terminal-session gating, idempotent close/bundle retry, and refusal before account mutation when the terminal receipt is missing."
   },
   "implemented": [
     "Portable bundles export account close archive and durable runner journal plus optional evidence inputs with SHA-256 and byte lengths.",
@@ -20,7 +20,7 @@
     "Bundle transfer has no managed delivery channel; this implementation exports a self-contained directory."
   ],
   "source_sha256": {
-    "src/financial_brain/forward_edge/daily_evidence_bundle.py": "5537e2e425cfd5366fbb270140b8c1022296ebb4da5a9d2a8c81408ddbf84bdc",
+    "src/financial_brain/forward_edge/daily_evidence_bundle.py": "66d733608ea13ef9e68348b840427658359afe66535d2783f6a30510b1c1b014",
     "tests/test_daily_evidence_bundle.py": "86e1b12dea0344210a562436bf0627538ac3abe651f9ce38d258010ed14e2a1a"
   }
 }

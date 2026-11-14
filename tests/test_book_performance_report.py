@@ -1,5 +1,6 @@
 import hashlib
 import json
+from pathlib import Path
 
 import pytest
 
@@ -7,7 +8,9 @@ from financial_brain.forward_edge.book_performance_report import (
     BookPerformanceError,
     build_book_performance_report,
     render_book_performance_report,
+    write_book_performance_report,
 )
+from financial_brain.forward_edge.cli import EXIT, cmd_book_performance_report
 
 
 def _archive(day, *, gross, fees, taxes=0, account="A"):
@@ -122,3 +125,37 @@ def test_tampered_archive_is_rejected():
             "book_id": "swing", "session_id": "s1", "session_date": "2026-11-02",
             "runner_records": [_closed("s1")], "account_archive": archive,
         }])
+
+
+def test_content_addressed_book_report_is_deterministic_and_refuses_output_tampering(tmp_path):
+    report = build_book_performance_report([{
+        "book_id": "swing", "session_id": "s1", "session_date": "2026-11-02",
+        "runner_records": [_closed("s1", candidates=0, covered=0)], "account_archive": None,
+    }])
+    first = write_book_performance_report(report, tmp_path / "reports")
+    second = write_book_performance_report(report, tmp_path / "reports")
+    assert first == second
+    assert set(Path(first["directory"]).iterdir()) == {
+        Path(first["files"]["report.json"]), Path(first["files"]["operator-report.txt"]),
+    }
+
+    Path(first["files"]["operator-report.txt"]).write_text("tampered", encoding="utf-8")
+    with pytest.raises(BookPerformanceError, match="different content"):
+        write_book_performance_report(report, tmp_path / "reports")
+
+
+def test_book_performance_report_cli_writes_only_valid_session_evidence(tmp_path):
+    input_path = tmp_path / "sessions.json"
+    input_path.write_text(json.dumps({"sessions": [{
+        "book_id": "swing", "session_id": "s1", "session_date": "2026-11-02",
+        "runner_records": [_closed("s1", candidates=0, covered=0)], "account_archive": None,
+    }]}), encoding="utf-8")
+    output, code = cmd_book_performance_report(str(input_path), str(tmp_path / "reports"))
+    assert code == EXIT["OK"]
+    assert Path(output["files"]["report.json"]).is_file()
+    assert output["physical_orders"] is False
+
+    input_path.write_text('{"wrong": []}', encoding="utf-8")
+    rejected, code = cmd_book_performance_report(str(input_path), str(tmp_path / "reports"))
+    assert code == EXIT["INCOMPLETE"]
+    assert "sessions array" in rejected["error"]

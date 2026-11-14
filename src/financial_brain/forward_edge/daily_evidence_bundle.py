@@ -41,7 +41,8 @@ def _read_inputs(bundle_dir: Path, manifest: dict) -> dict[str, bytes]:
         if not isinstance(entry, dict):
             raise DailyBundleError("bundle input manifest row is invalid")
         role, relative, expected = entry.get("role"), entry.get("path"), entry.get("sha256")
-        if not isinstance(role, str) or not role or role in output:
+        if (not isinstance(role, str) or not role or role in output
+                or not isinstance(relative, str) or not isinstance(expected, str)):
             raise DailyBundleError("bundle input roles must be unique nonempty names")
         relative = _safe_bundle_path(relative)
         path = bundle_dir.joinpath(*PurePosixPath(relative).parts)
@@ -153,6 +154,7 @@ def build_daily_bundle(*, session_date: str, session_id: str, artifact_paths: di
     if not isinstance(artifact_paths, dict) or not {"paper_account_archive", "runner_journal"}.issubset(artifact_paths):
         raise DailyBundleError("account archive and runner journal paths are required")
     payloads: dict[str, bytes] = {}
+    input_payloads: dict[str, bytes] = {}
     input_manifest = []
     for role, source in sorted(artifact_paths.items()):
         if not isinstance(role, str) or not role or not isinstance(source, Path) or not source.is_file():
@@ -162,8 +164,9 @@ def build_daily_bundle(*, session_date: str, session_id: str, artifact_paths: di
             raise DailyBundleError("bundle input path collision")
         data = source.read_bytes()
         payloads[relative] = data
+        input_payloads[role] = data
         input_manifest.append({"role": role, "path": relative, "sha256": _sha(data), "size_bytes": len(data)})
-    inputs = {entry["role"]: payloads[entry["path"]] for entry in input_manifest}
+    inputs = input_payloads
     report = render_operator_report(session_date=session_date, session_id=session_id, inputs=inputs)
     core = {
         "schema_version": "1.0", "session_date": session_date, "session_id": session_id,

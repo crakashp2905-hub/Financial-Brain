@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
+import shutil
+import tempfile
 
 
 class BookPerformanceError(ValueError):
@@ -256,3 +260,38 @@ def render_book_performance_report(report: dict) -> str:
     lines.append("Reports retain NO_TRADE, incomplete, unrecorded, unfilled, and missing-coverage rows; "
                  "they do not rank only winners or fills.")
     return "\n".join(lines) + "\n"
+
+
+def write_book_performance_report(report: dict, output_root: Path) -> dict:
+    """Persist deterministic JSON/text outputs in an immutable content-addressed directory."""
+    if not isinstance(report, dict) or not isinstance(report.get("books"), list):
+        raise BookPerformanceError("book report must be generated from book evidence")
+    core = {key: report[key] for key in ("schema_version", "books") if key in report}
+    expected_sha = hashlib.sha256(_canonical(core)).hexdigest()
+    if report.get("report_sha256") != expected_sha:
+        raise BookPerformanceError("book report hash does not match its contents")
+    payloads = {
+        "report.json": (json.dumps(report, sort_keys=True, indent=2, ensure_ascii=False,
+                                   allow_nan=False) + "\n").encode("utf-8"),
+        "operator-report.txt": render_book_performance_report(report).encode("utf-8"),
+    }
+    output_root = Path(output_root)
+    output_root.mkdir(parents=True, exist_ok=True)
+    target = output_root / expected_sha
+    if target.exists():
+        if (target.is_symlink() or not target.is_dir()
+                or {path.name for path in target.iterdir()} != set(payloads)
+                or any((target / name).read_bytes() != value for name, value in payloads.items())):
+            raise BookPerformanceError("content-addressed report output exists with different content")
+        return {"report_sha256": expected_sha, "directory": str(target),
+                "files": {name: str(target / name) for name in sorted(payloads)}}
+    staging = Path(tempfile.mkdtemp(prefix=".book-report-", dir=output_root))
+    try:
+        for name, value in payloads.items():
+            (staging / name).write_bytes(value)
+        os.replace(staging, target)
+    except Exception:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    return {"report_sha256": expected_sha, "directory": str(target),
+            "files": {name: str(target / name) for name in sorted(payloads)}}
