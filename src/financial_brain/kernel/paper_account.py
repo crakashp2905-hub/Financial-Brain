@@ -20,6 +20,7 @@ import re
 from uuid import uuid4
 
 from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.approvals import is_agent_actor
 from financial_brain.kernel.ledger import CREDIT, DEBIT, DoubleEntryLedger, Entry, Transaction
 from financial_brain.kernel.oms import Oms, OmsError, State
 from financial_brain.kernel.units import Money
@@ -330,7 +331,7 @@ class PaperAccount:
                         if not self._risk_latched or incident_id != self._risk_incident_id:
                             raise PaperAccountError("risk latch reset does not match an active incident")
                         if (not r.get("repair_id") or not isinstance(actor, str) or not actor.strip()
-                                or actor.startswith("agent:") or not re.fullmatch(r"[0-9a-f]{64}",
+                                or is_agent_actor(actor, "human") or not re.fullmatch(r"[0-9a-f]{64}",
                                                                                   str(r.get("signoff_sha256", "")))):
                             raise PaperAccountError("risk latch reset needs a human hash-backed repair signoff")
                         try:
@@ -447,7 +448,8 @@ class PaperAccount:
         """Clear a latch only after a human records a timestamped, hash-backed repair signoff."""
         if not self._risk_latched or incident_id != self._risk_incident_id:
             raise PaperAccountError("risk latch reset does not match an active incident")
-        if (not repair_id.strip() or not actor.strip() or actor.startswith("agent:")
+        if (not repair_id.strip() or not isinstance(actor, str) or not actor.strip()
+                or is_agent_actor(actor, "human")
                 or signed_at.tzinfo is None or signed_at.utcoffset() is None
                 or not re.fullmatch(r"[0-9a-f]{64}", signoff_sha256)):
             raise PaperAccountError("risk latch reset needs a human hash-backed repair signoff")

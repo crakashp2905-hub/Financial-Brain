@@ -11,6 +11,7 @@ import json
 from datetime import datetime, timezone
 from decimal import Decimal
 from html import escape
+from pathlib import Path
 
 from financial_brain.forward_edge.registry import Status
 
@@ -733,5 +734,67 @@ def decisions_panel(live_locked_reasons: list[str]) -> str:
     opts = "".join(f"<li>{d}</li>" for d in OPERATOR_DECISIONS)
     why = "".join(f"<li>{escape(r)}</li>" for r in live_locked_reasons) or "<li>No recorded reason</li>"
     html = _page("Operator decisions", f"<ul id='options'>{opts}</ul><h2>Live mode is LOCKED because</h2><ul>{why}</ul>")
+    assert_read_only(html)
+    return html
+
+
+def risk_incident_review(journal_path: Path) -> str:
+    """Review persistent paper-account latches from a chain-verified account journal."""
+    from financial_brain.forward_edge.durable import DurableJournal
+    from financial_brain.forward_edge.approvals import is_agent_actor
+
+    try:
+        records = DurableJournal(Path(journal_path)).records()
+    except Exception as exc:
+        raise CockpitError("risk incident journal is missing, corrupt, or unreadable") from exc
+    active: dict | None = None
+    incidents: list[dict] = []
+    for record in records:
+        if record.get("t") != "RISK_LATCH":
+            continue
+        state = record.get("state")
+        if state == "TRIPPED":
+            if active is not None:
+                raise CockpitError("risk incident journal contains overlapping active latches")
+            incident = record.get("incident_id")
+            reason = record.get("reason")
+            if not isinstance(incident, str) or not incident or not isinstance(reason, str) or not reason:
+                raise CockpitError("risk latch trip record lacks incident identity or reason")
+            active = record
+            incidents.append({"trip": record, "reset": None})
+        elif state == "RESET":
+            if active is None or record.get("incident_id") != active.get("incident_id"):
+                raise CockpitError("risk latch reset does not match an active incident")
+            actor, digest = record.get("actor"), record.get("signoff_sha256")
+            if (not isinstance(actor, str) or not actor.strip() or is_agent_actor(actor, "human")
+                    or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
+                raise CockpitError("risk reset record lacks human hash-backed sign-off")
+            incidents[-1]["reset"] = record
+            active = None
+        else:
+            raise CockpitError("risk incident journal contains an unknown latch state")
+    rows = []
+    for incident in incidents:
+        trip, reset = incident["trip"], incident["reset"]
+        status = "HALT ACTIVE — NEW PAPER INTENTS BLOCKED" if reset is None else "RESET BY HUMAN SIGN-OFF"
+        details = [
+            f"Incident {trip['incident_id']}", f"Reason {trip['reason']}",
+            f"Occurred {trip.get('occurred_at', 'UNKNOWN')}",
+        ]
+        if reset:
+            details.extend([f"Repair {reset.get('repair_id', 'UNKNOWN')}",
+                            f"Actor {reset.get('actor', 'UNKNOWN')}",
+                            f"Signed {reset.get('signed_at', 'UNKNOWN')}",
+                            f"Sign-off SHA-256 {reset.get('signoff_sha256', 'UNKNOWN')}"])
+        rows.append(f"<tr class='{'failed' if reset is None else ''}'><td>{escape(status)}</td>"
+                    f"<td>{escape(' · '.join(details))}</td></tr>")
+    current = "HALT ACTIVE — PAPER INTENTS BLOCKED" if active else "NO ACTIVE PAPER RISK LATCH"
+    reset_rule = "Reset is an account-journal operation requiring a human, timestamped, hash-backed repair sign-off. "
+    reset_rule += "This page is read-only; it cannot reset a latch or submit an order."
+    table_rows = "".join(rows) or "<tr><td colspan='2'>No incidents recorded</td></tr>"
+    html = _page("Paper risk incident review", f"<p class='{'failed' if active else 'notrade'}' id='risk-state'>{current}</p>"
+                 f"<p>Paper account only. {escape(reset_rule)}</p>"
+                 "<table><thead><tr><th>State</th><th>Incident record</th></tr></thead><tbody>"
+                 f"{table_rows}</tbody></table>")
     assert_read_only(html)
     return html
