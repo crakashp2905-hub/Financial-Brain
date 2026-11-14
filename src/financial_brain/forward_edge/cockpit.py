@@ -262,6 +262,76 @@ def research_vs_champions(*, provisional: list[dict], forward_champions: list[di
     return html
 
 
+def profitability_evidence(rows: list[dict]) -> str:
+    """Require uncertainty, multiplicity, matched benchmark, and capacity beside any edge claim."""
+    def decimal_or_none(value: object) -> Decimal | None:
+        if value is None:
+            return None
+        try:
+            result = Decimal(str(value))
+        except Exception:
+            return None
+        return result if result.is_finite() else None
+
+    rendered = []
+    for row in rows:
+        lower = decimal_or_none(row.get("ci_lower"))
+        upper = decimal_or_none(row.get("ci_upper"))
+        ci_level = decimal_or_none(row.get("ci_level_pct"))
+        net_lcb = decimal_or_none(row.get("net_alpha_lcb"))
+        benchmark_net = decimal_or_none(row.get("matched_benchmark_net_alpha"))
+        capacity = decimal_or_none(row.get("estimated_capacity_inr"))
+        multiplicity = row.get("multiplicity_count")
+        adjusted_alpha = decimal_or_none(row.get("familywise_adjusted_alpha"))
+        missing = []
+        if lower is None or upper is None or lower > upper:
+            missing.append("valid confidence interval")
+        if ci_level is None or not Decimal("50") < ci_level < Decimal("100"):
+            missing.append("confidence interval level")
+        if net_lcb is None:
+            missing.append("net-alpha lower bound")
+        if type(multiplicity) is not int or multiplicity < 1:
+            missing.append("multiplicity count")
+        if adjusted_alpha is None or adjusted_alpha <= 0:
+            missing.append("familywise-adjusted alpha")
+        if not row.get("matched_benchmark_id") or benchmark_net is None:
+            missing.append("matched benchmark and outcome")
+        if capacity is None or capacity <= 0:
+            missing.append("positive estimated capacity")
+        adjusted = row.get("familywise_adjusted") is True
+        if not adjusted:
+            missing.append("verified multiplicity adjustment")
+        positive = not missing and lower is not None and lower > 0 and net_lcb is not None and net_lcb > 0
+        status = ("POSITIVE ADJUSTED LOWER BOUND — NOT A GUARANTEE" if positive
+                  else "INSUFFICIENT / NON-POSITIVE EVIDENCE")
+        detail = "; ".join(missing) if missing else "all required evidence fields present"
+        cells = (
+            row.get("strategy_id", "UNKNOWN"), status,
+            row.get("claim", "No claim supplied"),
+            row.get("ci_level_pct", "UNKNOWN"), row.get("ci_lower", "UNKNOWN"), row.get("ci_upper", "UNKNOWN"),
+            row.get("net_alpha_lcb", "UNKNOWN"), row.get("multiplicity_count", "UNKNOWN"),
+            row.get("familywise_adjusted_alpha", "UNKNOWN"),
+            row.get("matched_benchmark_id", "UNKNOWN"),
+            row.get("matched_benchmark_net_alpha", "UNKNOWN"),
+            row.get("estimated_capacity_inr", "UNKNOWN"),
+            row.get("win_rate", "UNKNOWN"), row.get("total_net_rupees", "UNKNOWN"), detail,
+        )
+        rendered.append((0 if status.startswith("INSUFFICIENT") else 1,
+                         "<tr class='failed'><td>" + "</td><td>".join(escape(str(value)) for value in cells)
+                         + "</td></tr>"))
+    rendered.sort(key=lambda item: item[0])
+    headers = ("Strategy", "Evidence status", "Claim", "CI level %", "CI lower", "CI upper", "Net alpha LCB",
+               "Multiplicity count", "Adjusted alpha", "Matched benchmark", "Benchmark net alpha",
+               "Estimated capacity INR", "Win rate (descriptive)", "Total net rupees (descriptive)", "Evidence gaps")
+    table = "<table><thead><tr>" + "".join(f"<th>{escape(header)}</th>" for header in headers) + "</tr></thead><tbody>"
+    body = "".join(item[1] for item in rendered)
+    html = _page("Profitability evidence", "<p>No strategy is labeled proven from win rate or cumulative rupees."
+                 " A positive adjusted lower bound is still uncertain and conditional on the stated evidence.</p>"
+                 f"{table}{body}</tbody></table>")
+    assert_read_only(html)
+    return html
+
+
 def portfolio_nav(archives: list[dict], canonical_nav_rows: list[dict]) -> str:
     """Render cash plus marked open positions, verifying every session against the account NAV journal."""
     if not archives:

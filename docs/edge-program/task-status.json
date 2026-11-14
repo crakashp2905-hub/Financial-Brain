@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 187,
-  "unrecorded_tasks": 31,
+  "recorded_tasks": 188,
+  "unrecorded_tasks": 30,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4085,6 +4085,26 @@
       ],
       "test_result": "22 cockpit tests passed; Ruff, targeted mypy, refreshed source inventory, and inventory check passed. Provisional rankings cannot receive champion styling; incomplete forward evidence remains visible and non-champion.",
       "evidence_sha256": "e6da2e9fb1f09853269d5298b9cdfe9c0f8f56c925781c5a167c91ec419bdbeb",
+      "blockers": []
+    },
+    {
+      "id": "PE-0190",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/cockpit.py",
+        "tests/test_profitability_evidence_view.py",
+        "tests/test_forward_edge_f10.py",
+        "docs/edge-program/pe-0190-profitability-evidence-evidence.md",
+        "docs/edge-program/pe-0190-profitability-evidence-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_profitability_evidence_view.py",
+        "test_forward_edge_f10.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "23 cockpit tests passed; Ruff, targeted mypy, refreshed source inventory, and inventory check passed. Profitability rows include intervals, family correction, matched benchmark, and capacity; raw win rates or positive rupees do not satisfy the evidence status.",
+      "evidence_sha256": "ba7f614b78cfca01f5f4fa1ca82869317cf0e6f91c2398c4acd9e2153e02eec8",
       "blockers": []
     }
   ]
