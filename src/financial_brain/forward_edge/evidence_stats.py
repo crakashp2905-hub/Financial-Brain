@@ -291,11 +291,21 @@ def label_rows(rows: list[dict]) -> list[dict]:
 
 # ---- FE-0103 falsification ----
 
-FALSIFICATION_CHECKS = ("lookahead", "survivorship", "delisting", "factor_overlap", "rejected_trades", "missed_fills")
+CRITICAL_FALSIFICATION_CHECKS = (
+    "lookahead", "survivorship", "delisting", "corporate_actions", "stale_quote",
+    "missing_fills", "factor_overlap",
+)
+FALSIFICATION_CHECKS = CRITICAL_FALSIFICATION_CHECKS + ("rejected_trades", "missed_fills")
 
 
 def falsification_report(results: dict[str, bool | None]) -> dict:
     """True = check passed, False = check failed, None/absent = no evidence. No evidence is INSUFFICIENT, never a win."""
+    unknown = sorted(set(results) - set(FALSIFICATION_CHECKS))
+    if unknown:
+        raise StatsError(f"unknown falsification checks: {unknown}")
+    invalid = sorted(key for key, value in results.items() if value is not None and type(value) is not bool)
+    if invalid:
+        raise StatsError(f"falsification outcomes must be boolean or null: {invalid}")
     failed = [c for c in FALSIFICATION_CHECKS if results.get(c) is False]
     missing = [c for c in FALSIFICATION_CHECKS if results.get(c) is None]
     status = "FAIL" if failed else ("INSUFFICIENT_EVIDENCE" if missing else "NO_FALSIFICATION_FOUND")

@@ -176,3 +176,18 @@ def test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail() -
     full = {c: True for c in E.FALSIFICATION_CHECKS}
     assert E.falsification_report(full)["status"] == "NO_FALSIFICATION_FOUND"
     assert E.falsification_report({**full, "lookahead": False})["status"] == "FAIL"
+
+
+@pytest.mark.parametrize("check", E.CRITICAL_FALSIFICATION_CHECKS)
+def test_every_critical_falsification_failure_blocks_a_clean_report(check: str) -> None:
+    complete = {name: True for name in E.FALSIFICATION_CHECKS}
+    report = E.falsification_report({**complete, check: False})
+    assert report["status"] == "FAIL"
+    assert report["failed"] == [check]
+
+
+def test_falsification_report_rejects_unknown_or_non_boolean_results() -> None:
+    with pytest.raises(E.StatsError, match="unknown falsification checks"):
+        E.falsification_report({"stale_qoute": True})
+    with pytest.raises(E.StatsError, match="boolean or null"):
+        E.falsification_report({"stale_quote": 1})

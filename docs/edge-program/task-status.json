@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 126,
-  "unrecorded_tasks": 92,
+  "recorded_tasks": 127,
+  "unrecorded_tasks": 91,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2731,6 +2731,27 @@
         "Stratum labels are not bound to the frozen prospective cohort registry.",
         "Aggregation and portfolio utility weights are caller-supplied and not independently verified.",
         "No real prospective cohort observations are available."
+      ]
+    },
+    {
+      "id": "PE-0129",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "tests/test_forward_edge_f08.py",
+        "docs/edge-program/pe-0129-critical-falsification-gates.md",
+        "docs/edge-program/pe-0129-critical-falsification-gates-evidence.json"
+      ],
+      "tests": [
+        "test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail",
+        "test_every_critical_falsification_failure_blocks_a_clean_report",
+        "test_falsification_report_rejects_unknown_or_non_boolean_results"
+      ],
+      "test_result": "52 related tests passed; Ruff passed. Critical falsification failures are independently shown to yield FAIL; absent checks, unknown names and non-boolean values are fail-closed.",
+      "evidence_sha256": "8ec0fde3c31f1f6bb4d700519eb266e8e8eb172933ef12c6d14f49b249e61aaa",
+      "blockers": [
+        "Checks remain caller assertions rather than registered, data-backed tests.",
+        "The status report and promotion evaluator are not bound in one immutable evidence object."
       ]
     }
   ]
