@@ -34,6 +34,10 @@ class SessionDateLedger:
     def _records(self) -> list[dict]:
         return self.journal.records()
 
+    def records(self) -> list[dict]:
+        """Return the append-only planned-session and terminal-outcome evidence."""
+        return self._records()
+
     def is_planned(self, session_id: str) -> bool:
         return any(row.get("t") == "SESSION_DATE_PLAN" and row.get("session_id") == session_id
                    for row in self._records())
