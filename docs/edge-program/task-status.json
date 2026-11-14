@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 135,
-  "unrecorded_tasks": 83,
+  "recorded_tasks": 136,
+  "unrecorded_tasks": 82,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2951,6 +2951,31 @@
         "No adapter executes the portfolio simulator for the five-axis grid.",
         "Caller-declared data digest is not validated against an authoritative dataset manifest.",
         "No full five-axis run is archived."
+      ]
+    },
+    {
+      "id": "PE-0138",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/signal_decay.py",
+        "tests/test_signal_decay.py",
+        "docs/edge-program/pe-0138-signal-decay-turnover-report.md",
+        "docs/edge-program/pe-0138-signal-decay-turnover-report-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_reports_time_to_peak_half_life_and_turnover_to_net_alpha_by_horizon",
+        "test_final_window_and_non_development_rows_are_rejected",
+        "test_missing_horizon_or_mismatched_session_schedule_is_rejected",
+        "test_invalid_metrics_and_plan_are_rejected"
+      ],
+      "test_result": "9 focused signal-decay and existing half-life tests passed; Ruff passed. Synthetic development inputs verify peak/half-life/turnover diagnostics and protected-window exclusion.",
+      "evidence_sha256": "26171c668e5e4891c4350af44f20cf53433de026d8c07470a8f3690138633b8f",
+      "blockers": [
+        "Inputs and data digest are not bound to an authoritative research registry.",
+        "No new-version preregistration gate controls horizon adoption.",
+        "No real forward decay evidence exists."
       ]
     }
   ]
