@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 170,
-  "unrecorded_tasks": 48,
+  "recorded_tasks": 171,
+  "unrecorded_tasks": 47,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3742,6 +3742,26 @@
       ],
       "test_result": "10 learned-model and temporal-split tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (618 Python files, 253 linked candidates). CI pending.",
       "evidence_sha256": "c44740f25e6a8f0c198ac1c8773ac3bdad582d2597471f40d95d156d1422dfac",
+      "blockers": []
+    },
+    {
+      "id": "PE-0173",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/forecast_components.py",
+        "tests/test_forecast_components.py",
+        "docs/edge-program/pe-0173-separate-forecast-components-evidence.md",
+        "docs/edge-program/pe-0173-separate-forecast-components-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_forecast_components.py",
+        "test_phase5_learned_model.py",
+        "test_source_inventory.py",
+        "test_strategy_variant_inventory.py"
+      ],
+      "test_result": "21 forecast-component and learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (619 Python files, 253 source-linked candidates). CI pending.",
+      "evidence_sha256": "2518586f1abc87158edc55840870be29ccc223455fd0a5a27580d50565fb1789",
       "blockers": []
     }
   ]

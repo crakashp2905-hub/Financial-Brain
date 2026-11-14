@@ -1,0 +1,19 @@
+{
+  "checklist_task": "PE-0173",
+  "status": "DONE",
+  "criterion": "Separate supervised alpha forecast from execution-fill probability and risk forecast; components each have independently calibrated targets and quality metrics.",
+  "implementation": [
+    "src/financial_brain/evaluation/forecast_components.py"
+  ],
+  "tests": [
+    "tests/test_forecast_components.py",
+    "tests/test_phase5_learned_model.py"
+  ],
+  "test_result": "21 forecast-component and learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (619 Python files, 253 source-linked candidates).",
+  "evidence_scope": "Synthetic typed forecasts and synthetic validation observations. No real model calibration or market performance is represented.",
+  "operational_limits": [
+    "Validation reports require a fixed model identity, target schema, matured target, and target revision timestamp.",
+    "Alpha, fill, and risk metrics use distinct target fields and are calculated independently.",
+    "Alpha, fill, and risk calibrators are separate and require untouched validation; no calibrator can authorize a trade."
+  ]
+}
