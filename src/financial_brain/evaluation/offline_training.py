@@ -203,6 +203,9 @@ def run_offline_training_job(
     model_path: Path,
     meta_path: Path,
     manifest_path: Path | None = None,
+    challenger_registry_path: Path | None = None,
+    challenger_signing_key: bytes | None = None,
+    challenger_key_id: str | None = None,
     seed: int = 0,
     n_splits: int = 3,
     embargo_sessions: int = 20,
@@ -316,7 +319,8 @@ def run_offline_training_job(
     if manifest_file.parent.resolve() != Path(meta_path).parent.resolve():
         raise OfflineTrainingError("training manifest and model metadata must share a directory")
     code_paths = (Path(learned_model.__file__).resolve(), Path(__file__).resolve(),
-                  Path(learned_model.__file__).with_name("deep_library.py").resolve())
+                  Path(learned_model.__file__).with_name("deep_library.py").resolve(),
+                  Path(__file__).with_name("challenger_registry.py").resolve())
     code_sha256 = _code_sha256(code_paths)
     # The lower-level routine retains a one-calendar-day guard as a secondary buffer.
     fit_panel = fit_rows[["d", "lineage", *features, "fwd20"]].copy()
@@ -369,4 +373,16 @@ def run_offline_training_job(
     model_meta["offline_training_manifest_sha256"] = manifest["manifest_sha256"]
     model_meta["offline_training_code_sha256"] = code_sha256
     Path(meta_path).write_text(json.dumps(model_meta, indent=1, sort_keys=True), encoding="utf-8")
+    if challenger_registry_path is not None:
+        from .challenger_registry import register_challenger
+
+        record = register_challenger(
+            Path(challenger_registry_path), model_id=model_meta["model_id"],
+            model_sha256=model_meta["model_sha256"], training_manifest_sha256=manifest["manifest_sha256"],
+            code_sha256=code_sha256, created_at=trained_as_of,
+            signing_key=challenger_signing_key, key_id=challenger_key_id,
+        )
+        model_meta["challenger_registry_record_sha256"] = record["record_sha256"]
+        model_meta["challenger_registry_status"] = "CHALLENGER_ONLY"
+        Path(meta_path).write_text(json.dumps(model_meta, indent=1, sort_keys=True), encoding="utf-8")
     return manifest

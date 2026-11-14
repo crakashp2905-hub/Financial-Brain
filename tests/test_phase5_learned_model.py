@@ -43,6 +43,7 @@ def test_matured_offline_job_saves_reproducible_model_manifest(tmp_path):
         feature_schema_version="features-v1",
         trained_as_of=datetime(2023, 1, 1, tzinfo=timezone.utc),
         model_path=tmp_path / "m.txt", meta_path=tmp_path / "m.json", seed=0,
+        challenger_registry_path=tmp_path / "challengers.jsonl",
     )
     meta = json.loads((tmp_path / "m.json").read_text())
     assert meta["features"] == ["a", "b"]
@@ -60,6 +61,11 @@ def test_matured_offline_job_saves_reproducible_model_manifest(tmp_path):
     assert manifest["seed"] == 0 and len(manifest["code_sha256"]) == 64
     assert manifest["environment"]["threads"] == 1
     assert manifest["environment"]["deterministic"] is True
+    from financial_brain.evaluation import challenger_registry as CR
+    registry = CR.verify_registry(tmp_path / "challengers.jsonl")
+    assert registry["records"][0]["status"] == "CHALLENGER_ONLY"
+    assert meta["challenger_registry_record_sha256"] == registry["records"][0]["record_sha256"]
+    assert meta["challenger_registry_status"] == "CHALLENGER_ONLY"
     assert all(len(meta[key]) == 64 for key in ("model_id", "feature_schema_sha256", "training_data_sha256",
                                                 "feature_source_sha256", "model_sha256", "code_sha256"))
     booster, m2 = LM.load(tmp_path / "m.txt", tmp_path / "m.json")

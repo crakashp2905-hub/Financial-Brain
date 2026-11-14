@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 174,
-  "unrecorded_tasks": 44,
+  "recorded_tasks": 176,
+  "unrecorded_tasks": 42,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3824,6 +3824,48 @@
       ],
       "test_result": "12 learned-model tests passed; Ruff, targeted mypy, source inventory, and strategy-variant inventory passed. Open and pending-settlement outcomes are quarantined and counted.",
       "evidence_sha256": "7f54180c2ff34cb4408dbc7a41e7ff3b9e689ea74e44bb2bb41917cca7bc2500",
+      "blockers": []
+    },
+    {
+      "id": "PE-0177",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/challenger_registry.py",
+        "src/financial_brain/evaluation/offline_training.py",
+        "src/financial_brain/evaluation/learned_model.py",
+        "tests/test_challenger_registry.py",
+        "tests/test_phase5_learned_model.py",
+        "docs/edge-program/pe-0177-challenger-registry-evidence.md",
+        "docs/edge-program/pe-0177-challenger-registry-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_challenger_registry.py",
+        "test_phase5_learned_model.py",
+        "test_source_inventory.py",
+        "test_strategy_variant_inventory.py"
+      ],
+      "test_result": "16 challenger-registry and learned-model tests passed; Ruff, targeted mypy, source inventory and strategy-variant inventory passed. Training registration remains challenger-only.",
+      "evidence_sha256": "8a9d9b328c8afe586ee40d8cfd2102f42eb02e2a0938d98dfee7538de4805e17",
+      "blockers": []
+    },
+    {
+      "id": "PE-0178",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/factor_regularization.py",
+        "tests/test_factor_regularization.py",
+        "docs/edge-program/pe-0178-factor-turnover-regularization-evidence.md",
+        "docs/edge-program/pe-0178-factor-turnover-regularization-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_factor_regularization.py",
+        "test_source_inventory.py",
+        "test_strategy_variant_inventory.py"
+      ],
+      "test_result": "18 factor-regularization, challenger-registry, and learned-model tests passed; Ruff, targeted mypy, and inventory checks passed. Data split is restricted to DEVELOPMENT.",
+      "evidence_sha256": "080fa89795205001e4de0d8ac46f00a9a6901fdddde4614477e2a50e0ba5daab",
       "blockers": []
     }
   ]

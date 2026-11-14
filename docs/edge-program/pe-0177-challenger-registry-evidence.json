@@ -1,0 +1,21 @@
+{
+  "checklist_task": "PE-0177",
+  "status": "DONE",
+  "criterion": "Create a signed/hashable challenger registry and promote only through future authorized evidence gates; training performance alone cannot promote a model.",
+  "implementation": [
+    "src/financial_brain/evaluation/challenger_registry.py",
+    "src/financial_brain/evaluation/offline_training.py",
+    "src/financial_brain/evaluation/learned_model.py"
+  ],
+  "tests": [
+    "tests/test_challenger_registry.py",
+    "tests/test_phase5_learned_model.py"
+  ],
+  "test_result": "16 challenger-registry and learned-model tests passed; Ruff and targeted mypy passed. Tests cover hash-chain integrity, signatures, challenger-only training registration, promotion evidence gates, human approval scope, and duplicate refusal.",
+  "evidence_scope": "Synthetic registry and promotion-gate tests; no real prospective cohort or promoted model.",
+  "operational_limits": [
+    "Signing uses an owner-supplied HMAC key and is not independent third-party attestation.",
+    "An owner must protect signing keys and supply verified prospective evidence before promotion.",
+    "Training jobs can register challengers only and cannot promote them."
+  ]
+}
