@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0153",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_eod_paper_archive.py tests/test_paper_account.py tests/test_forward_paper_account_bridge.py tests/test_forward_book_adapter.py; ruff check src/financial_brain/forward_edge/eod_paper_archive.py src/financial_brain/kernel/paper_account.py tests/test_eod_paper_archive.py",
+    "result": "26 passed; Ruff passed."
+  },
+  "implemented": [
+    "EOD close requires a complete, same-session, source-hashed mark for every nonzero position.",
+    "Known working orders are canceled with exact fills retained and unfilled reservation released; unknown/submitted unresolved orders fail closed.",
+    "NAV snapshot requires account equity, cash ledger, total return, inventory, mark, and cash-flow reconciliation.",
+    "Canonical immutable archive includes account journal head, cash/NAV, orders, positions, marks, and provenance hashes.",
+    "Restart verification compares reopened cash, NAV, quantities, average costs, marks, order closure, and snapshot content hash.",
+    "Atomic archive file creation is deterministic and retry-safe."
+  ],
+  "blockers": [
+    "No scheduled daily launcher invokes the close workflow yet.",
+    "Authoritative close-price feed and data entitlement are not bound to the service.",
+    "No prospective EOD-to-next-open market cycle has been recorded."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/eod_paper_archive.py": "9ab2d486e9f54978203a8576f2a11a9b7615bb2617be2007ff638782e8f41beb",
+    "src/financial_brain/kernel/paper_account.py": "a05ed57992704d6fff6b594a3a90af745adbcbef9b9bdc5ceb7c0026722692f0",
+    "tests/test_eod_paper_archive.py": "c0c86f5b0448f872e32aeb9f42bba78996dea28f1424ca88897947ab1d44aec7"
+  }
+}

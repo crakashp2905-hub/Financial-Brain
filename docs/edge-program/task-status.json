@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 150,
-  "unrecorded_tasks": 68,
+  "recorded_tasks": 151,
+  "unrecorded_tasks": 67,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3334,6 +3334,30 @@
         "Authoritative exchange calendar provider and its effective-dated update process are not connected.",
         "Scheduled exit intents are not yet automatically routed through every runner risk, paper execution, and accounting adapter.",
         "No prospective overnight session has validated end-to-end exit order behavior."
+      ]
+    },
+    {
+      "id": "PE-0153",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/eod_paper_archive.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_eod_paper_archive.py",
+        "docs/edge-program/pe-0153-eod-paper-archive.md",
+        "docs/edge-program/pe-0153-eod-paper-archive-evidence.json"
+      ],
+      "tests": [
+        "test_eod_paper_archive.py",
+        "test_paper_account.py",
+        "test_forward_paper_account_bridge.py",
+        "test_forward_book_adapter.py"
+      ],
+      "test_result": "26 passed; Ruff passed.",
+      "evidence_sha256": "ba1b6c2ca4aabf4a9b8a2ea2ca0bf550b8297339ed12aeb46d0427c4cb017e68",
+      "blockers": [
+        "No scheduled daily launcher invokes the close workflow yet.",
+        "Authoritative close-price feed and data entitlement are not bound to the service.",
+        "No prospective EOD-to-next-open market cycle has been recorded."
       ]
     }
   ]

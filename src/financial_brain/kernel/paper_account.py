@@ -211,6 +211,29 @@ class PaperAccount:
         quantity, basis = self._positions.get(symbol, (0, Decimal(0)))
         return Position(symbol, quantity, basis / quantity if quantity else Decimal(0))
 
+    @property
+    def positions(self) -> list[Position]:
+        """Current nonzero inventory with exact average cost, in stable symbol order."""
+        return [self.position(symbol) for symbol, (quantity, _) in sorted(self._positions.items()) if quantity]
+
+    @property
+    def marks(self) -> list[dict]:
+        """Current mark evidence required to reproduce marked equity."""
+        return [{"symbol": symbol, "price": str(price), "observed_at": observed_at.isoformat(),
+                 "mark_id": mark_id}
+                for symbol, (price, observed_at, mark_id) in sorted(self._marks.items())]
+
+    @property
+    def orders(self) -> list[dict]:
+        """Current OMS orders with exact filled and remaining quantities."""
+        rows = []
+        for client_id, order in sorted(self.oms._orders.items()):
+            rows.append({"client_id": client_id, "symbol": self._symbol_for(client_id),
+                         "side": order.side, "quantity": order.quantity, "filled": order.filled,
+                         "remaining": order.remaining, "reserved": str(order.reserved),
+                         "state": order.state.value})
+        return rows
+
     def _rebuild(self) -> None:
         records = self.journal.records()
         try:
