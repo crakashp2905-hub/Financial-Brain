@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 176,
-  "unrecorded_tasks": 42,
+  "recorded_tasks": 177,
+  "unrecorded_tasks": 41,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3866,6 +3866,24 @@
       ],
       "test_result": "18 factor-regularization, challenger-registry, and learned-model tests passed; Ruff, targeted mypy, and inventory checks passed. Data split is restricted to DEVELOPMENT.",
       "evidence_sha256": "080fa89795205001e4de0d8ac46f00a9a6901fdddde4614477e2a50e0ba5daab",
+      "blockers": []
+    },
+    {
+      "id": "PE-0179",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/shadow_counterfactual.py",
+        "tests/test_shadow_counterfactual.py",
+        "docs/edge-program/pe-0179-counterfactual-decision-memory-evidence.md",
+        "docs/edge-program/pe-0179-counterfactual-decision-memory-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_shadow_counterfactual.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "9 shadow-counterfactual tests passed; Ruff and inventory checks passed. Every retained rejected decision is explicitly hypothetical and records no observed execution.",
+      "evidence_sha256": "fd0f34a03088c0dac6a6c55e96412c939ee09f505957387adfc00b9a44d563b5",
       "blockers": []
     }
   ]

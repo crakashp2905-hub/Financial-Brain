@@ -223,6 +223,8 @@ def simulate_rejected_shadow_book(
         status = ("NO_ENTRY_FILL" if entered == 0 else "UNRESOLVED_CLOSE" if unclosed > 0
                   else "CLOSED" if entered == order["quantity"] else "CLOSED_PARTIAL_ENTRY")
         results.append({"decision_id": order["decision_id"], "symbol": order["symbol"],
+                        "decision_nature": "HYPOTHETICAL_REJECTED_OPPORTUNITY",
+                        "execution_observed": False, "counterfactual_only": True,
                         "rejection_disposition": order["disposition"], "rejection_reason": order["reason"],
                         "status": status, "requested_quantity": order["quantity"],
                         "entered_quantity": entered, "closed_quantity": closed,
@@ -267,6 +269,14 @@ class ShadowBookJournal:
             raise ShadowCounterfactualError("book_id is required")
         if report.get("evidence_class") != "EXPLORATORY_SHADOW" or report.get("observed_cash_pnl") is not False:
             raise ShadowCounterfactualError("shadow book evidence label is mandatory")
+        orders = report.get("orders")
+        if (not isinstance(orders, list) or report.get("order_count") != len(orders)
+                or any(not isinstance(order, Mapping)
+                       or order.get("decision_nature") != "HYPOTHETICAL_REJECTED_OPPORTUNITY"
+                       or order.get("execution_observed") is not False
+                       or order.get("counterfactual_only") is not True
+                       for order in orders)):
+            raise ShadowCounterfactualError("memory accepts only explicitly hypothetical rejected decisions")
         body = {"book_id": book_id, "report": dict(report)}
         digest = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
                                        allow_nan=False).encode()).hexdigest()

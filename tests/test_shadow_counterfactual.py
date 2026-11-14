@@ -130,6 +130,20 @@ def test_shadow_journal_is_idempotent_and_cannot_replace_a_book(tmp_path):
         journal.record("rejected-opportunities-v1", changed)
 
 
+def test_counterfactual_memory_retains_rejection_without_claiming_actual_fills(tmp_path):
+    report = simulate_rejected_shadow_book(
+        decisions=[_decision("rejected-42")], quotes=[_quote("entry", 1), _close()], policy=_policy())
+    journal = ShadowBookJournal(tmp_path / "counterfactual.jsonl")
+    digest = journal.record("rejected-memory-v1", report)
+    stored = journal.journal.records()[0]
+    decision = stored["report"]["orders"][0]
+    assert stored["sha256"] == digest
+    assert decision["decision_nature"] == "HYPOTHETICAL_REJECTED_OPPORTUNITY"
+    assert decision["decision_id"] == "rejected-42"
+    assert decision["execution_observed"] is False and decision["counterfactual_only"] is True
+    assert decision["status"] == "CLOSED"  # hypothetical quote simulation, never an actual fill
+
+
 def test_invalid_quote_or_nonrejected_opportunity_fails_closed():
     with pytest.raises(ShadowCounterfactualError, match="only explicitly rejected"):
         simulate_rejected_shadow_book(decisions=[_decision(disposition="TAKEN")], quotes=[], policy=_policy())
