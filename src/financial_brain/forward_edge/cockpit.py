@@ -156,6 +156,63 @@ def strategy_table(rows: list[dict]) -> str:
     return html
 
 
+def strategy_comparison(rows: list[dict]) -> str:
+    """Compare fully costed outcomes while keeping failed and incomplete rows visible."""
+    columns = ("strategy_id", "status", "gross", "costs", "net", "benchmark_net", "alpha",
+               "ci_lower", "ci_upper", "drawdown", "turnover", "fidelity", "sample")
+    rendered: list[tuple[int, Decimal, str, str]] = []
+    failed_statuses = {"FAILED", "INSUFFICIENT", "EXTERNAL_BLOCKED", "NOT_VERIFIED", "NO_TRADE"}
+
+    def number(row: dict, key: str) -> Decimal | None:
+        value = row.get(key)
+        if value is None:
+            return None
+        try:
+            parsed = Decimal(str(value))
+        except Exception as exc:
+            raise CockpitError(f"{key} must be a finite number") from exc
+        if not parsed.is_finite():
+            raise CockpitError(f"{key} must be a finite number")
+        return parsed
+
+    for row in rows:
+        status = str(row.get("status") or "INCOMPLETE").upper()
+        sample = row.get("sample")
+        sufficient = row.get("sufficient") is True
+        if type(sample) is not int or sample <= 0:
+            status = "INSUFFICIENT" if status not in failed_statuses else status
+        elif row.get("sufficient") is False:
+            status = "INSUFFICIENT"
+        gross, costs, net = (number(row, key) for key in ("gross", "costs", "net"))
+        benchmark, alpha = (number(row, key) for key in ("benchmark_net", "alpha"))
+        lower, upper = (number(row, key) for key in ("ci_lower", "ci_upper"))
+        if gross is not None and costs is not None and net is not None and net != gross - costs:
+            raise CockpitError("strategy comparison net must equal gross minus costs")
+        if net is not None and benchmark is not None and alpha is not None and alpha != net - benchmark:
+            raise CockpitError("strategy comparison alpha must equal net minus benchmark net")
+        if lower is not None and upper is not None and lower > upper:
+            raise CockpitError("confidence interval lower bound exceeds upper bound")
+        if not sufficient and status not in failed_statuses:
+            status = "INSUFFICIENT"
+        rank = 0 if status in failed_statuses else 1
+        sortable = -alpha if alpha is not None else Decimal("Infinity")
+        cells = [escape(str(row.get("strategy_id") or "UNKNOWN")), escape(status)]
+        for key in columns[2:]:
+            value = row.get(key)
+            cells.append(escape("UNKNOWN" if value is None else str(value)))
+        klass = "failed" if status in failed_statuses else ""
+        rendered.append((rank, sortable, str(row.get("strategy_id") or ""),
+                         f"<tr class='{klass}'><td>" + "</td><td>".join(cells) + "</td></tr>"))
+
+    rendered.sort(key=lambda item: (item[0], item[1], item[2]))
+    headers = "".join(f"<th>{escape(key.replace('_', ' ').title())}</th>" for key in columns)
+    body = "".join(item[3] for item in rendered)
+    html = _page("Strategy comparison", f"<p>All {len(rows)} registered outcomes are shown; failed and insufficient rows remain visible.</p>"
+                 f"<table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table>")
+    assert_read_only(html)
+    return html
+
+
 # ---- FE-0116 ----
 
 def signal_panel(signal: dict) -> str:

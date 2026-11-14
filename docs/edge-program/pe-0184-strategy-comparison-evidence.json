@@ -1,0 +1,18 @@
+{
+  "checklist_task": "PE-0184",
+  "status": "DONE",
+  "criterion": "Render gross, costs, net, benchmark net, alpha, confidence interval, drawdown, turnover, fidelity, and sample; failed/insufficient results cannot be hidden by default sorting.",
+  "implementation": [
+    "src/financial_brain/forward_edge/cockpit.py"
+  ],
+  "tests": [
+    "tests/test_forward_edge_f10.py"
+  ],
+  "test_result": "20 cockpit tests passed; Ruff and targeted mypy passed. Cost/net and benchmark-alpha identities are checked, and all records remain visible with failed/insufficient rows first.",
+  "evidence_scope": "Synthetic rows for verified, failed, and under-sampled strategies, including invalid arithmetic rejection.",
+  "operational_limits": [
+    "The caller supplies outcomes and intervals; this component does not calculate returns or confidence bounds.",
+    "Rows are comparable only if the upstream evaluation contract uses aligned periods, horizons, benchmark, cost schedule, and fidelity.",
+    "No profitability or live-trading claim is produced by this table."
+  ]
+}

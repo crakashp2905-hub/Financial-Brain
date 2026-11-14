@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 181,
-  "unrecorded_tasks": 37,
+  "recorded_tasks": 182,
+  "unrecorded_tasks": 36,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3961,6 +3961,24 @@
       ],
       "test_result": "18 cockpit tests passed; combined cockpit, preflight, and inventory run had 40 passed. Ruff and targeted mypy passed. Missing, stale, future, incomplete, and latched controls block readiness.",
       "evidence_sha256": "3ca18509c9cb9ea2ccae1c1caa31d34f3c1f8132770dbf63821836536d5c3484",
+      "blockers": []
+    },
+    {
+      "id": "PE-0184",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/cockpit.py",
+        "tests/test_forward_edge_f10.py",
+        "docs/edge-program/pe-0184-strategy-comparison-evidence.md",
+        "docs/edge-program/pe-0184-strategy-comparison-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_forward_edge_f10.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "20 cockpit tests passed; Ruff, targeted mypy, and refreshed source inventory passed. Metrics reconcile when present; all registered strategies render and failed/insufficient rows sort first.",
+      "evidence_sha256": "2321988f82e0185850e39e9659df7c18e3b0f7abc62794dc6c5eceac929a0c0a",
       "blockers": []
     }
   ]
