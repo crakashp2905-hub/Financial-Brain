@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 138,
-  "unrecorded_tasks": 80,
+  "recorded_tasks": 139,
+  "unrecorded_tasks": 79,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3027,6 +3027,34 @@
         "No subscription to the durable quote/feed health journal.",
         "Not surfaced in daily results or cockpit.",
         "No causal inference from observational strata."
+      ]
+    },
+    {
+      "id": "PE-0141",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/shadow_counterfactual.py",
+        "tests/test_shadow_counterfactual.py",
+        "docs/edge-program/pe-0141-rejected-opportunity-shadow-book.md",
+        "docs/edge-program/pe-0141-rejected-opportunity-shadow-book-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_quote_depth_fills_are_costed_fifo_and_never_labeled_cash_pnl",
+        "test_nonmarketable_order_is_no_fill_not_midpoint_or_ltp_interpolated",
+        "test_partial_entry_and_unclosed_quantity_remain_incomplete_not_full_pnl",
+        "test_buy_budget_is_shared_across_partial_entry_quotes",
+        "test_quote_depth_is_shared_between_rejected_orders_and_not_reused",
+        "test_registered_controls_do_not_upgrade_shadow_evidence_or_allow_promotion",
+        "test_shadow_journal_is_idempotent_and_cannot_replace_a_book",
+        "test_invalid_quote_or_nonrejected_opportunity_fails_closed"
+      ],
+      "test_result": "20 shadow-book and F07 tests passed; Ruff passed. Shared quote depth, explicit partial/no fills, cost modeling, immutable shadow labels and promotion block verified.",
+      "evidence_sha256": "a62fd2c24a65cac0c23954a3bf8a24f3efc7b1e461d8a460f002f804c7b01f01",
+      "blockers": [
+        "Caller-supplied quotes and rejected decisions are not wired to durable live evidence.",
+        "No shared portfolio cash/margin accounting or independently registered matched controls."
       ]
     }
   ]
