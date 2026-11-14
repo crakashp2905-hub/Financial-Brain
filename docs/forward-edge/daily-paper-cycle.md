@@ -35,3 +35,7 @@ The manifest is an operator-owned JSON file. It contains:
 The cycle is resumable per book, not an atomic multi-account transaction. EOD archives, bundles, and report directories are immutable and retryable for unchanged inputs. If a later book fails, earlier books may already be closed; rerun with the same captured timestamp and marks after correcting the blocking input. The command never sends broker orders or invents missing market evidence.
 
 An OS scheduler can invoke this command after the session capture process writes a complete manifest. This repository does not install or enable a Windows Task Scheduler or systemd job, and no prospective Kite session is implied by a successful fixture test.
+
+## Windows scheduled-task wrapper
+
+`scripts/paper_daily_finalize.cmd` changes to the repository root, requires the repository `.venv`, reads an operator-managed `FB_DAILY_CYCLE_MANIFEST` path, runs `daily-paper-preflight`, and only then runs `daily-paper-cycle`. It logs both commands to `data/paper_reports/daily-cycle-YYYY-MM-DD.log` and returns a nonzero exit code when either phase fails. `scripts/run_hidden.vbs` can wrap this command for Task Scheduler. Configure the environment variable and schedule only after the session capture process has durably written the manifest and marks; this repository does not create the Windows task or fabricate those inputs.

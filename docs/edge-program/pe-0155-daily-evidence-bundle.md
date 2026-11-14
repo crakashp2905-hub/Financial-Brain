@@ -12,6 +12,7 @@
 - `fb forward daily-finalize` reconstructs the paper account from its journal and invokes close plus bundle creation in one command. It requires explicit observed close marks, capture time, runner journal, and terminal session evidence; it never creates physical orders.
 - `python -m financial_brain.forward_edge.cli daily-paper-cycle --manifest <path>` now iterates every account in a frozen registry plan, checks dated terminal runner evidence, finalizes each account and bundle, and emits a by-book report from the resulting archives plus caller-supplied prior sessions.
 - `daily-paper-preflight` validates the entire manifest before any close: account-journal replay and allocated cash, every book's marks and outstanding order states, and each terminal runner session's strategy/account binding. It is read-only and catches a later-book defect before an earlier book can be closed.
+- `scripts/paper_daily_finalize.cmd` is a Windows Task Scheduler-ready wrapper. It requires an explicit operator-managed manifest path, runs preflight before finalization, logs both results, and propagates failure. It does not register or enable a scheduled task.
 - The cycle derives account journal locations from the frozen registry and fails before finalization unless manifest membership exactly matches the plan. It is resumable per book through immutable close archives and bundles.
 - [Daily cycle manifest and operator contract](../forward-edge/daily-paper-cycle.md) documents required inputs, scheduler invocation, and retry behavior.
 
@@ -21,4 +22,4 @@
 
 ## Remaining evidence gap
 
-No OS scheduled job invokes the new orchestration command yet, so automatic completion after each actual paper session remains unverified. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until scheduling and owner-controlled key custody are established.
+No Windows Task Scheduler job has been registered or enabled, and no process generates the operator manifest yet, so automatic completion after each actual paper session remains unverified. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until scheduling and owner-controlled key custody are established.

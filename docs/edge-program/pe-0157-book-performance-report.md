@@ -11,6 +11,7 @@
 - The CLI accepts a JSON `sessions` evidence array and writes deterministic JSON and operator text into an immutable report-hash directory; identical reruns reuse it and altered output is refused.
 - The `daily-paper-cycle` launcher now finalizes every registered book in a frozen plan and feeds each generated, verified EOD account archive and the matching durable runner journal into this report. Explicit `history_sessions` are retained in the report denominator and are never inferred.
 - `daily-paper-preflight` validates the whole daily input set and historical report rows without account mutation before an operator or scheduler runs the close cycle.
+- The Windows `paper_daily_finalize.cmd` wrapper provides an explicit scheduler entry point with preflight, logging, manifest requirement, and nonzero failure propagation; the scheduled task itself is not installed.
 - The cycle manifest and retry contract are documented in [daily-paper-cycle.md](../forward-edge/daily-paper-cycle.md).
 
 ## Verification
