@@ -3,19 +3,25 @@
   "task_id": "PE-0126",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_fixed_look.py",
-    "result": "7 passed; Ruff passed for the new module and test file."
+    "command": "python -m pytest -q tests/test_fixed_look.py tests/test_forward_paper_account_bridge.py; ruff check src/financial_brain/forward_edge/paper_account_bridge.py tests/test_forward_paper_account_bridge.py; python -m mypy src/financial_brain/forward_edge/paper_account_bridge.py",
+    "result": "28 passed across fixed-look and paper-account bridge suites; Ruff and mypy passed. Risk-stop integration test reopens the account after a halt and confirms subsequent strategy, risk approval and execution callbacks remain blocked."
   },
   "implemented": [
     "The policy freezes ordered session-count looks, familywise alpha, drawdown harm floor and freeze timestamps into a content hash.",
     "Unscheduled efficacy views return no efficacy decision; alpha is divided across registered looks.",
     "Risk harm stops at any observation, including between looks; missing risk evidence fails closed.",
-    "The module reports order permission semantics without granting permission at efficacy checkpoints."
+    "The module reports order permission semantics without granting permission at efficacy checkpoints.",
+    "ForwardPaperSessionService accepts a validated optional fixed-look risk-stop callback, persists a harm stop to the append-only account risk latch before strategy evaluation, and records the stop report with the runner risk verdict. Account replay preserves the latch across restart."
   ],
   "blockers": [
-    "No durable authoritative trial registry stores the fixed-look policy or prevents post-observation replacement.",
-    "The risk-stop output is not yet wired to the paper runner's persistent restart-safe risk latch.",
-    "The fixed look schedule is not joined to sample-size design or prospective performance evidence."
+    "No authoritative trial registry persists the fixed-look policy or automatically supplies the risk-stop callback to production sessions.",
+    "The fixed-look schedule is not joined to sample-size design or prospective performance evidence; no live result is claimed."
   ],
-  "source_sha256": {}
+  "source_sha256": {
+    "src/financial_brain/forward_edge/fixed_look.py": "bbe15db3050a1b6aa60d0434e78877d4cb57ff359473d7918a709a4d2d438848",
+    "tests/test_fixed_look.py": "391b033c8a9b8f8bb17fe0598671feff1efaecf5880029146df73ad12cc18241",
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "e6fd589812b98e45e0bf367b9423b3e6fa4221a70f2c203d8935e4bf3280847b",
+    "tests/test_forward_paper_account_bridge.py": "179054b3890d6d74367551bcfc194bb836e477e3471397b1169fddbbcce7747a",
+    "docs/edge-program/pe-0126-fixed-look-risk-stop.md": "7d34b3284c6daa15a24e49316fd32abab6d39e9e39cb1a0c15607e6863afbb98"
+  }
 }

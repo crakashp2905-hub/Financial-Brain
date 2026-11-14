@@ -2732,7 +2732,9 @@
         "src/financial_brain/forward_edge/fixed_look.py",
         "tests/test_fixed_look.py",
         "docs/edge-program/pe-0126-fixed-look-risk-stop.md",
-        "docs/edge-program/pe-0126-fixed-look-risk-stop-evidence.json"
+        "docs/edge-program/pe-0126-fixed-look-risk-stop-evidence.json",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "tests/test_forward_paper_account_bridge.py"
       ],
       "tests": [
         "test_unscheduled_interim_display_cannot_produce_an_efficacy_decision",
@@ -2741,14 +2743,14 @@
         "test_risk_harm_stops_immediately_even_between_registered_looks",
         "test_missing_risk_evidence_fails_closed_and_withholds_efficacy",
         "test_policy_is_frozen_before_first_observation_and_hashes_all_look_controls",
-        "test_invalid_look_observations_are_rejected"
+        "test_invalid_look_observations_are_rejected",
+        "test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart"
       ],
-      "test_result": "7 fixed-look and risk-harm tests passed; Ruff passed. Efficacy decisions are restricted to pre-registered looks, while risk harm can stop between looks.",
-      "evidence_sha256": "301e925f13bac2403da15da31e6225b5d49320343e8bdb6509b086874da221aa",
+      "test_result": "Fixed-look policy harm is now wired through ForwardPaperSessionService to the durable paper-account risk latch. Integration verifies the breach prevents decision/risk/execution callbacks, stores the risk result in the runner journal, and remains blocking after account replay. Fixed-look plus paper-bridge suites: 28 passed; Ruff and mypy passed.",
+      "evidence_sha256": "8adb655268efe392fa7ba3cd7e559d2adc45a2abafe22a4c0c16c92d71737822",
       "blockers": [
-        "Policy is not persisted in an authoritative trial registry.",
-        "Risk-stop output is not wired to the paper runner persistent restart-safe risk latch.",
-        "Fixed looks are not connected to sample-size design or prospective evidence."
+        "No authoritative trial registry persists the fixed-look policy or automatically supplies the risk-stop callback to production sessions.",
+        "The fixed-look schedule is not joined to sample-size design or prospective performance evidence; no live result is claimed."
       ]
     },
     {

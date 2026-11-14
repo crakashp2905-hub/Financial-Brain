@@ -8,6 +8,7 @@ import pytest
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.approvals import Approval
+from financial_brain.forward_edge.fixed_look import FixedLookPolicy, evaluate_look
 from financial_brain.forward_edge.charter import EvaluationIdentity, ExperimentCharter
 from financial_brain.forward_edge.governance import FamilyEvidence, family_action_scope_sha256
 from financial_brain.forward_edge.durable import DurableJournal
@@ -212,6 +213,62 @@ def test_live_paper_service_stale_health_fails_closed_before_strategy(tmp_path):
     assert calls == []
     assert account.cash == Decimal("10000")
     assert not any(row.get("t") == "PAPER_INTENT" for row in DurableJournal(runner_path).records())
+
+
+def test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart(tmp_path):
+    service, config, account, _runner_path, account_path = _service(tmp_path)
+    policy = FixedLookPolicy(
+        policy_id="trial-risk-v1", checkpoints=(20, 40), familywise_alpha=0.05,
+        max_drawdown_floor=-0.15, frozen_at_utc="2026-01-01T00:00:00Z",
+        first_observation_at_utc="2026-01-02T00:00:00Z",
+    )
+    risk_stop = evaluate_look(
+        policy, completed_sessions=23, lower_confidence_bound=0.5, observed_max_drawdown=-0.15)
+    strategy_calls = []
+    result = service.run(
+        config, [_event(DECISION_AT + timedelta(seconds=1))],
+        preflight_fn=lambda: {"approved": True, "status": "READY"},
+        decision_fn=lambda _: strategy_calls.append("decision") or {"side": "BUY"},
+        risk_fn=lambda _: strategy_calls.append("risk") or {"approved": True},
+        execution_fn=lambda *_: strategy_calls.append("execution") or {},
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT, risk_stop_fn=lambda: risk_stop,
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["risk"]["reason"] == "FIXED_LOOK_RISK_HARM"
+    assert result["risk"]["fixed_look_risk_stop"]["policy_sha256"] == policy.sha256()
+    assert strategy_calls == []
+    assert account.risk_latched is True
+
+    reopened = PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
+                            fee_schedule=SCHEDULE)
+    assert reopened.risk_latched is True
+    restarted_config = replace(config, session_id="account-bridge-after-risk-restart")
+    restarted_runner_path = tmp_path / "after-risk-restart.runner.jsonl"
+    restarted_service = ForwardPaperSessionService(
+        ForwardSessionRunner(restarted_runner_path), reopened,
+        strategy_spec=service.strategy_spec, registry=service.registry,
+        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
+        paper_account_root=service.paper_account_root,
+        authority_registry=service.authority_registry,
+    )
+    restart_at = DECISION_AT + timedelta(minutes=1)
+    restart_health = FeedHealth(restart_at - timedelta(seconds=1), 0, 0, 0,
+                                last_heartbeat_utc=restart_at - timedelta(seconds=1))
+    restarted_result = restarted_service.run(
+        restarted_config, [_event(DECISION_AT + timedelta(seconds=1))],
+        preflight_fn=lambda: {"approved": True, "status": "READY"},
+        decision_fn=lambda _: pytest.fail("latched account must not call strategy"),
+        risk_fn=lambda _: pytest.fail("latched account must not approve risk"),
+        execution_fn=lambda *_: pytest.fail("latched account must not execute"),
+        decision_at=restart_at, feed_health=restart_health,
+        feed_health_observed_at=restart_at,
+    )
+    assert restarted_result["status"] == "REJECTED"
+    assert restarted_result["risk"]["reason"] == "PAPER_ACCOUNT_RISK_LATCHED"
+    assert not any(row.get("t") == "PAPER_INTENT"
+                   for row in DurableJournal(restarted_runner_path).records())
 
 
 def test_forward_paper_service_requires_account_opening_capital_to_match_frozen_plan(tmp_path):

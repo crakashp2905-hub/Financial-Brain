@@ -106,7 +106,8 @@ class ForwardPaperSessionService:
             decision_at: datetime | None = None,
             reconcile_execution_fn: Callable[[str], dict] | None = None,
             feed_health: FeedHealth | None = None,
-            feed_health_observed_at: datetime | None = None) -> dict:
+            feed_health_observed_at: datetime | None = None,
+            risk_stop_fn: Callable[[], dict] | None = None) -> dict:
         """Persist one preflight, run the session, then reconcile its receipt to PaperAccount."""
         if decision_at is None:
             existing_decision = next((row for row in DurableJournal(self.runner.journal_path).records()
@@ -159,6 +160,67 @@ class ForwardPaperSessionService:
             if not isinstance(preflight, dict) or type(preflight.get("approved")) is not bool:
                 preflight = {"approved": False, "reason": "PREFLIGHT_CALLBACK_INVALID"}
             self.runner.record_preflight(config, preflight)
+        risk_stop_report = None
+        risk_stop_block: str | None = None
+        if risk_stop_fn is not None:
+            try:
+                candidate = risk_stop_fn()
+            except Exception as exc:  # noqa: BLE001 - evidence callback failures block orders
+                candidate = None
+                risk_stop_block = f"FIXED_LOOK_EVIDENCE_CALLBACK_FAILED:{type(exc).__name__}"
+            if risk_stop_block is None:
+                required = {"status", "orders_permission", "completed_sessions", "policy_id", "policy_sha256"}
+                try:
+                    json.dumps(candidate, sort_keys=True, allow_nan=False)
+                except (TypeError, ValueError):
+                    risk_stop_block = "FIXED_LOOK_EVIDENCE_INVALID"
+                if risk_stop_block is not None:
+                    pass
+                elif (not isinstance(candidate, dict) or not required <= set(candidate)
+                        or not isinstance(candidate.get("status"), str)
+                        or not isinstance(candidate.get("orders_permission"), str)
+                        or type(candidate.get("completed_sessions")) is not int
+                        or candidate["completed_sessions"] < 1
+                        or not isinstance(candidate.get("policy_id"), str)
+                        or not candidate["policy_id"].strip()
+                        or not isinstance(candidate.get("policy_sha256"), str)
+                        or len(candidate["policy_sha256"]) != 64
+                        or any(c not in "0123456789abcdef" for c in candidate["policy_sha256"])):
+                    risk_stop_block = "FIXED_LOOK_EVIDENCE_INVALID"
+                else:
+                    risk_stop_report = candidate
+                    permission = candidate["orders_permission"]
+                    status = candidate["status"]
+                    if permission == "DISABLED_FOR_RISK_HARM" and status == "STOP_FOR_RISK_HARM":
+                        incident_material = (f"{candidate['policy_sha256']}:{candidate['completed_sessions']}:"
+                                             f"{decision_at.isoformat()}")
+                        incident_id = hashlib.sha256(incident_material.encode("utf-8")).hexdigest()
+                        reason = f"FIXED_LOOK_RISK_HARM:{candidate['policy_id']}"
+                        try:
+                            self.account.trip_risk_latch(
+                                incident_id=incident_id, reason=reason, occurred_at=decision_at)
+                            risk_stop_block = "FIXED_LOOK_RISK_HARM"
+                        except PaperAccountError:
+                            risk_stop_block = "PAPER_ACCOUNT_RISK_LATCHED"
+                    elif permission == "NOT_AUTHORIZED":
+                        risk_stop_block = "FIXED_LOOK_RISK_EVIDENCE_MISSING"
+                    elif permission != "UNCHANGED_BY_THIS_REPORT" or status == "STOP_FOR_RISK_HARM":
+                        risk_stop_block = "FIXED_LOOK_EVIDENCE_INVALID"
+
+        def guarded_decision(observed: list[NormalizedEvent]) -> dict:
+            if self.account.risk_latched or risk_stop_block is not None:
+                return {"side": "NONE", "reason": risk_stop_block or "PAPER_ACCOUNT_RISK_LATCHED"}
+            return decision_fn(observed)
+
+        def guarded_risk(decision: dict) -> dict:
+            if self.account.risk_latched or risk_stop_block is not None:
+                result = {"approved": False,
+                          "reason": risk_stop_block or "PAPER_ACCOUNT_RISK_LATCHED"}
+                if risk_stop_report is not None:
+                    result["fixed_look_risk_stop"] = risk_stop_report
+                return result
+            return risk_fn(decision)
+
         captured_events = list(events)
         execution_adapter = execution_fn
         bind_updates = getattr(execution_fn, "bind_order_update_callback", None)
@@ -168,7 +230,7 @@ class ForwardPaperSessionService:
                     config, intent_id, update))
         result = self.runner.run(
             config, captured_events, decision_at=decision_at,
-            decision_fn=decision_fn, risk_fn=risk_fn, execution_fn=execution_adapter,
+            decision_fn=guarded_decision, risk_fn=guarded_risk, execution_fn=execution_adapter,
             reconcile_execution_fn=reconcile_execution_fn,
         )
         if result.get("status") == "PAPER_COMPLETE":

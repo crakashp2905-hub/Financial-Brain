@@ -26,18 +26,18 @@
       }
     },
     {
-      "artifact_sha256": "3d3dbb9afcc4567b38faabf5da2fa6572c61814e37a803f5f08f76f2ccf544d8",
+      "artifact_sha256": "fb2853b8aa8547ce76fbeba5642c32ce2279ef0ca04087c0986641bc5c4f4f6e",
       "id": "forward-paper-account-authority",
       "maturity": "partial",
       "sources": {
-        "src/financial_brain/forward_edge/paper_account_bridge.py": "c41d5345dc2c50230146d66dff9b2d57077cc7c10bb6c1a6c146ce5a86efe603",
+        "src/financial_brain/forward_edge/paper_account_bridge.py": "6b22a0469b9e916983e252cb5d8a77f09316b4c93501d4b2db27b738ff6a123e",
         "src/financial_brain/forward_edge/session_runner.py": "cf9b840888123a5e150c10ed90d17d5b2bfc478aa5288e7c7ef76761f5cf44af",
         "src/financial_brain/kernel/paper_authority.py": "e4f0a17131d3bc331edba0454e113206130d4428101e117e88f2533ffc6cbe7c",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_forward_paper_account_bridge.py": "46c386f715a7226bc96b9793d6fcdc4952c0dec55ccf69b6797034fcbd217f04",
+        "tests/test_forward_paper_account_bridge.py": "e87136c7693b29fbc7116bca3dbbbec6af3a6ea31266aa224358af0e21e89c9c",
         "tests/test_forward_session_runner.py": "a4ab35fcb52835b037fdc3d13ace2a8811375f6e72b40562f6af6c0d81f6bc82",
         "tests/test_paper_execution_authority.py": "8026404c4ed069cf68e3456a4aae1b6e057c5079fa3bd156ee47f7ac11e02c93",
         "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782"
@@ -118,7 +118,7 @@
       }
     }
   ],
-  "manifest_sha256": "57c8257291d21d930e6f1d2e13eb4f1ab4850e9c30ce486a61ec074addf4c59c",
+  "manifest_sha256": "b261d4d358f9dbc2847439e09553e88cde0b513c72ae8d4bd8a1b9dfb1f16245",
   "matrix_sha256": "72b9b5b162e4b9239fa078da05a6aa12464900147cf8cb4e7252ba779b2237d2",
   "schema_version": "fb.capability-evidence.v1"
 }
