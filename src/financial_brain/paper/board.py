@@ -104,8 +104,8 @@ def render(b: pd.DataFrame, day: str) -> str:
     gaps = b[b["setups"].str.contains("GAP", na=False)]
     lines += ["", f"Intraday setups live at 09:30: {len(gaps)} gaps of 1.5%+ and "
               f"{int(b['setups'].str.contains('ORB_PENDING', na=False).sum())} pending opening-range breakouts. "
-              "Evidence for both: none demonstrated (they lose after costs in the backtest); the paper engine trades "
-              "them only to measure that live.", "",
+              "Evidence for both: not demonstrated (ORB's backtest is negative after costs and GAP evidence is "
+              "insufficient). New observations are isolated as SHADOW, not champion-book allocations.", "",
               "Information, not advice. Nothing here is sent to a broker."]
     return "\n".join(lines)
 

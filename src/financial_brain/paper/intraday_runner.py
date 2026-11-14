@@ -42,6 +42,14 @@ HOLIDAY_CHECK = time(9, 25)
 #: What the pre-registered backtest said each strategy should earn, net, per trade (bp of notional). Live and
 #: replay results are compared to these; a strategy is not "learned" from noise, it is checked against them.
 BACKTEST_NET_BP = {"ORB": -18.0, "GAP": None}
+# PE-0159: failed/insufficient intraday candidates remain observable, but new
+# simulator outcomes must not enter the formal local-paper/champion lane.
+SHADOW_ONLY_LIVE_MONITORS = frozenset({"ORB", "GAP"})
+
+
+def live_recording_mode(strategy: str) -> str:
+    """Isolate new evidence-failed ORB/GAP monitoring from the local-paper lane."""
+    return "shadow" if strategy.strip().upper() in SHADOW_ONLY_LIVE_MONITORS else "live"
 
 log = logging.getLogger("paper_intraday")
 
@@ -408,16 +416,16 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             for sym, px in last.items():
                 bid, ask = book.get(sym, (None, None))
                 for t in eng.on_price(sym, now.replace(tzinfo=None), px, bid=bid, ask=ask):
-                    save(con, t, "live")
+                    save(con, t, live_recording_mode(t.strategy))
             if clock >= I.TIME_EXIT and not eng.closed_for_day:
                 for t in eng.end_of_day(now.replace(tzinfo=None), last):
-                    save(con, t, "live")
+                    save(con, t, live_recording_mode(t.strategy))
         publish(path, eng, now=now, status="Paper session running", polls=polls,
                 prices=last, quote_at=quote_at)
         sleep_fn(poll)
     if session_issue is None and not eng.closed_for_day:
         for t in eng.end_of_day(now_fn().replace(tzinfo=None), last):
-            save(con, t, "live")
+            save(con, t, live_recording_mode(t.strategy))
     status = ("session_unavailable" if session_issue is not None else
               "capture_incomplete" if capture_failures else "complete")
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,
@@ -588,6 +596,7 @@ def write_report(con, day: str, mode: str, eng: I.DayEngine, *, cohort: str | No
                      else "Historical replay; not prospective or independently attested evidence.")
     lines = [f"# Paper trading {day} ({mode}, {I.VERSION}, cohort {cohort or 'default'})", "",
              f"Evidence class: `{evidence_class.value}`. {evidence_note}", "",
+             "New ORB/GAP observations from this runner are stored as `EXPLORATORY_SHADOW`, excluded from formal paper-book/champion allocation. Existing historical `live` rows remain queryable and are not rewritten.", "",
              f"Paper capabilities: {capabilities} (paper-only; required market inputs are enforced by the runner.)", "",
              "Paper only: no order was placed. Costs are the intraday schedule; quoted/assumed spread is in the fills. Intraday profit is "
              "taxed as business income at your slab rate, not modelled per trade here.", ""]

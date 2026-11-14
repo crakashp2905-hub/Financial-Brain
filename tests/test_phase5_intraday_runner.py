@@ -55,8 +55,33 @@ def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger
     assert out["status"] == "complete"
     con = R.ledger(setup / "l.duckdb")
     rows = con.execute("SELECT strategy, side, exit_reason, mode FROM trades").fetchall()
-    assert ("ORB", "long", "target", "live") in rows
+    assert ("ORB", "long", "target", "shadow") in rows
+    assert con.execute("SELECT COUNT(*) FROM trades WHERE strategy = 'ORB' AND mode = 'live'").fetchone()[0] == 0
     assert (setup / "reports" / "2026-10-06-live.md").exists()
+    report = (setup / "reports" / "2026-10-06-live.md").read_text(encoding="utf-8")
+    assert "EXPLORATORY_SHADOW" in report and "excluded from formal paper-book/champion allocation" in report
+
+
+def test_new_orb_gap_monitoring_is_shadow_and_historical_failed_live_rows_remain_queryable(setup):
+    from financial_brain.paper.intraday import Trade
+
+    path = setup / "l.duckdb"
+    con = R.ledger(path)
+    R.save(con, Trade("old-orb", "2026-10-05", "ORB", "X", "long", 1,
+                      "2026-10-05T09:40:00", 100, 98, 104,
+                      exit_ts="2026-10-05T10:00:00", exit_px=99, exit_reason="stop",
+                      gross_pnl=-1, costs=2, net_pnl=-3,
+                      shortfall_bp=2, spread_bp=1), "live")
+    con.close()
+
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=path)
+    con = R.ledger(path)
+    assert con.execute("SELECT mode, net_pnl FROM trades WHERE trade_id = 'old-orb'").fetchone() == ("live", -3)
+    assert con.execute("SELECT COUNT(*) FROM trades WHERE day = '2026-10-06' AND strategy IN ('ORB','GAP') "
+                       "AND mode != 'shadow'").fetchone()[0] == 0
+    assert R.evidence(con, mode="live")[0]["trades"] == 1
+    assert any(row["trades"] >= 1 for row in R.evidence(con, mode="shadow"))
 
 
 def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, monkeypatch):

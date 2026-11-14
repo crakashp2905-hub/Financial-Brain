@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 156,
-  "unrecorded_tasks": 62,
+  "recorded_tasks": 157,
+  "unrecorded_tasks": 61,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3460,6 +3460,29 @@
       ],
       "test_result": "45 passed; Ruff passed. Manual CLI exit codes 0, 2, 0, 0, 4.",
       "evidence_sha256": "dce9ce89113ed37fa7e349aab10dedc1fe0e31003b5726f786fb99ee03d1bb04",
+      "blockers": []
+    },
+    {
+      "id": "PE-0159",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/paper/board.py",
+        "src/financial_brain/paper/live_view.py",
+        "tests/test_phase5_intraday_runner.py",
+        "tests/test_paper_live_view.py",
+        "tests/test_monitoring_candidates.py",
+        "docs/edge-program/pe-0159-orb-gap-shadow-only.md",
+        "docs/edge-program/pe-0159-orb-gap-shadow-only-evidence.json"
+      ],
+      "tests": [
+        "test_phase5_intraday_runner.py",
+        "test_paper_live_view.py",
+        "test_paper_capabilities.py",
+        "test_monitoring_candidates.py"
+      ],
+      "test_result": "30 passed; Ruff passed.",
+      "evidence_sha256": "5c0d64a62285cd23ec0d87fcfc3209ec2e461b4c251b6f7226c645f16169a43d",
       "blockers": []
     }
   ]
