@@ -2,7 +2,7 @@
 
 Nothing here consumes a protected trial or the 2026Q4 holdout. The budget guard
 refuses any P&L evaluation on protected data while the 2026Q4 budget is spent
-(13/13, per the preregistration memory). Synthetic examples are labelled as such.
+(14/14, per the preregistration memory). Synthetic examples are labelled as such.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ def require_budget(spec: StudySpec, evaluate_pnl: bool) -> None:
     if evaluate_pnl and spec.protected:
         remaining = PROTECTED_BUDGET_2026Q4["budget"] - PROTECTED_BUDGET_2026Q4["spent"]
         if remaining <= 0:
-            raise BudgetExhausted("2026Q4 trial budget is 13/13 spent; protected P&L evaluation is refused")
+            raise BudgetExhausted("2026Q4 trial budget is 14/14 spent; protected P&L evaluation is refused")
 
 
 def dry_run_report(spec: StudySpec, sample_counts: dict[str, int]) -> dict[str, Any]:
