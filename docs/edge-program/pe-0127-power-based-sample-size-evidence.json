@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0127",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_sample_size.py",
+    "result": "13 passed; Ruff passed for the new module and test file."
+  },
+  "implemented": [
+    "One-sided normal-approximation sample size uses detectable daily benefit, daily volatility, target power and familywise alpha divided across pre-registered looks.",
+    "Dependence design effect and expected usable-session rate increase the required session count.",
+    "The required sample is max(session floor, calculated adjusted requirement); the default 60 sessions is not treated as sufficient by itself.",
+    "The plan reports estimated power at the floor, the assumption values, a freeze-before-observation check and a stable SHA-256 identity."
+  ],
+  "limitations": [
+    "The detectable benefit, volatility, dependence design effect and expected observation rate are caller-supplied, not empirically fitted here.",
+    "The formula uses a normal approximation; it does not replace cohort-level dependence-robust inference or the final promotion gate.",
+    "No prospective trading performance or profitability is implied."
+  ],
+  "blockers": [],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/sample_size.py": "999a2ba90ac2e94ad063e6c28a95964fdd575ecb165663e436d46a031860a231",
+    "tests/test_sample_size.py": "8ee47255f3b28b98e56ad4c1af0e007278b727d434f70704c19dc76f613680b6"
+  }
+}

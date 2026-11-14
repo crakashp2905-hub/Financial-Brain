@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 124,
-  "unrecorded_tasks": 94,
+  "recorded_tasks": 125,
+  "unrecorded_tasks": 93,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2686,6 +2686,27 @@
         "Risk-stop output is not wired to the paper runner persistent restart-safe risk latch.",
         "Fixed looks are not connected to sample-size design or prospective evidence."
       ]
+    },
+    {
+      "id": "PE-0127",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/sample_size.py",
+        "tests/test_sample_size.py",
+        "docs/edge-program/pe-0127-power-based-sample-size.md",
+        "docs/edge-program/pe-0127-power-based-sample-size-evidence.json"
+      ],
+      "tests": [
+        "test_required_sessions_are_calculated_and_sixty_is_only_a_floor",
+        "test_dependence_missingness_and_multiple_looks_increase_required_sample",
+        "test_easier_benefit_and_higher_power_have_expected_sample_tradeoffs",
+        "test_floor_binds_only_when_the_calculated_design_is_smaller",
+        "test_plan_hash_changes_with_assumptions_and_freeze_must_precede_data",
+        "test_invalid_sample_design_parameters_are_rejected"
+      ],
+      "test_result": "13 sample-size design tests passed; Ruff passed. Tests establish benefit/volatility/power/look/dependence/missingness adjustments, and that 60 is a floor rather than a sufficient-sample claim.",
+      "evidence_sha256": "1748592f72229ad26ef3d8759613f2308da1e21974d7763af47cc7f4332c3f1e",
+      "blockers": []
     }
   ]
 }
