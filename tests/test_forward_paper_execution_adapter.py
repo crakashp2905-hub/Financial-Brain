@@ -47,6 +47,12 @@ def test_quote_simulator_uses_first_quote_after_latency_and_caps_visible_size():
     assert receipt["fills"][0]["quantity"] == 3
     assert receipt["fills"][0]["price"] == "101.05"
     assert receipt["fills"][0]["quote_event_sha256"] == executable.content_sha256()
+    assert receipt["fills"][0]["execution_nature"] == "SIMULATED"
+    assert receipt["fills"][0]["quote_observation"]["exchange"] == "NSE"
+    assert receipt["fills"][0]["quote_observation"]["source"] == "UNDECLARED"
+    assert receipt["fills"][0]["quote_observation"]["bid_price"] == "100.9"
+    assert receipt["fills"][0]["quote_observation"]["ask_price"] == "101.02"
+    assert receipt["fills"][0]["quote_observation"]["received_utc"] == executable.received_utc.isoformat()
 
 
 def test_quote_simulator_refuses_ltp_only_and_invalid_quotes():

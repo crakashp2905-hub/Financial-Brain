@@ -373,6 +373,70 @@ def blotter_from_journal(records: list[dict], *, session_id: str | None = None) 
     return blotter(orders, updates=updates)
 
 
+def execution_fill_table(receipts: list[dict]) -> str:
+    """Show execution nature and its source inputs; simulated fills are never called exchange fills."""
+    sha_pattern = re.compile(r"^[0-9a-f]{64}$")
+    rows: list[str] = []
+    for receipt in receipts:
+        receipt_id = str(receipt.get("receipt_id") or "UNKNOWN")
+        fills = receipt.get("fills") or []
+        if not isinstance(fills, list):
+            raise CockpitError("execution receipt fills must be a list")
+        if not fills:
+            rows.append(f"<tr><td>{escape(receipt_id)}</td><td>NO FILL</td><td>—</td>"
+                        "<td>Receipt has no fill. No execution is implied.</td></tr>")
+            continue
+        for fill in fills:
+            if not isinstance(fill, dict):
+                raise CockpitError("execution fill must be an object")
+            fidelity = str(receipt.get("fidelity", "UNKNOWN")).upper()
+            inputs: dict = {}
+            if fidelity == "SIMULATED_QUOTE":
+                observation = fill.get("quote_observation")
+                required_quote = {"instrument", "exchange", "source", "event_utc", "received_utc",
+                                  "available_utc", "bid_price", "ask_price", "bid_qty", "ask_qty",
+                                  "quote_event_sha256"}
+                complete_quote = isinstance(observation, dict) and required_quote.issubset(observation)
+                valid_model = (isinstance(fill.get("execution_model_id"), str)
+                               and bool(fill.get("execution_model_id"))
+                               and bool(sha_pattern.fullmatch(str(fill.get("execution_model_sha256", ""))))
+                               and bool(sha_pattern.fullmatch(str(fill.get("fee_schedule_sha256", ""))))
+                               and bool(sha_pattern.fullmatch(str(fill.get("latency_model_sha256", ""))))
+                               and bool(sha_pattern.fullmatch(str(fill.get("data_snapshot_sha256", "")))))
+                nature = ("SIMULATED ONLY — NOT AN EXCHANGE FILL" if complete_quote and valid_model
+                          else "SIMULATION EVIDENCE INCOMPLETE — NOT AN EXCHANGE FILL")
+                inputs = {"execution_model_id": fill.get("execution_model_id"),
+                          "execution_model_sha256": fill.get("execution_model_sha256"),
+                          "fee_schedule_sha256": fill.get("fee_schedule_sha256"),
+                          "latency_model_sha256": fill.get("latency_model_sha256"),
+                          "data_snapshot_sha256": fill.get("data_snapshot_sha256"),
+                          "quote_observation": observation}
+            elif fidelity in {"OBSERVED_BROKER", "OBSERVED_EXCHANGE"}:
+                required_observed = ("provider_fill_id", "source", "exchange", "observed_at_utc",
+                                     "source_sha256", "broker_session_id")
+                complete_observed = (fill.get("execution_nature") == "OBSERVED"
+                                     and fill.get("reconciled") is True
+                                     and all(fill.get(key) for key in required_observed)
+                                     and bool(sha_pattern.fullmatch(str(fill.get("source_sha256", "")))))
+                nature = ("OBSERVED READ-ONLY FILL" if complete_observed
+                          else "OBSERVED LABEL UNVERIFIED — DO NOT TREAT AS EXCHANGE FILL")
+                inputs = {key: fill.get(key) for key in required_observed}
+                inputs["reconciled"] = fill.get("reconciled")
+            else:
+                nature = "UNCLASSIFIED — NOT VERIFIED AS AN EXCHANGE FILL"
+                inputs = {"fidelity": fidelity, "execution_nature": fill.get("execution_nature")}
+            input_text = escape(json.dumps(inputs, sort_keys=True, separators=(",", ":"), default=str))
+            details = " | ".join(str(fill.get(key, "UNKNOWN")) for key in ("quantity", "price"))
+            rows.append(f"<tr><td>{escape(receipt_id)}</td><td>{escape(nature)}</td>"
+                        f"<td>{escape(str(fill.get('fill_id') or 'UNKNOWN'))}; {escape(details)}</td>"
+                        f"<td><code>{input_text}</code></td></tr>")
+    html = _page("Execution evidence by fill", "<p>Simulated quote fills are model outputs, never observed exchange executions.</p>"
+                 "<table><thead><tr><th>Receipt</th><th>Execution label</th><th>Fill ID; qty / price</th>"
+                 f"<th>Inputs and provenance</th></tr></thead><tbody>{''.join(rows)}</tbody></table>")
+    assert_read_only(html)
+    return html
+
+
 # ---- FE-0118 ----
 
 def pnl_table(gross: Decimal, fees: Decimal, slippage: Decimal, net: Decimal, benchmark: Decimal, ledger_net: Decimal) -> str:

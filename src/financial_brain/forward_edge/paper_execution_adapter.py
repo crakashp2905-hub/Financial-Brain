@@ -180,8 +180,24 @@ class MarketableQuoteSimulator:
         receipt["simulated_execution_at_utc"] = attempt_at.isoformat()
         if result.filled_qty and result.avg_price is not None and selected is not None and quote_event is not None:
             quote_hash = quote_event.content_sha256()
+            selected_payload = dict(quote_event.payload)
+            quote_observation = {
+                "instrument": quote_event.instrument,
+                "exchange": selected_payload.get("exchange") or quote_event.instrument.partition(":")[0],
+                "source": selected_payload.get("source") or selected_payload.get("provider") or "UNDECLARED",
+                "event_utc": quote_event.event_utc.isoformat(),
+                "received_utc": quote_event.received_utc.isoformat(),
+                "available_utc": quote_event.available_utc.isoformat(),
+                "ingested_utc": quote_event.ingested_utc.isoformat() if quote_event.ingested_utc else None,
+                "bid_price": str(selected.bid), "ask_price": str(selected.ask),
+                "bid_qty": selected.bid_qty, "ask_qty": selected.ask_qty,
+                "quote_event_sha256": quote_hash,
+                "raw_archive_seq": selected_payload.get("raw_archive_seq"),
+                "raw_archive_chain_sha256": selected_payload.get("raw_archive_sha256"),
+            }
             receipt["fills"] = [{
                 "fill_id": hashlib.sha256(f"{intent_id}:{quote_hash}".encode()).hexdigest(),
+                "execution_nature": "SIMULATED",
                 "quantity": result.filled_qty,
                 "price": str(result.avg_price),
                 "quote_event_sha256": quote_hash,
@@ -192,6 +208,7 @@ class MarketableQuoteSimulator:
                 "fee_schedule_sha256": self.fee_schedule_sha256,
                 "latency_model_sha256": self.latency_model_sha256,
                 "data_snapshot_sha256": data_snapshot_sha256,
+                "quote_observation": quote_observation,
             }]
         return receipt
 
