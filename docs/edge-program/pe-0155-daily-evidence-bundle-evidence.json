@@ -3,8 +3,8 @@
   "task_id": "PE-0155",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py; ruff check src/financial_brain/forward_edge/daily_evidence_bundle.py tests/test_daily_evidence_bundle.py src/financial_brain/forward_edge/eod_paper_archive.py; python -m mypy src/financial_brain/forward_edge/daily_evidence_bundle.py; python -m mypy src/financial_brain/forward_edge/daily_evidence_bundle.py src/financial_brain/forward_edge/cli.py",
-    "result": "14 passed; Ruff and mypy passed. Tests cover terminal-session gating, retryable CLI close/bundle finalization, replay and exact reconciliation of account journals to EOD archives, cross-workstation verification, signatures, and tampering."
+    "command": "python -m pytest -q tests/test_daily_paper_cycle.py tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py tests/test_book_performance_report.py tests/test_source_inventory.py; ruff check src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py tests/test_daily_paper_cycle.py; python -m mypy src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py",
+    "result": "28 passed across the daily cycle, evidence bundle, EOD archive, book report, and source-inventory suites; Ruff and mypy passed. A live local integration test finalizes two real synthetic paper-account journals, verifies both exported bundles, and reads the immutable per-book report. This is synthetic workflow verification, not observed Kite-market evidence."
   },
   "implemented": [
     "Portable bundles export account close archive and durable runner journal plus optional evidence inputs with SHA-256 and byte lengths.",
@@ -14,16 +14,19 @@
     "Tampering, undeclared files, symbolic links, mismatched trusted keys, and output reuse with another signing key are refused.",
     "close_and_bundle_paper_session validates the runner journal hash chain, matching exchange date, and terminal session record before account close; then creates the account archive and portable bundle with immutable retry behavior.",
     "Every portable bundle includes the paper-account journal; the verifier replays it, binds its exact sequence/head to the EOD archive, checks order and economic state, and reconciles NAV before report reproduction.",
-    "The forward-edge CLI exposes daily-finalize: it reconstructs the local paper account from its journal and creates the close archive and evidence bundle after validating durable terminal-session evidence and caller-supplied close marks."
+    "The forward-edge CLI exposes daily-finalize and daily-paper-cycle; the cycle discovers every account from a frozen plan, finalizes the close archive and bundle, and creates a deterministic by-book report from generated archives plus caller-supplied history.",
+    "The cycle is resumable per book and requires unchanged timestamps and marks on retry; account paths are derived from the registered plan."
   ],
   "blockers": [
-    "No scheduled daily launcher invokes the orchestration primitive after every completed paper session.",
+    "No OS scheduled job invokes the daily-paper-cycle command after each completed paper session.",
     "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",
     "Bundle transfer has no managed delivery channel; this implementation exports a self-contained directory."
   ],
   "source_sha256": {
-    "src/financial_brain/forward_edge/daily_evidence_bundle.py": "afe9b0f4ce879268ef152b676290a48e24ce25bd2b6c55d67702217687b562ae",
-    "tests/test_daily_evidence_bundle.py": "5b2a42d3eda6794031f43577cdddd7310f451ce2784609cd13aed195d3a84853",
-    "src/financial_brain/forward_edge/cli.py": "fec908d3dd61e28b45f29ef33e65ba9bfe3b6f9a6496ad24e1cb6fe2757a627d"
+    "src/financial_brain/forward_edge/daily_evidence_bundle.py": "4723f707928dc3226249a4a8c275aeb5774b094f1e756eb25ba5cb6a5ee16ae1",
+    "tests/test_daily_evidence_bundle.py": "2264bf568848d11dfc7b8fb4b45982e470a7d85eecca6cba939bbeb3a2bd9ae1",
+    "src/financial_brain/forward_edge/cli.py": "3392a067ef9fabd1ee4c4988220eb8fb59e26e34fcc7816735a9238f9e0a3cd7",
+    "src/financial_brain/forward_edge/daily_paper_cycle.py": "692973cec6621ca2ece1e08ad8ebc63b83a650656c705dca43f3222376b41fb6",
+    "tests/test_daily_paper_cycle.py": "2d40321ef08ce04ad63d2cfb3eb45c8338526874cb962f6a057af16abcb9d17f"
   }
 }

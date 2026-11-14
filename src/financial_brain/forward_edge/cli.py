@@ -174,6 +174,20 @@ def cmd_registered_portfolio_report(registry_path: str, plan_id: str,
     return {"plan_id": plan_id, **report}, EXIT["OK"]
 
 
+def cmd_daily_paper_cycle(manifest_path: str) -> tuple[dict, int]:
+    """Finalize every frozen-plan account and emit its daily by-book evidence report."""
+    from financial_brain.forward_edge.daily_paper_cycle import (
+        DailyPaperCycleError,
+        run_daily_paper_cycle,
+    )
+
+    try:
+        result = run_daily_paper_cycle(Path(manifest_path))
+    except (OSError, ValueError, DailyPaperCycleError) as exc:
+        return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    return result, EXIT["OK"]
+
+
 def cmd_daily_finalize(*, account_journal_path: str, session_date: str, captured_at: str,
                        marks_path: str, runner_journal_path: str, session_id: str,
                        archive_dir: str, bundle_root: str) -> tuple[dict, int]:
@@ -303,6 +317,9 @@ def main(argv: list[str] | None = None) -> int:
     portfolio.add_argument("--registry", required=True, help="hash-chained registered paper-book plan journal")
     portfolio.add_argument("--plan-id", required=True)
     portfolio.add_argument("--account-root", required=True, help="root containing the allocated account journals")
+    cycle = sub.add_parser(
+        "daily-paper-cycle", help="finalize all frozen-plan paper books and build the by-book report")
+    cycle.add_argument("--manifest", required=True, help="owner-prepared JSON inputs for this session")
     df = sub.add_parser("daily-finalize", help="close a local paper book and export verified evidence")
     df.add_argument("--account-journal", required=True)
     df.add_argument("--session-date", required=True, help="exchange session date in YYYY-MM-DD")
@@ -333,6 +350,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_book_performance_report(args.input, args.output_root)
     elif args.cmd == "registered-portfolio-report":
         out, code = cmd_registered_portfolio_report(args.registry, args.plan_id, args.account_root)
+    elif args.cmd == "daily-paper-cycle":
+        out, code = cmd_daily_paper_cycle(args.manifest)
     elif args.cmd == "daily-finalize":
         out, code = cmd_daily_finalize(
             account_journal_path=args.account_journal, session_date=args.session_date,

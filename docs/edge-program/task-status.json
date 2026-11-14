@@ -3461,16 +3461,21 @@
         "tests/test_daily_evidence_bundle.py",
         "docs/edge-program/pe-0155-daily-evidence-bundle.md",
         "docs/edge-program/pe-0155-daily-evidence-bundle-evidence.json",
-        "src/financial_brain/forward_edge/cli.py"
+        "src/financial_brain/forward_edge/cli.py",
+        "src/financial_brain/forward_edge/daily_paper_cycle.py",
+        "tests/test_daily_paper_cycle.py",
+        "docs/forward-edge/daily-paper-cycle.md"
       ],
       "tests": [
         "test_daily_evidence_bundle.py",
-        "test_eod_paper_archive.py"
+        "test_eod_paper_archive.py",
+        "test_daily_paper_cycle.py",
+        "test_daily_paper_cycle_real_close_bundle_and_report_integration"
       ],
-      "test_result": "14 passed; Ruff and mypy passed. Tests cover terminal-session gating, retryable CLI close/bundle finalization, replay and exact reconciliation of account journals to EOD archives, cross-workstation verification, signatures, and tampering.",
-      "evidence_sha256": "2c637106602eafa0760ebe37f8fdca2e0947631ebd2d315251fabcbd96ba459a",
+      "test_result": "The resumable daily-paper-cycle validates exact frozen-plan membership and durable dated runner sessions bound to each registered strategy/account, finalizes all books from explicit owner-supplied marks, and creates the by-book report from generated archives plus supplied history. Combined cycle, bundle, EOD archive, report, and inventory suites: 28 passed; Ruff and mypy passed. A local integration finalized two synthetic accounts, verified both bundles, and read the report; no live-market evidence is claimed.",
+      "evidence_sha256": "9f1efb08fc5c38fcb52465174bb8b87f4dd3133047373e63a5ff8b4e665f4296",
       "blockers": [
-        "No scheduled daily launcher invokes the orchestration primitive after every completed paper session.",
+        "No OS scheduled job invokes the daily-paper-cycle command after each completed paper session.",
         "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",
         "Bundle transfer has no managed delivery channel; this implementation exports a self-contained directory."
       ]
@@ -3506,15 +3511,20 @@
         "src/financial_brain/forward_edge/cli.py",
         "tests/test_book_performance_report.py",
         "docs/edge-program/pe-0157-book-performance-report.md",
-        "docs/edge-program/pe-0157-book-performance-report-evidence.json"
+        "docs/edge-program/pe-0157-book-performance-report-evidence.json",
+        "src/financial_brain/forward_edge/daily_paper_cycle.py",
+        "tests/test_daily_paper_cycle.py",
+        "docs/forward-edge/daily-paper-cycle.md"
       ],
       "tests": [
-        "test_book_performance_report.py"
+        "test_book_performance_report.py",
+        "test_daily_paper_cycle.py",
+        "test_daily_paper_cycle_real_close_bundle_and_report_integration"
       ],
-      "test_result": "6 passed; Ruff passed. Tests cover report aggregation, explicit missing denominators, tamper detection, deterministic content-addressed output, output tamper refusal, and CLI input validation.",
-      "evidence_sha256": "3910abf0fd6ec27ebb3f1eec8a3ae436fcddd9f62b6e8b425a100c4da58e86d4",
+      "test_result": "The resumable daily-paper-cycle validates exact frozen-plan membership and durable dated runner sessions bound to each registered strategy/account, finalizes all books from explicit owner-supplied marks, and creates the by-book report from generated archives plus supplied history. Combined cycle, bundle, EOD archive, report, and inventory suites: 28 passed; Ruff and mypy passed. A local integration finalized two synthetic accounts, verified both bundles, and read the report; no live-market evidence is claimed.",
+      "evidence_sha256": "6177d4a2ee6a5a5b708bec8abf5d2b19feacb55c2e752e4d1d0bedddd1dac20b",
       "blockers": [
-        "The explicit CLI command is not invoked by a scheduled launcher for every registered paper book.",
+        "No OS scheduler invokes daily-paper-cycle for each market session; multi-session denominators require caller-supplied history_sessions.",
         "No prospective market-session cohort has populated this report from observed Kite quotes and account archives.",
         "The report only supports INR account archives; cross-currency book aggregation is not implemented here."
       ]

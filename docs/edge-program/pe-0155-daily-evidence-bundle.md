@@ -10,6 +10,9 @@
 - `close_and_bundle_paper_session` now checks the durable journal chain, matching exchange date and terminal session record before closing the account. It then creates the EOD archive and portable bundle; retrying the same close inputs reuses the immutable archive and bundle. This is a callable orchestration primitive, not a scheduler.
 - Bundle verification replays the copied account journal into the paper OMS/ledger, binds its exact sequence/head to the EOD close archive, and compares cash, available cash, orders, return reconciliation, and P&L. It also verifies positions, marks, and NAV. The account journal is mandatory; archive-only bundles are rejected.
 - `fb forward daily-finalize` reconstructs the paper account from its journal and invokes close plus bundle creation in one command. It requires explicit observed close marks, capture time, runner journal, and terminal session evidence; it never creates physical orders.
+- `python -m financial_brain.forward_edge.cli daily-paper-cycle --manifest <path>` now iterates every account in a frozen registry plan, checks dated terminal runner evidence, finalizes each account and bundle, and emits a by-book report from the resulting archives plus caller-supplied prior sessions.
+- The cycle derives account journal locations from the frozen registry and fails before finalization unless manifest membership exactly matches the plan. It is resumable per book through immutable close archives and bundles.
+- [Daily cycle manifest and operator contract](../forward-edge/daily-paper-cycle.md) documents required inputs, scheduler invocation, and retry behavior.
 
 ## Verification
 
@@ -17,4 +20,4 @@
 
 ## Remaining evidence gap
 
-No scheduled daily launcher invokes the new orchestration primitive yet, so automatic completion after each actual paper session remains unverified. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until launcher integration and owner-controlled key custody are established.
+No OS scheduled job invokes the new orchestration command yet, so automatic completion after each actual paper session remains unverified. Production signing requires a managed owner key and out-of-band trusted-key pin. The package is a portable directory; operators must transfer it intact. This remains PARTIAL until scheduling and owner-controlled key custody are established.

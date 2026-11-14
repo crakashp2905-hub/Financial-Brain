@@ -9,6 +9,8 @@
 - Hashed EOD account archives are verified before use. Cumulative, flow-adjusted return, gross contribution, fees, and taxes are differenced chronologically and same-date snapshots are de-duplicated to avoid double counting.
 - The human-readable report prints missing account archives and incomplete denominators instead of imputing zero or showing only filled/winning rows.
 - The CLI accepts a JSON `sessions` evidence array and writes deterministic JSON and operator text into an immutable report-hash directory; identical reruns reuse it and altered output is refused.
+- The `daily-paper-cycle` launcher now finalizes every registered book in a frozen plan and feeds each generated, verified EOD account archive and the matching durable runner journal into this report. Explicit `history_sessions` are retained in the report denominator and are never inferred.
+- The cycle manifest and retry contract are documented in [daily-paper-cycle.md](../forward-edge/daily-paper-cycle.md).
 
 ## Verification
 
@@ -16,4 +18,4 @@
 
 ## Remaining evidence gap
 
-The CLI is an explicit on-demand command; the session scheduler and daily evidence launcher do not yet invoke it for every registered paper book. Its results therefore describe only the session rows and validated archives supplied by the caller. No prospective Kite session cohort exists, and cross-currency aggregation is unsupported. This task remains PARTIAL.
+The launcher is an explicit on-demand command; no OS scheduler invokes it for every market session. Its historical report denominator depends on caller-supplied `history_sessions`. No prospective Kite session cohort exists, and cross-currency aggregation is unsupported. This task remains PARTIAL.

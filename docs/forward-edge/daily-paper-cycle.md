@@ -1,0 +1,35 @@
+# Registered paper-book daily cycle
+
+`python -m financial_brain.forward_edge.cli daily-paper-cycle --manifest <path>` finalizes the accounts in one frozen `RegisteredPaperBooks` plan, creates each paper close archive and portable evidence bundle, then writes the by-book performance report.
+
+## Manifest contract
+
+The manifest is an operator-owned JSON file. It contains:
+
+```json
+{
+  "session_date": "YYYY-MM-DD",
+  "captured_at": "aware ISO-8601 exchange-session timestamp",
+  "registry": "path/to/registered-paper-books.jsonl",
+  "plan_id": "frozen-plan-id",
+  "account_root": "path/to/registered-account-journals",
+  "books": [
+    {
+      "strategy_id": "registered-strategy-id",
+      "session_id": "durable-forward-session-id",
+      "runner_journal": "path/to/forward-runner.jsonl",
+      "marks": "path/to/owner-observed-close-marks.json",
+      "archive_dir": "path/to/eod-archives",
+      "bundle_root": "path/to/portable-bundles"
+    }
+  ],
+  "history_sessions": [],
+  "report_output_root": "path/to/immutable-book-reports"
+}
+```
+
+`books` must name every strategy in the selected frozen plan exactly once. Account-journal paths are derived from the registry and account root; callers cannot redirect a strategy to another account. Before closing an account, the command verifies the runner journal hash chain and requires a matching exchange date, durable terminal session event, registered `authority_strategy_id`, and allocated `authority_account_id`. Close marks remain explicit owner-supplied evidence and must satisfy the EOD archive's timestamp, coverage, and source-hash checks. `history_sessions` carries prior session evidence needed for a multi-session report; it is not reconstructed or inferred by this command.
+
+The cycle is resumable per book, not an atomic multi-account transaction. EOD archives, bundles, and report directories are immutable and retryable for unchanged inputs. If a later book fails, earlier books may already be closed; rerun with the same captured timestamp and marks after correcting the blocking input. The command never sends broker orders or invents missing market evidence.
+
+An OS scheduler can invoke this command after the session capture process writes a complete manifest. This repository does not install or enable a Windows Task Scheduler or systemd job, and no prospective Kite session is implied by a successful fixture test.
