@@ -4,6 +4,9 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta, timezone
 
 from financial_brain.forward_edge.market_data import DataError, NormalizedEvent
+from financial_brain.forward_edge.holding_period_schedule import (
+    ExchangeSessionCalendar, HoldingScheduleError, schedule_holding_exit,
+)
 from financial_brain.forward_edge.session_clock import ClockError, SessionClockProvider
 from financial_brain.paper.book import Spec
 
@@ -15,7 +18,8 @@ class BookAdapterError(ValueError):
 
 
 def forward_position_events(book, *, mode: str, spec: Spec, as_of: date,
-                            clock_provider: SessionClockProvider | None = None) -> list[NormalizedEvent]:
+                            clock_provider: SessionClockProvider | None = None,
+                            session_calendar: ExchangeSessionCalendar | None = None) -> list[NormalizedEvent]:
     """Expose existing open positions to a runner without creating or settling fills.
 
     The input is the daily book's persisted `positions` table, not an intraday callback.
@@ -51,10 +55,25 @@ def forward_position_events(book, *, mode: str, spec: Spec, as_of: date,
             raise BookAdapterError("position holding sessions exceed its frozen horizon")
         if last_day is not None and last_day > as_of:
             raise BookAdapterError("paper book contains a position mark after the requested session")
+        exit_schedule = None
         if entry_day is not None and entry_day > as_of:
             state = "ENTRY_PENDING"
         elif entry_day is None:
             state = "ENTRY_PENDING"
+        elif session_calendar is not None:
+            try:
+                exit_schedule = schedule_holding_exit(
+                    entry_session=entry_day, horizon_sessions=horizon,
+                    as_of_session=as_of, calendar=session_calendar,
+                )
+                marked_session = last_day or entry_day
+                marked_held = (session_calendar.session_dates.index(marked_session)
+                               - session_calendar.session_dates.index(entry_day))
+            except (HoldingScheduleError, ValueError) as exc:
+                raise BookAdapterError(f"position exit schedule cannot be resolved: {exc}") from exc
+            if held_sessions != marked_held:
+                raise BookAdapterError("paper-book held-session count does not match its exchange-session dates")
+            state = {"SCHEDULED": "ACTIVE", "DUE": "EXIT_DUE", "OVERDUE": "EXIT_OVERDUE"}[exit_schedule.status]
         else:
             state = "EXIT_DUE" if held_sessions == horizon else "ACTIVE"
         source_day = last_day or entry_day or signal_day
@@ -68,6 +87,10 @@ def forward_position_events(book, *, mode: str, spec: Spec, as_of: date,
             raise BookAdapterError(str(exc)) from exc
         if ingested_utc < clocks.available_utc:
             raise BookAdapterError("ingest clock cannot precede book-state availability")
+        if exit_schedule is not None:
+            schedule_available = datetime.combine(as_of, time(8, 45), tzinfo=IST).astimezone(timezone.utc)
+            if ingested_utc < schedule_available:
+                raise BookAdapterError("exit schedule clock precedes the scheduled exchange session")
         instrument = ticker if ":" in ticker else f"NSE:{ticker}"
         payload = {
             "source": "daily_paper_book",
@@ -80,12 +103,22 @@ def forward_position_events(book, *, mode: str, spec: Spec, as_of: date,
             "last_price": str(last_px) if last_px is not None else "",
             "held_sessions": str(held_sessions),
             "horizon_sessions": str(horizon),
-            "remaining_sessions": str(max(0, horizon - held_sessions)),
+            "remaining_sessions": str(exit_schedule.remaining_sessions if exit_schedule else
+                                       max(0, horizon - held_sessions)),
             "stop_price": str(stop) if stop is not None else "",
             "shares": str(int(shares or 0)),
             "position_state": state,
             "decision_clock": "DAILY_SESSION_ONLY",
         }
+        if exit_schedule is not None:
+            payload.update({
+                "scheduled_exit_session": exit_schedule.scheduled_exit_session.isoformat(),
+                "exit_schedule_status": exit_schedule.status,
+                "exit_window": exit_schedule.exit_window,
+                "exit_calendar_id": exit_schedule.calendar_id,
+                "exit_calendar_source_sha256": exit_schedule.calendar_source_sha256,
+                "holding_clock": "EXCHANGE_SESSIONS_FROM_ENTRY",
+            })
         try:
             output.append(NormalizedEvent(
                 kind="BOOK_POSITION", instrument=instrument,

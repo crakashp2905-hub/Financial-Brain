@@ -3,6 +3,10 @@ from datetime import date, datetime, timedelta, timezone
 import pytest
 
 from financial_brain.forward_edge.book_adapter import BookAdapterError, forward_position_events
+from financial_brain.forward_edge.holding_period_schedule import (
+    ExchangeSessionCalendar, HoldingScheduleError, schedule_holding_exit,
+    scheduled_exit_order_intents,
+)
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.session_clock import SessionClockProvider
 from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
@@ -30,6 +34,11 @@ def _insert_position(con, *, signal_day, entry_day, last_day, held, horizon=20, 
 def _clock():
     ticks = iter(NOW + timedelta(milliseconds=step) for step in (1, 2, 3, 4, 5, 6, 7, 8, 9))
     return SessionClockProvider(lambda: next(ticks))
+
+
+def _calendar_clock(day):
+    observed = datetime.combine(day, datetime.min.time(), tzinfo=UTC) + timedelta(hours=11)
+    return SessionClockProvider(lambda: observed)
 
 
 def _config():
@@ -99,3 +108,59 @@ def test_future_marks_and_horizon_corruption_are_rejected(tmp_path):
     with pytest.raises(BookAdapterError, match="exceed"):
         forward_position_events(con, mode="live", spec=B.MOMENTUM, as_of=AS_OF,
                                 clock_provider=_clock())
+
+
+def test_calendar_schedules_exit_on_later_exchange_session_across_weekend(tmp_path):
+    con = B.connect(tmp_path / "book.duckdb")
+    _insert_position(con, signal_day=date(2026, 11, 10), entry_day=date(2026, 11, 11),
+                     last_day=date(2026, 11, 11), held=0, horizon=3)
+    calendar = ExchangeSessionCalendar(
+        "NSE-CALENDAR-2026-v1",
+        (date(2026, 11, 11), date(2026, 11, 12), date(2026, 11, 13),
+         date(2026, 11, 16), date(2026, 11, 17)),
+        "a" * 64,
+    )
+    scheduled, = forward_position_events(
+        con, mode="live", spec=B.MOMENTUM, as_of=date(2026, 11, 13),
+        clock_provider=_calendar_clock(date(2026, 11, 13)), session_calendar=calendar,
+    )
+    fields = dict(scheduled.payload)
+    assert fields["position_state"] == "ACTIVE"
+    assert fields["scheduled_exit_session"] == "2026-11-16"
+    assert fields["exit_schedule_status"] == "SCHEDULED"
+    assert fields["remaining_sessions"] == "1"
+    assert fields["holding_clock"] == "EXCHANGE_SESSIONS_FROM_ENTRY"
+    with pytest.raises(BookAdapterError, match="clock precedes"):
+        forward_position_events(
+            con, mode="live", spec=B.MOMENTUM, as_of=date(2026, 11, 13),
+            clock_provider=_clock(), session_calendar=calendar,
+        )
+
+    due, = forward_position_events(
+        con, mode="live", spec=B.MOMENTUM, as_of=date(2026, 11, 16),
+        clock_provider=_calendar_clock(date(2026, 11, 16)), session_calendar=calendar,
+    )
+    assert dict(due.payload)["position_state"] == "EXIT_DUE"
+    order, = scheduled_exit_order_intents([due], exchange_session=date(2026, 11, 16))
+    assert order["side"] == "SELL"
+    assert order["position_effect"] == "CLOSE"
+    assert order["quantity"] == 10
+    assert order["scheduled_exit_session"] == "2026-11-16"
+    overdue, = forward_position_events(
+        con, mode="live", spec=B.MOMENTUM, as_of=date(2026, 11, 17),
+        clock_provider=_calendar_clock(date(2026, 11, 17)), session_calendar=calendar,
+    )
+    assert dict(overdue.payload)["position_state"] == "EXIT_OVERDUE"
+    late_order, = scheduled_exit_order_intents([overdue], exchange_session=date(2026, 11, 17))
+    assert late_order["order_id"] == order["order_id"]
+    assert late_order["reason"] == "OVERDUE_TIME_EXIT"
+
+
+def test_holding_schedule_requires_calendar_coverage_and_exchange_dates():
+    calendar = ExchangeSessionCalendar("NSE", (date(2026, 11, 12), date(2026, 11, 13)), "b" * 64)
+    with pytest.raises(HoldingScheduleError, match="does not cover"):
+        schedule_holding_exit(entry_session=date(2026, 11, 12), horizon_sessions=2,
+                              as_of_session=date(2026, 11, 12), calendar=calendar)
+    with pytest.raises(HoldingScheduleError, match="must exist"):
+        schedule_holding_exit(entry_session=date(2026, 11, 12), horizon_sessions=1,
+                              as_of_session=date(2026, 11, 14), calendar=calendar)
