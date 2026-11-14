@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 154,
-  "unrecorded_tasks": 64,
+  "recorded_tasks": 155,
+  "unrecorded_tasks": 63,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3423,6 +3423,26 @@
         "The frozen schedule is caller-supplied and not locked in an authoritative registry before session observations.",
         "Daily scheduled report generation is not yet automated.",
         "No prospective cohort period has validated daily denominators in operation."
+      ]
+    },
+    {
+      "id": "PE-0157",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/book_performance_report.py",
+        "tests/test_book_performance_report.py",
+        "docs/edge-program/pe-0157-book-performance-report.md",
+        "docs/edge-program/pe-0157-book-performance-report-evidence.json"
+      ],
+      "tests": [
+        "test_book_performance_report.py"
+      ],
+      "test_result": "4 passed; Ruff passed.",
+      "evidence_sha256": "5409f2a52b20ce76166ef9e59fc4cc63889fd048c49878bf3e0629f0c9899b25",
+      "blockers": [
+        "The daily scheduler and evidence launcher do not yet invoke this report for every registered book.",
+        "No prospective market-session cohort has populated this report from observed Kite quotes and account archives.",
+        "The report only supports INR account archives; cross-currency book aggregation is not implemented here."
       ]
     }
   ]

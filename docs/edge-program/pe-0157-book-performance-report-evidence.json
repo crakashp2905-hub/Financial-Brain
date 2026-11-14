@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0157",
+  "status": "PARTIAL",
+  "test": {
+    "command": "pytest -q tests/test_book_performance_report.py; ruff check src/financial_brain/forward_edge/book_performance_report.py tests/test_book_performance_report.py",
+    "result": "4 passed; Ruff passed."
+  },
+  "implemented": [
+    "Per-book reports keep CLOSED, NO_TRADE, INCOMPLETE and UNRECORDED session outcomes in an explicit denominator.",
+    "Opportunity counts remain incomplete when any supplied session lacks coverage evidence; quote coverage reports planned and observed denominators.",
+    "Paper intents, execution receipts, unique fills and skips are separate counts.",
+    "EOD archive hashes are verified; cumulative flow-adjusted gross/net returns, fees and taxes are differenced without double counting same-date snapshots.",
+    "Missing close archives and missing quote/session evidence are visible and are never imputed to zero."
+  ],
+  "blockers": [
+    "The daily scheduler and evidence launcher do not yet invoke this report for every registered book.",
+    "No prospective market-session cohort has populated this report from observed Kite quotes and account archives.",
+    "The report only supports INR account archives; cross-currency book aggregation is not implemented here."
+  ],
+  "source_sha256": {
+    "tests/test_book_performance_report.py": "a83f15f30d042073dc09137d6f363767b47a4ef6c3c3c64cd5b6be7ae0f7ca3a",
+    "src/financial_brain/forward_edge/book_performance_report.py": "10a9093ccd7acb7a1b3a51a2599c0c9e9d6faa55a8faac6249f4c93a031ff1ba"
+  }
+}
