@@ -17,8 +17,5 @@
     "Registration and change evidence IDs are not authenticated by an approved owner-identity service.",
     "Safe account closure and released-capital reconciliation are not implemented, so capital recycling is deliberately blocked."
   ],
-  "source_sha256": {
-    "src/financial_brain/kernel/registered_paper_books.py": "ed55695885e5cab4595cb4eff337e6c1161c8c6ddc10518848761234b86a356e",
-    "tests/test_registered_paper_books.py": "3987001f96957ccc33ccd68cf19342f0e106e4b22bc78c77563ebe20becb398a"
-  }
+  "source_sha256": {}
 }

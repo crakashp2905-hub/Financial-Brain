@@ -21,6 +21,6 @@
     "src/financial_brain/evaluation/prospective.py": "4d96e4adeecefa2569e538416f99ce6825768f02ad514b757646638312fd7253",
     "src/financial_brain/forward_edge/custody.py": "0a1839d3aab1212a31aae145b62f40ef4358178061c82c6be82609b5d06a0dab",
     "tests/test_prospective_champion.py": "9c25145c37e36f5e8f520030d3f3f20da8b937d8565e955ee1421e32045c5186",
-    "docs/edge-program/source-inventory.json": "e08bede3c00df4af79cf49503e9de84b3786d052b7d7f15551fbff915badf877"
+    "docs/edge-program/source-inventory.json": "b99322699ae9afa7e52f1a5afcfdf58c6f551ef8af359aea1b803ef83c3d93e6"
   }
 }

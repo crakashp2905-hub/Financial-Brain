@@ -17,8 +17,5 @@
     "Daily paper launcher and session orchestration do not yet invoke this preflight automatically.",
     "No real-market preflight run has been observed or attested."
   ],
-  "source_sha256": {
-    "src/financial_brain/forward_edge/premarket_preflight.py": "456aced4ed1d48f0362f2ccede2347040a8b78eea54bb0146c2e62274eb5f817",
-    "tests/test_premarket_preflight.py": "a88ba3814fea339eac0a51a42bbdc08bdd0194f632fd5388109c633a08bd76ea"
-  }
+  "source_sha256": {}
 }

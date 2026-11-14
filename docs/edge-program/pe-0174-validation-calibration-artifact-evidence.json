@@ -8,7 +8,7 @@
   "tests": [
     "tests/test_forecast_components.py"
   ],
-  "test_result": "12 forecast-component tests passed, including validation-only report output, curve contents, and artifact digests; Ruff and targeted mypy passed. Inventory checks passed (619 Python files; 253 candidates). CI pending.",
+  "test_result": "12 forecast-component tests passed, including validation-only report output, curve contents, and artifact digests; the combined forecast/model suite passed (23 tests). Ruff and targeted mypy passed. Inventory checks passed (619 Python files; 253 candidates). CI pending.",
   "evidence_scope": "Synthetic validation rows only. No real market calibration or trading impact is claimed.",
   "operational_limits": [
     "Report inputs must be untouched VALIDATION rows with matured/revised labels known by the as-of cutoff.",

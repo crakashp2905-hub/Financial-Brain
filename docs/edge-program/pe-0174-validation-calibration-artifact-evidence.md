@@ -8,7 +8,7 @@ Produce expected-net-return and uncertainty calibration curves plus a trading-im
 
 `write_alpha_validation_artifacts` accepts only rows marked `VALIDATION`, one fixed alpha model/target schema, unique decision digests, and matured/revised targets known by an explicit timezone-aware cutoff. It writes a deterministic JSON report and dependency-free SVG containing: equal-count expected-versus-realized net-alpha-bps bins, empirical coverage of forecast uncertainty intervals by standard-error bin, and realized net-alpha bps against the fraction of validation decisions selected at forecast quantiles. The JSON and SVG bind to the validation sample digest and model identity and include artifact hashes. The function reports validation results only; it does not fit or retune a policy.
 
-Verification: `tests/test_forecast_components.py` — 12 passed, including generated-artifact content and digest checks. Ruff and targeted mypy passed. The combined forecast-component and learned-model test set has 22 passing tests. Source and strategy-variant inventories remain current at 619 Python files and 253 source-linked candidates.
+Verification: `tests/test_forecast_components.py` — 12 passed, including generated-artifact content and digest checks. Ruff and targeted mypy passed. The combined forecast-component and learned-model test set has 23 passing tests. Source and strategy-variant inventories remain current at 619 Python files and 253 source-linked candidates.
 
 ## Limits
 

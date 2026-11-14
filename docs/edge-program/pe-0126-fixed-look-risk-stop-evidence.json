@@ -17,8 +17,5 @@
     "The risk-stop output is not yet wired to the paper runner's persistent restart-safe risk latch.",
     "The fixed look schedule is not joined to sample-size design or prospective performance evidence."
   ],
-  "source_sha256": {
-    "src/financial_brain/forward_edge/fixed_look.py": "8e63477a6fc5a84d618bb3312316617268cee5bbdf8df8a7204f93db1be890e6",
-    "tests/test_fixed_look.py": "1385001c45a6ed74bf86d0165d0a4ae1b3a41e52714a42f3169bdd6d218cefbb"
-  }
+  "source_sha256": {}
 }

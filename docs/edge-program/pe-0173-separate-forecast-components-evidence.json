@@ -9,7 +9,7 @@
     "tests/test_forecast_components.py",
     "tests/test_phase5_learned_model.py"
   ],
-  "test_result": "22 forecast-component and learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (619 Python files, 253 source-linked candidates).",
+  "test_result": "23 forecast-component and learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (619 Python files, 253 source-linked candidates).",
   "evidence_scope": "Synthetic typed forecasts and synthetic validation observations. No real model calibration or market performance is represented.",
   "operational_limits": [
     "Validation reports require a fixed model identity, target schema, matured target, and target revision timestamp.",

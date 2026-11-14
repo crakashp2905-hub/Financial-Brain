@@ -110,4 +110,3 @@ def test_clock_evidence_and_capture_identity_are_mandatory(tmp_path):
         record_capture_start(runner, config(), receipt(clock_skew_ms=float("nan")))
     with pytest.raises(CaptureStartError, match="capture ID"):
         record_capture_start(runner, config(), receipt(capture_id=" "))
-

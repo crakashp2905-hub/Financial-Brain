@@ -18,8 +18,5 @@
     "No prospective trading performance or profitability is implied."
   ],
   "blockers": [],
-  "source_sha256": {
-    "src/financial_brain/forward_edge/sample_size.py": "999a2ba90ac2e94ad063e6c28a95964fdd575ecb165663e436d46a031860a231",
-    "tests/test_sample_size.py": "8ee47255f3b28b98e56ad4c1af0e007278b727d434f70704c19dc76f613680b6"
-  }
+  "source_sha256": {}
 }

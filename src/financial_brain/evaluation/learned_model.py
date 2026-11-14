@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import hashlib
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -199,19 +199,54 @@ def _training_data_sha256(panel: pd.DataFrame, features: list[str]) -> str:
     return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
+def _validate_inference_frame(frame: pd.DataFrame) -> pd.Timestamp:
+    required = {"decision_at_utc", "feature_available_at_utc", "feature_revision_at_utc"}
+    if not required.issubset(frame.columns) or frame.empty:
+        raise LearnedModelError("inference schema requires decision, feature-availability, and feature-revision timestamps")
+    parsed: dict[str, list[pd.Timestamp]] = {}
+    for column in required:
+        values = []
+        for raw in frame[column]:
+            try:
+                value = pd.Timestamp(raw)
+            except (TypeError, ValueError) as exc:
+                raise LearnedModelError(f"{column} must contain aware timestamps") from exc
+            if value.tzinfo is None or value.utcoffset() is None:
+                raise LearnedModelError(f"{column} must contain aware timestamps")
+            values.append(value.tz_convert("UTC"))
+        parsed[column] = values
+    decisions = parsed["decision_at_utc"]
+    if len(set(decisions)) != 1:
+        raise LearnedModelError("one inference frame must represent exactly one decision timestamp")
+    decision = decisions[0]
+    for available, revised in zip(parsed["feature_available_at_utc"], parsed["feature_revision_at_utc"]):
+        if available > decision or revised > decision or revised < available:
+            raise LearnedModelError("future feature availability or revision cannot enter inference")
+    return decision
+
+
 def prediction_batch_sha256(frame: pd.DataFrame, *, as_of, model_digest: str) -> str:
     """Content hash a prediction batch independent of input row order or display formatting."""
     if "lineage" not in frame or "pred" not in frame or not model_digest:
         raise LearnedModelError("prediction batch needs lineage, predictions and model identity")
+    decision = _validate_inference_frame(frame)
+    try:
+        batch_as_of = pd.Timestamp(as_of)
+    except (TypeError, ValueError) as exc:
+        raise LearnedModelError("prediction batch as_of must be the aware decision timestamp") from exc
+    if batch_as_of.tzinfo is None or batch_as_of.tz_convert("UTC") != decision:
+        raise LearnedModelError("prediction batch as_of differs from its feature decision timestamp")
     if frame["lineage"].isna().any() or frame["lineage"].duplicated().any():
         raise LearnedModelError("prediction batch lineages must be present and unique")
     rows = []
-    for row in frame[["lineage", "pred"]].sort_values("lineage", kind="mergesort").itertuples(index=False):
+    columns = ["lineage", "pred", "feature_available_at_utc", "feature_revision_at_utc"]
+    for row in frame[columns].sort_values("lineage", kind="mergesort").itertuples(index=False):
         score = float(row.pred)
         if not np.isfinite(score):
             raise LearnedModelError("prediction batch contains a non-finite score")
-        rows.append([str(row.lineage), score.hex()])
-    body = json.dumps({"as_of": str(as_of), "model_id": model_digest, "predictions": rows},
+        rows.append([str(row.lineage), score.hex(), pd.Timestamp(row.feature_available_at_utc).tz_convert("UTC").isoformat(),
+                     pd.Timestamp(row.feature_revision_at_utc).tz_convert("UTC").isoformat()])
+    body = json.dumps({"as_of": decision.isoformat(), "model_id": model_digest, "predictions": rows},
                       sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
@@ -219,7 +254,8 @@ def prediction_batch_sha256(frame: pd.DataFrame, *, as_of, model_digest: str) ->
 def _valid_prediction_cache(frame: pd.DataFrame, *, as_of, meta: dict, model_path: Path,
                             meta_path: Path | None = None) -> bool:
     """Accept only cache rows matching the current model artifact and their own content digest."""
-    required = {"prediction_batch_sha256", "model_id", "feature_schema_sha256", "lineage", "pred"}
+    required = {"prediction_batch_sha256", "model_id", "feature_schema_sha256", "lineage", "pred",
+                "decision_at_utc", "feature_available_at_utc", "feature_revision_at_utc"}
     if not required.issubset(frame.columns) or not model_path.exists():
         return False
     if (_file_sha256(model_path) != meta.get("model_sha256") or not meta.get("model_id")
@@ -241,7 +277,8 @@ def _valid_prediction_cache(frame: pd.DataFrame, *, as_of, meta: dict, model_pat
 
 
 def score_frame(frame: pd.DataFrame, booster, features: list[str]) -> pd.Series:
-    """``frame``: one row per name for one day, with the features. Ranked per feature across the names, as trained."""
+    """Score one cross section only when its features were available/revised by the decision timestamp."""
+    _validate_inference_frame(frame)
     X = frame[features].rank(pct=True).to_numpy(np.float32)
     return pd.Series(booster.predict(X), index=frame.index)
 
@@ -287,30 +324,43 @@ def drivers(booster, ranked: np.ndarray, features: list[str], *, up: int = 5, do
 CACHE = Path("data") / "learned_scores"
 
 
-def score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_path: Path = META,
+def score_day(rcon, day, *, decision_at_utc: datetime | None = None, names: int = 500,
+              model_path: Path = MODEL, meta_path: Path = META,
               cache: Path | None = CACHE) -> pd.DataFrame:
     """Cached per day (``data/learned_scores/DAY.parquet``), so the competition, the books and the terminal score once."""
+    if (not isinstance(decision_at_utc, datetime) or decision_at_utc.tzinfo is None
+            or decision_at_utc.utcoffset() is None):
+        raise LearnedModelError("inference requires an explicit timezone-aware decision_at_utc")
+    decision = pd.Timestamp(decision_at_utc).tz_convert("UTC")
     if cache is not None:
         f = cache / f"{pd.Timestamp(day).date()}.parquet"
         if f.exists():
             cached = pd.read_parquet(f)
             metadata = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
-            if _valid_prediction_cache(cached, as_of=pd.Timestamp(day).date(), meta=metadata,
+            if _valid_prediction_cache(cached, as_of=decision, meta=metadata,
                                        model_path=model_path, meta_path=meta_path):
                 return cached
-    out = _score_day(rcon, day, names=names, model_path=model_path, meta_path=meta_path)
+    out = _score_day(rcon, day, decision_at_utc=decision.to_pydatetime(), names=names,
+                     model_path=model_path, meta_path=meta_path)
     if cache is not None:
         cache.mkdir(parents=True, exist_ok=True)
         out.to_parquet(cache / f"{pd.Timestamp(day).date()}.parquet")
     return out
 
 
-def _score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_path: Path = META) -> pd.DataFrame:
+def _score_day(rcon, day, *, decision_at_utc: datetime, names: int = 500,
+               model_path: Path = MODEL, meta_path: Path = META) -> pd.DataFrame:
     from ..features import library as LB
     from ..features import technical as TE
     booster, meta = load(model_path, meta_path)
-    lins = [r[0] for r in rcon.execute("""SELECT lineage FROM features WHERE business_date = ? AND adv20 > 0
-                                          ORDER BY adv20 DESC LIMIT ?""", [day, names]).fetchall()]
+    try:
+        timing_rows = rcon.execute("""SELECT lineage, feature_available_at_utc, feature_revision_at_utc
+                                      FROM features WHERE business_date = ? AND adv20 > 0
+                                      ORDER BY adv20 DESC LIMIT ?""", [day, names]).fetchall()
+    except Exception as exc:  # noqa: BLE001 - fail closed when the inference source lacks PIT metadata
+        raise LearnedModelError("features relation must provide availability and revision timestamps") from exc
+    timing = {row[0]: (row[1], row[2]) for row in timing_rows}
+    lins = list(timing)
     rcon.execute(TE.BARS_SQL)
     bars = rcon.execute("""SELECT lineage, d, o, h, l, c, v FROM _tbars WHERE lineage IN (SELECT UNNEST(?))
                            AND d <= ? AND d > ?::DATE - INTERVAL 700 DAY ORDER BY lineage, d""", [lins, day, day]).df()
@@ -326,13 +376,18 @@ def _score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_pa
         last = f.iloc[-1]
         if last["d"] != pd.Timestamp(day).date():
             continue                                    # no bar on the day: not scored
-        rows.append({"lineage": lin, **{k: last.get(k, np.nan) for k in meta["features"]}})
+        if lin not in timing:
+            raise LearnedModelError(f"feature provenance is missing for lineage {lin}")
+        available, revised = timing[lin]
+        rows.append({"lineage": lin, "decision_at_utc": decision_at_utc,
+                     "feature_available_at_utc": available, "feature_revision_at_utc": revised,
+                     **{k: last.get(k, np.nan) for k in meta["features"]}})
     frame = pd.DataFrame(rows)
     if frame.empty:
         raise LearnedModelError(f"no names scored on {day}")
     frame["pred"] = score_frame(frame, booster, meta["features"])
     batch_hash = prediction_batch_sha256(frame.assign(lineage=frame["lineage"], pred=frame["pred"]),
-                                         as_of=pd.Timestamp(day).date(), model_digest=meta["model_id"])
+                                         as_of=pd.Timestamp(decision_at_utc), model_digest=meta["model_id"])
     frame["prediction_batch_sha256"] = batch_hash
     frame["model_id"] = meta["model_id"]
     frame["feature_schema_sha256"] = meta["feature_schema_sha256"]
@@ -340,5 +395,6 @@ def _score_day(rcon, day, *, names: int = 500, model_path: Path = MODEL, meta_pa
     tick = dict(rcon.execute("SELECT lineage, ticker FROM adjusted_prices WHERE business_date = ? AND lineage IN (SELECT UNNEST(?))",
                              [day, list(frame["lineage"])]).fetchall())
     frame["ticker"] = frame["lineage"].map(tick)
-    cols = ["lineage", "ticker", "pred", "why"] + [f for f in meta["features"] if f in frame.columns]
+    cols = ["lineage", "ticker", "pred", "why", "decision_at_utc", "feature_available_at_utc",
+            "feature_revision_at_utc"] + [f for f in meta["features"] if f in frame.columns]
     return frame[cols].sort_values("pred", ascending=False).reset_index(drop=True)   # features kept for percentiles

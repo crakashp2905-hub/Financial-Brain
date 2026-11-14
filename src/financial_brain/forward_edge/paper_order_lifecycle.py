@@ -208,4 +208,3 @@ def project_order_updates(records: list[dict], *, session_id: str | None = None)
     return [dict(row, id=order_id, state=row["status"], filled=row["filled_quantity"],
                  requested=row["requested_quantity"], remaining=row["remaining_quantity"])
             for order_id, row in sorted(latest.items())]
-

@@ -17,8 +17,5 @@
     "Instrument aggregation and portfolio utility weights must be frozen by the caller and are not independently verified.",
     "No real prospective cohort observations are available to populate or validate these summaries."
   ],
-  "source_sha256": {
-    "src/financial_brain/forward_edge/stratified_outcomes.py": "ae7155896060cbb28eb708432aa5b7dc57399301ba83392aaa871e6db7acb851",
-    "tests/test_stratified_outcomes.py": "3dddaba4714eaa01018b5bb16e6fe5afca31b927c071c568a66c5386601ff296"
-  }
+  "source_sha256": {}
 }

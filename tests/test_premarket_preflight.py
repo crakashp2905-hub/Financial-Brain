@@ -120,4 +120,3 @@ def test_operator_reason_lists_all_simultaneous_blockers(inputs, policy):
                                         risk_approved=False, data_entitlement_active=False), policy)
     assert report.status == "NO_TRADE"
     assert {"archive_writable", "risk_configuration", "data_entitlement"} <= set(report.reason_codes)
-

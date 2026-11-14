@@ -246,4 +246,3 @@ def test_legacy_plan_loads_but_orders_still_need_current_family_approval(tmp_pat
             side="BUY", quantity=1, limit=Decimal("10"), reserve=Decimal("11"),
             family_evidence=evidence,
         )
-

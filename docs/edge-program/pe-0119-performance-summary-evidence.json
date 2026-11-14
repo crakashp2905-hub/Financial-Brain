@@ -20,6 +20,6 @@
     "src/financial_brain/evaluation/performance.py": "a5a37f5006db81092fe07acaafd3e35257c131f7a4e026ed4bf764500d10359c",
     "src/financial_brain/forward_edge/evidence_stats.py": "d66e5fc822b97d4e022f4821e0362aa64396aa7b0703ac47900ee52aac1e445a",
     "tests/test_performance_report.py": "d7d36877371f7c16a530d974118e01a4daeffe0e40d2ec0a47a06509eea0e2dd",
-    "docs/edge-program/source-inventory.json": "e08bede3c00df4af79cf49503e9de84b3786d052b7d7f15551fbff915badf877"
+    "docs/edge-program/source-inventory.json": "b99322699ae9afa7e52f1a5afcfdf58c6f551ef8af359aea1b803ef83c3d93e6"
   }
 }

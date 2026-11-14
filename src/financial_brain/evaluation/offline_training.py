@@ -104,7 +104,8 @@ def purged_embargo_splits(
                       for x in frame["label_revision_at_utc"]]
     as_of = pd.Timestamp(trained_as_of).tz_convert("UTC")
     for i, decided in enumerate(decision):
-        if feature_available[i] > decided or feature_revision[i] > decided:
+        if (feature_available[i] > decided or feature_revision[i] > decided
+                or feature_revision[i] < feature_available[i]):
             raise OfflineTrainingError("feature availability or revision occurs after its decision time")
         matured_at, revised_at = maturity[i], label_revision[i]
         if matured_at is not None and (matured_at < decided or revised_at is None
@@ -256,7 +257,8 @@ def run_offline_training_job(
     label_revision_series = pd.Series(label_revisions, index=frame.index, dtype="datetime64[ns, UTC]")
     if ((maturity_series.notna()) & (maturity_series < decision_series)).any():
         raise OfflineTrainingError("outcome maturity cannot precede its decision timestamp")
-    if (availability_series > decision_series).any() or (feature_revision_series > decision_series).any():
+    if ((availability_series > decision_series).any() or (feature_revision_series > decision_series).any()
+            or (feature_revision_series < availability_series).any()):
         raise OfflineTrainingError("feature availability or revision occurs after its decision time")
     if ((maturity_series.notna()) & (label_revision_series.isna() | (label_revision_series < maturity_series))).any():
         raise OfflineTrainingError("matured labels require a revision timestamp no earlier than maturity")

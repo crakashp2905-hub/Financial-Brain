@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 172,
-  "unrecorded_tasks": 46,
+  "recorded_tasks": 173,
+  "unrecorded_tasks": 45,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3760,7 +3760,7 @@
         "test_source_inventory.py",
         "test_strategy_variant_inventory.py"
       ],
-      "test_result": "22 forecast-component and learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (619 Python files, 253 source-linked candidates). CI pending.",
+      "test_result": "23 forecast-component and learned-model tests passed; Ruff and targeted mypy passed; source and strategy-variant inventory checks passed (619 Python files, 253 source-linked candidates). CI pending.",
       "evidence_sha256": "a72ff367494d84d8f3e886654c3ed3416bf2a243a2e1a46bb3c96c9e28d4bd06",
       "blockers": []
     },
@@ -3779,8 +3779,31 @@
         "test_source_inventory.py",
         "test_strategy_variant_inventory.py"
       ],
-      "test_result": "12 forecast-component tests passed, including validation-only curve and SVG/JSON hash evidence; Ruff and targeted mypy passed; inventory checks passed (619 Python files, 253 candidates). CI pending.",
+      "test_result": "12 forecast-component tests passed, including validation-only curve and SVG/JSON hash evidence; the combined forecast/model suite passed (23 tests). Ruff and targeted mypy passed; inventory checks passed (619 Python files, 253 candidates). CI pending.",
       "evidence_sha256": "038232b473075bcd8f11c8ee26049c4f053ce729eadfd4b5330e35cb605a3cba",
+      "blockers": []
+    },
+    {
+      "id": "PE-0175",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/learned_model.py",
+        "src/financial_brain/evaluation/offline_training.py",
+        "src/financial_brain/paper/book.py",
+        "src/financial_brain/paper/zoo_edges.py",
+        "tests/test_phase5_learned_model.py",
+        "docs/edge-program/pe-0175-point-in-time-inference-evidence.md",
+        "docs/edge-program/pe-0175-point-in-time-inference-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_phase5_learned_model.py",
+        "test_forecast_components.py",
+        "test_source_inventory.py",
+        "test_strategy_variant_inventory.py"
+      ],
+      "test_result": "23 focused tests passed; Ruff, targeted mypy, source inventory and strategy-variant inventory checks passed (619 Python files; 253 candidates). Future availability and revision timestamps are rejected.",
+      "evidence_sha256": "4cba9a70d948debc3a0709d3d9cbea87620cf6a10144363736b2cb63cb35945a",
       "blockers": []
     }
   ]

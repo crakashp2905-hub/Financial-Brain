@@ -156,7 +156,12 @@ def factor_ranking(rcon, day: date, spec: Spec, capital: float = CAPITAL) -> pd.
     cs = cs.sort_values("adv20", ascending=False).head(500)
     if spec.ranker == "learned":
         from ..evaluation import learned_model as LM
-        sc = LM.score_day(rcon, day)
+        # Historical paper-book callers only carry a business date. Do not invent
+        # an inference timestamp: without it the learned ranking is unavailable.
+        try:
+            sc = LM.score_day(rcon, day)
+        except LM.LearnedModelError:
+            return pd.DataFrame()
         cs = cs.merge(sc[["lineage", "pred", "why"]], on="lineage", how="inner").sort_values("pred", ascending=False)
     elif spec.ranker == "v2":
         from ..opportunity import ranking_v2 as R2

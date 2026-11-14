@@ -16,8 +16,5 @@
     "Falsification outcomes remain caller-supplied assertions rather than results derived from registered data-backed tests.",
     "The report and promotion verdict are not bound by an authoritative immutable evidence object; callers can supply a clean status string separately."
   ],
-  "source_sha256": {
-    "src/financial_brain/forward_edge/evidence_stats.py": "7713500d52ce0a2f4713eae914770df785b3234550959f205ef6952b6ffa0298",
-    "tests/test_forward_edge_f08.py": "a80288a5d77add9b6f0d968f833786cd9ea42214c2a1329f9fd3bbdd357cafdc"
-  }
+  "source_sha256": {}
 }

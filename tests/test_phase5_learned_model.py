@@ -63,6 +63,10 @@ def test_matured_offline_job_saves_reproducible_model_manifest(tmp_path):
                                                 "feature_source_sha256", "model_sha256", "code_sha256"))
     booster, m2 = LM.load(tmp_path / "m.txt", tmp_path / "m.json")
     day = p[p["d"] == p["d"].max()].reset_index(drop=True)
+    decision = pd.Timestamp(day["d"].iloc[0]).tz_localize("UTC") + pd.Timedelta(hours=10)
+    day["decision_at_utc"] = decision
+    day["feature_available_at_utc"] = decision - pd.Timedelta(seconds=1)
+    day["feature_revision_at_utc"] = decision - pd.Timedelta(seconds=1)
     s = LM.score_frame(day, booster, m2["features"])
     assert np.corrcoef(s, day["a"])[0, 1] > 0.5            # it learned the planted feature
 
@@ -142,11 +146,32 @@ def test_future_feature_availability_or_revision_is_rejected_before_fitting(tmp_
 
 
 def test_prediction_batch_digest_is_order_independent_and_content_sensitive():
-    frame = pd.DataFrame({"lineage": ["L2", "L1"], "pred": [0.2, -0.1]})
-    digest = LM.prediction_batch_sha256(frame, as_of=date(2026, 11, 2), model_digest="m" * 64)
-    assert digest == LM.prediction_batch_sha256(frame.iloc[::-1], as_of=date(2026, 11, 2), model_digest="m" * 64)
+    decision = datetime(2026, 11, 2, 10, tzinfo=timezone.utc)
+    frame = pd.DataFrame({"lineage": ["L2", "L1"], "pred": [0.2, -0.1],
+                          "decision_at_utc": [decision] * 2,
+                          "feature_available_at_utc": [decision - timedelta(seconds=1)] * 2,
+                          "feature_revision_at_utc": [decision - timedelta(seconds=1)] * 2})
+    digest = LM.prediction_batch_sha256(frame, as_of=decision, model_digest="m" * 64)
+    assert digest == LM.prediction_batch_sha256(frame.iloc[::-1], as_of=decision, model_digest="m" * 64)
     changed = frame.assign(pred=[0.3, -0.1])
-    assert digest != LM.prediction_batch_sha256(changed, as_of=date(2026, 11, 2), model_digest="m" * 64)
+    assert digest != LM.prediction_batch_sha256(changed, as_of=decision, model_digest="m" * 64)
+    revised = frame.assign(feature_revision_at_utc=[decision] * 2)
+    assert digest != LM.prediction_batch_sha256(revised, as_of=decision, model_digest="m" * 64)
+    future = frame.assign(feature_available_at_utc=[decision + timedelta(seconds=1)] * 2)
+    with pytest.raises(LM.LearnedModelError, match="future feature"):
+        LM.prediction_batch_sha256(future, as_of=decision, model_digest="m" * 64)
+
+
+def test_inference_rejects_missing_or_future_feature_timestamps():
+    decision = datetime(2026, 11, 2, 10, tzinfo=timezone.utc)
+    frame = pd.DataFrame({"a": [0.1, 0.2]})
+    with pytest.raises(LM.LearnedModelError, match="requires decision"):
+        LM.score_frame(frame, object(), ["a"])
+    frame["decision_at_utc"] = [decision] * 2
+    frame["feature_available_at_utc"] = [decision - timedelta(seconds=1)] * 2
+    frame["feature_revision_at_utc"] = [decision + timedelta(seconds=1)] * 2
+    with pytest.raises(LM.LearnedModelError, match="future feature"):
+        LM.score_frame(frame, object(), ["a"])
 
 
 def test_prediction_cache_requires_matching_model_and_batch_hash(tmp_path):
@@ -191,23 +216,27 @@ def test_prediction_cache_requires_matching_model_and_batch_hash(tmp_path):
     manifest["manifest_sha256"] = OT._manifest_sha256(manifest)
     meta["offline_training_manifest_sha256"] = manifest["manifest_sha256"]
     (tmp_path / manifest_name).write_text(json.dumps(manifest))
+    decision = datetime(2026, 11, 2, 10, tzinfo=timezone.utc)
     frame = pd.DataFrame({"lineage": ["L1", "L2"], "pred": [0.1, 0.2],
                           "model_id": [meta["model_id"]] * 2,
-                          "feature_schema_sha256": [meta["feature_schema_sha256"]] * 2})
-    batch_digest = LM.prediction_batch_sha256(frame, as_of=date(2026, 11, 2), model_digest=meta["model_id"])
+                          "feature_schema_sha256": [meta["feature_schema_sha256"]] * 2,
+                          "decision_at_utc": [decision] * 2,
+                          "feature_available_at_utc": [decision - timedelta(seconds=1)] * 2,
+                          "feature_revision_at_utc": [decision - timedelta(seconds=1)] * 2})
+    batch_digest = LM.prediction_batch_sha256(frame, as_of=decision, model_digest=meta["model_id"])
     frame["prediction_batch_sha256"] = batch_digest
-    assert LM._valid_prediction_cache(frame, as_of=date(2026, 11, 2), meta=meta,
+    assert LM._valid_prediction_cache(frame, as_of=decision, meta=meta,
                                       model_path=model_path, meta_path=meta_path)
     frame.loc[0, "pred"] = 0.9
-    assert not LM._valid_prediction_cache(frame, as_of=date(2026, 11, 2), meta=meta,
+    assert not LM._valid_prediction_cache(frame, as_of=decision, meta=meta,
                                           model_path=model_path, meta_path=meta_path)
     frame.loc[0, "pred"] = 0.1
     (tmp_path / manifest_name).write_text('{"manifest_sha256":"tampered"}')
-    assert not LM._valid_prediction_cache(frame, as_of=date(2026, 11, 2), meta=meta,
+    assert not LM._valid_prediction_cache(frame, as_of=decision, meta=meta,
                                           model_path=model_path, meta_path=meta_path)
     (tmp_path / manifest_name).write_text(json.dumps(manifest))
     model_path.write_bytes(b"changed")
-    assert not LM._valid_prediction_cache(frame, as_of=date(2026, 11, 2), meta=meta,
+    assert not LM._valid_prediction_cache(frame, as_of=decision, meta=meta,
                                           model_path=model_path, meta_path=meta_path)
 
 

@@ -116,4 +116,3 @@ def test_observations_must_be_complete_and_inside_the_frozen_cohort():
                                            late.window_end, late.window_end - timedelta(seconds=1),
                                            late.net_alpha_bps, late.slippage_bps, late.fill_coverage,
                                            late.drift_score, late.sample_count, late.evidence_ids))
-

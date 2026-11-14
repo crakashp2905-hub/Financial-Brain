@@ -20,6 +20,7 @@
   ],
   "source_sha256": {
     "src/financial_brain/forward_edge/prospective_cohort.py": "5df6ee250af783db3d351fb26ef11492de25c49f2c1b03d2fb4b5af7173b3504",
-    "tests/test_prospective_cohort.py": "f0f7343df0df836a4739973d695993b572bcba245e47a57bd953557b132950df"
+    "tests/test_prospective_cohort.py": "f0f7343df0df836a4739973d695993b572bcba245e47a57bd953557b132950df",
+    "docs/edge-program/source-inventory.json": "96caa353182a2cb5cc0e5ae61ef44a8e34891bcab8229684d27030b3c699940c"
   }
 }

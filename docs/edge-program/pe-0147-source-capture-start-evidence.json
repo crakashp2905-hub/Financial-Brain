@@ -17,8 +17,5 @@
     "Clock and entitlement evidence is supplied by callers and is not independently authenticated.",
     "No actual observed source-capture session has been produced."
   ],
-  "source_sha256": {
-    "src/financial_brain/forward_edge/source_capture_start.py": "05bc271c0f53cae9b10e1c98bb0114f7514c0f6fec5c21c57984f172be0047b9",
-    "tests/test_source_capture_start.py": "9972bcbcafcaa3029ca77a8972a35b55e46f7410adc5790097075560dacde662"
-  }
+  "source_sha256": {}
 }

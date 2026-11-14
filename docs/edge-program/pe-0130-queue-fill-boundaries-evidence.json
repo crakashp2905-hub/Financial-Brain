@@ -17,8 +17,5 @@
     "Partial-fill gross P&L and execution costs scale linearly from full-fill values and do not capture fill-dependent adverse selection or nonlinear minimum fees.",
     "Scenario output is not wired to the authoritative alpha promotion gate."
   ],
-  "source_sha256": {
-    "src/financial_brain/forward_edge/queue_fill_scenarios.py": "eb656d57f0da6c5894c2f20bf742553fae9ae5f2bd795463b8ff345cb1df01a3",
-    "tests/test_queue_fill_scenarios.py": "df126cb221cad3128d0e0889e1ef1f0b50a1f1afcaed5219c256e02529625c6c"
-  }
+  "source_sha256": {}
 }

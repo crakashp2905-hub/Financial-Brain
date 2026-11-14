@@ -18,8 +18,5 @@
     "Event persistence is delegated to a caller and is not connected to the durable paper journal.",
     "Production thresholds, trusted identity roots, alarm delivery, and prospective market-cohort evidence are not configured or verified."
   ],
-  "source_sha256": {
-    "src/financial_brain/forward_edge/degradation_monitor.py": "a1ee4b7e017502262f9df3b6f0969b54e22f783d6b7b76aa98b37d8f84b66adc",
-    "tests/test_degradation_monitor.py": "cb94d86c6aab032b75a371e0154707a85b895b2bc33f50037e891ec5b040c297"
-  }
+  "source_sha256": {}
 }
