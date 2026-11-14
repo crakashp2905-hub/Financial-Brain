@@ -9,6 +9,7 @@ import argparse
 import json
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 from financial_brain.forward_edge import evidence_stats as ES
 from financial_brain.forward_edge import evidence_labels as EL
@@ -60,6 +61,28 @@ def cmd_report(as_of: str) -> tuple[dict, int]:
     return EL.stamp_report(report, "fixture_replay"), EXIT["INSUFFICIENT"]
 
 
+def cmd_asset_class_report(path: str) -> tuple[dict, int]:
+    """Build a reconciled class report from explicit account and class snapshot JSON."""
+    from financial_brain.forward_edge.asset_class_edge import (
+        AssetClassEdgeError,
+        build_asset_class_edge_report,
+    )
+
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"error": f"cannot read asset-class evidence: {exc}"}, EXIT["USAGE"]
+    if (not isinstance(payload, dict) or not isinstance(payload.get("scheduled_sessions"), list)
+            or not isinstance(payload.get("observations"), list)):
+        return {"error": "input requires scheduled_sessions and observations arrays"}, EXIT["USAGE"]
+    try:
+        report = build_asset_class_edge_report(
+            scheduled_sessions=payload["scheduled_sessions"], observations=payload["observations"])
+    except AssetClassEdgeError as exc:
+        return {"error": str(exc)}, EXIT["USAGE"]
+    return report, EXIT["OK"] if report["aggregate_pnl_reportable"] else EXIT["INCOMPLETE"]
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb forward")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -73,6 +96,8 @@ def main(argv: list[str] | None = None) -> int:
     cl.add_argument("--fixture", default="win")
     rp = sub.add_parser("report")
     rp.add_argument("--as-of", default="2027-01-04")
+    ac = sub.add_parser("asset-class-report")
+    ac.add_argument("--input", required=True, help="JSON with scheduled_sessions and class snapshots")
     args = p.parse_args(argv)
     if args.cmd == "preflight":
         out, code = cmd_preflight(None, args.fail)
@@ -80,6 +105,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_paper_run(args.fixture, dry_run=not args.no_dry_run)
     elif args.cmd == "close":
         out, code = cmd_close(args.fixture)
+    elif args.cmd == "asset-class-report":
+        out, code = cmd_asset_class_report(args.input)
     else:
         out, code = cmd_report(args.as_of)
     print(json.dumps(out, indent=2, sort_keys=True, default=str))

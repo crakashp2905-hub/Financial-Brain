@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 166,
-  "unrecorded_tasks": 52,
+  "recorded_tasks": 167,
+  "unrecorded_tasks": 51,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3655,6 +3655,24 @@
       ],
       "test_result": "27 passed; Ruff and targeted mypy passed; source inventory check passed (616 Python files).",
       "evidence_sha256": "d2fde4a9bd82231b4d07681abc0a6271f20f6585ea0966ed9ec8484a10aab8fe",
+      "blockers": []
+    },
+    {
+      "id": "PE-0169",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/asset_class_edge.py",
+        "src/financial_brain/forward_edge/cli.py",
+        "tests/test_asset_class_edge.py",
+        "docs/edge-program/pe-0169-asset-class-economics-evidence.md",
+        "docs/edge-program/pe-0169-asset-class-economics-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_asset_class_edge.py"
+      ],
+      "test_result": "6 passed; Ruff and targeted mypy passed; source inventory check passed (617 Python files).",
+      "evidence_sha256": "82ea017f10d45e3f6e89c66459aa2b0be036958d6eefa1c00fffd445b9a6ac9a",
       "blockers": []
     }
   ]
