@@ -17,6 +17,7 @@ from financial_brain.evaluation.forecast_components import (
     evaluate_alpha_quality,
     evaluate_fill_quality,
     evaluate_risk_quality,
+    write_alpha_validation_artifacts,
 )
 
 AS_OF = datetime(2026, 2, 1, tzinfo=timezone.utc)
@@ -169,3 +170,25 @@ def test_calibration_fails_closed_on_non_development_data():
     with pytest.raises(ForecastComponentError, match="DEVELOPMENT"):
         calibrate_alpha_component([row] * 30, as_of=AS_OF, validation_start=AS_OF + timedelta(days=1),
                                   model_sha256=MODELS["alpha"])
+
+
+def test_untouched_validation_writes_return_uncertainty_and_trading_impact_curves(tmp_path):
+    rows = _rows("alpha", [
+        {"expected_net_alpha_bps": float(index),
+         "realized_net_alpha_bps": float(index) * 0.8,
+         "uncertainty_standard_error_bps": float(index) / 2}
+        for index in range(1, 21)
+    ])
+    report = write_alpha_validation_artifacts(rows, as_of=AS_OF, model_sha256=MODELS["alpha"],
+                                              output_dir=tmp_path, bins=5)
+    assert report["split"] == "VALIDATION"
+    assert len(report["alpha_calibration_curve"]) == 5
+    assert len(report["uncertainty_calibration_curve"]) == 5
+    assert len(report["net_alpha_trading_impact_curve"]) == 5
+    assert len(report["validation_data_sha256"]) == len(report["svg_sha256"]) == 64
+    svg = (tmp_path / "alpha-validation-calibration.svg").read_text()
+    assert "Net alpha calibration" in svg
+    assert "Uncertainty interval coverage" in svg
+    assert "Net alpha selection impact" in svg
+    assert report["svg_sha256"]
+    assert report["json_sha256"]

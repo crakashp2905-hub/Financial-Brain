@@ -10,7 +10,8 @@ from datetime import datetime
 import hashlib
 import json
 import math
-from typing import Any, Iterable
+from pathlib import Path
+from typing import Any, Iterable, cast
 
 import numpy as np
 import pandas as pd
@@ -410,3 +411,125 @@ def evaluate_risk_quality(rows: Iterable[dict[str, Any]], *, as_of: datetime,
             "sample_count": len(sample), "confidence_level": q, "empirical_coverage": coverage,
             "coverage_error": coverage - q, "underprediction_rate": float(np.mean(observed > forecasts)),
             "mean_pinball_loss_bps": float(np.mean(pinball))}
+
+
+def write_alpha_validation_artifacts(rows: Iterable[dict[str, Any]], *, as_of: datetime,
+                                     model_sha256: str, output_dir: str | Path,
+                                     interval_z: float = 1.645, bins: int = 10) -> dict[str, Any]:
+    """Write untouched-validation alpha/uncertainty curves and a net-alpha selection-impact SVG.
+
+    The output is diagnostic bps per decision. It is not a P&L backtest and does not fit or alter
+    any calibration policy. SVG is generated without an optional plotting dependency.
+    """
+    if type(bins) is not int or bins < 2 or not math.isfinite(interval_z) or interval_z <= 0:
+        raise ForecastComponentError("validation plot bins and interval z must be positive")
+    sample = _validation_rows(rows, as_of=as_of, model_sha256=model_sha256,
+                              target_schema=ALPHA_TARGET)
+    if len(sample) < bins:
+        raise ForecastComponentError("validation sample is too small for requested calibration bins")
+    predicted = np.asarray([_finite(row.get("expected_net_alpha_bps"), "expected net alpha") for row in sample])
+    realized = np.asarray([_finite(row.get("realized_net_alpha_bps"), "realized net alpha") for row in sample])
+    stderr = np.asarray([_finite(row.get("uncertainty_standard_error_bps"), "alpha standard error")
+                         for row in sample])
+    if (stderr <= 0).any():
+        raise ForecastComponentError("validation standard errors must be positive")
+    order = np.argsort(predicted, kind="mergesort")
+    groups = [group for group in np.array_split(order, min(bins, len(sample))) if len(group)]
+    alpha_curve = [{"count": int(len(group)), "mean_forecast_bps": float(predicted[group].mean()),
+                    "mean_realized_net_alpha_bps": float(realized[group].mean())} for group in groups]
+    uncertainty_curve = []
+    for group in np.array_split(np.argsort(stderr, kind="mergesort"), min(bins, len(sample))):
+        if not len(group):
+            continue
+        covered = np.abs(realized[group] - predicted[group]) <= interval_z * stderr[group]
+        uncertainty_curve.append({"count": int(len(group)), "mean_standard_error_bps": float(stderr[group].mean()),
+                                  "observed_interval_coverage": float(covered.mean()),
+                                  "nominal_interval_coverage": float(math.erf(interval_z / math.sqrt(2)))})
+    impact_curve = []
+    for quantile in (0.0, 0.2, 0.4, 0.6, 0.8):
+        threshold = float(np.quantile(predicted, quantile))
+        selected = predicted >= threshold
+        impact_curve.append({"threshold_quantile": quantile, "threshold_bps": threshold,
+                             "selected_count": int(selected.sum()),
+                             "selected_fraction": float(selected.mean()),
+                             "mean_realized_net_alpha_bps": float(realized[selected].mean()),
+                             "sum_realized_net_alpha_bps": float(realized[selected].sum())})
+    data_sha = _component_data_sha256(
+        sample, fields=("expected_net_alpha_bps", "realized_net_alpha_bps", "uncertainty_standard_error_bps"))
+    report: dict[str, Any] = {
+        "schema_version": "fb.alpha-validation-report.v1", "split": "VALIDATION",
+        "target_schema": ALPHA_TARGET, "model_sha256": model_sha256,
+        "validation_data_sha256": data_sha, "as_of_utc": pd.Timestamp(as_of).tz_convert("UTC").isoformat(),
+        "sample_count": len(sample), "interval_z": interval_z,
+        "alpha_calibration_curve": alpha_curve,
+        "uncertainty_calibration_curve": uncertainty_curve,
+        "net_alpha_trading_impact_curve": impact_curve,
+        "interpretation": "Net alpha bps per selected decision; synthetic or observed scope follows input data.",
+    }
+
+    def polyline(points: list[tuple[float, float]], *, x: float, y: float, width: float, height: float,
+                 x_range: tuple[float, float], y_range: tuple[float, float]) -> str:
+        xmin, xmax = x_range
+        ymin, ymax = y_range
+        if xmax <= xmin:
+            xmax = xmin + 1.0
+        if ymax <= ymin:
+            ymax = ymin + 1.0
+        coords = []
+        for px, py in points:
+            sx = x + width * (px - xmin) / (xmax - xmin)
+            sy = y + height * (1 - (py - ymin) / (ymax - ymin))
+            coords.append(f"{sx:.2f},{sy:.2f}")
+        return " ".join(coords)
+
+    def panel(title: str, x: int, series: list[tuple[float, float]], *,
+              x_label: str, y_label: str, y_range: tuple[float, float], diagonal: bool = False) -> str:
+        chart_x, chart_y, chart_w, chart_h = x + 55, 72, 235, 190
+        xs = [point[0] for point in series]
+        x_range = (min(xs), max(xs)) if xs else (0.0, 1.0)
+        coords = polyline(series, x=chart_x, y=chart_y, width=chart_w, height=chart_h,
+                          x_range=x_range, y_range=y_range)
+        line = f'<polyline points="{coords}" fill="none" stroke="#2563eb" stroke-width="3"/>'
+        reference = ""
+        if diagonal:
+            ref = polyline([(x_range[0], y_range[0]), (x_range[1], y_range[1])], x=chart_x, y=chart_y,
+                           width=chart_w, height=chart_h, x_range=x_range, y_range=y_range)
+            reference = f'<polyline points="{ref}" fill="none" stroke="#94a3b8" stroke-dasharray="5 4"/>'
+        return (f'<g><text x="{x + 12}" y="34" font-size="16" font-weight="bold">{title}</text>'
+                f'<path d="M{chart_x} {chart_y}V{chart_y + chart_h}H{chart_x + chart_w}" fill="none" stroke="#334155"/>'
+                f'{reference}{line}<text x="{chart_x + 55}" y="292" font-size="12">{x_label}</text>'
+                f'<text transform="translate({x + 14} {chart_y + 95}) rotate(-90)" font-size="12">{y_label}</text></g>')
+
+    curve_points = [(float(row["mean_forecast_bps"]), float(row["mean_realized_net_alpha_bps"]))
+                    for row in alpha_curve]
+    uncertainty_points = [(cast(float, row["mean_standard_error_bps"]),
+                           cast(float, row["observed_interval_coverage"]))
+                          for row in uncertainty_curve]
+    impact_points = [(float(row["selected_fraction"]), float(row["mean_realized_net_alpha_bps"]))
+                     for row in impact_curve]
+    alpha_values = [value for pair in curve_points for value in pair]
+    uncertainty_y = (min([0.0, *[point[1] for point in uncertainty_points]]),
+                     max([1.0, *[point[1] for point in uncertainty_points]]))
+    impact_y = (min([0.0, *[point[1] for point in impact_points]]),
+                max([1.0, *[point[1] for point in impact_points]]))
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" role="img">'
+           f'<rect width="960" height="320" fill="white"/>'
+           f'<text x="12" y="16" font-size="10">Validation-only · net alpha / uncertainty · {data_sha[:16]}</text>'
+           + panel("Net alpha calibration (bps)", 0, curve_points,
+                   x_label="Mean forecast bps", y_label="Mean realized net alpha bps",
+                   y_range=(min(alpha_values), max(alpha_values)), diagonal=True)
+           + panel("Uncertainty interval coverage", 320, uncertainty_points,
+                   x_label="Mean standard error bps", y_label="Observed coverage", y_range=uncertainty_y)
+           + panel("Net alpha selection impact", 640, impact_points,
+                   x_label="Validation fraction selected", y_label="Mean realized net alpha bps", y_range=impact_y)
+           + "</svg>")
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    svg_path, json_path = output / "alpha-validation-calibration.svg", output / "alpha-validation-calibration.json"
+    svg_bytes = svg.encode("utf-8")
+    report["svg_sha256"] = hashlib.sha256(svg_bytes).hexdigest()
+    svg_path.write_bytes(svg_bytes)
+    json_bytes = (json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+    json_path.write_bytes(json_bytes)
+    return {**report, "svg_path": str(svg_path), "json_path": str(json_path),
+            "json_sha256": hashlib.sha256(json_bytes).hexdigest()}

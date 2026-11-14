@@ -1,0 +1,18 @@
+{
+  "checklist_task": "PE-0174",
+  "status": "DONE",
+  "criterion": "Implement calibration for expected net returns and their uncertainty, not just direction accuracy; produce calibration curves and a trading-impact plot on untouched internal validation.",
+  "implementation": [
+    "src/financial_brain/evaluation/forecast_components.py"
+  ],
+  "tests": [
+    "tests/test_forecast_components.py"
+  ],
+  "test_result": "12 forecast-component tests passed, including validation-only report output, curve contents, and artifact digests; Ruff and targeted mypy passed. Inventory checks passed (619 Python files; 253 candidates). CI pending.",
+  "evidence_scope": "Synthetic validation rows only. No real market calibration or trading impact is claimed.",
+  "operational_limits": [
+    "Report inputs must be untouched VALIDATION rows with matured/revised labels known by the as-of cutoff.",
+    "The report generator does not fit or retune policies on validation data.",
+    "The impact curve reports net-alpha basis points per selected decision, not capital P&L."
+  ]
+}
