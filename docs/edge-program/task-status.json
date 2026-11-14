@@ -4241,7 +4241,7 @@
     },
     {
       "id": "PE-0196",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": [
         "scripts/check_critical_coverage.py",
         "tests/test_critical_coverage.py",
@@ -4254,11 +4254,9 @@
         "complete 4,085-test Windows suite; one opt-in protocol test skipped",
         "six-domain full-suite coverage report"
       ],
-      "test_result": "The Windows full suite passed 4,085 tests with one opt-in test skipped. Full-suite domain coverage: OMS 83.81%, custody 89.86%, market data 90.71%, accounting 82.17%, evaluation 88.69%, risk 83.50%. Added a CLI-generated JSON artifact and a 60% per-domain CI gate; focused coverage-check tests pass. Awaiting first clean Ubuntu/Windows CI run with the new gate.",
-      "blockers": [
-        "The new coverage gate has not yet completed a clean Ubuntu and Windows CI run."
-      ],
-      "evidence_sha256": "2331dca657821b543dc2d1be1c88baa7f6a0531d36dab85942cf47b509e975ac"
+      "test_result": "Full-suite coverage floors and the six-domain CI gate passed on Ubuntu and Windows in GitHub Actions run 43601378017 at commit 2c61abe6cbc50e2efa864fb8c883a734431894ef. Both complete workflow jobs passed and uploaded coverage artifacts; their IDs and SHA-256 digests are recorded in the PE-0196 evidence report. Coverage is an engineering quality measure, not profitability evidence.",
+      "blockers": [],
+      "evidence_sha256": "91275bfaa4f290df6d0f6886066977de5759fc86312ae9894a8627194535b95b"
     },
     {
       "id": "PE-0197",
