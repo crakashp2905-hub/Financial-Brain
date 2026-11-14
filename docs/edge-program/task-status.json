@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 152,
-  "unrecorded_tasks": 66,
+  "recorded_tasks": 153,
+  "unrecorded_tasks": 65,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3379,6 +3379,27 @@
       "blockers": [
         "Feed-health requirement is opt-in until the observed Kite/session orchestrator is wired to require it globally.",
         "Continuous live health monitoring and fault injection across a forward market session remain unverified."
+      ]
+    },
+    {
+      "id": "PE-0155",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/daily_evidence_bundle.py",
+        "tests/test_daily_evidence_bundle.py",
+        "docs/edge-program/pe-0155-daily-evidence-bundle.md",
+        "docs/edge-program/pe-0155-daily-evidence-bundle-evidence.json"
+      ],
+      "tests": [
+        "test_daily_evidence_bundle.py",
+        "test_eod_paper_archive.py"
+      ],
+      "test_result": "8 passed; Ruff passed.",
+      "evidence_sha256": "81710ca3db21024e9f18cd7ceb7d85410ec4e5c767992665cf22627fd7d93954",
+      "blockers": [
+        "Daily launcher does not yet invoke bundle creation after every completed paper session.",
+        "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",
+        "Bundle transfer has no managed delivery channel; this implementation exports a self-contained directory."
       ]
     }
   ]

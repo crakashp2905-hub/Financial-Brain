@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0155",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py; ruff check src/financial_brain/forward_edge/daily_evidence_bundle.py tests/test_daily_evidence_bundle.py src/financial_brain/forward_edge/eod_paper_archive.py",
+    "result": "8 passed; Ruff passed."
+  },
+  "implemented": [
+    "Portable bundles export account close archive and durable runner journal plus optional evidence inputs with SHA-256 and byte lengths.",
+    "Human-readable report derives exclusively from exported inputs and contains no profitability/live-execution overclaim.",
+    "Independent verifier checks archive hash, journal hash chain, manifest, input hashes, file set, optional Ed25519 signature, and deterministic report reproduction.",
+    "Cross-workstation copy test reproduces identical report bytes and validates with a pinned trusted public-key hash.",
+    "Tampering, undeclared files, symbolic links, mismatched trusted keys, and output reuse with another signing key are refused."
+  ],
+  "blockers": [
+    "Daily launcher does not yet invoke bundle creation after every completed paper session.",
+    "Production signing-key custody and trusted public-key distribution are owner responsibilities and are not configured.",
+    "Bundle transfer has no managed delivery channel; this implementation exports a self-contained directory."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/daily_evidence_bundle.py": "d67b077819e5fb1af63e85fd30663394eff9b37b3dc3c43b4c0400af4f55776b",
+    "tests/test_daily_evidence_bundle.py": "a5c6615fe1c76f9fa30becd3e892977b2c9afd70fa722938c2778f0c47ee87c6"
+  }
+}
