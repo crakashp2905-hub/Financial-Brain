@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0139",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_stop_target_sensitivity.py tests/test_kernel_fills.py tests/test_phase5_orb.py; ruff check src/financial_brain/evaluation/stop_target_sensitivity.py tests/test_stop_target_sensitivity.py",
+    "result": "24 passed; Ruff passed."
+  },
+  "implemented": [
+    "Freezes a bounded stop/target grid and restricts trade and OHLC dates to the development window.",
+    "Uses the shared stop-first adverse resolver for same-bar stop/target collisions and exposes collision counts.",
+    "Includes declared round-trip cost in every per-trade net outcome and retains all grid/trade rows, including losses.",
+    "Rejects invalid bars, final-window access, non-development inputs, and over-budget plans."
+  ],
+  "blockers": [
+    "No verified development dataset run or authoritative input-data registry binding is included.",
+    "Round-trip costs are supplied by the caller and are not independently calibrated here.",
+    "Daily bars cannot identify intrabar order; collision outcomes are conservatively penalized rather than observed."
+  ],
+  "source_sha256": {
+    "src/financial_brain/evaluation/stop_target_sensitivity.py": "85cf262eb4e08e24d215a9787a83411f2dec7d468086e6323d2883541807b678",
+    "tests/test_stop_target_sensitivity.py": "42317ab2be8eadfc648a778f6e7f0aa01cb61b3ca4b864f2e780684d4efd9ef5"
+  }
+}

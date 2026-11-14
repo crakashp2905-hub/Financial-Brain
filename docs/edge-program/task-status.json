@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 136,
-  "unrecorded_tasks": 82,
+  "recorded_tasks": 137,
+  "unrecorded_tasks": 81,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2976,6 +2976,31 @@
         "Inputs and data digest are not bound to an authoritative research registry.",
         "No new-version preregistration gate controls horizon adoption.",
         "No real forward decay evidence exists."
+      ]
+    },
+    {
+      "id": "PE-0139",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/stop_target_sensitivity.py",
+        "tests/test_stop_target_sensitivity.py",
+        "docs/edge-program/pe-0139-stop-target-development-sensitivity.md",
+        "docs/edge-program/pe-0139-stop-target-development-sensitivity-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_same_bar_collision_is_stop_first_and_penalizes_the_trade",
+        "test_complete_grid_reports_negative_trades_and_costed_outcomes",
+        "test_protected_final_window_and_non_development_rows_are_rejected",
+        "test_invalid_bars_budget_or_parameters_are_rejected"
+      ],
+      "test_result": "24 stop-target sensitivity, fill-kernel, and ORB tests passed; Ruff passed. Frozen grid includes costs and penalizes same-bar ambiguity.",
+      "evidence_sha256": "c20c69a881d6ba29d77f1eda8a75e0750a523ef9f2f3b3dc9e60c0593eaabba6",
+      "blockers": [
+        "No verified development dataset run or central data-provenance binding.",
+        "Cost assumptions are caller-supplied and not calibrated by this package.",
+        "Bar data cannot reveal intrabar path; adverse stop-first penalty is a model assumption."
       ]
     }
   ]
