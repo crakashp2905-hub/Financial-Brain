@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 155,
-  "unrecorded_tasks": 63,
+  "recorded_tasks": 156,
+  "unrecorded_tasks": 62,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3444,6 +3444,23 @@
         "No prospective market-session cohort has populated this report from observed Kite quotes and account archives.",
         "The report only supports INR account archives; cross-currency book aggregation is not implemented here."
       ]
+    },
+    {
+      "id": "PE-0158",
+      "status": "DONE",
+      "sources": [
+        "docs/edge-program/paper-session-runbook.md",
+        "tests/test_paper_session_runbook.py",
+        "docs/edge-program/pe-0158-paper-session-runbook-evidence.json"
+      ],
+      "tests": [
+        "test_paper_session_runbook.py",
+        "test_forward_edge_f13.py",
+        "test_forward_offline_paper_cli.py"
+      ],
+      "test_result": "45 passed; Ruff passed. Manual CLI exit codes 0, 2, 0, 0, 4.",
+      "evidence_sha256": "dce9ce89113ed37fa7e349aab10dedc1fe0e31003b5726f786fb99ee03d1bb04",
+      "blockers": []
     }
   ]
 }
