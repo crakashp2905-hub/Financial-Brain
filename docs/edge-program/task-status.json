@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 162,
-  "unrecorded_tasks": 56,
+  "recorded_tasks": 163,
+  "unrecorded_tasks": 55,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3576,6 +3576,25 @@
       ],
       "test_result": "19 passed across futures lifecycle, paper-account, and carry suites; Ruff passed; source inventory --check passed (613 Python files).",
       "evidence_sha256": "1215c8f4891d7e469fb0a962ba8c22d22be1531ccb74d18fc64ddab101aa6c10",
+      "blockers": []
+    },
+    {
+      "id": "PE-0165",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/paper/options_spread.py",
+        "tests/test_options_leg_evidence.py",
+        "tests/test_paper_options_spread.py",
+        "docs/edge-program/pe-0165-options-leg-evidence.md",
+        "docs/edge-program/pe-0165-options-leg-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_options_leg_evidence.py",
+        "test_paper_options_spread.py"
+      ],
+      "test_result": "11 passed across option-leg evidence and spread suites; Ruff passed; source inventory --check passed (613 Python files).",
+      "evidence_sha256": "f9abfb36071bf6a1c6962279abd3f8e39516c0fa1248cb32e3cc96e87c257d84",
       "blockers": []
     }
   ]

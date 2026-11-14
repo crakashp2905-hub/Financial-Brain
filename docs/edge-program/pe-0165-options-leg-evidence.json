@@ -1,0 +1,13 @@
+{
+  "checklist_task": "PE-0165",
+  "status": "DONE",
+  "criterion": "Every option leg requires timestamped bid/ask and source-verified venue, lot, and expiry compatibility before paper spread economics are produced.",
+  "implementation": "src/financial_brain/paper/options_spread.py::prepare_debit_vertical",
+  "tests": [
+    "tests/test_options_leg_evidence.py",
+    "tests/test_paper_options_spread.py"
+  ],
+  "test_result": "11 passed across option-leg evidence and spread suites; Ruff passed; source inventory check passed (613 Python files).",
+  "evidence_scope": "Synthetic quote and contract-master records only. No live option fill, broker routing, or profitability claim.",
+  "remaining_operational_evidence": "Capture authorized timestamped per-leg bid/ask and contract-master evidence in prospective paper sessions."
+}
