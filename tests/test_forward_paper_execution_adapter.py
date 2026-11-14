@@ -150,6 +150,7 @@ def test_quote_simulator_is_connected_to_durable_runner(tmp_path):
         strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
         constraints_sha256="c" * 64, ledger_id="ledger-a", benchmark_id="NIFTY50",
         instruments=("NSE:INFY",), capital_inr=str(capital), mode=Mode.LIVE_PAPER,
+        authority_strategy_id="test-strategy", authority_account_id="test-account",
         family_evidence=family, family_owner_approval=approval,
     )
     runner = ForwardSessionRunner(tmp_path / "session.jsonl")

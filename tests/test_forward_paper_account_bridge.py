@@ -19,6 +19,7 @@ from financial_brain.forward_edge.paper_execution_adapter import MarketableQuote
 from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
 from financial_brain.forward_edge.registry import Benchmark, MechanismHypothesis, Registry, Status, StrategySpec
 from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
+from financial_brain.kernel.paper_authority import PaperExecutionAuthorityRegistry
 from financial_brain.kernel.oms import State
 from financial_brain.kernel.registered_paper_books import (
     FamilyCapitalAuthorization,
@@ -97,6 +98,7 @@ def _config():
         strategy_sha256=STRATEGY_SHA, risk_policy_sha256="b" * 64,
         constraints_sha256="c" * 64, ledger_id="account-ledger", benchmark_id="NIFTY50",
         instruments=("NSE:INFY",), capital_inr=str(capital), mode=Mode.LIVE_PAPER,
+        authority_strategy_id="test-momentum", authority_account_id="paper-main",
         family_evidence=family, family_owner_approval=approval,
     )
 
@@ -239,6 +241,32 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
     assert all(row["receipt_id"] == first["execution"]["receipt_id"] for row in order_updates)
     assert PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
                         fee_schedule=SCHEDULE).position("NSE:INFY").quantity == 2
+
+
+def test_forward_paper_service_rejects_legacy_intraday_authority_before_writing(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    service.authority_registry = PaperExecutionAuthorityRegistry(
+        runner_path.parent / "paper_authority.sqlite3")
+    service.authority_registry.claim(
+        strategy_id=service.strategy_spec.strategy_id,
+        exchange_date=config.exchange_date,
+        engine_id="legacy_intraday",
+        account_id="legacy-book",
+    )
+    preflight_calls = []
+    before = account.journal.records()
+
+    with pytest.raises(PaperAccountBridgeError, match="authority conflict"):
+        service.run(
+            config, [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: preflight_calls.append(True) or {"approved": True},
+            decision_fn=lambda _events: {}, risk_fn=lambda _decision: {},
+            execution_fn=lambda *_: {}, decision_at=DECISION_AT,
+        )
+
+    assert preflight_calls == []
+    assert account.journal.records() == before
+    assert DurableJournal(runner_path).records() == []
 
 
 @pytest.mark.parametrize(

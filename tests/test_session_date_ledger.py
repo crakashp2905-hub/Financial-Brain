@@ -18,6 +18,7 @@ def _config(session_id="session-date-1"):
         strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
         constraints_sha256="c" * 64, ledger_id="LEDGER-1", benchmark_id="NIFTY50",
         instruments=("NSE:INFY",), capital_inr="1000000", mode=Mode.LIVE_PAPER,
+        authority_strategy_id="test-strategy", authority_account_id="test-account",
     )
 
 

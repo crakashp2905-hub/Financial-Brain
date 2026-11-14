@@ -46,9 +46,9 @@
       "id": "forward-paper-account-authority",
       "owner_role": "Execution",
       "maturity": "partial",
-      "source": ["src/financial_brain/forward_edge/paper_account_bridge.py", "src/financial_brain/forward_edge/session_runner.py"],
-      "tests": ["tests/test_forward_paper_account_bridge.py", "tests/test_forward_session_runner.py"],
-      "blockers": ["Legacy intraday DuckDB engine is not bound to the same authority registry", "No owner-authorized observed market session"]
+      "source": ["src/financial_brain/forward_edge/paper_account_bridge.py", "src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/kernel/paper_authority.py", "src/financial_brain/paper/intraday_runner.py"],
+      "tests": ["tests/test_forward_paper_account_bridge.py", "tests/test_forward_session_runner.py", "tests/test_paper_execution_authority.py", "tests/test_phase5_intraday_runner.py"],
+      "blockers": ["Production registry path and canonical strategy identifiers are not deployment-verified", "Other direct/manual paper writers and authenticated owner identity are not bound to this interlock", "No owner-authorized observed market session"]
     },
     {
       "id": "registered-paper-book-isolation",

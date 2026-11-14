@@ -30,6 +30,9 @@ from financial_brain.forward_edge.forecast_cost_benefit import (CostBenefitError
                                                                assess_cost_to_benefit)
 from financial_brain.forward_edge.session_clock import ClockError, SessionClockProvider, as_utc
 from financial_brain.forward_edge.session_ops import SessionDateLedger, SessionError
+from financial_brain.kernel.paper_authority import (
+    PaperAuthorityError, PaperExecutionAuthorityRegistry, configured_paper_authority_path,
+)
 
 
 class RunnerError(ValueError):
@@ -71,6 +74,8 @@ class ForwardRunConfig:
     require_feed_health: bool = False
     family_evidence: FamilyEvidence | None = None
     family_owner_approval: Approval | None = None
+    authority_strategy_id: str | None = None
+    authority_account_id: str | None = None
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
@@ -85,6 +90,13 @@ class ForwardRunConfig:
             raise RunnerError("instruments must be nonempty and unique")
         if self.mode not in (Mode.FIXTURE_REPLAY, Mode.LIVE_PAPER, Mode.SHADOW, Mode.RESEARCH_REPLAY):
             raise RunnerError("forward runner only accepts replay, shadow, or paper mode")
+        if self.mode is Mode.LIVE_PAPER and not self.authority_strategy_id:
+            raise RunnerError("LIVE_PAPER requires a registered authority strategy ID")
+        if self.mode is Mode.LIVE_PAPER and not self.authority_account_id:
+            raise RunnerError("LIVE_PAPER requires a registered authority account ID")
+        if ((self.authority_strategy_id is not None and not self.authority_strategy_id.strip())
+                or (self.authority_account_id is not None and not self.authority_account_id.strip())):
+            raise RunnerError("paper authority identifiers must be nonempty when supplied")
         if type(self.require_feed_health) is not bool:
             raise RunnerError("require_feed_health must be a boolean")
         if (isinstance(self.minimum_forecast_net_alpha, bool)
@@ -126,6 +138,8 @@ class ForwardRunConfig:
                      "constraints_sha256": self.constraints_sha256, "ledger_id": self.ledger_id,
                      "benchmark_id": self.benchmark_id, "instruments": sorted(set(self.instruments)),
                      "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value,
+                     "authority_strategy_id": self.authority_strategy_id,
+                     "authority_account_id": self.authority_account_id,
                      "minimum_forecast_net_alpha": self.minimum_forecast_net_alpha,
                      "net_alpha_policy_sha256": self.net_alpha_policy_sha256,
                      "session_key": self.session_key, "attempt_id": self.attempt_id}
@@ -158,7 +172,9 @@ class ForwardRunConfig:
     def session_key(self) -> str:
         """Stable identity for one strategy/cohort/date/mode, shared by its immutable attempts."""
         body = json.dumps({"exchange_date": self.exchange_date, "cohort_id": self.cohort_id,
-                           "strategy_sha256": self.strategy_sha256, "mode": self.mode.value},
+                           "strategy_sha256": self.strategy_sha256, "mode": self.mode.value,
+                           "authority_strategy_id": self.authority_strategy_id,
+                           "authority_account_id": self.authority_account_id},
                           sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(body.encode()).hexdigest()
 
@@ -181,8 +197,11 @@ class ForwardSessionRunner:
                  session_date_ledger: SessionDateLedger | None = None,
                  net_alpha_threshold_registry: NetAlphaThresholdRegistry | None = None,
                  uncertainty_sizing_registry: UncertaintySizingRegistry | None = None,
-                 forecast_benefit_registry: ForecastBenefitPolicyRegistry | None = None) -> None:
+                 forecast_benefit_registry: ForecastBenefitPolicyRegistry | None = None,
+                 authority_registry: PaperExecutionAuthorityRegistry | None = None) -> None:
         self.journal_path = Path(journal_path)
+        self.authority_registry = authority_registry or PaperExecutionAuthorityRegistry(
+            configured_paper_authority_path(self.journal_path.parent))
         self.clock_provider = clock_provider or SessionClockProvider()
         self.session_date_ledger = session_date_ledger
         self.net_alpha_threshold_registry = net_alpha_threshold_registry
@@ -525,6 +544,18 @@ class ForwardSessionRunner:
             reconcile_execution_fn: Callable[[str], dict] | None = None) -> dict:
         from financial_brain.forward_edge.market_data import decision_visible
 
+        if config.mode is Mode.LIVE_PAPER:
+            if not config.authority_strategy_id or not config.authority_account_id:
+                raise RunnerError("LIVE_PAPER requires registered strategy and paper-account authority IDs")
+            try:
+                self.authority_registry.claim(
+                    strategy_id=config.authority_strategy_id,
+                    exchange_date=config.exchange_date,
+                    engine_id="forward_paper",
+                    account_id=config.authority_account_id,
+                )
+            except PaperAuthorityError as exc:
+                raise RunnerError(f"paper execution authority conflict: {exc}") from exc
         self.begin(config)
         journal = DurableJournal(self.journal_path)
         records = journal.records()

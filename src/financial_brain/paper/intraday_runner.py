@@ -227,7 +227,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
              rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
              event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None,
-             raw_archive=None) -> dict:
+             raw_archive=None, authority_path: Path | None = None) -> dict:
     from ..providers import kite_data as kd
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
@@ -236,6 +236,15 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     if now.time() > CLOSE or now.weekday() >= 5:
         return {"day": day, "status": "not_a_session", "why": "after the close or a weekend: nothing recorded"}
     path, fingerprint = cohort_path(path, cohort, strategies, rules)
+    from ..kernel.paper_authority import (
+        PaperExecutionAuthorityRegistry, configured_paper_authority_path,
+    )
+    authority_registry = PaperExecutionAuthorityRegistry(
+        authority_path or configured_paper_authority_path(path.parent))
+    authority_registry.claim_many([{
+        "strategy_id": str(strategy), "exchange_date": day,
+        "engine_id": "legacy_intraday", "account_id": str(path.resolve()),
+    } for strategy in strategies])
     con = ledger(path)
     uni = universe(n)
     syms = [u["tradingsymbol"] for u in uni]

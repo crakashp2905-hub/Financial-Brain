@@ -197,24 +197,40 @@
         "docs/edge-program/source-inventory.json",
         "src/financial_brain/paper/intraday_runner.py",
         "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/kernel/paper_authority.py",
         "src/financial_brain/forward_edge/pipeline.py",
         "src/financial_brain/kernel/paper_account.py",
         "src/financial_brain/forward_edge/paper_account_bridge.py",
         "tests/test_forward_paper_account_bridge.py",
         "tests/test_paper_account_portfolio.py",
-        "docs/edge-program/pe-0011-paper-authority-boundary-evidence.md"
+        "docs/edge-program/pe-0011-paper-authority-boundary-evidence.md",
+        "tests/test_paper_execution_authority.py",
+        "tests/test_phase5_intraday_runner.py"
       ],
       "tests": [
-        "test_inventory_covers_all_python_sources_without_inventing_owners",
-        "test_inventory_captures_old_and_new_engine_dependency_graph_roots",
-        "test_task_ledger_inventory_counts_and_authority_evidence_hash_are_current",
-        "test_session_evidence_and_paper_account_authority_journals_cannot_alias",
-        "test_portfolio_refuses_ambiguous_duplicate_book_authority"
+        "test_paper_execution_authority.py",
+        "test_forward_paper_account_bridge.py",
+        "test_phase5_intraday_runner.py",
+        "test_paper_account_portfolio.py",
+        "test_source_inventory.py",
+        "test_forward_session_runner.py",
+        "test_forward_session_crash_matrix.py",
+        "test_forward_paper_execution_adapter.py",
+        "test_decision_sealing.py",
+        "test_forward_book_adapter.py",
+        "test_forward_feed_health.py",
+        "test_net_alpha_policy.py",
+        "test_pretrade_gates.py",
+        "test_session_date_ledger.py",
+        "test_source_capture_start.py",
+        "test_capability_matrix.py"
       ],
-      "test_result": "The forward paper path rejects aliasing the session evidence journal and authoritative PaperAccount journal before writes; reconciliation repeats the check. PaperAccountPortfolio refuses duplicate account objects/IDs and shared journals. The generated inventory covers 626 Python sources (613 unassessed, 358 role-unassigned). Combined bridge/account/portfolio/source-inventory suite: 31 passed; Ruff, mypy, and inventory freshness checks passed. Legacy intraday DuckDB remains a separate, unmapped engine.",
-      "evidence_sha256": "0eda65d8151779dff510a60a3dc7b6512c8ae323712f04164b2da0a49316928d",
+      "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (627 Python sources; 612 unassessed; 359 role-unassigned).",
+      "evidence_sha256": "91579cef58650bb9c19534d826ca0ba82ba4777c965829de95c9bc01eb7813b9",
       "blockers": [
-        "Legacy intraday DuckDB is not bound to a shared strategy/book authority registry, so overlapping authority across legacy and forward-paper engines is not prevented; 613 source modules remain unassessed and 358 lack owner-role assignments."
+        "Deployment must configure a shared registry path and canonical matching strategy IDs; this has not been verified in the owner environment.",
+        "Other direct/manual paper writers, authenticated owner identity, and account closure/release governance are not bound to this control.",
+        "No owner-authorized observed market session."
       ]
     },
     {

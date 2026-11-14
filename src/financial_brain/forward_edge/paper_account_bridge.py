@@ -27,6 +27,9 @@ from financial_brain.kernel.schemas import (
 )
 from financial_brain.kernel.oms import State
 from financial_brain.kernel.paper_account import PaperAccount, PaperAccountError
+from financial_brain.kernel.paper_authority import (
+    PaperExecutionAuthorityRegistry, configured_paper_authority_path,
+)
 from financial_brain.kernel.registered_paper_books import (
     PaperBookRegistryError,
     RegisteredPaperBooks,
@@ -43,7 +46,8 @@ class ForwardPaperSessionService:
     def __init__(self, runner: ForwardSessionRunner, account: PaperAccount, *,
                  strategy_spec: StrategySpec, registry: Registry,
                  paper_books: RegisteredPaperBooks, paper_book_plan_id: str,
-                 paper_account_root: Path) -> None:
+                 paper_account_root: Path,
+                 authority_registry: PaperExecutionAuthorityRegistry | None = None) -> None:
         if not isinstance(paper_books, RegisteredPaperBooks) or not paper_book_plan_id:
             raise PaperAccountBridgeError("LIVE_PAPER requires a registered frozen paper-book plan")
         self.runner = runner
@@ -53,8 +57,11 @@ class ForwardPaperSessionService:
         self.paper_books = paper_books
         self.paper_book_plan_id = paper_book_plan_id
         self.paper_account_root = Path(paper_account_root).resolve()
+        self.authority_registry = authority_registry or PaperExecutionAuthorityRegistry(
+            configured_paper_authority_path(self.paper_account_root.parent))
+        self.runner.authority_registry = self.authority_registry
 
-    def _validate_strategy(self, config: ForwardRunConfig, decision_at: datetime) -> None:
+    def _validate_strategy(self, config: ForwardRunConfig, decision_at: datetime):
         """Bind the paper service to the exact guarded registry identity before any session writes."""
         if config.mode is not Mode.LIVE_PAPER:
             raise PaperAccountBridgeError("paper account service accepts LIVE_PAPER sessions only")
@@ -83,10 +90,15 @@ class ForwardPaperSessionService:
             raise PaperAccountBridgeError("paper strategy is not registered") from exc
         if registered != self.strategy_spec or not order_intent_allowed(self.strategy_spec, self.registry):
             raise PaperAccountBridgeError("paper strategy is not the exact registered paper-capable version")
+        if config.authority_strategy_id != self.strategy_spec.strategy_id:
+            raise PaperAccountBridgeError("session authority strategy ID does not match the registered strategy")
+        if config.authority_account_id != allocation.account_id:
+            raise PaperAccountBridgeError("session authority account ID does not match the registered book allocation")
         if config.strategy_sha256 != self.strategy_spec.code_sha256:
             raise PaperAccountBridgeError("session strategy digest does not match the registered strategy")
         if config.benchmark_id != self.strategy_spec.benchmark_id:
             raise PaperAccountBridgeError("session benchmark does not match the frozen strategy benchmark")
+        return allocation
 
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
             preflight_fn: Callable[[], dict], decision_fn: Callable[[list[NormalizedEvent]], dict],
@@ -101,7 +113,16 @@ class ForwardPaperSessionService:
             decision_at = (datetime.fromisoformat(existing_decision["decision_at_utc"])
                            if existing_decision is not None
                            else self.runner.clock_provider.decision_time())
-        self._validate_strategy(config, decision_at)
+        allocation = self._validate_strategy(config, decision_at)
+        try:
+            self.authority_registry.claim(
+                strategy_id=self.strategy_spec.strategy_id,
+                exchange_date=config.exchange_date,
+                engine_id="forward_paper",
+                account_id=allocation.account_id,
+            )
+        except ValueError as exc:
+            raise PaperAccountBridgeError(f"paper execution authority conflict: {exc}") from exc
         existing_preflight = next((row for row in DurableJournal(self.runner.journal_path).records()
                                    if row.get("t") == "PREFLIGHT_RESULT"
                                    and row.get("session_id") == config.session_id), None)

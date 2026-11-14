@@ -24,9 +24,39 @@ from financial_brain.forward_edge.forecast_cost_benefit import (
     ForecastBenefitPolicyRegistry,
     calibrate_forecast_benefit_policy,
 )
+from financial_brain.kernel.paper_authority import PaperExecutionAuthorityRegistry
 
 
 NOW = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
+
+
+def test_direct_live_runner_requires_ids_and_claims_authority_before_journal_write(tmp_path):
+    journal_path = tmp_path / "session.jsonl"
+    runner = ForwardSessionRunner(journal_path)
+    config = _config()
+    registry = PaperExecutionAuthorityRegistry(tmp_path / "paper_authority.sqlite3")
+    registry.claim(strategy_id="test-strategy", exchange_date=config.exchange_date,
+                   engine_id="legacy_intraday", account_id="legacy-book")
+
+    with pytest.raises(RunnerError, match="authority conflict"):
+        runner.run(config, [], decision_at=NOW,
+                   decision_fn=lambda _events: {}, risk_fn=lambda _decision: {},
+                   execution_fn=lambda *_: {})
+
+    assert not journal_path.exists()
+
+
+def test_direct_live_runner_rejects_missing_authority_identity_before_writes(tmp_path):
+    journal_path = tmp_path / "session.jsonl"
+    runner = ForwardSessionRunner(journal_path)
+    config = _config(authority_strategy_id=None, authority_account_id=None)
+
+    with pytest.raises(RunnerError, match="authority IDs"):
+        runner.run(config, [], decision_at=NOW,
+                   decision_fn=lambda _events: {}, risk_fn=lambda _decision: {},
+                   execution_fn=lambda *_: {})
+
+    assert not journal_path.exists()
 
 
 def _config(**changes):
@@ -34,7 +64,8 @@ def _config(**changes):
                   strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
                   constraints_sha256="c" * 64, ledger_id="LEDGER-1",
                   benchmark_id="NIFTY50", instruments=("NSE:INFY",),
-                  capital_inr="1000000", mode=Mode.LIVE_PAPER)
+                  capital_inr="1000000", mode=Mode.LIVE_PAPER,
+                  authority_strategy_id="test-strategy", authority_account_id="test-account")
     values.update(changes)
     if "family_evidence" not in changes and "family_owner_approval" not in changes:
         evidence = FamilyEvidence(
@@ -414,7 +445,7 @@ def test_no_trade_signal_never_reaches_execution_adapter(tmp_path):
 
 
 def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
-    assert _config().sha256 == "ef27774c1b93108583996914c088c5c3320c5e379da6dff480f1ac924c927660"
+    assert _config().sha256 == "8f9bc7f06ef12a4da7059b0d51e968c170bf99ba7204a1f7a57c421e90435507"
     assert _config(capital_inr="1000000.00").sha256 == _config(capital_inr="1000000").sha256
     assert _config(ledger_id="LEDGER-2").sha256 != _config().sha256
     assert _config(risk_policy_sha256="d" * 64).sha256 != _config().sha256

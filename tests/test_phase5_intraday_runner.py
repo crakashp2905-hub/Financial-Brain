@@ -4,6 +4,7 @@ import pytest
 
 from financial_brain.paper import intraday_runner as R
 from financial_brain.providers import kite_data as KD
+from financial_brain.kernel.paper_authority import PaperAuthorityError, PaperExecutionAuthorityRegistry
 
 
 class Clock:
@@ -62,6 +63,22 @@ def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger
     assert "EXPLORATORY_SHADOW" in report and "excluded from formal paper-book/champion allocation" in report
 
 
+def test_legacy_intraday_runner_rejects_forward_engine_claim_before_creating_ledger(setup):
+    path = setup / "l.duckdb"
+    authority_path = setup / "paper_authority.sqlite3"
+    PaperExecutionAuthorityRegistry(authority_path).claim(
+        strategy_id="ORB", exchange_date="2026-10-06",
+        engine_id="forward_paper", account_id="registered-book",
+    )
+    clock = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+
+    with pytest.raises(PaperAuthorityError, match="already claimed"):
+        R.run_live(quote_fn=fake_quotes(clock), now_fn=clock.now, sleep_fn=clock.sleep,
+                   path=path, strategies=("ORB",), authority_path=authority_path)
+
+    assert not path.exists()
+
+
 def test_new_orb_gap_monitoring_is_shadow_and_historical_failed_live_rows_remain_queryable(setup):
     from financial_brain.paper.intraday import Trade
 
@@ -99,7 +116,8 @@ def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, m
                               strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
                               constraints_sha256="c" * 64, ledger_id="PAPER-LEDGER-1",
                               benchmark_id="NIFTY50", instruments=("NSE:X", "NSE:Y"), capital_inr="1000000",
-                              mode=Mode.LIVE_PAPER)
+                              mode=Mode.LIVE_PAPER, authority_strategy_id="test-strategy",
+                              authority_account_id="test-account")
     forward.begin(config)
 
     def quote(symbols, kind):

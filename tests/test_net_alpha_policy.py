@@ -81,6 +81,7 @@ def test_runner_checks_registry_policy_against_frozen_configuration(tmp_path):
         session_id="policy-bound", exchange_date="2026-11-16", cohort_id="momentum-v1",
         strategy_sha256=STRATEGY, risk_policy_sha256="c" * 64, constraints_sha256="d" * 64,
         ledger_id="ledger", benchmark_id="NIFTY50", instruments=("NSE:INFY",), capital_inr="10000",
+        authority_strategy_id="momentum", authority_account_id="paper-account",
         minimum_forecast_net_alpha=policy.minimum_net_alpha, net_alpha_policy_sha256=policy.sha256,
     )
     runner = ForwardSessionRunner(tmp_path / "session.jsonl", net_alpha_threshold_registry=registry)
@@ -98,6 +99,7 @@ def test_same_forward_cohort_cannot_change_threshold_between_sessions(tmp_path):
         session_id="threshold-day-1", exchange_date="2026-11-12", cohort_id="momentum-v1",
         strategy_sha256=STRATEGY, risk_policy_sha256="c" * 64, constraints_sha256="d" * 64,
         ledger_id="ledger", benchmark_id="NIFTY50", instruments=("NSE:INFY",), capital_inr="10000",
+        authority_strategy_id="momentum", authority_account_id="paper-account",
         minimum_forecast_net_alpha=0.01,
     )
     first = ForwardSessionRunner(tmp_path / "runner.jsonl")
