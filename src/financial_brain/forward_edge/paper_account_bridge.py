@@ -115,9 +115,15 @@ class ForwardPaperSessionService:
                 preflight = {"approved": False, "reason": "PREFLIGHT_CALLBACK_INVALID"}
             self.runner.record_preflight(config, preflight)
         captured_events = list(events)
+        execution_adapter = execution_fn
+        bind_updates = getattr(execution_fn, "bind_order_update_callback", None)
+        if callable(bind_updates):
+            execution_adapter = bind_updates(
+                lambda intent_id, update: self.runner.record_paper_order_update(
+                    config, intent_id, update))
         result = self.runner.run(
             config, captured_events, decision_at=decision_at,
-            decision_fn=decision_fn, risk_fn=risk_fn, execution_fn=execution_fn,
+            decision_fn=decision_fn, risk_fn=risk_fn, execution_fn=execution_adapter,
             reconcile_execution_fn=reconcile_execution_fn,
         )
         if result.get("status") == "PAPER_COMPLETE":

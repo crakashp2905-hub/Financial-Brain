@@ -3320,24 +3320,23 @@
       "sources": [
         "src/financial_brain/forward_edge/paper_order_lifecycle.py",
         "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/forward_edge/paper_execution_adapter.py",
         "src/financial_brain/forward_edge/cockpit.py",
         "tests/test_paper_order_lifecycle.py",
         "tests/test_forward_session_runner.py",
         "tests/test_forward_session_crash_matrix.py",
         "tests/test_forward_edge_f10.py",
-        "docs/edge-program/pe-0151-paper-order-lifecycle.md",
-        "docs/edge-program/pe-0151-paper-order-lifecycle-evidence.json"
+        "docs/edge-program/pe-0151-paper-order-lifecycle.md"
       ],
       "tests": [
+        "test_forward_paper_account_bridge.py",
         "test_paper_order_lifecycle.py",
-        "test_forward_session_runner.py",
-        "test_forward_session_crash_matrix.py",
-        "test_forward_edge_f10.py"
+        "test_forward_session_runner.py"
       ],
-      "test_result": "77 focused tests passed; Ruff passed.",
-      "evidence_sha256": "a9c3022cefd8c97fdc2170f2a53381739d4aaf3fb47db20d116371d453d346d2",
+      "test_result": "69 focused tests passed; Ruff passed.",
+      "evidence_sha256": "09607fa4588c9b8636556afa50f07a9467d222ee44a6f621cde9458c3fa89e4d",
       "blockers": [
-        "The live paper execution adapter is not yet wired to stream its observed updates through the callback.",
         "No observed forward market session verifies an end-to-end rendered order history."
       ]
     },

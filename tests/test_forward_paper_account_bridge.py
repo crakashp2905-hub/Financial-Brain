@@ -232,6 +232,11 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
     assert account.ledger.trial_balance_ok()
     assert first["account_reconciliation"]["mark"]["marking_policy"] == "LONG_LIQUIDATION_BID"
     assert first["account_reconciliation"]["unrealized_pnl_inr"] == "4.00"
+    order_updates = [row for row in DurableJournal(runner_path).records()
+                     if row.get("t") == "PAPER_ORDER_UPDATE"]
+    assert [row["status"] for row in order_updates] == ["SUBMITTED", "FILLED"]
+    assert [row["filled_quantity"] for row in order_updates] == [0, 2]
+    assert all(row["receipt_id"] == first["execution"]["receipt_id"] for row in order_updates)
     assert PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
                         fee_schedule=SCHEDULE).position("NSE:INFY").quantity == 2
 
@@ -371,6 +376,17 @@ def test_canceled_partial_receipt_reconciles_fills_and_releases_remaining_reserv
         assert receipt["status"] == "PARTIAL"
         receipt["status"] = "CANCELED"
         receipt["reason"] = "OPERATOR_CANCEL"
+        receipt["order_updates"] = [
+            {**receipt["order_updates"][0], "receipt_id": receipt["receipt_id"]},
+            {**receipt["order_updates"][1], "status": "CANCEL_PENDING",
+             "update_id": f"{receipt['receipt_id']}:cancel-pending",
+             "at_utc": receipt["simulated_execution_at_utc"], "reason": "OPERATOR_CANCEL",
+             "receipt_id": receipt["receipt_id"]},
+            {**receipt["order_updates"][1], "status": "CANCELED",
+             "update_id": f"{receipt['receipt_id']}:canceled",
+             "at_utc": receipt["simulated_execution_at_utc"], "reason": "OPERATOR_CANCEL",
+             "receipt_id": receipt["receipt_id"]},
+        ]
         return receipt
 
     result = service.run(

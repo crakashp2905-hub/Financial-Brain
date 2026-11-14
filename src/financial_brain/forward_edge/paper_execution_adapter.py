@@ -210,7 +210,52 @@ class MarketableQuoteSimulator:
                 "data_snapshot_sha256": data_snapshot_sha256,
                 "quote_observation": quote_observation,
             }]
+        receipt["order_updates"] = _simulated_order_updates(decision, receipt)
         return receipt
+
+    def bind_order_update_callback(self, callback: Callable[[str, dict], object]) -> Callable:
+        """Return an execution callable that streams simulator updates to the runner."""
+        if not callable(callback):
+            raise ValueError("paper order update callback must be callable")
+
+        def execute(decision: dict, intent_id: str, events: list[NormalizedEvent]) -> dict:
+            receipt = self(decision, intent_id, events)
+            for update in receipt["order_updates"]:
+                callback(intent_id, {**update, "receipt_id": receipt["receipt_id"]})
+            return receipt
+
+        return execute
+
+
+def _simulated_order_updates(decision: dict, receipt: dict) -> list[dict]:
+    """Build explicitly simulated submit/fill/terminal updates from one simulator receipt."""
+    decision_at = datetime.fromisoformat(str(decision["decision_at_utc"]))
+    execution_at = datetime.fromisoformat(str(receipt["simulated_execution_at_utc"]))
+    if execution_at < decision_at:
+        raise ValueError("simulated order update cannot precede its decision")
+    requested = int(receipt["requested_quantity"])
+    fills = receipt["fills"]
+    filled = sum(int(row["quantity"]) for row in fills)
+    receipt_id = str(receipt["receipt_id"])
+
+    def update(label: str, status: str, at: datetime, cumulative: int) -> dict:
+        return {
+            "update_id": f"{receipt_id}:{label}", "status": status, "at_utc": at.isoformat(),
+            "requested_quantity": requested, "filled_quantity": cumulative,
+            "remaining_quantity": requested - cumulative, "reason": receipt.get("reason"),
+        }
+
+    updates = [update("submitted", "SUBMITTED", decision_at, 0)]
+    status = str(receipt["status"])
+    if status == "CANCELED":
+        if filled:
+            fill_at = max(datetime.fromisoformat(str(row["quote_available_utc"])) for row in fills)
+            updates.append(update("partial", "PARTIAL", fill_at, filled))
+        updates.append(update("cancel-pending", "CANCEL_PENDING", execution_at, filled))
+        updates.append(update("canceled", "CANCELED", execution_at, filled))
+    else:
+        updates.append(update("terminal", status, execution_at, filled))
+    return updates
 
 
 def _sha256(value: object) -> str:
