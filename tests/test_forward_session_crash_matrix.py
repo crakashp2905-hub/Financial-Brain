@@ -12,6 +12,7 @@ NOW = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
 BOUNDARIES = (
     "SESSION_PLAN", "SESSION_STATE", "PREFLIGHT_RESULT", "MARKET_EVENT", "DECISION",
     "RISK_VERDICT", "PAPER_INTENT", "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK",
+    "PAPER_ORDER_UPDATE",
     "SESSION_CLOSED",
 )
 
@@ -110,6 +111,7 @@ def test_lifecycle_crash_at_each_durable_boundary_recovers_one_economic_event(
     assert by_type["MARKET_EVENT"] == 1
     assert by_type["PAPER_EXECUTION"] == 1
     assert by_type["OUTBOX_ACK"] == 1
+    assert by_type["PAPER_ORDER_UPDATE"] == 1
     assert by_type["PAPER_INTENT"] == 1
     assert by_type["DECISION"] == 1
     assert by_type["RISK_VERDICT"] == 1

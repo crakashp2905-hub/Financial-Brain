@@ -77,20 +77,71 @@ def signal_panel(signal: dict) -> str:
 
 # ---- FE-0117 ----
 
-ORDER_STATES = ("CREATED", "SUBMITTED", "PARTIAL", "FILLED", "UNKNOWN", "CANCELED")
+ORDER_STATES = ("CREATED", "SUBMITTED", "PARTIAL", "FILLED", "CANCEL_PENDING",
+                "UNKNOWN", "CANCELED", "MISSED", "REJECTED", "NO_TRADE")
 
 
-def blotter(orders: list[dict]) -> str:
-    """Orders show every state; the Trades section lists only orders with filled quantity."""
+def blotter(orders: list[dict], *, updates: list[dict] | None = None) -> str:
+    """Show exact requested, filled and remaining quantities; unknown values stay explicit."""
     for o in orders:
         if o["state"] not in ORDER_STATES:
             raise CockpitError(f"unknown order state {o['state']}")
-    order_rows = "".join(f"<tr><td>{escape(o['id'])}</td><td>{o['state']}</td><td>{o.get('filled', 0)}</td></tr>" for o in orders)
+
+        requested = o.get("requested")
+        filled = o.get("filled")
+        remaining = o.get("remaining")
+        for name, value in (("requested", requested), ("filled", filled), ("remaining", remaining)):
+            if value is not None and (type(value) is not int or value < 0):
+                raise CockpitError(f"{name} quantity must be a non-negative integer or unknown")
+        if requested is not None:
+            if filled is None or remaining != requested - filled:
+                raise CockpitError("remaining quantity must reconcile to requested minus filled")
+        elif remaining is not None:
+            raise CockpitError("remaining quantity cannot be shown without requested quantity")
+
+    def shown(value: object) -> str:
+        return "UNKNOWN" if value is None else str(value)
+
+    order_rows = "".join(
+        f"<tr><td>{escape(o['id'])}</td><td>{escape(o['state'])}</td>"
+        f"<td>{shown(o.get('requested'))}</td><td>{shown(o.get('filled'))}</td>"
+        f"<td>{shown(o.get('remaining'))}</td><td>{escape(str(o.get('reason') or ''))}</td></tr>"
+        for o in orders
+    )
     trades = [o for o in orders if o["state"] in ("FILLED", "PARTIAL") and o.get("filled", 0) > 0]
-    trade_rows = "".join(f"<tr><td>{escape(o['id'])}</td><td>{o['filled']}</td></tr>" for o in trades)
-    html = _page("Blotter", f"<h2>Orders</h2><table>{order_rows}</table><h2>Trades</h2><table id='trades'>{trade_rows}</table>")
+    trade_rows = "".join(
+        f"<tr><td>{escape(o['id'])}</td><td>{shown(o.get('filled'))}</td>"
+        f"<td>{shown(o.get('remaining'))}</td></tr>" for o in trades
+    )
+    headers = "<tr><th>Order</th><th>State</th><th>Requested</th><th>Filled</th><th>Remaining</th><th>Reason</th></tr>"
+    history_rows = "".join(
+        f"<tr><td>{escape(str(row.get('at_utc', 'UNKNOWN')))}</td><td>{escape(str(row.get('order_id', '')))}</td>"
+        f"<td>{escape(str(row.get('status', 'UNKNOWN')))}</td>"
+        f"<td>{shown(row.get('requested_quantity'))}</td><td>{shown(row.get('filled_quantity'))}</td>"
+        f"<td>{shown(row.get('remaining_quantity'))}</td><td>{escape(str(row.get('reason') or ''))}</td></tr>"
+        for row in (updates or [])
+    )
+    history = (f"<h2>Order update history</h2><table><tr><th>Time</th><th>Order</th><th>State</th>"
+               f"<th>Requested</th><th>Filled</th><th>Remaining</th><th>Reason</th></tr>{history_rows}</table>"
+               if updates else "")
+    html = _page("Blotter", f"<h2>Orders</h2><table>{headers}{order_rows}</table>"
+                 f"<h2>Trades</h2><table id='trades'><tr><th>Order</th><th>Filled</th><th>Remaining</th></tr>"
+                 f"{trade_rows}</table>{history}")
     assert_read_only(html)
     return html
+
+
+def blotter_from_journal(records: list[dict], *, session_id: str | None = None) -> str:
+    """Render the latest exact order state projected from hash-journaled paper updates."""
+    from financial_brain.forward_edge.paper_order_lifecycle import project_order_updates
+
+    try:
+        orders = project_order_updates(records, session_id=session_id)
+    except ValueError as exc:
+        raise CockpitError(f"paper order journal cannot be rendered: {exc}") from exc
+    updates = [row for row in records if row.get("t") == "PAPER_ORDER_UPDATE"
+               and (session_id is None or row.get("session_id") == session_id)]
+    return blotter(orders, updates=updates)
 
 
 # ---- FE-0118 ----

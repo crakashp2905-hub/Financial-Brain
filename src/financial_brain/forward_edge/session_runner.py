@@ -427,6 +427,71 @@ class ForwardSessionRunner:
         journal.append({"t": "FEED_HEALTH", "session_id": config.session_id,
                         "snapshot_sha256": digest, "health": payload})
 
+    def record_paper_order_update(self, config: ForwardRunConfig, intent_id: str, update: dict) -> int:
+        """Durably append an exact paper-order update while its session is open.
+
+        Execution adapters can call this from their update callback as fills and cancels
+        arrive. Event IDs make retries idempotent; updates are never inferred from a final fill.
+        """
+        from financial_brain.forward_edge.paper_order_lifecycle import (
+            ORDER_STATES, PaperOrderLifecycleError, normalize_order_update,
+        )
+
+        if not isinstance(intent_id, str) or not intent_id:
+            raise RunnerError("paper order update requires the stable intent id")
+        journal = DurableJournal(self.journal_path)
+        records = [row for row in journal.records() if row.get("session_id") == config.session_id]
+        if any(row.get("t") == "SESSION_CLOSED" for row in records):
+            raise RunnerError("paper order update cannot follow session close")
+        state = next((row.get("state") for row in reversed(records)
+                      if row.get("t") == "SESSION_STATE"), None)
+        if state not in {"OPEN", "DRAINING"}:
+            raise RunnerError("paper order updates require an OPEN or DRAINING session")
+        if not any(row.get("t") == "PAPER_INTENT" and row.get("intent_id") == intent_id
+                   for row in records):
+            raise RunnerError("paper order update must reference a durable paper intent")
+        prior = [row for row in records if row.get("t") == "PAPER_ORDER_UPDATE"
+                 and row.get("order_id") == intent_id]
+        try:
+            normalized = normalize_order_update(
+                order_id=intent_id, update=update, update_index=len(prior),
+                receipt_id=update.get("receipt_id"),
+            )
+        except PaperOrderLifecycleError as exc:
+            raise RunnerError(f"invalid paper order update: {exc}") from exc
+        normalized["session_id"] = config.session_id
+        same_id = next((row for row in prior if row.get("update_id") == normalized["update_id"]), None)
+        if same_id is not None:
+            comparable = {key: value for key, value in same_id.items()
+                          if key not in {"update_index", "update_sha256"}}
+            candidate = {key: value for key, value in normalized.items()
+                         if key not in {"update_index", "update_sha256"}}
+            if comparable != candidate:
+                raise RunnerError("paper order update identity was reused with different contents")
+            return 0
+        if prior:
+            previous = prior[-1]
+            transitions = {
+                "CREATED": {"CREATED", "SUBMITTED", "CANCELED", "REJECTED", "NO_TRADE", "UNKNOWN"},
+                "SUBMITTED": {"SUBMITTED", "PARTIAL", "FILLED", "CANCEL_PENDING", "CANCELED", "MISSED", "REJECTED", "NO_TRADE", "UNKNOWN"},
+                "PARTIAL": {"PARTIAL", "FILLED", "CANCEL_PENDING", "CANCELED", "MISSED", "UNKNOWN"},
+                "CANCEL_PENDING": {"CANCEL_PENDING", "PARTIAL", "FILLED", "CANCELED", "UNKNOWN"},
+                "CANCELED": {"CANCELED", "PARTIAL", "FILLED"},
+                "MISSED": {"MISSED"}, "FILLED": {"FILLED"},
+                "REJECTED": {"REJECTED"}, "UNKNOWN": set(ORDER_STATES),
+            }
+            if normalized["status"] not in transitions.get(previous["status"], set()):
+                raise RunnerError("paper order update violates the order state transition contract")
+            if normalized["filled_quantity"] < previous["filled_quantity"]:
+                raise RunnerError("cumulative paper fills cannot decrease")
+            if normalized["requested_quantity"] != previous["requested_quantity"]:
+                raise RunnerError("paper order requested quantity is immutable")
+            if self._utc(datetime.fromisoformat(normalized["at_utc"])) < self._utc(
+                    datetime.fromisoformat(previous["at_utc"])):
+                raise RunnerError("paper order update timestamps must be monotonic")
+        journal.append(normalized)
+        return 1
+
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
             decision_at: datetime | None = None,
             decision_fn: Callable[[list[NormalizedEvent]], dict],
@@ -657,11 +722,29 @@ class ForwardSessionRunner:
                 if not any(r.get("t") == "OUTBOX_ACK" and r.get("intent_id") == intent_id for r in existing):
                     self._persist_ack(journal, config.session_id, intent_id, execution)
             result.update({"status": "PAPER_COMPLETE", "intent_id": intent_id, "execution": execution})
+            # Preserve adapter-reported working/partial/cancel/missed events and exact
+            # quantity reconciliation before this session is closed. When the adapter
+            # only supplies a terminal receipt, unknown requested quantity remains null.
+            from financial_brain.forward_edge.paper_order_lifecycle import (
+                PaperOrderLifecycleError, updates_for_receipt,
+            )
+            try:
+                order_updates = updates_for_receipt(
+                    order_id=intent_id, decision=decision, receipt=execution,
+                )
+            except PaperOrderLifecycleError as exc:
+                raise RunnerError(f"invalid paper order lifecycle receipt: {exc}") from exc
+            for update in order_updates:
+                self.record_paper_order_update(config, intent_id, update)
+            result["order_updates"] = order_updates
+            # The adapter may have streamed order updates through this runner while
+            # executing. Refresh the journal cursor before appending the final skip/close.
+            journal = DurableJournal(self.journal_path)
         execution_receipt = result.get("execution")
         execution_status = (execution_receipt.get("status", execution_receipt.get("state"))
                             if isinstance(execution_receipt, dict) else None)
         skip_needed = (result.get("status") in {"NO_TRADE", "REJECTED"}
-                       or execution_status in {"NO_TRADE", "REJECTED", "MISSED"})
+                       or execution_status in {"NO_TRADE", "REJECTED", "MISSED", "CANCELED"})
         if skip_needed:
             reasons: list[str] = []
 
@@ -892,13 +975,16 @@ class ForwardSessionRunner:
                 execution["simulated_execution_at_utc"] = execution_at.isoformat()
             cls._validate_execution_receipt(execution)
         except ClockError as exc:
+            journal = DurableJournal(journal.path)
             journal.append({"t": "OUTBOX_UNKNOWN", "session_id": session_id,
                             "intent_id": intent_id, "reason": "INVALID_SIMULATION_CLOCK"})
             raise RunnerError(str(exc)) from exc
         except Exception as exc:
+            journal = DurableJournal(journal.path)
             journal.append({"t": "OUTBOX_UNKNOWN", "session_id": session_id,
                             "intent_id": intent_id, "reason": type(exc).__name__})
             raise
+        journal = DurableJournal(journal.path)
         cls._persist_execution_and_ack(journal, session_id, intent_id, execution)
         return execution
 
@@ -921,11 +1007,11 @@ class ForwardSessionRunner:
         except (KeyError, TypeError, ValueError) as exc:
             raise RunnerError("paper execution receipt needs an aware simulated execution timestamp") from exc
         status = execution.get("status", execution.get("state"))
-        if status not in {"FILLED", "PARTIAL", "MISSED", "REJECTED", "NO_TRADE"}:
+        if status not in {"FILLED", "PARTIAL", "MISSED", "REJECTED", "NO_TRADE", "CANCELED"}:
             raise RunnerError("paper execution receipt needs a recognized outcome status")
         fills = execution.get("fills", [])
-        if status in {"FILLED", "PARTIAL"}:
-            if not isinstance(fills, list) or not fills:
+        if status in {"FILLED", "PARTIAL", "CANCELED"}:
+            if not isinstance(fills, list) or (status in {"FILLED", "PARTIAL"} and not fills):
                 raise RunnerError("filled execution receipt needs one or more observed fills")
             for fill in fills:
                 if not isinstance(fill, dict) or not isinstance(fill.get("fill_id"), str) or not fill["fill_id"].strip():

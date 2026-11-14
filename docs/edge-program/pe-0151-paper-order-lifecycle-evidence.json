@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0151",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_paper_order_lifecycle.py tests/test_forward_session_runner.py tests/test_forward_session_crash_matrix.py tests/test_forward_edge_f10.py; ruff check affected modules and tests",
+    "result": "77 focused tests passed; Ruff passed."
+  },
+  "implemented": [
+    "Runner API durably records order updates during the execution callback.",
+    "Lifecycle validates stable update identities, states, monotonic timestamps and cumulative quantities; canceled partial fills remain explicit.",
+    "Journal projection and the read-only cockpit display exact requested, filled and remaining quantities and update history.",
+    "Missing requested quantity is rendered UNKNOWN; no complete-fill assumption is made.",
+    "Crash recovery test covers streamed order update journal boundaries."
+  ],
+  "blockers": [
+    "The live paper execution adapter is not yet wired to stream its observed updates through the callback.",
+    "No observed forward market session verifies an end-to-end rendered order history."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/paper_order_lifecycle.py": "397508468acba9b4d3f7729a63adb3b0779b3f845769b737dfb0a047de92e5d3",
+    "src/financial_brain/forward_edge/session_runner.py": "5462fb60660932d2d237dd39c4e7e81d5ebf28b19e194839a6b4de004d5d83ed",
+    "src/financial_brain/forward_edge/cockpit.py": "1bfaea695a5e14dfbe78c09fef3277b9bcad4770a48d6eb269b4c611ae666e50",
+    "tests/test_paper_order_lifecycle.py": "91503efd89630294ae42851fa76e280f569fc608d0556ee8e921933237a5ffd7",
+    "tests/test_forward_session_runner.py": "7988604074c5a3b1e096b3a4c1a17f89ac162a3f9f983b25c3b966400d056074",
+    "tests/test_forward_session_crash_matrix.py": "7d0d1cc6339a2e4acef2934876468cfcace03c5b9af3f3c475b704d55b1f1d66",
+    "tests/test_forward_edge_f10.py": "57e454acdfcca0d9ed74d2ee4dc1867d4495e652d3103ee07e9b8b51e85fa5fe"
+  }
+}

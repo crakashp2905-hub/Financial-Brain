@@ -4,6 +4,7 @@ import pytest
 
 from financial_brain.forward_edge.market_data import NormalizedEvent
 from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.cockpit import blotter_from_journal
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.session_runner import (
     ExecutionOutcomeUnknown,
@@ -93,11 +94,62 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     record_types = [r["t"] for r in DurableJournal(tmp_path / "session.jsonl").records()]
     assert record_types == ["SESSION_PLAN", "SESSION_STATE", "SESSION_STATE", "SESSION_STATE",
                             "PREFLIGHT_RESULT", "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT", "SESSION_STATE",
-                            "PAPER_INTENT", "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK", "PAPER_SKIP",
+                            "PAPER_INTENT", "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK", "PAPER_ORDER_UPDATE", "PAPER_SKIP",
                             "SESSION_STATE", "SESSION_CLOSED"]
     states = [r["state"] for r in DurableJournal(tmp_path / "session.jsonl").records()
               if r["t"] == "SESSION_STATE"]
     assert states == ["PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED"]
+
+
+def test_order_updates_are_journaled_during_execution_and_render_exact_remaining_qty(tmp_path):
+    path = tmp_path / "order-updates.jsonl"
+    runner = ForwardSessionRunner(path)
+    config = _config()
+    _approve_preflight(runner, config)
+
+    def execute(decision, intent_id, _events):
+        runner.record_paper_order_update(config, intent_id, {
+            "update_id": "submitted-1", "status": "SUBMITTED",
+            "at_utc": (NOW + timedelta(seconds=1)).isoformat(),
+            "requested_quantity": 10, "filled_quantity": 0,
+            "remaining_quantity": 10,
+        })
+        runner.record_paper_order_update(config, intent_id, {
+            "update_id": "partial-1", "status": "PARTIAL",
+            "at_utc": (NOW + timedelta(seconds=2)).isoformat(),
+            "requested_quantity": 10, "filled_quantity": 4,
+            "remaining_quantity": 6,
+        })
+        return {
+            "status": "CANCELED", "receipt_id": "receipt-cancel-1",
+            "fidelity": "SIMULATED_QUOTE",
+            "simulated_execution_at_utc": (NOW + timedelta(seconds=3)).isoformat(),
+            "fills": [{"fill_id": "fill-cancel-1", "quantity": 4, "price": "100.05"}],
+            "reason": "SESSION_END",
+        }
+
+    result = runner.run(
+        config, [_event()], decision_at=NOW,
+        decision_fn=lambda _: {
+            "side": "BUY", "quantity": 10,
+            "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1,
+            "forecast_costs_included": True,
+            "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033,
+                                    "benchmark": 0.01, "fees": 0.001,
+                                    "spread": 0.001, "impact": 0.001},
+        },
+        risk_fn=lambda _: {"approved": True}, execution_fn=execute,
+    )
+    assert result["execution"]["status"] == "CANCELED"
+    records = DurableJournal(path).records()
+    order_records = [row for row in records if row["t"] == "PAPER_ORDER_UPDATE"]
+    assert [row["status"] for row in order_records] == ["SUBMITTED", "PARTIAL", "CANCELED"]
+    assert order_records[-1]["requested_quantity"] == 10
+    assert order_records[-1]["filled_quantity"] == 4
+    assert order_records[-1]["remaining_quantity"] == 6
+    html = blotter_from_journal(records, session_id=config.session_id)
+    assert "Order update history" in html and "SESSION_END" in html
+    assert ">10<" in html and ">4<" in html and ">6<" in html
 
 
 def test_session_report_preserves_coverage_and_lost_opportunity_denominators(tmp_path):
