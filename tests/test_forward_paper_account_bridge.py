@@ -115,6 +115,17 @@ def _service(tmp_path):
     return service, config, account, runner_path, account_path
 
 
+def test_session_evidence_and_paper_account_authority_journals_cannot_alias(tmp_path):
+    service, config, account, _runner_path, account_path = _service(tmp_path)
+    service.runner = ForwardSessionRunner(account_path)
+    before = account.journal.records()
+
+    with pytest.raises(PaperAccountBridgeError, match="must be distinct"):
+        service._validate_strategy(config)
+
+    assert account.journal.records() == before
+
+
 def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently(tmp_path):
     service, config, account, runner_path, account_path = _service(tmp_path)
     events = [_event(DECISION_AT + timedelta(seconds=1)),

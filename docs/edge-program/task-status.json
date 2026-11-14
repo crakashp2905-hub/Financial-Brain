@@ -198,17 +198,23 @@
         "src/financial_brain/paper/intraday_runner.py",
         "src/financial_brain/forward_edge/session_runner.py",
         "src/financial_brain/forward_edge/pipeline.py",
-        "src/financial_brain/kernel/paper_account.py"
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_paper_account_portfolio.py",
+        "docs/edge-program/pe-0011-paper-authority-boundary-evidence.md"
       ],
       "tests": [
         "test_inventory_covers_all_python_sources_without_inventing_owners",
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots",
-        "test_task_ledger_inventory_counts_and_evidence_hash_match_current_snapshot"
+        "test_task_ledger_inventory_counts_and_authority_evidence_hash_are_current",
+        "test_session_evidence_and_paper_account_authority_journals_cannot_alias",
+        "test_portfolio_refuses_ambiguous_duplicate_book_authority"
       ],
-      "test_result": "Committed inventory covers 626 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It currently records 619 unassessed and 358 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
-      "evidence_sha256": "04a5e55093c527df873a5e990f07c32390ef37ae415bdd8cfc1667c25afdf5e3",
+      "test_result": "The forward paper path rejects aliasing the session evidence journal and authoritative PaperAccount journal before writes; reconciliation repeats the check. PaperAccountPortfolio refuses duplicate account objects/IDs and shared journals. The generated inventory covers 626 Python sources (619 unassessed, 358 role-unassigned). Combined bridge/account/portfolio/source-inventory suite: 31 passed; Ruff, mypy, and inventory freshness checks passed. Legacy intraday DuckDB remains a separate, unmapped engine.",
+      "evidence_sha256": "70b47dceb49cb821c51c27e8f944c6ab5bdf0d2b1f869aa3f75fcd7f51bc80ed",
       "blockers": [
-        "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state"
+        "Legacy intraday DuckDB is not bound to a shared strategy/book authority registry, so overlapping authority across legacy and forward-paper engines is not prevented; 619 source modules remain unassessed and 358 lack owner-role assignments."
       ]
     },
     {

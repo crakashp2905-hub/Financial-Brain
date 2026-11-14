@@ -47,6 +47,7 @@ class ForwardPaperSessionService:
         """Bind the paper service to the exact guarded registry identity before any session writes."""
         if config.mode is not Mode.LIVE_PAPER:
             raise PaperAccountBridgeError("paper account service accepts LIVE_PAPER sessions only")
+        _require_distinct_authority_journals(self.runner.journal_path, self.account.path)
         try:
             registered = self.registry.get(self.strategy_spec.strategy_id)
         except KeyError as exc:
@@ -103,6 +104,7 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
     """
     if account.fee_schedule is None:
         raise PaperAccountBridgeError("paper account needs an effective-dated fee schedule")
+    _require_distinct_authority_journals(runner_journal_path, account.path)
     if result.get("session_id") != config.session_id or result.get("status") != "PAPER_COMPLETE":
         raise PaperAccountBridgeError("only a completed, matching paper session can be reconciled")
     intent_id = result.get("intent_id")
@@ -258,6 +260,14 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
     if prior.get("reconciliation_sha256") != digest:
         raise RunnerError("paper account reconciliation id is already bound to different accounting facts")
     return prior
+
+
+def _require_distinct_authority_journals(runner_journal_path: Path, account_journal_path: Path) -> None:
+    """Keep runner outbox evidence separate from the authoritative OMS/accounting journal."""
+    if Path(runner_journal_path).resolve() == Path(account_journal_path).resolve():
+        raise PaperAccountBridgeError(
+            "forward-session evidence journal must be distinct from the PaperAccount authority journal"
+        )
 
 
 def _persist_canonical_events(*, journal_path: Path, config: ForwardRunConfig, result: dict,

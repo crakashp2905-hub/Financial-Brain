@@ -45,12 +45,13 @@ def test_inventory_captures_old_and_new_engine_dependency_graph_roots():
     assert any(edge["from"] == "src/financial_brain/forward_edge/session_runner.py" for edge in edges)
 
 
-def test_task_ledger_inventory_counts_and_evidence_hash_match_current_snapshot():
+def test_task_ledger_inventory_counts_and_authority_evidence_hash_are_current():
     inventory_path = ROOT / "docs/edge-program/source-inventory.json"
     inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
     task_status = json.loads((ROOT / "docs/edge-program/task-status.json").read_text(encoding="utf-8"))
     task = next(row for row in task_status["items"] if row["id"] == "PE-0011")
-    normalized = inventory_path.read_bytes().replace(b"\r\n", b"\n")
+    authority_evidence = ROOT / "docs/edge-program/pe-0011-paper-authority-boundary-evidence.md"
+    normalized = authority_evidence.read_bytes().replace(b"\r\n", b"\n")
 
     assert f"{inventory['source_count']} Python sources" in task["test_result"]
     assert f"{inventory['unassessed_count']} unassessed" in task["test_result"]
