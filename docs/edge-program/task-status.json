@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 139,
-  "unrecorded_tasks": 79,
+  "recorded_tasks": 140,
+  "unrecorded_tasks": 78,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3055,6 +3055,32 @@
       "blockers": [
         "Caller-supplied quotes and rejected decisions are not wired to durable live evidence.",
         "No shared portfolio cash/margin accounting or independently registered matched controls."
+      ]
+    },
+    {
+      "id": "PE-0142",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/research/causal_hypothesis.py",
+        "tests/test_causal_hypothesis.py",
+        "docs/edge-program/pe-0142-development-hypothesis-proposals.md",
+        "docs/edge-program/pe-0142-development-hypothesis-proposals-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_candidate_includes_observed_pattern_precommitted_falsifier_and_no_mutation",
+        "test_development_sample_can_trigger_the_predeclared_falsifier_without_rewriting_it",
+        "test_final_window_split_missing_samples_and_duplicate_sessions_fail_closed",
+        "test_missing_falsifier_and_bad_evidence_are_rejected",
+        "test_hypothesis_archive_is_immutable_and_cannot_accept_mutable_strategy_status"
+      ],
+      "test_result": "23 candidate-hypothesis, loss-classification and F07 tests passed; Ruff passed. Prewritten falsifier, development-only evidence, immutable archive, and no strategy/budget mutation are verified.",
+      "evidence_sha256": "9937916fb11f31692a7c3993dc2d392f1901349c01adc785bea96c0f0604f157",
+      "blockers": [
+        "Data inputs are not bound to authoritative development registry.",
+        "No independent review or paper strategy registry integration.",
+        "No causal or prospective edge evidence."
       ]
     }
   ]

@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0142",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_causal_hypothesis.py tests/test_loss_classification.py tests/test_forward_edge_f07.py; ruff check src/financial_brain/research/causal_hypothesis.py tests/test_causal_hypothesis.py",
+    "result": "23 passed; Ruff passed."
+  },
+  "implemented": [
+    "Freezes training/validation boundary, sample floor, effect direction/threshold, mechanism, and falsifier before evaluation.",
+    "Requires matched-control net-alpha observations with unique evidence IDs and one aggregate per development session.",
+    "Rejects validation-window or non-development inputs and retains the complete development evidence rows.",
+    "Keeps proposals pending independent review and structurally forbids paper-strategy mutation or trial-budget changes.",
+    "Persists proposals append-only and rejects changed records."
+  ],
+  "blockers": [
+    "Inputs and data digest are caller-provided and not bound to the authoritative development data registry.",
+    "No independent review workflow or paper strategy registry integration is connected.",
+    "Development association and synthetic tests do not prove causal mechanism or prospective edge."
+  ],
+  "source_sha256": {
+    "src/financial_brain/research/causal_hypothesis.py": "a1f97b7b215868c5b1558ee50eea92a5c240bd342c90eb00a849c9b3d101fd27",
+    "tests/test_causal_hypothesis.py": "e70e48c5f9a73b581b5b67b1669f261d7a75d77c7a93a7bb2e921041373f61db"
+  }
+}
