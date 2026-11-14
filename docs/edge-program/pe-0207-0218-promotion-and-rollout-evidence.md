@@ -11,6 +11,7 @@
 - The rehearsal adapter is read-only and rejects order submission/cancellation. The separate mock adapter is labeled mock and only produces `DRY_RUN_ACCEPTED` responses.
 - `RiskProposal` binds capital-at-risk, per-order limit, daily-loss limit, margin limit, and emergency-exit policy hash. Approval must match the proposal's computed hash.
 - The disarm latch recognizes stale feed, custody failure, abnormal costs, ledger mismatch, reconciliation mismatch, risk breach, unexpected execution, stale broker state, and lost heartbeat. Re-arming requires a scoped human `DISARM_RESET` approval. `scaling_evidence_gate` blocks scaling on statement mismatches, fill-model error, risk, reviewer, or owner-approval failures.
+- India retail-algo primary-source findings and the distinction between this project's read-only/paper scope and any future order path are recorded in [`pe-0214-indian-retail-algo-regulatory-evidence.md`](pe-0214-indian-retail-algo-regulatory-evidence.md). No regulatory or broker permission is inferred; PE-0214 remains blocked on the missing external review and approvals.
 
 ## Validation
 

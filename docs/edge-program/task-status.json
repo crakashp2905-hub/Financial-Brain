@@ -4603,12 +4603,13 @@
       "sources": [
         "src/financial_brain/forward_edge/rehearsal.py",
         "tests/test_forward_edge_f12.py",
-        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md",
+      "docs/edge-program/pe-0214-indian-retail-algo-regulatory-evidence.md"
       ],
       "tests": [
         "tests/test_forward_edge_f12.py"
       ],
-      "test_result": "Compliance gate blocks missing/false permission facts; no permissions are inferred from code.",
+    "test_result": "Compliance gate blocks missing/false permission facts; primary-source SEBI/NSE framework and the read-only/paper scope are documented. No permissions are inferred from code.",
       "blockers": [
         "Verified broker/venue permissions and applicable regulatory/operational review are absent."
       ],
