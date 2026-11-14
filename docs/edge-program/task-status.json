@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 142,
-  "unrecorded_tasks": 76,
+  "recorded_tasks": 143,
+  "unrecorded_tasks": 75,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3135,6 +3135,32 @@
         "Not wired to the forward session runner or candidate lifecycle.",
         "Alarm events are not persisted by the durable paper journal.",
         "Production thresholds, trusted identity roots, alarm delivery, and prospective market-cohort evidence are not configured or verified."
+      ]
+    },
+    {
+      "id": "PE-0145",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/premarket_preflight.py",
+        "tests/test_premarket_preflight.py",
+        "docs/edge-program/pe-0145-premarket-preflight.md",
+        "docs/edge-program/pe-0145-premarket-preflight-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_complete_premarket_record_is_ready_and_runner_compatible",
+        "test_any_missing_mandatory_preflight_item_yields_operator_visible_no_trade",
+        "test_cost_table_must_cover_exchange_session_and_hashes_are_valid",
+        "test_clock_must_be_aware_and_policy_limits_must_be_valid",
+        "test_operator_reason_lists_all_simultaneous_blockers"
+      ],
+      "test_result": "19 premarket preflight tests passed; Ruff passed. Mandatory checks, NO_TRADE output, operator-visible reasons, cost freshness, hash validation, and runner-compatible JSON verified.",
+      "evidence_sha256": "051438250c1b1e9aa7ab2ececf1101af803eeb3e212c624cc81c68be7a7e8543",
+      "blockers": [
+        "Authoritative live service probes are not wired.",
+        "Daily launcher/session orchestration does not invoke this automatically.",
+        "No real-market preflight run has been observed or attested."
       ]
     }
   ]
