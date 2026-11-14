@@ -14,6 +14,7 @@ REPORTS = Path("data") / "paper_reports"
 
 def build(ledger, day: str, *, book=None) -> str:
     from . import execution as XA
+    from .loss_economics import gross_cost_report
     from financial_brain.forward_edge.evidence_labels import classify
 
     lines = [f"# Financial-Brain paper results - {day}", "",
@@ -48,6 +49,14 @@ def build(ledger, day: str, *, book=None) -> str:
         sides = x.groupby("side")["net_pnl"].agg(["count", "sum"])
         lines.append("")
         lines.append("By side: " + "; ".join(f"{k} {int(r['count'])} trades, Rs {r['sum']:,.0f}" for k, r in sides.iterrows()))
+        economics = gross_cost_report(x[["gross_pnl", "costs", "net_pnl", "notional"]].to_dict("records"))
+        lines += ["", "Gross-negative versus gross-positive cost-erased trades (closed trades only):"]
+        for category in ("GROSS_NEGATIVE", "COST_ERASED", "NET_POSITIVE", "GROSS_FLAT"):
+            row = economics["groups"][category]
+            net_bp = "—" if row["net_pnl_bp"] is None else f"{row['net_pnl_bp']:+.1f}"
+            lines.append(f"- {category}: {row['trade_count']} trades, gross Rs {row['gross_pnl_inr']:,.0f}, "
+                         f"costs Rs {row['costs_inr']:,.0f}, net Rs {row['net_pnl_inr']:,.0f}, "
+                         f"{row['notional_share']:.1%} of traded notional, net {net_bp} bp of category notional")
         for title, rows in (("Best", x.nlargest(5, "net_pnl")), ("Worst", x.nsmallest(5, "net_pnl"))):
             lines.append(f"{title}: " + ", ".join(f"{r.symbol} {r.strategy} {r.side} Rs {r.net_pnl:,.0f} ({r.exit_reason})" for r in rows.itertuples()))
         xa = [a for a in XA.attribution(ledger, mode=mode)]

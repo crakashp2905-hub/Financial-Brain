@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0135",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_loss_economics.py tests/test_phase5_daily_results.py; ruff check src/financial_brain/paper/loss_economics.py src/financial_brain/paper/daily_results.py tests/test_loss_economics.py",
+    "result": "6 passed; Ruff passed."
+  },
+  "implemented": [
+    "Separates gross-negative, positive-gross cost-erased, net-positive, and gross-flat trades.",
+    "Reports counts, gross/cost/net INR, notional, notional share, and aggregate notional-weighted basis-point rates.",
+    "Rejects invalid notional, negative expenses, duplicate trade identifiers, nonfinite values, and gross/cost/net reconciliation errors.",
+    "Displays the categories in the daily paper report separately for each evidence mode."
+  ],
+  "blockers": [],
+  "scope_limits": [
+    "The report covers closed trades supplied by the paper ledger; open positions are not included.",
+    "This accounting classification does not establish that a strategy is profitable or that costs are avoidable."
+  ],
+  "source_sha256": {
+    "src/financial_brain/paper/loss_economics.py": "bc53363c028352d5949f206edf2ce1e8db881f542aa4ddb66f6e10d1218e99cf",
+    "src/financial_brain/paper/daily_results.py": "02567f37c7b5af513e7e03876d3a9403f1ffffc150ed05552e703b376e256396",
+    "tests/test_loss_economics.py": "a74947130ec41fc996955d8d275979019316d5c06f55299da8f5485626843f8a"
+  }
+}

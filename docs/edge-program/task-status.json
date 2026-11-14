@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 132,
-  "unrecorded_tasks": 86,
+  "recorded_tasks": 133,
+  "unrecorded_tasks": 85,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2879,6 +2879,28 @@
         "Not wired into the canonical trade ledger or loss-review report.",
         "Labels do not establish causal root cause."
       ]
+    },
+    {
+      "id": "PE-0135",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/paper/loss_economics.py",
+        "src/financial_brain/paper/daily_results.py",
+        "tests/test_loss_economics.py",
+        "docs/edge-program/pe-0135-gross-loss-cost-erasure-report.md",
+        "docs/edge-program/pe-0135-gross-loss-cost-erasure-report-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_separates_gross_negative_and_cost_erased_with_inr_and_weighted_rates",
+        "test_zero_gross_and_zero_net_are_separate_from_cost_erased",
+        "test_empty_population_and_non_reconciled_or_invalid_rows",
+        "test_daily_report_shows_gross_negative_and_cost_erased_counts"
+      ],
+      "test_result": "6 tests passed across new loss-economics and existing daily-report tests; Ruff passed. Daily paper output shows counts, INR and notional-weighted rates by category.",
+      "evidence_sha256": "d4cde6ccc7e30f6d8b8c52098a047e48446227458ba2c12dbebb942c74a55622",
+      "blockers": []
     }
   ]
 }
