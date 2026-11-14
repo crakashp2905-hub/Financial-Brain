@@ -16,7 +16,7 @@
 
 - `python -m ruff check ...` on the changed promotion, approval, rehearsal source and tests: **passed**.
 - `python -m mypy ...` on promotion, approval and rehearsal source: **passed**.
-- Focused promotion, rehearsal, confirmation, challenger-registry and fixed-look suite: **82 passed**. After updating the existing Kite-provider guard to permit GET-only status reads while rejecting mutation routes, the affected provider/rehearsal/promotion regression set passed **66 tests**. The prior full run had 4,077 passed, 1 skipped and only those two outdated guard assertions failing; the full suite has not yet been rerun after the guard update.
+- Combined focused promotion, rehearsal, confirmation, challenger-registry, fixed-look and Kite-provider suite: **109 passed**. The prior full run had 4,077 passed, 1 skipped and only the two old assertions forbidding GET-only order-status reads failing; those assertions were updated, and this combined regression set passes. The entire suite has not yet been rerun after that update; CI is validating the pushed revision.
 - Promotion-ledger tests cover failed decisions, immutable idempotence, changed-evidence rejection, and tamper detection.
 - These are code and synthetic-test results. They are not evidence that any strategy is profitable or that broker, custody, rights, legal, or live-session checks have occurred.
 
