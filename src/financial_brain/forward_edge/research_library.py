@@ -1,4 +1,4 @@
-"""Bounded, research-only mechanism catalogue with an append-only record for every variant (PE-0055)."""
+"""Campaign-budgeted research catalogue with an append-only record for every candidate."""
 from __future__ import annotations
 
 import hashlib
@@ -59,6 +59,7 @@ class ResearchVariantJournal:
         self.journal = DurableJournal(Path(path))
         self.max_variants_per_run = max_variants_per_run
         self._runs: dict[str, dict] = {}
+        self._campaigns: dict[str, dict] = {}
         self._rebuild()
 
     def _rebuild(self) -> None:
@@ -77,6 +78,23 @@ class ResearchVariantJournal:
                     raise ResearchLibraryError("run has duplicate or malformed variant digests")
                 if row.get("research_only") is not True or row.get("auto_promotion_allowed") is not False:
                     raise ResearchLibraryError("research run must be research-only and non-promotable")
+                campaign_id = row.get("campaign_id", row.get("mechanism_id"))
+                budget = row.get("campaign_budget", self.max_variants_per_run)
+                familywise_alpha = row.get("familywise_alpha", 0.05)
+                if (not isinstance(campaign_id, str) or not campaign_id.strip()
+                        or type(budget) is not int or not 1 <= budget <= MAX_VARIANTS_PER_RUN
+                        or isinstance(familywise_alpha, bool) or not isinstance(familywise_alpha, (int, float))
+                        or not math.isfinite(familywise_alpha) or not 0 < familywise_alpha < 1):
+                    raise ResearchLibraryError("research campaign identity, budget, or alpha is invalid")
+                campaign = self._campaigns.setdefault(campaign_id, {
+                    "candidate_count": 0, "budget": budget, "familywise_alpha": float(familywise_alpha),
+                })
+                if (campaign["budget"] != budget or campaign["familywise_alpha"] != float(familywise_alpha)
+                        or campaign["candidate_count"] + len(variants) > budget):
+                    raise ResearchLibraryError("run exceeds or changes its frozen campaign search budget")
+                campaign["candidate_count"] += len(variants)
+                if row.get("cumulative_candidate_count", campaign["candidate_count"]) != campaign["candidate_count"]:
+                    raise ResearchLibraryError("campaign candidate-count ledger is inconsistent")
                 self._runs[run_id] = {"expected": set(hashes), "variants": variants, "results": {}, "closed": False}
             elif row.get("t") == "RESEARCH_VARIANT_RESULT":
                 state = self._active_run(run_id)
@@ -105,7 +123,9 @@ class ResearchVariantJournal:
         return state
 
     def open_run(self, *, mechanism_id: str, mechanism_source_sha256: str, variants: list[dict],
-                 seed: int, run_id: str | None = None, at_utc: datetime | None = None) -> str:
+                 seed: int, run_id: str | None = None, at_utc: datetime | None = None,
+                 campaign_id: str | None = None, campaign_budget: int | None = None,
+                 familywise_alpha: float = 0.05) -> str:
         if not mechanism_id.strip() or not self._valid_sha(mechanism_source_sha256):
             raise ResearchLibraryError("mechanism id and source digest are required")
         if not isinstance(seed, int) or isinstance(seed, bool):
@@ -114,6 +134,21 @@ class ResearchVariantJournal:
             raise ResearchLibraryError(f"run must declare 1..{self.max_variants_per_run} variants")
         if at_utc is not None and (at_utc.tzinfo is None or at_utc.utcoffset() is None):
             raise ResearchLibraryError("run timestamp must be timezone-aware")
+        campaign_key = campaign_id or mechanism_id
+        budget = self.max_variants_per_run if campaign_budget is None else campaign_budget
+        if (not isinstance(campaign_key, str) or not campaign_key.strip()
+                or type(budget) is not int or not 1 <= budget <= MAX_VARIANTS_PER_RUN
+                or isinstance(familywise_alpha, bool) or not isinstance(familywise_alpha, (int, float))
+                or not math.isfinite(familywise_alpha) or not 0 < familywise_alpha < 1):
+            raise ResearchLibraryError("campaign ID, fixed budget, and familywise alpha are required")
+        campaign = self._campaigns.get(campaign_key)
+        if campaign is not None and (campaign["budget"] != budget
+                                     or campaign["familywise_alpha"] != float(familywise_alpha)):
+            raise ResearchLibraryError("campaign budget and familywise alpha are immutable")
+        prior_count = campaign["candidate_count"] if campaign else 0
+        cumulative_count = prior_count + len(variants)
+        if cumulative_count > budget:
+            raise ResearchLibraryError("campaign candidate budget is exhausted")
         frozen = []
         for variant in variants:
             if not isinstance(variant, dict) or not isinstance(variant.get("variant_id"), str) \
@@ -133,10 +168,15 @@ class ResearchVariantJournal:
             raise ResearchLibraryError("research run id was reused")
         self.journal.append({"t": "RESEARCH_RUN_OPENED", "run_id": rid, "mechanism_id": mechanism_id,
                              "mechanism_source_sha256": mechanism_source_sha256, "seed": seed,
+                             "campaign_id": campaign_key, "campaign_budget": budget,
+                             "familywise_alpha": float(familywise_alpha),
+                             "cumulative_candidate_count": cumulative_count,
                              "variants": frozen, "variant_count": len(frozen),
                              "research_only": True, "auto_promotion_allowed": False,
                              "at_utc": (at_utc or datetime.now(timezone.utc)).isoformat()})
         self._runs[rid] = state
+        self._campaigns[campaign_key] = {"candidate_count": cumulative_count, "budget": budget,
+                                         "familywise_alpha": float(familywise_alpha)}
         return rid
 
     def record_result(self, run_id: str, variant_sha256: str, *, outcome: str, details: Any) -> None:
@@ -191,3 +231,12 @@ class ResearchVariantJournal:
         """Return the immutable id-to-digest map needed by an evaluator to record results."""
         state = self._runs[run_id]
         return {item["variant_id"]: item["variant_sha256"] for item in state["variants"]}
+
+    def campaign_state(self, campaign_id: str) -> dict[str, float | int | str]:
+        """Return the cumulative family denominator and its frozen Bonferroni alpha threshold."""
+        state = self._campaigns[campaign_id]
+        count = state["candidate_count"]
+        return {"campaign_id": campaign_id, "candidate_count": count,
+                "candidate_budget": state["budget"], "familywise_alpha": state["familywise_alpha"],
+                "per_candidate_alpha": state["familywise_alpha"] / count,
+                "remaining_budget": state["budget"] - count}

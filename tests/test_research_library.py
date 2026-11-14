@@ -71,6 +71,43 @@ def test_variant_budget_and_duplicate_ids_are_rejected(tmp_path):
                                  {"variant_id": "same", "parameters": {}}])
 
 
+def test_search_campaign_counts_every_attempt_across_runs_and_freezes_correction(tmp_path):
+    path = tmp_path / "campaign.jsonl"
+    journal = ResearchVariantJournal(path, max_variants_per_run=2)
+    first = journal.open_run(
+        mechanism_id="momentum", mechanism_source_sha256="a" * 64,
+        variants=[{"variant_id": "window-5", "parameters": {"window": 5}},
+                  {"variant_id": "window-10", "parameters": {"window": 10}}],
+        seed=1, campaign_id="momentum-family", campaign_budget=3, familywise_alpha=0.05,
+    )
+    first_digests = journal.variant_digests(first)
+    journal.record_result(first, first_digests["window-5"], outcome="FAILED", details={"why": "costs"})
+    journal.record_result(first, first_digests["window-10"], outcome="ABORTED", details={"why": "interrupted"})
+    journal.close_run(first)
+    assert journal.campaign_state("momentum-family")["candidate_count"] == 2
+    second = journal.open_run(
+        mechanism_id="momentum", mechanism_source_sha256="a" * 64,
+        variants=[{"variant_id": "window-20", "parameters": {"window": 20}}],
+        seed=2, campaign_id="momentum-family", campaign_budget=3, familywise_alpha=0.05,
+    )
+    second_digest = next(iter(journal.variant_digests(second).values()))
+    journal.record_result(second, second_digest, outcome="SKIPPED", details={"why": "budgeted"})
+    journal.close_run(second)
+    state = ResearchVariantJournal(path).campaign_state("momentum-family")
+    assert state["candidate_count"] == 3 and state["remaining_budget"] == 0
+    assert state["per_candidate_alpha"] == pytest.approx(0.05 / 3)
+    with pytest.raises(ResearchLibraryError, match="budget is exhausted"):
+        journal.open_run(mechanism_id="momentum", mechanism_source_sha256="a" * 64,
+                         variants=[{"variant_id": "window-40", "parameters": {"window": 40}}],
+                         seed=3, campaign_id="momentum-family", campaign_budget=3,
+                         familywise_alpha=0.05)
+    with pytest.raises(ResearchLibraryError, match="immutable"):
+        journal.open_run(mechanism_id="momentum", mechanism_source_sha256="a" * 64,
+                         variants=[{"variant_id": "window-40", "parameters": {"window": 40}}],
+                         seed=3, campaign_id="momentum-family", campaign_budget=10,
+                         familywise_alpha=0.05)
+
+
 def test_bounded_search_durably_records_one_result_per_frozen_variant(monkeypatch, tmp_path):
     from financial_brain.evaluation import bounded_search as search
 

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 177,
-  "unrecorded_tasks": 41,
+  "recorded_tasks": 180,
+  "unrecorded_tasks": 38,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3884,6 +3884,63 @@
       ],
       "test_result": "9 shadow-counterfactual tests passed; Ruff and inventory checks passed. Every retained rejected decision is explicitly hypothetical and records no observed execution.",
       "evidence_sha256": "fd0f34a03088c0dac6a6c55e96412c939ee09f505957387adfc00b9a44d563b5",
+      "blockers": []
+    },
+    {
+      "id": "PE-0180",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/research_library.py",
+        "tests/test_research_library.py",
+        "docs/edge-program/pe-0180-search-budget-multiplicity-evidence.md",
+        "docs/edge-program/pe-0180-search-budget-multiplicity-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_research_library.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "6 research-library tests passed; Ruff, targeted mypy, and inventories passed. Cross-run candidate count and adjusted alpha are enforced within frozen campaigns.",
+      "evidence_sha256": "8e7866128b2f05326dc32295ce63ff4b23b69b8ce46d1aa102a23ba8c3b86319",
+      "blockers": []
+    },
+    {
+      "id": "PE-0181",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/evaluation/model_update_guard.py",
+        "src/financial_brain/evaluation/timing.py",
+        "tests/test_model_update_guard.py",
+        "docs/edge-program/pe-0181-locked-cohort-model-identity-evidence.md",
+        "docs/edge-program/pe-0181-locked-cohort-model-identity-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_model_update_guard.py",
+        "test_phase3_timing.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "23 focused model-lock, timing, and search-governance tests passed; Ruff, targeted mypy, and source/strategy inventory checks passed. Timing-model saves cannot change a locked cohort identity.",
+      "evidence_sha256": "7d6c25f95a744a3571e8d404d945cebe5937302d307e94055d48396e77d0c193",
+      "blockers": []
+    },
+    {
+      "id": "PE-0182",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/approved_rollback.py",
+        "src/financial_brain/forward_edge/approvals.py",
+        "tests/test_approved_rollback.py",
+        "docs/edge-program/pe-0182-approved-rollback-evidence.md",
+        "docs/edge-program/pe-0182-approved-rollback-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_approved_rollback.py",
+        "test_source_inventory.py"
+      ],
+      "test_result": "4 approval-scoped rollback tests passed as part of a 23-test focused run; Ruff, targeted mypy, and source/strategy inventory checks passed. Rollback binds alarm evidence and separately authorizes capital changes.",
+      "evidence_sha256": "a1297fd49d98e398912a3a12b526ed1d7a1f63760c229fd6fe60e5da17eb64c6",
       "blockers": []
     }
   ]

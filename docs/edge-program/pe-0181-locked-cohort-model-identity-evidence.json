@@ -1,0 +1,20 @@
+{
+  "checklist_task": "PE-0181",
+  "status": "DONE",
+  "criterion": "Block online model weight updates during locked forward cohorts; drift alarms may halt but cannot rewrite the running model identity.",
+  "implementation": [
+    "src/financial_brain/evaluation/model_update_guard.py",
+    "src/financial_brain/evaluation/timing.py"
+  ],
+  "tests": [
+    "tests/test_model_update_guard.py",
+    "tests/test_phase3_timing.py"
+  ],
+  "test_result": "23 focused model-lock, timing-model, and search-governance tests passed; Ruff and targeted mypy passed.",
+  "evidence_scope": "DuckDB synthetic cohort, model identity, drift alarm, close, and update scenarios.",
+  "operational_limits": [
+    "The current model-save integration covers the timing model; other online model stores must call the shared guard.",
+    "Drift alarm recording itself does not run the safe-policy halt workflow.",
+    "Local hash chaining does not provide independent external attestation or tamper-proof custody."
+  ]
+}
