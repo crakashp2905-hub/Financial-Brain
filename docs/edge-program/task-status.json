@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 131,
-  "unrecorded_tasks": 87,
+  "recorded_tasks": 132,
+  "unrecorded_tasks": 86,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2851,6 +2851,33 @@
         "Current paper ledger does not capture all component effects or frozen forecast baseline.",
         "No authoritative daily bridge integration verifies all losing days.",
         "Caller-supplied counterfactual effects are not independently causal evidence."
+      ]
+    },
+    {
+      "id": "PE-0134",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/paper/loss_classification.py",
+        "tests/test_loss_classification.py",
+        "docs/edge-program/pe-0134-evidence-linked-loss-categories.md",
+        "docs/edge-program/pe-0134-evidence-linked-loss-categories-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_losing_trade_without_evidence_is_explicitly_unknown",
+        "test_supported_categories_retain_evidence_ids_and_sort_deterministically",
+        "test_nonloss_does_not_receive_a_loss_category",
+        "test_unknown_categories_and_missing_evidence_ids_are_rejected",
+        "test_classification_storage_is_idempotent_and_rejects_retroactive_change",
+        "test_classification_storage_rejects_naive_timestamp"
+      ],
+      "test_result": "6 tests passed; Ruff passed. Missing evidence maps to UNKNOWN; records retain IDs and reject retroactive mutation.",
+      "evidence_sha256": "f6b2ae86c3e83ff550d921e83ca772a0cd80bc74a367563118042ba9650c45e3",
+      "blockers": [
+        "Evidence identifiers are not resolved against an authoritative evidence registry.",
+        "Not wired into the canonical trade ledger or loss-review report.",
+        "Labels do not establish causal root cause."
       ]
     }
   ]
