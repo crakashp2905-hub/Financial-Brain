@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 144,
-  "unrecorded_tasks": 74,
+  "recorded_tasks": 145,
+  "unrecorded_tasks": 73,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3189,6 +3189,32 @@
         "Registry is not connected to formal strategy eligibility or every forward-session order path.",
         "Registration evidence is not authenticated by approved identity service.",
         "Account closure and released-capital reconciliation are not implemented; capital recycling remains blocked."
+      ]
+    },
+    {
+      "id": "PE-0147",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/source_capture_start.py",
+        "tests/test_source_capture_start.py",
+        "docs/edge-program/pe-0147-source-capture-start.md",
+        "docs/edge-program/pe-0147-source-capture-start-evidence.json",
+        "docs/edge-program/task-status.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_capture_start_is_journaled_before_market_events_with_session_evidence",
+        "test_capture_after_earliest_decision_clock_is_rejected",
+        "test_missing_expired_or_disabled_entitlements_are_visible_and_block_eligibility",
+        "test_receipt_cannot_be_changed_or_added_after_capture_events",
+        "test_clock_evidence_and_capture_identity_are_mandatory"
+      ],
+      "test_result": "5 source-capture-start tests passed; Ruff passed. Pre-decision start time, durable ordering, source entitlement validity, clock and quote-health provenance, and immutable replay verified.",
+      "evidence_sha256": "a59bddf3f008112e5d739e7288e16a44cf3d67e717197f9c580bd628799faa0e",
+      "blockers": [
+        "Live Kite capture startup does not call this receipt API.",
+        "Clock and entitlement evidence remains caller-supplied and unauthenticated.",
+        "No actual observed capture session was produced."
       ]
     }
   ]
