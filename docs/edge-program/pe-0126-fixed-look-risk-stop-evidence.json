@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0126",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_fixed_look.py",
+    "result": "7 passed; Ruff passed for the new module and test file."
+  },
+  "implemented": [
+    "The policy freezes ordered session-count looks, familywise alpha, drawdown harm floor and freeze timestamps into a content hash.",
+    "Unscheduled efficacy views return no efficacy decision; alpha is divided across registered looks.",
+    "Risk harm stops at any observation, including between looks; missing risk evidence fails closed.",
+    "The module reports order permission semantics without granting permission at efficacy checkpoints."
+  ],
+  "blockers": [
+    "No durable authoritative trial registry stores the fixed-look policy or prevents post-observation replacement.",
+    "The risk-stop output is not yet wired to the paper runner's persistent restart-safe risk latch.",
+    "The fixed look schedule is not joined to sample-size design or prospective performance evidence."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/fixed_look.py": "8e63477a6fc5a84d618bb3312316617268cee5bbdf8df8a7204f93db1be890e6",
+    "tests/test_fixed_look.py": "1385001c45a6ed74bf86d0165d0a4ae1b3a41e52714a42f3169bdd6d218cefbb"
+  }
+}

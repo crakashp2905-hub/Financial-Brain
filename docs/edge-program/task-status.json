@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 123,
-  "unrecorded_tasks": 95,
+  "recorded_tasks": 124,
+  "unrecorded_tasks": 94,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2659,6 +2659,32 @@
         "Adequate sample size is not yet bound to the prospective cohort design.",
         "After-cost utility accounting lineage is caller-supplied and not verified by this API.",
         "No independently attested forward market cohort has elapsed."
+      ]
+    },
+    {
+      "id": "PE-0126",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/fixed_look.py",
+        "tests/test_fixed_look.py",
+        "docs/edge-program/pe-0126-fixed-look-risk-stop.md",
+        "docs/edge-program/pe-0126-fixed-look-risk-stop-evidence.json"
+      ],
+      "tests": [
+        "test_unscheduled_interim_display_cannot_produce_an_efficacy_decision",
+        "test_registered_look_uses_predeclared_familywise_alpha_spending",
+        "test_fixed_look_does_not_confirm_a_nonpositive_bound",
+        "test_risk_harm_stops_immediately_even_between_registered_looks",
+        "test_missing_risk_evidence_fails_closed_and_withholds_efficacy",
+        "test_policy_is_frozen_before_first_observation_and_hashes_all_look_controls",
+        "test_invalid_look_observations_are_rejected"
+      ],
+      "test_result": "7 fixed-look and risk-harm tests passed; Ruff passed. Efficacy decisions are restricted to pre-registered looks, while risk harm can stop between looks.",
+      "evidence_sha256": "301e925f13bac2403da15da31e6225b5d49320343e8bdb6509b086874da221aa",
+      "blockers": [
+        "Policy is not persisted in an authoritative trial registry.",
+        "Risk-stop output is not wired to the paper runner persistent restart-safe risk latch.",
+        "Fixed looks are not connected to sample-size design or prospective evidence."
       ]
     }
   ]
