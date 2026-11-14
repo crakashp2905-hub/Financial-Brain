@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 165,
-  "unrecorded_tasks": 53,
+  "recorded_tasks": 166,
+  "unrecorded_tasks": 52,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -3637,6 +3637,24 @@
       ],
       "test_result": "9 passed across expiry preflight, rule table parity, options settlement, durable journal restart, and stale-readiness checks; Ruff and targeted mypy passed; source inventory check passed (615 Python files).",
       "evidence_sha256": "559b229d56bc04405e07c08a20be8890f2f6f0f15eb20bd18ac9a5394ab634bd",
+      "blockers": []
+    },
+    {
+      "id": "PE-0168",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/kernel/fx_paper.py",
+        "tests/test_fx_paper.py",
+        "docs/edge-program/fx-paper-rulebook.v1.json",
+        "docs/edge-program/pe-0168-fx-paper-evidence.md",
+        "docs/edge-program/pe-0168-fx-paper-evidence.json",
+        "docs/edge-program/source-inventory.json"
+      ],
+      "tests": [
+        "test_fx_paper.py"
+      ],
+      "test_result": "27 passed; Ruff and targeted mypy passed; source inventory check passed (616 Python files).",
+      "evidence_sha256": "d2fde4a9bd82231b4d07681abc0a6271f20f6585ea0966ed9ec8484a10aab8fe",
       "blockers": []
     }
   ]
