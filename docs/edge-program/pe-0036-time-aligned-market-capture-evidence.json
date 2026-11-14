@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0036",
+  "status": "DONE",
+  "scope": "Offline implementation acceptance; no live-market observation or provider-rights claim.",
+  "implemented": [
+    "Durable normalized market-event capture for QUOTE, DEPTH, TICK, and BAR, gated by source- and event-kind-specific retention attestations.",
+    "Replay reconstructs normalized events in availability-time order and excludes records unavailable at the requested as-of time.",
+    "Kite historical minute bars are validated and archived with their retrieval time as availability, preventing retroactive lookahead claims.",
+    "Quote execution and fixture receipts expose exact quote input IDs, event hashes, timestamps, the selected quote ID on fills, and execution fidelity."
+  ],
+  "tests": {
+    "command": "python scripts/source_inventory.py --check docs/edge-program/source-inventory.json; python -m pytest tests/test_source_inventory.py tests/test_raw_quote_archive.py tests/test_forward_paper_execution_adapter.py tests/test_forward_fixture_replay.py tests/test_forward_session_runner.py tests/test_kite_forward_events.py tests/test_phase3_kite.py tests/test_phase5_intraday_runner.py tests/test_forward_paper_account_bridge.py -q",
+    "result": "109 passed (exit code 0); Ruff passed for changed Python files; mypy passed for raw_quote_archive.py, paper_execution_adapter.py, fixture_replay.py, and kite_live.py; source inventory freshness check passed (554 Python files, 547 unassessed).",
+    "additional": "None; the 109-test run includes source_inventory.py checks and all capture, adapter, fixture, runner, Kite, and account-bridge regressions.",
+    "cases": [
+      "test_market_archive_round_trips_quotes_ticks_and_bars_by_availability",
+      "test_market_archive_requires_kind_and_source_retention_scope",
+      "test_historical_kite_bars_are_available_only_after_retrieval_and_archive_with_rights",
+      "test_historical_kite_bars_reject_invalid_ohlc",
+      "test_simulated_fill_receipt_points_through_event_to_raw_quote_archive"
+    ]
+  },
+  "limitations": [
+    "No complete historical trade tape is asserted; TICK capture accepts only actual normalized events from a permitted source.",
+    "Retention permission is supplied and scoped by the operator; the code does not adjudicate provider contract rights.",
+    "All fills remain simulated; no broker fills or real-market execution results are claimed."
+  ]
+}

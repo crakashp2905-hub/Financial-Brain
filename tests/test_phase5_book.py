@@ -68,6 +68,10 @@ def test_the_record_keeps_losers_and_nets_costs_and_the_universe(tmp_path):
     assert s["mean_excess"] == pytest.approx(((0.097 - 0.02) + (-0.053)) / 2)
     assert s["gross_rs"] - s["costs_rs"] == pytest.approx(s["net_rs"])
     assert s["traded_entry_notional_rs"] > 0
+    assert s["costs_bp_on_traded_entry_notional"] == pytest.approx(
+        s["costs_rs"] / s["traded_entry_notional_rs"] * 1e4)
+    assert s["cost_drag_on_starting_capital_bp"] == pytest.approx(s["costs_rs"] / B.CAPITAL * 1e4)
+    assert s["cost_drag_on_starting_capital"] == pytest.approx(s["costs_rs"] / B.CAPITAL)
     assert s["approximate_round_trip_turnover_x"] == pytest.approx(
         2 * s["traded_entry_notional_rs"] / B.CAPITAL)
     assert s["verdict"].startswith("REPLAY")

@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0022",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T06:41:42Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/session_runner.py": "dc338055fb120325f93c5ecaf8a7b9c8f81d9a80e652de41ccba3e62f71ed0f3",
+    "src/financial_brain/forward_edge/paper_execution_adapter.py": "74095ac98b161f3b46f68a15c66e1ec9e04d2deb783c03c2c4857ad6bec2a705",
+    "src/financial_brain/forward_edge/execution.py": "6b08a8b90f3961568909d17454b085a63b8bed4cd7bf22c104817487baa9c34f",
+    "src/financial_brain/forward_edge/market_data.py": "f9b4ee1847b48373ea4305dd09247d679ceff97414b6e5ea2455d66bc64df43c",
+    "tests/test_forward_paper_execution_adapter.py": "e38e301f3f0529a1d9c073b3c690df0cb9676a4e3df9024a47eb70d5f1019598",
+    "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
+    "tests/test_forward_session_crash_matrix.py": "4535261aaf1b81bb5f8f86817512a01d1635b3225e87d1a02018aa4d4da25e37",
+    "docs/edge-program/forward-paper-execution-adapter-contract.md": "f7e17c1d7ea5aa6ed6f67eed30367169e97adf89a3938598f1ad3f8d06bfa03d"
+  },
+  "acceptance_tests": [
+    "test_pending_outbox_requires_reconciliation_after_unknown_side_effect",
+    "test_outbox_retries_only_after_reconciliation_proves_no_effect",
+    "test_execution_without_simulation_receipt_cannot_close_paper_session",
+    "test_filled_status_without_fill_facts_cannot_be_acknowledged",
+    "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution",
+    "test_quote_simulator_uses_first_quote_after_latency_and_caps_visible_size",
+    "test_quote_simulator_refuses_ltp_only_and_invalid_quotes",
+    "test_quote_simulator_abstains_when_feed_health_fails",
+    "test_quote_simulator_is_connected_to_durable_runner",
+    "test_quote_simulator_rejects_fractional_decision_quantity"
+  ],
+  "result": "A reusable marketable-quote simulator now feeds normalized, timestamped top-of-book events into the runner outbox. It only fills after configured latency, requires valid two-sided displayed depth, tick-rounds adverse to the trader, caps by visible size, and binds every fill to a stable intent/fill identity and quote-event SHA-256. The runner supplies its immutable decision time, validates the simulation receipt, journals execution before acknowledgement, and retains unknown outcomes until explicit reconciliation.",
+  "focused_tests": "91 passed across forward-session crash recovery, runner, clock, Kite, intraday, session-date, book, and paper-execution adapter suites",
+  "ruff": "passed",
+  "mypy": "passed",
+  "diff_check": "passed",
+  "limitations": [
+    "Simulation only; no broker order path or observed broker receipt.",
+    "Caller must provide current tick metadata and a feed-health gate.",
+    "Fees, portfolio accounting, authorized live-market capture, and profitability remain separate work."
+  ]
+}

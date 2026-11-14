@@ -1,0 +1,7 @@
+# Forward session opportunity coverage (PE-0042)
+
+Every finalized forward-session report includes an `opportunity_coverage` object. It records the session date denominator, configured instrument denominator, quoted and missing instruments, raw quote event count, strategy-emitted candidate count, candidate quote coverage, explicit candidate notional when supplied, filled value, accepted and quality-rejected quote receipts, filled quote count, missed candidate count, and lost-opportunity denominator.
+
+The report does not infer candidate notional from a missing limit/reference price. It records a null notional denominator and a `missing_denominators` reason instead. Candidate signals come from a decision's `candidate_signals` list; when that is absent, one actionable BUY/SELL decision is counted as one candidate. Non-actionable NONE/NO_TRADE decisions count zero candidates. The session report declares its universe as strategy output, not market-wide discovery.
+
+This is a per-session denominator/evidence report, not a claim that all market opportunities were observed. Configured instruments constrain the coverage universe. Quote presence alone is not proof that a quote was executable; accepted versus rejected quote counts are taken from the execution receipt when the adapter provides them. Market-wide coverage, complete strategy candidate enumeration, and real quote/fill outcomes require prospective source capture and are not established by fixtures.

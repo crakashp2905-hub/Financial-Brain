@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0058",
+  "status": "PARTIAL",
+  "implemented": [
+    "Immutable strategy version snapshot requires code, parameter, filter, horizon, universe, cost-model, benchmark and asset-scope identity.",
+    "Diff identifies all changed checklist dimensions and binds before, after and diff content with SHA-256.",
+    "Only adjacent versions of the same strategy can be compared; version-only changes are identified explicitly."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_strategy_version_diff.py -q",
+    "result": "5 passed (exit code 0); Ruff and mypy passed.",
+    "cases": [
+      "test_diff_exposes_every_checklist_identity_dimension",
+      "test_version_increment_without_identity_change_is_explicit",
+      "test_diff_refuses_cross_strategy_or_skipped_versions",
+      "test_snapshot_rejects_missing_dimension_digest"
+    ]
+  },
+  "limitations": [
+    "Snapshot diffing is not yet wired to all registry, strategy and execution configuration sources.",
+    "Legacy candidates do not all supply frozen filter, universe and cost-model digests."
+  ]
+}

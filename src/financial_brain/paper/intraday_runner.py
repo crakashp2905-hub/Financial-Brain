@@ -141,8 +141,12 @@ def daily_view(before: date | None = None):
         log.warning("daily view unavailable: %s", str(e)[:120])
         return None, None, None
     try:
-        asof = (rcon.execute("SELECT MAX(business_date) FROM features WHERE business_date < ?", [before]).fetchone()[0]
-                if before else rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0])
+        row = (rcon.execute("SELECT MAX(business_date) FROM features WHERE business_date < ?", [before]).fetchone()
+               if before else rcon.execute("SELECT MAX(business_date) FROM features").fetchone())
+        asof = row[0] if row is not None else None
+        if asof is None:
+            rcon.close()
+            return None, None, None
         cs = S.cross_section(rcon, asof)
         events = {r[0] for r in rcon.execute("""
             SELECT DISTINCT l.lineage FROM announcements a JOIN security_lineage l ON l.isin = a.isin
@@ -214,7 +218,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
              rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
-             event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None) -> dict:
+             event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None,
+             raw_archive=None) -> dict:
     from ..providers import kite_data as kd
     quote_fn = quote_fn or kd.quote
     now_fn = now_fn or (lambda: datetime.now(IST))
@@ -288,9 +293,10 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             if event_sink is not None:
                 from ..ingest.kite_live import forward_events
                 try:
-                    rejections = []
+                    rejections: list[dict] = []
                     events = forward_events(syms, quote_fn=lambda *_args, snapshot=q: snapshot,
-                                            received_at=poll_received_at, rejections_out=rejections)
+                                            received_at=poll_received_at, rejections_out=rejections,
+                                            raw_archive=raw_archive)
                     event_sink(events)
                     if rejections:
                         if rejection_sink is None:

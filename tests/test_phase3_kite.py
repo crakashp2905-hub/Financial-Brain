@@ -80,6 +80,22 @@ def test_http_auth_rejection_has_a_distinct_error(monkeypatch):
         kd._get("/quote")
 
 
+def test_read_only_provider_error_never_exposes_credentials(monkeypatch):
+    secret = "access-token-must-not-appear"
+    monkeypatch.setattr(kd, "credentials", lambda: ("api-key-private", secret))
+    monkeypatch.setattr(kd, "_throttle", lambda: None)
+
+    def rejected(*args, **kwargs):
+        raise urllib.error.HTTPError("https://api.kite.trade/quote", 403, "Forbidden", {},
+                                     io.BytesIO(secret.encode()))
+
+    monkeypatch.setattr(kd.urllib.request, "urlopen", rejected)
+    with pytest.raises(kd.KiteAuthError) as error:
+        kd.quote(["NSE:INFY"], "full")
+    assert secret not in str(error.value)
+    assert "api-key-private" not in str(error.value)
+
+
 def test_token_exception_response_has_a_distinct_error(monkeypatch):
     monkeypatch.setattr(kd, "credentials", lambda: ("key", "token"))
     monkeypatch.setattr(kd, "_throttle", lambda: None)

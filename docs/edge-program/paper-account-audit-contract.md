@@ -1,0 +1,5 @@
+# Independent PaperAccount Journal Audit
+
+`kernel.paper_account_audit.audit_paper_account_journal(path)` verifies the durable journal chain and independently folds `ACCOUNT_OPEN`, `FILL`, `FEE`, `EXTERNAL_FLOW`, `MARK`, and `NAV_SNAPSHOT` records. It recomputes cash, long inventory quantity and cost basis, gross/net realized P&L, total fees, marked NAV, and every persisted daily NAV snapshot. The auditor does not construct `PaperAccount` or consume its OMS/ledger state.
+
+The audit fails on an invalid journal chain, duplicate event identities, malformed amounts, oversells, missing valuation marks, unknown event types, or a mismatch between persisted and independently recomputed NAV/flows. The report identifies `DURABLE_JOURNAL_ONLY` as its source. It is a local consistency check, not an external confirmation of broker balances, source rights, marks, or corporate actions. The current account journal does not retain enough chronology to independently reconstruct every historical intraday balance between events; the daily snapshots are the immutable audit points.

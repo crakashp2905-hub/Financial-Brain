@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0090",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_paper_account_portfolio.py tests/test_paper_account.py tests/test_kernel_ledger_guards_ticks.py",
+    "result": "27 passed (exit code 0); Ruff and mypy on changed source modules passed."
+  },
+  "implemented": [
+    "Added PaperAccountPortfolio as a derived read-only portfolio across distinct per-strategy PaperAccounts.",
+    "Consolidates immutable double-entry transactions under book-namespaced accounts and transaction IDs, and verifies both total trial balance and each book cash balance.",
+    "Reports per-book and total initial cash, cash, reservations, available cash, fees, realized P&L and NAV; total NAV is withheld whenever any book lacks a current position mark.",
+    "Rejects duplicate account objects, mismatched book identifiers, shared journal paths and mixed currencies; explicitly prevents cross-book cash netting."
+  ],
+  "blockers": [
+    "The operational runner does not yet discover/register every strategy account into this derived view, and account subledgers remain the source of truth rather than one persisted portfolio ledger.",
+    "The scope remains long-only cash equities in one currency; margin, settlement, futures and options accounting are not implemented."
+  ],
+  "scope_note": "This produces a deterministic consolidated audit view for registered paper books. It does not pool buying power or claim cross-asset accounting."
+}

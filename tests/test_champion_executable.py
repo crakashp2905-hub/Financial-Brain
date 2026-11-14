@@ -120,6 +120,16 @@ def test_explicit_no_order_cash_cohort_resolves_to_zero_instead_of_disappearing(
     assert row == (0.0, True, 3, 0, 0)
 
 
+def test_no_fill_attempt_stays_in_the_scheduled_intention_denominator():
+    args = list(inputs(order_status="NO_FILL"))
+    args[4] = args[4].iloc[0:0]
+    ledger, _ = resolve(tuple(args))
+    selected, no_fill, filled, cash_days, net, complete = ledger.execute(
+        "SELECT selected_n, no_fill_n, n, cash_days, net, complete FROM champion_executable_cohorts"
+    ).fetchone()
+    assert (selected, no_fill, filled, cash_days, net, complete) == (2, 1, 0, 3, 0.0, True)
+
+
 def test_sell_fills_release_inventory_and_include_sell_fee_in_net_nav():
     args = list(inputs())
     orders = args[3].copy()

@@ -26,3 +26,18 @@ def test_curated_source_has_exact_existing_tests_and_stable_serialization():
     assert manifest["maturity"] == "locally_mapped"
     assert "tests/test_decision_manifest.py" in manifest["test_paths"]
     assert all((ROOT / test).is_file() for row in one["sources"] for test in row["test_paths"])
+
+
+def test_inventory_captures_old_and_new_engine_dependency_graph_roots():
+    report = build(ROOT)
+    roots = set(report["engine_graph_roots"])
+    assert roots == {
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/forward_edge/pipeline.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/ingest/kite_live.py",
+    }
+    edges = report["local_import_edges"]
+    assert all(edge["from"] != edge["to"] for edge in edges)
+    assert any(edge["from"] == "src/financial_brain/paper/intraday_runner.py" for edge in edges)
+    assert any(edge["from"] == "src/financial_brain/forward_edge/session_runner.py" for edge in edges)
