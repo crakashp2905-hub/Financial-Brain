@@ -336,6 +336,12 @@ def _persist_canonical_events(*, journal_path: Path, config: ForwardRunConfig, r
     if decision_row is None:
         raise PaperAccountBridgeError("canonical event export is missing its durable decision timestamp")
     decided_at = datetime.fromisoformat(decision_row["decision_at_utc"])
+    try:
+        executed_at = datetime.fromisoformat(str(receipt["simulated_execution_at_utc"]))
+    except (KeyError, ValueError) as exc:
+        raise PaperAccountBridgeError("canonical order events need a valid simulated execution timestamp") from exc
+    if executed_at < decided_at:
+        raise PaperAccountBridgeError("simulated execution timestamp precedes its sealed decision")
     receipt_sha = hashlib.sha256(json.dumps(receipt, sort_keys=True, separators=(",", ":"),
                                            allow_nan=False).encode("utf-8")).hexdigest()
     events: list[TradingEvent] = [IntentEvent(
@@ -360,7 +366,7 @@ def _persist_canonical_events(*, journal_path: Path, config: ForwardRunConfig, r
     for status in states:
         events.append(OrderEvent(
             event_id=f"{intent_id}:state:{status.value}", order_id=intent_id,
-            status=status, occurred_at=decided_at, source_sha256=receipt_sha,
+            status=status, occurred_at=executed_at, source_sha256=receipt_sha,
             reason=str(receipt.get("reason") or "SIMULATED_OUTCOME"),
         ))
     for fill in receipt.get("fills", []):

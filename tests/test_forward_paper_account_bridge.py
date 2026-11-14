@@ -223,6 +223,9 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
     ]
     assert payloads[0]["event"]["strategy_id"] == "test-momentum"
     assert payloads[0]["event"]["strategy_id"] != STRATEGY_SHA
+    assert payloads[1]["event"]["occurred_at"] == DECISION_AT.isoformat()
+    assert payloads[2]["event"]["occurred_at"] == first["execution"]["simulated_execution_at_utc"]
+    assert payloads[3]["event"]["occurred_at"] == first["execution"]["fills"][0]["quote_available_utc"]
     assert len({row["event_sha256"] for row in event_rows}) == len(event_rows)
     assert len(event_rows) == len(first["account_reconciliation"]["canonical_event_sha256s"])
     assert account.ledger.balance("cash:paper-main", "INR") == account.cash
