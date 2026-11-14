@@ -13,8 +13,8 @@ NOW = datetime(2027, 3, 1, 5, 0, tzinfo=timezone.utc)
 SHA = "9" * 64
 
 
-def _approval(kind: str, subject: str, actor="owner:akash", typ="human") -> Approval:
-    return Approval(kind, subject, SHA, actor, typ, NOW - timedelta(hours=1), NOW + timedelta(hours=1))
+def _approval(kind: str, subject: str, actor="owner:akash", typ="human", scope=SHA) -> Approval:
+    return Approval(kind, subject, scope, actor, typ, NOW - timedelta(hours=1), NOW + timedelta(hours=1))
 
 
 # ---- FE-0132 ----
@@ -34,6 +34,21 @@ def test_mock_adapter_is_labelled_mock_and_still_cannot_place_orders() -> None:
     assert m.dry_run_order("o1", "INFY", 1) == {"order_id": "o1", "status": "DRY_RUN_ACCEPTED", "mock": True, "filled": 0}
     with pytest.raises(H.OrderBlocked):
         m.place_order("INFY", 1)
+
+
+def test_kite_readonly_status_adapter_cannot_submit_orders(monkeypatch) -> None:
+    from financial_brain.providers import kite_data
+
+    monkeypatch.setattr(kite_data, "account_status", lambda: {
+        "orders": [{"order_id": "o1", "status": "COMPLETE"}],
+        "positions": {"day": [], "net": []}, "holdings": [],
+    })
+    adapter = H.KiteReadOnlyStatusAdapter()
+    assert adapter.orders()[0]["status"] == "COMPLETE"
+    with pytest.raises(H.OrderBlocked):
+        adapter.place_order("INFY", 1)
+    with pytest.raises(H.OrderBlocked):
+        adapter.cancel_order("o1")
 
 
 # ---- FE-0134 ----
@@ -79,13 +94,13 @@ def test_placed_is_not_filled_without_broker_confirmation(local: str, broker: st
 # ---- FE-0137 ----
 
 def test_no_real_trade_before_explicit_human_confirmation_of_the_exact_proposal() -> None:
-    prop = H.RiskProposal(D("100000"), D("5000"), D("2000"))
+    prop = H.RiskProposal(D("100000"), D("5000"), D("2000"), D("25000"), "a" * 64)
     assert H.proposal_confirmed(prop, None, SHA, NOW) is False
-    assert H.proposal_confirmed(prop, _approval("MICRO_RISK_BUDGET", "micro_pilot"), SHA, NOW) is True
-    assert H.proposal_confirmed(prop, _approval("MICRO_RISK_BUDGET", "micro_pilot", "agent:x", "agent"), SHA, NOW) is False
-    assert H.proposal_confirmed(prop, _approval("MICRO_RISK_BUDGET", "micro_pilot"), "8" * 64, NOW) is False
+    assert H.proposal_confirmed(prop, _approval("MICRO_RISK_BUDGET", "micro_pilot", scope=prop.sha256()), prop.sha256(), NOW) is True
+    assert H.proposal_confirmed(prop, _approval("MICRO_RISK_BUDGET", "micro_pilot", "agent:x", "agent", scope=prop.sha256()), prop.sha256(), NOW) is False
+    assert H.proposal_confirmed(prop, _approval("MICRO_RISK_BUDGET", "micro_pilot", scope=SHA), SHA, NOW) is False
     with pytest.raises(H.RehearsalError):
-        H.RiskProposal(D("100"), D("500"), D("10"))
+        H.RiskProposal(D("100"), D("500"), D("10"), D("200"), "a" * 64)
 
 
 # ---- FE-0138 ----
@@ -146,3 +161,20 @@ def test_a_profitable_week_never_scales_capital_by_itself() -> None:
     assert H.scaling_allowed(profitable_week=True, separate_review_done=False, approval_valid=False) is False
     assert H.scaling_allowed(profitable_week=True, separate_review_done=True, approval_valid=False) is False
     assert H.scaling_allowed(profitable_week=False, separate_review_done=True, approval_valid=True) is True
+
+
+def test_scaling_evidence_gate_requires_reconciled_observed_fills_and_risk_approval() -> None:
+    allowed, reasons = H.scaling_evidence_gate(
+        statement_mismatches=[], fill_model_error_bps=D("2.0"), maximum_fill_model_error_bps=D("3.0"),
+        risk_limits_passed=True, independent_review_done=True, owner_approval_valid=True,
+    )
+    assert allowed is True and reasons == []
+    allowed, reasons = H.scaling_evidence_gate(
+        statement_mismatches=["contract-note missing"], fill_model_error_bps=D("5.0"),
+        maximum_fill_model_error_bps=D("3.0"), risk_limits_passed=False,
+        independent_review_done=False, owner_approval_valid=False,
+    )
+    assert allowed is False
+    assert {"BROKER_STATEMENT_MISMATCH", "FILL_MODEL_ERROR_OUT_OF_LIMIT",
+            "RISK_LIMITS_NOT_PASSED", "INDEPENDENT_REVIEW_MISSING",
+            "OWNER_APPROVAL_MISSING"}.issubset(reasons)

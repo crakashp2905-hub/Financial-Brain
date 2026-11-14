@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 206,
-  "unrecorded_tasks": 12,
+  "recorded_tasks": 218,
+  "unrecorded_tasks": 0,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -4472,6 +4472,215 @@
         "A complete point-in-time issuer/ISIN/symbol succession graph with sourced effective dates and historical replay is not implemented; corporate-action tests use controlled synthetic records."
       ],
       "evidence_sha256": "49d89eabfa3aee6a7f905c8d8186483253b5c799338cf999b1d746d8d482783d"
+    },
+    {
+      "id": "PE-0207",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/promotion_policy.py",
+        "src/financial_brain/forward_edge/approvals.py",
+        "tests/test_promotion_policy.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_promotion_policy.py"
+      ],
+      "test_result": "Scoped human approval and pre-observation policy hash are implemented and tested; no real candidate policy has owner approval.",
+      "blockers": [
+        "Owner approval for a candidate-specific policy and cohort is absent."
+      ],
+      "evidence_sha256": "1ebfe8362d9d7604711dbbecee99fd7a4e94c008f6358f1c2f57e8bd32dc79e9"
+    },
+    {
+      "id": "PE-0208",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/promotion_policy.py",
+        "src/financial_brain/forward_edge/sample_size.py",
+        "tests/test_promotion_policy.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_promotion_policy.py"
+      ],
+      "test_result": "Promotion minimum now comes from SampleSizePlan.required_sessions and binds its digest; actual independent receipt-derived session count is not wired into the promotion evaluator.",
+      "blockers": [
+        "Forward eligible-session receipts and authoritative cohort integration are absent."
+      ],
+      "evidence_sha256": "1164051723d5c29a58aea5f0b20e8711f9bfa57dacba94f6ce2c06a18e78d097"
+    },
+    {
+      "id": "PE-0209",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/promotion_policy.py",
+        "tests/test_promotion_policy.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_promotion_policy.py"
+      ],
+      "test_result": "Gate separately requires positive net-alpha and risk-matched benchmark alpha lower bounds; synthetic inputs only.",
+      "blockers": [
+        "No prospective benchmark-matched returns or independently verified lower bound."
+      ],
+      "evidence_sha256": "a85ae48096fae6e91f3dfb1add5987fcc8ad33cbd90c59cf77fe7aa5fdec81f6"
+    },
+    {
+      "id": "PE-0210",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/promotion_policy.py",
+        "tests/test_promotion_policy.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_promotion_policy.py"
+      ],
+      "test_result": "Complete fixed 3x3 cost/fill grid and adverse-selection value must all remain positive; tests include missing and failed cells.",
+      "blockers": [
+        "Observed fills and calibrated adverse-selection inputs are unavailable."
+      ],
+      "evidence_sha256": "3053dec316fa915b5a1fe85caf1852142cd8fdb6fafdeaec851f2f0289e95c52"
+    },
+    {
+      "id": "PE-0211",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/promotion_policy.py",
+        "tests/test_promotion_policy.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_promotion_policy.py"
+      ],
+      "test_result": "Every operational state is fail-closed and requires a SHA-256 evidence reference; reference authenticity is not validated by an external trust root.",
+      "blockers": [
+        "Authoritative authenticated incident, ledger, rights and custody evidence sources are not integrated."
+      ],
+      "evidence_sha256": "f9a1d442fb42485d4a6c921950d320902583ede0aae7b819a39309eae464cc80"
+    },
+    {
+      "id": "PE-0212",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/providers/kite_data.py",
+        "src/financial_brain/forward_edge/rehearsal.py",
+        "tests/test_kite_paper_readonly.py",
+        "tests/test_forward_edge_f12.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_kite_paper_readonly.py",
+        "tests/test_forward_edge_f12.py"
+      ],
+      "test_result": "GET-only Kite account-status routes are allowlisted and exercised; rehearsal adapter cannot place/cancel orders; separate mock dry-run path remains labeled synthetic.",
+      "blockers": [
+        "No live credentials/session were exercised; acceptance is the read-only adapter interface plus mocked HTTP-boundary verification."
+      ],
+      "evidence_sha256": "9469f091df9600383bc441a3346ef3ca32f1c0b9c21112f73a8ceea0ba3d7469"
+    },
+    {
+      "id": "PE-0213",
+      "status": "EXTERNAL_BLOCKED",
+      "sources": [
+        "src/financial_brain/forward_edge/rehearsal.py",
+        "tests/test_forward_edge_f12.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_forward_edge_f12.py"
+      ],
+      "test_result": "Synthetic test coverage only; no real market-hours session recorded.",
+      "blockers": [
+        "Requires owner-authorized authenticated broker access and real market-hours clean-session receipts."
+      ],
+      "evidence_sha256": "b14adaf7b09d3259e035f78bfe8b7f89fef9750dd8fab9ab332da734902d5230"
+    },
+    {
+      "id": "PE-0214",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/rehearsal.py",
+        "tests/test_forward_edge_f12.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_forward_edge_f12.py"
+      ],
+      "test_result": "Compliance gate blocks missing/false permission facts; no permissions are inferred from code.",
+      "blockers": [
+        "Verified broker/venue permissions and applicable regulatory/operational review are absent."
+      ],
+      "evidence_sha256": "c21f0f1140d7500ce42b5f6fcc7d962bf714eae2d0c452ff29ba34cbe2ef4841"
+    },
+    {
+      "id": "PE-0215",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/rehearsal.py",
+        "tests/test_forward_edge_f12.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_forward_edge_f12.py"
+      ],
+      "test_result": "RiskProposal hashes capital, per-order loss, daily loss, margin and emergency-exit policy; approval must match exact hash.",
+      "blockers": [
+        "No owner-confirmed human approval for an actual proposal."
+      ],
+      "evidence_sha256": "1d0dc02249499370bbd6eb8904d409440d2ad3351c11bd8affc7d7670cbab662"
+    },
+    {
+      "id": "PE-0216",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/rehearsal.py",
+        "tests/test_forward_edge_f12.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_forward_edge_f12.py"
+      ],
+      "test_result": "Scaling gate fails on mismatch, fill-model error, risk, independent review or owner approval failures.",
+      "blockers": [
+        "No observed broker fills, contract-note sample or calibrated error report available."
+      ],
+      "evidence_sha256": "cf080cd343fcc74f80d10b839c43a5e31d9f54c18223e90e013774d253dcc5c1"
+    },
+    {
+      "id": "PE-0217",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/rehearsal.py",
+        "tests/test_forward_edge_f12.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_forward_edge_f12.py"
+      ],
+      "test_result": "All enumerated disarm triggers and human-only re-arm are tested.",
+      "blockers": [
+        "Live monitors are not wired to persistent latch actuation; owner reset evidence is not present."
+      ],
+      "evidence_sha256": "7941c1e0fe4a7b5eaa7de8f8f0697c6c2c4ec1354943f2888091a5710cfd2a49"
+    },
+    {
+      "id": "PE-0218",
+      "status": "DONE",
+      "sources": [
+        "src/financial_brain/forward_edge/promotion_policy.py",
+        "tests/test_promotion_policy.py",
+        "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
+      ],
+      "tests": [
+        "tests/test_promotion_policy.py"
+      ],
+      "test_result": "Append-only hash-chained ledger preserves failed outcomes; changed evidence and tampering are rejected; ledger never enables physical orders or cash.",
+      "blockers": [
+        ""
+      ],
+      "evidence_sha256": "97c533dcafbcfba659a7905e0bd9dde8ef2ec050af7325f91f9957ed85790eef"
     }
   ]
 }

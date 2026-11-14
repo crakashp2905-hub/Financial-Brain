@@ -45,6 +45,12 @@ def test_paper_data_reads_use_only_get_routes_and_order_paths_never_reach_networ
             return Response(b"instrument_token,tradingsymbol,segment\n123,INFY,NSE\n")
         if route == "/quote":
             return Response(json.dumps({"status": "success", "data": {"NSE:INFY": {"last_price": 101}}}).encode())
+        if route == "/orders":
+            return Response(json.dumps({"status": "success", "data": [{"order_id": "o1", "status": "COMPLETE"}]}).encode())
+        if route == "/portfolio/positions":
+            return Response(json.dumps({"status": "success", "data": {"net": [], "day": []}}).encode())
+        if route == "/portfolio/holdings":
+            return Response(json.dumps({"status": "success", "data": []}).encode())
         raise AssertionError(f"unexpected network route: {route}")
 
     monkeypatch.setattr(kite_data, "credentials", lambda: ("test-key", "test-token"))
@@ -54,15 +60,20 @@ def test_paper_data_reads_use_only_get_routes_and_order_paths_never_reach_networ
     kite_data.quote(["NSE:INFY"], kind="full")
     kite_data.candles(123, datetime(2026, 11, 16, 9, 15), datetime(2026, 11, 16, 9, 15))
     kite_data.instruments("NSE")
+    status = kite_data.account_status()
+    assert status["orders"][0]["order_id"] == "o1"
     assert requests == [
         ("GET", "/quote"),
         ("GET", "/instruments/historical/123/minute"),
         ("GET", "/instruments/NSE"),
+        ("GET", "/orders"),
+        ("GET", "/portfolio/positions"),
+        ("GET", "/portfolio/holdings"),
     ]
 
     calls_before_blocked_routes = len(requests)
     blocked = (
-        "/orders", "/orders/regular", "/orders/regular/123", "/gtt/triggers",
+        "/orders/regular", "/orders/regular/123", "/gtt/triggers",
         "/instruments/../orders", "/instruments/historical/1/../../orders",
         "/quote/../orders", "/quote/anything", "/quote?next=/orders",
         "https://api.kite.trade/orders",

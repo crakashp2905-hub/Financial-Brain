@@ -21,10 +21,11 @@ from financial_brain.providers import kite_login as kl
 # --- no order can be placed ---------------------------------------------------
 
 def test_no_endpoint_is_transactional():
-    """Every path this module will build, listed. None of them trades."""
+    """The complete allowlist contains only GET data/status routes, never a mutation route."""
     for path in kd.ENDPOINTS:
-        assert path.startswith("/instruments") or path.startswith("/quote"), path
-    forbidden = ("/orders", "/gtt", "/portfolio", "/margins", "/session")
+        assert (path.startswith("/instruments") or path.startswith("/quote")
+                or path in {"/orders", "/portfolio/positions", "/portfolio/holdings"}), path
+    forbidden = ("/orders/regular", "/gtt", "/margins", "/session")
     for bad in forbidden:
         assert not any(p.startswith(bad) for p in kd.ENDPOINTS), bad
 
@@ -37,15 +38,16 @@ def test_a_path_outside_the_allowlist_is_refused_before_any_credential_is_read(m
 
 
 def test_the_package_contains_no_order_call_anywhere():
-    """A grep a reviewer could run, run as a test."""
+    """A status read is allowed; no provider module may submit or mutate orders."""
     import pathlib
     root = pathlib.Path(kd.__file__).parent
     for path in root.glob("*.py"):
         body = path.read_text(encoding="utf-8")
-        # the endpoint itself, and the verbs that would reach it
-        assert '"/orders' not in body and "'/orders" not in body, path.name
+        # Order status is GET-only; mutation routes and methods remain absent.
+        assert '"/orders/regular' not in body and "'/orders/regular" not in body, path.name
         assert 'method="POST"' not in body, path.name
         assert 'method="DELETE"' not in body, path.name
+        assert 'method="PUT"' not in body, path.name
 
 
 # --- credentials --------------------------------------------------------------

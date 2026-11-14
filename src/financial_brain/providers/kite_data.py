@@ -1,4 +1,4 @@
-"""Kite Connect, read only: instruments, intraday candles, quotes.
+"""Kite Connect, read only: instruments, intraday candles, quotes and account status.
 
 ## Why this exists, and what it unlocks
 
@@ -8,13 +8,13 @@ session's opening range and this archive is daily. Kite's historical API serves 
 bars**, which makes them testable for the first time. That, not realism, is the concrete
 reason to connect.
 
-## No order can be placed from this package
+## No order can be submitted from this package
 
-There is no order endpoint here, in ``kite.py``, or anywhere else in ``providers``. That
-is the first gate in [[Kite readiness]], and it is a *structural* claim rather than a
-promise about behaviour: ``ENDPOINTS`` below is the complete set of paths this module will
-build, every one a GET, and ``_get`` refuses anything outside it. A reader asking "can this
-system place an order" can answer it by reading twenty lines.
+The package can read current order status through GET ``/orders`` for reconciliation, but
+it has no order-submission endpoint. That is a *structural* claim rather than a promise
+about behaviour: ``ENDPOINTS`` below is the complete set of paths this module will build,
+every request is GET, and ``_get`` refuses anything outside the allowlist. Mutation routes
+such as ``/orders/regular`` are not permitted here.
 
 The account's own IP allowlist is a second, independent barrier the owner controls. Two
 locks, neither relying on the other.
@@ -60,6 +60,9 @@ ENDPOINTS = (
     "/quote",                   # full quote including depth
     "/quote/ohlc",              # open/high/low/close and last price
     "/quote/ltp",               # last traded price only
+    "/orders",                  # current account order status (GET only)
+    "/portfolio/positions",     # current account positions (GET only)
+    "/portfolio/holdings",      # current account holdings (GET only)
 )
 
 INTERVALS = ("minute", "3minute", "5minute", "10minute", "15minute", "30minute",
@@ -71,7 +74,8 @@ def _is_read_endpoint(path: str) -> bool:
     parsed = urllib.parse.urlsplit(path)
     if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment or parsed.path != path:
         return False
-    if path in {"/instruments", "/quote", "/quote/ohlc", "/quote/ltp"}:
+    if path in {"/instruments", "/quote", "/quote/ohlc", "/quote/ltp", "/orders",
+                "/portfolio/positions", "/portfolio/holdings"}:
         return True
     if re.fullmatch(r"/instruments/[A-Z][A-Z0-9_-]{0,15}", path):
         return True
@@ -227,3 +231,11 @@ def quote_url(symbols: list[str], kind: str = "ohlc") -> str:
     paths = {"ltp": "/quote/ltp", "ohlc": "/quote/ohlc", "full": "/quote"}
     query = "&".join(f"i={urllib.parse.quote(s)}" for s in symbols)
     return f"{API}{paths[kind]}?{query}"
+
+
+def account_status() -> dict:
+    """Read current orders, positions and holdings using GET-only allowlisted endpoints."""
+    orders_body = _get("/orders").get("data", [])
+    positions_body = _get("/portfolio/positions").get("data", {})
+    holdings_body = _get("/portfolio/holdings").get("data", [])
+    return {"orders": orders_body, "positions": positions_body, "holdings": holdings_body}
