@@ -223,15 +223,23 @@ class PacketDeduper:
         self._last_sequence: int | None = None
         self.gaps = 0
         if self.journal is not None:
-            self._restore(self.journal.records())
+            records = self.journal.records()
+            if not records:
+                self.journal.append({"t": "PACKET_DEDUPER_INIT", "schema_version": 1})
+            else:
+                self._restore(records)
 
     @staticmethod
     def _packet_digest(packet_id: str) -> str:
         return hashlib.sha256(packet_id.encode("utf-8")).hexdigest()
 
     def _restore(self, records: list[dict]) -> None:
-        for row in records:
+        if records[0] != {"t": "PACKET_DEDUPER_INIT", "schema_version": 1}:
+            raise DataError("packet dedupe journal has an unknown header")
+        for row in records[1:]:
             kind = row.get("t")
+            if kind == "PACKET_DEDUPER_INIT":
+                raise DataError("packet dedupe journal contains a duplicate header")
             if kind == "PACKET_OFFER":
                 self._apply_offer(row["packet_id_sha256"], row["seq"], {},
                                   datetime.fromisoformat(row["available_utc"])
@@ -247,6 +255,8 @@ class PacketDeduper:
                 self._last_sequence = None
             elif kind == "DROP":
                 self.dropped_updates += row["count"]
+            else:
+                raise DataError("packet dedupe journal contains an unknown event")
 
     def _append(self, row: dict) -> None:
         if self.journal is not None:

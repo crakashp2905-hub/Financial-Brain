@@ -1311,11 +1311,12 @@
       "tests": [
         "test_packet_monitor_counts_gaps_duplicates_disconnects_reconnects_and_drops",
         "test_packet_deduper_recovers_sequence_and_duplicate_state_after_restart",
+        "test_packet_deduper_rejects_a_journal_with_another_schema",
         "test_feed_health_rejects_future_quote_and_stale_heartbeat",
         "test_stale_feed_forces_durable_no_trade_and_session_completeness_counts"
       ],
-      "test_result": "88 passed (exit code 0) across feed health, forward session, and execution-gate tests; Ruff and mypy passed for the changed session-ops module. PacketDeduper optionally persists packet-ID hashes and feed state in the hash-chained durable journal, restoring duplicate/gap state after restart without quote payloads.",
-      "evidence_sha256": "90476c473ddb63270f7fce631eba799e706c7fbf6d62c27f1dba954de49aa017",
+      "test_result": "89 passed (exit code 0) across feed health, forward session, and execution-gate tests; Ruff and mypy passed for the changed session-ops module. PacketDeduper optionally persists packet-ID hashes and feed state in the hash-chained durable journal, restoring duplicate/gap state after restart without quote payloads and rejecting incompatible journal schemas.",
+      "evidence_sha256": "c711bc2386464e37ee78936954ef09e565dd0b5693e0cbaf7125aed4de1836e1",
       "blockers": [
         "The current Kite REST polling payload has no provider sequence number or disconnect/reconnect callbacks; true source-level gaps and reconnect/drop counters still require a sequenced streaming source and owner-authorized session."
       ]

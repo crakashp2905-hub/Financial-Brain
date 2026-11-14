@@ -63,6 +63,13 @@ def test_packet_deduper_recovers_sequence_and_duplicate_state_after_restart(tmp_
     assert "not persisted" not in path.read_text(encoding="utf-8")
 
 
+def test_packet_deduper_rejects_a_journal_with_another_schema(tmp_path):
+    path = tmp_path / "wrong-schema.jsonl"
+    DurableJournal(path).append({"t": "SOME_OTHER_STREAM", "schema_version": 1})
+    with pytest.raises(DataError, match="unknown header"):
+        PacketDeduper(path)
+
+
 def test_feed_health_rejects_future_quote_and_stale_heartbeat():
     health = FeedHealth(NOW + timedelta(seconds=1), 0, 0, 0,
                         last_heartbeat_utc=NOW - timedelta(seconds=10))
