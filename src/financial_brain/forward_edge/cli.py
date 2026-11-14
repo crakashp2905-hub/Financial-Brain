@@ -8,7 +8,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 from financial_brain.forward_edge import evidence_stats as ES
@@ -139,6 +140,59 @@ def cmd_daily_export(account_archive_path: str, runner_journal_path: str,
         name: str(path) for name, path in sorted(paths.items())}, "physical_orders": False}, EXIT["OK"]
 
 
+def cmd_eod_reconcile(account_journal_path: str, reference_snapshot_path: str,
+                      gate_journal_path: str) -> tuple[dict, int]:
+    """Audit the local account and apply an explicit independent EOD snapshot."""
+    from financial_brain.kernel.paper_account_audit import audit_paper_account_journal
+    from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
+    from financial_brain.kernel.paper_eod_gate import EodGateError, PaperEodReconciliationGate
+    from financial_brain.forward_edge.durable import DurableJournal
+
+    try:
+        snapshot = json.loads(Path(reference_snapshot_path).read_text(encoding="utf-8"))
+        if not isinstance(snapshot, dict):
+            raise ValueError("reference snapshot must be a JSON object")
+        required = ("session_date", "as_of", "reference_positions", "reference_fill_ids", "reference_marks")
+        missing = [key for key in required if key not in snapshot]
+        if missing:
+            raise ValueError(f"reference snapshot missing fields: {', '.join(missing)}")
+        journal_state = audit_paper_account_journal(Path(account_journal_path))
+        as_of = datetime.fromisoformat(str(snapshot["as_of"]).replace("Z", "+00:00"))
+        result = PaperEodReconciliationGate(Path(gate_journal_path)).reconcile(
+            session_date=date.fromisoformat(str(snapshot["session_date"])),
+            journal_state=journal_state,
+            reference_positions=snapshot["reference_positions"],
+            reference_fill_ids=snapshot["reference_fill_ids"],
+            reference_marks=snapshot["reference_marks"],
+            as_of=as_of,
+            mark_tolerance=snapshot.get("mark_tolerance", "0.01"),
+            repair_signoff=snapshot.get("repair_signoff"),
+        )
+        account_records = DurableJournal(Path(account_journal_path)).records()
+        if not account_records or account_records[0].get("t") != "ACCOUNT_OPEN":
+            raise ValueError("account journal must start with ACCOUNT_OPEN")
+        opening = account_records[0]
+        account = PaperAccount(
+            Path(account_journal_path), account_id=str(opening.get("account", "")),
+            initial_cash=Decimal(str(opening.get("cash", "NaN"))),
+            currency=str(opening.get("currency", "INR")),
+            fee_schedule=FeeSchedule.from_dict(opening.get("fee_schedule")),
+        )
+        if result["status"] == "HALT_MISMATCH":
+            account.trip_risk_latch(
+                incident_id=str(result["incident_id"]), reason="EOD_RECONCILIATION_MISMATCH",
+                occurred_at=as_of,
+            )
+        result["paper_account_risk_latched"] = account.risk_latched
+        result["entries_allowed"] = result["entries_allowed"] and not account.risk_latched
+    except (OSError, json.JSONDecodeError, ValueError, KeyError, TypeError) as exc:
+        return {"error": str(exc), "entries_allowed": False, "physical_orders": False}, EXIT["INCOMPLETE"]
+    except EodGateError as exc:
+        return {"error": str(exc), "entries_allowed": False, "physical_orders": False}, EXIT["INCOMPLETE"]
+    return {**result, "gate_journal": str(Path(gate_journal_path)),
+            "physical_orders": False}, EXIT["OK"] if result["entries_allowed"] else EXIT["INCOMPLETE"]
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb forward")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -160,6 +214,10 @@ def main(argv: list[str] | None = None) -> int:
     de.add_argument("--runner-journal", required=True, help="hash-chained forward runner journal JSONL")
     de.add_argument("--session-id", required=True)
     de.add_argument("--output-dir", required=True, help="directory for report.json, report.csv, report.html")
+    er = sub.add_parser("eod-reconcile", help="reconcile paper account against an independent snapshot")
+    er.add_argument("--account-journal", required=True, help="durable local paper account journal JSONL")
+    er.add_argument("--reference-snapshot", required=True, help="independent OMS/venue snapshot JSON")
+    er.add_argument("--gate-journal", required=True, help="durable EOD halt and evidence JSONL")
     args = p.parse_args(argv)
     if args.cmd == "preflight":
         out, code = cmd_preflight(None, args.fail)
@@ -173,6 +231,8 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_asset_class_report(args.input)
     elif args.cmd == "daily-export":
         out, code = cmd_daily_export(args.account_archive, args.runner_journal, args.session_id, args.output_dir)
+    elif args.cmd == "eod-reconcile":
+        out, code = cmd_eod_reconcile(args.account_journal, args.reference_snapshot, args.gate_journal)
     else:
         out, code = cmd_report(args.as_of)
     print(json.dumps(out, indent=2, sort_keys=True, default=str))

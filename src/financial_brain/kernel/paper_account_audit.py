@@ -47,6 +47,7 @@ def audit_paper_account_journal(path: Path) -> dict:
     snapshot_dates: set[str] = set()
     snapshots: list[dict] = []
     issues: list[str] = []
+    active_risk_incident: str | None = None
 
     def amount(row: dict, key: str, *, positive: bool = False) -> Decimal:
         try:
@@ -172,6 +173,34 @@ def audit_paper_account_journal(path: Path) -> dict:
                               "reconciled": recorded_nav == computed_nav and recorded_flow == flow_since_snapshot})
             flow_since_snapshot = Decimal(0)
             flow_timestamps.clear()
+        elif kind == "RISK_LATCH":
+            incident_id = row.get("incident_id")
+            if not isinstance(incident_id, str) or not incident_id.strip():
+                raise PaperAuditError("risk latch incident ID is invalid")
+            if row.get("state") == "TRIPPED":
+                if active_risk_incident is not None or not isinstance(row.get("reason"), str) or not row["reason"].strip():
+                    raise PaperAuditError("risk latch trip is invalid or duplicates an active incident")
+                try:
+                    occurred = datetime.fromisoformat(str(row["occurred_at"]).replace("Z", "+00:00"))
+                except (KeyError, ValueError) as exc:
+                    raise PaperAuditError("risk latch timestamp is invalid") from exc
+                if occurred.tzinfo is None or occurred.utcoffset() is None:
+                    raise PaperAuditError("risk latch timestamp must be timezone-aware")
+                active_risk_incident = incident_id
+            elif row.get("state") == "RESET":
+                actor, repair_id, digest = row.get("actor"), row.get("repair_id"), row.get("signoff_sha256")
+                try:
+                    signed_at = datetime.fromisoformat(str(row["signed_at"]).replace("Z", "+00:00"))
+                except (KeyError, ValueError) as exc:
+                    raise PaperAuditError("risk latch reset timestamp is invalid") from exc
+                if (active_risk_incident != incident_id or not isinstance(actor, str) or not actor.strip()
+                        or actor.startswith("agent:") or not isinstance(repair_id, str) or not repair_id.strip()
+                        or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                        or signed_at.tzinfo is None or signed_at.utcoffset() is None):
+                    raise PaperAuditError("risk latch reset lacks a matching human hash-backed signoff")
+                active_risk_incident = None
+            else:
+                raise PaperAuditError("risk latch state is invalid")
         else:
             raise PaperAuditError(f"unknown paper account journal event: {kind}")
 

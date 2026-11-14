@@ -2267,20 +2267,28 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/kernel/paper_account_audit.py",
+        "src/financial_brain/kernel/paper_eod_gate.py",
+        "src/financial_brain/forward_edge/cli.py",
         "tests/test_paper_account_audit.py",
+        "tests/test_paper_eod_gate.py",
+        "tests/test_paper_account_risk_latch.py",
         "docs/edge-program/pe-0098-eod-independent-reconciliation.md",
         "docs/edge-program/pe-0098-eod-independent-reconciliation-evidence.json"
       ],
       "tests": [
         "test_independent_journal_audit_recomputes_balances_and_daily_nav",
-        "test_eod_reconciliation_halts_on_mismatch_and_requires_human_repair_signoff"
+        "test_eod_reconciliation_halts_on_mismatch_and_requires_human_repair_signoff",
+        "test_eod_mismatch_halt_survives_restart_until_clean_human_signoff",
+        "test_eod_gate_rejects_changed_replay_and_wrong_incident_signoff",
+        "test_empty_eod_gate_fails_closed",
+        "test_cli_audits_real_local_journal_and_persists_external_mismatch"
       ],
-      "test_result": "13 focused audit/account tests passed; Ruff and mypy passed. EOD comparison now gates entries on positions, fill receipts and source-hashed marks, and requires human signoff after repair.",
-      "evidence_sha256": "ac6c2a70c16e721e97a9c8a1937bd4ca968b860afff915d714317de825d30057",
+      "test_result": "11 focused EOD/account tests passed; Ruff and mypy passed. EOD mismatch persists across restart, trips the account risk latch, rejects changed evidence and wrong-incident signoff, and the CLI audits the local paper journal before comparing explicit reference evidence.",
       "blockers": [
-        "Operational runner invocation and restart-persistent halt state remain outstanding.",
-        "Independent provider/OMS EOD snapshots are not yet included in the daily evidence bundle."
-      ]
+        "Independent OMS/venue snapshots are not yet acquired or authenticated by an adapter and are not automatically added to the daily evidence bundle.",
+        "The live-market runner does not automatically schedule reconciliation; operators must provide the reference snapshot and invoke the CLI."
+      ],
+      "evidence_sha256": "7a9be8406d7484f4531bc7c9089511121879ded828b4986e08fd0a1396abb728"
     },
     {
       "id": "PE-0099",
