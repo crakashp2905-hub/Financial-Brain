@@ -202,7 +202,8 @@
       ],
       "tests": [
         "test_inventory_covers_all_python_sources_without_inventing_owners",
-        "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
+        "test_inventory_captures_old_and_new_engine_dependency_graph_roots",
+        "test_task_ledger_inventory_counts_and_evidence_hash_match_current_snapshot"
       ],
       "test_result": "Committed inventory covers 626 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It currently records 619 unassessed and 358 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
       "evidence_sha256": "04a5e55093c527df873a5e990f07c32390ef37ae415bdd8cfc1667c25afdf5e3",
@@ -4232,12 +4233,11 @@
         "CI run 43590775883 (Ubuntu and Windows; prior revision, Ubuntu evidence audit failed)",
         "CI run 43590906463 (Ubuntu and Windows; prior revision, in progress at latest check)"
       ],
-      "test_result": "Raw-byte capability evidence hashes differed between Windows CRLF and Git/Linux LF. Hashing now canonicalizes text line endings; dedicated LF/CRLF regression plus audit suite: 3 passed, Ruff passed, manifest regenerated. Full local suite before this narrow fix: 4080 passed, 1 skipped. A fresh Ubuntu/Windows CI run for this exact revision is required.",
+      "test_result": "The LF/CRLF-stable capability evidence hash fix and post-suite evidence audit passed in complete Ubuntu and Windows CI run 43601378017 at commit 2c61abe6cbc50e2efa864fb8c883a734431894ef. PR #32 remains open and unmerged without an independent approval.",
       "blockers": [
-        "Fresh Ubuntu and Windows CI for the line-ending fix has not yet passed.",
         "PR #32 still needs independent approval and merge to main; self-approval is not performed."
       ],
-      "evidence_sha256": "2c2d14b75ed581146e608a7a3b16a738170ad116a9a2fcc6018bc2161e99c9de"
+      "evidence_sha256": "94d70218d7388f0a4db7b98e1bf1fa93b2ef221be595ac140b353f08b10c0c9c"
     },
     {
       "id": "PE-0196",
@@ -4394,11 +4394,11 @@
       "tests": [
         "tests/test_dependency_inventory.py"
       ],
-      "test_result": "Added lock/environment inventory with package license metadata as a CI artifact, documented per-platform local wheelhouse and --no-index install steps, and retained setup-python pip cache. Two inventory tests, Ruff and mypy passed. Local inventory: 55 lock entries, 9 missing, 34 version mismatches, 9 unknown/absent licenses; this is not a clean lockfile reproduction.",
+      "test_result": "The lock-aware inventory parser, full dependency audit, and clean offline installs passed on Ubuntu and Windows in complete CI run 43601378017 at commit 2c61abe6cbc50e2efa864fb8c883a734431894ef. Both platform artifacts include the machine-readable dependency inventory; artifact identities and digests are recorded in the PE-0204 evidence report. Three focused inventory tests and Ruff pass locally. The earlier local mismatch counts came from an unrelated environment and are withdrawn; no license compatibility claim is made.",
       "blockers": [
-        "Offline install has not been run on clean Windows/Linux; unknown licenses need manual review; no compatibility conclusion is made."
+        "License identifiers and compatibility still require a documented manual review."
       ],
-      "evidence_sha256": "bef5ffad778731d0839fef270061defdc1b65b7ac1eb6b82209e2d22933d6120"
+      "evidence_sha256": "98fc1a9a249235c26b6f42428f8da978aaac8b661dadcadd942ac5b02cd46df4"
     },
     {
       "id": "PE-0205",
@@ -4428,11 +4428,11 @@
         "tests/test_capability_evidence_audit.py",
         "full pytest suite in CI before evidence-manifest check"
       ],
-      "test_result": "Added a hash-pinned evidence manifest binding each curated capability to exact source and test contents plus capability-matrix digest. CI checks manifest freshness after full pytest; changing promoted source/test or maturity without refreshing hashes fails. Two audit tests, Ruff and mypy passed locally.",
+      "test_result": "The capability evidence generator and post-suite freshness audit passed in complete Ubuntu and Windows CI run 43601378017 at commit 2c61abe6cbc50e2efa864fb8c883a734431894ef. Scope remains five curated capability records; this does not prove every platform capability.",
       "blockers": [
-        "CI for the new post-suite verifier is pending; the curated matrix covers five capabilities, not every feature in the platform."
+        "The curated matrix and its hash-pinned audit cover five capabilities, not every feature in the platform."
       ],
-      "evidence_sha256": "89a1f2c078d355152c155a2b6d43ec2f810586796651240ccd6e137c49d4f6e8"
+      "evidence_sha256": "ebb5dbf84f87b71c24321cb8e0335314b7539a7f7e80be5a1e93a8ec3d801d25"
     },
     {
       "id": "PE-0202",

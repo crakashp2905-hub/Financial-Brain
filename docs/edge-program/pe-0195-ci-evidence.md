@@ -14,4 +14,6 @@ The last PR check for the checklist branch passed the full test suite but failed
 
 ## Remaining acceptance
 
-PE-0195 remains **PARTIAL** until the exact pushed revision passes Ubuntu and Windows CI and PR #32 is merged to `main`. The prior failing run and the in-flight run predate this line-ending fix. PR #32 has no independent approving review; branch protection remains in force. No self-approval or bypass is performed.
+The line-ending fix and capability-manifest audit passed in the complete cross-platform [CI run #598](https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43601378017) at commit `2c61abe6cbc50e2efa864fb8c883a734431894ef`. Both platform jobs completed the full suite and post-suite evidence audit successfully.
+
+PE-0195 remains **PARTIAL** because PR #32 is not merged to `main` and has no independent approving review. Branch protection remains in force. No self-approval or bypass is performed.
