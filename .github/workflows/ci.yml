@@ -24,10 +24,37 @@ jobs:
         with:
           python-version-file: ".python-version"
           cache: pip
-      - name: Install (pyproject only)
+          cache-dependency-path: requirements-lock.txt
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.16"
+      - name: Install from verified lock
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          uv lock --check
+          uv export --locked --extra dev --format requirements-txt --no-emit-project --output-file .requirements-lock.generated.txt
+          python -c "from pathlib import Path; lines=lambda p: Path(p).read_text(encoding='utf-8').splitlines()[2:]; assert lines('.requirements-lock.generated.txt') == lines('requirements-lock.txt'), 'requirements-lock.txt is stale versus uv.lock'"
+          python -m pip install --require-hashes -r requirements-lock.txt
+          python -m pip install --no-deps --no-build-isolation -e .
+      - name: Build platform wheelhouse
+        run: |
+          python -m pip download --require-hashes --only-binary=:all: --dest wheelhouse -r requirements-lock.txt
+          python -m pip wheel --no-deps --no-build-isolation --wheel-dir wheelhouse .
+      - name: Fresh offline wheelhouse install (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m venv .venv-offline
+          .\.venv-offline\Scripts\python.exe -m pip install --no-index --find-links wheelhouse --require-hashes -r requirements-lock.txt
+          .\.venv-offline\Scripts\python.exe -m pip install --no-index --find-links wheelhouse --no-deps financial-brain==0.1.0
+          .\.venv-offline\Scripts\python.exe -m pip check
+          .\.venv-offline\Scripts\python.exe -c "import financial_brain; print(financial_brain.__file__)"
+      - name: Fresh offline wheelhouse install (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          python -m venv .venv-offline
+          ./.venv-offline/bin/python -m pip install --no-index --find-links wheelhouse --require-hashes -r requirements-lock.txt
+          ./.venv-offline/bin/python -m pip install --no-index --find-links wheelhouse --no-deps financial-brain==0.1.0
+          ./.venv-offline/bin/python -m pip check
+          ./.venv-offline/bin/python -c "import financial_brain; print(financial_brain.__file__)"
       - name: Lint
         run: python -m ruff check src tests
       - name: Validate capability claims

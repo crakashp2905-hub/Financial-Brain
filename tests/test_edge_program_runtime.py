@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_runtime_pins_are_explicit_and_offline_install_gap_stays_visible():
+def test_runtime_pins_and_locked_offline_install_gate_are_explicit():
     contract = json.loads((ROOT / "docs/edge-program/reproducible-runtime.json").read_text(encoding="utf-8"))
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert (ROOT / contract["python_version_file"]).read_text(encoding="utf-8").strip() == contract["python_version"]
@@ -15,11 +15,20 @@ def test_runtime_pins_are_explicit_and_offline_install_gap_stays_visible():
     assert contract["market_timezone"] == "Asia/Kolkata"
     assert contract["ci_sets_hash_seed_and_timezone"] is True
     assert contract["dependency_lock_contains_exact_versions"] is True
-    assert contract["ci_installs_from_dependency_lock"] is False
+    assert contract["dependency_lock"] == "uv.lock"
+    assert contract["lock_export"] == "requirements-lock.txt"
+    assert contract["requirements_lock_contains_artifact_hashes"] is True
+    assert contract["ci_installs_from_dependency_lock"] is True
     assert contract["offline_clean_install_verified_on"] == []
     assert "python-version-file: \".python-version\"" in workflow
     assert "PYTHONHASHSEED: \"0\"" in workflow
     assert "TZ: Asia/Kolkata" in workflow
+    assert "uv lock --check" in workflow
+    assert "--require-hashes -r requirements-lock.txt" in workflow
+    assert "--only-binary=:all:" in workflow
+    assert "--no-index --find-links wheelhouse" in workflow
+    assert "Fresh offline wheelhouse install (Windows)" in workflow
+    assert "Fresh offline wheelhouse install (Ubuntu)" in workflow
     assert (ROOT / "requirements-lock.txt").is_file()
     assert all((ROOT / path).is_file() for path in contract["evidence_sources"])
 

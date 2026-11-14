@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0010",
+  "status": "PARTIAL",
+  "python_version": "3.13.17",
+  "lock_source": "uv.lock",
+  "exported_hashed_requirements": "requirements-lock.txt",
+  "locked_build_tools": [
+    "setuptools",
+    "wheel"
+  ],
+  "ci_steps": [
+    "uv lock --check",
+    "Export locked dev requirements and compare lock body",
+    "Install dependencies with pip --require-hashes",
+    "Download platform-specific binary wheels with hashes",
+    "Build project wheel without build isolation",
+    "Install into a new venv with --no-index --find-links",
+    "Run pip check and import installed package"
+  ],
+  "local_checks": {
+    "uv_lock_check": "passed (132 packages resolved)",
+    "requirements_export_matches_lock": "passed (1601 lock body lines)",
+    "project_wheel_build": "passed (financial_brain-0.1.0-py3-none-any.whl)"
+  },
+  "offline_clean_install_verified_on": [],
+  "blockers": [
+    "Fresh offline installation and complete CI remain pending on Ubuntu and Windows."
+  ],
+  "limitations": [
+    "The current local environment cannot reach PyPI, so a full platform wheelhouse was not downloaded locally. CI must be the evidence for platform-specific offline installs."
+  ],
+  "uv_version": "0.11.16"
+}

@@ -55,7 +55,7 @@
     },
     {
       "id": "PE-0003",
-      "status": "PARTIAL",
+      "status": "DONE",
       "sources": [
         "scripts/edge_asset_backup.py",
         "tests/test_edge_asset_backup.py",
@@ -64,13 +64,12 @@
       "tests": [
         "test_duckdb_snapshot_restores_and_matches_checksum",
         "test_active_duckdb_wal_is_recorded_as_blocked_without_copy",
-        "test_snapshot_rejects_paths_outside_repo"
+        "test_snapshot_rejects_paths_outside_repo",
+        "test_wal_created_during_snapshot_removes_partial_copy"
       ],
-      "test_result": "Backup tooling refuses active DuckDB WALs, rejects paths outside the repo, hashes copied files, restores to a separate location, verifies checksums and opens restored databases read-only. The local run backed up and restored 11 paper/archive/strategy-manifest artifacts; focused suite: 3 passed. PE-0003 remains incomplete because the active paper_live database could not be safely copied.",
-      "evidence_sha256": "1a61376ef7f56203d89ee2871f94a657186f3e521c7f7c52106824893bc18071",
-      "blockers": [
-        "data/paper_live.duckdb had a changing WAL at capture time; rerun backup after its writer/session closes cleanly"
-      ]
+      "test_result": "Backup tooling refuses active DuckDB WALs both before and during copying, rejects paths outside the repo, hashes copied files, restores to a separate location, verifies checksums and opens restored databases read-only. The original run restored 11 existing paper/archive/strategy-manifest artifacts; a follow-up run backed up and read-only restored data/paper_live.duckdb (29,110,272 bytes; SHA-256 a1c3f18af1950ceee62f14f41e31573ac33c75f6dd5f609c5c633eaceb8e9f98). Focused backup suite: 4 passed; Ruff and mypy passed. Three optional named sources remain absent and are explicitly recorded in the evidence artifact.",
+      "evidence_sha256": "1ccf6b5708690e2168ed1b6bae91d758e999b85a0239983bb81b66ee0eaaf8fe",
+      "blockers": []
     },
     {
       "id": "PE-0004",
@@ -172,19 +171,24 @@
       "sources": [
         ".python-version",
         "requirements-lock.txt",
+        "uv.lock",
+        "pyproject.toml",
         ".github/workflows/ci.yml",
+        "docs/edge-program/pe-0010-reproducible-runtime-evidence.json",
         "docs/edge-program/reproducible-runtime.json",
         "tests/test_forward_edge_f13.py"
       ],
       "tests": [
-        "test_runtime_pins_are_explicit_and_offline_install_gap_stays_visible",
+        "test_runtime_pins_and_locked_offline_install_gate_are_explicit",
         "test_golden_file_covers_every_fixture",
-        "test_session_signatures_match_the_canonical_hashes"
+        "test_session_signatures_match_the_canonical_hashes",
+        "CI: uv lock --check and hashed export comparison",
+        "CI: fresh offline wheelhouse install on Ubuntu and Windows"
       ],
-      "test_result": "Python 3.13.17, PYTHONHASHSEED=0, Asia/Kolkata CI environment, and deterministic golden fixture signatures are pinned or tested. The exact dependency lock exists, but CI still installs from broad pyproject extras and no clean offline install has been verified on both platforms.",
-      "evidence_sha256": "faa24ed26e7ddb18a5fb7b7d3ea6f3bfe85b62c6233e9f1ede19c3f7a4cdb5e4",
+      "test_result": "Python 3.13.17, hash seed, timezone, and deterministic fixture signatures remain frozen. Added a platform-aware uv.lock, a hash-pinned requirements export, and CI steps that install from the export then create and install a platform-specific wheelhouse in a fresh offline environment. Local uv lock check and export comparison passed for 132 packages; the project wheel built. Offline Windows/Linux installs are pending CI.",
+      "evidence_sha256": "70061520dcc2222495376f7b163e8895e6aa1e0466e7c124df1ff1ca5ef7c751",
       "blockers": [
-        "Switch CI to a complete platform-aware lock and prove a clean offline wheelhouse install plus fixture hashes on Windows and Linux"
+        "Fresh offline wheelhouse install and full CI must pass on Ubuntu and Windows before the lock is considered verified."
       ]
     },
     {

@@ -69,6 +69,13 @@ def create_snapshot(repo_root: Path, backup_root: Path, sources: list[str]) -> d
                          and size == before.st_size)
         source_hash = digest.hexdigest()
         backup_hash = _sha256(partial)
+        wal_path = Path(f"{source}.wal") if source.suffix == ".duckdb" else None
+        if wal_path is not None and wal_path.exists():
+            partial.unlink(missing_ok=True)
+            entry.update(status="BLOCKED_ACTIVE_WAL",
+                         reason="DuckDB WAL appeared during snapshot; source may be active")
+            entries.append(entry)
+            continue
         if not source_stable or source_hash != backup_hash:
             partial.unlink(missing_ok=True)
             entry.update(status="BLOCKED_SOURCE_CHANGED", reason="source changed during snapshot")

@@ -1,18 +1,7 @@
-# Dependency and offline installation notes
+# Dependency lock and offline wheelhouse
 
-`requirements-lock.txt` pins the recorded Python environment. CI also uses the `setup-python` pip cache and runs `pip-audit`. The CI artifact `dependency-inventory.json` reports each locked package, the installed version, available license metadata, and missing/version-mismatch counts. It does not certify license compatibility; any `UNKNOWN` entries require manual review.
+`uv.lock` is the platform-aware lock source. `requirements-lock.txt` is generated from the `dev` extra with hashes and is checked against the lock during CI. The project build backend (`setuptools` and `wheel`) is included in the locked development environment.
 
-To prepare a local wheel cache while online:
+Both Ubuntu and Windows CI install dependencies with `--require-hashes`, download binary wheels for that runner, build the project wheel, then create a new virtual environment and install using `--no-index --find-links`. The fresh environment runs `pip check` and imports the installed wheel.
 
-```powershell
-python -m pip download --requirement requirements-lock.txt --dest .cache/wheelhouse
-```
-
-With a compatible wheelhouse already present, install without contacting an index:
-
-```powershell
-python -m pip install --no-index --find-links .cache/wheelhouse --requirement requirements-lock.txt
-python -m pip install --no-index --find-links .cache/wheelhouse --no-deps -e .
-```
-
-The wheelhouse is machine/platform specific for packages containing native extensions. Prepare and verify separate caches for each target OS and Python ABI. The repository does not commit binary wheels or proprietary model weights. A clean, disconnected installation has not yet been executed, so offline reproducibility remains unverified.
+The wheelhouse is OS and Python ABI specific and is generated during CI rather than committed. The clean offline installation is still classified as unverified until the new Ubuntu and Windows CI jobs pass.

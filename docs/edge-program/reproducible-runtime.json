@@ -8,22 +8,33 @@
   "stochastic_seed_policy": "Per-experiment seeds must be frozen in experiment identity; CI does not claim a global RNG seed for all research code.",
   "market_timezone": "Asia/Kolkata",
   "ci_sets_hash_seed_and_timezone": true,
-  "dependency_lock": "requirements-lock.txt",
+  "uv_version": "0.11.16",
+  "dependency_lock": "uv.lock",
+  "lock_export": "requirements-lock.txt",
   "dependency_lock_contains_exact_versions": true,
-  "ci_installs_from_dependency_lock": false,
-  "fixture_fingerprint_tests": [
-    "test_golden_file_covers_every_fixture",
-    "test_session_signatures_match_the_canonical_hashes"
+  "requirements_lock_contains_artifact_hashes": true,
+  "ci_installs_from_dependency_lock": true,
+  "build_backend_dependencies_are_locked": [
+    "setuptools",
+    "wheel"
+  ],
+  "offline_install_protocol": [
+    "Export the dev environment from uv.lock and compare it with requirements-lock.txt.",
+    "Download hash-verified binary wheels for the current OS and Python ABI.",
+    "Build the pure-Python project wheel using the locked setuptools and wheel packages.",
+    "Create a fresh virtual environment and install dependencies with pip --no-index --find-links.",
+    "Install the project wheel locally, run pip check, and import the installed package."
   ],
   "offline_clean_install_verified_on": [],
   "blockers": [
-    "CI currently installs the broad pyproject development extras rather than the repository lock.",
-    "No clean offline wheelhouse installation has been verified on both Windows and Linux."
+    "Ubuntu and Windows CI must pass the fresh offline wheelhouse installation before reproducibility is marked verified."
   ],
   "evidence_sources": [
     ".python-version",
+    "pyproject.toml",
+    "uv.lock",
     "requirements-lock.txt",
     ".github/workflows/ci.yml",
-    "tests/test_forward_edge_f13.py"
+    "tests/test_edge_program_runtime.py"
   ]
 }

@@ -22,5 +22,18 @@
     "data/depth_archive.duckdb"
   ],
   "backup_location": "Local ignored data directory. Market data and paper databases were not added to Git.",
+  "follow_up_snapshot": {
+    "captured_at": "2026-11-14T12:56:04Z",
+    "source": "data/paper_live.duckdb",
+    "source_bytes": 29110272,
+    "source_sha256": "a1c3f18af1950ceee62f14f41e31573ac33c75f6dd5f609c5c633eaceb8e9f98",
+    "backup_manifest": "data/edge_program_backups/pre-migration-20261114/manifest.json",
+    "backup_manifest_sha256": "ca14c073df04dc21a0a7ea923b1de195ffb647b52d1cf8b00dda63bb4205599f",
+    "restore_report": "data/edge_program_backups/pre-migration-20261114/restore-check.json",
+    "restore_report_sha256": "4d8c81a0cec1284fbc26e1fa2ed3723fd21a639d57999ff8e37ef90c3364edf1",
+    "result": "BACKED_UP_AND_RESTORED_AND_VERIFIED",
+    "database_opened_read_only": true,
+    "wal_present_before_or_during_copy": false
+  },
   "rights_note": "The quote archive was copied locally as requested. Its underlying provider retention rights were not independently revalidated by this backup operation."
 }

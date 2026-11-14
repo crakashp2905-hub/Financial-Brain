@@ -53,6 +53,28 @@ def test_active_duckdb_wal_is_recorded_as_blocked_without_copy(tmp_path):
     assert report["outcomes"][0]["status"] == "BLOCKED_ACTIVE_WAL"
 
 
+def test_wal_created_during_snapshot_removes_partial_copy(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    source = repo / "data" / "paper.duckdb"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"stable-looking database")
+    original_open = Path.open
+
+    def open_with_new_wal(path, *args, **kwargs):
+        if path == source and args and args[0] == "rb":
+            Path(f"{source}.wal").write_bytes(b"writer appeared during copy")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", open_with_new_wal)
+    manifest = create_snapshot(repo, repo / "data" / "backup", ["data/paper.duckdb"])
+
+    entry = manifest["entries"][0]
+    assert entry["status"] == "BLOCKED_ACTIVE_WAL"
+    assert "appeared during snapshot" in entry["reason"]
+    assert not (repo / "data" / "backup" / "files" / "data" / "paper.duckdb").exists()
+    assert not (repo / "data" / "backup" / "files" / "data" / "paper.duckdb.partial").exists()
+
+
 def test_snapshot_rejects_paths_outside_repo(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
