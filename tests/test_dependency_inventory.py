@@ -26,6 +26,21 @@ def test_lock_parser_requires_unique_exact_pins(tmp_path: Path) -> None:
         parse_lock(lock)
 
 
+def test_uv_export_parser_selects_only_current_environment_marked_pins(tmp_path: Path) -> None:
+    lock = tmp_path / "requirements-lock.txt"
+    continuation = chr(92)
+    lock.write_text("\n".join([
+        f"numpy==1.0 ; python_full_version < '3.12' {continuation}",
+        f"    --hash=sha256:old {continuation}",
+        f"numpy==2.0 ; python_full_version >= '3.12' {continuation}",
+        "    --hash=sha256:new",
+    ]) + "\n", encoding="utf-8")
+
+    versions = {version for _, version in parse_lock(lock)}
+    assert len(versions) == 1
+    assert versions <= {"1.0", "2.0"}
+
+
 def test_inventory_reports_version_and_license_gaps_without_hiding_them(tmp_path: Path) -> None:
     lock = tmp_path / "lock.txt"
     lock.write_text("alpha==1.0\nbeta==2.0\ngamma==3.0\n", encoding="utf-8")

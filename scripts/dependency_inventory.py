@@ -4,16 +4,31 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from importlib import metadata
 from pathlib import Path
 from typing import Any
 
+from packaging.markers import default_environment
+from packaging.requirements import Requirement
+
 
 def parse_lock(path: Path) -> list[tuple[str, str]]:
     packages = []
+    marker_environment = default_environment()
+    marker_environment["python_full_version"] = ".".join(map(str, sys.version_info[:3]))
     for line in path.read_text(encoding="utf-8").splitlines():
-        match = re.fullmatch(r"\s*([A-Za-z0-9_.-]+)==([^;\s]+)\s*(?:#.*)?", line)
+        # uv's hash-pinned requirements export may contain multiple mutually
+        # exclusive versions and continuation lines for each package.
+        line = line.split("#", 1)[0].rstrip()
+        match = re.match(
+            r"\s*([A-Za-z0-9_.-]+)==([^;\s\\]+)\s*(?:;\s*(.*?))?\s*\\?\s*$",
+            line,
+        )
         if match:
+            marker = match.group(3)
+            if marker and not Requirement(f"{match.group(1)}; {marker}").marker.evaluate(marker_environment):
+                continue
             packages.append((match.group(1), match.group(2)))
     names = [name.lower().replace("_", "-").replace(".", "-") for name, _ in packages]
     if not packages or len(names) != len(set(names)):
