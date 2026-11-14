@@ -2697,8 +2697,8 @@
         "test_durable_registry_rejects_invalid_observation_receipts",
         "test_durable_registry_rejects_forged_cohort_plan"
       ],
-      "test_result": "15 focused cohort/registry tests passed; the full Windows suite passes (4160 passed, 1 skipped). Ruff and mypy pass. Synthetic software verification only; timestamps and outcome digests remain caller-supplied.",
-      "evidence_sha256": "da1370e1a0a64c125e4eebc015912a1317a9255cc2ff5475cef4777b6dfb13c0",
+      "test_result": "15 focused cohort/registry tests passed; full Windows suite: 4164 passed, 1 skipped (1002.58s). Ruff and mypy pass. Synthetic software verification only; timestamps and outcome digests remain caller-supplied.",
+      "evidence_sha256": "8b1d9968d9651ab1973c563f8af02703527c205fb080fc071d476c00050fa215",
       "blockers": [
         "Freeze timestamps and outcome digests remain caller-supplied and are not independently attested.",
         "Outcome receipts are not automatically reconciled against the receipt-verified paper-account ledger.",
@@ -2710,7 +2710,12 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/forward_edge/confirmation_bounds.py",
+        "src/financial_brain/forward_edge/dependence.py",
+        "src/financial_brain/forward_edge/prospective_cohort.py",
+        "src/financial_brain/forward_edge/prospective_registry.py",
+        "src/financial_brain/forward_edge/sample_size.py",
         "tests/test_confirmation_bounds.py",
+        "tests/test_prospective_cohort.py",
         "docs/edge-program/pe-0125-confidence-bounds.md",
         "docs/edge-program/pe-0125-confidence-bounds-evidence.json"
       ],
@@ -2719,15 +2724,18 @@
         "test_positive_point_estimate_with_nonpositive_lower_bound_is_not_confirmed",
         "test_missing_scheduled_values_are_not_dropped_or_confirmed",
         "test_degenerate_variance_does_not_create_a_zero_width_confirmation",
-        "test_extra_dates_bad_schedule_and_nonfinite_values_are_rejected"
+        "test_extra_dates_bad_schedule_and_nonfinite_values_are_rejected",
+        "test_registered_confirmation_binds_cohort_receipts_and_sample_plan",
+        "test_registered_confirmation_rejects_changed_outcome_values",
+        "test_registered_confirmation_withholds_when_design_requires_more_sessions",
+        "test_confirmation_alpha_is_allocated_across_metrics_and_registered_looks"
       ],
-      "test_result": "5 focused lower-bound tests passed; Ruff passed. Both daily net alpha and after-cost utility use the frozen dependence policy; incomplete or degenerate samples cannot be confirmed.",
-      "evidence_sha256": "a0bc2dccf6805682867ebb5dfaa74066742b6a7a7ac759d7c0616349f21caa8c",
+      "test_result": "Nine focused confirmation tests pass; the registry integration is covered by 24 combined confirmation and prospective-cohort tests. Full Windows suite: 4164 passed, 1 skipped (1002.58s). Ruff and mypy pass. Synthetic software verification only.",
+      "evidence_sha256": "698bfeadacfe608c4b85df84d61fe42a7c9a8417fff5b0a1b3ecdabd7179e81f",
       "blockers": [
         "The report is not yet enforced by the authoritative strategy promotion gate.",
-        "Adequate sample size is not yet bound to the prospective cohort design.",
-        "After-cost utility accounting lineage is caller-supplied and not verified by this API.",
-        "No independently attested forward market cohort has elapsed."
+        "After-cost utility fee and risk-accounting lineage remains caller-supplied and is not independently recomputed from paper-account events.",
+        "Cohort timestamps and outcome digests are caller-supplied without independent attestation; no prospective market cohort has elapsed."
       ]
     },
     {
@@ -2743,7 +2751,8 @@
         "tests/test_fixed_look.py",
         "tests/test_fixed_look_registry.py",
         "tests/test_forward_paper_account_bridge.py",
-        "tests/test_sample_size.py"
+        "tests/test_sample_size.py",
+        "docs/edge-program/pe-0126-fixed-look-risk-stop-evidence.json"
       ],
       "tests": [
         "test_unscheduled_interim_display_cannot_produce_an_efficacy_decision",
@@ -2760,8 +2769,8 @@
         "test_registry_rejects_policy_after_charter_revision",
         "test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart"
       ],
-      "test_result": "Full Windows suite: 4160 passed, 1 skipped (884.30s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff, configured mypy, migration, capability-matrix, source-inventory, algorithm/chart matrices and offline pattern demo pass. Synthetic software verification only; no live or prospective trading-performance claim.",
-      "evidence_sha256": "ff8da83b7f5fe3a85e76f08a2219e0d4f9383b39e608da8e071c945a42a5a9d9",
+      "test_result": "Full Windows suite: 4164 passed, 1 skipped (1002.58s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff, configured mypy, migration, capability-matrix, source-inventory, algorithm/chart matrices and offline pattern demo pass. Synthetic software verification only; no live or prospective trading-performance claim.",
+      "evidence_sha256": "c10e8fbfe26c5807912b2518db90f49680489c8f36936985ee25eef1a26f3921",
       "blockers": [
         "Production session configuration does not yet require the registry or bind its observation callback to receipt-derived, independently attested cohort metrics.",
         "The fixed-look package is not yet enforced by the authoritative promotion gate, and no prospective market-performance result is claimed."
@@ -2813,8 +2822,8 @@
         "test_frozen_stratification_plan_rejects_invalid_aggregation_digest",
         "test_registered_stratification_verifies_each_durable_session_outcome_digest"
       ],
-      "test_result": "14 focused stratification tests passed; registry-bound integration is covered by 29 combined prospective cohort and stratification tests. The full Windows suite passes (4160 passed, 1 skipped). Ruff and mypy pass. Synthetic software checks only.",
-      "evidence_sha256": "54e5bbe7da9ddf4df2155fbb9a386d38190830565bc4dc9c643dcfca215918b5",
+      "test_result": "14 focused stratification tests passed; registry-bound integration is covered by 29 combined prospective-cohort and stratification tests. Full Windows suite: 4164 passed, 1 skipped (1002.58s). Ruff and mypy pass. Synthetic software checks only.",
+      "evidence_sha256": "36131a6b3c4759235abe1f735c3a49a555738ef17642d86836b38e65b03424f6",
       "blockers": [
         "The aggregation-policy digest is caller-supplied and its underlying weights and instrument-level calculations are not independently resolved or recomputed.",
         "Cohort timestamps and observation digests are not independently attested; no real prospective cohort observations are available."
