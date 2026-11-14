@@ -20,6 +20,12 @@ from financial_brain.forward_edge.session_runner import ForwardRunConfig, Forwar
 from financial_brain.forward_edge.registry import Benchmark, MechanismHypothesis, Registry, Status, StrategySpec
 from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
 from financial_brain.kernel.oms import State
+from financial_brain.kernel.registered_paper_books import (
+    FamilyCapitalAuthorization,
+    FrozenPaperBookPlan,
+    RegisteredPaperBooks,
+    StrategyBookAllocation,
+)
 
 
 DECISION_AT = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
@@ -41,7 +47,7 @@ def _registered_strategy():
     )
     charter = ExperimentCharter(
         charter_id="paper-test-v1", version=1, strategy_id=strategy_id,
-        code_sha256=STRATEGY_SHA, capital_inr="100000", start_on="2026-11-12",
+        code_sha256=STRATEGY_SHA, capital_inr="10000", start_on="2026-11-12",
         end_on="2027-03-31", universe=("NSE_EQ",), benchmarks=("NIFTY50",),
         horizon_sessions=5, evaluation_identity=identity,
     )
@@ -71,9 +77,9 @@ def _registered_strategy():
 
 
 def _config():
-    capital = Decimal("100000")
+    capital = Decimal("10000")
     family = FamilyEvidence(
-        family_id="test-family", status="VERIFIED", strategy_sha256="a" * 64,
+        family_id="test-momentum", status="VERIFIED", strategy_sha256="a" * 64,
         frozen_protocol_sha256="b" * 64, evidence_manifest_sha256="c" * 64,
         protocol_frozen=True, protocol_frozen_at=datetime(2025, 1, 1, tzinfo=timezone.utc),
         cohort_started_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
@@ -95,6 +101,28 @@ def _config():
     )
 
 
+def _registered_paper_books(tmp_path, family):
+    capital = Decimal("10000")
+    scope = family_action_scope_sha256(
+        evidence=family, action="INITIAL_ALLOCATION", current_capital_inr=Decimal(0),
+        requested_capital_inr=capital, execution_mode="PAPER")
+    approval = Approval(
+        "STRATEGY_ENROLLMENT", family.family_id, scope, "owner:test", "human",
+        datetime(2026, 11, 1, tzinfo=timezone.utc), datetime(2035, 1, 1, tzinfo=timezone.utc))
+    authorization = FamilyCapitalAuthorization(
+        strategy_id=family.family_id, action="INITIAL_ALLOCATION", current_capital_inr=Decimal(0),
+        requested_capital_inr=capital, evidence=family, owner_approval=approval)
+    plan = FrozenPaperBookPlan(
+        plan_id="paper-plan-v1", registered_at=datetime(2026, 11, 11, tzinfo=timezone.utc),
+        effective_from=datetime(2026, 11, 12, tzinfo=timezone.utc), total_capital_inr=capital,
+        books=(StrategyBookAllocation(family.family_id, "paper-main", capital),),
+        eligible_strategy_ids=(family.family_id,), eligibility_evidence_id="eligibility:test",
+        registration_evidence_id="registration:test", family_capital_authorizations=(authorization,))
+    books = RegisteredPaperBooks(tmp_path / "paper-books.jsonl")
+    books.register(plan)
+    return books
+
+
 def _event(at, bid="99.95", ask="100", bid_qty=20, ask_qty=20):
     return NormalizedEvent(
         "QUOTE", "NSE:INFY", at - timedelta(milliseconds=2), at - timedelta(milliseconds=1), at,
@@ -109,9 +137,11 @@ def _service(tmp_path):
     account_path = tmp_path / "account.jsonl"
     account = PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
                            fee_schedule=SCHEDULE)
+    books = _registered_paper_books(tmp_path, config.family_evidence)
     strategy_spec, registry = _registered_strategy()
     service = ForwardPaperSessionService(ForwardSessionRunner(runner_path), account,
-                                         strategy_spec=strategy_spec, registry=registry)
+                                         strategy_spec=strategy_spec, registry=registry,
+                                         paper_books=books, paper_book_plan_id="paper-plan-v1")
     return service, config, account, runner_path, account_path
 
 
@@ -121,9 +151,26 @@ def test_session_evidence_and_paper_account_authority_journals_cannot_alias(tmp_
     before = account.journal.records()
 
     with pytest.raises(PaperAccountBridgeError, match="must be distinct"):
-        service._validate_strategy(config)
+        service._validate_strategy(config, DECISION_AT)
 
     assert account.journal.records() == before
+
+
+def test_forward_paper_service_requires_account_opening_capital_to_match_frozen_plan(tmp_path):
+    service, config, _account, runner_path, _account_path = _service(tmp_path)
+    wrong_account = PaperAccount(tmp_path / "wrong-capital.jsonl", account_id="paper-main",
+                                 initial_cash=Decimal("9999"), fee_schedule=SCHEDULE)
+    before = wrong_account.journal.records()
+    mismatched = ForwardPaperSessionService(
+        ForwardSessionRunner(runner_path), wrong_account,
+        strategy_spec=service.strategy_spec, registry=service.registry,
+        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
+    )
+
+    with pytest.raises(PaperAccountBridgeError, match="opening capital must match"):
+        mismatched._validate_strategy(config, DECISION_AT)
+
+    assert wrong_account.journal.records() == before
 
 
 def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently(tmp_path):
@@ -252,6 +299,7 @@ def test_crash_after_durable_fill_and_cost_post_restarts_without_duplicate_econo
     restarted_service = ForwardPaperSessionService(
         ForwardSessionRunner(runner_path), restarted_account,
         strategy_spec=service.strategy_spec, registry=service.registry,
+        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
     )
     recovered = restarted_service.run(config, events, **kwargs)
 

@@ -3194,27 +3194,26 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/kernel/registered_paper_books.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
         "tests/test_registered_paper_books.py",
+        "tests/test_forward_paper_account_bridge.py",
         "docs/edge-program/pe-0146-registered-paper-books.md",
         "docs/edge-program/pe-0146-registered-paper-books-evidence.json",
         "docs/edge-program/task-status.json",
         "docs/edge-program/source-inventory.json"
       ],
       "tests": [
-        "test_registered_plan_opens_distinct_persistent_accounts_and_cash",
-        "test_strategy_order_uses_only_its_registered_book_and_reservation",
-        "test_unregistered_or_late_allocation_changes_are_rejected",
-        "test_plan_rejects_duplicate_accounts_and_unbudgeted_capital",
-        "test_plan_books_must_cover_the_frozen_eligible_strategy_manifest",
-        "test_plan_changes_cannot_reassign_or_resize_an_existing_account",
-        "test_transfer_api_never_moves_cash_between_books"
+        "tests/test_registered_paper_books.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_source_inventory.py",
+        "test_forward_paper_service_requires_account_opening_capital_to_match_frozen_plan"
       ],
-      "test_result": "7 registered paper-book tests passed; Ruff passed. Frozen eligibility coverage, distinct persistent accounts, capital reservation isolation, plan registration/change linkage, budget constraints, cross-book order rejection, and disabled transfers verified.",
-      "evidence_sha256": "2e1bd3cdf7d2242be5b5f9d1205837b4cc702693ae6c4c21b03b3ae41d6228b5",
+      "test_result": "The LIVE_PAPER service now requires the exact configured registered book plan and validates effective strategy allocation, account ID, and opening capital before preflight or journal writes. Receipt reconciliation submits intents via the registered-book family evidence/approval gate. Focused bridge, registry, and source inventory suite: 29 passed; Ruff and mypy passed. Full cross-platform CI for this update is pending.",
+      "evidence_sha256": "9bf1b77932adaf6046e35384cfab1174d282cee1a8b533c8762698e928e09d2d",
       "blockers": [
-        "Registry is not connected to formal strategy eligibility or every forward-session order path.",
-        "Registration evidence is not authenticated by approved identity service.",
-        "Account closure and released-capital reconciliation are not implemented; capital recycling remains blocked."
+        "Registration and allocation-change evidence IDs are not authenticated by an approved owner-identity service.",
+        "Account closure and released-capital reconciliation are not implemented; capital recycling remains blocked.",
+        "Legacy or directly constructed PaperAccount writers outside ForwardPaperSessionService can still bypass the registered-book path."
       ]
     },
     {
@@ -4445,11 +4444,11 @@
         "tests/test_kite_history_refresh.py",
         "full pytest suite in CI before evidence-manifest check"
       ],
-      "test_result": "Expanded the hash-pinned capability evidence matrix from five to eight curated domains, adding forward paper account authority, registered book isolation, and market-data availability lineage. Matrix validation passed; targeted acceptance suite: 98 passed. The evidence generator produced manifest_sha256=2f1d66d6fad176c549a9a39e675a3f5c66297ec004ec850b2cd7eeea4133e66a. Cross-platform full CI for this update is pending.",
+      "test_result": "Expanded the hash-pinned capability evidence matrix from five to eight curated domains. Matrix validation and the post-suite manifest audit passed full Ubuntu and Windows CI run #609 (43605705134) at commit bf19b2fb56a8917a685cedf0a5c91582461af5f0. Follow-up registered-book bridge changes are newer and still require full CI.",
       "blockers": [
         "The matrix remains curated rather than exhaustive across all platform capabilities; independent market evidence, entitlements and custody are not supplied by file hashes."
       ],
-      "evidence_sha256": "e9187965a5a31507da65d163a3444a1c13a160fdaaa39ca7f48285207af0ea55"
+      "evidence_sha256": "0e86b2e6a7d5ad1ca8ad4378c1a724b3704d19665c7abd059534c7a59d742f02"
     },
     {
       "id": "PE-0202",

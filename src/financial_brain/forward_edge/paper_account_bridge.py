@@ -27,6 +27,10 @@ from financial_brain.kernel.schemas import (
 )
 from financial_brain.kernel.oms import State
 from financial_brain.kernel.paper_account import PaperAccount, PaperAccountError
+from financial_brain.kernel.registered_paper_books import (
+    PaperBookRegistryError,
+    RegisteredPaperBooks,
+)
 
 
 class PaperAccountBridgeError(ValueError):
@@ -37,17 +41,33 @@ class ForwardPaperSessionService:
     """Run explicit preflight, durable forward session, and idempotent account reconciliation."""
 
     def __init__(self, runner: ForwardSessionRunner, account: PaperAccount, *,
-                 strategy_spec: StrategySpec, registry: Registry) -> None:
+                 strategy_spec: StrategySpec, registry: Registry,
+                 paper_books: RegisteredPaperBooks, paper_book_plan_id: str) -> None:
+        if not isinstance(paper_books, RegisteredPaperBooks) or not paper_book_plan_id:
+            raise PaperAccountBridgeError("LIVE_PAPER requires a registered frozen paper-book plan")
         self.runner = runner
         self.account = account
         self.strategy_spec = strategy_spec
         self.registry = registry
+        self.paper_books = paper_books
+        self.paper_book_plan_id = paper_book_plan_id
 
-    def _validate_strategy(self, config: ForwardRunConfig) -> None:
+    def _validate_strategy(self, config: ForwardRunConfig, decision_at: datetime) -> None:
         """Bind the paper service to the exact guarded registry identity before any session writes."""
         if config.mode is not Mode.LIVE_PAPER:
             raise PaperAccountBridgeError("paper account service accepts LIVE_PAPER sessions only")
         _require_distinct_authority_journals(self.runner.journal_path, self.account.path)
+        try:
+            plan, allocation = self.paper_books.resolve(
+                strategy_id=self.strategy_spec.strategy_id, at=decision_at)
+        except PaperBookRegistryError as exc:
+            raise PaperAccountBridgeError(f"no registered paper-book allocation for session: {exc}") from exc
+        if plan.plan_id != self.paper_book_plan_id:
+            raise PaperAccountBridgeError("session does not use the configured frozen paper-book plan")
+        if (self.account.account_id != allocation.account_id
+                or self.account.initial_cash != allocation.capital_inr):
+            raise PaperAccountBridgeError(
+                "paper account identity and opening capital must match the frozen strategy allocation")
         try:
             registered = self.registry.get(self.strategy_spec.strategy_id)
         except KeyError as exc:
@@ -65,7 +85,14 @@ class ForwardPaperSessionService:
             decision_at: datetime | None = None,
             reconcile_execution_fn: Callable[[str], dict] | None = None) -> dict:
         """Persist one preflight, run the session, then reconcile its receipt to PaperAccount."""
-        self._validate_strategy(config)
+        if decision_at is None:
+            existing_decision = next((row for row in DurableJournal(self.runner.journal_path).records()
+                                      if row.get("t") == "DECISION"
+                                      and row.get("session_id") == config.session_id), None)
+            decision_at = (datetime.fromisoformat(existing_decision["decision_at_utc"])
+                           if existing_decision is not None
+                           else self.runner.clock_provider.decision_time())
+        self._validate_strategy(config, decision_at)
         existing_preflight = next((row for row in DurableJournal(self.runner.journal_path).records()
                                    if row.get("t") == "PREFLIGHT_RESULT"
                                    and row.get("session_id") == config.session_id), None)
@@ -87,7 +114,9 @@ class ForwardPaperSessionService:
         if result.get("status") == "PAPER_COMPLETE":
             evidence = reconcile_paper_account(
                 runner_journal_path=self.runner.journal_path, config=config, result=result,
-                account=self.account, events=captured_events,
+                account=self.account, events=captured_events, paper_books=self.paper_books,
+                paper_book_plan_id=self.paper_book_plan_id,
+                strategy_id=self.strategy_spec.strategy_id,
             )
             return {**result, "account_reconciliation": evidence}
         return result
@@ -95,7 +124,8 @@ class ForwardPaperSessionService:
 
 def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConfig,
                             result: dict, account: PaperAccount,
-                            events: list[NormalizedEvent]) -> dict:
+                            events: list[NormalizedEvent], paper_books: RegisteredPaperBooks,
+                            paper_book_plan_id: str, strategy_id: str) -> dict:
     """Post a closed runner receipt to PaperAccount, then persist cross-journal reconciliation.
 
     Stable intent/fill IDs make replays safe after a crash between an account event and its
@@ -167,8 +197,18 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
 
     limit = Decimal(str(decision["limit"])) if decision.get("limit") is not None else None
     try:
-        account.submit_intent(client_id=intent_id, symbol=symbol, side=side, quantity=quantity,
-                              limit=limit, reserve=reserve)
+        decision_record = next((row for row in DurableJournal(Path(runner_journal_path)).records()
+                                if row.get("t") == "DECISION"
+                                and row.get("session_id") == config.session_id), None)
+        if decision_record is None:
+            raise PaperAccountBridgeError("paper intent has no persisted decision timestamp")
+        decision_at = datetime.fromisoformat(decision_record["decision_at_utc"])
+        paper_books.submit_intent(
+            plan_id=paper_book_plan_id, strategy_id=strategy_id, account=account,
+            session_at=decision_at, client_id=intent_id, symbol=symbol, side=side,
+            quantity=quantity, limit=limit, reserve=reserve,
+            family_evidence=config.family_evidence, owner_approval=config.family_owner_approval,
+        )
         order = account.oms.order(intent_id)
         if order.state is State.CREATED:
             account.move(intent_id, State.SUBMITTED)
@@ -201,7 +241,7 @@ def reconcile_paper_account(*, runner_journal_path: Path, config: ForwardRunConf
             # no ACCEPTED -> REJECTED transition because rejection precedes acceptance.
             account.move(intent_id, State.CANCEL_PENDING)
             account.move(intent_id, State.CANCELED)
-    except (PaperAccountError, ValueError, KeyError, InvalidOperation) as exc:
+    except (PaperAccountError, PaperBookRegistryError, ValueError, KeyError, InvalidOperation) as exc:
         if isinstance(exc, PaperAccountBridgeError):
             raise
         raise PaperAccountBridgeError(f"cash-equity OMS/account refused receipt: {exc}") from exc

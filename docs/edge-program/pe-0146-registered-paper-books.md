@@ -11,14 +11,18 @@ budget. The registry creates/reopens separate durable `PaperAccount` journals
 and its scoped submit method rejects submitting one strategy through another
 strategy's account. Cash transfer is explicitly disabled.
 
-Validation: `python -m pytest -q tests/test_registered_paper_books.py` (7
-passed) and Ruff passed. Tests cover restart, separate capital, reservations,
-cross-book order rejection, immutable registration, successor plans, duplicate
-accounts, budget limits, and disabled transfers.
+Validation: the registered-book and forward paper bridge suites pass together
+(29 tests); Ruff and mypy pass for the changed bridge. In addition to restart,
+capital isolation, and cross-book order rejection, the live-paper service now
+requires a registered plan, resolves the exact strategy allocation at the
+decision timestamp, and checks both account ID and opening capital before
+preflight or session writes. Receipt reconciliation submits the order through
+the registered-book family evidence and owner-approval gate. A mismatched
+opening-capital regression confirms rejection without writing to the account.
 
-Remaining work: connect this registry to the eligibility registry and route all
-forward-session OMS calls through it; authenticate the registration/change
-evidence through an approved owner identity service; reconcile account closure
-and safely release capital before any reallocation. Until those integrations
-exist, untrusted callers can bypass this registry by constructing `PaperAccount`
-directly. No live or realized strategy capital is implied.
+Remaining work: authenticate the registration/change evidence through an
+approved owner identity service; reconcile account closure and safely release
+capital before any reallocation; wire any legacy paper-account writers through
+this registry. Direct construction of `PaperAccount` remains possible outside
+the guarded forward paper service. No live or realized strategy capital is
+implied.
