@@ -67,13 +67,13 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *, received_at:
         }
     except (KeyError, TypeError, ValueError, OverflowError) as exc:
         raise KiteQuoteNormalizationError("Kite quote contains invalid price, depth or volume") from exc
-    received = received_at
     packet_hash = hashlib.sha256(json.dumps(quote, sort_keys=True, default=str,
                                              separators=(",", ":")).encode("utf-8")).hexdigest()
-    event_id = f"kite:{venue.upper()}:{symbol}:{timestamp.isoformat()}:{packet_hash[:16]}"
+    receipt_iso = received_at.isoformat()
+    event_id = f"kite:{venue.upper()}:{symbol}:{timestamp.isoformat()}:{receipt_iso}:{packet_hash[:16]}"
     return MarketEvent(event_id=event_id, kind=EventKind.QUOTE, venue=venue.upper(),
                        instrument_id=f"{venue.upper()}:{symbol}", event_time=timestamp,
-                       received_at=received, available_at=received, payload=payload,
+                       received_at=received_at, available_at=received_at, payload=payload,
                        source="KITE_CONNECT_READ_ONLY", evidence_id=packet_hash)
 
 

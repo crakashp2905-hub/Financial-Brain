@@ -42,3 +42,12 @@ def test_missing_exchange_clock_or_two_sided_depth_is_refused(patch, message):
 def test_naive_receipt_clock_is_rejected_instead_of_claimed_as_observed_time():
     with pytest.raises(KiteQuoteNormalizationError, match="timezone aware"):
         normalize_kite_quote("NSE:INFY", quote(), received_at=datetime(2026, 11, 13, 10, 15))
+
+
+def test_repeated_exchange_snapshot_at_a_later_receipt_keeps_both_observations():
+    first = normalize_kite_quote("NSE:INFY", quote(),
+                                 received_at=datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc))
+    second = normalize_kite_quote("NSE:INFY", quote(),
+                                  received_at=datetime(2026, 11, 13, 4, 45, 2, tzinfo=timezone.utc))
+    assert first.event_time == second.event_time
+    assert first.event_id != second.event_id
