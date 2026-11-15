@@ -269,8 +269,12 @@ class PaperAccount:
             self._risk_incident_id: str | None = None
             self._risk_reason: str | None = None
             self._risk_occurred_at: datetime | None = None
+            self._closed = False
+            self._closure: dict | None = None
             prior_records = [records[0]]
             for r in records[1:]:
+                if self._closed:
+                    raise PaperAccountError("account journal contains activity after closure")
                 t = r["t"]
                 if t == "INTENT":
                     if self._risk_latched:
@@ -346,6 +350,8 @@ class PaperAccount:
                         self._risk_occurred_at = None
                     else:
                         raise PaperAccountError("unknown risk latch transition")
+                elif t == "ACCOUNT_CLOSE":
+                    self._apply_account_close(r)
                 else:
                     raise PaperAccountError(f"unknown paper account journal event: {t}")
                 prior_records.append(r)
@@ -367,6 +373,8 @@ class PaperAccount:
                 self._sell_reserved[cid] = 0
 
     def _validate_and_commit(self, rec: dict) -> None:
+        if self._closed:
+            raise PaperAccountError("paper account is closed and read-only")
         # Preview through the same deterministic fold before making the event durable.
         # A rejected command therefore leaves journal and account state unchanged.
         preview = self.path.with_name(f"{self.path.name}.{uuid4().hex}.preview")
@@ -385,6 +393,72 @@ class PaperAccount:
             self._rebuild()
         finally:
             preview.unlink(missing_ok=True)
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    @property
+    def closure(self) -> dict | None:
+        return deepcopy(self._closure) if self._closure is not None else None
+
+    def close(self, *, closure_id: str, closed_at: datetime, evidence_id: str) -> dict:
+        """Permanently close a fully reconciled, flat book and freeze its final cash value."""
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", closure_id or ""):
+            raise PaperAccountError("closure ID must be a stable identifier")
+        if not isinstance(evidence_id, str) or not evidence_id.strip():
+            raise PaperAccountError("closure evidence ID is required")
+        if not isinstance(closed_at, datetime) or closed_at.tzinfo is None or closed_at.utcoffset() is None:
+            raise PaperAccountError("closure timestamp must be timezone-aware")
+        if self._closed:
+            if (self._closure
+                    and self._closure.get("closure_id") == closure_id
+                    and self._closure.get("evidence_id") == evidence_id
+                    and self._closure.get("closed_at_utc") == closed_at.astimezone(timezone.utc).isoformat()):
+                return deepcopy(self._closure)
+            raise PaperAccountError("paper account is already closed")
+        if self.positions:
+            raise PaperAccountError("paper account cannot close with open inventory")
+        if any(State(order["state"]) not in {State.FILLED, State.CANCELED, State.REJECTED, State.EXPIRED}
+               for order in self.orders):
+            raise PaperAccountError("paper account cannot close with nonterminal orders")
+        if self.available_cash != self.cash:
+            raise PaperAccountError("paper account cannot close while cash remains reserved")
+        reconciliation = self.reconcile_total_return()
+        body = {
+            "t": "ACCOUNT_CLOSE", "account_id": self.account_id,
+            "closure_id": closure_id, "closed_at_utc": closed_at.astimezone(timezone.utc).isoformat(),
+            "evidence_id": evidence_id, "final_cash_inr": str(self.cash),
+            "reconciliation": reconciliation,
+        }
+        body["close_sha256"] = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode()).hexdigest()
+        self._validate_and_commit(body)
+        return deepcopy(self._closure or {})
+
+    def _apply_account_close(self, row: dict) -> None:
+        body = {key: value for key, value in row.items() if key != "close_sha256"}
+        expected = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode()).hexdigest()
+        try:
+            closed_at = datetime.fromisoformat(row["closed_at_utc"].replace("Z", "+00:00"))
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise PaperAccountError("account closure timestamp is invalid") from exc
+        if (row.get("account_id") != self.account_id or not row.get("closure_id")
+                or not row.get("evidence_id") or row.get("close_sha256") != expected
+                or closed_at.tzinfo is None or closed_at.utcoffset() is None):
+            raise PaperAccountError("account closure record is invalid")
+        if self.positions or any(State(order["state"]) not in {
+                State.FILLED, State.CANCELED, State.REJECTED, State.EXPIRED} for order in self.orders):
+            raise PaperAccountError("account closure record has open inventory or orders")
+        if self.available_cash != self.cash or row.get("final_cash_inr") != str(self.cash):
+            raise PaperAccountError("account closure cash does not reconcile")
+        if row.get("reconciliation") != self.reconcile_total_return():
+            raise PaperAccountError("account closure P&L reconciliation does not match")
+        self._closed = True
+        self._closure = dict(row)
 
     def submit_intent(
         self, *, client_id: str, symbol: str, side: str, quantity: int,

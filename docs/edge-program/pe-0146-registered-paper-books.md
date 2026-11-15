@@ -21,9 +21,17 @@ submits the order through the registered-book family evidence and owner-approval
 gate. Regressions reject mismatched capital and an unregistered journal without
 additional account writes.
 
+`PaperAccount.close()` now adds a durable, hashed close record only when the book
+has no open inventory or working orders, available cash equals cash, and total
+return reconciles. The close survives restart, is idempotent for the same close
+identity, rejects altered retries, and makes the account journal read-only. This
+records final account cash but does not itself authorize release or reallocation
+of that capital from the registered-book budget.
+
 Remaining work: authenticate the registration/change evidence through an
-approved owner identity service; reconcile account closure and safely release
-capital before any reallocation; wire any legacy paper-account writers through
-this registry. Direct construction of `PaperAccount` remains possible outside
-the guarded forward paper service. No live or realized strategy capital is
-implied.
+approved owner identity service; connect the closed-account receipt to registry
+level released-capital accounting and successor allocation approval; wire any
+legacy paper-account writers through the registered-book service. Direct
+construction of `PaperAccount` remains possible outside that service, although
+the durable account-close state itself is enforced by the account journal. No
+live or realized strategy capital is implied.

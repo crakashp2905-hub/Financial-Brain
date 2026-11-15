@@ -3317,17 +3317,21 @@
         "docs/edge-program/pe-0146-registered-paper-books.md",
         "docs/edge-program/pe-0146-registered-paper-books-evidence.json",
         "docs/edge-program/task-status.json",
-        "docs/edge-program/source-inventory.json"
+        "docs/edge-program/source-inventory.json",
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_paper_account.py"
       ],
       "tests": [
         "tests/test_registered_paper_books.py",
         "tests/test_forward_paper_account_bridge.py",
         "tests/test_source_inventory.py",
         "test_forward_paper_service_requires_account_opening_capital_to_match_frozen_plan",
-        "test_forward_paper_service_rejects_unregistered_journal_with_matching_id_and_capital"
+        "test_forward_paper_service_rejects_unregistered_journal_with_matching_id_and_capital",
+        "test_flat_account_close_reconciles_cash_survives_restart_and_blocks_writes",
+        "test_account_cannot_close_with_open_inventory_or_working_orders"
       ],
-      "test_result": "The LIVE_PAPER service requires the exact configured registered book plan and validates effective strategy allocation, account ID, canonical journal path, and opening cash before preflight or journal writes. Receipt reconciliation submits intents via the registered-book family evidence/approval gate. Focused bridge, registry, and source inventory suite: 30 passed; Ruff and mypy passed. Full cross-platform CI for this update is pending.",
-      "evidence_sha256": "bf7acf0079a6d5552b1706570e597db7c42eedaeb19b4e950a81bb30be23b9cf",
+      "test_result": "46 paper-account, registered-book, and forward bridge tests passed; Ruff and mypy passed for PaperAccount. Account closure is durable, flat-book guarded, cash/P&L reconciled, and read-only after restart; released-capital recycling remains pending.",
+      "evidence_sha256": "bdc54a91c4812a95819e46080af3daf8f0a3d8c59ba02edde78101d950868593",
       "blockers": [
         "Registration and allocation-change evidence IDs are not authenticated by an approved owner-identity service.",
         "Account closure and released-capital reconciliation are not implemented; capital recycling remains blocked.",
