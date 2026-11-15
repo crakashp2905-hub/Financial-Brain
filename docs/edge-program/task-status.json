@@ -3284,7 +3284,9 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/forward_edge/premarket_preflight.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
         "tests/test_premarket_preflight.py",
+        "tests/test_forward_paper_account_bridge.py",
         "docs/edge-program/pe-0145-premarket-preflight.md",
         "docs/edge-program/pe-0145-premarket-preflight-evidence.json",
         "docs/edge-program/task-status.json",
@@ -3297,13 +3299,16 @@
         "test_clock_must_be_aware_and_policy_limits_must_be_valid",
         "test_operator_reason_lists_all_simultaneous_blockers",
         "test_local_storage_probe_checks_real_free_space_and_cleans_probe_file",
-        "test_local_storage_probe_fails_closed_for_missing_archive_directory"
+        "test_local_storage_probe_fails_closed_for_missing_archive_directory",
+        "test_configured_premarket_provider_is_session_bound_and_persisted",
+        "test_premarket_provider_mismatched_frozen_risk_policy_fails_closed",
+        "test_generic_callback_cannot_approve_without_configured_premarket_provider"
       ],
-      "test_result": "21 premarket preflight tests passed; Ruff passed. Local free-space and archive write/fsync/delete probing is available with local-only evidence scope.",
-      "evidence_sha256": "c458990e424609f3f5c957cd14e2308beb88d38f25754690f9718988069d8819",
+      "test_result": "51 premarket and LIVE_PAPER account-bridge tests passed; Ruff and mypy passed. A configured provider is bound to the frozen session, strategy, risk digest, cost schedule, and decision clock. Generic callbacks cannot approve missing or mismatched premarket evidence.",
+      "evidence_sha256": "d0385fcc636812433dbecee9b63a26cd041abf3422f02533076146d15771cf03",
       "blockers": [
-        "Authoritative live service probes are not wired.",
-        "Daily launcher/session orchestration does not invoke this automatically.",
+        "Authoritative live service probes are not configured for calendar, entitlement, broker session, and clock evidence; the filesystem probe is local only.",
+        "The daily paper launcher does not automatically configure the provider; provider setup remains caller-owned.",
         "No real-market preflight run has been observed or attested."
       ]
     },

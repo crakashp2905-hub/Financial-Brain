@@ -18,6 +18,7 @@ import financial_brain.forward_edge.paper_account_bridge as paper_bridge
 from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
 from financial_brain.forward_edge.holding_period_schedule import ExchangeSessionCalendar
 from financial_brain.forward_edge.pretrade_gates import PreTradePolicy, PreTradeSnapshot
+from financial_brain.forward_edge.premarket_preflight import PremarketPolicy, PremarketSnapshot
 from financial_brain.forward_edge.sample_size import design_sample_size
 from financial_brain.forward_edge.paper_account_bridge import (
     ForwardPaperSessionService,
@@ -145,7 +146,27 @@ def _event(at, bid="99.95", ask="100", bid_qty=20, ask_qty=20):
     )
 
 
-def _service(tmp_path, *, account_cash=Decimal("10000")):
+def _premarket_snapshot(config, strategy_spec):
+    return PremarketSnapshot(
+        session_id=config.session_id, session_date=date.fromisoformat(config.exchange_date),
+        checked_at=datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc),
+        calendar_is_session=True, calendar_version="NSE-fixture-v1",
+        calendar_evidence_id="fixture:calendar", data_entitlement_active=True,
+        data_source="fixture-kite-readonly", entitlement_evidence_id="fixture:entitlement",
+        broker_read_only_session=True, broker_session_id="fixture-session",
+        broker_evidence_id="fixture:broker", disk_free_bytes=2_000_000_000,
+        disk_probe_evidence_id="fixture:disk", archive_writable=True,
+        archive_probe_evidence_id="fixture:archive", cost_schedule_sha256=SCHEDULE.sha256,
+        cost_effective_from=SCHEDULE.effective_from, cost_effective_until=None,
+        cost_evidence_id="fixture:cost", strategy_id=strategy_spec.strategy_id,
+        strategy_version=str(strategy_spec.version),
+        strategy_spec_sha256=strategy_spec.code_sha256, strategy_evidence_id="fixture:strategy",
+        risk_config_sha256=config.risk_policy_sha256, risk_approved=True,
+        risk_evidence_id="fixture:risk", clock_skew_ms=1.0, clock_evidence_id="fixture:clock",
+    )
+
+
+def _service(tmp_path, *, account_cash=Decimal("10000"), premarket=True):
     config = _config()
     runner_path = tmp_path / f"{config.session_id}.runner.jsonl"
     books = _registered_paper_books(tmp_path, config.family_evidence)
@@ -158,7 +179,12 @@ def _service(tmp_path, *, account_cash=Decimal("10000")):
     service = ForwardPaperSessionService(ForwardSessionRunner(runner_path), account,
                                          strategy_spec=strategy_spec, registry=registry,
                                          paper_books=books, paper_book_plan_id="paper-plan-v1",
-                                         paper_account_root=account_root)
+                                         paper_account_root=account_root,
+                                         premarket_policy=(PremarketPolicy(
+                                             min_disk_free_bytes=1_000_000_000,
+                                             max_clock_skew_ms=50) if premarket else None),
+                                         premarket_snapshot_fn=(lambda run_config, _at: _premarket_snapshot(
+                                             run_config, strategy_spec)) if premarket else None)
     return service, config, account, runner_path, account_path
 
 
@@ -186,6 +212,69 @@ def test_live_paper_service_requires_health_snapshot_before_preflight(tmp_path):
     assert preflight_calls == []
     assert account.cash == Decimal("10000")
     assert not runner_path.exists()
+
+
+def test_configured_premarket_provider_is_session_bound_and_persisted(tmp_path):
+    service, config, _account, runner_path, _ = _service(tmp_path, premarket=True)
+
+    result = service.run(
+        config, [], decision_fn=lambda _: {"side": "NONE", "reason": "NO_SIGNAL"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("no-signal session cannot execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT,
+    )
+
+    preflight = next(row["result"] for row in DurableJournal(runner_path).records()
+                     if row.get("t") == "PREFLIGHT_RESULT")
+    assert preflight["approved"] is True
+    assert preflight["session_id"] == config.session_id
+    assert preflight["report_sha256"]
+    assert result["status"] == "NO_TRADE"
+
+
+def test_premarket_provider_mismatched_frozen_risk_policy_fails_closed(tmp_path):
+    service, config, _account, runner_path, _ = _service(tmp_path, premarket=True)
+    service.premarket_snapshot_fn = lambda _run_config, _at: _premarket_snapshot(
+        config, service.strategy_spec)
+    changed = replace(config, risk_policy_sha256="d" * 64)
+
+    result = service.run(
+        changed, [], decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 1},
+        preflight_fn=lambda: {"approved": True, "source": "legacy-caller"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("failed preflight cannot execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT,
+    )
+
+    preflight = next(row["result"] for row in DurableJournal(runner_path).records()
+                     if row.get("t") == "PREFLIGHT_RESULT")
+    assert preflight["approved"] is False
+    assert preflight["reason"] == "PREMARKET_PREFLIGHT_FAILED"
+    assert result["status"] == "NO_TRADE"
+
+
+def test_generic_callback_cannot_approve_without_configured_premarket_provider(tmp_path):
+    service, config, _account, runner_path, _ = _service(tmp_path, premarket=False)
+    called = []
+
+    result = service.run(
+        config, [], preflight_fn=lambda: called.append(True) or {"approved": True},
+        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 1},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("unconfigured premarket gate cannot execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT,
+    )
+
+    preflight = next(row["result"] for row in DurableJournal(runner_path).records()
+                     if row.get("t") == "PREFLIGHT_RESULT")
+    assert called == [True]
+    assert preflight["approved"] is False
+    assert preflight["reason"] == "PREMARKET_OR_ADDITIONAL_PREFLIGHT_BLOCKED"
+    assert preflight["additional_preflight"]["approved"] is True
+    assert result["status"] == "NO_TRADE"
 
 
 def test_strategy_degradation_pause_latches_entries_without_blocking_account_risk_reductions(tmp_path):

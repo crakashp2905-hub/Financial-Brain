@@ -28,6 +28,9 @@ from financial_brain.forward_edge.pretrade_gates import (
     PreTradeSnapshot,
     evaluate_pretrade,
 )
+from financial_brain.forward_edge.premarket_preflight import (
+    PremarketPolicy, PremarketSnapshot, evaluate_premarket,
+)
 from financial_brain.forward_edge.registry import Registry, StrategySpec, order_intent_allowed
 from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner, RunnerError
 from financial_brain.kernel.schemas import (
@@ -65,7 +68,10 @@ class ForwardPaperSessionService:
                  strategy_spec: StrategySpec, registry: Registry,
                  paper_books: RegisteredPaperBooks, paper_book_plan_id: str,
                  paper_account_root: Path,
-                 authority_registry: PaperExecutionAuthorityRegistry | None = None) -> None:
+                 authority_registry: PaperExecutionAuthorityRegistry | None = None,
+                 premarket_policy: PremarketPolicy | None = None,
+                 premarket_snapshot_fn: Callable[[ForwardRunConfig, datetime], PremarketSnapshot] | None = None
+                 ) -> None:
         if not isinstance(paper_books, RegisteredPaperBooks) or not paper_book_plan_id:
             raise PaperAccountBridgeError("LIVE_PAPER requires a registered frozen paper-book plan")
         self.runner = runner
@@ -75,6 +81,12 @@ class ForwardPaperSessionService:
         self.paper_books = paper_books
         self.paper_book_plan_id = paper_book_plan_id
         self.paper_account_root = Path(paper_account_root).resolve()
+        if (premarket_policy is None) != (premarket_snapshot_fn is None):
+            raise PaperAccountBridgeError("premarket policy requires a matching snapshot provider")
+        if premarket_policy is not None and not isinstance(premarket_policy, PremarketPolicy):
+            raise PaperAccountBridgeError("premarket policy must be a validated PremarketPolicy")
+        self.premarket_policy = premarket_policy
+        self.premarket_snapshot_fn = premarket_snapshot_fn
         self.authority_registry = authority_registry or PaperExecutionAuthorityRegistry(
             configured_paper_authority_path(self.paper_account_root.parent))
         self.runner.authority_registry = self.authority_registry
@@ -150,8 +162,33 @@ class ForwardPaperSessionService:
             raise PaperAccountBridgeError(
                 "degradation alarm could not persistently latch new paper entries") from exc
 
+    def _premarket_preflight(self, config: ForwardRunConfig, decision_at: datetime) -> dict:
+        """Evaluate a provider snapshot against the exact registered paper session identity."""
+        if self.premarket_policy is None or self.premarket_snapshot_fn is None:
+            raise PaperAccountBridgeError("configured premarket snapshot provider is unavailable")
+        snapshot = self.premarket_snapshot_fn(config, decision_at)
+        if not isinstance(snapshot, PremarketSnapshot):
+            raise PaperAccountBridgeError("premarket provider must return a validated PremarketSnapshot")
+        if (not isinstance(snapshot.checked_at, datetime) or snapshot.checked_at.tzinfo is None
+                or snapshot.checked_at.utcoffset() is None):
+            raise PaperAccountBridgeError("premarket snapshot timestamp must be timezone-aware")
+        session_date = date.fromisoformat(config.exchange_date)
+        schedule = self.account.fee_schedule
+        if (snapshot.session_id != config.session_id or snapshot.session_date != session_date
+                or snapshot.strategy_id != self.strategy_spec.strategy_id
+                or snapshot.strategy_version != str(self.strategy_spec.version)
+                or snapshot.strategy_spec_sha256 != self.strategy_spec.code_sha256
+                or snapshot.risk_config_sha256 != config.risk_policy_sha256
+                or schedule is None or snapshot.cost_schedule_sha256 != schedule.sha256
+                or snapshot.cost_effective_from != schedule.effective_from
+                or snapshot.checked_at.astimezone(timezone.utc) > decision_at.astimezone(timezone.utc)):
+            raise PaperAccountBridgeError(
+                "premarket snapshot does not match the frozen session, strategy, risk, cost, or decision clock")
+        return evaluate_premarket(snapshot, self.premarket_policy).runner_result()
+
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
-            preflight_fn: Callable[[], dict], decision_fn: Callable[[list[NormalizedEvent]], dict],
+            preflight_fn: Callable[[], dict] | None = None,
+            decision_fn: Callable[[list[NormalizedEvent]], dict],
             risk_fn: Callable[[dict], dict], execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
             decision_at: datetime | None = None,
             reconcile_execution_fn: Callable[[str], dict] | None = None,
@@ -228,9 +265,26 @@ class ForwardPaperSessionService:
                                    and row.get("session_id") == config.session_id), None)
         if existing_preflight is None:
             try:
-                preflight = preflight_fn()
+                if self.premarket_policy is not None:
+                    preflight = self._premarket_preflight(config, decision_at)
+                else:
+                    preflight = {"approved": False, "reason": "PREMARKET_PREFLIGHT_NOT_CONFIGURED"}
+                if preflight_fn is not None:
+                    additional = preflight_fn()
+                    if not isinstance(additional, dict) or type(additional.get("approved")) is not bool:
+                        additional = {"approved": False, "reason": "ADDITIONAL_PREFLIGHT_INVALID"}
+                    preflight = {
+                        **preflight,
+                        "approved": preflight["approved"] and additional["approved"],
+                        "additional_preflight": additional,
+                    }
+                    if not preflight["approved"]:
+                        preflight["status"] = "NO_TRADE"
+                        preflight["reason"] = "PREMARKET_OR_ADDITIONAL_PREFLIGHT_BLOCKED"
             except Exception as exc:  # noqa: BLE001 - fail closed while retaining only exception type
-                preflight = {"approved": False, "reason": "PREFLIGHT_CALLBACK_FAILED",
+                failure_reason = ("PREMARKET_PREFLIGHT_FAILED" if self.premarket_policy is not None
+                                  else "PREMARKET_PREFLIGHT_NOT_CONFIGURED")
+                preflight = {"approved": False, "status": "NO_TRADE", "reason": failure_reason,
                              "error_type": type(exc).__name__}
             if not isinstance(preflight, dict) or type(preflight.get("approved")) is not bool:
                 preflight = {"approved": False, "reason": "PREFLIGHT_CALLBACK_INVALID"}
