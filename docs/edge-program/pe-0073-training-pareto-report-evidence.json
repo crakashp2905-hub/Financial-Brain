@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0073",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_pareto_selection.py",
+    "result": "3 passed (exit code 0); Ruff and mypy passed. The report requires TRAIN-only candidates on one content-addressed training snapshot, computes the five-objective frontier, records reasons for every non-selected candidate and refuses archive rewrites."
+  },
+  "implemented": [
+    "Five declared criteria are net return and capacity (maximize), drawdown, turnover and complexity (minimize).",
+    "Validation/holdout candidate labels, mixed training hashes and mixed training end dates are rejected.",
+    "The selected candidate must be on the Pareto frontier and requires a human-supplied selection reason.",
+    "Dominated candidates list their dominators; non-selected frontier candidates carry explicit alternative reasons.",
+    "JSON decision archive is immutable and idempotent for exact retries."
+  ],
+  "blockers": [
+    "The repository has not supplied a new, verified, same-snapshot training metric set for all candidates.",
+    "Metric provenance, capacity model and complexity scoring are supplied by the caller and are not recalculated by this reporting layer.",
+    "No validation result or profitability claim is inferred from a training-only Pareto report."
+  ],
+  "scope_note": "Training-only report generation and immutable candidate decision archive are implemented; measured candidate coverage and metric provenance remain outstanding."
+}

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 99,
-  "unrecorded_tasks": 119,
+  "recorded_tasks": 100,
+  "unrecorded_tasks": 118,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -206,8 +206,8 @@
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots",
         "test_portfolio_rejects_shared_authoritative_state_between_books"
       ],
-      "test_result": "Committed inventory captures 590 Python files (583 unassessed, 331 role-unassigned), hash 1316fdc8f07912e09debf796f67215049e725c30234df29b316e82ee7d92fd0f. Source-inventory and paper-portfolio authority tests: 9 passed. PaperAccountPortfolio rejects duplicate OMS, ledger and position-state owners across registered books. Cross-runner/global authority remains unenforced.",
-      "evidence_sha256": "afc0bb5e5ba608a457ee349c0e34dfc4be21958344720f952c166167bc88f341",
+      "test_result": "Committed inventory captures 591 Python files (584 unassessed, 332 role-unassigned), hash f57a92f320d0f979c7db89ee59ee619f39430e0b9e8b74fc2f1f328646c636aa. Source-inventory and paper-portfolio authority tests: 9 passed. PaperAccountPortfolio rejects duplicate OMS, ledger and position-state owners across registered books. Cross-runner/global authority remains unenforced.",
+      "evidence_sha256": "d5c66d6d292781171bf6f5b7db908cc0831de820036f11ff732060c70cd252db",
       "blockers": [
         "The runtime guard covers only accounts registered in one PaperAccountPortfolio; it does not prevent legacy and forward runner composition roots from owning competing order, ledger or position state for the same logical book."
       ]
@@ -2091,7 +2091,7 @@
         "test_capacity_is_limited_by_adv_participation_and_visible_depth",
         "test_capacity_verdict_withholds_orders_without_fresh_evidence_or_above_haircut"
       ],
-      "test_result": "Capacity uses min(ADV Ã— participation, visible depth) Ã— explicit safety factor; stale, missing, future or insufficient evidence returns NO_TRADE. F09 tests: 16 passed; Ruff and mypy passed. Universal adapter wiring and independently verified liquidity sources remain pending.",
+      "test_result": "Capacity uses min(ADV Ãƒâ€” participation, visible depth) Ãƒâ€” explicit safety factor; stale, missing, future or insufficient evidence returns NO_TRADE. F09 tests: 16 passed; Ruff and mypy passed. Universal adapter wiring and independently verified liquidity sources remain pending.",
       "evidence_sha256": "657af7f2a7f7116597f9445a5e511f3d2040e78508f6ec7555ec72a2aa0cd3e5",
       "blockers": [
         "No universal runner/order-adapter integration.",
@@ -2117,6 +2117,27 @@
         "The gate is not invoked by all paper runners/order adapters.",
         "Correlation and risk-unit data have no enforced point-in-time provenance/horizon contract.",
         "Portfolio accounting/margin reconciliation is not part of this gate."
+      ]
+    },
+    {
+      "id": "PE-0073",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/pareto_selection.py",
+        "tests/test_pareto_selection.py",
+        "docs/edge-program/pe-0073-training-pareto-report-evidence.json"
+      ],
+      "tests": [
+        "test_training_pareto_report_archives_selected_dominated_and_alternative_candidates",
+        "test_training_pareto_refuses_validation_data_changed_training_identity_and_dominated_choice",
+        "test_training_pareto_refuses_rewriting_an_existing_decision_archive"
+      ],
+      "test_result": "Training-only five-objective Pareto reports require a shared frozen training hash and end date, archive a chosen frontier candidate and explicit reasons for every rejected alternative, and refuse report rewrites. 3 tests passed; Ruff and mypy passed. No full candidate metric set was supplied.",
+      "evidence_sha256": "897ddb67850d3590bb5f5d2cfae05a7d8bd5375bc013cc7876958a6bfac08d7f",
+      "blockers": [
+        "No verified same-snapshot metrics for all candidate strategies have been ingested.",
+        "Capacity/complexity metric source and calculation remain caller-provided.",
+        "No validation or profitable strategy conclusion is claimed."
       ]
     }
   ]
