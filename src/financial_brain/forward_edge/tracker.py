@@ -415,7 +415,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_unaligned_dates_are_separate_groups_not_directly_ranked",
                                   "test_duplicate_series_and_too_short_series_are_rejected"), (),
                      "Cross-strategy scorecard groups only identical cohort/horizon/session sets, reuses stationary-block confidence intervals, and shows capacity status without promotion inference. It currently consumes caller-supplied aligned net-alpha series/capacity reports; forward paper ledgers and multiplicity-adjusted selection are not connected."),
-    "FE-0121": Entry("NOT_STARTED", (), (), "Evidence bundle export not built."),
+    "FE-0121": Entry("PARTIAL", ("test_bundle_is_deterministic_hashed_and_contains_reanalysis_notebook",
+                                  "test_optional_signature_is_only_trusted_with_external_matching_public_key",
+                                  "test_bundle_refuses_traversal_names_and_detects_content_tampering"), (),
+                     "Deterministic ZIP export includes an input-hash manifest, checksums, reanalysis notebook and optional Ed25519 signature; signing is explicitly untrusted unless an external public key verifies it. Analyst-supplied frozen experiment files and exact reproduction command must still be selected for each report."),
     "FE-0122": Entry("NOT_STARTED", (), (), "Read-only UI not built."),
     "FE-0123": Entry("NOT_STARTED", (), (), "Operator decisions not built."),
     # ---- F11 ----
