@@ -61,3 +61,23 @@ def test_archive_recovers_rows_after_close_and_reopen(tmp_path) -> None:
         assert second.get("q-7").sequence == 7
     finally:
         second.close()
+
+
+def test_decision_snapshot_excludes_late_data_and_is_reproducible(tmp_path) -> None:
+    archive = QuoteArchive(tmp_path / "quotes.sqlite3")
+    try:
+        archive.append(_quote(1))
+        archive.append(_quote(2))
+        decision_time = T0 + timedelta(seconds=1, milliseconds=500)
+        snapshot = archive.snapshot(decision_id="decision-1", venue="NSE", instrument_id="NSE:INFY",
+                                   decision_time=decision_time)
+        assert [row["event_id"] for row in snapshot["events"]] == ["q-1"]
+        assert snapshot["snapshot_sha256"] == archive.snapshot(
+            decision_id="decision-1", venue="NSE", instrument_id="NSE:INFY",
+            decision_time=decision_time)["snapshot_sha256"]
+        assert len(snapshot["snapshot_sha256"]) == 64
+        with pytest.raises(QuoteArchiveError, match="no archived events"):
+            archive.snapshot(decision_id="too-early", venue="NSE", instrument_id="NSE:INFY",
+                             decision_time=T0 - timedelta(seconds=1))
+    finally:
+        archive.close()

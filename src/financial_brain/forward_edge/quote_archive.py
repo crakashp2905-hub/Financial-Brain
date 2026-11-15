@@ -70,6 +70,27 @@ class QuoteArchive:
             raise KeyError(event_id)
         return MarketEvent.from_dict(json.loads(row[0]))
 
+    def snapshot(self, *, decision_id: str, venue: str, instrument_id: str, decision_time: datetime) -> dict[str, object]:
+        """Freeze exactly those archived events available no later than the decision clock."""
+        if not decision_id.strip() or decision_time.tzinfo is None or decision_time.utcoffset() is None:
+            raise ValueError("decision ID and timezone-aware decision_time are required")
+        cutoff = decision_time.astimezone(timezone.utc).isoformat()
+        rows = self._con.execute("""
+            SELECT event_id, event_sha256, available_at FROM market_events
+            WHERE venue=? AND instrument_id=? AND available_at<=?
+            ORDER BY available_at, event_id
+        """, [venue, instrument_id, cutoff]).fetchall()
+        members = [{"event_id": event_id, "sha256": digest, "available_at": available}
+                   for event_id, digest, available in rows]
+        if not members:
+            raise QuoteArchiveError("no archived events were available at decision time")
+        body: dict[str, object] = {"schema": "fb.market-decision-snapshot.v1", "decision_id": decision_id,
+                                  "venue": venue, "instrument_id": instrument_id,
+                                  "decision_time": cutoff, "events": members}
+        canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        body["snapshot_sha256"] = __import__("hashlib").sha256(canonical.encode("utf-8")).hexdigest()
+        return body
+
     def health(self, *, venue: str, instrument_id: str, as_of: datetime | None = None) -> FeedHealth:
         # `as_of` is retained for a stable report contract; rows are not filtered
         # because the archive health summary measures observed history, not a cutoff.
