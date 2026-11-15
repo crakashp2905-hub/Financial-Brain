@@ -152,7 +152,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_each_bad_data_condition_abstains_with_reason",
                                   "test_future_and_naive_quote_timestamps_are_rejected"), (),
                      "A shared deterministic data gate abstains on missing/stale/future quotes, wide spread, zero volume, circuit limits, freeze limits, non-continuous sessions and missing auction data. Kite adapters and every paper runner still need to consume the gate."),
-    "FE-0043": Entry("NOT_STARTED", (), (), "Prefix-invariance tests not built for the forward path."),
+    "FE-0043": Entry("PARTIAL", ("test_point_in_time_inputs_are_hashable_only_when_available",
+                                  "test_lookahead_contract_rejects_naive_and_duplicate_inputs",
+                                  "test_prefix_output_survives_future_perturbations_and_detects_leakage"), (),
+                     "Reusable point-in-time input hash and future-perturbation contract are implemented. Existing strategy feature families are not yet universally evaluated against this contract."),
     "FE-0044": Entry("NOT_STARTED", (), (), "Coverage score not built."),
     # ---- F04 ----
     "FE-0045": Entry("NOT_STARTED", (), (BLK_MARKET, BLK_TIME), "Cohort schedule freeze not built."),
