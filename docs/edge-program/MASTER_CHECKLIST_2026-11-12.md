@@ -150,8 +150,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
   **Acceptance:** Crash at each lifecycle boundary produces exactly one economic event after recovery.
 - [ ] **PE-0022** — Implement a transactional outbox for simulated execution and journal acknowledgements.  
   **Acceptance:** Failed side effect is UNKNOWN and cannot be marked FILLED without an observed simulation receipt.
-- [ ] **PE-0023** — Persist preflight, every data rejection, decision, risk verdict, order intent and fill.  
+- [x] **PE-0023** — Persist preflight, every data rejection, decision, risk verdict, order intent and fill.
   **Acceptance:** Daily record can be reconstructed from durable append-only events after deleting ephemeral views.
+  **Completion evidence:** `runner_audit_log` is immutable by SQLite update/delete triggers and records preflight, normalized market events, ingest rejections, decisions, explicit risk verdicts, paper intents, execution receipts and close reports. `ForwardSessionRunner.rebuild_materialized_views()` reconstructs query tables from this log. `tests/test_forward_edge_session_runner.py::test_append_only_audit_rebuilds_daily_views_and_records_data_rejection` verifies view deletion/rebuild equivalence, tamper rejection, durable ingest rejection, and risk-gated paper execution.
 - [x] **PE-0024** — Use a durable per-strategy session key and attempt ID; do not overwrite `(day, mode)` results.  
   **Evidence:** `ForwardRunConfig` canonically persists mode and attempt ID; `session_attempt_key()` derives stable per-strategy/date/cohort/mode/attempt keys; `tests/test_forward_edge_session_state.py::test_strategy_attempt_keys_are_durable_and_never_overwrite_prior_attempt` verifies a second attempt appends without changing the first record.
   **Acceptance:** A second attempt appends a new immutable attempt; previous results are unchanged.

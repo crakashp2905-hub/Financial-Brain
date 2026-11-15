@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import sqlite3
+import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -62,6 +63,24 @@ class ForwardSessionRunner:
             session_id TEXT NOT NULL, decision_id TEXT NOT NULL, strategy_id TEXT NOT NULL,
             outcome TEXT NOT NULL, decided_at TEXT NOT NULL, record_sha256 TEXT NOT NULL,
             record_json TEXT NOT NULL, PRIMARY KEY(session_id, decision_id))""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS runner_risk_verdicts (
+            session_id TEXT NOT NULL, decision_id TEXT NOT NULL, verdict_id TEXT NOT NULL,
+            allowed INTEGER NOT NULL, record_sha256 TEXT NOT NULL, record_json TEXT NOT NULL,
+            PRIMARY KEY(session_id, decision_id))""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS runner_data_rejections (
+            session_id TEXT NOT NULL, rejection_id TEXT NOT NULL, record_sha256 TEXT NOT NULL,
+            record_json TEXT NOT NULL, PRIMARY KEY(session_id, rejection_id))""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS runner_audit_log (
+            sequence INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL,
+            record_id TEXT NOT NULL, kind TEXT NOT NULL, occurred_at TEXT NOT NULL,
+            record_sha256 TEXT NOT NULL, record_json TEXT NOT NULL,
+            UNIQUE(session_id, record_id))""")
+        self._con.executescript("""
+            CREATE TRIGGER IF NOT EXISTS runner_audit_no_update
+            BEFORE UPDATE ON runner_audit_log BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
+            CREATE TRIGGER IF NOT EXISTS runner_audit_no_delete
+            BEFORE DELETE ON runner_audit_log BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
+        """)
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_session_reports (
             session_id TEXT PRIMARY KEY, status TEXT NOT NULL, report_sha256 TEXT NOT NULL,
             report_json TEXT NOT NULL)""")
@@ -270,11 +289,16 @@ class ForwardSessionRunner:
                                   [session_id, event.event_id, event.kind.value,
                                    event.available_at.astimezone(timezone.utc).isoformat(),
                                    ingested_at.isoformat(), ingest_source, digest, canonical])
+                self._append_audit("market_event", session_id, event.event_id, ingested_at,
+                                   {"event": payload, "event_sha256": digest,
+                                    "ingested_at": ingested_at.isoformat(),
+                                    "ingest_clock_source": ingest_source})
                 counts["persisted"] += 1
-        except Exception:
+        except Exception as exc:
             self._con.execute("ROLLBACK TO ingest_batch")
             self._con.execute("RELEASE ingest_batch")
             self._con.rollback()
+            self._record_data_rejection(session_id, "ingest_batch", str(exc), batch)
             raise
         self._con.execute("RELEASE ingest_batch")
         self._con.commit()
@@ -335,6 +359,45 @@ class ForwardSessionRunner:
             return False
         self._con.execute("INSERT INTO runner_decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
                           [session_id, decision_id, strategy_id, outcome, clock.isoformat(), digest, canonical])
+        self._append_audit("decision", session_id, decision_id, clock, body)
+        self._con.commit()
+        return True
+
+    def record_risk_verdict(self, *, session_id: str, decision_id: str, verdict_id: str,
+                            allowed: bool, policy_id: str, policy_sha256: str,
+                            reason_codes: tuple[str, ...] = (), assessed_at: datetime | None = None) -> bool:
+        """Persist the immutable policy verdict before any paper order intent."""
+        if self.state_store.state(session_id) is not SessionState.OPEN:
+            raise ForwardSessionRunnerError("risk verdicts are accepted only in an OPEN session")
+        if not all(value.strip() for value in (decision_id, verdict_id, policy_id)):
+            raise ForwardSessionRunnerError("risk verdict identity and policy are required")
+        if type(allowed) is not bool or re.fullmatch(r"[0-9a-f]{64}", policy_sha256) is None:
+            raise ForwardSessionRunnerError("risk verdict needs an explicit boolean and policy SHA-256")
+        decision = self._con.execute(
+            "SELECT outcome, decided_at FROM runner_decisions WHERE session_id=? AND decision_id=?",
+            [session_id, decision_id]).fetchone()
+        if decision is None or decision[0] != "TRADE":
+            raise ForwardSessionRunnerError("risk verdict requires a journaled TRADE decision")
+        assessed_at = assessed_at or capture_local_time(self.clock, label="risk assessment timestamp")
+        if assessed_at.tzinfo is None or assessed_at.utcoffset() is None:
+            raise ForwardSessionRunnerError("risk assessment time must be timezone aware")
+        occurred = assessed_at.astimezone(timezone.utc)
+        if occurred < datetime.fromisoformat(decision[1]):
+            raise ForwardSessionRunnerError("risk verdict cannot precede its decision")
+        record = {"session_id": session_id, "decision_id": decision_id, "verdict_id": verdict_id,
+                  "allowed": allowed, "policy_id": policy_id, "policy_sha256": policy_sha256,
+                  "reason_codes": sorted(set(reason_codes)), "assessed_at": occurred.isoformat()}
+        canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        previous = self._con.execute("SELECT record_sha256 FROM runner_risk_verdicts "
+                                      "WHERE session_id=? AND decision_id=?", [session_id, decision_id]).fetchone()
+        if previous:
+            if previous[0] != digest:
+                raise ForwardSessionRunnerError("risk verdict conflicts with the immutable prior verdict")
+            return False
+        self._con.execute("INSERT INTO runner_risk_verdicts VALUES (?, ?, ?, ?, ?, ?)",
+                          [session_id, decision_id, verdict_id, int(allowed), digest, canonical])
+        self._append_audit("risk_verdict", session_id, verdict_id, occurred, record)
         self._con.commit()
         return True
 
@@ -363,9 +426,85 @@ class ForwardSessionRunner:
             "SELECT report_json FROM runner_session_reports WHERE session_id=? ORDER BY session_id",
             [session_id]).fetchall()]
         accounting = self._rebuild_accounting(session_id, events, intents, receipts)
+        risk_verdicts = [json.loads(row[0]) for row in self._con.execute(
+            "SELECT record_json FROM runner_risk_verdicts WHERE session_id=? ORDER BY decision_id",
+            [session_id]).fetchall()]
+        data_rejections = [json.loads(row[0]) for row in self._con.execute(
+            "SELECT record_json FROM runner_data_rejections WHERE session_id=? ORDER BY rejection_id",
+            [session_id]).fetchall()]
+        audit_log = [{"kind": row[0], "record_id": row[1], "occurred_at": row[2],
+                      "record_sha256": row[3], "record": json.loads(row[4])}
+                     for row in self._con.execute(
+            "SELECT kind, record_id, occurred_at, record_sha256, record_json "
+            "FROM runner_audit_log WHERE session_id=? ORDER BY sequence", [session_id]).fetchall()]
         return {"events": events, "decisions": decisions, "lifecycle": lifecycle,
                 "intents": intents, "execution_receipts": receipts, "session_reports": reports,
-                "accounting": accounting}
+                "risk_verdicts": risk_verdicts, "data_rejections": data_rejections,
+                "audit_log": audit_log, "accounting": accounting}
+
+    def rebuild_materialized_views(self, session_id: str) -> None:
+        """Rebuild query tables for a day from the immutable append-only audit log."""
+        audit = self._con.execute(
+            "SELECT kind, record_json FROM runner_audit_log WHERE session_id=? ORDER BY sequence",
+            [session_id]).fetchall()
+        if not audit:
+            raise ForwardSessionRunnerError("cannot rebuild session views without canonical audit events")
+        self._con.commit()
+        self._con.execute("BEGIN IMMEDIATE")
+        try:
+            for table in ("runner_events", "runner_decisions", "runner_risk_verdicts",
+                          "runner_data_rejections", "paper_intents", "paper_execution_receipts",
+                          "runner_session_reports"):
+                self._con.execute(f"DELETE FROM {table} WHERE session_id=?", [session_id])
+            for kind, encoded in audit:
+                body = json.loads(encoded)
+                if kind in {"preflight", "calendar_plan"}:
+                    event_id = f"{session_id}:{kind}"
+                    digest = self._sha256(body)
+                    self._con.execute("INSERT INTO runner_events "
+                                      "(session_id,event_id,kind,available_at,event_sha256,event_json) "
+                                      "VALUES (?,?,?,?,?,?)",
+                                      [session_id, event_id, kind, body["occurred_at"], digest, encoded])
+                elif kind == "market_event":
+                    event = body["event"]
+                    self._con.execute("INSERT INTO runner_events "
+                                      "(session_id,event_id,kind,available_at,ingested_at,ingest_clock_source,"
+                                      "event_sha256,event_json) VALUES (?,?,?,?,?,?,?,?)",
+                                      [session_id, event["event_id"], event["kind"], event["available_at"],
+                                       body["ingested_at"], body["ingest_clock_source"],
+                                       body["event_sha256"], json.dumps(event, sort_keys=True,
+                                       separators=(",", ":"), allow_nan=False)])
+                elif kind == "decision":
+                    encoded_body = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                    self._con.execute("INSERT INTO runner_decisions VALUES (?,?,?,?,?,?,?)",
+                                      [session_id, body["decision_id"], body["strategy_id"], body["outcome"],
+                                       body["decided_at"], self._sha256(body), encoded_body])
+                elif kind == "risk_verdict":
+                    self._con.execute("INSERT INTO runner_risk_verdicts VALUES (?,?,?,?,?,?)",
+                                      [session_id, body["decision_id"], body["verdict_id"],
+                                       int(body["allowed"]), self._sha256(body), encoded])
+                elif kind == "data_rejection":
+                    self._con.execute("INSERT INTO runner_data_rejections VALUES (?,?,?,?)",
+                                      [session_id, body["rejection_id"], self._sha256(body), encoded])
+                elif kind == "paper_intent":
+                    request = body
+                    request_json = json.dumps(request, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                    request_hash = self._sha256(request)
+                    self._con.execute("INSERT INTO paper_intents VALUES (?,?,?,?,?,?)",
+                                      [session_id, request["order_id"], request["decision_id"],
+                                       request["event_id"], request_hash, request_json])
+                elif kind == "execution_receipt":
+                    encoded_body = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                    self._con.execute("INSERT INTO paper_execution_receipts VALUES (?,?,?,?)",
+                                      [session_id, body["order_id"], self._sha256(body), encoded_body])
+                elif kind == "session_report":
+                    encoded_body = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                    self._con.execute("INSERT INTO runner_session_reports VALUES (?,?,?,?)",
+                                      [session_id, body["status"], body["report_sha256"], encoded_body])
+            self._con.commit()
+        except Exception:
+            self._con.rollback()
+            raise
 
     def _rebuild_accounting(self, session_id: str, events: list[dict[str, Any]],
                             intents: list[dict[str, Any]], receipts: list[dict[str, Any]]) -> dict[str, Any]:
@@ -505,6 +644,10 @@ class ForwardSessionRunner:
         if decision_row is None or decision_row[0] != "TRADE":
             raise ForwardSessionRunnerError("paper intent requires a journaled TRADE decision")
         decision = json.loads(decision_row[1])
+        risk = self._con.execute("SELECT allowed FROM runner_risk_verdicts "
+                                  "WHERE session_id=? AND decision_id=?", [session_id, decision_id]).fetchone()
+        if risk is None or risk[0] != 1:
+            raise ForwardSessionRunnerError("paper intent requires an explicit persisted allow risk verdict")
         if event_id not in decision["input_event_ids"]:
             raise ForwardSessionRunnerError("paper quote must be an input to the recorded decision")
         event_row = self._con.execute("SELECT event_json FROM runner_events WHERE session_id=? AND event_id=?",
@@ -548,6 +691,7 @@ class ForwardSessionRunner:
         if not existing:
             self._con.execute("INSERT INTO paper_intents VALUES (?, ?, ?, ?, ?, ?)",
                               [session_id, order_id, decision_id, event_id, request_sha, request_json])
+            self._append_audit("paper_intent", session_id, order_id, simulated_at, request)
             self._con.commit()
 
         def persist_simulation() -> None:
@@ -590,6 +734,8 @@ class ForwardSessionRunner:
         if not previous:
             self._con.execute("INSERT INTO paper_execution_receipts VALUES (?, ?, ?, ?)",
                               [session_id, order_id, digest, canonical])
+            self._append_audit("execution_receipt", session_id, order_id,
+                               datetime.fromisoformat(body["simulated_at"]), body)
             self._con.commit()
 
     def reconcile_unknown_paper_intent(self, *, session_id: str, order_id: str,
@@ -650,6 +796,7 @@ class ForwardSessionRunner:
         report_json = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False)
         self._con.execute("INSERT INTO runner_session_reports VALUES (?, ?, ?, ?)",
                           [session_id, status, report["report_sha256"], report_json])
+        self._append_audit("session_report", session_id, session_id, now, report)
         self._con.commit()
         return report
 
@@ -687,5 +834,44 @@ class ForwardSessionRunner:
                                 ingest_clock_source, event_sha256, event_json)
                                 VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)""",
                               [session_id, event_id, kind, record["occurred_at"], digest, canonical])
+            self._append_audit(kind, session_id, event_id, datetime.fromisoformat(record["occurred_at"]), record)
             self._con.commit()
+
+    def _append_audit(self, kind: str, session_id: str, record_id: str, occurred_at: datetime,
+                      record: dict[str, Any]) -> None:
+        canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        stable_id = f"{kind}:{record_id}"
+        previous = self._con.execute(
+            "SELECT record_sha256 FROM runner_audit_log WHERE session_id=? AND record_id=?",
+            [session_id, stable_id]).fetchone()
+        if previous:
+            if previous[0] != digest:
+                raise ForwardSessionRunnerError("append-only audit record conflicts with prior evidence")
+            return
+        self._con.execute("INSERT INTO runner_audit_log "
+                          "(session_id, record_id, kind, occurred_at, record_sha256, record_json) "
+                          "VALUES (?, ?, ?, ?, ?, ?)",
+                          [session_id, stable_id, kind, occurred_at.astimezone(timezone.utc).isoformat(),
+                           digest, canonical])
+
+    def _record_data_rejection(self, session_id: str, operation: str, reason: str,
+                               events: list[MarketEvent]) -> None:
+        rejected_at = capture_local_time(self.clock, label="data rejection timestamp").astimezone(timezone.utc)
+        source_ids = sorted(event.event_id for event in events)
+        seed = json.dumps({"operation": operation, "reason": reason, "event_ids": source_ids},
+                          sort_keys=True, separators=(",", ":"))
+        rejection_id = hashlib.sha256(f"{seed}:{uuid.uuid4()}".encode("utf-8")).hexdigest()
+        record = {"session_id": session_id, "rejection_id": rejection_id, "operation": operation,
+                  "reason": reason, "source_event_ids": source_ids, "rejected_at": rejected_at.isoformat()}
+        canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        previous = self._con.execute("SELECT record_sha256 FROM runner_data_rejections "
+                                     "WHERE session_id=? AND rejection_id=?", [session_id, rejection_id]).fetchone()
+        if previous:
+            return
+        self._con.execute("INSERT INTO runner_data_rejections VALUES (?, ?, ?, ?)",
+                          [session_id, rejection_id, digest, canonical])
+        self._append_audit("data_rejection", session_id, rejection_id, rejected_at, record)
+        self._con.commit()
 

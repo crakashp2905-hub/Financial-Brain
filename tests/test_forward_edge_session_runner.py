@@ -251,7 +251,7 @@ def test_incomplete_close_is_explicit_and_idempotent(tmp_path):
     runner.close()
 
 
-def trade_setup(tmp_path):
+def trade_setup(tmp_path, *, risk_allowed=True):
     runner = make_runner(tmp_path)
     opened(runner)
     quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
@@ -262,6 +262,9 @@ def trade_setup(tmp_path):
     decided = NOW + timedelta(seconds=1)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
                   decided_at=decided, input_event_ids=(event.event_id,))
+    runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
+                               allowed=risk_allowed, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               reason_codes=() if risk_allowed else ("DAILY_LOSS_LIMIT",), assessed_at=decided)
     return runner, event, decided
 
 
@@ -301,6 +304,9 @@ def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path
     sell_decision_at = decided + timedelta(seconds=1)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="sell-1", outcome="TRADE",
                   decided_at=sell_decision_at, input_event_ids=(event.event_id,))
+    runner.record_risk_verdict(session_id="s", decision_id="sell-1", verdict_id="risk-sell-1",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               assessed_at=sell_decision_at)
     sold = runner.execute_paper_intent(
         session_id="s", order_id="sell-order", decision_id="sell-1", event_id=event.event_id,
         side="SELL", quantity=2, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),
@@ -327,6 +333,40 @@ def test_paper_sell_is_rejected_when_long_inventory_is_insufficient(tmp_path):
     runner.close()
 
 
+def test_paper_intent_requires_an_explicit_allowed_risk_verdict(tmp_path):
+    runner, event, decided = trade_setup(tmp_path, risk_allowed=False)
+    with pytest.raises(ForwardSessionRunnerError, match="explicit persisted allow risk verdict"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    runner.close()
+
+
+def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    baseline = runner.records("s")
+    assert [item["kind"] for item in baseline["audit_log"]] == [
+        "preflight", "market_event", "decision", "risk_verdict", "paper_intent", "execution_receipt"]
+    with pytest.raises(Exception, match="append-only"):
+        runner._con.execute("UPDATE runner_audit_log SET record_json='{}' WHERE session_id='s'")
+    runner.rebuild_materialized_views("s")
+    assert runner.records("s") == baseline
+
+    outside = normalize_kite_quote("NSE:OTHER", {
+        "timestamp": "2026-11-13 10:15:01", "last_price": 10.0, "volume": 10,
+    }, received_at=NOW)
+    with pytest.raises(ForwardSessionRunnerError, match="outside frozen universe"):
+        runner.ingest("s", make_config(), [outside])
+    rejected = runner.records("s")["data_rejections"]
+    assert len(rejected) == 1 and rejected[0]["source_event_ids"] == [outside.event_id]
+    assert "outside frozen universe" in rejected[0]["reason"]
+    runner.close_session("s", complete=False, reason="test evidence close")
+    closed_records = runner.records("s")
+    runner.rebuild_materialized_views("s")
+    assert runner.records("s") == closed_records
+    runner.close()
+
+
 def test_partial_missed_and_rejected_scenarios_keep_requested_vs_filled_separate(tmp_path):
     runner, event, decided = trade_setup(tmp_path)
     partial = execute(runner, event, decided, order_id="partial", qty=5)
@@ -347,6 +387,9 @@ def test_ltp_only_cannot_create_paper_fill_intent(tmp_path):
     decided = NOW + timedelta(seconds=1)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
                   decided_at=decided, input_event_ids=(tick.event_id,))
+    runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               assessed_at=decided)
     with pytest.raises(ForwardSessionRunnerError, match="two-sided quote"):
         execute(runner, tick, decided)
     runner.close()
@@ -365,6 +408,9 @@ def test_paper_fill_requires_hashed_raw_source_evidence(tmp_path):
     decided = NOW + timedelta(seconds=1)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
                   decided_at=decided, input_event_ids=(event.event_id,))
+    runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               assessed_at=decided)
     with pytest.raises(ForwardSessionRunnerError, match="SHA-256 source-payload"):
         runner.execute_paper_intent(
             session_id="s", order_id="no-evidence-order", decision_id="trade-1",
@@ -401,6 +447,9 @@ def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
                   ingest_metadata={event.event_id: (NOW + timedelta(milliseconds=10), "FIXTURE_CLOCK")})
     runner.decide(session_id="clock-session", strategy_id="momentum", decision_id="clock-trade",
                   outcome="TRADE", input_event_ids=(event.event_id,))
+    runner.record_risk_verdict(session_id="clock-session", decision_id="clock-trade",
+                               verdict_id="clock-risk", allowed=True, policy_id="test-risk-v1",
+                               policy_sha256="a" * 64, assessed_at=decided_at)
     receipt = runner.execute_paper_intent(
         session_id="clock-session", order_id="clock-order", decision_id="clock-trade",
         event_id=event.event_id, side="BUY", quantity=2, limit_price=Decimal("100.30"),
