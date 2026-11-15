@@ -123,8 +123,27 @@ def test_throttle_is_versioned_and_changes_hash_when_edited() -> None:
 # ---- FE-0111 ----
 
 def test_capacity_is_limited_by_adv_participation_and_visible_depth() -> None:
-    assert P.capacity_notional(D("1000000"), D("40000"), D("0.05")) == D("40000")
-    assert P.capacity_notional(D("1000000"), D("400000"), D("0.05")) == D("50000.00")
+    assert P.capacity_notional(D("1000000"), D("40000"), D("0.05"), D("0.8")) == D("32000.0")
+    assert P.capacity_notional(D("1000000"), D("400000"), D("0.05"), D("0.8")) == D("40000.000")
+
+
+def test_capacity_verdict_withholds_orders_without_fresh_evidence_or_above_haircut():
+    common = dict(adv_notional=D("1000000"), depth_notional=D("40000"), participation_cap=D("0.05"),
+                 safety_factor=D("0.8"), evidence_id="snapshot-1", observed_at=NOW - timedelta(seconds=30),
+                 decision_at=NOW, max_age=timedelta(minutes=1))
+    assert P.check_order_capacity(proposed_notional=D("32000"), **common).decision == "TRADE"
+    above = P.check_order_capacity(proposed_notional=D("32001"), **common)
+    assert above.decision == "NO_TRADE"
+    assert above.reason == "INSUFFICIENT_CONSERVATIVE_CAPACITY"
+    assert above.capacity_notional == D("32000.0")
+    missing = P.check_order_capacity(proposed_notional=D("1"), **{**common, "depth_notional": None})
+    assert missing.reason == "MISSING_LIQUIDITY_EVIDENCE"
+    stale = P.check_order_capacity(proposed_notional=D("1"),
+                                   **{**common, "observed_at": NOW - timedelta(minutes=2)})
+    assert stale.reason == "STALE_OR_FUTURE_LIQUIDITY_EVIDENCE"
+    future = P.check_order_capacity(proposed_notional=D("1"),
+                                    **{**common, "observed_at": NOW + timedelta(seconds=1)})
+    assert future.reason == "STALE_OR_FUTURE_LIQUIDITY_EVIDENCE"
 
 
 # ---- FE-0112 ----

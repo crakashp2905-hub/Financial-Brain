@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 97,
-  "unrecorded_tasks": 121,
+  "recorded_tasks": 98,
+  "unrecorded_tasks": 120,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2077,6 +2077,26 @@
         "Not every paper strategy runner consumes this inventory-aware planner.",
         "Fill and fee reconciliation across all adapters remains outstanding.",
         "No measured cost reduction is claimed."
+      ]
+    },
+    {
+      "id": "PE-0071",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/portfolio_risk.py",
+        "tests/test_forward_edge_f09.py",
+        "docs/edge-program/pe-0071-observed-liquidity-capacity-evidence.json"
+      ],
+      "tests": [
+        "test_capacity_is_limited_by_adv_participation_and_visible_depth",
+        "test_capacity_verdict_withholds_orders_without_fresh_evidence_or_above_haircut"
+      ],
+      "test_result": "Capacity uses min(ADV × participation, visible depth) × explicit safety factor; stale, missing, future or insufficient evidence returns NO_TRADE. F09 tests: 16 passed; Ruff and mypy passed. Universal adapter wiring and independently verified liquidity sources remain pending.",
+      "evidence_sha256": "657af7f2a7f7116597f9445a5e511f3d2040e78508f6ec7555ec72a2aa0cd3e5",
+      "blockers": [
+        "No universal runner/order-adapter integration.",
+        "Liquidity input source and timestamp policy remain caller-supplied.",
+        "Safety factor is configurable and not empirically calibrated."
       ]
     }
   ]

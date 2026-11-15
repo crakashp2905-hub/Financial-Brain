@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -52,18 +52,23 @@ class Limits:
     max_sector: Decimal
 
 
-def check_batch(limits: Limits, intents: list[dict], positions: dict[str, Decimal], sectors: dict[str, str]) -> list[dict]:
+def check_batch(limits: Limits, intents: list[dict[str, object]], positions: dict[str, Decimal],
+                sectors: dict[str, str]) -> list[dict[str, object]]:
     """Evaluate intents cumulatively, in order. Two intents that are each fine alone cannot jointly breach a limit."""
-    book = dict(positions)
-    verdicts = []
+    book: dict[str, Decimal] = dict(positions)
+    verdicts: list[dict[str, object]] = []
     for it in intents:
-        sym, signed = it["symbol"], Decimal(it["notional"]) * (1 if it["side"] == "BUY" else -1)
-        trial = dict(book)
+        symbol, side, notional = it.get("symbol"), it.get("side"), it.get("notional")
+        if not isinstance(symbol, str) or side not in {"BUY", "SELL"} or notional is None:
+            raise RiskError("intent needs a symbol, BUY/SELL side and notional")
+        sym = symbol
+        signed = Decimal(str(notional)) * (1 if side == "BUY" else -1)
+        trial: dict[str, Decimal] = dict(book)
         trial[sym] = trial.get(sym, Decimal(0)) + signed
-        gross = sum(abs(v) for v in trial.values())
-        net = sum(trial.values())
+        gross = sum((abs(v) for v in trial.values()), Decimal(0))
+        net = sum(trial.values(), Decimal(0))
         sector = sectors.get(sym, "?")
-        sector_exp = sum(abs(v) for s, v in trial.items() if sectors.get(s, "?") == sector)
+        sector_exp = sum((abs(v) for s, v in trial.items() if sectors.get(s, "?") == sector), Decimal(0))
         reasons = []
         if gross > limits.max_gross:
             reasons.append("GROSS")
@@ -185,18 +190,58 @@ class ThrottlePolicy:
 
 # ---- FE-0111 capacity ----
 
-def capacity_notional(adv_notional: Decimal, depth_notional: Decimal, participation_cap: Decimal) -> Decimal:
-    return min(adv_notional * participation_cap, depth_notional)
+def capacity_notional(adv_notional: Decimal, depth_notional: Decimal, participation_cap: Decimal,
+                      safety_factor: Decimal) -> Decimal:
+    """Conservative notional cap: lower of ADV participation and visible depth, then haircut."""
+    values = (adv_notional, depth_notional, participation_cap, safety_factor)
+    if any(not value.is_finite() for value in values):
+        raise ValueError("liquidity capacity inputs must be finite")
+    if adv_notional <= 0 or depth_notional <= 0 or not 0 < participation_cap <= 1:
+        raise ValueError("ADV/depth must be positive and participation must be in (0, 1]")
+    if not 0 < safety_factor <= 1:
+        raise ValueError("liquidity safety factor must be in (0, 1]")
+    return min(adv_notional * participation_cap, depth_notional) * safety_factor
+
+
+@dataclass(frozen=True)
+class CapacityVerdict:
+    decision: str
+    reason: str
+    capacity_notional: Decimal | None
+
+
+def check_order_capacity(*, proposed_notional: Decimal, adv_notional: Decimal | None,
+                         depth_notional: Decimal | None, participation_cap: Decimal,
+                         safety_factor: Decimal, evidence_id: str, observed_at: datetime | None,
+                         decision_at: datetime, max_age: timedelta) -> CapacityVerdict:
+    """Withhold orders without fresh, identified liquidity evidence or above conservative capacity."""
+    if not proposed_notional.is_finite() or proposed_notional <= 0:
+        raise ValueError("proposed notional must be finite and positive")
+    if max_age < timedelta(0):
+        raise ValueError("maximum liquidity evidence age must be non-negative")
+    if not evidence_id.strip() or adv_notional is None or depth_notional is None or observed_at is None:
+        return CapacityVerdict("NO_TRADE", "MISSING_LIQUIDITY_EVIDENCE", None)
+    if (decision_at.tzinfo is None or decision_at.utcoffset() is None or observed_at.tzinfo is None
+            or observed_at.utcoffset() is None):
+        return CapacityVerdict("NO_TRADE", "INVALID_LIQUIDITY_TIMESTAMP", None)
+    decision_utc, observed_utc = decision_at.astimezone(timezone.utc), observed_at.astimezone(timezone.utc)
+    if observed_utc > decision_utc or decision_utc - observed_utc > max_age:
+        return CapacityVerdict("NO_TRADE", "STALE_OR_FUTURE_LIQUIDITY_EVIDENCE", None)
+    capacity = capacity_notional(adv_notional, depth_notional, participation_cap, safety_factor)
+    if proposed_notional > capacity:
+        return CapacityVerdict("NO_TRADE", "INSUFFICIENT_CONSERVATIVE_CAPACITY", capacity)
+    return CapacityVerdict("TRADE", "WITHIN_CONSERVATIVE_CAPACITY", capacity)
 
 
 # ---- FE-0112 shocks ----
 
-def apply_shock(cash: Decimal, positions: dict[str, tuple[int, Decimal]], shock: dict[str, Decimal]) -> dict[str, Decimal]:
+def apply_shock(cash: Decimal, positions: dict[str, tuple[int, Decimal]],
+                shock: dict[str, Decimal]) -> dict[str, Decimal | bool]:
     """positions: sym -> (qty, price). shock: sym -> fractional move. Cash is untouched; only marks move."""
-    before = cash + sum(q * p for q, p in positions.values())
+    before = cash + sum((q * p for q, p in positions.values()), Decimal(0))
     after_positions = {s: (q, p * (Decimal(1) + shock.get(s, Decimal(0)))) for s, (q, p) in positions.items()}
-    after = cash + sum(q * p for q, p in after_positions.values())
-    explained = sum(q * p * shock.get(s, Decimal(0)) for s, (q, p) in positions.items())
+    after = cash + sum((q * p for q, p in after_positions.values()), Decimal(0))
+    explained = sum((q * p * shock.get(s, Decimal(0)) for s, (q, p) in positions.items()), Decimal(0))
     return {"equity_before": before, "equity_after": after, "explained_change": explained,
             "invariant_holds": (after - before) == explained and cash >= Decimal(0)}
 
