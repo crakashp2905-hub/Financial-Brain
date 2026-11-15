@@ -331,7 +331,11 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_single_period_cannot_hide_as_overall_positive_mean",
                                   "test_block_plan_must_be_preregistered_and_cover_outcomes"), (),
                      "At least three preregistered chronological blocks report session returns and regime mix, and flag when a positive mean depends on one block or exceeds the predeclared concentration limit. Exchange-calendar completeness and data-driven regime assignment are not yet wired."),
-    "FE-0101": Entry("NOT_STARTED", (), (), "Stop rules not written into a charter."),
+    "FE-0101": Entry("PARTIAL", ("test_daily_loss_reconciliation_and_incident_triggers_stop_at_first_harm",
+                                  "test_drawdown_rule_is_independent_from_single_day_loss_rule",
+                                  "test_no_harm_continues_or_requests_review_without_promoting",
+                                  "test_plan_freeze_and_session_order_are_enforced"), (),
+                     "Predeclared daily-loss, drawdown, ledger-mismatch and critical-incident rules stop at first breach; reaching the sample review floor returns review-only and never promotes. Runtime runner/kill-switch wiring and owner-approved thresholds remain pending."),
     "FE-0102": Entry("NOT_STARTED", (), (), "Claim-tier labels not implemented."),
     "FE-0103": Entry("NOT_STARTED", (), (), "Falsification report not built."),
     # ---- F09 ----
