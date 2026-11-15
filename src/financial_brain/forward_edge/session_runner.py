@@ -338,7 +338,7 @@ class ForwardSessionRunner:
         self._con.commit()
         return True
 
-    def records(self, session_id: str) -> dict[str, list[dict[str, Any]]]:
+    def records(self, session_id: str) -> dict[str, Any]:
         """Return the deterministic persisted event and decision trace for reanalysis."""
         events = [json.loads(row[0]) | {"ingested_at": row[1], "ingest_clock_source": row[2]}
                   for row in self._con.execute(
@@ -357,13 +357,23 @@ class ForwardSessionRunner:
             "SELECT request_json FROM paper_intents WHERE session_id=? ORDER BY order_id",
             [session_id]).fetchall()]
         receipts = [json.loads(row[0]) for row in self._con.execute(
-            "SELECT receipt_json FROM paper_execution_receipts WHERE session_id=? ORDER BY order_id",
+            "SELECT receipt_json FROM paper_execution_receipts WHERE session_id=? ORDER BY rowid",
             [session_id]).fetchall()]
         reports = [json.loads(row[0]) for row in self._con.execute(
             "SELECT report_json FROM runner_session_reports WHERE session_id=? ORDER BY session_id",
             [session_id]).fetchall()]
+        accounting = self._rebuild_accounting(session_id, events, intents, receipts)
         return {"events": events, "decisions": decisions, "lifecycle": lifecycle,
-                "intents": intents, "execution_receipts": receipts, "session_reports": reports}
+                "intents": intents, "execution_receipts": receipts, "session_reports": reports,
+                "accounting": accounting}
+
+    def _rebuild_accounting(self, session_id: str, events: list[dict[str, Any]],
+                            intents: list[dict[str, Any]], receipts: list[dict[str, Any]]) -> dict[str, Any]:
+        from financial_brain.forward_edge.paper_accounting import rebuild_paper_accounting
+
+        config = self.state_store.config(session_id)
+        return rebuild_paper_accounting(account_id=config.ledger_id, capital=Decimal(config.capital),
+                                        events=events, intents=intents, receipts=receipts)
 
     def checkpoint(self, session_id: str, *, phase: str, now: datetime | None = None) -> dict[str, Any]:
         """Freeze a START or END journal/outbox snapshot; ledger absence is explicit."""
@@ -395,6 +405,8 @@ class ForwardSessionRunner:
                                    "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
         hashes = {name: self._sha256(records[name])
                   for name in ("events", "decisions", "lifecycle", "intents", "execution_receipts")}
+        hashes["accounting"] = self._sha256(records["accounting"])
+        hashes["ledger"] = str(records["accounting"]["ledger_sha256"])
         hashes["outbox"] = self._sha256(outbox_rows)
         if existing:
             prior = json.loads(existing[1])
@@ -405,7 +417,8 @@ class ForwardSessionRunner:
                 "checkpoint_id": checkpoint_id, "phase": phase,
                 "captured_at": now.astimezone(timezone.utc).isoformat(),
                 "session_state": state.value, "record_hashes": hashes,
-                "ledger_sha256": None, "ledger_status": "NOT_INTEGRATED",
+                "ledger_sha256": records["accounting"]["ledger_sha256"],
+                "ledger_status": records["accounting"]["status"],
                 "atomic_with_ledger": False}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
         digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -432,12 +445,15 @@ class ForwardSessionRunner:
         return {"session_id": session_id, "checkpoint_id": checkpoint_id,
                 "immutable_evidence_valid": immutable_ok, "current_records_match": current_ok,
                 "ledger_sha256": body["ledger_sha256"], "ledger_status": body["ledger_status"],
-                "verification_complete": immutable_ok and current_ok is True and body["ledger_sha256"] is not None}
+                "verification_complete": immutable_ok and current_ok is True and
+                body["ledger_sha256"] is not None and body["atomic_with_ledger"] is True}
 
     def _checkpoint_hashes(self, session_id: str) -> dict[str, str]:
         records = self.records(session_id)
         hashes = {name: self._sha256(records[name])
                   for name in ("events", "decisions", "lifecycle", "intents", "execution_receipts")}
+        hashes["accounting"] = self._sha256(records["accounting"])
+        hashes["ledger"] = str(records["accounting"]["ledger_sha256"])
         outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
         outbox_rows: list[dict[str, Any]] = []
         if outbox_path.is_file():
@@ -501,6 +517,14 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("paper fill requires a two-sided quote with positive visible depth")
         if not event.evidence_id or re.fullmatch(r"[0-9a-f]{64}", event.evidence_id) is None:
             raise ForwardSessionRunnerError("paper fill requires an immutable SHA-256 source-payload evidence ID")
+        accounting = self.records(session_id)["accounting"]
+        if accounting["status"] != "RECONCILED_GROSS":
+            raise ForwardSessionRunnerError("paper execution is blocked while the OMS/accounting projection is incomplete")
+        instrument = event.instrument_id
+        if side == "SELL" and int(accounting["positions"].get(instrument, 0)) < quantity:
+            raise ForwardSessionRunnerError("paper sell exceeds reconciled long inventory")
+        if side == "BUY" and Decimal(str(accounting["cash_inr"])) < limit * quantity:
+            raise ForwardSessionRunnerError("paper buy exceeds reconciled available cash")
         decision_at = datetime.fromisoformat(decision["decided_at"])
         timed = create_timed_intent(decision_id=decision_id, event=event, side=side, quantity=quantity,
                                     decision_time=decision_at,
@@ -602,6 +626,9 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("only an OPEN or DRAINING session can close")
         if complete:
             self._require_resolved_paper_intents(session_id)
+            accounting = self.records(session_id)["accounting"]
+            if accounting["status"] != "RECONCILED_GROSS" or not accounting["cash_reconciled"]:
+                raise ForwardSessionRunnerError("cannot close complete with OMS/accounting reconciliation errors")
         if state is SessionState.OPEN:
             self.state_store.transition(session_id, SessionState.DRAINING, now=now)
         if complete:

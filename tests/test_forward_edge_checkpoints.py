@@ -31,8 +31,8 @@ def test_start_and_end_checkpoints_are_immutable_and_detect_journal_changes(tmp_
     runner = _runner(tmp_path)
     runner.begin("s", _config(), now=NOW, preflight={"risk_policy_loaded": True})
     start = runner.checkpoint("s", phase="START", now=NOW)
-    assert start["ledger_status"] == "NOT_INTEGRATED"
-    assert start["ledger_sha256"] is None
+    assert start["ledger_status"] == "RECONCILED_GROSS"
+    assert len(start["ledger_sha256"]) == 64
 
     runner.ingest("s", _config(), [_event()], ingest_metadata={
         "quote-1": (NOW, "TEST_CLOCK")})
@@ -43,7 +43,7 @@ def test_start_and_end_checkpoints_are_immutable_and_detect_journal_changes(tmp_
     verified = runner.verify_checkpoint("s", end["checkpoint_id"])
     assert verified["immutable_evidence_valid"] is True
     assert verified["current_records_match"] is True
-    assert verified["verification_complete"] is False  # No linked accounting ledger exists yet.
+    assert verified["verification_complete"] is False  # The journal checkpoint is not atomically bound to the ledger.
 
     runner._con.execute("UPDATE runner_events SET ingested_at=? WHERE session_id=? AND event_id=?",
                         [(NOW.replace(second=4)).isoformat(), "s", "quote-1"])

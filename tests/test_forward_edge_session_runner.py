@@ -283,6 +283,47 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert first["physical_order_submitted"] is False
     assert runner.records("s")["execution_receipts"] == [first]
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
+    accounting = runner.records("s")["accounting"]
+    assert accounting["cash_inr"] == "99799.60"
+    assert accounting["ledger_cash_inr"] == accounting["cash_inr"]
+    assert accounting["positions"] == {"NSE:INFY": 2}
+    assert accounting["ledger_balanced"] and accounting["cash_reconciled"]
+    assert accounting["charges_assessed"] is False and accounting["net_pnl_eligible"] is False
+    runner.close()
+
+
+def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    before = runner.records("s")["accounting"]
+    assert before["positions"] == {"NSE:INFY": 2}
+
+    sell_decision_at = decided + timedelta(seconds=1)
+    runner.decide(session_id="s", strategy_id="momentum", decision_id="sell-1", outcome="TRADE",
+                  decided_at=sell_decision_at, input_event_ids=(event.event_id,))
+    sold = runner.execute_paper_intent(
+        session_id="s", order_id="sell-order", decision_id="sell-1", event_id=event.event_id,
+        side="SELL", quantity=2, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),
+        freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
+        simulated_at=sell_decision_at + timedelta(milliseconds=100))
+    assert sold["status"] == "FILLED"
+    after = runner.records("s")["accounting"]
+    assert after["positions"] == {}
+    assert after["realized_gross_pnl_inr"] == "-0.70"
+    assert after["cash_inr"] == after["ledger_cash_inr"] == "99999.30"
+    assert after["ledger_balanced"] and after["cash_reconciled"]
+    runner.close()
+
+
+def test_paper_sell_is_rejected_when_long_inventory_is_insufficient(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    with pytest.raises(ForwardSessionRunnerError, match="exceeds reconciled long inventory"):
+        runner.execute_paper_intent(
+            session_id="s", order_id="short-attempt", decision_id="trade-1", event_id=event.event_id,
+            side="SELL", quantity=1, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),
+            freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
+            simulated_at=decided + timedelta(milliseconds=100))
+    assert runner.records("s")["intents"] == []
     runner.close()
 
 
