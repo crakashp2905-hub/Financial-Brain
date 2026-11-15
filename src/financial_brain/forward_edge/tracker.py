@@ -60,7 +60,8 @@ OMS_TESTS = ("test_rejected_fills_leave_state_bit_identical", "test_fill_that_wo
 EVENT_TESTS = ("test_failed_action_is_unknown_not_acknowledged", "test_unknown_is_never_replayed_without_reconciliation",
                "test_reconciliation_that_found_the_order_closes_it_without_resend",
                "test_resolution_requires_a_named_reconciler_and_an_unknown_key",
-               "test_unknown_state_survives_checkpoint_and_resume")
+               "test_unknown_state_survives_checkpoint_and_resume",
+               "test_durable_kernel_recovers_events_and_outbox_after_restart")
 PILOT_TESTS = ("test_pilot_win_and_loss_reconcile_oms_cash_to_ledger", "test_pilot_repeat_run_posts_no_phantom_fill",
                "test_pilot_failed_dispatch_is_unknown_and_posts_nothing")
 
@@ -79,7 +80,10 @@ OVERRIDES: dict[str, Entry] = {
     # ---- F00 ----
     "FE-0001": Entry("DONE", BASELINE_TESTS, (), "docs/forward-edge/baseline-2026-11-10.json captured with gh PR list."),
     "FE-0002": Entry("DONE", TRIAL_TESTS, (), "2026Q4 ledger 13/13; pins guard retrospective edits; no ledger write made."),
-    "FE-0003": Entry("NOT_STARTED", (), (), "Immutable eligibility registry belongs to F02 (FE-0022..0024)."),
+    "FE-0003": Entry("DONE", ("test_catalogue_covers_source_registry_and_historical_trials_with_explanations",
+                               "test_catalogue_change_requires_new_version_and_source_edits_are_detected",
+                               "test_missing_exclusion_reason_and_unknown_status_are_rejected"), (),
+                     "Versioned hash-pinned catalogue covers checked-in external references and historical trial ledger; all candidates carry lineage and a conservative exclusion reason. No candidate is paper-eligible or verified."),
     "FE-0004": Entry("DONE", ("test_charter_hash_is_deterministic_and_sensitive_to_every_field",
                               "test_revision_is_a_new_version_with_a_new_clock",
                               "test_malformed_charters_are_rejected"), (), "Hash over canonical JSON; no signing key."),
@@ -87,11 +91,14 @@ OVERRIDES: dict[str, Entry] = {
     "FE-0006": Entry("DONE", MODE_TESTS, (), "LIVE_CASH refused by build policy; needs compliance and human approval."),
     "FE-0007": Entry("BLOCKED", (), (BLK_GITHUB,), "Owner must enable branch protection and required checks."),
     "FE-0008": Entry("DONE", APPROVAL_TESTS, (), "Human-only, scoped, expiring approvals. Real owner approvals not yet recorded."),
-    "FE-0009": Entry("NOT_STARTED", (), (), "Disposable DuckDB ledger harness not built."),
+    "FE-0009": Entry("DONE", ("test_disposable_ledger_isolated_append_only_and_removed_on_close",
+                               "test_disposable_ledger_refuses_repository_and_existing_paths",
+                               "test_temporary_disposable_ledger_needs_no_credentials"), (),
+                     "Creates only under a caller-provided temporary root; refuses repository overlap and overwrite; event IDs are idempotent and content-bound."),
     "FE-0010": Entry("DONE", AUDIT_TESTS, (BLK_TSA, BLK_LINUX), "python -m financial_brain.forward_edge.audit; currently RED."),
     # ---- F01 ----
-    "FE-0011": Entry("PARTIAL", EVENT_TESTS[:2], (), "In-memory outbox: a failed action is UNKNOWN, never acknowledged. No durable store."),
-    "FE-0012": Entry("NOT_STARTED", (), (), "Durable write-ahead log and monotonic IDs not built."),
+    "FE-0011": Entry("PARTIAL", EVENT_TESTS[:2] + (EVENT_TESTS[-1],), (), "SQLite WAL outbox records PENDING before action, then DISPATCHED or UNKNOWN. Cross-process external side-effect atomicity still needs reconciliation."),
+    "FE-0012": Entry("PARTIAL", (EVENT_TESTS[-1],), (), "SQLite FULL-synchronous WAL persists ordered events, watermark, dispatch and reconciliation state. Crash injection at every transition remains incomplete."),
     "FE-0013": Entry("PARTIAL", EVENT_TESTS, (BLK_BROKER,), "Kernel and OMS block replay of UNKNOWN; no broker reconciliation."),
     "FE-0014": Entry("DONE", OMS_TESTS[:3], (), "Validate-before-mutate; bit-identical after rejection."),
     "FE-0015": Entry("PARTIAL", ("test_full_buy_reduces_buying_power",) + PILOT_TESTS[:1], (),

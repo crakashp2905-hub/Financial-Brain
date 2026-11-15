@@ -8,6 +8,7 @@ has identical content). Nothing was pushed. Physical orders remain disabled ever
 | Item | Change | Evidence |
 |---|---|---|
 | FE-0001 | `forward_edge/baseline.py`; `docs/forward-edge/baseline-2026-11-10.json` | `test_baseline_*` |
+| FE-0009 | `forward_edge/disposable_ledger.py` | `test_disposable_ledger_*`; isolated DuckDB ledger, refuses repository overlap/overwrite, deterministic event identity and cleanup |
 | FE-0002 | `forward_edge/trials.py`; `docs/forward-edge/protected-pins.json` (ledger + manifests, cross-checked against `docs/audits/protected-baseline.json`). Ledger not modified. | `test_*trial*`, `test_protected_records_match_pinned_digests`, `test_retrospective_edit_*` |
 | FE-0004 | `forward_edge/charter.py` | `test_charter_*`, `test_revision_*`, `test_malformed_charters_*` |
 | FE-0005/0006 | `forward_edge/modes.py` | `test_live_cash_*`, `test_flipping_*`, `test_only_live_paper_*` |
@@ -17,7 +18,7 @@ has identical content). Nothing was pushed. Physical orders remain disabled ever
 | FE-0148 | not runnable here: Linux blocked | see BLOCKERS.md |
 | FE-0007 | blocked: `main` unprotected | see BLOCKERS.md |
 
-Not started in F00: FE-0003 (belongs to F02 registry), FE-0009 (disposable DuckDB harness).
+Not started in F00: FE-0003 (belongs to F02 registry).
 
 ## Wave F01 - transactional correctness
 
