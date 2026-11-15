@@ -394,7 +394,7 @@ def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_p
     assert [item["kind"] for item in baseline["audit_log"]] == [
         "preflight", "market_event", "decision", "decision_manifest", "risk_verdict",
         "paper_intent", "execution_receipt"]
-    with pytest.raises(Exception, match="append-only"):
+    with pytest.raises(sqlite3.IntegrityError, match="append-only"):
         runner._con.execute("UPDATE runner_audit_log SET record_json='{}' WHERE session_id='s'")
     runner.rebuild_materialized_views("s")
     assert runner.records("s") == baseline
@@ -412,6 +412,33 @@ def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_p
     runner.rebuild_materialized_views("s")
     assert runner.records("s") == closed_records
     runner.close()
+
+
+def test_decision_manifest_and_risk_verdict_replay_idempotently_after_restart(tmp_path):
+    runner, _, _ = trade_setup(tmp_path)
+    baseline = runner.records("s")
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    assert resumed.resume("s")["state"] == "OPEN"
+    decision = baseline["decisions"][0]
+    assert resumed.decide(session_id="s", strategy_id=decision["strategy_id"],
+                          decision_id=decision["decision_id"], outcome=decision["outcome"],
+                          input_event_ids=tuple(decision["input_event_ids"]),
+                          decided_at=datetime.fromisoformat(decision["decided_at"])) is False
+    manifest_row = resumed._con.execute("SELECT manifest_sha256 FROM runner_decision_manifests "
+                                        "WHERE session_id='s' AND decision_id='trade-1'").fetchone()
+    manifest = baseline["decision_manifests"][0]
+    assert resumed.record_decision_manifest(session_id="s", decision_id="trade-1",
+                                             manifest=manifest) == manifest_row[0]
+    risk = baseline["risk_verdicts"][0]
+    assert resumed.record_risk_verdict(
+        session_id="s", decision_id=risk["decision_id"], verdict_id=risk["verdict_id"],
+        allowed=risk["allowed"], policy_id=risk["policy_id"], policy_sha256=risk["policy_sha256"],
+        reason_codes=tuple(risk["reason_codes"]),
+        assessed_at=datetime.fromisoformat(risk["assessed_at"])) is False
+    assert resumed.records("s")["audit_log"] == baseline["audit_log"]
+    resumed.close()
 
 
 def test_partial_missed_and_rejected_scenarios_keep_requested_vs_filled_separate(tmp_path):
