@@ -11,7 +11,8 @@ from pathlib import Path
 from .approvals import Approval, ApprovalError, validate_approval
 
 
-KILL_REASONS = frozenset({"DAILY_LOSS", "DRAWDOWN", "STALE_FEED", "RECONCILIATION_MISMATCH"})
+KILL_REASONS = frozenset({"DAILY_LOSS", "DRAWDOWN", "STALE_FEED", "RECONCILIATION_MISMATCH",
+                          "LOST_HEARTBEAT", "BROKER_STATE_UNKNOWN", "RISK_LIMIT_BREACH"})
 GENESIS_HASH = "0" * 64
 
 

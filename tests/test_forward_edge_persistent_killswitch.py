@@ -66,3 +66,17 @@ def test_reset_survives_restart_and_event_rows_are_immutable(tmp_path) -> None:
     restored.trip(event_id="later-loss", reason="DAILY_LOSS", occurred_at=_time(), evidence_hash="later")
     assert restored.active
     restored.close()
+
+
+def test_heartbeat_broker_unknown_and_risk_breach_reasons_latch_until_human_reset(tmp_path) -> None:
+    switch = PersistentKillSwitch(tmp_path / "kill.sqlite3")
+    for index, reason in enumerate(("LOST_HEARTBEAT", "BROKER_STATE_UNKNOWN", "RISK_LIMIT_BREACH")):
+        switch.trip(event_id=f"safety-{index}", reason=reason, occurred_at=_time(),
+                    evidence_hash=f"evidence-{index}")
+    assert set(switch.active_reasons) == {
+        "LOST_HEARTBEAT", "BROKER_STATE_UNKNOWN", "RISK_LIMIT_BREACH"}
+    approval = _approval(switch)
+    assert switch.reset(event_id="human-reset-safety", approval=approval, now=_time(),
+                        evidence_hash="post-reconciliation-evidence")
+    assert not switch.active
+    switch.close()
