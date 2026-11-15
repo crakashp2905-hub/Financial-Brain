@@ -86,11 +86,23 @@ class EventKernel:
                     reconciled_by TEXT
                 );
                 CREATE TABLE IF NOT EXISTS reconciliations (
-                    key TEXT NOT NULL, took_effect INTEGER NOT NULL, reconciled_by TEXT NOT NULL,
-                    PRIMARY KEY(key, reconciled_by)
+                    reconciliation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key TEXT NOT NULL, took_effect INTEGER NOT NULL, reconciled_by TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS kernel_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
             """)
+            reconciliation_columns = list(self._store.execute("PRAGMA table_info(reconciliations)"))
+            if not any(row[1] == "reconciliation_id" for row in reconciliation_columns):
+                self._store.executescript("""
+                    CREATE TABLE reconciliations_v2 (
+                        reconciliation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        key TEXT NOT NULL, took_effect INTEGER NOT NULL, reconciled_by TEXT NOT NULL
+                    );
+                    INSERT INTO reconciliations_v2 (key, took_effect, reconciled_by)
+                        SELECT key, took_effect, reconciled_by FROM reconciliations;
+                    DROP TABLE reconciliations;
+                    ALTER TABLE reconciliations_v2 RENAME TO reconciliations;
+                """)
             self._store.commit()
             self._restore_store()
 
@@ -108,14 +120,15 @@ class EventKernel:
         meta = dict(self._store.execute("SELECT key, value FROM kernel_meta"))
         watermark = meta.get("watermark")
         self.watermark = datetime.fromisoformat(watermark) if watermark else None
-        for key, state in self._store.execute("SELECT key, state FROM outbox"):
+        for key, state, reconciled_by in self._store.execute("SELECT key, state, reconciled_by FROM outbox"):
             if state == "DISPATCHED":
                 self._dispatched_keys.add(key)
                 self.side_effects.append(key)
-            elif state in ("PENDING", "UNKNOWN"):
+            elif state == "UNKNOWN" or (state == "PENDING" and not reconciled_by):
                 self._unknown_keys.add(key)
         self.reconciliations = [(key, bool(took_effect), reconciler) for key, took_effect, reconciler in
-                                self._store.execute("SELECT key, took_effect, reconciled_by FROM reconciliations")]
+                                self._store.execute("SELECT key, took_effect, reconciled_by FROM reconciliations "
+                                                    "ORDER BY reconciliation_id")]
 
     def _persist_event(self, event: Event) -> None:
         if self._store is None:
@@ -189,7 +202,7 @@ class EventKernel:
         self._unknown_keys.discard(key)
         self.reconciliations.append((key, bool(took_effect), reconciled_by))
         if self._store is not None:
-            self._store.execute("INSERT INTO reconciliations VALUES (?, ?, ?)",
+            self._store.execute("INSERT INTO reconciliations (key, took_effect, reconciled_by) VALUES (?, ?, ?)",
                                 [key, int(bool(took_effect)), reconciled_by])
             self._store.commit()
             self._persist_outbox(key, "DISPATCHED" if took_effect else "PENDING", reconciled_by)

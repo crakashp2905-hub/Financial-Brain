@@ -121,6 +121,51 @@ def test_durable_kernel_recovers_events_and_outbox_after_restart(tmp_path: Path)
     restored.close()
 
 
+def test_durable_reconciliation_allows_retry_after_restart_only_when_no_effect_proven(tmp_path: Path) -> None:
+    db = tmp_path / "reconciled-kernel.sqlite3"
+    first = EventKernel(journal_path=str(db))
+    with pytest.raises(UnknownOutcome):
+        first.side_effect("retryable", _boom)
+    first.resolve_unknown("retryable", took_effect=False, reconciled_by="operator:test")
+    first.close()
+
+    restored = EventKernel(journal_path=str(db))
+    assert "retryable" not in restored.unknown_keys
+    calls: list[str] = []
+    assert restored.side_effect("retryable", lambda: calls.append("executed")) is True
+    assert calls == ["executed"]
+    restored.close()
+
+
+def test_durable_reconciliation_that_found_effect_survives_restart_without_retry(tmp_path: Path) -> None:
+    db = tmp_path / "effect-kernel.sqlite3"
+    first = EventKernel(journal_path=str(db))
+    with pytest.raises(UnknownOutcome):
+        first.side_effect("already-done", _boom)
+    first.resolve_unknown("already-done", took_effect=True, reconciled_by="operator:test")
+    first.close()
+
+    restored = EventKernel(journal_path=str(db))
+    assert restored.side_effect("already-done", lambda: pytest.fail("replayed reconciled effect")) is False
+    restored.close()
+
+
+def test_durable_kernel_migrates_legacy_reconciliation_table(tmp_path: Path) -> None:
+    import sqlite3
+
+    db = tmp_path / "legacy-reconciliations.sqlite3"
+    EventKernel(journal_path=str(db)).close()
+    with sqlite3.connect(db) as con:
+        con.execute("DROP TABLE reconciliations")
+        con.execute("CREATE TABLE reconciliations (key TEXT NOT NULL, took_effect INTEGER NOT NULL, "
+                    "reconciled_by TEXT NOT NULL, PRIMARY KEY(key, reconciled_by))")
+        con.execute("INSERT INTO reconciliations VALUES ('legacy-key', 0, 'operator:legacy')")
+
+    restored = EventKernel(journal_path=str(db))
+    assert restored.reconciliations == [("legacy-key", False, "operator:legacy")]
+    restored.close()
+
+
 # ---------- OMS helpers ----------
 
 def _oms(cash: str = "100000") -> Oms:
