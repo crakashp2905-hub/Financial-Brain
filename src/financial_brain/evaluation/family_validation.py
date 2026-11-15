@@ -17,6 +17,7 @@ Two tests the public validation toolkits use and this project lacked:
 from __future__ import annotations
 
 from itertools import combinations
+import math
 
 import numpy as np
 import pandas as pd
@@ -32,30 +33,63 @@ def stationary_indices(n: int, mean_block: float, rng: np.random.Generator) -> n
 
 
 def reality_check(X: pd.DataFrame, *, reps: int = 2000, mean_block: float = 6.0, seed: int = 20261014) -> dict:
-    """``X``: periods x strategies of excess returns (benchmark already subtracted). Missing periods are dropped
-    per column by aligning on rows where every strategy has a value."""
+    """Family-level White RC and SPA tests on aligned period excess returns.
+
+    The zero null applies because the caller supplies benchmark-subtracted returns.
+    Every input column remains in the family; rows missing for any candidate are
+    dropped jointly and counted in the report. Alternate block lengths expose
+    sensitivity to the stationary-bootstrap dependence assumption.
+    """
+    if type(reps) is not int or reps < 100 or not math.isfinite(mean_block) or mean_block < 1:
+        raise ValueError("reps must be >=100 and mean_block must be finite and >=1")
+    if type(seed) is not int:
+        raise ValueError("seed must be an integer")
+    original_periods, candidates = X.shape
+    if candidates < 1:
+        raise ValueError("at least one registered candidate is required")
     X = X.dropna()
     n, k = X.shape
     A = X.to_numpy()
+    if n < 5 or not np.isfinite(A).all():
+        raise ValueError("need at least five complete finite periods")
+    if mean_block > n:
+        raise ValueError("mean_block cannot exceed the aligned period count")
     mean = A.mean(axis=0)
     sd = A.std(axis=0, ddof=1)
-    sd[sd == 0] = np.nan
-    rng = np.random.default_rng(seed)
+    if (sd <= 0).any():
+        raise ValueError("every registered candidate needs nonzero return variance")
     rc_stat = np.sqrt(n) * mean.max()
     t = np.sqrt(n) * mean / sd
-    spa_stat = max(np.nanmax(t), 0.0)
+    spa_stat = max(np.max(t), 0.0)
     # SPA's recentring: strategies far below zero are not recentred (Hansen's consistent version)
     keep = mean >= -sd * np.sqrt(2 * np.log(np.log(n)) / n)
     centre = np.where(keep, mean, 0.0)
-    rc_b, spa_b = np.empty(reps), np.empty(reps)
-    for b in range(reps):
-        Ab = A[stationary_indices(n, mean_block, rng)]
-        mb = Ab.mean(axis=0)
-        rc_b[b] = np.sqrt(n) * (mb - mean).max()
-        spa_b[b] = max(np.nanmax(np.sqrt(n) * (mb - centre) / sd), 0.0)
+    def bootstrap(block: float, count: int, rng_seed: int) -> tuple[float, float]:
+        rng = np.random.default_rng(rng_seed)
+        rc_b, spa_b = np.empty(count), np.empty(count)
+        for b in range(count):
+            Ab = A[stationary_indices(n, block, rng)]
+            mb = Ab.mean(axis=0)
+            rc_b[b] = np.sqrt(n) * (mb - mean).max()
+            spa_b[b] = max(np.max(np.sqrt(n) * (mb - centre) / sd), 0.0)
+        return (float((np.count_nonzero(rc_b >= rc_stat) + 1) / (count + 1)),
+                float((np.count_nonzero(spa_b >= spa_stat) + 1) / (count + 1)))
+
+    rc_p, spa_p = bootstrap(mean_block, reps, seed)
+    sensitivity_reps = max(100, reps // 2)
+    alternate_blocks = sorted({max(1.0, mean_block / 2), mean_block * 2})
+    sensitivity = []
+    for offset, block in enumerate(alternate_blocks, start=1):
+        alt_rc, alt_spa = bootstrap(block, sensitivity_reps, seed + offset)
+        sensitivity.append({"mean_block": block, "resamples": sensitivity_reps,
+                            "seed": seed + offset, "rc_p": alt_rc, "spa_p": alt_spa})
     best = int(np.nanargmax(t))
-    return {"strategies": k, "periods": n, "best": X.columns[best], "best_t": float(t[best]),
-            "rc_p": float((rc_b >= rc_stat).mean()), "spa_p": float((spa_b >= spa_stat).mean())}
+    return {"strategies": k, "candidate_count": candidates, "periods": n,
+            "dropped_incomplete_periods": original_periods - n,
+            "null_construction": "stationary bootstrap of aligned benchmark-subtracted period returns; null mean is zero",
+            "best": X.columns[best], "best_t": float(t[best]),
+            "rc_p": rc_p, "spa_p": spa_p, "mean_block": mean_block,
+            "resamples": reps, "seed": seed, "sensitivity": sensitivity}
 
 
 def pbo(X: pd.DataFrame, *, blocks: int = 16) -> dict:

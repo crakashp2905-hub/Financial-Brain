@@ -1,0 +1,23 @@
+{
+  "checklist_task": "PE-0194",
+  "status": "DONE",
+  "criterion": "Ship one offline command containing a win, loss, NO_TRADE, feed outage, and UNKNOWN_ORDER with honest evidence labels.",
+  "implementation": [
+    "src/financial_brain/forward_edge/fixtures.py",
+    "src/financial_brain/forward_edge/cli.py",
+    "tests/fixtures/forward_edge/golden_signatures.json",
+    "tests/test_forward_edge_f13.py",
+    "docs/forward-edge/OPERATIONS.md"
+  ],
+  "tests": [
+    "tests/test_forward_edge_f13.py",
+    "tests/test_forward_fixture_replay.py",
+    "scripts/source_inventory.py --check docs/edge-program/source-inventory.json"
+  ],
+  "test_result": "56 fixture replay and CLI tests passed; Ruff, targeted mypy, golden signature coverage, refreshed source inventory, and inventory check passed. One CLI invocation reproduces all five scenarios and asserts each outcome, local-only custody, balanced ledger, and no physical orders.",
+  "evidence_scope": "Deterministic synthetic fixtures run through the offline session pipeline.",
+  "operational_limits": [
+    "The demo uses synthetic data only and is not market, execution, or profitability evidence.",
+    "All scenarios run with no broker and physical orders disabled."
+  ]
+}

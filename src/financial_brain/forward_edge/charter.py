@@ -26,7 +26,7 @@ class CharterError(ValueError):
 
 @dataclass(frozen=True)
 class EvaluationIdentity:
-    """Content-addressed market, rights, model, strategy, universe, cost and benchmark inputs."""
+    """Content-addressed market, rights, model, strategy, risk, universe, cost and benchmark inputs."""
 
     strategy_code_sha256: str
     model_code_sha256: str
@@ -38,6 +38,7 @@ class EvaluationIdentity:
     universe_sha256: str
     execution_cost_id: str
     execution_cost_sha256: str
+    risk_policy_sha256: str
     benchmarks: tuple[tuple[str, str], ...]
 
     def __post_init__(self) -> None:
@@ -50,7 +51,7 @@ class EvaluationIdentity:
             raise CharterError("benchmark identities must be non-empty id/digest pairs")
         hashes = (self.strategy_code_sha256, self.model_code_sha256, self.data_snapshot_sha256,
                   self.data_rights_sha256, self.market_calendar_sha256, self.universe_sha256,
-                  self.execution_cost_sha256, *(digest for _, digest in self.benchmarks))
+                  self.execution_cost_sha256, self.risk_policy_sha256, *(digest for _, digest in self.benchmarks))
         if any(not isinstance(value, str) or not _SHA.fullmatch(value) for value in hashes):
             raise CharterError("every evaluation identity component must have a SHA-256 digest")
         if not self.benchmarks or list(self.benchmarks) != sorted(self.benchmarks):
@@ -72,6 +73,7 @@ class EvaluationIdentity:
             "universe_sha256": self.universe_sha256,
             "execution_cost_id": self.execution_cost_id,
             "execution_cost_sha256": self.execution_cost_sha256,
+            "risk_policy_sha256": self.risk_policy_sha256,
             "benchmarks": [list(item) for item in self.benchmarks],
         }
 
@@ -79,7 +81,7 @@ class EvaluationIdentity:
     def from_dict(cls, value: dict) -> "EvaluationIdentity":
         expected = {"strategy_code_sha256", "model_code_sha256", "data_snapshot_sha256", "data_rights_id",
                     "data_rights_sha256", "market_calendar_id", "market_calendar_sha256", "universe_sha256",
-                    "execution_cost_id", "execution_cost_sha256", "benchmarks"}
+                    "execution_cost_id", "execution_cost_sha256", "risk_policy_sha256", "benchmarks"}
         if not isinstance(value, dict) or set(value) != expected:
             raise CharterError("malformed evaluation identity")
         try:
@@ -144,7 +146,7 @@ class ExperimentCharter:
 
     def require_evaluation_identity(self) -> EvaluationIdentity:
         if self.evaluation_identity is None:
-            raise CharterError("protected evaluation needs complete market/data-rights/model/cost identity")
+            raise CharterError("protected evaluation needs complete market/data-rights/model/cost/risk identity")
         return self.evaluation_identity
 
     def canonical_bytes(self) -> bytes:
@@ -270,6 +272,29 @@ class CharterRegistry:
             return self._latest[charter_id]
         except KeyError as exc:
             raise CharterError(f"unknown charter: {charter_id}") from exc
+
+    def registered_revision(self, charter_id: str, charter_sha256: str
+                            ) -> tuple[ExperimentCharter, CohortSchedule, str]:
+        """Resolve an immutable historical revision by its registered content hash."""
+        for row in self.journal.records():
+            if row.get("t") != "CHARTER_REGISTERED":
+                continue
+            try:
+                charter = ExperimentCharter.from_dict(row["charter"])
+                if charter.charter_id != charter_id or row.get("charter_sha256") != charter_sha256:
+                    continue
+                schedule = CohortSchedule(
+                    charter_sha256=row["schedule"]["charter_sha256"],
+                    cohorts=tuple(Cohort(*item) for item in row["schedule"]["cohorts"]),
+                )
+                if (charter.sha256() != charter_sha256
+                        or schedule.charter_sha256 != charter_sha256
+                        or schedule.sha256() != row["schedule_sha256"]):
+                    raise CharterError("charter registry hash mismatch")
+                return charter, schedule, charter_sha256
+            except (KeyError, TypeError, ValueError) as exc:
+                raise CharterError("malformed charter registry revision") from exc
+        raise CharterError(f"unknown charter revision: {charter_id}@{charter_sha256}")
 
     def _accept_close(self, charter_id: str, charter_sha256: str, cohort_id: str, *, closed_on: str,
                       outcome_sha256: str) -> None:

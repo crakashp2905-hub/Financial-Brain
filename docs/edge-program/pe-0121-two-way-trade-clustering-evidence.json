@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0121",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f15.py",
+    "result": "14 passed; Ruff passed for refinements.py and test_forward_edge_f15.py."
+  },
+  "implemented": [
+    "Two-way clustered standard error uses calendar-date and instrument-name clustering with the intersection correction.",
+    "Tests show date-only dependence matches the one-way clustered estimate when instruments are unique, and simultaneous date/name shocks produce uncertainty far above the iid estimate."
+  ],
+  "limitations": [
+    "This is an inference utility; only verified trade observations and the frozen evaluation policy can make its output part of a formal claim."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/refinements.py": "7bf436c085510f3da17e981852d0f3b2e30397e8cfa1e407f9b8c8fb1f7b530a",
+    "tests/test_forward_edge_f15.py": "9b73e7cc26b67a799ff14fe5ce9964ae416b17bf8c028766a65eb61ab5c5823f"
+  }
+}

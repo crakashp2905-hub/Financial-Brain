@@ -1,0 +1,21 @@
+{
+  "checklist_task": "PE-0187",
+  "status": "DONE",
+  "criterion": "Display simulated versus observed fill labels and their inputs; prevent modeled quote fills from being mistaken for exchange fills.",
+  "implementation": [
+    "src/financial_brain/forward_edge/paper_execution_adapter.py",
+    "src/financial_brain/forward_edge/cockpit.py"
+  ],
+  "tests": [
+    "tests/test_execution_fill_evidence_view.py",
+    "tests/test_forward_paper_execution_adapter.py",
+    "tests/test_forward_edge_f10.py"
+  ],
+  "test_result": "30 execution-adapter and cockpit tests passed; Ruff and targeted mypy passed. Simulated quote inputs are attached to receipts, unverified observed labels remain explicit, and no-fill receipts invent no fills.",
+  "evidence_scope": "Synthetic quote-replay receipts and observed-label validation fixtures.",
+  "operational_limits": [
+    "The simulator does not create observed exchange or broker fills.",
+    "Observed labels require caller-provided source and reconciliation evidence; the view does not authenticate the source.",
+    "Raw quote availability depends on upstream archival references and entitlements."
+  ]
+}

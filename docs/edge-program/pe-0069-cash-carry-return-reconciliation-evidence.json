@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0069",
+  "status": "PARTIAL",
+  "implemented": [
+    "Cash dividends carry source identity, digest, ex-date, payment date, application date, eligible shares, gross income and withholding.",
+    "Cash yield accrues over an effective interval from reconstructed daily closing cash and a sourced annual rate; undated cash events, overlapping periods, negative balances and retroactive NAV rewrites are rejected.",
+    "Return reconciliation bridges NAV change net of external flows to realized and marked unrealized price P&L, gross dividend and cash-yield income, fees and tax."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_paper_account.py tests/test_paper_account_audit.py tests/test_paper_account_corporate_actions.py tests/test_paper_nav_returns.py tests/test_paper_account_income.py -q",
+    "result": "23 passed; exit code 0.",
+    "additional_checks": [
+      "python -m mypy src/financial_brain/kernel/paper_account.py — Success: no issues found in 1 source file.",
+      "python -m ruff check src/financial_brain/kernel/paper_account.py tests/test_paper_account_income.py tests/test_paper_account_corporate_actions.py — All checks passed."
+    ]
+  },
+  "limitations": [
+    "Tests use synthetic inputs; no current market-rate, dividend-payment or carry dataset has been independently validated.",
+    "Futures carry is not yet integrated with canonical PaperAccount income and total-return reconciliation.",
+    "External source evidence and prospective account-level reconciliation remain required."
+  ]
+}

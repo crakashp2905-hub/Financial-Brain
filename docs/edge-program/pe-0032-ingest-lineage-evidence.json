@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0032",
+  "status": "PARTIAL",
+  "captured_at_utc": "2026-11-13T07:15:22Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/market_data.py": "f9b4ee1847b48373ea4305dd09247d679ceff97414b6e5ea2455d66bc64df43c",
+    "src/financial_brain/forward_edge/session_runner.py": "dc338055fb120325f93c5ecaf8a7b9c8f81d9a80e652de41ccba3e62f71ed0f3",
+    "src/financial_brain/forward_edge/raw_quote_archive.py": "5ebba04be09994903f71bb6db19c065b154af037c73a24ed33f286fa7fc240df",
+    "src/financial_brain/ingest/kite_live.py": "37f40028f188ac29a5b0d951681fef095e61f4621cd0c7ed1792d818f6419ca2",
+    "src/financial_brain/paper/intraday_runner.py": "d689bb41e4e00c67466858c699efe6bc61372eecfbe7ba45f62d73fba31a0087",
+    "tests/test_kite_forward_events.py": "fb1a4426e9b534a3297848ab3c4df87810112500c706367023f19c10c9a7f342",
+    "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
+    "tests/test_raw_quote_archive.py": "c1d3462193fbed60590bca1108b5c8c68c273924fc6c5bb352e5904bf6437bd2",
+    "tests/test_phase5_intraday_runner.py": "aaa3c664a6ba77a05392488a44cfe33c51df47f187a7e6f1648a3b9568ddb13e"
+  },
+  "tests": {
+    "command": "python -m pytest -q tests/test_kite_forward_events.py tests/test_forward_session_runner.py tests/test_raw_quote_archive.py tests/test_phase5_intraday_runner.py",
+    "result": "Focused Kite lineage, runner, archive, and live-loop tests passed; see PR CI for full suite."
+  },
+  "verified": [
+    "Kite event preserves source event, receipt, availability, and ingest clocks; raw source digest is part of normalized event identity.",
+    "Optional RawQuoteArchive stores canonical JSON of parsed Kite SDK quote objects with a payload digest and durable hash chain; it is not raw HTTP wire bytes.",
+    "Normalized quote references archive sequence and chain digest; simulated fill receipt hashes the normalized event, establishing fill \u2192 event \u2192 archived quote lineage.",
+    "Existing read-only intraday polling loop can opt into the archive; no archive is enabled by default.",
+    "Synthetic tests verify explicit attestation gate, event/archive/fill linkage, tamper detection, and runner integration."
+  ],
+  "blockers": [
+    "No independently verified data-provider retention-rights record is available; the archive checks only caller-supplied attestation fields.",
+    "No authorized live-market capture has been observed; real session evidence still requires owner login and an eligible market session."
+  ],
+  "secrets_or_market_payloads_included": false
+}

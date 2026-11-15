@@ -14,6 +14,8 @@ Rules enforced:
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN, Decimal
@@ -91,6 +93,95 @@ def earliest_quote(quotes: list[Quote], decision_utc: datetime, latency: timedel
     return min(later, key=lambda q: _aware(q.available_utc)) if later else None
 
 
+def quote_arrival_shortfall(*, side: str, modeled_price: Decimal, requested_qty: int,
+                            decision_utc: datetime, latency: timedelta, quote: Quote,
+                            source_sha256: str) -> dict:
+    """Compare a frozen model price with the first executable quote at modeled order arrival.
+
+    This measures quote movement/availability, not a broker fill. Only displayed quantity is measured; no price is
+    extrapolated beyond top-of-book depth. The source event hash is retained for audit and replay.
+    """
+    if side not in {"BUY", "SELL"}:
+        raise ExecutionError("side must be BUY or SELL")
+    if not isinstance(modeled_price, Decimal) or not modeled_price.is_finite() or modeled_price <= 0:
+        raise ExecutionError("modeled price must be a positive finite Decimal")
+    if type(requested_qty) is not int or requested_qty <= 0:
+        raise ExecutionError("requested quantity must be a positive integer")
+    if not isinstance(latency, timedelta) or latency < timedelta(0):
+        raise ExecutionError("latency must be non-negative")
+    if not isinstance(source_sha256, str) or len(source_sha256) != 64 or any(
+        c not in "0123456789abcdef" for c in source_sha256
+    ):
+        raise ExecutionError("source quote SHA-256 is required")
+    cutoff = _aware(decision_utc) + latency
+    available = _aware(quote.available_utc)
+    if available < cutoff:
+        raise ExecutionError("quote is not available at modeled order arrival")
+    if (not isinstance(quote.bid, Decimal) or not isinstance(quote.ask, Decimal)
+            or not quote.bid.is_finite() or not quote.ask.is_finite() or quote.bid <= 0
+            or quote.ask < quote.bid or type(quote.bid_qty) is not int or type(quote.ask_qty) is not int
+            or quote.bid_qty < 0 or quote.ask_qty < 0):
+        raise ExecutionError("arrival quote is invalid")
+    executable_price = quote.ask if side == "BUY" else quote.bid
+    displayed_qty = quote.ask_qty if side == "BUY" else quote.bid_qty
+    measured_qty = min(requested_qty, displayed_qty)
+    if measured_qty <= 0:
+        raise ExecutionError("arrival quote has no executable displayed quantity")
+    sign = Decimal(1) if side == "BUY" else Decimal(-1)
+    shortfall_bp = sign * (executable_price / modeled_price - Decimal(1)) * Decimal(10_000)
+    return {
+        "benchmark_type": "SUBSEQUENT_EXECUTABLE_QUOTE",
+        "fidelity": "SIMULATED_QUOTE",
+        "broker_fill_observation": False,
+        "side": side,
+        "modeled_price": str(modeled_price),
+        "arrival_executable_price": str(executable_price),
+        "decision_available_utc": _aware(decision_utc).isoformat(),
+        "order_eligible_utc": cutoff.isoformat(),
+        "quote_available_utc": available.isoformat(),
+        "requested_qty": requested_qty,
+        "measured_qty": measured_qty,
+        "depth_coverage": measured_qty / requested_qty,
+        "source_quote_sha256": source_sha256,
+        "shortfall_bp": str(shortfall_bp),
+    }
+
+
+def quote_arrival_shortfall_report(rows: list[dict]) -> dict:
+    """Aggregate quote-arrival shortfall while explicitly excluding broker-fill claims."""
+    if not rows:
+        return {"benchmark_type": "SUBSEQUENT_EXECUTABLE_QUOTE", "fidelity": "SIMULATED_QUOTE",
+                "broker_fill_observations": 0, "samples": 0, "mean_shortfall_bp": None,
+                "depth_coverage": 0.0}
+    for row in rows:
+        if (row.get("benchmark_type") != "SUBSEQUENT_EXECUTABLE_QUOTE"
+                or row.get("fidelity") != "SIMULATED_QUOTE" or row.get("broker_fill_observation") is not False):
+            raise ExecutionError("quote-arrival report cannot include broker-fill or unlabeled rows")
+        digest = row.get("source_quote_sha256")
+        if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            raise ExecutionError("quote-arrival report requires source quote hashes")
+        if (type(row.get("requested_qty")) is not int or type(row.get("measured_qty")) is not int
+                or row["requested_qty"] <= 0 or not 0 < row["measured_qty"] <= row["requested_qty"]):
+            raise ExecutionError("quote-arrival report has invalid measured depth")
+    try:
+        values = [Decimal(str(row["shortfall_bp"])) for row in rows]
+    except (KeyError, ValueError) as exc:
+        raise ExecutionError("quote-arrival report has invalid shortfall values") from exc
+    if any(not value.is_finite() for value in values):
+        raise ExecutionError("shortfall values must be finite")
+    requested = sum(row["requested_qty"] for row in rows)
+    measured = sum(row["measured_qty"] for row in rows)
+    return {
+        "benchmark_type": "SUBSEQUENT_EXECUTABLE_QUOTE",
+        "fidelity": "SIMULATED_QUOTE",
+        "broker_fill_observations": 0,
+        "samples": len(rows),
+        "mean_shortfall_bp": str(sum(values, Decimal(0)) / len(values)),
+        "depth_coverage": measured / requested if requested else 0.0,
+        "source_quote_sha256s": sorted({str(row["source_quote_sha256"]) for row in rows}),
+    }
+
+
 def marketable_limit(intent: OrderIntent, quotes: list[Quote], latency: timedelta,
                      price_band: tuple[Decimal, Decimal] | None = None) -> ExecResult:
     q = earliest_quote(quotes, intent.decision_utc, latency)
@@ -115,14 +206,32 @@ def marketable_limit(intent: OrderIntent, quotes: list[Quote], latency: timedelt
 
 def passive_limit(intent: OrderIntent, trades: list[tuple[datetime, Decimal, int]],
                   latency: timedelta) -> ExecResult:
-    """Conservative: fills only on a print strictly through the limit; touching is not a fill."""
+    """Conservative: only a unique, post-latency print strictly through the limit can fill.
+
+    Without provider trade IDs, exact duplicate (UTC timestamp, price, quantity)
+    tuples are collapsed to avoid granting duplicate feed prints extra queue volume.
+    Distinct prints sharing that exact tuple may therefore be undercounted.
+    """
     if intent.limit is None:
         raise ExecutionError("a passive order needs a limit")
     cutoff = _aware(intent.decision_utc) + latency
     remaining = intent.quantity
     cost = Decimal(0)
-    for ts, price, qty in sorted(trades, key=lambda t: _aware(t[0])):
-        if _aware(ts) < cutoff or remaining == 0:
+    unique_trades = []
+    seen: set[tuple[datetime, Decimal, int]] = set()
+    for ts, price, qty in trades:
+        instant = _aware(ts)
+        if not isinstance(price, Decimal) or not price.is_finite() or price <= 0:
+            raise ExecutionError("trade prints need a positive finite Decimal price")
+        if type(qty) is not int or qty <= 0:
+            raise ExecutionError("trade prints need a positive integer quantity")
+        identity = (instant, price, qty)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        unique_trades.append((instant, price, qty))
+    for instant, price, qty in sorted(unique_trades, key=lambda trade: trade[0]):
+        if instant < cutoff or remaining == 0:
             continue
         through = price < intent.limit if intent.side == "BUY" else price > intent.limit
         if through:
@@ -164,11 +273,54 @@ class CostRule:
     stt_bps_sell: Decimal
     stamp_bps_buy: Decimal
     gst_fraction: Decimal  # applied to brokerage + exchange charges
+    sebi_bps: Decimal = Decimal("0")
+    ipft_bps: Decimal = Decimal("0")
+    clearing_bps: Decimal = Decimal("0")
+    brokerage_min_inr: Decimal = Decimal("0")
+    brokerage_max_inr: Decimal | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.effective_from, date) or isinstance(self.effective_from, datetime):
+            raise ExecutionError("cost rule needs an effective calendar date")
+        rates = (self.brokerage_bps, self.exchange_bps, self.stt_bps_buy, self.stt_bps_sell,
+                 self.stamp_bps_buy, self.gst_fraction, self.sebi_bps, self.ipft_bps,
+                 self.clearing_bps, self.brokerage_min_inr)
+        if any(not isinstance(value, Decimal) or not value.is_finite() or value < 0 for value in rates):
+            raise ExecutionError("cost rates and brokerage floor must be finite nonnegative Decimals")
+        if self.gst_fraction > 1:
+            raise ExecutionError("GST fraction cannot exceed 100 percent")
+        if self.brokerage_max_inr is not None:
+            if (not isinstance(self.brokerage_max_inr, Decimal) or not self.brokerage_max_inr.is_finite()
+                    or self.brokerage_max_inr < 0 or self.brokerage_min_inr > self.brokerage_max_inr):
+                raise ExecutionError("brokerage cap must be finite and at least the brokerage floor")
 
 
 @dataclass(frozen=True)
 class CostSchedule:
     rules: dict[str, tuple[CostRule, ...]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.rules or any(not isinstance(segment, str) or not segment.strip() or not rules
+                                 for segment, rules in self.rules.items()):
+            raise ExecutionError("cost schedule needs nonempty named segment rules")
+        for rules in self.rules.values():
+            if len({rule.effective_from for rule in rules}) != len(rules):
+                raise ExecutionError("cost schedule has duplicate effective dates")
+
+    @property
+    def sha256(self) -> str:
+        """Content identity for the complete effective-dated table supplied by the owner."""
+        rows = []
+        for segment, rules in sorted(self.rules.items()):
+            for rule in sorted(rules, key=lambda item: item.effective_from):
+                rows.append({"segment": segment, "effective_from": rule.effective_from.isoformat(),
+                             **{name: (format(getattr(rule, name), "f")
+                                       if getattr(rule, name) is not None else None)
+                                for name in ("brokerage_bps", "exchange_bps", "stt_bps_buy", "stt_bps_sell",
+                                             "stamp_bps_buy", "gst_fraction", "sebi_bps", "ipft_bps",
+                                             "clearing_bps", "brokerage_min_inr", "brokerage_max_inr")}})
+        encoded = json.dumps(rows, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        return hashlib.sha256(encoded).hexdigest()
 
     def rule_for(self, segment: str, day: date) -> CostRule:
         eligible = [r for r in self.rules.get(segment, ()) if r.effective_from <= day]
@@ -176,18 +328,32 @@ class CostSchedule:
             raise ExecutionError(f"no cost rule effective for {segment} on {day}")
         return max(eligible, key=lambda r: r.effective_from)
 
-    def charges(self, segment: str, side: str, notional: Decimal, day: date) -> dict[str, Decimal]:
+    def charges(self, segment: str, side: str, notional: Decimal, day: date) -> dict[str, Decimal | str]:
+        if side not in {"BUY", "SELL"}:
+            raise ExecutionError("cost side must be BUY or SELL")
+        if not isinstance(notional, Decimal) or not notional.is_finite() or notional <= 0:
+            raise ExecutionError("cost notional must be a positive finite Decimal")
         r = self.rule_for(segment, day)
         bps = Decimal(10_000)
         brokerage = notional * r.brokerage_bps / bps
+        brokerage = max(brokerage, r.brokerage_min_inr)
+        if r.brokerage_max_inr is not None:
+            brokerage = min(brokerage, r.brokerage_max_inr)
         exchange = notional * r.exchange_bps / bps
+        sebi = notional * r.sebi_bps / bps
+        ipft = notional * r.ipft_bps / bps
+        clearing = notional * r.clearing_bps / bps
         stt = notional * (r.stt_bps_buy if side == "BUY" else r.stt_bps_sell) / bps
         stamp = notional * r.stamp_bps_buy / bps if side == "BUY" else Decimal(0)
-        gst = (brokerage + exchange) * r.gst_fraction
-        total = brokerage + exchange + stt + stamp + gst
-        out = {"brokerage": brokerage, "exchange": exchange, "stt": stt, "stamp": stamp, "gst": gst}
-        out = {k: v.quantize(CENT, rounding=ROUND_HALF_EVEN) for k, v in out.items()}
+        gst = (brokerage + exchange + sebi + ipft + clearing) * r.gst_fraction
+        total = brokerage + exchange + sebi + ipft + clearing + stt + stamp + gst
+        parts = {"brokerage": brokerage, "exchange": exchange, "sebi": sebi, "ipft": ipft,
+                 "clearing": clearing, "stt": stt, "stamp": stamp, "gst": gst}
+        out: dict[str, Decimal | str] = {
+            key: value.quantize(CENT, rounding=ROUND_HALF_EVEN) for key, value in parts.items()
+        }
         out["total"] = total.quantize(CENT, rounding=ROUND_HALF_EVEN)  # rounded once from unrounded parts
+        out["schedule_sha256"] = self.sha256
         return out
 
 
@@ -270,9 +436,9 @@ def fill_bounds(side: str, quotes: list[Quote]) -> tuple[Decimal, Decimal, Decim
         raise ExecutionError("no quotes in the window")
     if side == "BUY":
         prices = [q.ask for q in quotes]
-        return min(prices), sum(prices) / len(prices), max(prices)
+        return min(prices), sum(prices, Decimal(0)) / Decimal(len(prices)), max(prices)
     prices = [q.bid for q in quotes]
-    return max(prices), sum(prices) / len(prices), min(prices)
+    return max(prices), sum(prices, Decimal(0)) / Decimal(len(prices)), min(prices)
 
 
 # ---- FE-0067 post-trade identity ----

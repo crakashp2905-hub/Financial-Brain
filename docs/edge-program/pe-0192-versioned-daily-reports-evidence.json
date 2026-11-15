@@ -1,0 +1,22 @@
+{
+  "checklist_task": "PE-0192",
+  "status": "DONE",
+  "criterion": "Produce daily JSON/CSV/HTML reports from one versioned schema and keep totals equal across output formats and operating systems.",
+  "implementation": [
+    "src/financial_brain/forward_edge/daily_report.py",
+    "src/financial_brain/forward_edge/cli.py",
+    "src/financial_brain/forward_edge/durable.py",
+    "src/financial_brain/forward_edge/eod_paper_archive.py"
+  ],
+  "tests": [
+    "tests/test_daily_report_formats.py",
+    "tests/test_forward_edge_f13.py"
+  ],
+  "test_result": "44 daily-report and forward CLI tests passed; Ruff, targeted mypy, refreshed source inventory, and inventory check passed. All JSON/CSV/HTML totals parse to the same values; output bytes are deterministic with LF CSV newlines.",
+  "evidence_scope": "Synthetic hash-verified EOD account archives and durable runner journals, including cash/position totals and CLI sibling-file generation.",
+  "operational_limits": [
+    "Requires a valid account archive and hash-verified runner journal session plan.",
+    "Reports are paper evidence and do not claim exchange executions or profitability.",
+    "Files are atomically replaced individually; publication should verify the shared report hash and complete sibling set."
+  ]
+}

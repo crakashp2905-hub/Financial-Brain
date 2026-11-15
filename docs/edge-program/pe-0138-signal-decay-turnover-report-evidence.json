@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0138",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_signal_decay.py; ruff check src/financial_brain/evaluation/signal_decay.py tests/test_signal_decay.py; mypy src/financial_brain/evaluation/signal_decay.py",
+    "result": "6 signal-decay tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. The exhaustive runner verifies the dataset digest before/after all family/horizon/session cells and rejects holdout schedules or midrun data changes."
+  },
+  "implemented": [
+    "Computes peak information horizon and interpolated half-life for every registered family.",
+    "Reports net alpha, turnover, and turnover-to-absolute-net-alpha by horizon with explicit undefined status near zero alpha.",
+    "Requires a matched decision/session schedule across every horizon and rejects access to protected final-window dates.",
+    "Retains the observation rows and hash; never changes an existing decision horizon.",
+    "Adds an exhaustive data-pinned runner for every family/horizon/session cell; checks frozen file digest before/after execution and enforces training-window schedules."
+  ],
+  "blockers": [
+    "The runner delegates signal and portfolio calculations to a caller-supplied evaluator; outputs are not independently recomputed from the canonical portfolio simulator.",
+    "Dataset and outcome provenance is not bound to the authoritative registry or independently attested prospective evidence.",
+    "No real forward decay evidence exists; horizon adoption still requires a newly registered version."
+  ],
+  "source_sha256": {
+    "src/financial_brain/evaluation/signal_decay.py": "1254d14ed893c1d8fd4732c3a7149efaa60ef0e1592bba97c3a4c4a952249f50",
+    "tests/test_signal_decay.py": "a46ccfac1b733367388385af4f6b7c4bafbe0ef76ffaed08047e2d066d17ae40",
+    "docs/edge-program/pe-0138-signal-decay-turnover-report.md": "b2542a0f691f962b7da69b0cf2d40550a7234a5437d320867c050a24131859c4"
+  }
+}

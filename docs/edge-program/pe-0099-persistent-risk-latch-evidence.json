@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0099",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_paper_account_risk_latch.py tests/test_paper_account.py tests/test_paper_account_audit.py tests/test_forward_session_crash_matrix.py",
+    "result": "27 passed; Ruff and mypy passed for PaperAccount."
+  },
+  "implemented": [
+    "Risk trip and reset transitions are append-only PaperAccount journal events and replay into the current latch state.",
+    "A latched account refuses new intents while preserving existing order state, cash and reservations across restart.",
+    "Reset requires the matching incident, a repair identifier, a non-agent human actor, a timestamp after the incident, and a SHA-256 signoff reference."
+  ],
+  "blockers": [],
+  "source_sha256": {
+    "src/financial_brain/kernel/paper_account.py": "cf786ff3df86179ae16b8cd0ea937f6b644772f9947f1d2eddf696490a3ca37c",
+    "tests/test_paper_account_risk_latch.py": "e5ea853cf941b49b3f1f4d713a615c96dc84642c41cd775f74e99daf2b22a688"
+  }
+}

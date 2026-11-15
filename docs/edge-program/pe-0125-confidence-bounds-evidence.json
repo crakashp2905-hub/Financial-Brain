@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0125",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_confirmation_bounds.py",
+    "result": "Nine focused confirmation tests pass; the registry integration is covered by 24 combined confirmation and prospective-cohort tests. Full Windows suite: 4191 passed, 1 skipped (930.68s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only."
+  },
+  "implemented": [
+    "Computes one-sided lower confidence bounds for daily net alpha and after-cost portfolio utility using a frozen Newey-West dependence policy.",
+    "A positive point estimate with a nonpositive lower bound is never labeled CONFIRMED.",
+    "Incomplete scheduled samples retain the full denominator and withhold bounds; unscheduled and non-finite observations are rejected.",
+    "Degenerate zero-variance samples cannot produce a zero-width confirmation.",
+    "Allocates the dependence-policy familywise alpha across both reported metrics and the number of pre-registered looks using Bonferroni one-sided lower bounds.",
+    "Adds registered_confirmation_bounds, which resolves the durable frozen cohort, re-derives the sample-size plan, verifies policy/cohort schedule and timestamps, and checks every reported session against its stored digest.",
+    "Withholds confidence bounds with SAMPLE_SIZE_NOT_MET when the scheduled cohort length is below the calculated required sample."
+  ],
+  "blockers": [
+    "The report is not yet enforced by the authoritative strategy promotion gate.",
+    "After-cost utility fee and risk-accounting lineage remains caller-supplied and is not independently recomputed from paper-account events.",
+    "Cohort timestamps and outcome digests are caller-supplied without independent attestation; no prospective market cohort has elapsed."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/confirmation_bounds.py": "f69a9ec241248fc084f87a00fe0e258962247faa660e605d051228c3c8f5278b",
+    "src/financial_brain/forward_edge/dependence.py": "b9ceda39a6c92040182216e9c3ca04200567308abf6e7859fa2bed71f44b9d98",
+    "src/financial_brain/forward_edge/prospective_cohort.py": "5df6ee250af783db3d351fb26ef11492de25c49f2c1b03d2fb4b5af7173b3504",
+    "src/financial_brain/forward_edge/prospective_registry.py": "512f8d4eb469a74f529c3490b5dc9bf5b507b1b104d55ae86304e9090edf8543",
+    "src/financial_brain/forward_edge/sample_size.py": "6b1f5585ec8c6d3942d3636a7e038cbfec54416ea052cf5fbaa1a01c26d153c9",
+    "tests/test_confirmation_bounds.py": "e0983acc7c48e2031fa0029e3b0c2ef40048d48f6b5455f89d392f0ab01151d5",
+    "tests/test_prospective_cohort.py": "41e973d6bbb737d4ab9457e8083fb5488536f5d834125da64ce5a7b1bb2e736c",
+    "docs/edge-program/pe-0125-confidence-bounds.md": "a45f5b8536820c73451f39fe54163c4ae636928365616af847c89390ea73b738"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "checklist_task": "PE-0178",
+  "status": "DONE",
+  "criterion": "Use factor exposure and expected turnover as explicit regularizers; show whether apparent alpha is factor exposure or excess trading.",
+  "implementation": [
+    "src/financial_brain/evaluation/factor_regularization.py"
+  ],
+  "tests": [
+    "tests/test_factor_regularization.py"
+  ],
+  "test_result": "18 factor-regularization, challenger-registry, and learned-model tests passed; Ruff and targeted mypy passed. Candidate outputs separate raw forecast, size/momentum/beta drag, turnover drag, and regularized forecast.",
+  "evidence_scope": "Synthetic development candidate estimates only.",
+  "operational_limits": [
+    "The report refuses validation/test data and cannot authorize a trade or model promotion.",
+    "Penalty weights are versioned inputs and are not calibrated or proven by this module.",
+    "Regularized forecasts are diagnostics, not causal factor attribution or realized performance."
+  ]
+}

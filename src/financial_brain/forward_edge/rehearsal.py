@@ -8,8 +8,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+import hashlib
+import json
+from pathlib import Path
 
 from financial_brain.forward_edge.approvals import Approval, ApprovalError, validate_approval
+from financial_brain.forward_edge.durable import DurableJournal
 
 
 class RehearsalError(RuntimeError):
@@ -54,6 +58,20 @@ class MockBrokerAdapter(ReadOnlyBrokerAdapter):
         resp = {"order_id": order_id, "status": "DRY_RUN_ACCEPTED", "mock": True, "filled": 0}
         self.dry_run_orders.append(resp)
         return resp
+
+
+class KiteReadOnlyStatusAdapter(ReadOnlyBrokerAdapter):
+    """Kite account-status reader; delegates only to providers.kite_data's GET allowlist."""
+
+    def account_status(self) -> dict:
+        from financial_brain.providers.kite_data import account_status
+        return account_status()
+
+    def orders(self) -> list[dict]:
+        return list(self.account_status().get("orders", []))
+
+    def positions(self) -> dict:
+        return dict(self.account_status().get("positions", {}))
 
 
 # ---- FE-0134 compliance gate ----
@@ -122,15 +140,33 @@ class RiskProposal:
     capital_inr: Decimal
     max_per_order_inr: Decimal
     max_daily_loss_inr: Decimal
+    max_margin_inr: Decimal
+    emergency_exit_policy_sha256: str
 
     def __post_init__(self) -> None:
-        if not (0 < self.max_per_order_inr <= self.capital_inr) or not (0 < self.max_daily_loss_inr <= self.capital_inr):
+        if (not (0 < self.capital_inr) or not (0 < self.max_per_order_inr <= self.capital_inr)
+                or not (0 < self.max_daily_loss_inr <= self.capital_inr)
+                or not (0 <= self.max_margin_inr <= self.capital_inr)):
             raise RehearsalError("limits must be positive and within capital")
+        if (len(self.emergency_exit_policy_sha256) != 64
+                or any(char not in "0123456789abcdef" for char in self.emergency_exit_policy_sha256)):
+            raise RehearsalError("emergency exit policy must be bound by a SHA-256 digest")
+
+    def sha256(self) -> str:
+        payload = json.dumps({"capital_inr": str(self.capital_inr),
+                              "max_per_order_inr": str(self.max_per_order_inr),
+                              "max_daily_loss_inr": str(self.max_daily_loss_inr),
+                              "max_margin_inr": str(self.max_margin_inr),
+                              "emergency_exit_policy_sha256": self.emergency_exit_policy_sha256},
+                             sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def proposal_confirmed(proposal: RiskProposal, approval: Approval | None, scope_sha256: str, now: datetime) -> bool:
     """No real trade before a valid human confirmation of this exact proposal."""
     if approval is None:
+        return False
+    if scope_sha256 != proposal.sha256():
         return False
     try:
         validate_approval(approval, kind="MICRO_RISK_BUDGET", subject="micro_pilot", scope_sha256=scope_sha256, now=now)
@@ -162,14 +198,46 @@ def reconcile_statement(ledger_rows: list[dict], statement_rows: list[dict]) -> 
 # ---- FE-0139 / FE-0142 disarm ----
 
 class DisarmLatch:
-    TRIGGERS = ("LOST_HEARTBEAT", "STALE_BROKER_STATE", "RECONCILIATION_MISMATCH", "RISK_BREACH", "UNEXPECTED_EXECUTION")
+    TRIGGERS = (
+        "LOST_HEARTBEAT", "STALE_BROKER_STATE", "STALE_FEED", "CUSTODY_FAILURE",
+        "ABNORMAL_COST", "LEDGER_MISMATCH", "RECONCILIATION_MISMATCH", "RISK_BREACH",
+        "UNEXPECTED_EXECUTION",
+    )
 
-    def __init__(self) -> None:
+    def __init__(self, journal_path: Path | None = None) -> None:
         self.armed = True
         self.reason: str | None = None
+        self.journal = DurableJournal(Path(journal_path)) if journal_path is not None else None
+        if self.journal is not None:
+            records = self.journal.records()
+            if not records:
+                self.journal.append({"t": "DISARM_LATCH_INIT", "schema_version": 1})
+            else:
+                self._restore(records)
+
+    def _restore(self, records: list[dict]) -> None:
+        if records[0] != {"t": "DISARM_LATCH_INIT", "schema_version": 1}:
+            raise RehearsalError("disarm latch journal has an unknown header")
+        for row in records[1:]:
+            kind = row.get("t")
+            if kind == "DISARM_TRIGGER":
+                trigger = row.get("trigger")
+                if trigger not in self.TRIGGERS:
+                    raise RehearsalError("disarm latch journal contains an unknown trigger")
+                self.armed, self.reason = False, trigger
+            elif kind == "DISARM_RESET":
+                if (not isinstance(row.get("actor_id"), str) or not row["actor_id"].strip()
+                        or row.get("actor_type") != "human" or not isinstance(row.get("scope_sha256"), str)
+                        or len(row["scope_sha256"]) != 64):
+                    raise RehearsalError("disarm latch journal contains an invalid reset record")
+                self.armed, self.reason = True, None
+            else:
+                raise RehearsalError("disarm latch journal contains an unknown event")
 
     def observe(self, trigger: str) -> None:
         if trigger in self.TRIGGERS:
+            if self.journal is not None and (self.armed or self.reason != trigger):
+                self.journal.append({"t": "DISARM_TRIGGER", "trigger": trigger})
             self.armed = False
             self.reason = trigger
 
@@ -180,6 +248,11 @@ class DisarmLatch:
             validate_approval(approval, kind="DISARM_RESET", subject="disarm_latch", scope_sha256=scope_sha256, now=now)
         except ApprovalError as exc:
             raise RehearsalError(f"re-arm refused: {exc}") from exc
+        if self.journal is not None:
+            self.journal.append({
+                "t": "DISARM_RESET", "actor_id": approval.actor_id, "actor_type": approval.actor_type,
+                "scope_sha256": scope_sha256, "approved_at_utc": approval.approved_at_utc.isoformat(),
+            })
         self.armed, self.reason = True, None
 
 
@@ -194,18 +267,27 @@ def slippage_report(simulated_bps: list[float], observed_bps: list[float]) -> di
 
 
 class ExecutionModelRegistry:
-    """A model is registered under a version; it is never edited in place."""
+    """Canonical immutable model records addressable by version and content hash."""
 
     def __init__(self) -> None:
-        self._versions: dict[str, dict] = {}
+        self._versions: dict[str, tuple[dict, str]] = {}
 
     def register(self, version: str, params: dict) -> None:
         if version in self._versions:
             raise RehearsalError("version exists; register a new version instead")
-        self._versions[version] = dict(params)
+        try:
+            frozen = json.loads(json.dumps(params, sort_keys=True, separators=(",", ":"), allow_nan=False))
+        except (TypeError, ValueError) as exc:
+            raise RehearsalError("model parameters must be finite canonical JSON") from exc
+        digest = hashlib.sha256(json.dumps(frozen, sort_keys=True, separators=(",", ":"),
+                                           allow_nan=False).encode("utf-8")).hexdigest()
+        self._versions[version] = (frozen, digest)
 
     def get(self, version: str) -> dict:
-        return dict(self._versions[version])
+        return json.loads(json.dumps(self._versions[version][0]))
+
+    def sha256(self, version: str) -> str:
+        return self._versions[version][1]
 
 
 # ---- FE-0141 scaling ----
@@ -213,3 +295,23 @@ class ExecutionModelRegistry:
 def scaling_allowed(*, profitable_week: bool, separate_review_done: bool, approval_valid: bool) -> bool:
     """A profitable week alone never scales capital: review and explicit approval are both required."""
     return separate_review_done and approval_valid
+
+
+def scaling_evidence_gate(*, statement_mismatches: list[str], fill_model_error_bps: Decimal,
+                          maximum_fill_model_error_bps: Decimal, risk_limits_passed: bool,
+                          independent_review_done: bool, owner_approval_valid: bool) -> tuple[bool, list[str]]:
+    """Block exposure scaling until observed statement, fill-model, risk, review and approval gates all pass."""
+    reasons = []
+    if statement_mismatches:
+        reasons.append("BROKER_STATEMENT_MISMATCH")
+    if (not fill_model_error_bps.is_finite() or not maximum_fill_model_error_bps.is_finite()
+            or fill_model_error_bps < 0 or maximum_fill_model_error_bps < 0
+            or fill_model_error_bps > maximum_fill_model_error_bps):
+        reasons.append("FILL_MODEL_ERROR_OUT_OF_LIMIT")
+    if risk_limits_passed is not True:
+        reasons.append("RISK_LIMITS_NOT_PASSED")
+    if independent_review_done is not True:
+        reasons.append("INDEPENDENT_REVIEW_MISSING")
+    if owner_approval_valid is not True:
+        reasons.append("OWNER_APPROVAL_MISSING")
+    return not reasons, reasons

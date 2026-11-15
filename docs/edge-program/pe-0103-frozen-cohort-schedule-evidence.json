@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0103",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_evaluation_identity.py tests/test_forward_edge_f00.py tests/test_forward_edge_f02.py tests/test_forward_edge_f04.py",
+    "result": "103 passed; Ruff and mypy passed for the charter module."
+  },
+  "implemented": [
+    "Protected charter identity freezes strategy/model, rights, calendar, universe, execution costs, benchmark definitions, capital, parameters, horizon and cohort date ranges.",
+    "Risk/stop policy now has an explicit SHA-256 identity input; changing it changes the charter hash.",
+    "Durable append-only charter registration binds the cohort schedule to the exact charter hash; retroactive edits require a new version and later prospective start.",
+    "Closed cohort outcomes are immutable and registry recovery validates the append-only history."
+  ],
+  "blockers": [
+    "The schedule stores date ranges rather than the explicit exchange-session date list resolved from the frozen calendar.",
+    "No authoritative future exchange calendar is loaded into a production cohort scheduler; no prospective cohort is claimed as started."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/charter.py": "13f5834d7b0ac34f997e182f5da1bdff9ed06c983802817c54ff54c2cd6428e6",
+    "src/financial_brain/forward_edge/decision_custody.py": "ce833ff9aa84ebaa35076b85d868e0b6d15ad56777906f5b9dcc3f8c8eed6f46",
+    "tests/test_evaluation_identity.py": "d3ed67b0ffb9b4ebfe9be7f5a426da801d41f25b68b499090a68ca998cdc616b",
+    "docs/edge-program/evaluation-identity-contract.md": "d356081fdc8719b16be4e8ef216bf1009e42ed79074f332e811183c61d6136ce"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0100",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_paper_account.py tests/test_paper_account_audit.py",
+    "result": "Focused fill/account audit suite passes; Ruff and mypy pass for the account implementation."
+  },
+  "implemented": [
+    "Fill IDs are durable idempotency keys: an identical replay has one economic effect, including after restart.",
+    "Reusing a fill ID with changed quantity or other economic content is rejected before journal mutation.",
+    "The independent journal auditor rejects duplicated fill IDs rather than counting them twice."
+  ],
+  "blockers": [],
+  "source_sha256": {
+    "src/financial_brain/kernel/paper_account.py": "cf786ff3df86179ae16b8cd0ea937f6b644772f9947f1d2eddf696490a3ca37c",
+    "src/financial_brain/kernel/paper_account_audit.py": "515edd47579ededcd72f2bb8067d47e75609cdb7d0dbbf4b9bcbc580908e5016",
+    "tests/test_paper_account.py": "51b6c8b121c300b1bb0be508559d11242cbc50bdabdd5a4a0c039ff337c008cd",
+    "tests/test_paper_account_audit.py": "857f6173d35fa0af15e31b01f496c4856d047c617ed97346e5310600db364950"
+  }
+}

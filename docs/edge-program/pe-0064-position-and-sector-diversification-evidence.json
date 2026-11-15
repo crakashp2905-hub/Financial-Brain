@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0064",
+  "status": "DONE",
+  "implemented": [
+    "Scheduled portfolio planning enforces a configurable maximum position count while retaining existing holdings within the slot budget.",
+    "An optional complete sector map enforces a configurable maximum sector weight; any clipped risk stays in explicit cash.",
+    "The shared signal allocator forwards position and sector constraints.",
+    "Invalid sector maps, position limits, and prior books already beyond the requested limits fail closed."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_target_portfolio.py tests/test_signal_allocator.py -q",
+    "result": "16 passed; mypy and Ruff passed for changed allocator modules and tests.",
+    "cases": [
+      "test_position_and_sector_caps_leave_concentrated_exposure_in_cash",
+      "test_turnover_limit_cannot_reintroduce_positions_outside_position_budget",
+      "test_sector_map_must_cover_the_frozen_universe",
+      "test_max_positions_must_be_positive_integer",
+      "test_signal_allocator_forwards_position_and_sector_limits"
+    ]
+  },
+  "limitations": [
+    "The defaults of 20 positions and 0.30 maximum sector weight are configurable engineering assumptions, not market-calibrated parameters.",
+    "Sector taxonomy quality and freshness are external inputs; synthetic tests do not verify classifications.",
+    "No real market, prospective performance, or profitability evidence is claimed."
+  ]
+}

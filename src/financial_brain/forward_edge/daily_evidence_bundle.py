@@ -1,0 +1,409 @@
+"""Portable, reproducible paper-session evidence bundles with optional Ed25519 signatures."""
+from __future__ import annotations
+
+import base64
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import shutil
+import tempfile
+from datetime import date, datetime
+from decimal import Decimal
+
+from financial_brain.forward_edge.durable import DurableJournal
+
+
+class DailyBundleError(ValueError):
+    """Daily evidence bundle is incomplete, tampered, or cannot be reproduced."""
+
+
+def _canonical(value: dict) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+
+def _sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _safe_bundle_path(value: str) -> str:
+    path = PurePosixPath(value)
+    if path.is_absolute() or not value or any(part in {"", ".", ".."} for part in path.parts):
+        raise DailyBundleError("bundle path must be a safe relative path")
+    return path.as_posix()
+
+
+def _read_inputs(bundle_dir: Path, manifest: dict) -> dict[str, bytes]:
+    inputs = manifest.get("inputs")
+    if not isinstance(inputs, list) or not inputs:
+        raise DailyBundleError("bundle must declare its exported inputs")
+    output = {}
+    for entry in inputs:
+        if not isinstance(entry, dict):
+            raise DailyBundleError("bundle input manifest row is invalid")
+        role, relative, expected = entry.get("role"), entry.get("path"), entry.get("sha256")
+        if (not isinstance(role, str) or not role or role in output
+                or not isinstance(relative, str) or not isinstance(expected, str)):
+            raise DailyBundleError("bundle input roles must be unique nonempty names")
+        relative = _safe_bundle_path(relative)
+        path = bundle_dir.joinpath(*PurePosixPath(relative).parts)
+        if path.is_symlink():
+            raise DailyBundleError("bundle input cannot be a symbolic link")
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            raise DailyBundleError(f"bundle input is missing: {role}") from exc
+        if _sha(data) != expected:
+            raise DailyBundleError(f"bundle input hash mismatch: {role}")
+        output[role] = data
+    if not {"paper_account_archive", "paper_account_journal", "runner_journal"}.issubset(output):
+        raise DailyBundleError("bundle needs account archive, account journal, and runner journal inputs")
+    return output
+
+
+def _verified_account(data: bytes, session_date: str) -> dict:
+    try:
+        account = json.loads(data)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise DailyBundleError("paper account archive is not valid JSON") from exc
+    digest = account.get("snapshot_sha256")
+    unsigned = {key: value for key, value in account.items() if key != "snapshot_sha256"}
+    if not isinstance(digest, str) or _sha(_canonical(unsigned)) != digest:
+        raise DailyBundleError("paper account archive snapshot hash is invalid")
+    if account.get("session_date") != session_date:
+        raise DailyBundleError("paper account archive date differs from the bundle session")
+    return account
+
+
+def render_operator_report(*, session_date: str, session_id: str,
+                           inputs: dict[str, bytes]) -> bytes:
+    """Render a stable UTF-8 report solely from exported, hash-verified inputs."""
+    account = _verified_account(inputs["paper_account_archive"], session_date)
+    with tempfile.TemporaryDirectory(prefix="fb-daily-report-") as temporary:
+        root = Path(temporary)
+        runner_path = root / "runner.jsonl"
+        account_path = root / "account.jsonl"
+        archive_path = root / "account-archive.json"
+        runner_path.write_bytes(inputs["runner_journal"])
+        account_path.write_bytes(inputs["paper_account_journal"])
+        archive_path.write_bytes(inputs["paper_account_archive"])
+        try:
+            from financial_brain.forward_edge.eod_paper_archive import verify_prior_paper_open
+            from financial_brain.kernel.paper_account import PaperAccount
+
+            opening_records = DurableJournal(account_path).records()
+            opening = opening_records[0]
+            if opening.get("t") != "ACCOUNT_OPEN":
+                raise DailyBundleError("paper account journal does not start with ACCOUNT_OPEN")
+            paper_account = PaperAccount(
+                account_path, account_id=str(opening["account"]),
+                initial_cash=Decimal(str(opening["cash"])),
+                currency=str(opening["currency"]),
+            )
+            if (paper_account.journal.seq != account.get("account_journal_seq")
+                    or paper_account.journal.head != account.get("account_journal_head")):
+                raise DailyBundleError("paper account journal head does not match the archived close")
+            verification = verify_prior_paper_open(account=paper_account, archive_path=archive_path)
+            if verification.get("verified") is not True:
+                raise DailyBundleError("account journal does not reconcile to the archived close")
+            reconciled = paper_account.reconcile_total_return()
+            exact_state = {
+                "cash": str(paper_account.cash), "available_cash": str(paper_account.available_cash),
+                "equity": str(paper_account.equity), "realized_pnl": str(paper_account.realized_pnl),
+                "net_realized_pnl": str(paper_account.net_realized_pnl),
+                "fees": str(paper_account.fees), "taxes": str(paper_account.taxes),
+                "orders": paper_account.orders, "return_reconciliation": reconciled,
+            }
+            if any(account.get(key) != value for key, value in exact_state.items()):
+                raise DailyBundleError("paper account journal state differs from the archived close")
+        except DailyBundleError:
+            raise
+        except Exception as exc:
+            raise DailyBundleError("paper account journal does not reconcile to its close archive") from exc
+        try:
+            records = DurableJournal(runner_path).records()
+        except Exception as exc:
+            raise DailyBundleError("runner journal failed its durable hash-chain check") from exc
+    selected = [row for row in records if row.get("session_id") == session_id]
+    plan = next((row for row in selected if row.get("t") == "SESSION_PLAN"), None)
+    if plan is None or plan.get("config", {}).get("exchange_date") != session_date:
+        raise DailyBundleError("runner journal does not contain the requested dated session plan")
+    closed = next((row for row in reversed(selected) if row.get("t") == "SESSION_CLOSED"), None)
+    incomplete = next((row for row in reversed(selected) if row.get("t") == "SESSION_INCOMPLETE"), None)
+    if incomplete:
+        outcome = f"INCOMPLETE — {incomplete.get('reason', 'reason unavailable')}"
+    elif closed:
+        outcome = str(closed.get("result", {}).get("status", "CLOSED_STATUS_UNKNOWN"))
+    else:
+        outcome = "UNFINISHED — no terminal session record"
+    counts = {kind: sum(row.get("t") == kind for row in selected) for kind in (
+        "MARKET_EVENT", "DECISION", "PAPER_INTENT", "PAPER_EXECUTION",
+        "PAPER_ORDER_UPDATE", "PAPER_SKIP",
+    )}
+    inventory = account.get("inventory", [])
+    orders = account.get("orders", [])
+    lines = [
+        "Financial Brain — Paper Session Evidence Report",
+        f"Exchange session: {session_date}",
+        f"Session ID: {session_id}",
+        f"Outcome: {outcome}",
+        f"Account: {account['account_id']} ({account['currency']})",
+        f"Cash: {account['cash']}",
+        f"Available cash: {account['available_cash']}",
+        f"NAV: {account['equity']}",
+        f"Realized P&L: {account['realized_pnl']}",
+        f"Net realized P&L: {account['net_realized_pnl']}",
+        f"Fees: {account['fees']}",
+        f"Order rows: {len(orders)}; working rows: {sum(row.get('state') not in {
+            "FILLED", "CANCELED", "REJECTED", "EXPIRED"} for row in orders)}",
+        "Order quantities (order | state | filled | remaining):",
+    ]
+    for order in orders:
+        lines.append(f"  {order['client_id']} | {order['state']} | {order['filled']} | {order['remaining']}")
+    lines.append("Inventory (symbol | quantity | average cost | close mark | market value):")
+    for position in inventory:
+        lines.append(f"  {position['symbol']} | {position['quantity']} | {position['average_cost']} | "
+                     f"{position['mark_price']} | {position['market_value']}")
+    lines.append("Runner evidence counts:")
+    lines.extend(f"  {kind}: {count}" for kind, count in counts.items())
+    lines.extend([
+        f"Account archive snapshot SHA-256: {account['snapshot_sha256']}",
+        "The report describes exported paper evidence. It does not claim live execution or profitability.",
+    ])
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def build_daily_bundle(*, session_date: str, session_id: str, artifact_paths: dict[str, Path],
+                       output_dir: Path, signing_key=None) -> dict:
+    """Export inputs, deterministic report, and content-addressed manifest atomically.
+
+    `artifact_paths` must include account archive, account journal, and runner journal roles.
+    An optional cryptography Ed25519 private-key object signs the canonical manifest core.
+    """
+    try:
+        from datetime import date
+        if date.fromisoformat(session_date).isoformat() != session_date:
+            raise ValueError
+    except ValueError as exc:
+        raise DailyBundleError("session_date must be a canonical ISO exchange date") from exc
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise DailyBundleError("session id is required")
+    required_roles = {"paper_account_archive", "paper_account_journal", "runner_journal"}
+    if not isinstance(artifact_paths, dict) or not required_roles.issubset(artifact_paths):
+        raise DailyBundleError("account archive, account journal, and runner journal paths are required")
+    payloads: dict[str, bytes] = {}
+    input_payloads: dict[str, bytes] = {}
+    input_manifest = []
+    for role, source in sorted(artifact_paths.items()):
+        if not isinstance(role, str) or not role or not isinstance(source, Path) or not source.is_file():
+            raise DailyBundleError("every bundle input must have a role and an existing file path")
+        relative = f"inputs/{_safe_bundle_path(role)}{source.suffix.lower()}"
+        if relative in payloads:
+            raise DailyBundleError("bundle input path collision")
+        data = source.read_bytes()
+        payloads[relative] = data
+        input_payloads[role] = data
+        input_manifest.append({"role": role, "path": relative, "sha256": _sha(data), "size_bytes": len(data)})
+    inputs = input_payloads
+    report = render_operator_report(session_date=session_date, session_id=session_id, inputs=inputs)
+    core = {
+        "schema_version": "1.0", "session_date": session_date, "session_id": session_id,
+        "inputs": input_manifest, "operator_report_sha256": _sha(report),
+        "report_path": "operator-report.txt",
+    }
+    signature = None
+    public_key = None
+    if signing_key is not None:
+        try:
+            from cryptography.hazmat.primitives import serialization
+            signature = base64.b64encode(signing_key.sign(_canonical(core))).decode("ascii")
+            public_key = base64.b64encode(signing_key.public_key().public_bytes(
+                serialization.Encoding.Raw, serialization.PublicFormat.Raw,
+            )).decode("ascii")
+        except (AttributeError, ImportError, ValueError) as exc:
+            raise DailyBundleError("signing key must be a usable Ed25519 private key") from exc
+    public_key_sha256 = _sha(base64.b64decode(public_key)) if public_key else None
+    manifest = {**core, "manifest_sha256": _sha(_canonical(core)),
+                "signature_algorithm": "Ed25519" if signature else None,
+                "signature_base64": signature, "public_key_base64": public_key,
+                "public_key_sha256": public_key_sha256}
+    output_dir = Path(output_dir)
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    if output_dir.exists():
+        try:
+            prior = verify_daily_bundle(output_dir)
+            existing_manifest = json.loads((output_dir / "manifest.json").read_bytes())
+        except DailyBundleError as exc:
+            raise DailyBundleError("existing bundle directory is not a valid immutable bundle") from exc
+        except (OSError, ValueError) as exc:
+            raise DailyBundleError("existing bundle manifest cannot be read") from exc
+        if existing_manifest != manifest:
+            raise DailyBundleError("daily bundle output already exists with different content")
+        return prior
+    staging = Path(tempfile.mkdtemp(prefix=f".{output_dir.name}.", dir=output_dir.parent))
+    try:
+        for relative, data in payloads.items():
+            path = staging.joinpath(*PurePosixPath(relative).parts)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        (staging / "operator-report.txt").write_bytes(report)
+        (staging / "manifest.json").write_bytes(_canonical(manifest) + b"\n")
+        verify_daily_bundle(staging)
+        os.replace(staging, output_dir)
+        return verify_daily_bundle(output_dir)
+    except Exception:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+
+
+def close_and_bundle_paper_session(*, account, session_date: date, captured_at: datetime,
+                                   marks: dict[str, dict], archive_dir: Path,
+                                   runner_journal_path: Path, session_id: str,
+                                   bundle_root: Path, signing_key=None,
+                                   additional_artifacts: dict[str, Path] | None = None) -> dict:
+    """Close a paper book and create its portable evidence bundle as one retryable step.
+
+    This is an orchestration primitive for a daily launcher, not a scheduler. The caller
+    supplies observed close marks and a stable capture timestamp; a retry after a crash must
+    reuse those values. Account close archives and bundle output are immutable/idempotent.
+    """
+    from financial_brain.forward_edge.eod_paper_archive import close_and_archive_paper_session
+
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise DailyBundleError("session id is required")
+    runner_path = Path(runner_journal_path)
+    if not runner_path.is_file():
+        raise DailyBundleError("runner journal must exist before paper-session finalization")
+    try:
+        records = DurableJournal(runner_path).records()
+    except Exception as exc:
+        raise DailyBundleError("runner journal failed its durable hash-chain check") from exc
+    session_rows = [row for row in records if row.get("session_id") == session_id]
+    plan = next((row for row in session_rows if row.get("t") == "SESSION_PLAN"), None)
+    terminal = next((row for row in reversed(session_rows)
+                     if row.get("t") in {"SESSION_CLOSED", "SESSION_INCOMPLETE"}), None)
+    if (plan is None or plan.get("config", {}).get("exchange_date") != session_date.isoformat()
+            or terminal is None):
+        raise DailyBundleError("matching dated session must have a durable terminal record before close")
+    archive = close_and_archive_paper_session(
+        account=account, session_date=session_date, captured_at=captured_at,
+        marks=marks, archive_dir=Path(archive_dir),
+    )
+    artifact_paths = {
+        "paper_account_archive": Path(archive["archive_path"]),
+        "paper_account_journal": Path(account.path),
+        "runner_journal": runner_path,
+    }
+    if additional_artifacts:
+        overlap = set(artifact_paths).intersection(additional_artifacts)
+        if overlap:
+            raise DailyBundleError(f"additional artifact roles are reserved: {', '.join(sorted(overlap))}")
+        artifact_paths.update({role: Path(path) for role, path in additional_artifacts.items()})
+    output_dir = Path(bundle_root) / session_date.isoformat() / account.account_id
+    bundle = build_daily_bundle(
+        session_date=session_date.isoformat(), session_id=session_id,
+        artifact_paths=artifact_paths, output_dir=output_dir, signing_key=signing_key,
+    )
+    return {"account_archive": archive, "bundle": bundle, "bundle_dir": str(output_dir),
+            "physical_orders": False}
+
+
+def verify_daily_bundle(bundle_dir: Path, *, trusted_public_key_sha256: str | None = None) -> dict:
+    """Verify all exported hashes/signature and independently reproduce the human report."""
+    bundle_dir = Path(bundle_dir)
+    try:
+        manifest = json.loads((bundle_dir / "manifest.json").read_bytes())
+        report = (bundle_dir / "operator-report.txt").read_bytes()
+    except (OSError, ValueError) as exc:
+        raise DailyBundleError("bundle manifest or operator report is missing/invalid") from exc
+    core = {key: manifest.get(key) for key in (
+        "schema_version", "session_date", "session_id", "inputs",
+        "operator_report_sha256", "report_path",
+    )}
+    digest = _sha(_canonical(core))
+    if manifest.get("manifest_sha256") != digest:
+        raise DailyBundleError("daily manifest hash does not match its contents")
+    if manifest.get("report_path") != "operator-report.txt" or _sha(report) != manifest.get("operator_report_sha256"):
+        raise DailyBundleError("operator report hash does not match the manifest")
+    inputs = _read_inputs(bundle_dir, manifest)
+    reproduced = render_operator_report(session_date=manifest["session_date"],
+                                        session_id=manifest["session_id"], inputs=inputs)
+    if reproduced != report:
+        raise DailyBundleError("operator report cannot be reproduced from exported inputs")
+    algorithm = manifest.get("signature_algorithm")
+    signature = manifest.get("signature_base64")
+    public_key = manifest.get("public_key_base64")
+    if algorithm is None:
+        if signature is not None or public_key is not None or manifest.get("public_key_sha256") is not None:
+            raise DailyBundleError("unsigned manifest contains partial signature metadata")
+        signature_status = "UNSIGNED_HASHED"
+    elif algorithm == "Ed25519" and signature and public_key:
+        try:
+            from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+            public_bytes = base64.b64decode(public_key, validate=True)
+            if _sha(public_bytes) != manifest.get("public_key_sha256"):
+                raise DailyBundleError("manifest public-key hash does not match its contents")
+            if trusted_public_key_sha256 is not None and trusted_public_key_sha256 != _sha(public_bytes):
+                raise DailyBundleError("signing public key does not match the trusted key identity")
+            Ed25519PublicKey.from_public_bytes(public_bytes).verify(
+                base64.b64decode(signature, validate=True), _canonical(core))
+        except DailyBundleError:
+            raise
+        except Exception as exc:
+            raise DailyBundleError("daily manifest signature verification failed") from exc
+        signature_status = "ED25519_TRUSTED" if trusted_public_key_sha256 else "ED25519_VALID_UNPINNED"
+    else:
+        raise DailyBundleError("manifest signature metadata is incomplete or unsupported")
+    allowed = {"manifest.json", "operator-report.txt", *(entry["path"] for entry in manifest["inputs"])}
+    all_paths = list(bundle_dir.rglob("*"))
+    if any(path.is_symlink() for path in all_paths):
+        raise DailyBundleError("bundle cannot contain symbolic links")
+    actual = {path.relative_to(bundle_dir).as_posix() for path in all_paths if path.is_file()}
+    if actual != allowed:
+        raise DailyBundleError("bundle contains missing or undeclared files")
+    return {"verified": True, "manifest_sha256": digest,
+            "signature_status": signature_status, "input_count": len(inputs),
+            "report_reproduced": True}
+
+
+def restore_daily_bundle(bundle_dir: Path, destination: Path, *,
+                         trusted_public_key_sha256: str | None = None) -> dict:
+    """Restore a verified daily bundle to a new isolated directory.
+
+    Verification is performed before any destination is created. The restore is
+    immutable and refuses an existing destination so a previous recovery cannot
+    be silently overwritten. This restores evidence files; it does not grant
+    authority to resume live collection or trading.
+    """
+    source = Path(bundle_dir).resolve()
+    target = Path(destination).resolve()
+    if source == target or source in target.parents or target in source.parents:
+        raise DailyBundleError("restore source and destination must be separate trees")
+    verified = verify_daily_bundle(source, trusted_public_key_sha256=trusted_public_key_sha256)
+    if target.exists():
+        raise DailyBundleError("restore destination already exists; restored bundles are immutable")
+    manifest = json.loads((source / "manifest.json").read_bytes())
+    staging: Path | None = None
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        staging = Path(tempfile.mkdtemp(prefix=f".{target.name}.restore-", dir=target.parent))
+        staging.rmdir()
+        shutil.copytree(source, staging)
+        restored = verify_daily_bundle(staging, trusted_public_key_sha256=trusted_public_key_sha256)
+        if restored != verified:
+            raise DailyBundleError("restored bundle verification differs from source")
+        os.rename(staging, target)
+    except BaseException:
+        if staging is not None and staging.exists():
+            shutil.rmtree(staging, ignore_errors=True)
+        raise
+    inputs = {entry["role"]: str(target.joinpath(*PurePosixPath(entry["path"]).parts))
+              for entry in manifest["inputs"]}
+    return {
+        **restored,
+        "session_date": manifest["session_date"],
+        "session_id": manifest["session_id"],
+        "restore_dir": str(target),
+        "inputs": inputs,
+        "physical_orders": False,
+    }

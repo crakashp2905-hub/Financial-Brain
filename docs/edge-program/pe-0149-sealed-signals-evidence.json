@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0149",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_decision_sealing.py tests/test_forward_session_runner.py; ruff check src/financial_brain/forward_edge/signal_seal.py src/financial_brain/forward_edge/session_runner.py tests/test_decision_sealing.py",
+    "result": "48 passed; Ruff passed."
+  },
+  "implemented": [
+    "Every newly generated runner decision and abstention is written with a seal timestamp before risk evaluation and paper execution.",
+    "Input proof hashes the strategy/run configuration, preflight receipt, feed-health snapshot, and every source event available by the decision clock.",
+    "Events arriving after the decision clock are excluded; direct sealing rejects future inputs.",
+    "The durable journal stores a canonical input-manifest digest and content hash of the signal; abstentions carry an explicit reason."
+  ],
+  "blockers": [],
+  "source_sha256": {}
+}

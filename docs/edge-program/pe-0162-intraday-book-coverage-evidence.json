@@ -1,0 +1,12 @@
+{
+  "checklist_task": "PE-0162",
+  "status": "DONE",
+  "criterion": "LTP-only intervals cannot contribute executable alpha; every required sub-30-minute interval must have fresh, provenance-bearing two-sided book and displayed size or the cohort is blocked.",
+  "implementation": "src/financial_brain/evaluation/intraday_book_coverage.py",
+  "tests": [
+    "tests/test_intraday_book_coverage.py"
+  ],
+  "test_result": "6 passed; Ruff passed.",
+  "evidence_scope": "Synthetic acceptance fixtures only. No live Kite quote/depth coverage, fill economics, or profitability is asserted.",
+  "remaining_operational_evidence": "Capture authorized prospective quote/depth observations for every required interval and publish observed coverage before making empirical fill-economics claims."
+}

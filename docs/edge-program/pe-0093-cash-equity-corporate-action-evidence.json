@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0093",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_paper_account_corporate_actions.py tests/test_paper_account.py tests/test_paper_account_portfolio.py tests/test_kernel_ledger_guards_ticks.py",
+    "result": "32 passed (exit code 0); Ruff and mypy on changed source modules passed."
+  },
+  "implemented": [
+    "Effective-dated, source-hash-bound stock splits preserve total book basis, reject fractional-share outcomes, and invalidate pre-split marks until a new mark is recorded.",
+    "Cash dividends validate historical pre-ex-date holdings from dated fills and splits, post gross income, owner-supplied withholding tax and net cash exactly once, and survive restart.",
+    "Sourced suspension/resumption events block new intents while suspended.",
+    "Sourced delisting cash recovery posts proceeds and realizes gains/losses against position basis; zero recovery is supported.",
+    "Corporate actions require stable IDs and source hashes; conflicting action IDs and invalid events fail without mutating the journal."
+  ],
+  "blockers": [
+    "Source hashes and supplied rates are not independently checked against an official corporate-action provider or tax authority; no real source feed is configured.",
+    "Fractional split entitlements require a sourced cash-in-lieu workflow and are currently refused.",
+    "Delisting settlement models only owner-supplied gross cash recovery; event-specific tax, legal settlement, symbol succession and non-cash demerger/rights mechanics remain unsupported."
+  ],
+  "scope_note": "This is paper-only long cash-equity accounting and does not assert completeness for all Indian corporate-action mechanics."
+}

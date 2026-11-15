@@ -1,0 +1,3 @@
+# PE-0198 crash recovery evidence
+
+The existing forward-session crash matrix exercises decision/risk gates, paper intent, pending outbox, simulated send, acknowledgement, paper order updates and session closure. Added a crash after the account journal durably stores a fill with fee, then restarted and compared cash, fees, quantity, ledger head, receipt digest and reconciliation against an uninterrupted reference run. Verification: 78 combined focused accounting, archive and crash tests passed; Ruff and mypy passed. This is deterministic software fault injection, not a hardware or live-broker fault test.

@@ -1,6 +1,7 @@
 """SPA / Reality Check and PBO on planted families: noise looks like noise; one real strategy is found."""
 import numpy as np
 import pandas as pd
+import pytest
 
 from financial_brain.evaluation import family_validation as FV
 
@@ -29,3 +30,23 @@ def test_one_real_strategy_is_found():
     rc = FV.reality_check(X, reps=500)
     assert rc["best"] == "s0" and rc["spa_p"] < 0.05
     assert FV.pbo(X, blocks=8)["pbo"] < 0.1
+
+
+def test_reality_check_reports_full_family_null_seed_and_block_sensitivity():
+    X = _family(real=0.006, seed=21)
+    report = FV.reality_check(X, reps=100, mean_block=6, seed=99)
+    assert report["candidate_count"] == X.shape[1]
+    assert report["null_construction"].startswith("stationary bootstrap")
+    assert report["seed"] == 99 and report["resamples"] == 100
+    assert [row["mean_block"] for row in report["sensitivity"]] == [3.0, 12]
+    assert all(0 <= row["spa_p"] <= 1 for row in report["sensitivity"])
+
+
+def test_reality_check_rejects_degenerate_or_missing_family_inputs():
+    with pytest.raises(ValueError, match="nonzero return variance"):
+        FV.reality_check(pd.DataFrame({"flat": np.zeros(20)}), reps=100)
+    X = _family(seed=33)
+    X.iloc[0, 0] = np.nan
+    report = FV.reality_check(X, reps=100)
+    assert report["candidate_count"] == X.shape[1]
+    assert report["dropped_incomplete_periods"] == 1

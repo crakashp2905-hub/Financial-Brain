@@ -6,8 +6,9 @@ outside the trading phase all make the instrument non-tradable; the caller must 
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, time
 from decimal import Decimal
 from enum import Enum
 
@@ -55,7 +56,7 @@ class InstrumentId:
 
 @dataclass(frozen=True)
 class RuleVersion:
-    """Market rules effective from a date (tick, lot, multiplier, settlement lag in days)."""
+    """Market rules effective from a date, with optional execution provenance and limits."""
 
     effective_from: date
     tick: Decimal
@@ -63,12 +64,28 @@ class RuleVersion:
     multiplier: Decimal = Decimal(1)
     settlement_lag_days: int = 1
     max_order_quantity: int | None = None
+    exchange: str | None = None
+    max_freeze_quantity: int | None = None
+    margin_rule_id: str | None = None
+    session_rule_id: str | None = None
+    session_open: time | None = None
+    session_close: time | None = None
+    source_id: str | None = None
+    source_sha256: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "tick", to_decimal(self.tick))
         object.__setattr__(self, "multiplier", to_decimal(self.multiplier))
         if self.tick <= 0 or self.lot < 1 or self.multiplier <= 0 or self.settlement_lag_days < 0:
             raise InstrumentError("tick, lot and multiplier must be positive; settlement lag non-negative")
+        if self.max_order_quantity is not None and self.max_order_quantity < 1:
+            raise InstrumentError("maximum order quantity must be positive")
+        if self.max_freeze_quantity is not None and self.max_freeze_quantity < 1:
+            raise InstrumentError("maximum freeze quantity must be positive")
+        if self.session_open is not None and self.session_close is not None and self.session_open >= self.session_close:
+            raise InstrumentError("session open must precede session close")
+        if self.source_sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", self.source_sha256):
+            raise InstrumentError("source SHA-256 must be 64 lowercase hexadecimal characters")
 
 
 @dataclass
@@ -93,6 +110,47 @@ class Instrument:
         if not applicable:
             raise InstrumentError(f"no rule effective on {day.isoformat()}; refusing to guess")
         return applicable[-1]
+
+    def validate_order(self, *, day: date, exchange: str, quantity: int, price: Decimal,
+                       local_time: time) -> RuleVersion:
+        """Validate an executable order only when complete, source-identified rules exist for its date.
+
+        Research callers may still use :meth:`rule_on` for historical tick conversion. This method is the stricter
+        order gate and refuses incomplete owner-supplied Indian-market instrument, margin, session, or source rules.
+        """
+        tradable, reason = self.tradable(day, Phase.CONTINUOUS)
+        if not tradable:
+            raise InstrumentError(f"instrument is not tradable: {reason}")
+        rule = self.rule_on(day)
+        required = {
+            "exchange": rule.exchange,
+            "freeze quantity": rule.max_freeze_quantity,
+            "margin rule": rule.margin_rule_id,
+            "session rule": rule.session_rule_id,
+            "session open": rule.session_open,
+            "session close": rule.session_close,
+            "source identifier": rule.source_id,
+            "source SHA-256": rule.source_sha256,
+        }
+        missing = [name for name, value in required.items() if value is None or value == ""]
+        if missing:
+            raise InstrumentError("execution rules missing source-specific fields: " + ", ".join(missing))
+        if rule.session_open is None or rule.session_close is None:
+            raise InstrumentError("execution rules missing source-specific session window")
+        if exchange != rule.exchange:
+            raise InstrumentError("order exchange does not match the effective instrument rules")
+        if type(quantity) is not int or quantity <= 0:
+            raise InstrumentError("order quantity must be a positive integer")
+        if quantity % rule.lot:
+            raise InstrumentError(f"order quantity must be a multiple of lot size {rule.lot}")
+        freeze = min(rule.max_freeze_quantity or 0, rule.max_order_quantity or rule.max_freeze_quantity or 0)
+        if quantity > freeze:
+            raise InstrumentError(f"order quantity exceeds effective freeze limit {freeze}")
+        if not isinstance(price, Decimal) or not price.is_finite() or price <= 0 or price % rule.tick:
+            raise InstrumentError(f"order price must be positive and aligned to tick {rule.tick}")
+        if not rule.session_open <= local_time < rule.session_close:
+            raise InstrumentError("order time is outside the effective exchange session")
+        return rule
 
     def status_on(self, day: date) -> Status:
         current = None

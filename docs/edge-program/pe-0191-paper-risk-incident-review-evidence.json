@@ -1,0 +1,22 @@
+{
+  "checklist_task": "PE-0191",
+  "status": "DONE",
+  "criterion": "Provide paper-only risk kill switch and incident review with human-controlled reset; AI and UI actions cannot silently override halt.",
+  "implementation": [
+    "src/financial_brain/kernel/paper_account.py",
+    "src/financial_brain/forward_edge/cockpit.py",
+    "src/financial_brain/forward_edge/approvals.py"
+  ],
+  "tests": [
+    "tests/test_risk_incident_review.py",
+    "tests/test_paper_account_risk_latch.py",
+    "tests/test_forward_edge_f09.py"
+  ],
+  "test_result": "22 paper-risk and incident-review tests passed; Ruff and targeted mypy passed. Active latches block paper intents, non-human reset actors fail, human reset is journaled, and corrupt journals are refused.",
+  "evidence_scope": "Synthetic paper account journal trips, attempted resets, human repair sign-off, and journal tampering.",
+  "operational_limits": [
+    "Applies to the paper account journal and does not control a broker or live order route.",
+    "Sign-off SHA-256 is recorded but not verified by an external identity/signature provider.",
+    "Incident view is read-only; reset remains a human account-journal operation."
+  ]
+}

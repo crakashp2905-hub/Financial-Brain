@@ -1,0 +1,1035 @@
+from dataclasses import replace
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
+import json
+
+import pytest
+
+from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
+from financial_brain.forward_edge.degradation_monitor import FrozenThresholds, RollingObservation
+from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.approvals import Approval
+from financial_brain.forward_edge.fixed_look import FixedLookPolicy
+from financial_brain.forward_edge.charter import CharterRegistry, EvaluationIdentity, ExperimentCharter
+from financial_brain.forward_edge.decision_custody import Cohort, CohortSchedule
+from financial_brain.forward_edge.governance import FamilyEvidence, family_action_scope_sha256
+from financial_brain.forward_edge.durable import DurableJournal
+import financial_brain.forward_edge.paper_account_bridge as paper_bridge
+from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
+from financial_brain.forward_edge.holding_period_schedule import ExchangeSessionCalendar
+from financial_brain.forward_edge.pretrade_gates import PreTradePolicy, PreTradeSnapshot
+from financial_brain.forward_edge.premarket_preflight import PremarketPolicy, PremarketSnapshot
+from financial_brain.forward_edge.sample_size import design_sample_size
+from financial_brain.forward_edge.paper_account_bridge import (
+    ForwardPaperSessionService,
+    PaperAccountBridgeError,
+)
+from financial_brain.forward_edge.paper_execution_adapter import MarketableQuoteSimulator
+from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
+from financial_brain.forward_edge.registry import Benchmark, MechanismHypothesis, Registry, Status, StrategySpec
+from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount, PaperAccountError
+from financial_brain.kernel.paper_authority import PaperExecutionAuthorityRegistry
+from financial_brain.kernel.oms import State
+from financial_brain.paper import book as daily_paper_book
+from financial_brain.kernel.registered_paper_books import (
+    FamilyCapitalAuthorization,
+    FrozenPaperBookPlan,
+    RegisteredPaperBooks,
+    StrategyBookAllocation,
+)
+
+
+DECISION_AT = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
+FEED_HEALTH = FeedHealth(DECISION_AT - timedelta(seconds=1), 0, 0, 0,
+                         last_heartbeat_utc=DECISION_AT - timedelta(seconds=1))
+SCHEDULE = FeeSchedule("paper-cost-v1", date(2026, 1, 1), Decimal("10"), Decimal("10"))
+MODEL_EVIDENCE = {"fee_schedule_sha256": SCHEDULE.sha256}
+STRATEGY_SHA = "a" * 64
+
+
+def _registered_strategy():
+    strategy_id = "test-momentum"
+    benchmark = Benchmark("NIFTY50", "INDEX", "f" * 64, date(2026, 11, 1))
+    identity = EvaluationIdentity(
+        strategy_code_sha256=STRATEGY_SHA, model_code_sha256="1" * 64,
+        data_snapshot_sha256="2" * 64, data_rights_id="paper-test",
+        data_rights_sha256="3" * 64, market_calendar_id="NSE-test",
+        market_calendar_sha256="4" * 64, universe_sha256="5" * 64,
+        execution_cost_id="paper-cost-v1", execution_cost_sha256="6" * 64,
+        risk_policy_sha256="7" * 64, benchmarks=(("NIFTY50", "f" * 64),),
+    )
+    charter = ExperimentCharter(
+        charter_id="paper-test-v1", version=1, strategy_id=strategy_id,
+        code_sha256=STRATEGY_SHA, capital_inr="10000", start_on="2026-11-12",
+        end_on="2027-03-31", universe=("NSE_EQ",), benchmarks=("NIFTY50",),
+        horizon_sessions=5, evaluation_identity=identity,
+    )
+    spec = StrategySpec(
+        strategy_id=strategy_id, family="momentum", version=1, code_sha256=STRATEGY_SHA,
+        asset_scope=("NSE_EQ",), decision_clock="minute_close", direction="LONG",
+        exit_rule="time_5_sessions", horizon_sessions=5, data_requirements=("quote",),
+        source_lineage="test:registered-paper-adapter", status=Status.SHADOW_ONLY,
+        benchmark_id="NIFTY50", mechanism_hypothesis=MechanismHypothesis(
+            "Delayed trend following can leave continuation.",
+            "Slow portfolio rebalancing can extend the response.",
+            "Late trend entrants pay spread and impact.", ("liquid trend",),
+            "The advantage disappears after full execution costs.",
+        ),
+    )
+    registry = Registry()
+    registry.register(spec)
+    registry.register_benchmark(benchmark)
+    approval = Approval(
+        "STRATEGY_ENROLLMENT", strategy_id, charter.sha256(), "owner:test", "human",
+        datetime(2026, 11, 1, tzinfo=timezone.utc), datetime(2035, 1, 1, tzinfo=timezone.utc),
+    )
+    eligible = registry.transition(strategy_id, Status.PAPER_ELIGIBLE,
+                                    reason="test-only scoped enrollment", approval=approval,
+                                    charter=charter, now=DECISION_AT)
+    return eligible, registry
+
+
+def _config():
+    capital = Decimal("10000")
+    family = FamilyEvidence(
+        family_id="test-momentum", status="VERIFIED", strategy_sha256="a" * 64,
+        frozen_protocol_sha256="b" * 64, evidence_manifest_sha256="c" * 64,
+        protocol_frozen=True, protocol_frozen_at=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        cohort_started_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+        verified_sessions=80, receipt_sessions=80, candidate_count=1,
+        multiplicity_adjusted=True, cost_stress_passed=True,
+        matched_control_lcb_bps=Decimal("1"), net_alpha_lcb_bps=Decimal("1"),
+    )
+    scope = family_action_scope_sha256(
+        evidence=family, action="AUTO_EXECUTION_ENABLE", current_capital_inr=capital,
+        requested_capital_inr=capital, execution_mode="PAPER")
+    approval = Approval("STRATEGY_ENROLLMENT", family.family_id, scope, "owner:test", "human",
+                        datetime(2025, 1, 1, tzinfo=timezone.utc), datetime(2035, 1, 1, tzinfo=timezone.utc))
+    return ForwardRunConfig(
+        session_id="account-bridge-session", exchange_date="2026-11-12", cohort_id="bridge-cohort",
+        strategy_sha256=STRATEGY_SHA, risk_policy_sha256="b" * 64,
+        constraints_sha256="c" * 64, ledger_id="account-ledger", benchmark_id="NIFTY50",
+        instruments=("NSE:INFY",), capital_inr=str(capital), mode=Mode.LIVE_PAPER,
+        require_feed_health=True,
+        authority_strategy_id="test-momentum", authority_account_id="paper-main",
+        family_evidence=family, family_owner_approval=approval,
+    )
+
+
+def _registered_paper_books(tmp_path, family):
+    capital = Decimal("10000")
+    scope = family_action_scope_sha256(
+        evidence=family, action="INITIAL_ALLOCATION", current_capital_inr=Decimal(0),
+        requested_capital_inr=capital, execution_mode="PAPER")
+    approval = Approval(
+        "STRATEGY_ENROLLMENT", family.family_id, scope, "owner:test", "human",
+        datetime(2026, 11, 1, tzinfo=timezone.utc), datetime(2035, 1, 1, tzinfo=timezone.utc))
+    authorization = FamilyCapitalAuthorization(
+        strategy_id=family.family_id, action="INITIAL_ALLOCATION", current_capital_inr=Decimal(0),
+        requested_capital_inr=capital, evidence=family, owner_approval=approval)
+    plan = FrozenPaperBookPlan(
+        plan_id="paper-plan-v1", registered_at=datetime(2026, 11, 11, tzinfo=timezone.utc),
+        effective_from=datetime(2026, 11, 12, tzinfo=timezone.utc), total_capital_inr=capital,
+        books=(StrategyBookAllocation(family.family_id, "paper-main", capital),),
+        eligible_strategy_ids=(family.family_id,), eligibility_evidence_id="eligibility:test",
+        registration_evidence_id="registration:test", family_capital_authorizations=(authorization,))
+    books = RegisteredPaperBooks(tmp_path / "paper-books.jsonl")
+    books.register(plan)
+    return books
+
+
+def _event(at, bid="99.95", ask="100", bid_qty=20, ask_qty=20):
+    return NormalizedEvent(
+        "QUOTE", "NSE:INFY", at - timedelta(milliseconds=2), at - timedelta(milliseconds=1), at,
+        tuple(sorted({"bid_price": bid, "ask_price": ask,
+                      "bid_qty": str(bid_qty), "ask_qty": str(ask_qty)}.items())),
+    )
+
+
+def _premarket_snapshot(config, strategy_spec):
+    return PremarketSnapshot(
+        session_id=config.session_id, session_date=date.fromisoformat(config.exchange_date),
+        checked_at=datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc),
+        calendar_is_session=True, calendar_version="NSE-fixture-v1",
+        calendar_evidence_id="fixture:calendar", data_entitlement_active=True,
+        data_source="fixture-kite-readonly", entitlement_evidence_id="fixture:entitlement",
+        broker_read_only_session=True, broker_session_id="fixture-session",
+        broker_evidence_id="fixture:broker", disk_free_bytes=2_000_000_000,
+        disk_probe_evidence_id="fixture:disk", archive_writable=True,
+        archive_probe_evidence_id="fixture:archive", cost_schedule_sha256=SCHEDULE.sha256,
+        cost_effective_from=SCHEDULE.effective_from, cost_effective_until=None,
+        cost_evidence_id="fixture:cost", strategy_id=strategy_spec.strategy_id,
+        strategy_version=str(strategy_spec.version),
+        strategy_spec_sha256=strategy_spec.code_sha256, strategy_evidence_id="fixture:strategy",
+        risk_config_sha256=config.risk_policy_sha256, risk_approved=True,
+        risk_evidence_id="fixture:risk", clock_skew_ms=1.0, clock_evidence_id="fixture:clock",
+    )
+
+
+def _service(tmp_path, *, account_cash=Decimal("10000"), premarket=True):
+    config = _config()
+    runner_path = tmp_path / f"{config.session_id}.runner.jsonl"
+    books = _registered_paper_books(tmp_path, config.family_evidence)
+    account_root = tmp_path / "registered-accounts"
+    account_path = books.account_path(plan_id="paper-plan-v1", account_id="paper-main",
+                                     root=account_root)
+    account = PaperAccount(account_path, account_id="paper-main", initial_cash=account_cash,
+                           fee_schedule=SCHEDULE)
+    strategy_spec, registry = _registered_strategy()
+    service = ForwardPaperSessionService(ForwardSessionRunner(runner_path), account,
+                                         strategy_spec=strategy_spec, registry=registry,
+                                         paper_books=books, paper_book_plan_id="paper-plan-v1",
+                                         paper_account_root=account_root,
+                                         premarket_policy=(PremarketPolicy(
+                                             min_disk_free_bytes=1_000_000_000,
+                                             max_clock_skew_ms=50) if premarket else None),
+                                         premarket_snapshot_fn=(lambda run_config, _at: _premarket_snapshot(
+                                             run_config, strategy_spec)) if premarket else None)
+    return service, config, account, runner_path, account_path
+
+
+def test_session_evidence_and_paper_account_authority_journals_cannot_alias(tmp_path):
+    service, config, account, _runner_path, account_path = _service(tmp_path)
+    service.runner = ForwardSessionRunner(account_path)
+    before = account.journal.records()
+
+    with pytest.raises(PaperAccountBridgeError, match="must be distinct"):
+        service._validate_strategy(config, DECISION_AT)
+
+    assert account.journal.records() == before
+
+
+def test_live_paper_service_requires_health_snapshot_before_preflight(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    preflight_calls = []
+    with pytest.raises(PaperAccountBridgeError, match="requires a feed-health snapshot"):
+        service.run(
+            config, [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: preflight_calls.append(True) or {"approved": True},
+            decision_fn=lambda _: {"side": "NONE"}, risk_fn=lambda _: {"approved": True},
+            execution_fn=lambda *_: {}, decision_at=DECISION_AT,
+        )
+    assert preflight_calls == []
+    assert account.cash == Decimal("10000")
+    assert not runner_path.exists()
+
+
+def test_configured_premarket_provider_is_session_bound_and_persisted(tmp_path):
+    service, config, _account, runner_path, _ = _service(tmp_path, premarket=True)
+
+    result = service.run(
+        config, [], decision_fn=lambda _: {"side": "NONE", "reason": "NO_SIGNAL"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("no-signal session cannot execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT,
+    )
+
+    preflight = next(row["result"] for row in DurableJournal(runner_path).records()
+                     if row.get("t") == "PREFLIGHT_RESULT")
+    assert preflight["approved"] is True
+    assert preflight["session_id"] == config.session_id
+    assert preflight["report_sha256"]
+    assert result["status"] == "NO_TRADE"
+
+
+def test_premarket_provider_mismatched_frozen_risk_policy_fails_closed(tmp_path):
+    service, config, _account, runner_path, _ = _service(tmp_path, premarket=True)
+    service.premarket_snapshot_fn = lambda _run_config, _at: _premarket_snapshot(
+        config, service.strategy_spec)
+    changed = replace(config, risk_policy_sha256="d" * 64)
+
+    result = service.run(
+        changed, [], decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 1},
+        preflight_fn=lambda: {"approved": True, "source": "legacy-caller"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("failed preflight cannot execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT,
+    )
+
+    preflight = next(row["result"] for row in DurableJournal(runner_path).records()
+                     if row.get("t") == "PREFLIGHT_RESULT")
+    assert preflight["approved"] is False
+    assert preflight["reason"] == "PREMARKET_PREFLIGHT_FAILED"
+    assert result["status"] == "NO_TRADE"
+
+
+def test_generic_callback_cannot_approve_without_configured_premarket_provider(tmp_path):
+    service, config, _account, runner_path, _ = _service(tmp_path, premarket=False)
+    called = []
+
+    result = service.run(
+        config, [], preflight_fn=lambda: called.append(True) or {"approved": True},
+        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 1},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("unconfigured premarket gate cannot execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT,
+    )
+
+    preflight = next(row["result"] for row in DurableJournal(runner_path).records()
+                     if row.get("t") == "PREFLIGHT_RESULT")
+    assert called == [True]
+    assert preflight["approved"] is False
+    assert preflight["reason"] == "PREMARKET_OR_ADDITIONAL_PREFLIGHT_BLOCKED"
+    assert preflight["additional_preflight"]["approved"] is True
+    assert result["status"] == "NO_TRADE"
+
+
+def test_strategy_degradation_pause_latches_entries_without_blocking_account_risk_reductions(tmp_path):
+    service, config, account, _runner_path, account_path = _service(tmp_path)
+    policy = FrozenThresholds(
+        strategy_id=service.strategy_spec.strategy_id,
+        strategy_version=config.strategy_sha256,
+        frozen_at=DECISION_AT - timedelta(days=10),
+        cohort_starts_at=DECISION_AT - timedelta(days=9),
+        pause_net_alpha_bps=0.0, retire_net_alpha_bps=-100.0,
+        max_slippage_bps=10.0, min_fill_coverage=0.75, max_drift_score=0.5,
+        min_observations=1,
+    )
+    config = replace(config, degradation_policy_sha256=policy.policy_sha256)
+    observed_at = DECISION_AT + timedelta(minutes=2)
+    observation = RollingObservation(
+        observation_id=config.session_id, policy_sha256=policy.policy_sha256,
+        window_start=policy.cohort_starts_at, window_end=DECISION_AT + timedelta(minutes=1),
+        observed_at=observed_at, net_alpha_bps=-1.0, slippage_bps=2.0,
+        fill_coverage=1.0, drift_score=0.1, sample_count=1,
+        evidence_ids=("paper-monitor:synthetic-test",),
+    )
+    result = service.run(
+        config, [_event(DECISION_AT)],
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _: {"side": "NONE", "reason": "NO_SIGNAL"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("no order should be executed"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT, degradation_policy=policy,
+        degradation_observation_fn=lambda *_: observation,
+    )
+
+    assert result["degradation"]["action"] == "PAUSE"
+    assert result["degradation"]["observed_at_utc"] == observed_at.isoformat()
+    assert account.entry_latched is True
+    assert account.risk_latched is False
+    with pytest.raises(PaperAccountError, match="entry latch blocks"):
+        account.submit_intent(client_id="blocked-after-pause", symbol="NSE:TCS", side="BUY",
+                              quantity=1, limit=Decimal("100"), reserve=Decimal("120"))
+    reopened = PaperAccount(account_path, account_id=account.account_id,
+                            initial_cash=account.initial_cash, fee_schedule=SCHEDULE)
+    assert reopened.entry_latched is True and reopened.risk_latched is False
+    service._latch_degradation_entries(config, result["degradation"])
+    assert sum(row.get("t") == "ENTRY_LATCH" and row.get("state") == "TRIPPED"
+               for row in reopened.journal.records()) == 1
+
+
+def test_session_bound_pretrade_policy_blocks_order_and_persists_verdict(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    policy = PreTradePolicy(
+        strategy_sha256=config.strategy_sha256, strategy_version=str(service.strategy_spec.version),
+        frozen_at=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        session_starts_at=datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc),
+        max_quote_age_s=5, max_spread_bps=20, max_adv_age_days=1,
+        max_adv_participation=0.1, minimum_net_alpha_bps=0,
+        max_abs_exposure_inr=Decimal("5000"), minimum_model_confidence=0.6,
+    )
+    config = replace(config, pretrade_policy_sha256=policy.sha256)
+    quote = _event(DECISION_AT - timedelta(seconds=2))
+    calls = []
+
+    def snapshot_fn(run_config, decision, visible_events, decision_at):
+        calls.append(tuple(event.content_sha256() for event in visible_events))
+        return PreTradeSnapshot(
+            session_id=run_config.session_id, strategy_sha256=run_config.strategy_sha256,
+            instrument=decision["instrument"], side=decision["side"], quantity=decision["quantity"],
+            decision_at=decision_at, quote=visible_events[-1], adv_quantity=1000,
+            adv_as_of=date(2026, 11, 12), adv_source_sha256="d" * 64,
+            current_signed_exposure_inr=Decimal(0), exposure_evidence_sha256="e" * 64,
+            gross_alpha_bps=10, fees_bps=10, spread_cost_bps=2, impact_bps=2,
+            cost_evidence_sha256="f" * 64, model_confidence=0.9, model_evidence_sha256="1" * 64,
+        )
+
+    result = service.run(
+        config, [quote], preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 1},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("failed net-alpha gate cannot execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+        pretrade_policy=policy, pretrade_snapshot_fn=snapshot_fn,
+    )
+    records = DurableJournal(runner_path).records()
+    risk = next(row["risk"] for row in records if row.get("t") == "RISK_VERDICT")
+    assert result["status"] == "REJECTED"
+    assert calls == [(quote.content_sha256(),)]
+    assert risk["approved"] is False
+    assert risk["pretrade_gate"]["policy_sha256"] == policy.sha256
+    assert risk["pretrade_gate"]["expected_net_alpha_bps"] == -4
+    assert account.cash == Decimal("10000")
+
+
+def test_session_bound_pretrade_policy_cannot_be_omitted_or_changed(tmp_path):
+    service, config, _account, runner_path, _ = _service(tmp_path)
+    policy = PreTradePolicy(
+        strategy_sha256=config.strategy_sha256, strategy_version=str(service.strategy_spec.version),
+        frozen_at=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        session_starts_at=datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc),
+        max_quote_age_s=5, max_spread_bps=20, max_adv_age_days=1,
+        max_adv_participation=0.1, minimum_net_alpha_bps=0,
+        max_abs_exposure_inr=Decimal("5000"), minimum_model_confidence=0.6,
+    )
+    config = replace(config, pretrade_policy_sha256=policy.sha256)
+    arguments = dict(
+        preflight_fn=lambda: {"approved": True}, decision_fn=lambda _: {"side": "NONE"},
+        risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {},
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+    with pytest.raises(PaperAccountBridgeError, match="matching snapshot adapter"):
+        service.run(config, [], **arguments, pretrade_policy=policy)
+    changed = replace(policy, minimum_net_alpha_bps=1)
+    with pytest.raises(PaperAccountBridgeError, match="differs from the session-bound"):
+        service.run(config, [], **arguments, pretrade_policy=changed,
+                    pretrade_snapshot_fn=lambda *_: None)
+    assert not runner_path.exists()
+
+
+def test_registered_live_paper_service_cannot_disable_feed_health_gate(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    with pytest.raises(PaperAccountBridgeError, match="requires feed-health gating"):
+        service.run(
+            replace(config, require_feed_health=False), [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: {"approved": True}, decision_fn=lambda _: {"side": "NONE"},
+            risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {},
+            decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+            feed_health_observed_at=DECISION_AT,
+        )
+    assert not runner_path.exists()
+    assert account.cash == Decimal("10000")
+
+
+def test_live_paper_service_stale_health_fails_closed_before_strategy(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    stale = FeedHealth(DECISION_AT - timedelta(seconds=30), 0, 0, 0,
+                       last_heartbeat_utc=DECISION_AT - timedelta(seconds=30))
+    calls = []
+    result = service.run(
+        config, [_event(DECISION_AT + timedelta(seconds=1))],
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _: calls.append("decision") or pytest.fail("stale feed must block decisions"),
+        risk_fn=lambda _: calls.append("risk") or {"approved": True},
+        execution_fn=lambda *_: calls.append("execution") or {}, decision_at=DECISION_AT,
+        feed_health=stale, feed_health_observed_at=DECISION_AT,
+    )
+    assert result["status"] == "INCOMPLETE"
+    assert result["reason"] == "FEED_ENDED_EARLY"
+    assert calls == []
+    assert account.cash == Decimal("10000")
+    assert not any(row.get("t") == "PAPER_INTENT" for row in DurableJournal(runner_path).records())
+
+
+def test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart(tmp_path):
+    service, config, account, _runner_path, account_path = _service(tmp_path)
+    policy = FixedLookPolicy(
+        policy_id="trial-risk-v1", checkpoints=(20, 40, 60), familywise_alpha=0.05,
+        max_drawdown_floor=-0.15, frozen_at_utc="2026-01-01T00:00:00Z",
+        first_observation_at_utc="2026-01-02T00:00:00Z",
+    )
+    sample_size_plan = design_sample_size(
+        design_id="trial-risk-sample-v1", detectable_daily_benefit=0.04,
+        daily_volatility=0.10, target_power=0.8, familywise_alpha=policy.familywise_alpha,
+        planned_looks=len(policy.checkpoints), dependence_design_effect=1.0,
+        expected_observation_rate=1.0, session_floor=10,
+        frozen_at_utc=policy.frozen_at_utc,
+        first_observation_at_utc=policy.first_observation_at_utc,
+    )
+    identity = EvaluationIdentity(
+        strategy_code_sha256=service.strategy_spec.code_sha256, model_code_sha256="1" * 64,
+        data_snapshot_sha256="2" * 64, data_rights_id="fixed-look-test",
+        data_rights_sha256="3" * 64, market_calendar_id="NSE-test",
+        market_calendar_sha256="4" * 64, universe_sha256="5" * 64,
+        execution_cost_id="paper-cost-v1", execution_cost_sha256="6" * 64,
+        risk_policy_sha256=FixedLookRegistry.bundle_sha256(policy, sample_size_plan),
+        benchmarks=(("NIFTY50", "f" * 64),),
+    )
+    charter = ExperimentCharter(
+        charter_id="trial-risk-v1", version=1, strategy_id=service.strategy_spec.strategy_id,
+        code_sha256=service.strategy_spec.code_sha256, capital_inr="10000",
+        start_on="2026-11-12", end_on="2027-03-31", universe=("NSE_EQ",),
+        benchmarks=("NIFTY50",), horizon_sessions=5, evaluation_identity=identity,
+    )
+    charter_registry = CharterRegistry(tmp_path / "risk-charter.jsonl")
+    schedule = CohortSchedule(charter.sha256(), (Cohort("risk-test", "2026-11-12", "2027-03-31"),))
+    charter_registry.register(charter, schedule)
+    fixed_look_registry = FixedLookRegistry(tmp_path / "risk-look.jsonl", charter_registry)
+    fixed_look_registry.register(policy, sample_size_plan=sample_size_plan,
+                                 charter_id=charter.charter_id)
+    strategy_calls = []
+    result = service.run(
+        config, [_event(DECISION_AT + timedelta(seconds=1))],
+        preflight_fn=lambda: {"approved": True, "status": "READY"},
+        decision_fn=lambda _: strategy_calls.append("decision") or {"side": "BUY"},
+        risk_fn=lambda _: strategy_calls.append("risk") or {"approved": True},
+        execution_fn=lambda *_: strategy_calls.append("execution") or {},
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT, fixed_look_registry=fixed_look_registry,
+        fixed_look_policy_id=policy.policy_id,
+        fixed_look_observation_fn=lambda: {
+            "completed_sessions": 23,
+            "lower_confidence_bound": 0.5,
+            "observed_max_drawdown": -0.15,
+        },
+    )
+
+    assert result["status"] == "REJECTED"
+    assert result["risk"]["reason"] == "FIXED_LOOK_RISK_HARM"
+    assert result["risk"]["fixed_look_risk_stop"]["policy_sha256"] == policy.sha256()
+    assert strategy_calls == []
+    assert account.risk_latched is True
+
+    reopened = PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
+                            fee_schedule=SCHEDULE)
+    assert reopened.risk_latched is True
+    restarted_config = replace(config, session_id="account-bridge-after-risk-restart")
+    restarted_runner_path = tmp_path / "after-risk-restart.runner.jsonl"
+    restarted_service = ForwardPaperSessionService(
+        ForwardSessionRunner(restarted_runner_path), reopened,
+        strategy_spec=service.strategy_spec, registry=service.registry,
+        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
+        paper_account_root=service.paper_account_root,
+        authority_registry=service.authority_registry,
+    )
+    restart_at = DECISION_AT + timedelta(minutes=1)
+    restart_health = FeedHealth(restart_at - timedelta(seconds=1), 0, 0, 0,
+                                last_heartbeat_utc=restart_at - timedelta(seconds=1))
+    restarted_result = restarted_service.run(
+        restarted_config, [_event(DECISION_AT + timedelta(seconds=1))],
+        preflight_fn=lambda: {"approved": True, "status": "READY"},
+        decision_fn=lambda _: pytest.fail("latched account must not call strategy"),
+        risk_fn=lambda _: pytest.fail("latched account must not approve risk"),
+        execution_fn=lambda *_: pytest.fail("latched account must not execute"),
+        decision_at=restart_at, feed_health=restart_health,
+        feed_health_observed_at=restart_at,
+    )
+    assert restarted_result["status"] == "REJECTED"
+    assert restarted_result["risk"]["reason"] == "PAPER_ACCOUNT_RISK_LATCHED"
+    assert not any(row.get("t") == "PAPER_INTENT"
+                   for row in DurableJournal(restarted_runner_path).records())
+
+
+def test_forward_paper_service_requires_account_opening_capital_to_match_frozen_plan(tmp_path):
+    mismatched, config, wrong_account, _runner_path, _account_path = _service(
+        tmp_path, account_cash=Decimal("9999"))
+    before = wrong_account.journal.records()
+
+    with pytest.raises(PaperAccountBridgeError, match="opening capital must match"):
+        mismatched._validate_strategy(config, DECISION_AT)
+
+    assert wrong_account.journal.records() == before
+
+
+def test_forward_paper_service_rejects_unregistered_journal_with_matching_id_and_capital(tmp_path):
+    service, config, _account, runner_path, _account_path = _service(tmp_path)
+    rogue_account = PaperAccount(tmp_path / "rogue-book.jsonl", account_id="paper-main",
+                                 initial_cash=Decimal("10000"), fee_schedule=SCHEDULE)
+    before = rogue_account.journal.records()
+    rogue_service = ForwardPaperSessionService(
+        ForwardSessionRunner(runner_path), rogue_account,
+        strategy_spec=service.strategy_spec, registry=service.registry,
+        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
+        paper_account_root=service.paper_account_root,
+    )
+
+    with pytest.raises(PaperAccountBridgeError, match="journal path"):
+        rogue_service._validate_strategy(config, DECISION_AT)
+
+    assert rogue_account.journal.records() == before
+
+
+def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently(tmp_path):
+    service, config, account, runner_path, account_path = _service(tmp_path)
+    events = [_event(DECISION_AT + timedelta(seconds=1)),
+              _event(DECISION_AT + timedelta(seconds=2), bid="102", ask="102.05")]
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+    preflight_calls = []
+    kwargs = dict(
+        preflight_fn=lambda: preflight_calls.append(True) or {"approved": True, "checks": {"cash": True}},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+
+    first = service.run(config, events, **kwargs)
+    cash_after_first = account.cash
+    second = service.run(config, events, **kwargs)
+
+    assert first["execution"]["status"] == "FILLED"
+    assert first["account_reconciliation"] == second["account_reconciliation"]
+    assert preflight_calls == [True]
+    assert account.cash == cash_after_first == Decimal("9799.80")
+    assert account.position("NSE:INFY").quantity == 2
+    assert account.fees == Decimal("0.20")
+    durable_fill = next(row for row in account.journal.records() if row.get("t") == "FILL")
+    assert durable_fill["execution_evidence"]["fee_schedule_sha256"] == SCHEDULE.sha256
+    assert durable_fill["execution_evidence"]["execution_model_sha256"] == first["execution"]["execution_model_sha256"]
+    assert first["account_reconciliation"]["data_snapshot_sha256"] == first["execution"]["data_snapshot_sha256"]
+    event_rows = [row for row in DurableJournal(runner_path).records()
+                  if row.get("t") == "CANONICAL_TRADING_EVENT"]
+    payloads = [json.loads(row["payload"]) for row in event_rows]
+    assert [payload["event_type"] for payload in payloads] == [
+        "IntentEvent", "OrderEvent", "OrderEvent", "FillEvent", "MarkEvent"
+    ]
+    assert payloads[0]["event"]["strategy_id"] == "test-momentum"
+    assert payloads[0]["event"]["strategy_id"] != STRATEGY_SHA
+    assert payloads[1]["event"]["occurred_at"] == DECISION_AT.isoformat()
+    assert payloads[2]["event"]["occurred_at"] == first["execution"]["simulated_execution_at_utc"]
+    assert payloads[3]["event"]["occurred_at"] == first["execution"]["fills"][0]["quote_available_utc"]
+    assert len({row["event_sha256"] for row in event_rows}) == len(event_rows)
+    assert len(event_rows) == len(first["account_reconciliation"]["canonical_event_sha256s"])
+    assert account.ledger.balance("cash:paper-main", "INR") == account.cash
+    assert account.ledger.trial_balance_ok()
+    assert first["account_reconciliation"]["mark"]["marking_policy"] == "LONG_LIQUIDATION_BID"
+    assert first["account_reconciliation"]["unrealized_pnl_inr"] == "4.00"
+    order_updates = [row for row in DurableJournal(runner_path).records()
+                     if row.get("t") == "PAPER_ORDER_UPDATE"]
+    assert [row["status"] for row in order_updates] == ["SUBMITTED", "FILLED"]
+    assert [row["filled_quantity"] for row in order_updates] == [0, 2]
+    assert all(row["receipt_id"] == first["execution"]["receipt_id"] for row in order_updates)
+    assert PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
+                        fee_schedule=SCHEDULE).position("NSE:INFY").quantity == 2
+
+
+def test_due_exchange_calendar_exit_uses_risk_execution_and_account_reconciliation(tmp_path):
+    service, config, account, _runner_path, _account_path = _service(tmp_path)
+    entry_events = [_event(DECISION_AT + timedelta(seconds=1)),
+                    _event(DECISION_AT + timedelta(seconds=2), bid="100", ask="100.05")]
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+    entered = service.run(
+        config, entry_events, preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _events: {
+            "side": "BUY", "instrument": "NSE:INFY", "quantity": 2,
+            "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1,
+            "forecast_costs_included": True,
+            "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033,
+                                   "benchmark": 0.01, "fees": 0.001,
+                                   "spread": 0.001, "impact": 0.001},
+        },
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+    assert entered["execution"]["status"] == "FILLED"
+    assert account.position("NSE:INFY").quantity == 2
+
+    exit_at = datetime(2026, 11, 16, 4, 0, tzinfo=timezone.utc)
+    exit_config = replace(config, session_id="account-bridge-time-exit", exchange_date="2026-11-16")
+    source_at = exit_at - timedelta(minutes=5)
+    position_event = NormalizedEvent(
+        "BOOK_POSITION", "NSE:INFY", source_at - timedelta(seconds=2),
+        source_at - timedelta(seconds=1), source_at,
+        tuple(sorted({
+            "book_version": "daily-v1", "entry_day": "2026-11-09", "exit_window": "EXCHANGE_CLOSE",
+            "exit_calendar_id": "nse-test-calendar", "exit_calendar_source_sha256": "c" * 64,
+            "exit_schedule_status": "DUE", "horizon_sessions": "5", "held_sessions": "5",
+            "mode": "live", "position_state": "EXIT_DUE", "shares": "2",
+            "signal_day": "2026-11-06", "scheduled_exit_session": "2026-11-16",
+        }.items())), ingested_utc=source_at,
+    )
+    exit_health = FeedHealth(exit_at - timedelta(seconds=1), 0, 0, 0,
+                             last_heartbeat_utc=exit_at - timedelta(seconds=1))
+    exit_events = [position_event, _event(exit_at + timedelta(seconds=1), bid="101", ask="101.05"),
+                   _event(exit_at + timedelta(seconds=2), bid="101.10", ask="101.15")]
+    risk_decisions = []
+
+    def approve_close(decision):
+        risk_decisions.append(decision)
+        assert decision["side"] == "SELL"
+        assert decision["position_effect"] == "CLOSE"
+        assert decision["reason"] == "TIME_EXIT"
+        return {"approved": True}
+
+    closed = service.run(
+        exit_config, exit_events, preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _events: pytest.fail("due scheduled exit must override a fresh entry signal"),
+        risk_fn=approve_close, execution_fn=simulator, decision_at=exit_at,
+        feed_health=exit_health, feed_health_observed_at=exit_at,
+    )
+
+    assert closed["status"] == "PAPER_COMPLETE"
+    assert closed["decision"]["scheduled_exit_session"] == "2026-11-16"
+    assert closed["risk"]["pretrade_gate"] == {
+        "required": False, "approved": True, "reason": "POSITION_REDUCTION"}
+    assert closed["risk"]["net_alpha_hurdle"]["reason"] == "POSITION_REDUCTION"
+    assert closed["risk"]["family_automation_gate"] == {
+        "required": False, "approved": True, "reason": "POSITION_REDUCTION"}
+    assert risk_decisions == [closed["decision"]]
+    assert closed["execution"]["status"] == "FILLED"
+    assert account.position("NSE:INFY").quantity == 0
+
+
+def test_registered_paper_service_builds_positions_from_daily_book_adapter(tmp_path, monkeypatch):
+    service, config, _account, _runner_path, _account_path = _service(tmp_path)
+    event = NormalizedEvent(
+        "BOOK_POSITION", "NSE:INFY", DECISION_AT - timedelta(seconds=3),
+        DECISION_AT - timedelta(seconds=2), DECISION_AT - timedelta(seconds=1),
+        tuple(sorted({"position_state": "ACTIVE", "shares": "0"}.items())),
+        ingested_utc=DECISION_AT,
+    )
+    captured = {}
+
+    def build_positions(book, *, mode, spec, as_of, clock_provider, session_calendar):
+        captured.update({"book": book, "mode": mode, "spec": spec, "as_of": as_of,
+                         "clock_provider": clock_provider, "calendar": session_calendar})
+        return [event]
+
+    monkeypatch.setattr(paper_bridge, "forward_position_events", build_positions)
+    calendar = ExchangeSessionCalendar(
+        "nse-test-calendar", (date(2026, 11, 12), date(2026, 11, 13)), "c" * 64)
+    observed = []
+    result = service.run_with_daily_book(
+        config, [], daily_book=object(), daily_book_mode="live",
+        daily_book_spec=daily_paper_book.MOMENTUM, session_calendar=calendar,
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda events: observed.extend(events) or {"side": "NONE", "reason": "NO_SIGNAL"},
+        risk_fn=lambda _decision: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("no-trade book state must not execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT,
+    )
+
+    assert result["status"] == "NO_TRADE"
+    assert observed == [event]
+    assert captured["book"] is not None
+    assert captured["mode"] == "live"
+    assert captured["spec"] == daily_paper_book.MOMENTUM
+    assert captured["as_of"] == date(2026, 11, 12)
+    assert captured["clock_provider"] is service.runner.clock_provider
+    assert captured["calendar"] is calendar
+
+
+def test_daily_book_runner_requires_calendar_before_any_session_writes(tmp_path):
+    service, config, _account, runner_path, _account_path = _service(tmp_path)
+    with pytest.raises(PaperAccountBridgeError, match="requires an exchange-session calendar"):
+        service.run_with_daily_book(
+            config, [], daily_book=object(), daily_book_mode="live",
+            daily_book_spec=daily_paper_book.MOMENTUM, session_calendar=None,
+        )
+    assert not runner_path.exists()
+
+
+def test_forward_paper_service_rejects_legacy_intraday_authority_before_writing(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    service.authority_registry = PaperExecutionAuthorityRegistry(
+        runner_path.parent / "paper_authority.sqlite3")
+    service.authority_registry.claim(
+        strategy_id=service.strategy_spec.strategy_id,
+        exchange_date=config.exchange_date,
+        engine_id="legacy_intraday",
+        account_id="legacy-book",
+    )
+    preflight_calls = []
+    before = account.journal.records()
+
+    with pytest.raises(PaperAccountBridgeError, match="authority conflict"):
+        service.run(
+            config, [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: preflight_calls.append(True) or {"approved": True},
+            decision_fn=lambda _events: {}, risk_fn=lambda _decision: {},
+            execution_fn=lambda *_: {}, decision_at=DECISION_AT,
+            feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+        )
+
+    assert preflight_calls == []
+    assert account.journal.records() == before
+    assert DurableJournal(runner_path).records() == []
+
+
+@pytest.mark.parametrize(
+    "mutate, message",
+    [
+        (lambda config: replace(config, strategy_sha256="d" * 64), "strategy digest"),
+        (lambda config: replace(config, benchmark_id="BANKNIFTY"), "frozen strategy benchmark"),
+        (lambda config: replace(config, mode=Mode.RESEARCH_REPLAY), "LIVE_PAPER sessions only"),
+    ],
+)
+def test_paper_service_rejects_unbound_strategy_before_preflight_or_journal_write(
+        tmp_path, mutate, message):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    preflight_calls = []
+    with pytest.raises(PaperAccountBridgeError, match=message):
+        service.run(
+            mutate(config), [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: preflight_calls.append(True) or {"approved": True},
+            decision_fn=lambda _events: {"side": "NONE", "reason": "NO_SIGNAL"},
+            risk_fn=lambda _decision: {"approved": True},
+            execution_fn=lambda *_: {}, decision_at=DECISION_AT,
+        )
+    assert preflight_calls == []
+    assert not runner_path.exists()
+    assert account.cash == Decimal("10000")
+
+
+def test_paper_service_rechecks_registry_status_before_each_run(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    service.registry.transition(service.strategy_spec.strategy_id, Status.SHADOW_ONLY,
+                                reason="eligibility revoked")
+    preflight_calls = []
+    with pytest.raises(PaperAccountBridgeError, match="exact registered paper-capable version"):
+        service.run(
+            config, [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: preflight_calls.append(True) or {"approved": True},
+            decision_fn=lambda _events: {"side": "NONE", "reason": "NO_SIGNAL"},
+            risk_fn=lambda _decision: {"approved": True},
+            execution_fn=lambda *_: {}, decision_at=DECISION_AT,
+        )
+    assert preflight_calls == []
+    assert not runner_path.exists()
+    assert account.cash == Decimal("10000")
+
+
+def test_crash_after_durable_fill_and_cost_post_restarts_without_duplicate_economics(tmp_path, monkeypatch):
+    service, config, account, runner_path, account_path = _service(tmp_path)
+    events = [_event(DECISION_AT + timedelta(seconds=1)),
+              _event(DECISION_AT + timedelta(seconds=2), bid="102", ask="102.05")]
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+    kwargs = dict(
+        preflight_fn=lambda: {"approved": True, "checks": {"cash": True}},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02,
+                                     "forecast_horizon_sessions": 1, "forecast_costs_included": True,
+                                     "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033,
+                                         "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001},
+                                     "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+    reference_dir = tmp_path / "reference"
+    reference_dir.mkdir()
+    reference_service, reference_config, reference_account, reference_runner_path, _ = _service(reference_dir)
+    reference = reference_service.run(reference_config, events, **kwargs)
+    append = DurableJournal.append
+
+    def crash_after_account_fill(journal, record):
+        sequence = append(journal, record)
+        if journal.path == account_path and record.get("t") == "FILL":
+            raise RuntimeError("simulated crash after durable fill and fee")
+        return sequence
+
+    monkeypatch.setattr(DurableJournal, "append", crash_after_account_fill)
+    with pytest.raises(RuntimeError, match="after durable fill and fee"):
+        service.run(config, events, **kwargs)
+    monkeypatch.setattr(DurableJournal, "append", append)
+
+    restarted_account = PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
+                                     fee_schedule=SCHEDULE)
+    assert restarted_account.cash == Decimal("9799.80")
+    assert restarted_account.fees == Decimal("0.20")
+    assert restarted_account.position("NSE:INFY").quantity == 2
+    restarted_service = ForwardPaperSessionService(
+        ForwardSessionRunner(runner_path), restarted_account,
+        strategy_spec=service.strategy_spec, registry=service.registry,
+        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
+        paper_account_root=service.paper_account_root,
+    )
+    recovered = restarted_service.run(config, events, **kwargs)
+
+    assert recovered["status"] == "PAPER_COMPLETE"
+    assert recovered["account_reconciliation"]["fees_inr"] == "0.20"
+    assert recovered["account_reconciliation"] == reference["account_reconciliation"]
+    assert DurableJournal(account_path).head == DurableJournal(reference_account.path).head
+    records = restarted_account.journal.records()
+    assert len([row for row in records if row.get("t") == "FILL"]) == 1
+    assert len([row for row in records if row.get("t") == "INTENT"]) == 1
+    recovered_runner_rows = DurableJournal(runner_path).records()
+    reference_runner_rows = DurableJournal(reference_runner_path).records()
+    recovered_receipt = next(row for row in recovered_runner_rows if row.get("t") == "PAPER_EXECUTION")
+    reference_receipt = next(row for row in reference_runner_rows if row.get("t") == "PAPER_EXECUTION")
+    assert recovered_receipt["execution"] == reference_receipt["execution"]
+    recovered_receipt_hash = next(row["execution_sha256"] for row in recovered_runner_rows
+                                  if row.get("t") == "OUTBOX_ACK")
+    reference_receipt_hash = next(row["execution_sha256"] for row in reference_runner_rows
+                                  if row.get("t") == "OUTBOX_ACK")
+    assert recovered_receipt_hash == reference_receipt_hash
+    assert len([row for row in recovered_runner_rows if row.get("t") == "ACCOUNT_RECONCILIATION"]) == 1
+
+
+def test_restart_after_runner_close_recovers_mark_events_before_account_sync(tmp_path, monkeypatch):
+    service, config, account, runner_path, account_path = _service(tmp_path)
+    events = [_event(DECISION_AT + timedelta(seconds=1)),
+              _event(DECISION_AT + timedelta(seconds=2), bid="102", ask="102.05")]
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+    kwargs = dict(
+        preflight_fn=lambda: {"approved": True, "checks": {"cash": True}},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02,
+                                     "forecast_horizon_sessions": 1, "forecast_costs_included": True,
+                                     "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033,
+                                         "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001},
+                                     "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+    reconcile = paper_bridge.reconcile_paper_account
+
+    def crash_before_account_sync(**_kwargs):
+        raise RuntimeError("simulated crash before account sync")
+
+    monkeypatch.setattr(paper_bridge, "reconcile_paper_account", crash_before_account_sync)
+    with pytest.raises(RuntimeError, match="before account sync"):
+        service.run(config, events, **kwargs)
+    monkeypatch.setattr(paper_bridge, "reconcile_paper_account", reconcile)
+
+    restarted_account = PaperAccount(account_path, account_id="paper-main", initial_cash=Decimal("10000"),
+                                     fee_schedule=SCHEDULE)
+    restarted_service = ForwardPaperSessionService(
+        ForwardSessionRunner(runner_path), restarted_account,
+        strategy_spec=service.strategy_spec, registry=service.registry,
+        paper_books=service.paper_books, paper_book_plan_id=service.paper_book_plan_id,
+        paper_account_root=service.paper_account_root,
+    )
+    recovered = restarted_service.run(config, [], **kwargs)
+
+    assert recovered["status"] == "PAPER_COMPLETE"
+    assert recovered["account_reconciliation"]["mark"]["price"] == "102"
+    assert recovered["account_reconciliation"]["mark"]["observed_at_utc"] == events[-1].available_utc.isoformat()
+    assert restarted_account.position("NSE:INFY").quantity == 2
+    assert restarted_account.cash == Decimal("9799.80")
+    rows = DurableJournal(runner_path).records()
+    assert len([row for row in rows if row.get("t") == "ACCOUNT_RECONCILIATION"]) == 1
+
+
+def test_partial_receipt_releases_unfilled_reservation_after_cancel(tmp_path):
+    service, config, account, _, _ = _service(tmp_path)
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+
+    result = service.run(
+        config, [_event(DECISION_AT + timedelta(seconds=1), ask_qty=1)],
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 3},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+
+    assert result["execution"]["status"] == "PARTIAL"
+    assert account.position("NSE:INFY").quantity == 1
+    assert account.oms.order(result["intent_id"]).state is State.CANCELED
+    assert account.oms.order(result["intent_id"]).reserved == 0
+
+
+def test_canceled_partial_receipt_reconciles_fills_and_releases_remaining_reservation(tmp_path):
+    service, config, account, _, _ = _service(tmp_path)
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+
+    def canceled_execution(*args):
+        receipt = simulator(*args)
+        assert receipt["status"] == "PARTIAL"
+        receipt["status"] = "CANCELED"
+        receipt["reason"] = "OPERATOR_CANCEL"
+        receipt["order_updates"] = [
+            {**receipt["order_updates"][0], "receipt_id": receipt["receipt_id"]},
+            {**receipt["order_updates"][1], "status": "CANCEL_PENDING",
+             "update_id": f"{receipt['receipt_id']}:cancel-pending",
+             "at_utc": receipt["simulated_execution_at_utc"], "reason": "OPERATOR_CANCEL",
+             "receipt_id": receipt["receipt_id"]},
+            {**receipt["order_updates"][1], "status": "CANCELED",
+             "update_id": f"{receipt['receipt_id']}:canceled",
+             "at_utc": receipt["simulated_execution_at_utc"], "reason": "OPERATOR_CANCEL",
+             "receipt_id": receipt["receipt_id"]},
+        ]
+        return receipt
+
+    result = service.run(
+        config, [_event(DECISION_AT + timedelta(seconds=1), ask_qty=1)],
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 3},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=canceled_execution, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+
+    assert result["execution"]["status"] == "CANCELED"
+    assert account.position("NSE:INFY").quantity == 1
+    assert account.oms.order(result["intent_id"]).state is State.CANCELED
+    assert account.oms.order(result["intent_id"]).remaining == 2
+    assert account.oms.order(result["intent_id"]).reserved == 0
+
+
+def test_quote_quality_no_trade_reconciles_as_canceled_without_cash_or_position_changes(tmp_path):
+    service, config, account, _, _ = _service(tmp_path)
+    locked = _event(DECISION_AT + timedelta(seconds=1), bid="100", ask="100")
+
+    result = service.run(
+        config, [locked],
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+
+    assert result["execution"]["status"] == "NO_TRADE"
+    assert result["execution"]["quote_quality_rejections"][0]["reason_codes"] == ["LOCKED_BOOK"]
+    assert result["account_reconciliation"]["order_state"] == "CANCELED"
+    assert account.cash == Decimal("10000")
+    assert account.position("NSE:INFY").quantity == 0
+
+
+def test_buy_sync_requires_explicit_risk_cash_reserve(tmp_path):
+    service, config, account, _, _ = _service(tmp_path)
+
+    with pytest.raises(PaperAccountBridgeError, match="account_cash_reserve_inr"):
+        service.run(
+            config, [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: {"approved": True},
+            decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
+            risk_fn=lambda _decision: {"approved": True},
+            execution_fn=MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE),
+            decision_at=DECISION_AT, feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+        )
+
+    assert account.cash == Decimal("10000")
+    assert account.position("NSE:INFY").quantity == 0
+
+
+def test_execution_fee_hash_mismatch_is_rejected_before_account_posting(tmp_path):
+    service, config, account, _, _ = _service(tmp_path)
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+
+    def wrong_fee_execution(decision, intent_id, events):
+        receipt = simulator(decision, intent_id, events)
+        receipt["fee_schedule_sha256"] = "f" * 64
+        for fill in receipt["fills"]:
+            fill["fee_schedule_sha256"] = "f" * 64
+        return receipt
+
+    with pytest.raises(PaperAccountBridgeError, match="fee hash"):
+        service.run(
+            config, [_event(DECISION_AT + timedelta(seconds=1))],
+            preflight_fn=lambda: {"approved": True},
+            decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
+            risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+            execution_fn=wrong_fee_execution, decision_at=DECISION_AT,
+            feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+        )
+
+    assert account.cash == Decimal("10000")
+    assert account.position("NSE:INFY").quantity == 0
+
+
+def test_preflight_exception_is_durable_and_never_executes(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    calls = []
+
+    result = service.run(
+        config, [_event(DECISION_AT + timedelta(seconds=1))],
+        preflight_fn=lambda: (_ for _ in ()).throw(RuntimeError("private preflight details")),
+        decision_fn=lambda _events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=lambda *_: calls.append(True) or {}, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+
+    assert result["status"] == "REJECTED"
+    assert calls == []
+    assert account.cash == Decimal("10000")
+    assert "private preflight details" not in runner_path.read_text(encoding="utf-8")

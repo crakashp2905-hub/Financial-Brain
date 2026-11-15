@@ -1,11 +1,12 @@
 """F09 - portfolio decisions and risk (FE-0104 .. FE-0113). Offline."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal as D
 from pathlib import Path
 
 import pytest
+import numpy as np
 
 from financial_brain.forward_edge import portfolio_risk as P
 from financial_brain.forward_edge.approvals import Approval
@@ -125,6 +126,43 @@ def test_throttle_is_versioned_and_changes_hash_when_edited() -> None:
 def test_capacity_is_limited_by_adv_participation_and_visible_depth() -> None:
     assert P.capacity_notional(D("1000000"), D("40000"), D("0.05")) == D("40000")
     assert P.capacity_notional(D("1000000"), D("400000"), D("0.05")) == D("50000.00")
+
+
+def test_order_capacity_requires_fresh_hashed_adv_and_depth_and_applies_safety_margin() -> None:
+    args = dict(order_notional=D("40000"), adv_notional=D("1000000"), adv_as_of=date(2027, 1, 4),
+                adv_source_sha256="a" * 64, depth_notional=D("80000"), depth_observed_at=NOW,
+                depth_source_sha256="b" * 64, order_at=NOW, max_adv_age_days=1,
+                max_depth_age=timedelta(seconds=2), participation_cap=D("0.10"),
+                safety_factor=D("0.5"))
+    allowed = P.assess_order_capacity(**args)
+    assert allowed["decision"] == "ALLOW"
+    assert allowed["allowed_notional"] == "40000.0"
+    assert P.assess_order_capacity(**{**args, "order_notional": D("50001")})["reason"] == "CAPACITY_EXCEEDED"
+    assert P.assess_order_capacity(**{**args, "adv_notional": None})["reason"] == "MISSING_CAPACITY_EVIDENCE"
+    assert P.assess_order_capacity(**{**args, "depth_observed_at": NOW - timedelta(seconds=3)})["reason"] == \
+        "STALE_OR_FUTURE_DEPTH_EVIDENCE"
+    assert P.assess_order_capacity(**{**args, "adv_as_of": date(2026, 12, 1)})["reason"] == "STALE_ADV_EVIDENCE"
+
+
+def test_multiple_strategy_books_share_market_and_correlated_risk_ceilings() -> None:
+    books = {
+        "swing": {"MARKET": D("20"), "TREND": D("60"), "VALUE": D("0")},
+        "intraday": {"MARKET": D("20"), "TREND": D("0"), "VALUE": D("60")},
+    }
+    covariance = np.array([[0.1, 0.0, 0.0], [0.0, 1.0, 0.9], [0.0, 0.9, 1.0]])
+    combined = P.aggregate_correlated_books(
+        book_exposures=books, factor_names=("MARKET", "TREND", "VALUE"), covariance=covariance,
+        max_market_exposure=D("60"), max_portfolio_volatility=D("100"))
+    assert combined["decision"] == "NO_TRADE"
+    assert combined["reasons"] == ["CORRELATED_PORTFOLIO_RISK_LIMIT"]
+    assert D(combined["market_exposure"]) == D("40")
+
+    market_limit = P.aggregate_correlated_books(
+        book_exposures={key: {**value, "MARKET": D("40")} for key, value in books.items()},
+        factor_names=("MARKET", "TREND", "VALUE"), covariance=np.eye(3),
+        max_market_exposure=D("60"), max_portfolio_volatility=D("200"))
+    assert market_limit["decision"] == "NO_TRADE"
+    assert market_limit["reasons"] == ["MARKET_EXPOSURE_LIMIT"]
 
 
 # ---- FE-0112 ----

@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0157",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_daily_paper_cycle.py tests/test_daily_evidence_bundle.py tests/test_eod_paper_archive.py tests/test_book_performance_report.py tests/test_source_inventory.py; ruff check src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py tests/test_daily_paper_cycle.py; python -m mypy src/financial_brain/forward_edge/daily_paper_cycle.py src/financial_brain/forward_edge/cli.py",
+    "result": "Configured daily-paper-run now derives capture time from verified SESSION_CLOSED receipts, generates/reuses an immutable manifest, derives fresh Kite-tagged close bids, and preflights before close. Combined manifest, configured-run, mark derivation, preflight, cycle, bundle, EOD, report, and source-inventory suite: 32 passed; Ruff and mypy passed. Synthetic fixtures only; no real Kite capture is established."
+  },
+  "implemented": [
+    "Per-book reports keep CLOSED, NO_TRADE, INCOMPLETE and UNRECORDED session outcomes in an explicit denominator.",
+    "Opportunity counts remain incomplete when any supplied session lacks coverage evidence; quote coverage reports planned and observed denominators.",
+    "Paper intents, execution receipts, unique fills and skips are separate counts.",
+    "EOD archive hashes are verified; cumulative flow-adjusted gross/net returns, fees and taxes are differenced without double counting same-date snapshots.",
+    "Missing close archives and missing quote/session evidence are visible and are never imputed to zero.",
+    "The forward CLI accepts a JSON sessions array and writes deterministic JSON and operator text under an immutable report-hash directory; identical reruns reuse outputs and changed outputs are refused.",
+    "The daily-paper-cycle CLI finalizes every book in a frozen plan, then supplies newly verified archives and runner journal rows to the by-book report along with explicit caller-supplied prior sessions.",
+    "The forward-edge CLI exposes the read-only daily-paper-preflight command, which validates all registered accounts, close marks, terminal strategy/account bindings and historical report rows before any book is finalized.",
+    "The daily-paper-manifest CLI derives one terminal runner session for every frozen-plan strategy/account binding, requires an explicit complete marks map, accepts explicit historical rows, and writes an immutable content-hashed manifest. Ambiguous sessions fail closed.",
+    "Optional Kite close-mark derivation uses only hash-consistent kite_connect NSE quote events with valid two-sided depth, raw quote SHA-256, availability/source-age checks, and an explicit maximum age; missing or stale held-symbol quotes fail closed.",
+    "The configured daily-paper-run CLI derives close time from verified terminal receipts, generates an immutable manifest from the frozen plan and configured runner journals, rechecks identical inputs on retry, and runs preflight before closing books.",
+    "The Windows paper_daily_finalize.cmd wrapper accepts FB_DAILY_CYCLE_CONFIG for generated runs or FB_DAILY_CYCLE_MANIFEST for explicit runs; generated mode derives the India session date and propagates failures. It does not register a scheduled task.",
+    "A Windows PowerShell installer defines a weekday Task Scheduler task with a WhatIf preview, current interactive-user principal, configured runner, and no broker-order action; registration remains operator-controlled."
+  ],
+  "blockers": [
+    "No Windows Task Scheduler job invokes the wrapper; the owner-managed history_sessions file remains an explicit input.",
+    "No OS scheduler invokes daily-paper-cycle for each market session; multi-session denominators require explicit history_sessions.",
+    "No prospective market-session cohort has populated this report from observed Kite quotes and account archives.",
+    "The report only supports INR account archives; cross-currency book aggregation is not implemented here."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/book_performance_report.py": "bbf62f845f2f763029b2de59fbe170cc2186d939d64a03b1e009ed809f21d175",
+    "tests/test_book_performance_report.py": "1c0115fba9032e24b55e08eccb708993a821043ca28e4aa615575465f5db3b0a",
+    "src/financial_brain/forward_edge/cli.py": "b0ea1b6d27f9ae967c4cf4b92c4b1d8205e8381c40fb2d1e91c48816a05822eb",
+    "src/financial_brain/forward_edge/daily_paper_cycle.py": "b975a6ddedddfdb11f007f0e3576b5573b156093b34d5eb790fc0f3f4359fe1e",
+    "tests/test_daily_paper_cycle.py": "daeefa9bc33ecb54c599032bd8d872b67288fcc2cb6df0f03f1033cf848c7476",
+    "src/financial_brain/forward_edge/eod_paper_archive.py": "c7009ccb1fe98891aee8faede9863efedde60969f8c9d8b10cafc55b146ddbbe",
+    "scripts/paper_daily_finalize.cmd": "0e2166813e4ad4f845458e213cab9daa42302c196ba77611d219f47347413815",
+    "docs/forward-edge/daily-paper-cycle.md": "349fe55d16fd61881088657e886cb347268875d648b36e22fc204d6c78cfdae2",
+    "docs/edge-program/pe-0157-book-performance-report.md": "b22811837b27454fd5ef5e10cc08ff0ce36ec9602ae0b1256a92e25034b1c5ef",
+    "scripts/register_paper_daily_task.ps1": "fa0ff09efb064bb35bec5e4383e317399aba5875e9f4da45177feb9eaa690834"
+  }
+}

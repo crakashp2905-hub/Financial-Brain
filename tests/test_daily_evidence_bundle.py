@@ -1,0 +1,268 @@
+from datetime import date, datetime, timezone
+from decimal import Decimal
+import hashlib
+import shutil
+from pathlib import Path
+
+import pytest
+
+from financial_brain.forward_edge.daily_evidence_bundle import (
+    DailyBundleError,
+    build_daily_bundle,
+    close_and_bundle_paper_session,
+    restore_daily_bundle,
+    verify_daily_bundle,
+)
+from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.eod_paper_archive import close_and_archive_paper_session
+from financial_brain.forward_edge.cli import EXIT, cmd_daily_finalize, cmd_daily_restore
+from financial_brain.kernel.oms import State
+from financial_brain.kernel.paper_account import PaperAccount
+
+
+SESSION = date(2026, 11, 12)
+CAPTURE = datetime(2026, 11, 12, 11, 0, tzinfo=timezone.utc)
+MARK = datetime(2026, 11, 12, 10, 0, tzinfo=timezone.utc)
+
+
+def _inputs(tmp_path):
+    account_path = tmp_path / "account.jsonl"
+    account = PaperAccount(account_path, account_id="bundle-account", initial_cash=Decimal("1000"))
+    account.submit_intent(client_id="buy-1", symbol="NSE:INFY", side="BUY", quantity=2,
+                          limit=Decimal("100"), reserve=Decimal("200"))
+    account.move("buy-1", State.SUBMITTED)
+    account.move("buy-1", State.ACCEPTED)
+    account.record_fill("buy-1", fill_id="fill-1", quantity=2, price=Decimal("100"))
+    eod = close_and_archive_paper_session(
+        account=account, session_date=SESSION, captured_at=CAPTURE,
+        marks={"NSE:INFY": {"price": "102", "observed_at": MARK.isoformat(),
+                             "source_id": "fixture-close", "source_sha256": "a" * 64}},
+        archive_dir=tmp_path / "eod",
+    )
+    runner_path = tmp_path / "runner.jsonl"
+    runner = DurableJournal(runner_path)
+    runner.append({"t": "SESSION_PLAN", "session_id": "S-2026-11-12",
+                   "config": {"exchange_date": SESSION.isoformat()}})
+    runner.append({"t": "MARKET_EVENT", "session_id": "S-2026-11-12"})
+    runner.append({"t": "DECISION", "session_id": "S-2026-11-12"})
+    runner.append({"t": "SESSION_CLOSED", "session_id": "S-2026-11-12",
+                   "result": {"status": "PAPER_COMPLETE"}})
+    return {"paper_account_archive": Path(eod["archive_path"]),
+            "paper_account_journal": account_path, "runner_journal": runner_path}
+
+
+def test_signed_daily_bundle_reproduces_on_copied_workstation(tmp_path):
+    crypto = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
+    serialization = pytest.importorskip("cryptography.hazmat.primitives.serialization")
+    private = crypto.Ed25519PrivateKey.generate()
+    public = private.public_key().public_bytes(
+        serialization.Encoding.Raw, serialization.PublicFormat.Raw,
+    )
+    trusted = hashlib.sha256(public).hexdigest()
+    bundle = tmp_path / "bundle"
+    built = build_daily_bundle(
+        session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+        artifact_paths=_inputs(tmp_path), output_dir=bundle, signing_key=private,
+    )
+    assert built["verified"] is True
+    assert built["signature_status"] == "ED25519_VALID_UNPINNED"
+    exported = tmp_path / "second-workstation" / "bundle"
+    exported.parent.mkdir()
+    shutil.copytree(bundle, exported)
+    verified = verify_daily_bundle(exported, trusted_public_key_sha256=trusted)
+    assert verified["signature_status"] == "ED25519_TRUSTED"
+    assert verified["report_reproduced"] is True
+    report = (exported / "operator-report.txt").read_text()
+    assert "NAV: 1004" in report
+    assert "MARKET_EVENT: 1" in report
+    assert "does not claim live execution or profitability" in report
+
+
+def test_daily_bundle_restore_verifies_before_copy_and_returns_replay_inputs(tmp_path):
+    bundle = tmp_path / "bundle"
+    build_daily_bundle(
+        session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+        artifact_paths=_inputs(tmp_path), output_dir=bundle,
+    )
+    destination = tmp_path / "isolated" / "restored"
+    result = restore_daily_bundle(bundle, destination)
+
+    assert result["verified"] is True
+    assert result["session_date"] == SESSION.isoformat()
+    assert result["session_id"] == "S-2026-11-12"
+    assert result["physical_orders"] is False
+    assert set(result["inputs"]) == {
+        "paper_account_archive", "paper_account_journal", "runner_journal",
+    }
+    assert verify_daily_bundle(destination)["report_reproduced"] is True
+    with pytest.raises(DailyBundleError, match="already exists"):
+        restore_daily_bundle(bundle, destination)
+
+
+def test_daily_restore_cli_refuses_tampered_bundle_before_creating_destination(tmp_path):
+    bundle = tmp_path / "bundle"
+    build_daily_bundle(
+        session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+        artifact_paths=_inputs(tmp_path), output_dir=bundle,
+    )
+    report = bundle / "operator-report.txt"
+    report.write_bytes(report.read_bytes() + b"tamper")
+    destination = tmp_path / "restored"
+
+    result, code = cmd_daily_restore(bundle_dir=str(bundle), destination=str(destination))
+
+    assert code == EXIT["INCOMPLETE"]
+    assert "hash" in result["error"]
+    assert destination.exists() is False
+
+
+def test_daily_bundle_refuses_input_tamper_and_untrusted_signing_key(tmp_path):
+    crypto = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
+    bundle = tmp_path / "bundle"
+    build_daily_bundle(
+        session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+        artifact_paths=_inputs(tmp_path), output_dir=bundle,
+        signing_key=crypto.Ed25519PrivateKey.generate(),
+    )
+    trusted_wrong_key = hashlib.sha256(b"wrong key").hexdigest()
+    with pytest.raises(DailyBundleError, match="trusted key"):
+        verify_daily_bundle(bundle, trusted_public_key_sha256=trusted_wrong_key)
+    artifact = next((bundle / "inputs").glob("paper_account_archive.json"))
+    artifact.write_bytes(artifact.read_bytes() + b" ")
+    with pytest.raises(DailyBundleError, match="hash mismatch"):
+        verify_daily_bundle(bundle)
+
+
+def test_daily_bundle_includes_and_replays_the_account_journal(tmp_path):
+    bundle = tmp_path / "bundle"
+    build_daily_bundle(
+        session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+        artifact_paths=_inputs(tmp_path), output_dir=bundle,
+    )
+    account_journal = next((bundle / "inputs").glob("paper_account_journal.jsonl"))
+    account_journal.write_bytes(account_journal.read_bytes() + b" ")
+    with pytest.raises(DailyBundleError, match="hash mismatch"):
+        verify_daily_bundle(bundle)
+
+
+def test_daily_bundle_requires_account_journal_as_a_first_class_input(tmp_path):
+    artifact_paths = _inputs(tmp_path)
+    artifact_paths.pop("paper_account_journal")
+    with pytest.raises(DailyBundleError, match="account journal"):
+        build_daily_bundle(session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+                           artifact_paths=artifact_paths, output_dir=tmp_path / "bundle")
+
+
+def test_hash_only_bundle_is_explicitly_unsigned(tmp_path):
+    built = build_daily_bundle(
+        session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+        artifact_paths=_inputs(tmp_path), output_dir=tmp_path / "unsigned",
+    )
+    assert built["signature_status"] == "UNSIGNED_HASHED"
+
+
+def test_existing_bundle_is_not_reused_for_a_different_signing_key(tmp_path):
+    crypto = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
+    artifact_paths = _inputs(tmp_path)
+    target = tmp_path / "signed"
+    build_daily_bundle(session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+                       artifact_paths=artifact_paths, output_dir=target,
+                       signing_key=crypto.Ed25519PrivateKey.generate())
+    with pytest.raises(DailyBundleError, match="different content"):
+        build_daily_bundle(session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+                           artifact_paths=artifact_paths, output_dir=target,
+                           signing_key=crypto.Ed25519PrivateKey.generate())
+
+
+def test_close_and_bundle_finalizes_only_durable_terminal_session_and_is_retryable(tmp_path):
+    account = PaperAccount(tmp_path / "account.jsonl", account_id="bundle-account",
+                           initial_cash=Decimal("1000"))
+    runner_path = tmp_path / "runner.jsonl"
+    runner = DurableJournal(runner_path)
+    runner.append({"t": "SESSION_PLAN", "session_id": "S-2026-11-12",
+                   "config": {"exchange_date": SESSION.isoformat()}})
+    runner.append({"t": "SESSION_CLOSED", "session_id": "S-2026-11-12",
+                   "result": {"status": "PAPER_COMPLETE"}})
+    kwargs = dict(
+        account=account, session_date=SESSION, captured_at=CAPTURE,
+        marks={}, archive_dir=tmp_path / "archive", runner_journal_path=runner_path,
+        session_id="S-2026-11-12", bundle_root=tmp_path / "bundles",
+    )
+
+    first = close_and_bundle_paper_session(**kwargs)
+    second = close_and_bundle_paper_session(**kwargs)
+
+    assert first["bundle"] == second["bundle"]
+    assert Path(first["bundle_dir"]).is_dir()
+    assert verify_daily_bundle(Path(first["bundle_dir"]))["report_reproduced"] is True
+    assert first["account_archive"]["snapshot_sha256"] == second["account_archive"]["snapshot_sha256"]
+
+
+def test_close_and_bundle_rejects_missing_session_terminal_before_account_mutation(tmp_path):
+    account = PaperAccount(tmp_path / "account.jsonl", account_id="bundle-account",
+                           initial_cash=Decimal("1000"))
+    runner_path = tmp_path / "runner.jsonl"
+    runner = DurableJournal(runner_path)
+    runner.append({"t": "SESSION_PLAN", "session_id": "S-2026-11-12",
+                   "config": {"exchange_date": SESSION.isoformat()}})
+
+    with pytest.raises(DailyBundleError, match="terminal record"):
+        close_and_bundle_paper_session(
+            account=account, session_date=SESSION, captured_at=CAPTURE, marks={},
+            archive_dir=tmp_path / "archive", runner_journal_path=runner_path,
+            session_id="S-2026-11-12", bundle_root=tmp_path / "bundles",
+        )
+
+    assert account.nav_snapshots == []
+    assert not (tmp_path / "archive" / SESSION.isoformat()).exists()
+
+
+def test_daily_finalize_cli_closes_reconciles_and_exports_bundle_idempotently(tmp_path):
+    account_path = tmp_path / "account.jsonl"
+    PaperAccount(account_path, account_id="bundle-account", initial_cash=Decimal("1000"))
+    runner_path = tmp_path / "runner.jsonl"
+    runner = DurableJournal(runner_path)
+    runner.append({"t": "SESSION_PLAN", "session_id": "S-2026-11-12",
+                   "config": {"exchange_date": SESSION.isoformat()}})
+    runner.append({"t": "SESSION_CLOSED", "session_id": "S-2026-11-12",
+                   "result": {"status": "PAPER_COMPLETE"}})
+    marks_path = tmp_path / "marks.json"
+    marks_path.write_text("{}", encoding="utf-8")
+    args = dict(
+        account_journal_path=str(account_path), session_date=SESSION.isoformat(),
+        captured_at=CAPTURE.isoformat(), marks_path=str(marks_path),
+        runner_journal_path=str(runner_path), session_id="S-2026-11-12",
+        archive_dir=str(tmp_path / "archive"), bundle_root=str(tmp_path / "bundles"),
+    )
+
+    first, code = cmd_daily_finalize(**args)
+    second, retry_code = cmd_daily_finalize(**args)
+
+    assert code == retry_code == EXIT["OK"]
+    assert first == second
+    assert first["bundle_verified"] is True
+    assert first["physical_orders"] is False
+    assert Path(first["bundle_dir"]).is_dir()
+
+
+def test_daily_finalize_cli_refuses_to_close_before_session_terminal_record(tmp_path):
+    account_path = tmp_path / "account.jsonl"
+    PaperAccount(account_path, account_id="bundle-account", initial_cash=Decimal("1000"))
+    runner_path = tmp_path / "runner.jsonl"
+    DurableJournal(runner_path).append({
+        "t": "SESSION_PLAN", "session_id": "S-2026-11-12",
+        "config": {"exchange_date": SESSION.isoformat()},
+    })
+    marks_path = tmp_path / "marks.json"
+    marks_path.write_text("{}", encoding="utf-8")
+
+    result, code = cmd_daily_finalize(
+        account_journal_path=str(account_path), session_date=SESSION.isoformat(),
+        captured_at=CAPTURE.isoformat(), marks_path=str(marks_path),
+        runner_journal_path=str(runner_path), session_id="S-2026-11-12",
+        archive_dir=str(tmp_path / "archive"), bundle_root=str(tmp_path / "bundles"),
+    )
+
+    assert code == EXIT["INCOMPLETE"]
+    assert "terminal record" in result["error"]
+    assert not (tmp_path / "archive" / SESSION.isoformat()).exists()

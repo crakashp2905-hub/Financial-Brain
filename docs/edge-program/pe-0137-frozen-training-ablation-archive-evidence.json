@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0137",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_ablation_plan.py; ruff check src/financial_brain/evaluation/ablation_plan.py tests/test_ablation_plan.py; mypy src/financial_brain/evaluation/ablation_plan.py",
+    "result": "7 frozen-ablation tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. Exhaustive runner executes each combination/session, verifies exact data digest before and after, and rejects holdout schedules or midrun data changes."
+  },
+  "implemented": [
+    "Freezes a bounded complete Cartesian grid for entry, exit, horizon, portfolio width, and turnover before outcomes.",
+    "Restricts outcomes to the declared TRAINING development window and protects the final window from evaluation input.",
+    "Requires every parameter combination to have outcomes for the same dates and decision identities.",
+    "Retains exact positive, zero, and negative outcome rows and records all grid-cell summaries.",
+    "Archives the plan and complete outcomes in a hash-chained journal with immutable replay checks.",
+    "Adds a runner that exhaustively invokes a supplied evaluator for every frozen combination/session against the pinned development data file and checks for concurrent file changes."
+  ],
+  "blockers": [
+    "The runner delegates actual portfolio economics to a caller-supplied evaluator; no in-house production simulator adapter is selected and validated.",
+    "Development digest and evaluator output provenance need binding to an authoritative dataset and paper-ledger manifest.",
+    "No complete five-axis run has been archived; no validation-window or profitability conclusion is supported."
+  ],
+  "source_sha256": {
+    "src/financial_brain/evaluation/ablation_plan.py": "42cf71663abe8c26ab93dd3d289505269c0618f8850f753d37ea3d1f8e6c44a9",
+    "tests/test_ablation_plan.py": "733f8cff117be0cae72d34afa04601278d2ff2f364d418214d2d1808b696b8cb",
+    "docs/edge-program/pe-0137-frozen-training-ablation-archive.md": "67c451f7c4764526b92ef0c5d05b9cb622f4816cd9e010562d53a1b7e89a9608"
+  }
+}

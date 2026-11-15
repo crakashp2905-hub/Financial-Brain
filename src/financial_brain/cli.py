@@ -2606,6 +2606,8 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--limit", type=int, default=20)
     g.set_defaults(fn=cmd_trader_core)
     sub.add_parser("options-audit", help="read-only option daily-history and quote-quality audit").set_defaults(fn=cmd_options_audit)
+    from financial_brain.forward_edge.offline_paper import register_commands as register_forward_commands
+    register_forward_commands(sub)
 
     g = sub.add_parser("inverse", help="read-only inverse-policy research")
     g.add_argument("--synthetic")

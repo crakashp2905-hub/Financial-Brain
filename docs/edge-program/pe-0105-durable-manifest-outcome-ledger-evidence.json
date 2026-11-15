@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0105",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f04.py tests/test_forward_edge_f00.py tests/test_forward_session_runner.py tests/test_forward_session_crash_matrix.py",
+    "result": "118 passed; Ruff and mypy passed for the custody module."
+  },
+  "implemented": [
+    "ManifestJournal can persist canonical manifests and session outcomes in the hash-chained DurableJournal and reconstruct them after restart.",
+    "Persisted manifests are revalidated against their canonical digest and decision/record/entry clock order during recovery.",
+    "Outcome vocabulary includes SUBMITTED, NO_SIGNAL, NO_TRADE, REJECTED, UNKNOWN_ORDER and unsuccessful/abstained states; scheduled denominator reports missing rows as UNRECORDED.",
+    "The forward session runner separately persists decisions, risk results, outbox uncertainty, execution receipts and terminal outcomes."
+  ],
+  "blockers": [
+    "ManifestJournal persistence is not yet wired into ForwardSessionRunner as the one authoritative session stream.",
+    "Session-date planning and manifest/outcome journaling are separate append-only logs, so there is no atomic cross-ledger completeness transaction yet."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/decision_custody.py": "f734fc89b1f2e819ab9e609e2068d38dedbf9f044db369ee3e60de7247634e99",
+    "tests/test_forward_edge_f04.py": "c051128610a88d73f240ddfcbfb063afcb8c646ece44b31af50ad0caba1941de",
+    "src/financial_brain/forward_edge/session_runner.py": "1f1d80a8bb9153bc30c6740cb5cbc7fd6a9ab957c27da1bf5ca392573ed5a74a",
+    "src/financial_brain/forward_edge/session_ops.py": "5bf0cbb288581087f2e9fb96a0b8d754f99383bab4251643011b0ce0ef449627"
+  }
+}

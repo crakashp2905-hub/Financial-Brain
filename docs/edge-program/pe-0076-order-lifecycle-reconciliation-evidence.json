@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0076",
+  "status": "DONE",
+  "implemented": [
+    "Explicit quote outcomes cover zero fills, partial fills, price-band rejects, feed/outage NO_TRADE and circuit/auction halts.",
+    "Durable OMS supports cancellation and expiry; partial fills remain in inventory while unfilled reservations are released.",
+    "Restart replay reproduces the partial-expiry account cash, inventory, reservation and terminal order state."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_paper_account.py tests/test_forward_edge_f05.py tests/test_forward_paper_execution_adapter.py -q",
+    "result": "41 passed; exit code 0.",
+    "additional_checks": [
+      "python -m mypy src/financial_brain/kernel/paper_account.py src/financial_brain/forward_edge/execution.py src/financial_brain/forward_edge/paper_execution_adapter.py — Success: no issues found in 3 source files.",
+      "python -m ruff check tests/test_paper_account.py tests/test_forward_edge_f05.py — All checks passed."
+    ],
+    "cases": [
+      "test_partial_fill_then_expiry_reconciles_filled_inventory_and_releases_rest",
+      "test_quote_simulator_blocks_circuit_auction_and_freeze_violations",
+      "test_sell_reservations_prevent_overselling_and_release_on_cancel",
+      "test_no_quote_after_latency_is_a_recorded_miss",
+      "test_visible_size_caps_the_fill_and_limit_protects_the_buyer"
+    ]
+  },
+  "limitations": [
+    "Lifecycle scenarios are deterministic offline simulations, not measured exchange rejection or halt frequencies."
+  ]
+}

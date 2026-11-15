@@ -1,0 +1,18 @@
+{
+  "checklist_task": "PE-0179",
+  "status": "DONE",
+  "criterion": "Retain rejected opportunities in a counterfactual memory with explicit hypothetical nature and no invented actual fills.",
+  "implementation": [
+    "src/financial_brain/forward_edge/shadow_counterfactual.py"
+  ],
+  "tests": [
+    "tests/test_shadow_counterfactual.py"
+  ],
+  "test_result": "9 shadow-counterfactual tests passed; rejected decisions persist under immutable book identities with explicit hypothetical and no-observed-execution labels.",
+  "evidence_scope": "Synthetic rejected-decision and quote-depth fixtures.",
+  "operational_limits": [
+    "All outputs remain EXPLORATORY_SHADOW and non-promotable.",
+    "Hypothetical quote fills are never represented as broker or exchange fills.",
+    "Missing quote/close data remains incomplete rather than being filled by interpolation."
+  ]
+}

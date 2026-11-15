@@ -1,0 +1,19 @@
+{
+  "checklist_task": "PE-0190",
+  "status": "DONE",
+  "criterion": "Show confidence intervals, multiplicity count/correction, matched benchmark, and estimated capacity beside profitability claims; never call a strategy proven solely on win rate or positive total rupees.",
+  "implementation": [
+    "src/financial_brain/forward_edge/cockpit.py"
+  ],
+  "tests": [
+    "tests/test_profitability_evidence_view.py",
+    "tests/test_forward_edge_f10.py"
+  ],
+  "test_result": "3 focused profitability-evidence tests passed; combined cockpit run had 23 passed. Ruff and targeted mypy passed. Win rate/rupee-only claims fail the evidence gate; complete positive intervals remain explicitly non-guaranteed.",
+  "evidence_scope": "Synthetic evidence rows covering missing intervals, invalid bounds, incomplete capacity, win-rate-only claims, and complete adjusted evidence.",
+  "operational_limits": [
+    "Inferential values are supplied by upstream evaluation and are not recomputed here.",
+    "Matched periods, benchmark definitions, and family denominators must be verified upstream.",
+    "A positive adjusted lower bound is not a guarantee of future profitability."
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "checklist_task": "PE-0180",
+  "status": "DONE",
+  "criterion": "Limit search budgets and apply candidate-count correction across the complete registered search family, including failed and hidden-in-run attempts.",
+  "implementation": [
+    "src/financial_brain/forward_edge/research_library.py"
+  ],
+  "tests": [
+    "tests/test_research_library.py"
+  ],
+  "test_result": "6 research-library tests passed; Ruff and targeted mypy passed. Cumulative candidate count and familywise-adjusted per-candidate alpha are exposed from the durable campaign journal.",
+  "evidence_scope": "Synthetic candidate campaigns and journal recovery tests.",
+  "operational_limits": [
+    "Only attempts submitted to the governed journal can be counted; out-of-band searches require disclosure and inclusion in the family denominator.",
+    "Failed, skipped, and aborted candidates remain counted.",
+    "The campaign budget is fixed and cannot be expanded after opening."
+  ]
+}

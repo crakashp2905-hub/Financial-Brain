@@ -168,5 +168,5 @@ def test_reality_check_runs_on_existing_implementation() -> None:
         "v1": [0.001 * ((i * 7) % 5 - 2) for i in range(200)],
         "v2": [0.0005 * ((i * 3) % 4 - 1.5) for i in range(200)],
     }
-    result = reality_check_adapter(returns, reps=50)
+    result = reality_check_adapter(returns, reps=100)
     assert isinstance(result, dict) and result

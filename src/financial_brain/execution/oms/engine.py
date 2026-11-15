@@ -14,7 +14,8 @@ timed out is UNKNOWN until the broker's book shows its tag; after ``UNKNOWN_GRAC
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
 from . import killswitch as KS
 from . import model as M
@@ -22,6 +23,7 @@ from . import reconcile as RC
 from . import risk_gate as RG
 from . import rollout as RO
 from .broker import BrokerError, BrokerTimeout
+from financial_brain.kernel.instruments import InstrumentError, InstrumentId, InstrumentMaster, Phase
 
 UNKNOWN_GRACE = 3
 PAPER_LIMITS = RO.SMALL
@@ -30,7 +32,7 @@ PAPER_LIMITS = RO.SMALL
 class OMS:
     def __init__(self, journal, broker, *, verdicts: dict[str, str], stage_path=None, ks_path=None,
                  banned: frozenset | None = None, baseline: dict | None = None, clock=None,
-                 paper_limits: RG.Limits = PAPER_LIMITS):
+                 paper_limits: RG.Limits = PAPER_LIMITS, instrument_master: InstrumentMaster | None = None):
         self.j, self.b = journal, broker
         self.verdicts = verdicts
         self.stage_path, self.ks_path = stage_path, ks_path
@@ -38,6 +40,7 @@ class OMS:
         self.baseline = baseline or {}
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.paper_limits = paper_limits
+        self.instrument_master = instrument_master
 
     # ------------------------------------------------------------------ helpers
 
@@ -55,7 +58,7 @@ class OMS:
             return RO.limits(st, verdict) or self.paper_limits
         return RO.limits(st, verdict)
 
-    def _context(self, o: M.Order, ltp: float | None) -> RG.Context:
+    def _context(self, o: M.Order, ltp: float | None, *, tick: float = RG.TICK) -> RG.Context:
         today = [x for x in self.j.orders(day=o.day) if x.state not in (M.REJECTED_RISK, M.NEW)]
         pos = self.j.positions()
         k = (o.exchange, o.symbol)
@@ -68,7 +71,7 @@ class OMS:
         return RG.Context(now=self.clock(), ltp=ltp, position_qty=held.get(k, 0), gross_inr=gross,
                           orders_today=len(today), notional_today=sum(x.notional for x in today),
                           live_same_side=any(x.symbol == o.symbol and x.side == o.side and x.state in M.LIVE | {M.AWAITING_APPROVAL, M.APPROVED}
-                                             for x in today),
+                                             for x in today), tick=tick,
                           recent_order_times=sent, banned=self.banned if self.banned is not None else frozenset({o.symbol}))
 
     def _last_price(self, k) -> float:
@@ -83,7 +86,7 @@ class OMS:
 
     def submit(self, *, strategy: str, day: str, symbol: str, side: str, qty: int, limit_price: float,
                exchange: str = "NSE", product: str = "CNC", arrival_price: float | None = None,
-               slice_no: int = 0, parent_id: str | None = None) -> M.Order:
+               slice_no: int = 0, parent_id: str | None = None, asset_class: str = "EQUITY") -> M.Order:
         cid = M.client_id(strategy, day, symbol, side, qty, slice_no)
         existing = self.j.get(cid)
         if existing is not None:
@@ -104,9 +107,27 @@ class OMS:
             why.append("kill switch tripped")
         if self.banned is None:
             why.append("today's F&O ban list could not be read")
+        rule = None
+        if self.instrument_master is None:
+            why.append("source-specific instrument rules are unavailable")
+        else:
+            try:
+                session_day = date.fromisoformat(day)
+                instrument = self.instrument_master.get(InstrumentId(exchange, asset_class, symbol))
+                tradable, status_reason = instrument.tradable(session_day, Phase.CONTINUOUS)
+                if not tradable:
+                    why.append(f"instrument is not tradable: {status_reason}")
+                else:
+                    rule = instrument.validate_order(
+                        day=session_day, exchange=exchange, quantity=qty, price=Decimal(str(limit_price)),
+                        local_time=self.clock().astimezone(RG.IST).time(),
+                    )
+            except (InstrumentError, ValueError) as exc:
+                why.append(f"instrument rule validation failed: {exc}")
         if lim is not None:
             ltp = self.b.ltp([(exchange, symbol)]).get((exchange, symbol))
-            why += RG.check(o, lim, self._context(o, ltp))
+            tick = float(rule.tick) if rule is not None else RG.TICK
+            why += RG.check(o, lim, self._context(o, ltp, tick=tick))
         if why:
             return self._save(M.advance(o, M.REJECTED_RISK, reason="; ".join(why)), "RISK_REJECTED")
         if st["stage"] == RO.TICKET:

@@ -1,0 +1,23 @@
+{
+  "checklist_task": "PE-0168",
+  "status": "DONE",
+  "criterion": "FX paper simulation is permitted only for explicitly legal/authorized instrument and venue specifications; unknown venue or jurisdiction becomes NO_TRADE.",
+  "implementation": [
+    "src/financial_brain/kernel/fx_paper.py",
+    "docs/edge-program/fx-paper-rulebook.v1.json"
+  ],
+  "tests": ["tests/test_fx_paper.py"],
+  "test_result": "27 passed; Ruff passed; targeted mypy passed; source inventory check passed (616 Python files).",
+  "evidence_scope": "Synthetic contract, venue authorization, exposure and quote fixtures. Paper-only conservative top-of-book simulation; no real exchange fill, execution cost schedule or profitability claim.",
+  "operational_limits": [
+    "The RBI rule snapshot must be reviewed and updated if the Master Direction changes.",
+    "Dated source-hashed venue authorization and exposure records must be supplied by an authorized owner/provider; the engine does not fetch or authenticate the underlying documents.",
+    "The module returns a per-intent simulated quote fill and does not yet maintain an FX position book, funding ledger or broker connection.",
+    "Only the reviewed Indian exchange-traded currency products and venues are supported; other jurisdictions fail closed."
+  ],
+  "official_sources": [
+    "https://rbi.org.in/scripts/FS_Notification.aspx?Id=12594&Mode=0&fn=6",
+    "https://www.rbi.org.in/Scripts/BS_PressReleaseDisplay.aspx?prid=57628",
+    "https://www.sebi.gov.in/reports-and-statistics/publications/aug-2026/SEBI%20ANNUAL%20REPORT%202025_26.pdf"
+  ]
+}

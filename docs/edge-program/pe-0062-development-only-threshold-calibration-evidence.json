@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0062",
+  "status": "PARTIAL",
+  "implemented": [
+    "Hurdle selection accepts development split observations only and enforces development dates before validation.",
+    "Predeclared candidate thresholds are evaluated by a 95% lower confidence bound of realized net alpha.",
+    "The frozen policy binds strategy, cohort, development data digest, protocol digest, validation date, selected hurdle, and freeze timestamp.",
+    "The hash-chained registry rejects policy changes; runner integration verifies policy identity and threshold and locks a strategy/cohort journal against dynamic edits."
+  ],
+  "tests": {
+    "commands": [
+      "python -m pytest tests/test_net_alpha_policy.py tests/test_forward_session_runner.py tests/test_forward_paper_account_bridge.py tests/test_capture_replay.py tests/test_forward_feed_health.py tests/test_forward_paper_execution_adapter.py tests/test_forward_session_crash_matrix.py tests/test_forward_fixture_replay.py tests/test_forward_edge_f13.py -q",
+      "mypy src/financial_brain/forward_edge/session_runner.py src/financial_brain/forward_edge/net_alpha_policy.py",
+      "ruff check src/financial_brain/forward_edge/session_runner.py src/financial_brain/forward_edge/net_alpha_policy.py tests/test_net_alpha_policy.py"
+    ],
+    "result": "125 tests passed; mypy, Ruff, and diff checks passed.",
+    "cases": [
+      "test_threshold_calibration_uses_development_slice_and_freezes_before_validation",
+      "test_threshold_calibration_rejects_holdout_or_invalid_development_rows",
+      "test_frozen_threshold_cannot_be_changed_after_forward_drawdown",
+      "test_runner_checks_registry_policy_against_frozen_configuration",
+      "test_same_forward_cohort_cannot_change_threshold_between_sessions"
+    ]
+  },
+  "limitations": [
+    "Only synthetic development fixtures were used; a real development slice and resulting production threshold are not available.",
+    "The development selector is not a multiplicity-corrected promotion procedure; confirmatory validation remains separate.",
+    "Legacy runners without an injected threshold registry retain compatibility and do not prove policy provenance."
+  ]
+}

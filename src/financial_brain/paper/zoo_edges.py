@@ -332,7 +332,12 @@ VERDICT["edge_l2_learned_ls"] = "failed (t +0.65 / +2.44; strongest futures resu
 def l2_targets(rcon, day: date, fno_lins: list[str], frac: float = 0.10) -> dict:
     """L2: the learned model's scores for the F&O names, long the top decile and short the bottom, equal gross."""
     from ..evaluation import learned_model as LM
-    sc = LM.score_day(rcon, day)
+    # This legacy replay API has a date but no point-in-time decision clock.
+    # Fail closed until its caller can provide an attested timestamp.
+    try:
+        sc = LM.score_day(rcon, day)
+    except LM.LearnedModelError:
+        return {}
     if sc is None or sc.empty:
         return {}
     s = sc[sc["lineage"].isin(fno_lins)].set_index("lineage")["pred"]

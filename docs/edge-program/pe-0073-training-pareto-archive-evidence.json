@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0073",
+  "status": "PARTIAL",
+  "implemented": [
+    "Five training-only objectives are directionally fixed: maximize net performance and capacity; minimize drawdown, turnover and complexity.",
+    "Candidates are rejected if the sample role or frozen training digest is wrong, and a selected candidate must be nondominated.",
+    "Every non-selected candidate needs an explicit rejection reason; selected and rejected rows, dominators and objective values are retained.",
+    "Reports are appended to a local hash-chained DurableJournal and retrospective edits/duplicate reports are refused."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_pareto_tradeoff.py -q",
+    "result": "3 passed; exit code 0.",
+    "additional_checks": [
+      "python -m mypy src/financial_brain/forward_edge/pareto_tradeoff.py — Success: no issues found in 1 source file.",
+      "python -m ruff check src/financial_brain/forward_edge/pareto_tradeoff.py tests/test_pareto_tradeoff.py — All checks passed."
+    ],
+    "cases": [
+      "test_training_only_pareto_report_archives_selected_and_every_rejection_reason",
+      "test_pareto_report_rejects_holdout_rows_dominated_selection_and_missing_reasons",
+      "test_pareto_archive_is_append_only_and_detects_report_tampering"
+    ]
+  },
+  "limitations": [
+    "No approved real training cohort or registered selection rule was supplied; results use synthetic records only.",
+    "Local hash chaining does not constitute independent external attestation.",
+    "No strategy performance result or winner is claimed."
+  ]
+}

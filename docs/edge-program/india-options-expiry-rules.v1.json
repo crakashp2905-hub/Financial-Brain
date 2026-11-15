@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "rulebook_id": "india-options-expiry-rules-v1",
+  "rulebook_sha256": "6115f8428b13c5e2320013878b55bff96eb578ad1add9306d4c52b95b3f844f0",
+  "rules": [
+    {
+      "rule_id": "india-index-options-cash-european-v1",
+      "venue": "NFO",
+      "underlying_kind": "INDEX",
+      "effective_from": "2000-12-11",
+      "settlement": "CASH",
+      "exercise_style": "EUROPEAN",
+      "sources": [
+        "https://www.sebi.gov.in/sebi_data/attachdocs/1300707082606.pdf"
+      ],
+      "coverage_note": "SEBI circular IES/DC/CIR-5/00 dated 2000-12-11 specifies initially introduced European-style index options settled in cash. Contract master and final settlement price remain required for each contract."
+    },
+    {
+      "rule_id": "india-single-stock-options-physical-european-v1",
+      "venue": "NFO",
+      "underlying_kind": "STOCK",
+      "effective_from": "2019-10-01",
+      "settlement": "PHYSICAL",
+      "exercise_style": "EUROPEAN",
+      "sources": [
+        "https://www.sebi.gov.in/legal/circulars/dec-2018/physical-settlement-of-stock-derivatives_41482.html",
+        "https://nsearchives.nseindia.com/content/circulars/INSP47293.pdf",
+        "https://www.sebi.gov.in/legal/circulars/oct-2010/european-style-stock-options_6846.html"
+      ],
+      "coverage_note": "Remaining cash-settled stocks moved to mandatory physical settlement from October 2019 expiry onwards. SEBI's phased schedule moved some eligible stocks earlier; this generic table intentionally blocks pre-October 2019 stock expiries because it lacks a contract-specific phase assignment."
+    },
+    {
+      "rule_id": "india-stock-calendar-spread-expiry-no-offset-v1",
+      "venue": "NFO",
+      "underlying_kind": "STOCK",
+      "effective_from": "2026-05-05",
+      "settlement": "PHYSICAL",
+      "exercise_style": "EUROPEAN",
+      "sources": [
+        "https://www.sebi.gov.in/sebi_data/attachdocs/feb-2026/1770288869049.pdf"
+      ],
+      "coverage_note": "Expiry-day calendar-spread margin benefit is treated as unavailable from the stated effective date. The paper preflight requires positive source-hashed per-contract delivery-margin evidence and does not infer an exchange margin amount. Evidence must reflect applicable no-offset margin; current official margin capture remains external."
+    }
+  ]
+}

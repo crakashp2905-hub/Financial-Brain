@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "observed_at": "2026-11-13T04:12:02Z",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "branch": "main",
+  "main_sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
+  "api_endpoint": "GET /repos/crakashp2905-hub/Financial-Brain/branches/main/protection",
+  "classic_protection_enabled": true,
+  "repository_rulesets": [],
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["test (ubuntu-latest)", "test (windows-latest)"]
+  },
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1,
+    "dismiss_stale_reviews": true,
+    "require_last_push_approval": true,
+    "require_code_owner_reviews": false
+  },
+  "enforce_admins": true,
+  "required_conversation_resolution": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "verification": "Settings were written through the GitHub branch-protection API and then read back from the same endpoint."
+}

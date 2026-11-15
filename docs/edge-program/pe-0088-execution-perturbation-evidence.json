@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0088",
+  "status": "DONE",
+  "tests": {
+    "command": "python -m pytest -q tests/test_execution_quote_perturbations.py tests/test_forward_edge_f05.py tests/test_forward_paper_execution_adapter.py tests/test_kite_forward_events.py",
+    "result": "41 passed (exit code 0); Ruff, mypy for execution.py, and diff checks passed."
+  },
+  "verified": [
+    "Wider spreads and price gaps do not improve a buy fill price.",
+    "Missing quotes and pre-latency quotes remain missed orders.",
+    "Missing or zero displayed depth never produces a fill.",
+    "Duplicate quote observations do not multiply displayed quantity.",
+    "Identical post-latency trade tuples are deduplicated before passive fill volume is counted.",
+    "A feed-health adapter marking a batch stale/late yields NO_TRADE without a fill."
+  ],
+  "limitations": [
+    "Provider trade IDs are not present in this passive simulator input. Exact duplicate UTC timestamp/price/quantity tuples are collapsed conservatively, which can undercount legitimate distinct prints at the same timestamp granularity.",
+    "Late-feed classification is supplied by the configured feed-health callback; the perturbation tests do not measure real Kite latency or packet loss.",
+    "All perturbation evidence is synthetic and establishes no live fill fidelity or profitability."
+  ],
+  "secrets_or_market_payloads_included": false,
+  "source_sha256": {
+    "src/financial_brain/forward_edge/execution.py": "72b1c4e16d162459ea970b16ce3d404b3c45b16564f25e4e467156cc687a4558",
+    "src/financial_brain/forward_edge/paper_execution_adapter.py": "74095ac98b161f3b46f68a15c66e1ec9e04d2deb783c03c2c4857ad6bec2a705",
+    "tests/test_execution_quote_perturbations.py": "7975623bc213e06503d1fa0fb421a9b51541329992165c4ad8a465b5b363ffba",
+    "tests/test_forward_edge_f05.py": "3e12a6acd56a195310e9d47d8f8e0515463e5cd2ed5afe810eb94a397772e2b6",
+    "tests/test_forward_paper_execution_adapter.py": "e38e301f3f0529a1d9c073b3c690df0cb9676a4e3df9024a47eb70d5f1019598",
+    "tests/test_kite_forward_events.py": "fb1a4426e9b534a3297848ab3c4df87810112500c706367023f19c10c9a7f342"
+  }
+}

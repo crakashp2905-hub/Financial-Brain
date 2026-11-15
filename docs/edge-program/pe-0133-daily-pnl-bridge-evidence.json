@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0133",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_loss_attribution.py tests/test_phase5_loss_review.py; ruff check src/financial_brain/paper/loss_attribution.py tests/test_loss_attribution.py",
+    "result": "12 daily P&L bridge tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. Scheduled dates remain in the report, zero-trade zero-net days reconcile, and missing daily totals, unattributed nonzero days, or trade-to-ledger residuals remain incomplete."
+  },
+  "implemented": [
+    "Aggregates signed forecast gross, selection, spread, impact, charges, timing, and risk-sizing effects by day.",
+    "Requires unique trade identity and finite numeric components; duplicate, malformed, and nonfinite values fail closed.",
+    "Marks a day reconciled only when all effects are present and sum to realized net within the declared tolerance.",
+    "Exposes missing trade IDs, leaves missing effects null, and reports a nonzero arithmetic residual instead of hiding it.",
+    "Accepts a frozen ordered session population and daily ledger totals, preserves no-trade dates, reconciles true zero-trade zero-net days, and withholds completeness when the ledger total is missing or unexplained."
+  ],
+  "blockers": [
+    "The intraday paper ledger does not yet persist all bridge effects or a frozen forecast-gross baseline.",
+    "There is no authoritative bridge integration that proves each paper portfolio loss day has complete trade-level inputs.",
+    "The bridge validates accounting arithmetic only; caller-supplied counterfactual selection, timing, and sizing effects are not causal evidence."
+  ],
+  "source_sha256": {
+    "src/financial_brain/paper/loss_attribution.py": "80e3c8c2ea36f1930fa0b8b1a31ac4fcb5b53b29804e331407e529e5bd2878f1",
+    "tests/test_loss_attribution.py": "5c4eb282ec8a2967b9b0ff4a7eb5fefa4a939e040a7fb4bc09c0d31b28626707",
+    "docs/edge-program/pe-0133-daily-pnl-bridge.md": "508edc087c34287276d5e19e0855c0c59e52e3441c0b6552d3a10f98c5ad4737"
+  }
+}

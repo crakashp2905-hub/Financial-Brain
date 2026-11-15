@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0044",
+  "status": "DONE",
+  "scope": "Offline deterministic parity acceptance for normalized capture and replay event sequences.",
+  "implemented": [
+    "Compares ordered normalized-event content hashes before execution; differing inputs are durably reported as non-equivalent.",
+    "Runs identical capture and replay inputs through the same ForwardSessionRunner contract in isolated temporary journals.",
+    "Hashes the decision with visible event IDs and hashes the durable paper-intent record; parity requires both signal and intent hashes to match.",
+    "Parity audit records are idempotent and the runner has no physical broker-order path."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_capture_replay.py tests/test_forward_session_runner.py -q",
+    "result": "29 passed (exit code 0); Ruff and mypy passed for capture_replay.py.",
+    "cases": [
+      "test_capture_and_archive_replay_produce_identical_signal_and_intent_hashes",
+      "test_capture_replay_mismatch_is_durably_reported_without_claiming_equivalence"
+    ]
+  },
+  "limitations": [
+    "The harness accepts event sequences from its caller; caller must read captured and replayed data through the rights-gated local archive.",
+    "Synthetic fixtures prove deterministic parity mechanics only; no live session or profitability evidence is claimed."
+  ]
+}

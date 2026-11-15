@@ -1,0 +1,13 @@
+{
+  "checklist_task": "PE-0163",
+  "status": "DONE",
+  "criterion": "Future prices and full-day regimes cannot influence morning entries.",
+  "implementation": "src/financial_brain/regime/asof.py",
+  "tests": [
+    "tests/test_regime_asof.py",
+    "tests/test_script_mechanisms.py"
+  ],
+  "test_result": "12 passed across the as-of and existing daily-mechanism suites; Ruff passed; source inventory check passed (612 Python files).",
+  "evidence_scope": "Synthetic timestamped features and existing daily strategy regression tests; no live intraday feed or profitability claim.",
+  "remaining_operational_evidence": "Wire observed as-of features into prospective paper decisions and retain timestamp/source coverage evidence."
+}

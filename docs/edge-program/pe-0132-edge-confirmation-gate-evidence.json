@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0132",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_edge_confirmation.py tests/test_edge_preregistration.py",
+    "result": "6 edge-confirmation and preregistration tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. Durable preregistration recovery pins protocol, schedule, timestamps, and receipt identity; missing or mismatched registry records cannot produce EDGE_CONFIRMED. Signed fixture remains synthetic."
+  },
+  "implemented": [
+    "Hashes the frozen charter, schedule, sample-size plan, dependence policy, and risk/execution/integrity policies.",
+    "Requires a verified pre-observation registration receipt and pre-entry decision plus post-session outcome receipts for every scheduled session.",
+    "Requires at least 60 independently verified scheduled sessions and the power-plan sample size, positive robust lower bounds, cost/fill stress, fills, risk, integrity, and complete falsification gates.",
+    "Binds the exact session receipts, outcomes, timestamps, scenario economics, trust-root material, and evidence digests into the independently attested release bundle.",
+    "Rejects unreceipted zero and favorable synthetic metrics and rejects reuse of a release receipt after an outcome is changed.",
+    "Adds append-only preregistration storage for frozen protocol identity and requires evaluator resolution to match the protocol, cohort schedule, registration time, first-observation time, and receipt."
+  ],
+  "blockers": [
+    "No approved independent timestamp provider or deployment-pinned trust roots are configured; a caller-provided key map is not proof of deployment authority.",
+    "The local registry is not connected to external immutable custody or deployment-level access controls.",
+    "No real prospective market cohort, validated costs/fills, or external custody receipts exist; the signed test fixture is synthetic software evidence only.",
+    "The gate is not wired into the authoritative strategy promotion and paper-trading lifecycle."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/edge_confirmation.py": "23a580cc71d46754e61f150bf03567a414377b4ab680f03f2e8de0fbe39b7cd7",
+    "tests/test_edge_confirmation.py": "1824c90e5de7c200970467a2a711cbb489afefb939a7f5ffaf1225d52768aa08",
+    "src/financial_brain/forward_edge/edge_preregistration.py": "2ce0ef4baf15c4921edb874a43cf011df5fbcf0c6a1302fceaa688c20d7ca836",
+    "tests/test_edge_preregistration.py": "066d23de704d7ec84dfd019f9cb3ddc436e25f8abf270843f64c07af3c0f4002",
+    "docs/edge-program/pe-0132-edge-confirmation-gate.md": "925fe21de26e1c4e665a1ce31c10a13c2776fab4bbc74b78fccf2e0b7b367f44"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0087",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_paper_execution_adapter.py tests/test_forward_paper_account_bridge.py tests/test_execution_quote_perturbations.py tests/test_raw_quote_archive.py tests/test_forward_edge_f12.py tests/test_paper_account.py",
+    "result": "49 passed (exit code 0); Ruff and mypy on changed source modules passed."
+  },
+  "implemented": [
+    "ExecutionModelRegistry stores canonical JSON snapshots, returns defensive copies, rejects edits to an existing version, and exposes a stable SHA-256 identity.",
+    "Each quote-simulator receipt and fill contains an execution model ID and hash, the effective fee schedule hash, a fixed-latency model hash, and a content hash of its exact quote-event snapshot.",
+    "PaperAccount persists fill-level execution provenance and verifies that its fee-schedule hash matches the configured schedule, including on journal replay.",
+    "Forward paper reconciliation rejects missing or malformed provenance, mismatched fee schedules, snapshot-hash mismatches, and fill provenance that differs from the parent receipt before posting account events."
+  ],
+  "blockers": [],
+  "scope_note": "The evidence proves immutable provenance and consistency for deterministic paper receipts. It does not claim broker fills, live latency calibration, or market profitability."
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0081",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_execution_slippage_calibration.py",
+    "result": "4 passed; Ruff and mypy passed for changed modules."
+  },
+  "implemented": [
+    "Five-dimensional buckets classify missing context as unknown.",
+    "Only provenance-bearing OBSERVED_BROKER observations with aware timestamps and source hashes contribute to recommendations.",
+    "A new immutable execution-model version can be registered only when every included bucket meets its observed sample floor; simulated and uncalibrated inputs are rejected."
+  ],
+  "blockers": [
+    "No authorized observed broker-fill sample is available in this repository snapshot; fixture data does not calibrate market slippage."
+  ],
+  "source_sha256": {
+    "src/financial_brain/execution/oms/quality.py": "663d0be4074e3c26f57e4ada73d2fc54b3c35021cafbd4a7e09d26118bd6dde1",
+    "tests/test_execution_slippage_calibration.py": "4de5c9d65d178c0d6fb8a4e0229639f7d786f3514300a135e95e82874a549fd7"
+  }
+}

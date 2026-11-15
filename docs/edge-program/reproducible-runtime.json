@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "status": "DONE",
+  "python_version_file": ".python-version",
+  "python_version": "3.13.17",
+  "ci_installs_pinned_python": true,
+  "python_hash_seed": "0",
+  "stochastic_seed_policy": "Per-experiment seeds must be frozen in experiment identity; CI does not claim a global RNG seed for all research code.",
+  "market_timezone": "Asia/Kolkata",
+  "ci_sets_hash_seed_and_timezone": true,
+  "uv_version": "0.11.16",
+  "dependency_lock": "uv.lock",
+  "lock_export": "requirements-lock.txt",
+  "dependency_lock_contains_exact_versions": true,
+  "requirements_lock_contains_artifact_hashes": true,
+  "ci_installs_from_dependency_lock": true,
+  "build_backend_dependencies_are_locked": [
+    "setuptools",
+    "wheel"
+  ],
+  "offline_install_protocol": [
+    "Export the dev environment from uv.lock and compare it with requirements-lock.txt.",
+    "Download hash-verified binary wheels for the current OS and Python ABI.",
+    "Build the pure-Python project wheel using the locked setuptools and wheel packages.",
+    "Create a fresh virtual environment and install dependencies with pip --no-index --find-links.",
+    "Install the project wheel locally, run pip check, and import the installed package."
+  ],
+  "offline_clean_install_verified_on": [
+    "ubuntu-latest",
+    "windows-latest"
+  ],
+  "ci_verification": {
+    "run_id": 43600108119,
+    "run_url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43600108119",
+    "commit_sha": "a12e10820d534f37454adc8293f891bf828d0ed7",
+    "ubuntu_job": "success",
+    "windows_job": "success",
+    "complete_workflow": "success",
+    "verified_at_utc": "2026-11-14T13:43:27Z"
+  },
+  "blockers": [],
+  "evidence_sources": [
+    ".python-version",
+    "pyproject.toml",
+    "uv.lock",
+    "requirements-lock.txt",
+    ".github/workflows/ci.yml",
+    "tests/test_edge_program_runtime.py"
+  ]
+}

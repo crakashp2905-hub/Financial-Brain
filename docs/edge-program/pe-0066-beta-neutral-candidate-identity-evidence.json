@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0066",
+  "status": "PARTIAL",
+  "implemented": [
+    "Beta is estimated on unique dated DEVELOPMENT pairs only; validation rows and zero-variance benchmarks are rejected.",
+    "The beta-neutral candidate gets a content-addressed strategy SHA distinct from its source strategy.",
+    "Candidate registration is immutable and must precede validation start.",
+    "Candidate-specific validation receipts are stored under the candidate SHA with gross return, benchmark and itemized costs; net alpha is derived and records cannot predate validation."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_beta_candidate.py -q",
+    "result": "5 passed; mypy and Ruff passed.",
+    "cases": [
+      "test_beta_candidate_is_development_fit_with_separate_frozen_strategy_identity",
+      "test_beta_candidate_rejects_validation_rows_duplicate_identity_and_zero_market_variance",
+      "test_candidate_performance_records_are_validation_only_and_not_coalesced",
+      "test_performance_record_must_match_candidate_and_follow_validation_start",
+      "test_candidate_must_be_registered_before_validation_and_before_performance"
+    ]
+  },
+  "limitations": [
+    "Synthetic data verifies identity and record isolation only; no real factor exposures or return improvements are claimed.",
+    "No authorized independent validation performance receipts have been supplied.",
+    "Candidate registration is a research record and does not imply approval or paper eligibility."
+  ]
+}

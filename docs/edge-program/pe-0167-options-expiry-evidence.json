@@ -1,0 +1,22 @@
+{
+  "checklist_task": "PE-0167",
+  "status": "DONE",
+  "criterion": "Indian options expiry applies effective-dated settlement/exercise rules and preflights physical delivery inventory, cash, and margin without unaccounted delivery or margin deficit.",
+  "implementation": [
+    "src/financial_brain/kernel/india_options_expiry.py",
+    "src/financial_brain/kernel/options_paper.py",
+    "docs/edge-program/india-options-expiry-rules.v1.json"
+  ],
+  "tests": [
+    "tests/test_india_options_expiry.py",
+    "tests/test_kernel_options_paper.py"
+  ],
+  "test_result": "9 passed across India expiry preflight, rule table parity, options settlement, durable journal restart, and stale-readiness checks; Ruff passed; targeted mypy passed; source inventory check passed (615 Python files).",
+  "evidence_scope": "Synthetic contract-master, settlement-price, delivery-margin, and account data. No live exchange session or margin file is represented.",
+  "operational_limits": [
+    "Official contract master, expiry, settlement price, and current applicable margin evidence must be supplied and source-attested by the authorized provider at run time.",
+    "The generic stock physical rule starts at the remaining-stock October 2019 phase. Earlier phased stock expiries block without contract-specific effective-date evidence.",
+    "The no-calendar-spread-offset expiry rule requires caller-provided margin evidence reflecting the applicable treatment; the module does not invent or independently fetch an exchange margin rate.",
+    "Pre-existing journal expiry events remain replayable for accounting continuity and are surfaced as legacy events without retroactive preflight attestation."
+  ]
+}

@@ -20,6 +20,7 @@ def identity(**changes):
         "universe_sha256": "f" * 64,
         "execution_cost_id": "owner-cost-schedule-v1",
         "execution_cost_sha256": "1" * 64,
+        "risk_policy_sha256": "0" * 64,
         "benchmarks": (("NIFTY50_CASH", "2" * 64),),
     }
     values.update(changes)
@@ -49,6 +50,7 @@ def test_every_source_cost_calendar_and_benchmark_digest_changes_identity_hash()
         {"market_calendar_sha256": "6" * 64},
         {"universe_sha256": "7" * 64},
         {"execution_cost_sha256": "8" * 64},
+        {"risk_policy_sha256": "8" * 64},
         {"benchmarks": (("NIFTY50_CASH", "9" * 64),)},
     ]
     for change in changes:
@@ -95,7 +97,7 @@ def test_durable_registry_rejects_retroactive_benchmark_and_endpoint_edits(tmp_p
 def test_protected_charter_requires_all_evaluation_identity_components():
     legacy = replace(experiment(), evaluation_identity=None)
     # This is a compatibility-only charter and cannot enter the protected registry.
-    with pytest.raises(charter.CharterError, match="complete market/data-rights/model/cost identity"):
+    with pytest.raises(charter.CharterError, match="complete market/data-rights/model/cost/risk identity"):
         legacy.require_evaluation_identity()
     with pytest.raises(charter.CharterError, match="SHA-256"):
         identity(market_calendar_sha256="not-a-hash")

@@ -211,6 +211,23 @@ def build(con, *, fit_end: str = "2022-12-31", calib_end: str = "2024-06-30",
 
 
 def save(con, model: Model) -> None:
+    # A locked prospective cohort must keep the exact model identity it opened with.
+    # Drift is handled by the cohort's halt/close workflow, never by changing weights.
+    from . import model_update_guard
+
+    identity = model_update_guard.model_identity_sha256(
+        version=VERSION,
+        features=model.features,
+        weights=model.weights,
+        bias=model.bias,
+        threshold=model.threshold,
+        fitted_on=model.fitted_on,
+        verified_on=model.verified_on,
+    )
+    if not model_update_guard.assert_model_update_allowed(
+        con, proposed_model_sha256=identity
+    ):
+        return
     con.execute("""INSERT INTO timing_models (version, fitted_at, weights, bias, features,
                    threshold, fitted_on, verified_on, report)
                    VALUES (?,?,?,?,?,?,?,?,?)""",
@@ -240,7 +257,7 @@ def decide(con, isin: str, as_of: date, *, model: Model | None = None):
     """
     from ..llm.system1 import Decision
     model = model or latest(con)
-    if model is None or not model.usable():
+    if model is None or model.threshold is None:
         return Decision(label="wait", probs={}, confidence=0.0, model=f"timing-{VERSION}",
                         extra={"declined": "no verified timing model"})
     row = con.execute(f"""

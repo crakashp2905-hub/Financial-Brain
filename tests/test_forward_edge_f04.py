@@ -1,6 +1,7 @@
 """F04 - forward decision custody (FE-0045 .. FE-0054). Offline. Without a configured provider every session is LOCAL_ONLY."""
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -8,7 +9,8 @@ from pathlib import Path
 import pytest
 
 from financial_brain.forward_edge import decision_custody as D
-from financial_brain.forward_edge.custody import CustodyStatus, Receipt
+from financial_brain.forward_edge.custody import CustodyStatus, Receipt, UnconfiguredProvider
+from financial_brain.forward_edge.durable import JournalCorrupt
 
 H = "d" * 64
 CHARTER = "c" * 64
@@ -51,8 +53,8 @@ def test_schedule_hash_is_pinned_once_observations_begin() -> None:
 def test_manifest_canonical_bytes_are_stable_and_hash_matches_golden() -> None:
     m = _manifest()
     assert m.canonical() == _manifest().canonical()
-    # Golden digest over canonical ASCII JSON; recomputed on Linux in CI (FE-0148) before the item can be marked DONE.
-    assert m.sha256() == _manifest().sha256()
+    # Pinned canonical ASCII JSON digest is checked on both CI operating systems.
+    assert m.sha256() == "49a11cedc6c6d357e9007bab78870f8462ddc56aab9362504428dea8921d9337"
     assert _manifest(intended_quantity=11).sha256() != m.sha256()
 
 
@@ -79,6 +81,59 @@ def test_manifest_must_be_recorded_before_entry_and_never_overwritten() -> None:
     j.record(m, recorded_at_utc=DECIDE + timedelta(seconds=5))
     with pytest.raises(D.CustodyError, match="overwrite"):
         j.record(_manifest(intended_quantity=99), recorded_at_utc=DECIDE + timedelta(seconds=6))
+
+
+def test_durable_manifest_journal_replays_decisions_and_all_terminal_outcome_classes(tmp_path: Path) -> None:
+    path = tmp_path / "decision-custody.jsonl"
+    journal = D.ManifestJournal(path)
+    manifest = _manifest()
+    journal.record(manifest, recorded_at_utc=DECIDE + timedelta(seconds=5))
+    outcomes = {
+        "2027-01-04": "SUBMITTED",
+        "2027-01-05": "NO_SIGNAL",
+        "2027-01-06": "NO_TRADE",
+        "2027-01-07": "REJECTED",
+        "2027-01-08": "UNKNOWN_ORDER",
+        "2027-01-09": "UNSUCCESSFUL",
+    }
+    for session_id, outcome in outcomes.items():
+        journal.outcome(session_id, outcome)
+
+    recovered = D.ManifestJournal(path)
+    assert recovered.manifests() == [manifest]
+    assert recovered._recorded_at[manifest.session_id] == DECIDE + timedelta(seconds=5)
+    counts = recovered.denominator(list(outcomes))
+    assert counts["SCHEDULED"] == 6
+    assert counts["UNRECORDED"] == 0
+    assert all(counts[name] == 1 for name in outcomes.values())
+
+
+def test_optional_timestamp_provider_keeps_local_fallback_and_persists_untrusted_receipt(tmp_path: Path) -> None:
+    class FixtureProvider:
+        provider_id = "fixture-tsa"
+
+        def anchor(self, digest_sha256: str) -> Receipt:
+            return Receipt(self.provider_id, "fixture-key", digest_sha256, DECIDE + timedelta(seconds=6), "AAAA")
+
+    path = tmp_path / "optional-anchor.jsonl"
+    journal = D.ManifestJournal(path)
+    journal.record(_manifest(), recorded_at_utc=DECIDE + timedelta(seconds=5))
+    assert journal.anchor("2027-01-04", UnconfiguredProvider(), {}) is CustodyStatus.LOCAL_ONLY
+    assert journal.anchor("2027-01-04", FixtureProvider(), {}) is CustodyStatus.UNVERIFIED
+    recovered = D.ManifestJournal(path)
+    assert recovered.status("2027-01-04", {}) is CustodyStatus.UNVERIFIED
+
+
+def test_local_manifest_hash_chain_detects_mutation_without_promoting_local_evidence(tmp_path: Path) -> None:
+    path = tmp_path / "local-evidence.jsonl"
+    journal = D.ManifestJournal(path)
+    journal.record(_manifest(), recorded_at_utc=DECIDE + timedelta(seconds=5))
+    assert journal.status("2027-01-04", {}) is CustodyStatus.LOCAL_ONLY
+    text = path.read_text(encoding="utf-8")
+    assert "NIFTY_CASH" in text
+    path.write_text(text.replace("NIFTY_CASH", "NIFTY_NASH"), encoding="utf-8")
+    with pytest.raises(JournalCorrupt):
+        D.ManifestJournal(path)
 
 
 def test_status_is_local_only_without_a_receipt_and_verified_only_with_a_pinned_one() -> None:
@@ -124,7 +179,7 @@ def test_bundle_verifies_and_detects_tampering(tmp_path: Path) -> None:
     D.export_bundle(j, sched, out, sessions=["2027-01-04"])
     assert D.verify_bundle(out) == []
     original = (out / "manifests.jsonl").read_text(encoding="utf-8")
-    text = original.replace('"intended_quantity": 10', '"intended_quantity": 11')
+    text = original.replace('"intended_quantity":10', '"intended_quantity":11')
     assert text != original  # the edit must actually happen
     (out / "manifests.jsonl").write_text(text, encoding="utf-8")
     problems = D.verify_bundle(out)
@@ -143,3 +198,43 @@ def test_bundle_copy_verifies_on_another_location(tmp_path: Path) -> None:
         (dst / p.name).write_bytes(p.read_bytes())
     assert D.verify_bundle(dst) == []
     assert json.loads((dst / "schedule.json").read_text(encoding="utf-8"))["charter_sha256"] == CHARTER
+
+
+def test_bundle_replay_hashes_and_custody_mismatches_are_reported(tmp_path: Path) -> None:
+    j = D.ManifestJournal()
+    j.record(_manifest(), recorded_at_utc=DECIDE + timedelta(seconds=5))
+    sched = D.CohortSchedule(CHARTER, _cohorts(("2027-01-04", "2027-02-01")))
+    orders = [{"order_id": "o1", "filled_qty": 5, "price": "100.00"}]
+    equity = [{"session_id": "2027-01-04", "nav": "100000.00"}]
+    out = tmp_path / "replay-bundle"
+    D.export_bundle(j, sched, out, sessions=["2027-01-04"], orders=orders,
+                    equity=equity)
+
+    assert D.verify_bundle(out, replay_orders=orders, replay_equity=equity) == []
+    mismatched = D.verify_bundle(out, replay_orders=orders,
+                                 replay_equity=[{"session_id": "2027-01-04", "nav": "99999.00"}])
+    assert "replay equity hash mismatch" in mismatched
+
+    custody_path = out / "custody.jsonl"
+    custody_row = json.loads(custody_path.read_text(encoding="utf-8"))
+    custody_row["status"] = "VERIFIED"  # no receipt or pinned root supports this claim
+    custody_bytes = (json.dumps(custody_row, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    custody_path.write_bytes(custody_bytes)
+    index_path = out / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    index["custody.jsonl"] = hashlib.sha256(custody_bytes).hexdigest()
+    index_path.write_text(json.dumps(index, sort_keys=True, indent=1) + "\n", encoding="utf-8")
+
+    problems = D.verify_bundle(out, replay_orders=orders, replay_equity=equity)
+    assert any(p.startswith("custody mismatch 2027-01-04:") for p in problems)
+
+
+def test_bundle_refuses_duplicate_or_out_of_schedule_sessions(tmp_path: Path) -> None:
+    journal = D.ManifestJournal()
+    schedule = D.CohortSchedule(CHARTER, _cohorts(("2027-01-04", "2027-02-01")))
+    with pytest.raises(D.CustodyError, match="duplicates"):
+        D.export_bundle(journal, schedule, tmp_path / "duplicate",
+                        sessions=["2027-01-04", "2027-01-04"])
+    with pytest.raises(D.CustodyError, match="outside frozen schedule"):
+        D.export_bundle(journal, schedule, tmp_path / "outside",
+                        sessions=["2027-03-01"])

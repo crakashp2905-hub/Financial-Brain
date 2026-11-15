@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0096",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_multi_currency.py tests/test_kernel_ledger_guards_ticks.py tests/test_kernel_accounting_extra.py",
+    "result": "24 passed; Ruff and mypy passed for the new module."
+  },
+  "implemented": [
+    "A paper-ledger helper posts source and destination cash through per-currency clearing legs; every currency balances independently.",
+    "Conversion and revaluation require positive effective-dated fixings, aware availability timestamps, source IDs and SHA-256 provenance.",
+    "Foreign-currency cash translation P&L is posted explicitly in reporting currency and exposed as a separate balance."
+  ],
+  "blockers": [
+    "The multi-currency helper is not yet integrated into the durable PaperAccount/account lifecycle or its replay auditor.",
+    "No authorized fixing provider is configured; tests use synthetic fixing fixtures and are not market-rate evidence."
+  ],
+  "source_sha256": {
+    "src/financial_brain/kernel/multi_currency.py": "9357d23d6e413fdaa448e227a5a610aac01c0c218db8b1d585dd0e16a7d85a7d",
+    "tests/test_multi_currency.py": "6a88231748156ad164838b27c06b303b68c70b3241fe37e6b897eae18caeb260"
+  }
+}

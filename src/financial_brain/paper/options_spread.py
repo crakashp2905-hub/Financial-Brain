@@ -1,7 +1,12 @@
 """Defined-risk debit vertical envelope; no expiry settlement or broker margin claim."""
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta, timezone
+from math import isfinite
 
 from ..costs.india import CostModel, Segment, Side
 from .options import OptionPaperError, Quote
@@ -13,6 +18,101 @@ class Leg:
     underlying: str
     option_type: str
     strike: float
+
+
+@dataclass(frozen=True)
+class OptionLegEvidence:
+    """One option quote joined to its venue contract-master record."""
+
+    leg: Leg
+    quote_venue: str
+    master_venue: str
+    quote_available_at: datetime
+    quote_source_sha256: str
+    contract_master_sha256: str
+    contract_master_expiry: date
+    contract_master_lot_size: int
+
+
+def _aware(value: datetime, name: str) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise OptionPaperError(f"{name} must be timezone-aware")
+    return value.astimezone(timezone.utc)
+
+
+def prepare_debit_vertical(long: OptionLegEvidence, short: OptionLegEvidence, *,
+                           decision_at: datetime, expected_venue: str,
+                           max_quote_age: timedelta = timedelta(seconds=5),
+                           lots: int = 1, costs: CostModel | None = None) -> dict:
+    """Fail closed unless every leg has fresh bid/ask and matching venue contract terms.
+
+    ``debit_vertical`` remains the price/risk calculator. This function is the execution
+    readiness gate: it binds each quote timestamp and digest to its sourced contract-master
+    expiry, lot and venue, and returns no executable economics when any leg fails.
+    """
+    cutoff = _aware(decision_at, "decision_at")
+    if not expected_venue.strip() or not isinstance(max_quote_age, timedelta) or max_quote_age < timedelta(0):
+        raise OptionPaperError("an expected venue and non-negative quote age are required")
+    blockers: list[str] = []
+    evidence = []
+    for side, item in (("long", long), ("short", short)):
+        quote = item.leg.quote
+        observed = _aware(quote.observed_at, f"{side} quote observed_at")
+        available = _aware(item.quote_available_at, f"{side} quote_available_at")
+        if observed > available or available > cutoff:
+            blockers.append(f"{side.upper()}_QUOTE_NOT_AVAILABLE_AT_DECISION")
+        if (cutoff - observed) > max_quote_age:
+            blockers.append(f"{side.upper()}_QUOTE_STALE")
+        if item.quote_venue != expected_venue or item.master_venue != expected_venue:
+            blockers.append(f"{side.upper()}_VENUE_MISMATCH")
+        if (item.contract_master_expiry != quote.expiry
+                or item.contract_master_lot_size != quote.lot_size):
+            blockers.append(f"{side.upper()}_CONTRACT_TERMS_MISMATCH")
+        if (item.leg.underlying.strip() == "" or item.leg.option_type not in {"CE", "PE"}
+                or item.leg.strike <= 0):
+            blockers.append(f"{side.upper()}_INVALID_CONTRACT_IDENTITY")
+        for label, digest in (("quote", item.quote_source_sha256),
+                              ("contract", item.contract_master_sha256)):
+            if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+                blockers.append(f"{side.upper()}_MISSING_{label.upper()}_SHA256")
+        if (not isfinite(quote.bid) or not isfinite(quote.ask) or quote.bid <= 0
+                or quote.ask < quote.bid or quote.bid_qty <= 0 or quote.ask_qty <= 0):
+            blockers.append(f"{side.upper()}_INVALID_OR_INCOMPLETE_BOOK")
+        evidence.append({
+            "side": side,
+            "instrument_id": quote.token,
+            "venue": item.quote_venue,
+            "master_venue": item.master_venue,
+            "expiry": quote.expiry.isoformat(),
+            "lot_size": quote.lot_size,
+            "observed_at": observed.isoformat(),
+            "available_at": available.isoformat(),
+            "bid": quote.bid,
+            "ask": quote.ask,
+            "bid_qty": quote.bid_qty,
+            "ask_qty": quote.ask_qty,
+            "quote_source_sha256": item.quote_source_sha256,
+            "contract_master_sha256": item.contract_master_sha256,
+        })
+    if long.leg.quote.token == short.leg.quote.token:
+        blockers.append("DUPLICATE_OPTION_INSTRUMENT")
+    body = {"decision_at": cutoff.isoformat(), "expected_venue": expected_venue,
+            "max_quote_age_seconds": max_quote_age.total_seconds(), "legs": evidence,
+            "blockers": sorted(set(blockers))}
+    digest = hashlib.sha256(json.dumps(
+        body, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")).hexdigest()
+    if blockers:
+        return {"status": "BLOCKED_OPTION_LEG_EVIDENCE", "allow_execution": False,
+                "blockers": sorted(set(blockers)), "evidence_sha256": digest}
+    try:
+        economics = debit_vertical(long.leg, short.leg, lots=lots, costs=costs)
+    except OptionPaperError as exc:
+        return {"status": "BLOCKED_OPTION_SPREAD_VALIDATION", "allow_execution": False,
+                "blockers": [str(exc)], "evidence_sha256": digest}
+    return {"status": "ELIGIBLE_PAPER_OPTION_SPREAD", "allow_execution": True,
+            "blockers": [], "evidence_sha256": digest, "leg_evidence": evidence,
+            "economics": economics}
 
 
 def debit_vertical(long: Leg, short: Leg, *, lots: int = 1,

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0152",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest tests/test_forward_paper_account_bridge.py tests/test_forward_book_adapter.py tests/test_forward_session_runner.py tests/test_forward_feed_health.py -q; python -m ruff check src/financial_brain/forward_edge/paper_account_bridge.py src/financial_brain/forward_edge/session_runner.py tests/test_forward_paper_account_bridge.py; python -m mypy src/financial_brain/forward_edge/paper_account_bridge.py src/financial_brain/forward_edge/session_runner.py",
+    "result": "94 passed; Ruff passed; mypy passed."
+  },
+  "implemented": [
+    "Exchange-session calendar is content-addressed and validates unique ordered dates.",
+    "Frozen holding horizon resolves from entry session across weekends and holidays; midnight does not reset it.",
+    "Book adapter emits scheduled exit date and SCHEDULED/DUE/OVERDUE state as normalized position events.",
+    "ForwardPaperSessionService.run_with_daily_book constructs BOOK_POSITION events from the persisted daily book using the supplied exchange calendar and runner clock.",
+    "Registered ForwardPaperSessionService routes one visible due/overdue position event through the sealed decision, configured risk callback, quote-based simulator, durable order lifecycle, and cash-account reconciliation.",
+    "The close route validates event visibility, frozen instrument eligibility, and exact account inventory quantity; invalid or mismatched evidence fails closed.",
+    "Explicit reduction/close decisions bypass entry-only alpha, pretrade, and family-enrollment gates while retaining feed-health and configured risk checks.",
+    "Multiple due exits fail closed because the runner currently accepts one intent per session."
+  ],
+  "blockers": [
+    "An authoritative effective-dated exchange calendar feed is not wired; the caller must supply the calendar.",
+    "The single-intent session runner cannot execute multiple due exits in one session.",
+    "No prospective overnight market session has validated the end-to-end exit behavior."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/holding_period_schedule.py": "02fd115f99602d396533b4c26922c3704e344a596c4b5644a07dcdbbc2b84272",
+    "src/financial_brain/forward_edge/book_adapter.py": "eb4cc2b976572eed91038d2b73a24ef34888d6de3324d41974c023cf35ea0663",
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "24c9395f67839da315919ac2918c8036d7802fea2d9dfccce4ab472a628fa3d2",
+    "src/financial_brain/forward_edge/session_runner.py": "e1ea0afc71cb4af0e7e4d796455993c62e3c62c7b048fbe16093652102a670d1",
+    "tests/test_forward_book_adapter.py": "0f417fae66ee6a3183fe58aec92dd110bdd4ffefc6b8a7ba7feb448eab358e9d",
+    "tests/test_forward_paper_account_bridge.py": "773d0a7edcc9309a6fdc1e4152963ae41be25b6eccf77fbce35e5664c7c3ceeb",
+    "tests/test_forward_session_runner.py": "46e96de6f782847f8528db3ca19a80897ac9ef766785d3728b211770fb18565f",
+    "src/financial_brain/paper/book.py": "fd2943b099022bbef877abf2b70cf7a631ac49016789b9cc3c318f58c4f7c5e6"
+  }
+}

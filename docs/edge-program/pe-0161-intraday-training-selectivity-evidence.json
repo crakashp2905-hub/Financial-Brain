@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0161",
+  "status": "DONE",
+  "test": {
+    "command": "pytest -q tests/test_intraday_selectivity.py; ruff check src/financial_brain/evaluation/intraday_selectivity.py tests/test_intraday_selectivity.py",
+    "result": "4 passed; Ruff passed."
+  },
+  "implemented": [
+    "Threshold fitting is limited to TRAIN rows within the frozen date window; future-dated and non-TRAIN rows are rejected.",
+    "Controls come from a separate source manifest, cannot reuse candidate event IDs, must be same-session/time-bucket/stratum and different-symbol, and can be used once.",
+    "Thresholds with incomplete same-time control coverage are excluded; net excess is computed after supplied training costs.",
+    "The deterministic frozen policy carries data/source hashes and training denominators and exposes score-only selection without any forward schedule input."
+  ],
+  "blockers": [],
+  "source_sha256": {
+    "src/financial_brain/evaluation/intraday_selectivity.py": "f3c4ed8e0884028e4420c4aca1b750e5b1e7295de5513397fe8d34130835019b",
+    "tests/test_intraday_selectivity.py": "02c6c09e2f138347f02b0b2e3094a6a4c4f0c86a6a65816ed6ebc8060658eee0"
+  }
+}

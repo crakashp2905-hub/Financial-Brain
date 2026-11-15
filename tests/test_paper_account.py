@@ -47,6 +47,44 @@ def test_buy_sell_fees_and_restart_reconcile(tmp_path) -> None:
     assert reopened.fees == Decimal("2.50")
 
 
+def test_flat_account_close_reconciles_cash_survives_restart_and_blocks_writes(tmp_path):
+    path = tmp_path / "closeable.jsonl"
+    account = PaperAccount(path, account_id="closeable", initial_cash=Decimal("5000"))
+    closed_at = datetime(2026, 11, 15, 12, tzinfo=timezone.utc)
+    closure = account.close(closure_id="close-1", closed_at=closed_at,
+                           evidence_id="owner-paper-close:1")
+    assert closure["final_cash_inr"] == "5000"
+    assert closure["reconciliation"]["reconciled"] is True
+    assert account.closed is True
+    saved_closure = account.closure
+    closure["reconciliation"]["reconciled"] = False
+    assert account.closure["reconciliation"]["reconciled"] is True
+    assert account.close(closure_id="close-1", closed_at=closed_at,
+                         evidence_id="owner-paper-close:1") == account.closure
+    with pytest.raises(PaperAccountError, match="already closed"):
+        account.close(closure_id="close-1", closed_at=closed_at,
+                      evidence_id="changed-evidence")
+    with pytest.raises(PaperAccountError, match="closed and read-only"):
+        account.submit_intent(client_id="after-close", symbol="NSE:ABC", side="BUY",
+                              quantity=1, limit=Decimal("10"), reserve=Decimal("10"))
+    reopened = PaperAccount(path, account_id="closeable", initial_cash=Decimal("5000"))
+    assert reopened.closed is True
+    assert reopened.closure == saved_closure
+    with pytest.raises(PaperAccountError, match="closed and read-only"):
+        reopened.record_nav_snapshot(date(2026, 11, 16), snapshot_id="after-close",
+                                     captured_at=datetime(2026, 11, 16, 12, tzinfo=timezone.utc))
+
+
+def test_account_cannot_close_with_open_inventory_or_working_orders(tmp_path):
+    account = PaperAccount(tmp_path / "not-flat.jsonl", account_id="not-flat",
+                           initial_cash=Decimal("5000"))
+    _buy(account, quantity=1)
+    account.record_fill("buy-1", fill_id="open-position", quantity=1, price=Decimal("90"))
+    with pytest.raises(PaperAccountError, match="open inventory"):
+        account.close(closure_id="close-open", closed_at=datetime(2026, 11, 15, 12, tzinfo=timezone.utc),
+                      evidence_id="owner-paper-close:open")
+
+
 def test_replayed_intent_fill_and_fee_have_one_economic_effect(tmp_path) -> None:
     path = tmp_path / "paper.jsonl"
     book = PaperAccount(path, account_id="day", initial_cash=Decimal("5000"))
@@ -90,6 +128,28 @@ def test_sell_reservations_prevent_overselling_and_release_on_cancel(tmp_path) -
     )
 
 
+def test_partial_fill_then_expiry_reconciles_filled_inventory_and_releases_rest(tmp_path) -> None:
+    path = tmp_path / "partial-expiry.jsonl"
+    book = PaperAccount(path, account_id="expiry", initial_cash=Decimal("5000"))
+    book.submit_intent(client_id="b", symbol="NSE:ABC", side="BUY", quantity=10,
+                       limit=Decimal("200"), reserve=Decimal("2000"))
+    book.move("b", State.SUBMITTED)
+    book.move("b", State.ACCEPTED)
+    book.record_fill("b", fill_id="partial", quantity=4, price=Decimal("100"))
+    book.move("b", State.EXPIRED)
+
+    assert book.position("NSE:ABC").quantity == 4
+    assert book.cash == Decimal("4600")
+    assert book.oms.order("b").reserved == 0
+    assert book.oms.order("b").remaining == 6
+    assert book.oms.order("b").state is State.EXPIRED
+    reopened = PaperAccount(path, account_id="expiry", initial_cash=Decimal("5000"))
+    assert reopened.position("NSE:ABC").quantity == 4
+    assert reopened.cash == Decimal("4600")
+    assert reopened.oms.order("b").reserved == 0
+    assert reopened.oms.order("b").state is State.EXPIRED
+
+
 def test_failed_fill_or_fee_does_not_change_journal(tmp_path) -> None:
     book = PaperAccount(tmp_path / "paper.jsonl", account_id="day", initial_cash=Decimal("1000"))
     _buy(book, "b", 5)
@@ -113,6 +173,26 @@ def test_conflicting_client_fill_and_fee_ids_are_refused(tmp_path) -> None:
     book.record_fee("fee", Decimal("1"))
     with pytest.raises(PaperAccountError, match="fee id"):
         book.record_fee("fee", Decimal("2"))
+
+
+def test_daily_nav_curve_keeps_cash_days_and_open_losing_positions(tmp_path) -> None:
+    path = tmp_path / "complete-nav.jsonl"
+    book = PaperAccount(path, account_id="daily-nav", initial_cash=Decimal("1000"))
+    book.record_nav_snapshot(date(2026, 11, 10), snapshot_id="cash-day-1",
+                             captured_at=datetime(2026, 11, 10, 10, tzinfo=timezone.utc))
+    book.record_nav_snapshot(date(2026, 11, 11), snapshot_id="cash-day-2",
+                             captured_at=datetime(2026, 11, 11, 10, tzinfo=timezone.utc))
+    _buy(book, client_id="open-loss", quantity=5)
+    book.record_fill("open-loss", fill_id="open-loss-fill", quantity=5, price=Decimal("100"))
+    book.record_mark("NSE:ABC", mark_id="loss-mark", price=Decimal("90"),
+                     observed_at=datetime(2026, 11, 12, 10, tzinfo=timezone.utc))
+    book.record_nav_snapshot(date(2026, 11, 12), snapshot_id="open-loss-day",
+                             captured_at=datetime(2026, 11, 12, 10, 1, tzinfo=timezone.utc))
+
+    reopened = PaperAccount(path, account_id="daily-nav", initial_cash=Decimal("1000"))
+    assert [row["nav"] for row in reopened.nav_snapshots] == ["1000", "1000", "950"]
+    assert reopened.daily_nav_returns == [Decimal("0"), Decimal("-0.05")]
+    assert reopened.position("NSE:ABC").quantity == 5  # loss is open, not omitted as a closed-trade sample
 
 
 def test_effective_fee_schedule_uses_filled_notional_and_reconciles_nav(tmp_path) -> None:

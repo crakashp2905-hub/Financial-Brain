@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0077",
+  "status": "PARTIAL",
+  "captured_at_utc": "2026-11-13T10:04:36Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/execution.py": "ff508515a9dc0bccd391d9239ba4b5203c8ed2b3ed968c547b78917de5206b32",
+    "tests/test_forward_edge_f05.py": "979c6f61fd9d30a528c527a7612b598d18af64eff4e20e52e4bd248b27b9bc2d",
+    "docs/edge-program/indian-cash-cost-schedule-contract.md": "b5c83f1f78f2df94185282c70056d4cc37b3ad109e6faff8cf0b865c71e1349a"
+  },
+  "tests": {
+    "command": "python -m pytest -q tests/test_forward_edge_f05.py",
+    "result": "22 passed (exit code 0); Ruff, mypy and diff checks passed."
+  },
+  "verified": [
+    "Effective-dated cash-equity rules support owner-supplied brokerage, exchange, STT, stamp duty, GST, SEBI, IPFT, and clearing rates.",
+    "Brokerage floors/caps, side-specific levy handling, rate validation, unique effective dates, and deterministic table SHA-256 identity are implemented.",
+    "Unrounded components are summed before total is rounded once to paise; component detail is returned separately.",
+    "A synthetic hand-calculated buy/sell round trip reconciles to 78.60 INR."
+  ],
+  "blockers": [
+    "Source-verified/current broker and statutory rates are not supplied or independently validated in the repository.",
+    "CostSchedule is not wired into the PaperAccount bridge; the account currently uses its separate owner-supplied all-in BPS fee schedule."
+  ],
+  "limitations": [
+    "The test rates are synthetic fixtures, not applicable current India charges. The helper alone does not prove net P&L cost reconciliation."
+  ]
+}

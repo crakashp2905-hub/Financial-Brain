@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0029",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T09:58:16Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/session_checkpoints.py": "59a0397d8796d947fc193281452386c15c06bc51c1f154020a589fa8b46aafff",
+    "src/financial_brain/forward_edge/durable.py": "0f32847d2bf0d192780c69a20d7e928a8efcd1830c26814d9cccdc7fd8d70d04",
+    "tests/test_session_checkpoints.py": "8d74d0944a61cb3946d52dd95d8c8b47f61b4a7c8bf6635bd011135f7a41b0e9",
+    "docs/edge-program/session-checkpoint-contract.md": "c86aa33dd60ed7a603ac78641b372d435b99af6a7c8e69e73efef61154f8b7cb"
+  },
+  "tests": {
+    "command": "python -m pytest -q tests/test_session_checkpoints.py",
+    "result": "5 passed (exit code 0); Ruff, mypy and diff checks passed."
+  },
+  "verified": [
+    "Start/end checkpoint is a single fsynced record carrying both source journal sequence/head and byte-prefix hashes.",
+    "Checkpoint pair verifies phase/session/date identity, time ordering, monotonic journal sequences, and both immutable source prefixes.",
+    "A restart retry returns the original immutable snapshot after newer source records are appended.",
+    "Torn source journals are rejected without modifying source bytes; corrupted prefixes fail verification.",
+    "Checkpoint creation requires an explicit writer-quiescence assertion and detects source mutation during sampling.",
+    "Checkpoint, event, and account journals are required to be distinct paths."
+  ],
+  "limitations": [
+    "Writer quiescence is a caller-supplied operational assertion; the module cannot stop writers that ignore the gate.",
+    "Hash-chain references are local integrity evidence, not independent attestation, provider-rights proof, or broker accounting reconciliation."
+  ],
+  "secrets_or_market_payloads_included": false
+}

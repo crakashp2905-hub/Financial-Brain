@@ -15,6 +15,7 @@ def test_open_short_mark_is_gross_and_closed_net_is_separate():
     assert "₹30.00" in html and "₹35.00" in html
     assert "₹65.00" not in html  # never combine gross open P&L with net closed P&L
     assert "₹0.00" not in V.render()  # no feed must not imply zero profits
+    assert "exploratory SHADOW monitoring" in html
 
 
 def test_snapshot_escapes_symbols_and_does_not_read_database(tmp_path):

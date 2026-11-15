@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0131",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_contribution_report.py tests/test_contribution_registry.py",
+    "result": "11 contribution-report and durable registry tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s). Ruff and targeted mypy passed. The registry binds source digests and recomputes reports against the frozen prospective cohort; caller digests do not authenticate source ledgers."
+  },
+  "implemented": [
+    "Reports daily return mean, median, standard deviation, quantiles, minimum, maximum and positive/negative fractions.",
+    "Requires per-instrument daily net contributions to reconcile to observed scheduled-day returns.",
+    "Shows best and worst day, month and instrument plus fixed-denominator sensitivity after removing the top day, month or instrument.",
+    "Includes frozen protocol/schedule identity in a deterministic report hash and keeps missing dates in the cohort denominator.",
+    "Adds an append-only journal registry binding report inputs and source digests to the frozen cohort plan; restart revalidates the derived report and conflicting replacements are rejected."
+  ],
+  "blockers": [
+    "Attribution rows and source digests remain caller-supplied and are not independently authenticated against the paper ledger.",
+    "The report is not included in the final promotion gate.",
+    "Removal analysis is additive diagnostic attribution, not a portfolio replay of the counterfactual trade set."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/contribution_report.py": "39e32b93daffb69ed4740422e0281d4a73a0a0eff0a105e58a824ad219653fee",
+    "src/financial_brain/forward_edge/contribution_registry.py": "e8dd157e59eb0cdabfdd696907a9e882f4aa73c16fc903cc5bace4287be4ae4a",
+    "tests/test_contribution_report.py": "1b6840b2f27a32114ccb10f39e491836d17ba09bac8cc773a26838d0a01e9c8b",
+    "tests/test_contribution_registry.py": "67510effcf9f3dc7a5c809a4d1c2f2c07cc077c3ee5fede1ee26b9ee1fee9ec2",
+    "docs/edge-program/pe-0131-contributor-removal-report.md": "bbd791f65d4e61a35f71165a222a40bf899b037833b7642d32a540e51f5f660b"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0147",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest tests/test_phase5_intraday_runner.py tests/test_source_capture_start.py tests/test_kite_forward_events.py -q; python -m ruff check src/financial_brain/paper/intraday_runner.py tests/test_phase5_intraday_runner.py; python -m mypy src/financial_brain/paper/intraday_runner.py src/financial_brain/ingest/kite_live.py",
+    "result": "40 passed; Ruff and mypy passed.",
+    "new_cases": [
+      "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink",
+      "test_live_runner_rejects_stale_kite_timestamp_before_forward_event_sink",
+      "test_live_runner_can_opt_in_to_authorized_raw_quote_archive",
+      "test_live_forward_sink_without_capture_receipt_is_no_trade_and_emits_no_events"
+    ]
+  },
+  "implemented": [
+    "Captures a unique source session ID and verifies capture start precedes the earliest decision time.",
+    "Persists the capture-start marker before the first market event, with monotonic immutable replay semantics.",
+    "Records measured clock skew, clock evidence ID, initial quote-health facts/reasons, and source entitlement evidence with validity windows.",
+    "Missing or expired source entitlements are visible and block the capture receipt's entry-eligibility indicator.",
+    "Kite forward_events accepts runner/config/receipt together and durably records capture start before calling the quote provider.",
+    "Regular intraday run_live accepts the existing ForwardSessionRunner/config/receipt, records the receipt before its first live quote request, and sends later normalized polls to its existing event sink.",
+    "When forward event capture is enabled without a valid start receipt and required sinks, the preflight is forced to NO_TRADE and normalized events are suppressed."
+  ],
+  "blockers": [
+    "Caller-owned launch configuration must supply the capture runner/config/receipt; no trusted automatic receipt provider is configured.",
+    "Clock and entitlement evidence is supplied by callers and is not independently authenticated.",
+    "No actual observed source-capture session has been produced."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/source_capture_start.py": "05bc271c0f53cae9b10e1c98bb0114f7514c0f6fec5c21c57984f172be0047b9",
+    "tests/test_source_capture_start.py": "8d38cb1ce657e31d1701ffd631cea1fbf6f7a113fb2688b4f6fd748fb897747a",
+    "src/financial_brain/ingest/kite_live.py": "ebf5afb7ced6285bfa664477ae46587582b3830e21e4450386896b83fd615e57",
+    "tests/test_kite_forward_events.py": "0fa896c32ff9b4f8167208dc1282a9a5dd10bfa31325648defc73a1bddf9fd6c",
+    "src/financial_brain/paper/intraday_runner.py": "bde63b9e5b799b38204b0fd6cfeecd4502eb4f494d7603bdaa13a1c1c11a10c2",
+    "tests/test_phase5_intraday_runner.py": "c7d7d3ac22aac8a6864c2b1ab71638814b96ea441621a7631105ce17f60ab83a"
+  }
+}

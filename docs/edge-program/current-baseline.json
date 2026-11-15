@@ -1,10 +1,11 @@
 {
   "schema_version": "1.0",
-  "observed_at": "2026-11-13",
+  "observed_at": "2026-11-13T04:23:17Z",
   "repository": "https://github.com/crakashp2905-hub/Financial-Brain",
   "main": {
-    "sha": "054193a524dd35eaa258df0ac352a58fc369e937",
+    "sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
     "latest_first_parent_commits": [
+      "9170700 Merge pull request #31 from crakashp2905-hub/codex/checklist-baseline-20261113",
       "054193a Merge pull request #30 from crakashp2905-hub/codex/evidence-boundaries-20261113",
       "4add801 Merge pull request #28 from crakashp2905-hub/codex/evaluation-identity-20261113",
       "3806fc3 Merge pull request #27 from crakashp2905-hub/codex/champion-executable-resolution-20261113"
@@ -13,16 +14,25 @@
       {"number": 27, "state": "MERGED", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/27"},
       {"number": 28, "state": "MERGED", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/28"},
       {"number": 30, "state": "MERGED", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/30"},
+      {"number": 31, "state": "MERGED", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/31"},
       {"number": 29, "state": "CLOSED_UNMERGED", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/29",
        "note": "GitHub closed the stacked PR when its temporary base branch was deleted; its changes were carried by PR #30."}
     ]
   },
   "branch_governance": {
-    "main_classic_protection": "NOT_ENABLED",
+    "main_classic_protection": "ENABLED",
     "repository_rulesets": [],
-    "required_checks_enforced": false,
-    "evidence": "GitHub branch-protection API returned 404 Branch not protected; repository rulesets API returned an empty list.",
-    "release_effect": "PR CI passed, but GitHub does not enforce required checks or review before main updates."
+    "required_checks_enforced": true,
+    "required_checks": ["test (ubuntu-latest)", "test (windows-latest)"],
+    "required_approving_reviews": 1,
+    "dismiss_stale_reviews": true,
+    "last_push_requires_approval": true,
+    "enforce_admins": true,
+    "conversation_resolution_required": true,
+    "force_pushes_allowed": false,
+    "deletions_allowed": false,
+    "evidence": "Verified by GET /repos/crakashp2905-hub/Financial-Brain/branches/main/protection at 2026-11-13T04:12:02Z; repository rulesets API returned an empty list.",
+    "release_effect": "Direct main updates are restricted. Pull requests require green Ubuntu and Windows checks, one approval, and resolved conversations."
   },
   "runtime": {
     "audit_host": "Windows",
@@ -48,7 +58,7 @@
     ],
     "latest_observed_market_quote": null,
     "freshness_status": "NO_CURRENT_CAPTURE_EVIDENCED",
-    "credential_status": "NOT_CHECKED; secret values were not inspected",
+    "credential_status": "Presence-only check: API-key and access-token environment flags absent; token file present; token validity not authenticated; secret contents were not inspected.",
     "entitlement_and_retention": "Owner reports a paid Kite Connect API subscription. Current credentials, exchange-data entitlements, persistence and redistribution rights were not independently verified in this audit.",
     "limitations": [
       "No fresh observed market session or quote was captured for this baseline.",
@@ -64,21 +74,21 @@
     "profitability_claim": "NONE; executable positive forward net alpha has not been established."
   },
   "latest_ci": {
-    "pull_request": 30,
-    "head_sha": "a3f3b750bf1d73326788a537879ff7f961d18586",
-    "merge_commit": "054193a524dd35eaa258df0ac352a58fc369e937",
+    "pull_request": 31,
+    "head_sha": "1593643c132a7325e131e6d7a7c72facf88fa4a1",
+    "merge_commit": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
     "ubuntu": "SUCCESS",
     "windows": "SUCCESS",
     "run_urls": [
-      "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43313853867",
-      "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43313847240",
-      "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43314065701"
+      "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43362245553",
+      "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43362250701"
     ]
   },
   "evidence_sources": [
     "https://github.com/crakashp2905-hub/Financial-Brain/commits/main",
     "https://github.com/crakashp2905-hub/Financial-Brain/pulls?q=is%3Apr+is%3Amerged",
     "https://github.com/crakashp2905-hub/Financial-Brain/actions/workflows/ci.yml",
+    "https://api.github.com/repos/crakashp2905-hub/Financial-Brain/branches/main/protection",
     ".github/workflows/ci.yml",
     "docs/forward-edge/capability-matrix.json",
     "docs/forward-edge/OPERATIONS.md",
@@ -86,6 +96,13 @@
     "src/financial_brain/ingest/kite_live.py",
     "src/financial_brain/forward_edge/market_data.py",
     "src/financial_brain/forward_edge/session_runner.py",
-    "src/financial_brain/kernel/paper_account.py"
+    "src/financial_brain/kernel/paper_account.py",
+    "docs/edge-program/data-source-matrix.json",
+    "docs/edge-program/mode-capability-matrix.json",
+    "docs/edge-program/main-branch-protection-evidence.json",
+    "docs/edge-program/release-semantics.json",
+    "docs/edge-program/reproducible-runtime.json",
+    "docs/edge-program/deviation-log.json",
+    "docs/edge-program/source-inventory.json"
   ]
 }

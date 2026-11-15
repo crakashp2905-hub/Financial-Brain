@@ -1,0 +1,20 @@
+{
+  "checklist_task": "PE-0188",
+  "status": "DONE",
+  "criterion": "Provide quote-to-attribution trade drilldown with every displayed field linked to immutable journal IDs.",
+  "implementation": [
+    "src/financial_brain/forward_edge/cockpit.py",
+    "src/financial_brain/forward_edge/durable.py",
+    "src/financial_brain/forward_edge/eod_paper_archive.py"
+  ],
+  "tests": [
+    "tests/test_trade_drilldown_view.py"
+  ],
+  "test_result": "6 drilldown tests passed; combined drilldown/cockpit run had 26 passed. Ruff and targeted mypy passed. Durable journal links, record digests, complete stage coverage, and displayed-field binding are checked.",
+  "evidence_scope": "Synthetic durable hash-chain and content-addressed paper archive records across the full eight-stage drilldown.",
+  "operational_limits": [
+    "Caller is responsible for assembling authoritative records and correct stage relationships.",
+    "Hash verification establishes content binding, not truth of source quote, model output, fill, or attribution.",
+    "A position without a completed exit requires an explicit open-state journal record."
+  ]
+}

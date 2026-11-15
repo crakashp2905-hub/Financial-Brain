@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_paper_account_bridge.py tests/test_forward_edge_f02.py",
+    "result": "50 passed; Ruff passed for the paper bridge and tests, and mypy passed for the paper bridge."
+  },
+  "implemented": [
+    "Registered `fb forward real-paper --date ... --cohort ... --confirm-paper-only` and `fb forward session --resume ...` in the project CLI.",
+    "Reads only local normalized quote archives, validates schema/date/timezone/source lineage, hashes the input, and persists frozen config, event stream, preflight and outcomes in the existing durable runner journal.",
+    "Tests deny socket creation and confirm zero physical orders; interrupted sessions recover frozen events without duplicating market events or fills; repeated close/resume returns the prior result.",
+    "Fails closed when confirmation, timestamps, source lineage, matching archive, or session identity is invalid.",
+    "ForwardPaperSessionService now requires the exact guarded paper-capable registry entry and checks strategy code digest and benchmark before any preflight or journal write. Registry revocation and mismatched identities fail before side effects."
+  ],
+  "scope_note": "The offline archive CLI remains RESEARCH_REPLAY and returns NO_TRADE; it does not invoke the registered paper-account service. A separate registered LIVE_PAPER bridge now proves strategy-generated simulated fills, durable account reconciliation and restart recovery. No live-market evidence is claimed.",
+  "task_id": "PE-0028",
+  "status": "PARTIAL",
+  "blockers": [
+    "The offline archive CLI has no strategy adapter and is not connected to the registered paper-account service; it remains NO_TRADE. Live observed market sessions and approved production adapters are not evidenced."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "0beac9235c23f1c345ef76bc681887d94d1769cfe47e7a3be898251f254780b3",
+    "src/financial_brain/forward_edge/registry.py": "7c9707962f01b958719d7e9cccf4b2973de144d6f74501caacceb0332a13f7c4",
+    "tests/test_forward_paper_account_bridge.py": "fd38b08e2f63438aa6b2dcea6dbc76b8ab99691ce764f9dbba77f2fc0e4dfc9c",
+    "tests/test_forward_edge_f02.py": "50f9b0d149f605a273463f042aeea2e9ffc0faefc17d5b688be1937af055cebc",
+    "docs/forward-edge/offline-paper-cli.md": "d493c8460b64fb421baacc306c4994f7fd2a4c9435dffb1c79fba51bb16249d7"
+  }
+}

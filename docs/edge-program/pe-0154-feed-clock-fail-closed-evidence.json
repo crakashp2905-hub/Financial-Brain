@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0154",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_session_runner.py tests/test_forward_session_crash_matrix.py tests/test_forward_feed_health.py tests/test_forward_paper_account_bridge.py tests/test_forward_paper_execution_adapter.py tests/test_pretrade_gates.py tests/test_decision_sealing.py tests/test_forward_book_adapter.py tests/test_session_date_ledger.py tests/test_source_capture_start.py tests/test_kite_forward_events.py tests/test_phase5_intraday_runner.py; ruff check src/financial_brain/forward_edge/session_runner.py src/financial_brain/forward_edge/paper_account_bridge.py tests/test_forward_session_runner.py tests/test_forward_session_crash_matrix.py tests/test_forward_feed_health.py tests/test_forward_paper_account_bridge.py tests/test_forward_paper_execution_adapter.py tests/test_pretrade_gates.py tests/test_decision_sealing.py tests/test_forward_book_adapter.py tests/test_session_date_ledger.py tests/test_source_capture_start.py tests/test_kite_forward_events.py tests/test_phase5_intraday_runner.py; python -m mypy src/financial_brain/forward_edge/session_runner.py src/financial_brain/forward_edge/paper_account_bridge.py",
+    "result": "176 passed in 88.46s; Ruff and mypy passed. LIVE_PAPER rejects explicit feed-health opt-out before authority claim or journal write; the default LIVE_PAPER configuration requires health evidence."
+  },
+  "implemented": [
+    "Observed-session configurations can require feed-health evidence.",
+    "Absent required health, stale quotes or heartbeat, gaps/disconnects/drops and unsafe timestamps produce durable INCOMPLETE evidence and block strategy, risk and execution callbacks.",
+    "Untrusted decision clock is recorded as an incomplete session before any strategy or order intent.",
+    "Execution-clock failure after durable intent leaves OUTBOX_UNKNOWN and no fill acknowledgment or session close.",
+    "Pre-entry feed outage preserves account and existing risk state and cannot be counted as successful zero-loss session.",
+    "Registered ForwardPaperSessionService requires a configured feed-health gate and a durable feed-health snapshot before preflight; a stale snapshot blocks strategy, risk, and execution.",
+    "An identical health snapshot is idempotent across a closed-session retry; changed health cannot be appended retroactively after decision.",
+    "LIVE_PAPER requires feed-health evidence by default; an explicit opt-out is rejected. ForwardSessionRunner.run and ForwardPaperSessionService validate config before claiming execution authority or writing session evidence. Replay and shadow sessions retain opt-in behavior."
+  ],
+  "blockers": [
+    "The Kite poller is not yet connected to the registered account service to enforce health for every observed paper session.",
+    "Continuous intra-session monitoring and fault injection across a prospective forward market session remain unverified."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/session_runner.py": "a5aa95af6ea8bdf4b715293b1e19a89e2b9a63591dc20468602255f48694cce5",
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "a4b797e7f627413ccbe29b3e1fdf65efaed2de81d01ccc2a168ff437b52e38c8",
+    "tests/test_forward_session_runner.py": "5a72aeb61a35226a5dcedec0d3e4c9ff2e37c61cd44da777de13066e703d2d5d",
+    "tests/test_forward_session_crash_matrix.py": "54191099614168f120cd327d17356d058ee8dc45905c112423d90bc9eadd1e58",
+    "tests/test_forward_feed_health.py": "e05e233c4b1a7b2fcd34b9cd1237462a9953f749c2569b227f311ed87c31fed2",
+    "tests/test_forward_paper_account_bridge.py": "2239303b42902a44237e677be4ca14b2a0f3131a78dec69aa7e7d79e4bace906",
+    "tests/test_forward_paper_execution_adapter.py": "0c3bb8b0f18dbaa01d1e19e4573bddf8b05cb2c735756bb86c9cffc5d8117d87",
+    "tests/test_pretrade_gates.py": "6ccc4f65dfa166cab497025117af67144d82a4a90deec437c7485bb53ae3255f",
+    "tests/test_decision_sealing.py": "0a840f2ca847536c7741470ba4afd9384fb1b194942a3fcfb28b4a548b96aeae",
+    "tests/test_forward_book_adapter.py": "4ba5563208f56b97db02208e99b7b92289b2e98165eda79f96c2262190ef3c0b",
+    "tests/test_session_date_ledger.py": "3f4f3f9b141dd81f739d7f67f42cee38d1367dcc49d119193a0d6d9df3167ba1",
+    "tests/test_source_capture_start.py": "527556ab4b31f215b13bcc39bbf8c9c548c2517e79a540fb1a98f9e40e7682fb",
+    "tests/test_kite_forward_events.py": "e976b786387c02341a7313ea237d8dab81f73345242e17f76e4abf35e29ccf89",
+    "tests/test_phase5_intraday_runner.py": "2a066c8a81a37d34dc57a9e0b4b0ce0a0c106900a494058a6c031609b6de0ac8",
+    "docs/edge-program/pe-0154-feed-clock-fail-closed.md": "f48baba875c191616e22e4ef8b94167ef547ee661c831a77bbd73694dfac2505"
+  }
+}

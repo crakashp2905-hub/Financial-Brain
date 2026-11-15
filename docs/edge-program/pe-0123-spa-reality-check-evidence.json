@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0123",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_family_validation.py",
+    "result": "4 passed; Ruff passed for family_validation.py and its tests."
+  },
+  "implemented": [
+    "White Reality Check and Hansen-style SPA p-values use a stationary bootstrap over aligned benchmark-subtracted returns.",
+    "The report exposes candidate count, null construction, complete-period count, dropped incomplete periods, resample counts, primary block length, and seeds.",
+    "Alternate half/double block-length sensitivity is reported with deterministic independent seeds.",
+    "Degenerate candidate variances and invalid resampling configuration are rejected."
+  ],
+  "blockers": [
+    "The caller supplies the candidate matrix; its columns are not yet enforced against the authoritative full development search registry. A caller could omit tried candidates and understate selection bias."
+  ],
+  "source_sha256": {
+    "src/financial_brain/evaluation/family_validation.py": "1323643b17b79bea1309acbc544ab2f4db09519f7e1f0fe6a93d2a5c1fc57c1b",
+    "tests/test_family_validation.py": "5ce230ccff4a004ba6d7de5540a13ea321866a16589665b331203ad8fd7c14e0",
+    "docs/edge-program/source-inventory.json": "b99322699ae9afa7e52f1a5afcfdf58c6f551ef8af359aea1b803ef83c3d93e6"
+  }
+}

@@ -1,12 +1,13 @@
 """Execution modes (FE-0005, FE-0006) - fail-closed by construction.
 
-* Five modes exist: ``RESEARCH_REPLAY``, ``SHADOW``, ``LIVE_PAPER``, ``BROKER_DRYRUN``, ``LIVE_CASH``.
+* Six modes exist: ``FIXTURE_REPLAY``, ``RESEARCH_REPLAY``, ``SHADOW``, ``LIVE_PAPER``, ``BROKER_DRYRUN``, ``LIVE_CASH``.
 * A mode is granted only by :func:`resolve_mode`. Nothing else in the codebase may construct a session in a higher
   mode than it was granted; sessions are frozen dataclasses with no setter.
 * ``PHYSICAL_ORDERS_ENABLED`` is a build-policy constant set to ``False``. Flipping it alone does not enable cash
   orders: ``LIVE_CASH`` also needs a valid human ``LIVE_CASH_ENABLE`` approval and a verified broker compliance
   record. Both are checked on every call.
-* Shadow and replay modes never emit fills; only ``LIVE_PAPER`` emits paper fills.
+* ``FIXTURE_REPLAY`` may emit only deterministic fixture receipts. Shadow and research replay never emit fills;
+  only ``LIVE_PAPER`` emits paper fills.
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ PHYSICAL_ORDERS_ENABLED = False
 
 
 class Mode(str, Enum):
+    FIXTURE_REPLAY = "FIXTURE_REPLAY"
     RESEARCH_REPLAY = "RESEARCH_REPLAY"
     SHADOW = "SHADOW"
     LIVE_PAPER = "LIVE_PAPER"

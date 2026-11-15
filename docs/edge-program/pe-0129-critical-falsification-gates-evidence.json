@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0129",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f08.py tests/test_pattern_study.py tests/test_falsification_registry.py",
+    "result": "57 focused tests passed, covering each critical check, durable recovery, cohort binding, required artifact digests and registry-derived promotion blocking. Full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only."
+  },
+  "implemented": [
+    "The falsification contract includes look-ahead, survivorship, delisting, corporate actions, stale quote, missing fills and factor overlap.",
+    "Existing rejected-trade and missed-fill checks remain in the report.",
+    "Any false check returns FAIL; absent checks return INSUFFICIENT_EVIDENCE; promotion_verdict blocks statuses other than NO_FALSIFICATION_FOUND.",
+    "Unknown check names and non-boolean outcomes are rejected; tests fail each critical check independently.",
+    "Adds an append-only FalsificationRegistry binding complete per-check outcomes and source artifact digests to a frozen prospective cohort plan hash.",
+    "Promotion verdict resolves falsification status from the registered report; legacy caller-supplied clean status cannot promote without registered evidence.",
+    "Missing artifact digests for executed checks, changed reports, changed artifacts and non-clean checks all remain fail-closed."
+  ],
+  "blockers": [
+    "Artifact digests and check outcomes remain caller-supplied assertions; no independent custodian proves the checks ran or validates the underlying datasets.",
+    "Look-ahead, survivorship, corporate-action, stale-quote, fill and factor-overlap evidence still lacks complete data-backed adapters and independent review."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/evidence_stats.py": "9a9da756969eff354c26770208b8e2e69b6274db867d087b3ac9aeba345fca5d",
+    "src/financial_brain/forward_edge/falsification_registry.py": "f69d1f9eb696c0af09c6ebc6ce1cf6a9880587eafbab0f5e4223e0ef38acdfd9",
+    "src/financial_brain/forward_edge/prospective_registry.py": "512f8d4eb469a74f529c3490b5dc9bf5b507b1b104d55ae86304e9090edf8543",
+    "tests/test_forward_edge_f08.py": "2b8a1276cb8de8c5a650d6ad8e00bbf9a7556b7573f651208f61bbf7977a9a4e",
+    "tests/test_pattern_study.py": "9ece6de1b8637cccab6dd6539a476e01ce569ff409994c6c87c26b1ec9e84aac",
+    "tests/test_falsification_registry.py": "4cdcb418b14be7ef65b371d38f1f98bcbb35c0bd746d160943e2cca88d2a388b",
+    "docs/edge-program/pe-0129-critical-falsification-gates.md": "2536f4bea6a3b861a1dcc4da32212fe945c75e5a5f52e4b7ec5d3676ac8a56d9"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0051",
+  "status": "PARTIAL",
+  "implemented": [
+    "Added deterministic long-only target-weight optimization using supplied expected net alpha and same-period covariance.",
+    "Enforced per-name caps, cash floor, explicit residual CASH, maximum one-way turnover, and turnover costs.",
+    "Rebalance dates are frozen inputs; unscheduled observations preserve the existing book.",
+    "Added explicit cash-day count and rejects incomplete, out-of-universe, non-finite, asymmetric, or non-PSD input data."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_target_portfolio.py -q",
+    "result": "5 passed (exit code 0); Ruff, mypy and diff checks passed.",
+    "cases": [
+      "test_scheduled_rebalance_returns_bounded_target_weights_and_cash",
+      "test_unscheduled_observation_preserves_previous_book",
+      "test_turnover_cost_can_keep_a_paper_book_in_cash",
+      "test_cash_days_count_explicit_cash_and_rejects_bad_ledgers",
+      "test_invalid_covariance_and_previous_cash_floor_fail_closed"
+    ]
+  },
+  "limitations": [
+    "Planner is not yet integrated with the live forward-session paper book or current holdings ledger.",
+    "No frozen prospective Indian-market expected-alpha/covariance dataset or realized cash-day report has been evaluated.",
+    "Forecasts and covariance must be supplied with matching horizon and declared cost units; poor inputs can yield poor targets."
+  ]
+}

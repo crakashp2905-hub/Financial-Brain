@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0055",
+  "status": "PARTIAL",
+  "implemented": [
+    "Append-only, hash-chained bounded research journal with a maximum of 256 variants per run.",
+    "Frozen mechanism source digest, seed, parameter catalogue and run timestamp.",
+    "Exactly one evaluated/failed/skipped/aborted outcome per declared variant; close requires complete accounting.",
+    "Bounded daily random search writes its complete variant results and records aborted outcomes on evaluator exceptions.",
+    "Restart recovery records ABORTED for pending variants left by a hard process stop before opening a new run.",
+    "Portable OS-backed sidecar locking serializes reads and mutations across processes; each operation reloads the hash chain and campaign ledger under lock before acting.",
+    "Research-only and auto-promotion-disabled flags are mandatory journal invariants."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_research_library.py tests/test_bounded_search.py tests/test_strategy_variant_inventory.py -q; python -m ruff check src/financial_brain/forward_edge/research_library.py tests/test_research_library.py; python -m mypy src/financial_brain/forward_edge/research_library.py",
+    "result": "Combined research-journal, bounded-search and strategy-inventory suite: 14 passed (exit code 0), including concurrent Windows process budget enforcement. Ruff and mypy pass for changed modules; source inventory and capability evidence refresh successfully.",
+    "cases": [
+      "test_every_declared_variant_must_be_recorded_before_closing_and_recovery",
+      "test_hard_stop_pending_variants_are_aborted_on_explicit_restart_recovery",
+      "test_duplicate_results_and_nonresearch_promotion_are_rejected",
+      "test_variant_budget_and_duplicate_ids_are_rejected",
+      "test_bounded_search_durably_records_one_result_per_frozen_variant",
+      "test_concurrent_processes_cannot_oversubscribe_campaign_budget"
+    ]
+  },
+  "limitations": [
+    "The journal applies to the daily bounded search only; other search mechanisms are not yet wired to it.",
+    "The advisory sidecar lock protects only cooperating writers on filesystems that honor the operating-system locking primitive.",
+    "No full search on the owner's historical dataset or independent reproduction is claimed.",
+    "Research records do not establish a deployable edge or authorize strategy promotion."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "checklist_task": "PE-0193",
+  "status": "DONE",
+  "criterion": "Render explicit insufficient evidence for missing observations and never let synthetic all-green fixtures appear as real forward champions or profitability evidence.",
+  "implementation": [
+    "src/financial_brain/forward_edge/cockpit.py",
+    "tests/test_research_vs_champions_view.py",
+    "tests/test_profitability_evidence_view.py",
+    "tests/test_forward_edge_f10.py"
+  ],
+  "tests": [
+    "tests/test_research_vs_champions_view.py",
+    "tests/test_profitability_evidence_view.py",
+    "tests/test_forward_edge_f10.py",
+    "scripts/source_inventory.py --check docs/edge-program/source-inventory.json"
+  ],
+  "test_result": "28 cockpit tests passed; Ruff, targeted mypy, refreshed source inventory, and inventory check passed. Missing and synthetic evidence stays insufficient; only observed-forward rows with verified custody, full session/receipt coverage, and a valid digest can receive positive labels.",
+  "evidence_scope": "Unit tests with empty observations, incomplete rows, all-green synthetic fixtures, and fully populated evidence rows.",
+  "operational_limits": [
+    "The view trusts upstream provenance and custody classifications and does not independently verify signatures.",
+    "No real prospective market observation or profitability is claimed."
+  ]
+}

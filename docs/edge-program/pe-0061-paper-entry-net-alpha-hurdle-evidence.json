@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0061",
+  "status": "DONE",
+  "implemented": [
+    "LIVE_PAPER and SHADOW position increases require a finite, cost-itemized net-alpha forecast and positive holding horizon.",
+    "The runner recomputes excess return after fees, spread, and impact and rejects mismatched forecasts or net alpha at/below the configured hurdle.",
+    "The threshold is frozen into session configuration and risk-verdict journal evidence.",
+    "Below-hurdle candidates become NO_TRADE with the rejected forecast retained in a durable disposition record.",
+    "Reductions and closes are exempt; ambiguous SELL effects are rejected and short entries require the hurdle."
+  ],
+  "tests": {
+    "commands": [
+      "python -m pytest tests/test_forward_session_runner.py tests/test_forward_paper_account_bridge.py tests/test_capture_replay.py tests/test_forward_feed_health.py tests/test_forward_paper_execution_adapter.py tests/test_forward_session_crash_matrix.py -q",
+      "python -m pytest tests/test_forward_fixture_replay.py tests/test_forward_edge_f13.py -q",
+      "mypy src/financial_brain/forward_edge/session_runner.py src/financial_brain/forward_edge/fixtures.py src/financial_brain/forward_edge/fixture_replay.py",
+      "ruff check and ruff format --check on the changed Python files"
+    ],
+    "result": "118 tests passed (67 runner/account/replay integration + 51 fixture replay); mypy, Ruff, and Ruff format checks passed.",
+    "cases": [
+      "test_paper_entry_hurdle_rejects_missing_or_non_exceeding_forecast",
+      "test_paper_entry_above_hurdle_is_recorded_and_can_reach_simulator",
+      "test_paper_position_reduction_is_exempt_but_short_entry_needs_hurdle"
+    ]
+  },
+  "limitations": [
+    "Forecast decomposition and costs are caller supplied; the gate verifies arithmetic, not calibration or source evidence.",
+    "Not all existing strategy adapters emit the required forecast contract, so those entries are rejected until integrated.",
+    "No live-market result or profitability claim is made."
+  ]
+}

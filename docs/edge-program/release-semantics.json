@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "scope": "Keep engineering health, research evidence, and trading readiness as independent axes. A green engineering result never implies a profitable strategy or permission to trade live.",
+  "axes": {
+    "engineering": {
+      "GREEN": "Required lint, type, migration, coverage, Ubuntu, and Windows checks pass on the same commit, with test skips reported.",
+      "YELLOW": "No required check failed, but a required check is absent, skipped without an accepted reason, or evidence is stale for the commit.",
+      "RED": "Any required check fails, protected evidence is corrupted, or a safety invariant is broken."
+    },
+    "research": {
+      "GREEN": "A frozen prospective evaluation meets its pre-registered after-cost effect, uncertainty, multiplicity, capacity, and stress gates on the required sample; independent custody is verified where required.",
+      "YELLOW": "Research infrastructure or retrospective diagnostics exist, but prospective evidence is incomplete, underpowered, or does not establish the promotion gates.",
+      "RED": "Evaluation identity or outcome integrity is broken, leakage is detected, or an uncorrected protocol violation invalidates the result."
+    },
+    "trading": {
+      "GREEN": "The requested trading mode has its own authorization, reconciled account and order state, measured execution/cost limits, and current operational preflight; LIVE_CASH additionally requires explicit owner approval and applicable compliance gates.",
+      "YELLOW": "Paper or shadow workflow is operationally tested, but live feed coverage, execution realism, reconciliation, authorization, or other mode-specific evidence remains incomplete.",
+      "RED": "A mode bypasses its authorization gate, state does not reconcile, or execution/risk controls fail."
+    }
+  },
+  "current_assessment": {
+    "engineering": "UNASSESSED_FOR_THIS_CANDIDATE_COMMIT; evaluate its CI checks.",
+    "research": "YELLOW; no independently evidenced prospective positive net-alpha cohort is established.",
+    "trading": "YELLOW; local paper is tested, but a qualifying live-market session is not evidenced and live cash remains disabled.",
+    "live_cash": "DISABLED"
+  },
+  "non_implications": [
+    "GREEN engineering does not imply GREEN research.",
+    "GREEN research does not authorize a broker or live-capital route.",
+    "GREEN paper trading does not establish real-world profitability."
+  ],
+  "evidence_sources": [
+    "src/financial_brain/forward_edge/audit.py",
+    "src/financial_brain/forward_edge/release.py",
+    "src/financial_brain/forward_edge/modes.py",
+    "docs/edge-program/current-baseline.json"
+  ]
+}

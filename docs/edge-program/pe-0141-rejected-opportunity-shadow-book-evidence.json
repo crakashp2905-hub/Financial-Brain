@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0141",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_shadow_counterfactual.py tests/test_raw_quote_archive.py tests/test_forward_edge_f07.py; ruff check src/financial_brain/forward_edge/shadow_counterfactual.py tests/test_shadow_counterfactual.py",
+    "result": "34 passed; Ruff passed."
+  },
+  "implemented": [
+    "Simulates explicit rejected opportunities from executable bid/ask quotes and displayed size only.",
+    "Shares quote depth across orders and enforces each BUY intent's virtual cash budget.",
+    "Models FIFO entry/exit fills, partial/no fills, unresolved close quantities, and explicit costs.",
+    "Replays authorized normalized quote events from the existing hash-chained archive using event availability time and archive event IDs.",
+    "Persists immutable shadow book outputs in a hash-chained journal.",
+    "Hard labels all results EXPLORATORY_SHADOW, never observed cash P&L, and never promotion-eligible; controls do not bypass this gate."
+  ],
+  "blockers": [
+    "No strategy rejection stream integration; rejected decisions and modeled costs remain caller-supplied.",
+    "No shared multi-strategy portfolio cash or margin accounting in this shadow book.",
+    "No registered matched control-book integration; supplied control IDs are recorded but not independently verified."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/shadow_counterfactual.py": "c4fccea51fdbac965472b6442e40754c8be885361a48a7b94dc5556ad036ef02",
+    "tests/test_shadow_counterfactual.py": "a1dccc7b83295852eefdd68edc5b11bc9d9e86fcfa723bc50a4474ee5576e9a6"
+  }
+}

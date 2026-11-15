@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0136",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_opportunity_controls.py tests/test_matched_performance.py; ruff check src/financial_brain/forward_edge/opportunity_controls.py tests/test_opportunity_controls.py",
+    "result": "7 matched-opportunity tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. ISO dates are canonicalized, and population/report digests are stable under input reordering and change when a matched input changes."
+  },
+  "implemented": [
+    "Matches on the same session within frozen size, liquidity-spread, and risk-budget relative calipers.",
+    "Uses deterministic no-replacement matching and reports matched net-return differences.",
+    "Retains every treated opportunity and explicit reasons for no contemporaneous control, caliper rejection, or exhausted controls.",
+    "States observational confounding and explicitly disclaims causal filter benefit and promotion inference.",
+    "Requires canonical ISO session dates and hashes normalized treated/control populations and the complete diagnostic report for reproducibility."
+  ],
+  "blockers": [
+    "No frozen paper control-book outcomes or authoritative binding of control inputs.",
+    "Observational matched comparisons do not establish causal filter benefit; no confidence interval or promotion gate is implemented."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/opportunity_controls.py": "b93117a83b0e60ad434f184562c3af15343a1614cff1346442fff441d766c89f",
+    "tests/test_opportunity_controls.py": "cc8cad2744345477146de2796c938a83f9a56263bffd9fd3f62237c7ed2a210f",
+    "docs/edge-program/pe-0136-matched-opportunity-controls.md": "7754c95552c3db9d579b2ddc4d45dec03701d18464a629e9eb99102c9d6efa86"
+  }
+}

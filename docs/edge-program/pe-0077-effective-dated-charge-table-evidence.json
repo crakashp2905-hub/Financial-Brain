@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0077",
+  "status": "DONE",
+  "implemented": [
+    "CostSchedule selects the latest segment rule effective on the trade date and refuses missing prior rules or duplicate effective dates.",
+    "Version identity hashes the full effective-dated table; charges cover brokerage, exchange, SEBI, IPFT, clearing, STT, stamp duty and GST.",
+    "Spread crossing is reflected by executable ask/bid prices separately from fee line items; the total is rounded once to paise."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f05.py -q",
+    "result": "26 passed; exit code 0.",
+    "cases": [
+      "test_cost_rule_is_selected_by_effective_date_and_side",
+      "test_total_is_rounded_once_from_unrounded_parts",
+      "test_cost_rule_models_all_effective_dated_cash_equity_components_and_hashes_table",
+      "test_buy_pays_the_ask_and_sell_receives_the_bid_never_the_mid"
+    ]
+  },
+  "limitations": [
+    "Rates in the focused tests are explicitly synthetic fixtures; current broker/exchange fee schedules need owner-supplied verification before use as calibrated cost inputs."
+  ]
+}
