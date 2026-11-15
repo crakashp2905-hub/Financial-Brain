@@ -6,6 +6,7 @@ from financial_brain.forward_edge.trade_data_quality import (
     DataQualityPolicy,
     TradeDataQualityError,
     assess_trade_data_quality,
+    verify_trade_data_quality_report,
 )
 
 
@@ -72,3 +73,13 @@ def test_policy_must_be_frozen_before_observation_and_bad_timestamps_rejected():
     with pytest.raises(TradeDataQualityError, match="timezone-aware"):
         DataQualityPolicy("bad", 5, 30, 0.95, "2026-01-01T00:00:00",
                           "2026-01-02T00:00:00Z", "2026-02-01T00:00:00Z")
+
+
+def test_report_digest_is_reproducible_and_detects_mutation():
+    kwargs = {"trades": [_trade()], "feed_gaps": [], "policy": _policy()}
+    first = assess_trade_data_quality(**kwargs)
+    second = assess_trade_data_quality(**kwargs)
+    assert first["report_sha256"] == second["report_sha256"]
+    assert verify_trade_data_quality_report(first)
+    first["trades"][0]["net_pnl_inr"] = 999.0
+    assert not verify_trade_data_quality_report(first)

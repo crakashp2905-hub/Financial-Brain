@@ -3149,10 +3149,11 @@
         "test_abnormal_spread_high_volatility_and_stale_quote_flags_are_independent",
         "test_missing_market_health_coverage_is_incomplete_not_clean",
         "test_gap_after_entry_does_not_contaminate_preentry_classification",
-        "test_policy_must_be_frozen_before_observation_and_bad_timestamps_rejected"
+        "test_policy_must_be_frozen_before_observation_and_bad_timestamps_rejected",
+        "test_report_digest_is_reproducible_and_detects_mutation"
       ],
-      "test_result": "40 market-quality, feed-health and F03 tests passed; Ruff passed. Pre-entry data-quality strata retain evidence IDs and separate incomplete coverage.",
-      "evidence_sha256": "92e0642bc276589a19531aac5e54181551eb659443781b52acebc47edb13adbb",
+      "test_result": "43 trade-quality, feed-health and F03 tests passed; Ruff passed. Reports carry a deterministic mutation-detecting digest; digest is not source authentication.",
+      "evidence_sha256": "7e8fcb6e8d4ae93296e04b9a28a5f3d8020b54d23df1e5cae278cf8800666e67",
       "blockers": [
         "No subscription to the durable quote/feed health journal.",
         "Not surfaced in daily results or cockpit.",

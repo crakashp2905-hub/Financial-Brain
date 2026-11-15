@@ -13,6 +13,19 @@ class TradeDataQualityError(ValueError):
     """Malformed market-quality policy, trade, or outage evidence."""
 
 
+def _report_sha256(report: Mapping[str, object]) -> str:
+    payload = {key: value for key, value in report.items() if key != "report_sha256"}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                         allow_nan=False).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def verify_trade_data_quality_report(report: Mapping[str, object]) -> bool:
+    """Check report integrity; this does not authenticate its supplied evidence."""
+    digest = report.get("report_sha256")
+    return isinstance(digest, str) and digest == _report_sha256(report)
+
+
 def _utc(value: str, label: str) -> datetime:
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -160,6 +173,8 @@ def assess_trade_data_quality(
         rows = [row for row in classified if row["status"] == status]
         groups[status] = {"trades": len(rows), "net_pnl_inr": sum(row["net_pnl_inr"] for row in rows),
                           "losing_trades": sum(row["net_pnl_inr"] < 0 for row in rows)}
-    return {"policy_id": policy.policy_id, "policy_sha256": policy.sha256,
-            "trade_count": len(classified), "groups": groups, "trades": classified,
-            "interpretation": "Market-data quality strata are descriptive and do not by themselves establish strategy failure or causality."}
+    report = {"policy_id": policy.policy_id, "policy_sha256": policy.sha256,
+              "trade_count": len(classified), "groups": groups, "trades": classified,
+              "interpretation": "Market-data quality strata are descriptive and do not by themselves establish strategy failure or causality."}
+    report["report_sha256"] = _report_sha256(report)
+    return report
