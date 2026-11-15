@@ -283,7 +283,9 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_mid_only_stale_or_nonmatching_exit_data_is_rejected"), (BLK_DATA,),
                      "Executable entry/exit bid/ask premiums, contract lot multipliers, fees and physical-delivery/cash-settlement expiry scenarios are reported; stale quotes fail closed. Real licensed depth, authoritative settlement/assignment rules and forward cohort outcomes remain blocked."),
     "FE-0088": Entry("DONE", TRIAL_TESTS[2:], (), "Trial budget and approval gate; no bypass path."),
-    "FE-0089": Entry("NOT_STARTED", (), (), "Exploratory archive not built."),
+    "FE-0089": Entry("PARTIAL", ("test_negative_inconclusive_and_no_signal_cohorts_are_archived_and_discoverable",
+                                  "test_archive_is_immutable_and_no_signal_requires_zero_opportunities"), (),
+                     "Append-only cohort archive preserves positive, negative, inconclusive, no-signal and unresolved results with version/evidence hashes and discovery queries. Automatic capture by all research/evaluation runners is not yet wired."),
     "FE-0090": Entry("NOT_STARTED", (), (), "Parameter-freeze enforcement not built."),
     # ---- F08 ----
     "FE-0091": Entry("NOT_STARTED", (), (), "Daily portfolio return not built for forward cohorts."),
