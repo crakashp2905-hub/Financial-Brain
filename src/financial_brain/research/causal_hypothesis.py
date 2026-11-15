@@ -106,6 +106,9 @@ def propose_candidate_hypothesis(
     if len(seen_days) < plan.minimum_sessions:
         raise HypothesisError("development sample is below the predeclared minimum sessions")
     rows.sort(key=lambda row: (row["session_date"], row["evidence_id"]))
+    observations_sha256 = hashlib.sha256(json.dumps(
+        rows, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()).hexdigest()
     delta = sum(row["paired_delta_bp"] for row in rows) / len(rows)
     supports = (delta >= plan.minimum_effect_bp if plan.expected_direction == "POSITIVE"
                 else delta <= -plan.minimum_effect_bp)
@@ -118,6 +121,7 @@ def propose_candidate_hypothesis(
         "prewritten_falsifier": plan.falsifier,
         "expected_direction": plan.expected_direction, "minimum_effect_bp": plan.minimum_effect_bp,
         "development_mean_paired_delta_bp": delta,
+        "observations_sha256": observations_sha256,
         "development_falsifier_triggered": not supports,
         "development_session_count": len(seen_days), "observation_count": len(rows),
         "evidence_ids": [row["evidence_id"] for row in rows], "observations": rows,

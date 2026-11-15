@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import json
+
 import pytest
 
 from financial_brain.research.causal_hypothesis import (
@@ -43,6 +46,33 @@ def test_candidate_includes_observed_pattern_precommitted_falsifier_and_no_mutat
     assert proposal["trial_budget_effect"] == "UNCHANGED"
     assert proposal["development_falsifier_triggered"] is False
     assert proposal["claim_scope"].startswith("Development association only")
+    assert len(proposal["observations_sha256"]) == 64
+
+
+def test_observation_digest_binds_the_exact_normalized_development_rows():
+    rows = _observations()
+    proposal = propose_candidate_hypothesis(
+        plan=_plan(), pattern_id="digest-v1", pattern_description="predeclared pattern",
+        observations=rows,
+    )
+    normalized = sorted([
+        {"split": "DEVELOPMENT", "session_date": row["session_date"],
+         "evidence_id": row["evidence_id"],
+         "pattern_net_alpha_bp": float(row["pattern_net_alpha_bp"]),
+         "matched_control_net_alpha_bp": float(row["matched_control_net_alpha_bp"]),
+         "paired_delta_bp": float(row["pattern_net_alpha_bp"])
+         - float(row["matched_control_net_alpha_bp"])}
+        for row in rows
+    ], key=lambda row: (row["session_date"], row["evidence_id"]))
+    expected = hashlib.sha256(json.dumps(normalized, sort_keys=True, separators=(",", ":"),
+                                         allow_nan=False).encode()).hexdigest()
+    assert proposal["observations_sha256"] == expected
+    rows[0]["pattern_net_alpha_bp"] += 1
+    changed = propose_candidate_hypothesis(
+        plan=_plan(), pattern_id="digest-v1", pattern_description="predeclared pattern",
+        observations=rows,
+    )
+    assert changed["observations_sha256"] != expected
 
 
 def test_development_sample_can_trigger_the_predeclared_falsifier_without_rewriting_it():

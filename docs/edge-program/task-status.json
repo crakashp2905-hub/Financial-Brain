@@ -3206,10 +3206,11 @@
         "test_development_sample_can_trigger_the_predeclared_falsifier_without_rewriting_it",
         "test_final_window_split_missing_samples_and_duplicate_sessions_fail_closed",
         "test_missing_falsifier_and_bad_evidence_are_rejected",
-        "test_hypothesis_archive_is_immutable_and_cannot_accept_mutable_strategy_status"
+        "test_hypothesis_archive_is_immutable_and_cannot_accept_mutable_strategy_status",
+        "test_observation_digest_binds_the_exact_normalized_development_rows"
       ],
-      "test_result": "23 candidate-hypothesis, loss-classification and F07 tests passed; Ruff passed. Prewritten falsifier, development-only evidence, immutable archive, and no strategy/budget mutation are verified.",
-      "evidence_sha256": "9937916fb11f31692a7c3993dc2d392f1901349c01adc785bea96c0f0604f157",
+      "test_result": "26 hypothesis, loss-classification and F07 tests passed; Ruff passed. Proposal digest now includes exact normalized supplied development rows; no trusted registry receipt is claimed.",
+      "evidence_sha256": "9800ee50e76448ab4be49d9787e6ebe59690b82e3a516cf946eab6dccfbddc7b",
       "blockers": [
         "Data inputs are not bound to authoritative development registry.",
         "No independent review or paper strategy registry integration.",
