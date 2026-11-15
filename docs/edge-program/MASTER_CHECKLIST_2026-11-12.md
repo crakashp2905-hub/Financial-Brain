@@ -131,12 +131,15 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
 **Goal:** Turn separate forward-edge primitives into the same persistent market-session lifecycle used by actual paper trading.
 
 **Repository integration points:** `forward_edge/pipeline.py`, `forward_edge/cli.py`, `paper/intraday_runner.py`, `forward_edge/durable.py`, `forward_edge/decision_custody.py`
-- [ ] **PE-0015** — Define versioned `ForwardSession` state machine: PLANNED, PREFLIGHT, OPEN, DRAINING, CLOSED, INCOMPLETE, REJECTED.  
+- [x] **PE-0015** — Define versioned `ForwardSession` state machine: PLANNED, PREFLIGHT, OPEN, DRAINING, CLOSED, INCOMPLETE, REJECTED.  
   **Acceptance:** Invalid transitions fail closed and session IDs cannot be reused with different metadata.
-- [ ] **PE-0016** — Define `ForwardRunConfig` containing exchange date, cohort, strategy SHA, benchmark, instrument universe, capital, constraints and ledger IDs.  
+- **Completion evidence:** `src/financial_brain/forward_edge/session_state.py`; `tests/test_forward_edge_session_state.py` (4 passed).
+- [x] **PE-0016** — Define `ForwardRunConfig` containing exchange date, cohort, strategy SHA, benchmark, instrument universe, capital, constraints and ledger IDs.  
   **Acceptance:** Canonical config hash is invariant across process restarts and OSes.
-- [ ] **PE-0017** — Implement `ForwardSessionRunner` that consumes normalized event streams, not fixture dictionaries.  
+- **Completion evidence:** canonical JSON/date/decimal/universe hashes persist with the session; `tests/test_forward_edge_session_state.py` (4 passed).
+- [x] **PE-0017** — Implement `ForwardSessionRunner` that consumes normalized event streams, not fixture dictionaries.  
   **Acceptance:** One fixture adapter and one actual-market adapter call the exact same runner.
+- **Completion evidence:** `src/financial_brain/forward_edge/session_runner.py`; `tests/test_forward_edge_session_runner.py` (10 passed with PE-0015/0016 tests; the test proves the same runner ingests fixture and Kite-normalized events).
 - [ ] **PE-0018** — Refactor fixture-only `pipeline.run_session` to delegate to the canonical runner without changing golden outcomes.  
   **Acceptance:** All existing fixture tests pass and a trace diff shows equivalent behavior.
 - [ ] **PE-0019** — Connect existing `paper/intraday_runner.py` as a read-only producer of observed quote events.  
