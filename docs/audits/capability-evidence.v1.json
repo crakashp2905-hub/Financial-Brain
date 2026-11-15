@@ -26,18 +26,18 @@
       }
     },
     {
-      "artifact_sha256": "31858d2d77cba94a9272572b6e791fe79ba8f6eb495dd367ef66d1175ce762e2",
+      "artifact_sha256": "0bd1b460406e0156dff8a0f2ca8e9576c9c0e3560413a2dcbd001fe75406d612",
       "id": "forward-paper-account-authority",
       "maturity": "partial",
       "sources": {
-        "src/financial_brain/forward_edge/paper_account_bridge.py": "746baed5d7a11bec71986e1765b63a0def9b850d0163e985f81c9f5d7dcea372",
-        "src/financial_brain/forward_edge/session_runner.py": "1616231071ccaf383ea816b394fea27a7582805c97e7d1d5d97214ddb1ba5a13",
+        "src/financial_brain/forward_edge/paper_account_bridge.py": "28b4bb91791f26f6c5ebd1fc3d8bc4b7639df6d5ab9c1f43addb3af07442cceb",
+        "src/financial_brain/forward_edge/session_runner.py": "3ec02222e184264c78f60d71405a871ea3001b0d0a496c8c1ef121cbff71b93c",
         "src/financial_brain/kernel/paper_authority.py": "e4f0a17131d3bc331edba0454e113206130d4428101e117e88f2533ffc6cbe7c",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_forward_paper_account_bridge.py": "773d0a7edcc9309a6fdc1e4152963ae41be25b6eccf77fbce35e5664c7c3ceeb",
+        "tests/test_forward_paper_account_bridge.py": "5e4b441a2dc6d5820529b5a342fa366e0f9099c91e896abcb710530058c1911b",
         "tests/test_forward_session_runner.py": "4c91bd2654f4f891e6325e870f1af1d56f038afe32a97725f04632b9493b049a",
         "tests/test_paper_execution_authority.py": "8026404c4ed069cf68e3456a4aae1b6e057c5079fa3bd156ee47f7ac11e02c93",
         "tests/test_phase5_intraday_runner.py": "e40c667c59db13bba344e4a216c40f59ae6c737b972bf53e6a7d00d4ca359cef"
@@ -100,12 +100,12 @@
       }
     },
     {
-      "artifact_sha256": "0254a1be44a3a2354e41c10691f63c69b7d9b5fb89069c11710b3e6993fdc104",
+      "artifact_sha256": "e15cc69eed3cde59fdd04ee2fa60c05d270f0369d4bfa0678b58205e37bdc82d",
       "id": "registered-paper-book-isolation",
       "maturity": "partial",
       "sources": {
         "src/financial_brain/forward_edge/registry.py": "7c9707962f01b958719d7e9cccf4b2973de144d6f74501caacceb0332a13f7c4",
-        "src/financial_brain/kernel/paper_account.py": "df6e09b97a3daef2a5b432dd04e772b0f6abc22533ab04280b185e933533fd20",
+        "src/financial_brain/kernel/paper_account.py": "482e78f9b8af90c41a7f47f2eb9757ce5a3a4567f91bcfe6d9b5e7bc146ff9ba",
         "src/financial_brain/kernel/registered_paper_books.py": "17be756b22e8af5030f2964a3d2bcff76be56dd65841ded1b9c8258bbd143878",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
@@ -118,7 +118,7 @@
       }
     }
   ],
-  "manifest_sha256": "332e4acb045fbb33545d2e76b05833ef720726b1373bf3a744d6e77f08c9e636",
+  "manifest_sha256": "2e2ee7b5117d4bbd9458a4dea392d85904d1d4faf0652eedda5b519a8c45fc7d",
   "matrix_sha256": "72b9b5b162e4b9239fa078da05a6aa12464900147cf8cb4e7252ba779b2237d2",
   "schema_version": "fb.capability-evidence.v1"
 }

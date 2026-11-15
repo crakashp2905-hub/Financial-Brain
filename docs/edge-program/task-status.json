@@ -4891,16 +4891,27 @@
       "sources": [
         "src/financial_brain/forward_edge/rehearsal.py",
         "tests/test_forward_edge_f12.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "tests/test_paper_account_risk_latch.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_degradation_monitor.py",
         "docs/edge-program/pe-0207-0218-promotion-and-rollout-evidence.md"
       ],
       "tests": [
-        "tests/test_forward_edge_f12.py"
+        "tests/test_forward_edge_f12.py",
+        "tests/test_paper_account_risk_latch.py",
+        "tests/test_forward_paper_account_bridge.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_degradation_monitor.py"
       ],
-      "test_result": "DisarmLatch supports an optional durable hash-chained journal. Trip state survives restart; an approved human DISARM_RESET is persisted and survives restart. Focused promotion/rehearsal suite: 29 passed; Ruff and targeted mypy passed.",
+      "test_result": "DisarmLatch supports an optional durable hash-chained journal and human-only reset. Registered paper-session degradation PAUSE/RETIRE alarms bind to the frozen policy and observation hash/timestamp, persist a separate account ENTRY_LATCH, block BUY entries while allowing inventory-reducing SELLs, and survive restart. Combined latch, account, service, runner, degradation, inventory, and evidence-audit suite: 135 passed; Ruff and targeted mypy passed.",
       "blockers": [
-        "Live production monitors are not wired to actuate the persistent latch; owner-controlled reset evidence and monitor-source authenticity are not present."
+        "No owner-authorized prospective market session has exercised the monitor-to-entry-latch path; production monitor-source authenticity and owner-controlled reset evidence are absent."
       ],
-      "evidence_sha256": "03067200e3d72aea128525d110c1fd834986e5b139b2df4c4e2937d43e140a8e"
+      "evidence_sha256": "82122be05e7b76d5e4a24c67283cdaa4d50781bcc0a4174dc62b22a2470b518b"
     },
     {
       "id": "PE-0218",

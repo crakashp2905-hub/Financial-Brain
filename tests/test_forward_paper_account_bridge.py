@@ -6,6 +6,7 @@ import json
 import pytest
 
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
+from financial_brain.forward_edge.degradation_monitor import FrozenThresholds, RollingObservation
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.approvals import Approval
 from financial_brain.forward_edge.fixed_look import FixedLookPolicy
@@ -25,7 +26,7 @@ from financial_brain.forward_edge.paper_account_bridge import (
 from financial_brain.forward_edge.paper_execution_adapter import MarketableQuoteSimulator
 from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
 from financial_brain.forward_edge.registry import Benchmark, MechanismHypothesis, Registry, Status, StrategySpec
-from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
+from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount, PaperAccountError
 from financial_brain.kernel.paper_authority import PaperExecutionAuthorityRegistry
 from financial_brain.kernel.oms import State
 from financial_brain.paper import book as daily_paper_book
@@ -185,6 +186,52 @@ def test_live_paper_service_requires_health_snapshot_before_preflight(tmp_path):
     assert preflight_calls == []
     assert account.cash == Decimal("10000")
     assert not runner_path.exists()
+
+
+def test_strategy_degradation_pause_latches_entries_without_blocking_account_risk_reductions(tmp_path):
+    service, config, account, _runner_path, account_path = _service(tmp_path)
+    policy = FrozenThresholds(
+        strategy_id=service.strategy_spec.strategy_id,
+        strategy_version=config.strategy_sha256,
+        frozen_at=DECISION_AT - timedelta(days=10),
+        cohort_starts_at=DECISION_AT - timedelta(days=9),
+        pause_net_alpha_bps=0.0, retire_net_alpha_bps=-100.0,
+        max_slippage_bps=10.0, min_fill_coverage=0.75, max_drift_score=0.5,
+        min_observations=1,
+    )
+    config = replace(config, degradation_policy_sha256=policy.policy_sha256)
+    observed_at = DECISION_AT + timedelta(minutes=2)
+    observation = RollingObservation(
+        observation_id=config.session_id, policy_sha256=policy.policy_sha256,
+        window_start=policy.cohort_starts_at, window_end=DECISION_AT + timedelta(minutes=1),
+        observed_at=observed_at, net_alpha_bps=-1.0, slippage_bps=2.0,
+        fill_coverage=1.0, drift_score=0.1, sample_count=1,
+        evidence_ids=("paper-monitor:synthetic-test",),
+    )
+    result = service.run(
+        config, [_event(DECISION_AT)],
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _: {"side": "NONE", "reason": "NO_SIGNAL"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("no order should be executed"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT, degradation_policy=policy,
+        degradation_observation_fn=lambda *_: observation,
+    )
+
+    assert result["degradation"]["action"] == "PAUSE"
+    assert result["degradation"]["observed_at_utc"] == observed_at.isoformat()
+    assert account.entry_latched is True
+    assert account.risk_latched is False
+    with pytest.raises(PaperAccountError, match="entry latch blocks"):
+        account.submit_intent(client_id="blocked-after-pause", symbol="NSE:TCS", side="BUY",
+                              quantity=1, limit=Decimal("100"), reserve=Decimal("120"))
+    reopened = PaperAccount(account_path, account_id=account.account_id,
+                            initial_cash=account.initial_cash, fee_schedule=SCHEDULE)
+    assert reopened.entry_latched is True and reopened.risk_latched is False
+    service._latch_degradation_entries(config, result["degradation"])
+    assert sum(row.get("t") == "ENTRY_LATCH" and row.get("state") == "TRIPPED"
+               for row in reopened.journal.records()) == 1
 
 
 def test_session_bound_pretrade_policy_blocks_order_and_persists_verdict(tmp_path):

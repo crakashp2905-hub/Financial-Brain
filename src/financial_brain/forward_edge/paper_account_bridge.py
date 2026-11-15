@@ -11,6 +11,11 @@ from typing import Any
 
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.book_adapter import BookAdapterError, forward_position_events
+from financial_brain.forward_edge.degradation_monitor import (
+    Action as DegradationAction,
+    FrozenThresholds,
+    RollingObservation,
+)
 from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
 from financial_brain.forward_edge.holding_period_schedule import (
     ExchangeSessionCalendar, HoldingScheduleError, scheduled_exit_order_intents,
@@ -113,6 +118,38 @@ class ForwardPaperSessionService:
             raise PaperAccountBridgeError("session benchmark does not match the frozen strategy benchmark")
         return allocation
 
+    def _latch_degradation_entries(self, config: ForwardRunConfig, summary: object) -> None:
+        """Persist strategy PAUSE/RETIRE while allowing later inventory reductions."""
+        if not isinstance(summary, dict) or summary.get("action") not in {
+                DegradationAction.PAUSE.value, DegradationAction.RETIRE.value}:
+            return
+        if (summary.get("observation_id") != config.session_id
+                or summary.get("strategy_id") != config.authority_strategy_id
+                or summary.get("policy_sha256") != config.degradation_policy_sha256):
+            raise PaperAccountBridgeError("degradation alarm does not match the frozen paper session")
+        observed_at = summary.get("observed_at_utc")
+        observation_sha256 = summary.get("observation_sha256")
+        if (not isinstance(observed_at, str) or not isinstance(observation_sha256, str)
+                or len(observation_sha256) != 64
+                or any(character not in "0123456789abcdef" for character in observation_sha256)):
+            raise PaperAccountBridgeError("degradation alarm lacks timestamped observation identity")
+        incident_material = json.dumps({
+            "session_id": config.session_id,
+            "policy_sha256": config.degradation_policy_sha256,
+            "observation_sha256": observation_sha256,
+            "action": summary["action"],
+        }, sort_keys=True, separators=(",", ":"))
+        incident_id = hashlib.sha256(incident_material.encode("utf-8")).hexdigest()
+        try:
+            self.account.trip_entry_latch(
+                incident_id=incident_id,
+                reason=f"DEGRADATION_MONITOR_{summary['action']}",
+                occurred_at=datetime.fromisoformat(observed_at),
+            )
+        except (PaperAccountError, ValueError) as exc:
+            raise PaperAccountBridgeError(
+                "degradation alarm could not persistently latch new paper entries") from exc
+
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
             preflight_fn: Callable[[], dict], decision_fn: Callable[[list[NormalizedEvent]], dict],
             risk_fn: Callable[[dict], dict], execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
@@ -125,7 +162,10 @@ class ForwardPaperSessionService:
             fixed_look_observation_fn: Callable[[], dict] | None = None,
             pretrade_policy: PreTradePolicy | None = None,
             pretrade_snapshot_fn: Callable[[ForwardRunConfig, dict, list[NormalizedEvent], datetime],
-                                           PreTradeSnapshot] | None = None) -> dict:
+                                           PreTradeSnapshot] | None = None,
+            degradation_policy: FrozenThresholds | None = None,
+            degradation_observation_fn: Callable[[ForwardRunConfig, dict, list[dict]],
+                                                 RollingObservation] | None = None) -> dict:
         """Persist one preflight, run the session, then reconcile its receipt to PaperAccount."""
         if config.mode is Mode.LIVE_PAPER and config.require_feed_health is False:
             raise PaperAccountBridgeError("LIVE_PAPER account service requires feed-health gating")
@@ -260,7 +300,12 @@ class ForwardPaperSessionService:
                 return {"side": "NONE", "reason": risk_stop_block or "PAPER_ACCOUNT_RISK_LATCHED"}
             if due_exit_decision is not None:
                 return due_exit_decision
-            return decision_fn(observed)
+            decision = decision_fn(observed)
+            if self.account.entry_latched and (not isinstance(decision, dict) or not (
+                    decision.get("side") == "SELL"
+                    and decision.get("position_effect") in {"REDUCE", "CLOSE"})):
+                return {"side": "NONE", "reason": "PAPER_STRATEGY_ENTRY_LATCHED"}
+            return decision
 
         def guarded_risk(decision: dict) -> dict:
             if self.account.risk_latched or risk_stop_block is not None:
@@ -269,9 +314,12 @@ class ForwardPaperSessionService:
                 if risk_stop_report is not None:
                     result["fixed_look_risk_stop"] = risk_stop_report
                 return result
+            is_reduction = (decision.get("side") == "SELL"
+                            and decision.get("position_effect") in {"REDUCE", "CLOSE"})
+            if self.account.entry_latched and not is_reduction:
+                return {"approved": False, "reason": "PAPER_STRATEGY_ENTRY_LATCHED"}
             base_risk = risk_fn(decision)
-            if (decision.get("side") == "SELL"
-                    and decision.get("position_effect") in {"REDUCE", "CLOSE"}):
+            if is_reduction:
                 if not isinstance(base_risk, dict) or type(base_risk.get("approved")) is not bool:
                     return base_risk
                 return {**base_risk, "pretrade_gate": {
@@ -368,7 +416,10 @@ class ForwardPaperSessionService:
             config, captured_events, decision_at=decision_at,
             decision_fn=guarded_decision, risk_fn=guarded_risk, execution_fn=execution_adapter,
             reconcile_execution_fn=reconcile_execution_fn,
+            degradation_policy=degradation_policy,
+            degradation_observation_fn=degradation_observation_fn,
         )
+        self._latch_degradation_entries(config, result.get("degradation"))
         if result.get("status") == "PAPER_COMPLETE":
             reconciled_events = _persisted_session_events(
                 self.runner.journal_path, config.session_id)

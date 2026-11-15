@@ -133,6 +133,11 @@ class PaperAccount:
         return self._risk_latched
 
     @property
+    def entry_latched(self) -> bool:
+        """Whether strategy entries are paused while inventory reductions remain possible."""
+        return self._entry_latched
+
+    @property
     def realized_pnl(self) -> Decimal:
         # Credit balances are positive economic P&L; ledger.balance is signed debits-minus-credits.
         return -self.ledger.balance(f"realized_pnl:{self.account_id}", self.currency)
@@ -269,6 +274,10 @@ class PaperAccount:
             self._risk_incident_id: str | None = None
             self._risk_reason: str | None = None
             self._risk_occurred_at: datetime | None = None
+            self._entry_latched = False
+            self._entry_incident_id: str | None = None
+            self._entry_reason: str | None = None
+            self._entry_occurred_at: datetime | None = None
             self._closed = False
             self._closure: dict | None = None
             prior_records = [records[0]]
@@ -314,6 +323,41 @@ class PaperAccount:
                     self._apply_instrument_status(r)
                 elif t == "DELISTING_SETTLEMENT":
                     self._apply_delisting_settlement(r)
+                elif t == "ENTRY_LATCH":
+                    incident_id = r.get("incident_id")
+                    if not isinstance(incident_id, str) or not incident_id:
+                        raise PaperAccountError("entry latch event needs an incident id")
+                    if r.get("state") == "TRIPPED":
+                        if self._entry_latched or not str(r.get("reason", "")).strip():
+                            raise PaperAccountError("invalid or duplicate entry latch trip")
+                        try:
+                            occurred = datetime.fromisoformat(str(r["occurred_at"]).replace("Z", "+00:00"))
+                        except (KeyError, ValueError) as exc:
+                            raise PaperAccountError("entry latch timestamp is invalid") from exc
+                        if occurred.tzinfo is None or occurred.utcoffset() is None:
+                            raise PaperAccountError("entry latch timestamp must be timezone-aware")
+                        self._entry_latched, self._entry_incident_id = True, incident_id
+                        self._entry_reason, self._entry_occurred_at = r["reason"], occurred
+                    elif r.get("state") == "RESET":
+                        actor = r.get("actor")
+                        if not self._entry_latched or incident_id != self._entry_incident_id:
+                            raise PaperAccountError("entry latch reset does not match an active incident")
+                        if (not r.get("repair_id") or not isinstance(actor, str) or not actor.strip()
+                                or is_agent_actor(actor, "human")
+                                or not re.fullmatch(r"[0-9a-f]{64}", str(r.get("signoff_sha256", "")))):
+                            raise PaperAccountError("entry latch reset needs a human hash-backed repair signoff")
+                        try:
+                            signed = datetime.fromisoformat(str(r["signed_at"]).replace("Z", "+00:00"))
+                        except (KeyError, ValueError) as exc:
+                            raise PaperAccountError("entry latch signoff timestamp is invalid") from exc
+                        if signed.tzinfo is None or signed.utcoffset() is None:
+                            raise PaperAccountError("entry latch signoff timestamp must be timezone-aware")
+                        if self._entry_occurred_at is not None and signed < self._entry_occurred_at:
+                            raise PaperAccountError("entry latch signoff predates its incident")
+                        self._entry_latched, self._entry_incident_id, self._entry_reason = False, None, None
+                        self._entry_occurred_at = None
+                    else:
+                        raise PaperAccountError("unknown entry latch transition")
                 elif t == "RISK_LATCH":
                     incident_id = r.get("incident_id")
                     if not isinstance(incident_id, str) or not incident_id:
@@ -490,6 +534,8 @@ class PaperAccount:
             return
         if self._risk_latched:
             raise PaperAccountError(f"risk latch blocks new paper intents: {self._risk_reason}")
+        if self._entry_latched and side == "BUY":
+            raise PaperAccountError(f"entry latch blocks new BUY intents: {self._entry_reason}")
         if side == "SELL" and self.position(symbol).quantity - sum(
             qty for cid, qty in self._sell_reserved.items()
             if self.oms.order(cid).state not in {State.CANCELED, State.REJECTED, State.EXPIRED, State.FILLED}
@@ -516,6 +562,34 @@ class PaperAccount:
         self._validate_and_commit({"t": "RISK_LATCH", "state": "TRIPPED", "incident_id": incident_id,
                                    "reason": reason, "occurred_at": occurred_at.isoformat()})
         return True
+
+    def trip_entry_latch(self, *, incident_id: str, reason: str, occurred_at: datetime) -> bool:
+        """Persist a strategy-entry halt while leaving position-reducing SELL intents available."""
+        if not incident_id.strip() or not reason.strip() or occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise PaperAccountError("entry latch trip needs an incident id, reason and aware timestamp")
+        if self._entry_latched:
+            if incident_id == self._entry_incident_id and reason == self._entry_reason:
+                return False
+            raise PaperAccountError("an active entry incident must be repaired before another latch trip")
+        self._validate_and_commit({"t": "ENTRY_LATCH", "state": "TRIPPED", "incident_id": incident_id,
+                                   "reason": reason, "occurred_at": occurred_at.isoformat()})
+        return True
+
+    def reset_entry_latch(self, *, incident_id: str, repair_id: str, actor: str, signed_at: datetime,
+                          signoff_sha256: str) -> None:
+        """Clear a strategy-entry halt only after a human records a timestamped repair signoff."""
+        if not self._entry_latched or incident_id != self._entry_incident_id:
+            raise PaperAccountError("entry latch reset does not match an active incident")
+        if (not repair_id.strip() or not isinstance(actor, str) or not actor.strip()
+                or is_agent_actor(actor, "human")
+                or signed_at.tzinfo is None or signed_at.utcoffset() is None
+                or not re.fullmatch(r"[0-9a-f]{64}", signoff_sha256)):
+            raise PaperAccountError("entry latch reset needs a human hash-backed repair signoff")
+        if self._entry_occurred_at is not None and signed_at < self._entry_occurred_at:
+            raise PaperAccountError("entry latch signoff predates its incident")
+        self._validate_and_commit({"t": "ENTRY_LATCH", "state": "RESET", "incident_id": incident_id,
+                                   "repair_id": repair_id, "actor": actor,
+                                   "signed_at": signed_at.isoformat(), "signoff_sha256": signoff_sha256})
 
     def reset_risk_latch(self, *, incident_id: str, repair_id: str, actor: str, signed_at: datetime,
                          signoff_sha256: str) -> None:

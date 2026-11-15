@@ -676,7 +676,7 @@ class ForwardSessionRunner:
                 if not isinstance(observation, RollingObservation):
                     raise RunnerError("degradation observation adapter must return RollingObservation")
                 event = self.record_degradation_observation(config, degradation_policy, observation)
-                summary = self._degradation_summary(event)
+                summary = self._degradation_summary(event, observation.observed_at)
                 DurableJournal(self.journal_path).append({
                     "t": "DEGRADATION_SESSION_SUMMARY", "session_id": config.session_id,
                     "summary": summary,
@@ -1022,7 +1022,7 @@ class ForwardSessionRunner:
             if not isinstance(observation, RollingObservation):
                 raise RunnerError("degradation observation adapter must return RollingObservation")
             event = self.record_degradation_observation(config, degradation_policy, observation)
-            summary = self._degradation_summary(event)
+            summary = self._degradation_summary(event, observation.observed_at)
             DurableJournal(self.journal_path).append({
                 "t": "DEGRADATION_SESSION_SUMMARY", "session_id": config.session_id,
                 "summary": summary,
@@ -1031,11 +1031,12 @@ class ForwardSessionRunner:
         return result
 
     @staticmethod
-    def _degradation_summary(event: AlarmEvent) -> dict:
+    def _degradation_summary(event: AlarmEvent, observed_at: datetime) -> dict:
         return {"observation_id": event.observation_id, "strategy_id": event.strategy_id,
                 "strategy_version": event.strategy_version, "policy_sha256": event.policy_sha256,
                 "action": event.action.value, "reasons": list(event.reasons),
-                "observation_sha256": event.observation_sha256}
+                "observation_sha256": event.observation_sha256,
+                "observed_at_utc": observed_at.astimezone(timezone.utc).isoformat()}
 
     @staticmethod
     def _apply_net_alpha_hurdle(config: ForwardRunConfig, decision: dict, risk: dict) -> dict:
