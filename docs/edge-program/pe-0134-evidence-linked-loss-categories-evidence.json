@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_loss_classification.py; ruff check src/financial_brain/paper/loss_classification.py tests/test_loss_classification.py; mypy src/financial_brain/paper/loss_classification.py",
-    "result": "8 loss-classification and evidence-registry tests passed; full Windows suite: 4185 passed, 1 skipped (796.89s); Ruff and targeted mypy passed. The durable registry binds evidence IDs to categories and artifact digests; unknown IDs and category mismatches fail closed. Artifact sources remain caller-supplied and unauthenticated."
+    "result": "8 loss-classification and evidence-registry tests passed; full Windows suite: 4187 passed, 1 skipped (828.89s); Ruff and targeted mypy passed. The durable registry binds evidence IDs to categories and artifact digests; unknown IDs and category mismatches fail closed. Artifact sources remain caller-supplied and unauthenticated."
   },
   "implemented": [
     "Supports the eight requested evidence-linked reason categories and explicit UNKNOWN when a losing trade has no evidence identifiers.",

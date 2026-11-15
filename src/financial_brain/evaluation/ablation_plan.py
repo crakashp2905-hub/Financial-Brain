@@ -1,7 +1,7 @@
 """Frozen, bounded development-only strategy ablations with complete outcome logs."""
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from itertools import product
@@ -10,6 +10,7 @@ import json
 import math
 from pathlib import Path
 from statistics import mean
+from typing import cast
 
 from financial_brain.forward_edge.durable import DurableJournal
 
@@ -132,7 +133,7 @@ def evaluate_ablations(*, plan: AblationPlan, outcomes: Iterable[Mapping[str, ob
         if combo_key not in combination_keys:
             raise AblationPlanError("outcome combination is not in the frozen grid")
         try:
-            day = date.fromisoformat(row["session_date"]).isoformat()
+            day = date.fromisoformat(cast(str, row["session_date"])).isoformat()
             decision_id = row["decision_sha256"]
             value = row["net_alpha"]
         except (KeyError, TypeError, ValueError) as exc:
@@ -144,10 +145,10 @@ def evaluate_ablations(*, plan: AblationPlan, outcomes: Iterable[Mapping[str, ob
             raise AblationPlanError("decision_sha256 must be lowercase SHA-256")
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
             raise AblationPlanError("net_alpha must be finite")
-        key = (combo_key, day, decision_id)
-        if key in seen:
+        outcome_identity = (combo_key, day, decision_id)
+        if outcome_identity in seen:
             raise AblationPlanError("duplicate combination/session/decision outcome")
-        seen.add(key)
+        seen.add(outcome_identity)
         grouped[combo_key].append(float(value))
         identities[combo_key].add((day, decision_id))
         rows.append({"split": "TRAINING", "combination": combination_keys[combo_key],
@@ -177,6 +178,62 @@ def evaluate_ablations(*, plan: AblationPlan, outcomes: Iterable[Mapping[str, ob
                                     allow_nan=False).encode()).hexdigest()
     return AblationResult(plan.sha256, plan.development_data_sha256,
                           len(plan.combinations), len(schedule or ()), tuple(evaluations), tuple(rows), data)
+
+
+def execute_frozen_ablations(
+    *,
+    plan: AblationPlan,
+    development_data_path: Path,
+    training_sessions: Sequence[str],
+    evaluator: Callable[[Path, Mapping[str, object], str], Mapping[str, object]],
+) -> AblationResult:
+    """Execute every frozen parameter/session cell against one hashed dev dataset.
+
+    The evaluator must return a stable ``decision_sha256`` and after-cost
+    ``net_alpha`` for one cell. The dataset is rehashed after execution so a
+    modified file cannot silently mix versions during a search.
+    """
+    def data_digest() -> str:
+        digest = hashlib.sha256()
+        try:
+            with Path(development_data_path).open("rb") as stream:
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(block)
+        except OSError as exc:
+            raise AblationPlanError("development dataset is unavailable") from exc
+        return digest.hexdigest()
+
+    if data_digest() != plan.development_data_sha256:
+        raise AblationPlanError("development dataset digest differs from the frozen plan")
+    try:
+        sessions = tuple(date.fromisoformat(day).isoformat() for day in training_sessions)
+    except (TypeError, ValueError) as exc:
+        raise AblationPlanError("training sessions must be ISO dates") from exc
+    if (not sessions or sessions != tuple(training_sessions)
+            or sessions != tuple(sorted(set(sessions)))
+            or any(not plan.development_start <= day <= plan.development_end for day in sessions)):
+        raise AblationPlanError("training schedule must be ordered within the development window")
+    outcomes = []
+    for combination in plan.combinations:
+        for session in sessions:
+            try:
+                result = evaluator(Path(development_data_path), combination, session)
+            except Exception as exc:
+                raise AblationPlanError(
+                    f"portfolio evaluator failed for {session} and {combination}"
+                ) from exc
+            if not isinstance(result, Mapping):
+                raise AblationPlanError("portfolio evaluator must return a mapping")
+            outcomes.append({
+                "split": "TRAINING",
+                "combination": combination,
+                "session_date": session,
+                "decision_sha256": result.get("decision_sha256"),
+                "net_alpha": result.get("net_alpha"),
+            })
+    if data_digest() != plan.development_data_sha256:
+        raise AblationPlanError("development dataset changed during the ablation run")
+    return evaluate_ablations(plan=plan, outcomes=outcomes)
 
 
 class AblationJournal:

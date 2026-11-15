@@ -9,6 +9,7 @@ from financial_brain.evaluation.ablation_plan import (
     AblationJournal,
     AblationPlan,
     AblationPlanError,
+    execute_frozen_ablations,
     evaluate_ablations,
 )
 
@@ -99,3 +100,54 @@ def test_hash_chain_archives_all_results_and_rejects_retroactive_replacement(tmp
     altered = replace(result, outcome_sha256=hashlib.sha256(b"changed").hexdigest())
     with pytest.raises(AblationPlanError, match="does not reconcile"):
         registry.record(plan, altered)
+
+
+def test_frozen_runner_hashes_data_and_executes_every_grid_session_cell(tmp_path):
+    data = b"frozen-development-data-v1"
+    data_path = tmp_path / "development.bin"
+    data_path.write_bytes(data)
+    plan = _plan(development_data_sha256=hashlib.sha256(data).hexdigest())
+    calls = []
+
+    def evaluator(path, combination, session):
+        assert path == data_path
+        calls.append((combination, session))
+        return {
+            "decision_sha256": hashlib.sha256(session.encode()).hexdigest(),
+            "net_alpha": -0.01 if combination["entry_rule"] == "breakout" else 0.02,
+        }
+
+    result = execute_frozen_ablations(
+        plan=plan, development_data_path=data_path,
+        training_sessions=["2026-01-02", "2026-01-03"], evaluator=evaluator,
+    )
+    assert len(calls) == len(plan.combinations) * 2 == 4
+    assert result.combination_count == 2 and result.session_count == 2
+    assert len(result.outcomes) == 4
+
+
+def test_frozen_runner_rejects_wrong_digest_holdout_or_midrun_data_change(tmp_path):
+    data_path = tmp_path / "development.bin"
+    data_path.write_bytes(b"expected")
+    plan = _plan(development_data_sha256=hashlib.sha256(b"other").hexdigest())
+    with pytest.raises(AblationPlanError, match="digest differs"):
+        execute_frozen_ablations(
+            plan=plan, development_data_path=data_path, training_sessions=["2026-01-02"],
+            evaluator=lambda *_: pytest.fail("must not run on unverified data"),
+        )
+    plan = _plan(development_data_sha256=hashlib.sha256(b"expected").hexdigest())
+    with pytest.raises(AblationPlanError, match="within the development window"):
+        execute_frozen_ablations(
+            plan=plan, development_data_path=data_path, training_sessions=["2026-01-04"],
+            evaluator=lambda *_: {},
+        )
+
+    def mutating(path, combination, session):
+        path.write_bytes(b"changed")
+        return {"decision_sha256": "1" * 64, "net_alpha": 0.0}
+
+    with pytest.raises(AblationPlanError, match="changed during"):
+        execute_frozen_ablations(
+            plan=plan, development_data_path=data_path, training_sessions=["2026-01-02"],
+            evaluator=mutating,
+        )

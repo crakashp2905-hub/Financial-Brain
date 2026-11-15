@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_opportunity_controls.py tests/test_matched_performance.py; ruff check src/financial_brain/forward_edge/opportunity_controls.py tests/test_opportunity_controls.py",
-    "result": "7 matched-opportunity tests passed; full Windows suite: 4185 passed, 1 skipped (796.89s); Ruff and targeted mypy passed. ISO dates are canonicalized, and population/report digests are stable under input reordering and change when a matched input changes."
+    "result": "7 matched-opportunity tests passed; full Windows suite: 4187 passed, 1 skipped (828.89s); Ruff and targeted mypy passed. ISO dates are canonicalized, and population/report digests are stable under input reordering and change when a matched input changes."
   },
   "implemented": [
     "Matches on the same session within frozen size, liquidity-spread, and risk-budget relative calipers.",
