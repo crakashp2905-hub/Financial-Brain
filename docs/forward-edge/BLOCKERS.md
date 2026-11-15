@@ -13,4 +13,4 @@ Each blocker is an external provider, owner action or elapsed evidence. None is 
 | BLK-MARKET | FE-0045, FE-0070, FE-0079, FE-0135 | Elapsed NSE/BSE sessions with independent timestamps; cannot be shortened or simulated. |
 | BLK-OWNER | FE-0129, FE-0137, FE-0139, FE-0142 | The owner makes and records the decision; agents cannot. |
 | BLK-TIME | FE-0045, FE-0097, FE-0098 | Calendar time: the preregistered number of scheduled sessions must elapse. |
-| BLK-TSA | FE-0010, FE-0047, FE-0048, FE-0051, FE-0098, FE-0128 | Owner selects an independent timestamp provider and pins its trust root in docs/forward-edge/trust-roots.json. |
+| BLK-TSA | FE-0010, FE-0047, FE-0048, FE-0051, FE-0098, FE-0128, FE-0129 | Owner selects an independent timestamp provider and pins its trust root in docs/forward-edge/trust-roots.json. |
