@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from multiprocessing import Event, Process, Queue
 
 import pytest
 
@@ -7,6 +8,20 @@ from financial_brain.forward_edge.research_library import (
     ResearchVariantJournal,
     canonical_sha256,
 )
+
+
+def _concurrent_campaign_open(path, start, results, variant_id):
+    journal = ResearchVariantJournal(path)
+    start.wait(10)
+    try:
+        journal.open_run(
+            mechanism_id="concurrent", mechanism_source_sha256="c" * 64,
+            variants=[{"variant_id": variant_id, "parameters": {}}], seed=1,
+            campaign_id="one-slot", campaign_budget=1,
+        )
+        results.put("opened")
+    except ResearchLibraryError:
+        results.put("budget-rejected")
 
 
 def _open(journal, *, variants=None):
@@ -103,9 +118,26 @@ def test_search_campaign_counts_every_attempt_across_runs_and_freezes_correction
                          familywise_alpha=0.05)
     with pytest.raises(ResearchLibraryError, match="immutable"):
         journal.open_run(mechanism_id="momentum", mechanism_source_sha256="a" * 64,
-                         variants=[{"variant_id": "window-40", "parameters": {"window": 40}}],
+                         variants=[{"variant_id": "window-40", "parameters": {}}],
                          seed=3, campaign_id="momentum-family", campaign_budget=10,
                          familywise_alpha=0.05)
+
+
+
+def test_concurrent_processes_cannot_oversubscribe_campaign_budget(tmp_path):
+    path = tmp_path / "concurrent.jsonl"
+    start = Event()
+    results = Queue()
+    processes = [Process(target=_concurrent_campaign_open, args=(path, start, results, f"v{i}"))
+                 for i in range(2)]
+    for process in processes:
+        process.start()
+    start.set()
+    for process in processes:
+        process.join(15)
+        assert process.exitcode == 0
+    assert sorted(results.get(timeout=2) for _ in processes) == ["budget-rejected", "opened"]
+    assert ResearchVariantJournal(path).campaign_state("one-slot")["candidate_count"] == 1
 
 
 def test_bounded_search_durably_records_one_result_per_frozen_variant(monkeypatch, tmp_path):

@@ -4,6 +4,9 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
+import time
+from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -19,6 +22,53 @@ _SHA = frozenset("0123456789abcdef")
 
 class ResearchLibraryError(ValueError):
     pass
+
+
+@contextmanager
+def _journal_lock(path: Path):
+    """Take a portable advisory process lock on a stable sidecar file."""
+    lock_path = path.with_name(path.name + ".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            stream = lock_path.open("a+b")
+            break
+        except PermissionError:
+            if os.name != "nt" or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.05)
+    with stream:
+        if os.name == "nt":
+            import msvcrt
+
+            stream.seek(0, os.SEEK_END)
+            if stream.tell() == 0:
+                stream.write(b"0")
+                stream.flush()
+            while True:
+                try:
+                    stream.seek(0)
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(f"timed out waiting for research journal lock: {lock_path}") from None
+                    time.sleep(0.05)
+            try:
+                yield
+            finally:
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            lock_file = fcntl.flock  # type: ignore[attr-defined]
+            lock_file(stream.fileno(), fcntl.LOCK_EX)  # type: ignore[attr-defined]
+            try:
+                yield
+            finally:
+                lock_file(stream.fileno(), fcntl.LOCK_UN)  # type: ignore[attr-defined]
 
 
 def json_safe(value: Any) -> Any:
@@ -56,10 +106,18 @@ class ResearchVariantJournal:
     def __init__(self, path: Path, *, max_variants_per_run: int = MAX_VARIANTS_PER_RUN) -> None:
         if not 1 <= max_variants_per_run <= MAX_VARIANTS_PER_RUN:
             raise ResearchLibraryError(f"variant limit must be in [1, {MAX_VARIANTS_PER_RUN}]")
-        self.journal = DurableJournal(Path(path))
+        self.path = Path(path)
         self.max_variants_per_run = max_variants_per_run
         self._runs: dict[str, dict] = {}
         self._campaigns: dict[str, dict] = {}
+        with _journal_lock(self.path):
+            self._reload_locked()
+
+    def _reload_locked(self) -> None:
+        """Refresh the hash-chain head and folded state while holding the process lock."""
+        self.journal = DurableJournal(self.path)
+        self._runs.clear()
+        self._campaigns.clear()
         self._rebuild()
 
     def _rebuild(self) -> None:
@@ -141,6 +199,21 @@ class ResearchVariantJournal:
                 or isinstance(familywise_alpha, bool) or not isinstance(familywise_alpha, (int, float))
                 or not math.isfinite(familywise_alpha) or not 0 < familywise_alpha < 1):
             raise ResearchLibraryError("campaign ID, fixed budget, and familywise alpha are required")
+        with _journal_lock(self.path):
+            self._reload_locked()
+            return self._open_run_locked(
+                mechanism_id=mechanism_id, mechanism_source_sha256=mechanism_source_sha256,
+                variants=variants, seed=seed, run_id=run_id, at_utc=at_utc,
+                campaign_id=campaign_key, campaign_budget=budget,
+                familywise_alpha=familywise_alpha,
+            )
+
+    def _open_run_locked(self, *, mechanism_id: str, mechanism_source_sha256: str,
+                         variants: list[dict], seed: int, run_id: str | None,
+                         at_utc: datetime | None, campaign_id: str,
+                         campaign_budget: int, familywise_alpha: float) -> str:
+        campaign_key = campaign_id
+        budget = campaign_budget
         campaign = self._campaigns.get(campaign_key)
         if campaign is not None and (campaign["budget"] != budget
                                      or campaign["familywise_alpha"] != float(familywise_alpha)):
@@ -180,6 +253,11 @@ class ResearchVariantJournal:
         return rid
 
     def record_result(self, run_id: str, variant_sha256: str, *, outcome: str, details: Any) -> None:
+        with _journal_lock(self.path):
+            self._reload_locked()
+            self._record_result_locked(run_id, variant_sha256, outcome=outcome, details=details)
+
+    def _record_result_locked(self, run_id: str, variant_sha256: str, *, outcome: str, details: Any) -> None:
         state = self._active_run(run_id)
         if variant_sha256 not in state["expected"] or variant_sha256 in state["results"]:
             raise ResearchLibraryError("variant digest is not pending in this run")
@@ -193,26 +271,37 @@ class ResearchVariantJournal:
         state["results"][variant_sha256] = outcome
 
     def abort_pending(self, run_id: str, *, reason: str) -> None:
+        with _journal_lock(self.path):
+            self._reload_locked()
+            self._abort_pending_locked(run_id, reason=reason)
+
+    def _abort_pending_locked(self, run_id: str, *, reason: str) -> None:
         state = self._active_run(run_id)
         for digest in sorted(state["expected"] - set(state["results"])):
-            self.record_result(run_id, digest, outcome="ABORTED", details={"reason": reason})
+            self._record_result_locked(run_id, digest, outcome="ABORTED", details={"reason": reason})
 
     def recover_incomplete_runs(self, *, reason: str = "process_restarted_before_completion") -> list[str]:
-        """Close interrupted runs with explicit outcomes before a new single-writer run starts.
+        """Close interrupted runs atomically with explicit outcomes.
 
-        This is intentionally an explicit operation: constructing a journal to inspect it does not
-        mutate evidence. Callers must ensure no other process is actively writing this journal.
+        This is intentionally explicit: constructing a journal to inspect it does not mutate evidence.
         """
-        recovered = []
-        for run_id, state in list(self._runs.items()):
-            if state["closed"]:
-                continue
-            self.abort_pending(run_id, reason=reason)
-            self.close_run(run_id)
-            recovered.append(run_id)
-        return recovered
+        with _journal_lock(self.path):
+            self._reload_locked()
+            recovered = []
+            for run_id, state in list(self._runs.items()):
+                if state["closed"]:
+                    continue
+                self._abort_pending_locked(run_id, reason=reason)
+                self._close_run_locked(run_id)
+                recovered.append(run_id)
+            return recovered
 
     def close_run(self, run_id: str) -> None:
+        with _journal_lock(self.path):
+            self._reload_locked()
+            self._close_run_locked(run_id)
+
+    def _close_run_locked(self, run_id: str) -> None:
         state = self._active_run(run_id)
         if state["expected"] != set(state["results"]):
             missing = len(state["expected"] - set(state["results"]))
@@ -223,17 +312,32 @@ class ResearchVariantJournal:
         state["closed"] = True
 
     def run_state(self, run_id: str) -> dict:
+        with _journal_lock(self.path):
+            self._reload_locked()
+            return self._run_state_locked(run_id)
+
+    def _run_state_locked(self, run_id: str) -> dict:
         state = self._runs[run_id]
         return {"variant_count": len(state["expected"]), "recorded_count": len(state["results"]),
                 "outcomes": dict(state["results"]), "closed": state["closed"]}
 
     def variant_digests(self, run_id: str) -> dict[str, str]:
         """Return the immutable id-to-digest map needed by an evaluator to record results."""
+        with _journal_lock(self.path):
+            self._reload_locked()
+            return self._variant_digests_locked(run_id)
+
+    def _variant_digests_locked(self, run_id: str) -> dict[str, str]:
         state = self._runs[run_id]
         return {item["variant_id"]: item["variant_sha256"] for item in state["variants"]}
 
     def campaign_state(self, campaign_id: str) -> dict[str, float | int | str]:
         """Return the cumulative family denominator and its frozen Bonferroni alpha threshold."""
+        with _journal_lock(self.path):
+            self._reload_locked()
+            return self._campaign_state_locked(campaign_id)
+
+    def _campaign_state_locked(self, campaign_id: str) -> dict[str, float | int | str]:
         state = self._campaigns[campaign_id]
         count = state["candidate_count"]
         return {"campaign_id": campaign_id, "candidate_count": count,
