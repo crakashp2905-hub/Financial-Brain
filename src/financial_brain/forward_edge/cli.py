@@ -216,6 +216,36 @@ def cmd_daily_paper_preflight(manifest_path: str) -> tuple[dict, int]:
     return result, EXIT["OK"]
 
 
+def cmd_session_coverage(*, registry_path: str, schedule_id: str, ledger_path: str,
+                         calendar_path: str, window_start: str, window_end: str,
+                         as_of: str) -> tuple[dict, int]:
+    """Render coverage from an immutable schedule and durable date ledger."""
+    from financial_brain.forward_edge.market_data import load_calendar
+    from financial_brain.forward_edge.session_coverage import (
+        FrozenSessionScheduleRegistry,
+        SessionCoverageError,
+        session_coverage_report,
+    )
+    from financial_brain.forward_edge.session_ops import SessionDateLedger
+
+    try:
+        report = session_coverage_report(
+            registry=FrozenSessionScheduleRegistry(Path(registry_path)),
+            schedule_id=schedule_id,
+            ledger=SessionDateLedger(Path(ledger_path)),
+            calendar=load_calendar(Path(calendar_path)),
+            window_start=date.fromisoformat(window_start),
+            window_end=date.fromisoformat(window_end),
+            as_of_utc=datetime.fromisoformat(as_of.replace("Z", "+00:00")),
+        )
+    except (OSError, ValueError, TypeError, KeyError, SessionCoverageError) as exc:
+        return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    counts = report["status_counts"]
+    complete = (counts["PENDING"] == 0 and report["unqualified_count"] == 0
+                and not report["unscheduled_tradable_dates"])
+    return report, EXIT["OK"] if complete else EXIT["INCOMPLETE"]
+
+
 def cmd_daily_paper_manifest(args: argparse.Namespace) -> tuple[dict, int]:
     """Derive the manifest's per-book identity rows from registered plans and runner journals."""
     from financial_brain.forward_edge.daily_paper_cycle import (
@@ -381,6 +411,15 @@ def main(argv: list[str] | None = None) -> int:
     preflight = sub.add_parser(
         "daily-paper-preflight", help="validate all daily-cycle evidence without mutating accounts")
     preflight.add_argument("--manifest", required=True, help="owner-prepared JSON inputs for this session")
+    coverage = sub.add_parser(
+        "session-coverage", help="report a frozen session denominator against its durable result ledger")
+    coverage.add_argument("--registry", required=True, help="hash-chained frozen-schedule registry")
+    coverage.add_argument("--schedule-id", required=True)
+    coverage.add_argument("--ledger", required=True, help="hash-chained session-date outcome ledger")
+    coverage.add_argument("--calendar", required=True, help="versioned exchange-calendar JSON")
+    coverage.add_argument("--window-start", required=True, help="first exchange date, YYYY-MM-DD")
+    coverage.add_argument("--window-end", required=True, help="last exchange date, YYYY-MM-DD")
+    coverage.add_argument("--as-of", required=True, help="aware ISO-8601 report clock for reproducibility")
     manifest = sub.add_parser(
         "daily-paper-manifest", help="derive immutable per-book session bindings from verified runner journals")
     manifest.add_argument("--registry", required=True)
@@ -437,6 +476,12 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_daily_paper_run_config(args.config, args.session_date)
     elif args.cmd == "daily-paper-preflight":
         out, code = cmd_daily_paper_preflight(args.manifest)
+    elif args.cmd == "session-coverage":
+        out, code = cmd_session_coverage(
+            registry_path=args.registry, schedule_id=args.schedule_id, ledger_path=args.ledger,
+            calendar_path=args.calendar, window_start=args.window_start,
+            window_end=args.window_end, as_of=args.as_of,
+        )
     elif args.cmd == "daily-paper-manifest":
         out, code = cmd_daily_paper_manifest(args)
     elif args.cmd == "daily-finalize":

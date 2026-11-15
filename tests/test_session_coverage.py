@@ -134,3 +134,35 @@ def test_schedule_registry_freezes_before_session_and_rejects_retroactive_replac
     expanded = _schedule([_planned("s11", "2026-11-11"), _planned("s12", "2026-11-12")])
     with pytest.raises(SessionCoverageError, match="immutable"):
         registry.register(expanded, frozen_at_utc=valid_freeze)
+
+
+def test_session_coverage_cli_reports_frozen_denominator_and_incomplete_exit(tmp_path, capsys):
+    from financial_brain.forward_edge.cli import main
+
+    calendar_path = tmp_path / "calendar.json"
+    calendar_path.write_text(json.dumps({"version": "nse-calendar-v1", "holidays": []}), encoding="utf-8")
+    schedule = _schedule([_planned("cli-session", "2026-11-17")])
+    registry_path = tmp_path / "registry.jsonl"
+    registry = FrozenSessionScheduleRegistry(registry_path)
+    registry.register(schedule, frozen_at_utc=datetime(2026, 11, 16, 18, 29, tzinfo=UTC))
+    ledger_path = tmp_path / "ledger.jsonl"
+    ledger = SessionDateLedger(ledger_path)
+    ledger.plan_date("cli-session", "2026-11-17", Calendar("nse-calendar-v1", frozenset()),
+                     datetime.fromisoformat("2026-11-18T10:00:00+00:00"))
+
+    args = [
+        "session-coverage", "--registry", str(registry_path), "--schedule-id", schedule.schedule_id,
+        "--ledger", str(ledger_path), "--calendar", str(calendar_path),
+        "--window-start", "2026-11-17", "--window-end", "2026-11-17",
+        "--as-of", "2026-11-17T12:00:00+00:00",
+    ]
+    assert main(args) == 3  # pending sessions are visible and cannot be counted as complete
+    pending = json.loads(capsys.readouterr().out)
+    assert pending["planned_session_denominator"] == 1
+    assert pending["status_counts"]["PENDING"] == 1
+
+    ledger.record_result("cli-session", "CLOSED", "SESSION_COMPLETE")
+    assert main(args) == 0
+    closed = json.loads(capsys.readouterr().out)
+    assert closed["qualified_closed_count"] == 1
+    assert closed["report_sha256"]

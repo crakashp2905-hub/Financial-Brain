@@ -3593,17 +3593,19 @@
         "tests/test_session_coverage.py",
         "tests/test_session_date_ledger.py",
         "docs/edge-program/pe-0156-session-coverage.md",
-        "docs/edge-program/pe-0156-session-coverage-evidence.json"
+        "docs/edge-program/pe-0156-session-coverage-evidence.json",
+        "src/financial_brain/forward_edge/cli.py",
+        "docs/forward-edge/session-coverage.md"
       ],
       "tests": [
         "test_session_coverage.py",
         "test_session_date_ledger.py"
       ],
-      "test_result": "10 passed; Ruff and mypy passed.",
-      "evidence_sha256": "26d4fe74dba56991254de2c094263bcd067211803637b276cc28f23811331351",
+      "test_result": "11 passed; Ruff and mypy passed. Session-coverage CLI tests verify reproducible denominator output, pending-session incomplete exit, and complete closed-session exit.",
+      "evidence_sha256": "922a7a629119b67cae5c0128d240901c99597167c9eda8120f8ffdf97d3e200a",
       "blockers": [
         "Owner-approved cohort construction and independent confirmation that every intended eligible session is included are not configured.",
-        "Daily scheduled report generation is not yet automated.",
+        "Automated daily invocation is not configured; the CLI report is available for explicit reproducible runs.",
         "No prospective cohort period has validated daily denominators in operation."
       ]
     },

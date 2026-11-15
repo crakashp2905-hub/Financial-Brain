@@ -3,8 +3,8 @@
   "task_id": "PE-0156",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_session_coverage.py tests/test_session_date_ledger.py; ruff check src/financial_brain/forward_edge/session_coverage.py src/financial_brain/forward_edge/session_ops.py tests/test_session_coverage.py tests/test_session_date_ledger.py",
-    "result": "10 passed; Ruff and mypy passed."
+    "command": "python -m pytest -q tests/test_session_coverage.py tests/test_session_date_ledger.py; ruff check src/financial_brain/forward_edge/cli.py tests/test_session_coverage.py; python -m mypy src/financial_brain/forward_edge/cli.py",
+    "result": "11 passed; Ruff and mypy passed. Includes CLI pending/incomplete and fully closed coverage exit behavior."
   },
   "implemented": [
     "Frozen schedules hash expected exchange session IDs/dates, calendar version, and settlement deadlines.",
@@ -12,7 +12,8 @@
     "Session-date ledger outcomes remain separate as CLOSED, NO_TRADE, INCOMPLETE, overdue MISSING, future PENDING, UNPLANNED, PLAN_MISMATCH, and UNQUALIFIED.",
     "Unqualified, no-trade, completed, pending, and planned denominators are independently reported.",
     "Human-readable and machine-readable report lists excluded non-trading and unscheduled tradable dates and carries a canonical report hash.",
-    "FrozenSessionScheduleRegistry stores hash-chained schedule registrations, requires registration before the first exchange date, refuses retroactive replacement, and is the required schedule source for coverage reports."
+    "FrozenSessionScheduleRegistry stores hash-chained schedule registrations, requires registration before the first exchange date, refuses retroactive replacement, and is the required schedule source for coverage reports.",
+    "The read-only session-coverage CLI resolves the frozen schedule registry and durable date ledger, validates a versioned calendar, requires an explicit report clock, emits canonical JSON/human output, and exits incomplete while the denominator has pending, unqualified, or omitted tradable sessions."
   ],
   "blockers": [
     "Owner-approved cohort construction and independent confirmation that every intended eligible session is included are not configured.",
@@ -20,9 +21,12 @@
     "No prospective cohort period has validated daily denominators in operation."
   ],
   "source_sha256": {
-    "src/financial_brain/forward_edge/session_coverage.py": "a629f0e1a8f4e2eeebb040efaa33983ee4f85b1e9a90f8bac2f4c55137bb10ca",
-    "src/financial_brain/forward_edge/session_ops.py": "437c2aa38e69852b1b45cf6447a6b2a67ad786f5aa3de3c7c53f772a2810379a",
-    "tests/test_session_coverage.py": "28425ba1993cf73157268491c8d4b176d166fb708961d73d412bdd111eaf378c",
-    "tests/test_session_date_ledger.py": "ff2b60451f7218a489c0fc625dd725f5004c3eefd11e6e71d94b3309d6943132"
+    "src/financial_brain/forward_edge/session_coverage.py": "aaa53008da5bbccf19c9e3205132a434959ea48fcbfbb719eb49ff0626aaf4d7",
+    "src/financial_brain/forward_edge/session_ops.py": "799ad4352df74bc4a441d161784ec2934226cbed8ee4f67311d263218fafdb6d",
+    "src/financial_brain/forward_edge/cli.py": "0a783286724f7f52083c120e1fdfc86696a3fd88cbe467ecebb1ae54db4a4b2b",
+    "tests/test_session_coverage.py": "fa72157529245766e131f4304b40a196439fb677b032ac36f38e877a83e23c76",
+    "tests/test_session_date_ledger.py": "dda0356716a409e60ebc31d84892184f3cd2104e8f5e1c5a42433c2b8e9b1efa",
+    "docs/forward-edge/session-coverage.md": "633be0f240a25689cd5e3838ad821881b3e069468d4acfbb8fbf9eacd743e0a1",
+    "docs/edge-program/pe-0156-session-coverage.md": "b313310ecc75cb330b601df571b06925af529e18e51843e478b6051d41bfd4b0"
   }
 }
