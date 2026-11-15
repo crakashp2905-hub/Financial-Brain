@@ -382,7 +382,11 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_disaster_suite_requires_each_scenario_class_and_complete_shock_coverage",
                                   "test_network_partition_cannot_be_declared_without_disabling_entries"), (),
                      "Deterministic gap, limit-down, spread blowout, expiry and network-partition scenarios report mark loss, execution cost, unfilled exposure, entry disablement and reconciliation requirements. Scenarios are not calibrated forecasts and are not yet run against production book snapshots or operational recovery drills."),
-    "FE-0113": Entry("NOT_STARTED", (), (), "NO_TRADE as explicit decisions in the forward path not built."),
+    "FE-0113": Entry("PARTIAL", ("test_every_gate_passes_only_with_positive_after_cost_alpha",
+                                  "test_blocking_conditions_are_explicit_no_trade",
+                                  "test_abstention_is_journaled_idempotently_without_fallback_fill",
+                                  "test_abstention_writer_rejects_trade_decision"), (),
+                     "Unified policy boundary returns explicit reason-coded NO_TRADE for invalid data, liquidity, margin, risk or non-positive/unknown after-cost alpha; abstentions are idempotently journaled with fallback_fill=false. Trade submission and all paper adapters still need to call this boundary."),
     # ---- F10 ----
     "FE-0114": Entry("NOT_STARTED", (), (), "Cockpit not built."),
     "FE-0115": Entry("NOT_STARTED", (), (), "Strategy list not built."),
