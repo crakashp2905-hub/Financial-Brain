@@ -39,6 +39,7 @@ import pandas as pd
 from ..costs.india import CostModel
 from ..opportunity import engine as E
 from ..opportunity import scanners as S
+from .executable import ExecutableOutcome, resolve_executable as _resolve_executable
 
 LOCK_DATE = date(2026, 10, 5)
 HORIZON = 20
@@ -48,6 +49,20 @@ T_PROMOTE = 2.0
 CHAMPION = "naive_momentum"
 RANKING_METRIC = "ranking_close_v1"
 EXECUTABLE_METRIC = "executable_next_session_v1"
+
+
+def resolve_executable(*, selected: Sequence[tuple[date, str, str]],
+                       outcomes: Sequence[ExecutableOutcome], scheduled_days: Sequence[date],
+                       horizon_sessions: int, annual_cash_rate: float,
+                       missing_fill_loss: float = -1.0) -> dict[str, object]:
+    """Resolve frozen picks from itemized, content-hashed executable outcomes.
+
+    This creates a diagnostic calculation only. It does not establish independent custody,
+    populate the champion ledger, attest the session schedule, or authorize promotion.
+    """
+    return _resolve_executable(selected=selected, outcomes=outcomes, scheduled_days=scheduled_days,
+                               horizon_sessions=horizon_sessions, annual_cash_rate=annual_cash_rate,
+                               missing_fill_loss=missing_fill_loss)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS champion_picks (day VARCHAR, strategy VARCHAR, ticker VARCHAR, lineage VARCHAR,
