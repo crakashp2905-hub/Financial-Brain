@@ -430,7 +430,11 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_nonhuman_actors_and_explicit_evidence_identity_are_required"), (),
                      "Continue-paper, pause, investigate, reject and request-review decisions can be stored as immutable, evidence-hashed human records; the page shows current audit blockers plus the permanent physical-order lock. The static view and audit API are not connected to an authenticated operator workflow or mode transitions."),
     # ---- F11 ----
-    "FE-0124": Entry("NOT_STARTED", (), (), "Outcome maturation queue not built."),
+    "FE-0124": Entry("PARTIAL", ("test_unfinished_and_embargoed_outcomes_never_enter_training_examples",
+                                  "test_missing_outcome_label_hash_is_not_released",
+                                  "test_unfinished_candidate_cannot_be_created_with_early_realized_label",
+                                  "test_duplicate_ids_and_naive_asof_are_rejected"), (),
+                     "Outcome queue exposes a training label only after full exit, valid outcome-source hash and elapsed embargo; unfinished, future-exit and embargoed records expose status only. The queue is not yet populated directly from reconciled paper ledgers or the versioned training pipeline."),
     "FE-0125": Entry("NOT_STARTED", (), (), "Versioned training not built."),
     "FE-0126": Entry("NOT_STARTED", (), (), "Locked cohort separation not built."),
     "FE-0127": Entry("NOT_STARTED", (), (), "Net challenger comparison not built."),
