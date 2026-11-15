@@ -1041,9 +1041,12 @@ class ForwardSessionRunner:
             effect = "REDUCE"
         if effect not in {"INCREASE", "REDUCE", "CLOSE"}:
             gate = {"required": True, "passed": False, "reason": "INVALID_POSITION_EFFECT"}
-        elif effect != "INCREASE":
+        elif effect != "INCREASE" and side in {"SELL", "NONE", "NO_TRADE"}:
             gate = {"required": False, "passed": True, "reason": "POSITION_REDUCTION",
                     "position_effect": effect}
+        elif effect != "INCREASE":
+            gate = {"required": True, "passed": False, "reason": "INVALID_POSITION_EFFECT",
+                    "position_effect": effect, "side": side}
         else:
             raw_alpha = decision.get("expected_net_alpha")
             forecast_value = decision.get("net_alpha_forecast")
@@ -1088,6 +1091,10 @@ class ForwardSessionRunner:
         """Require family proof and exact human approval before a paper order intent."""
         if config.mode is not Mode.LIVE_PAPER or decision.get("side") not in {"BUY", "SELL"}:
             return risk
+        if (decision.get("side") == "SELL"
+                and decision.get("position_effect") in {"REDUCE", "CLOSE"}):
+            return {**risk, "family_automation_gate": {
+                "required": False, "approved": True, "reason": "POSITION_REDUCTION"}}
         if config.family_evidence is None:
             gate = {"required": True, "approved": False,
                     "reasons": ["FAMILY_EVIDENCE_REQUIRED"], "evidence_sha256": None}

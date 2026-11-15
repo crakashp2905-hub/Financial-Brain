@@ -10,6 +10,9 @@ from collections.abc import Callable, Iterable
 
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
+from financial_brain.forward_edge.holding_period_schedule import (
+    HoldingScheduleError, scheduled_exit_order_intents,
+)
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.pretrade_gates import (
@@ -241,9 +244,13 @@ class ForwardPaperSessionService:
                 elif risk_stop_block is None:
                     risk_stop_block = "FIXED_LOOK_EVIDENCE_INVALID"
 
+        due_exit_decision: dict | None = None
+
         def guarded_decision(observed: list[NormalizedEvent]) -> dict:
             if self.account.risk_latched or risk_stop_block is not None:
                 return {"side": "NONE", "reason": risk_stop_block or "PAPER_ACCOUNT_RISK_LATCHED"}
+            if due_exit_decision is not None:
+                return due_exit_decision
             return decision_fn(observed)
 
         def guarded_risk(decision: dict) -> dict:
@@ -254,6 +261,12 @@ class ForwardPaperSessionService:
                     result["fixed_look_risk_stop"] = risk_stop_report
                 return result
             base_risk = risk_fn(decision)
+            if (decision.get("side") == "SELL"
+                    and decision.get("position_effect") in {"REDUCE", "CLOSE"}):
+                if not isinstance(base_risk, dict) or type(base_risk.get("approved")) is not bool:
+                    return base_risk
+                return {**base_risk, "pretrade_gate": {
+                    "required": False, "approved": True, "reason": "POSITION_REDUCTION"}}
             if pretrade_policy is None or pretrade_snapshot_fn is None or decision.get("side") not in {"BUY", "SELL"}:
                 return base_risk
             try:
@@ -294,6 +307,48 @@ class ForwardPaperSessionService:
             return result
 
         captured_events = list(events)
+        try:
+            due_exits = scheduled_exit_order_intents(
+                [event for event in captured_events if event.kind == "BOOK_POSITION"],
+                exchange_session=date.fromisoformat(config.exchange_date),
+            )
+        except (HoldingScheduleError, ValueError) as exc:
+            raise PaperAccountBridgeError(f"scheduled paper exit evidence is invalid: {exc}") from exc
+        if len(due_exits) > 1:
+            raise PaperAccountBridgeError(
+                "the single-intent paper session cannot route multiple due exits; split the closes into separate sessions")
+        if due_exits:
+            due = due_exits[0]
+            if due["instrument"] not in config.instruments:
+                raise PaperAccountBridgeError("scheduled exit instrument is outside the frozen session universe")
+            position = self.account.position(due["instrument"])
+            if position.quantity != due["quantity"]:
+                raise PaperAccountBridgeError(
+                    "scheduled exit quantity does not match the registered paper-account inventory")
+            due_hash = due["position_identity"]
+            visible_position_hashes = {
+                event.content_sha256() for event in captured_events
+                if event.kind == "BOOK_POSITION" and event.available_utc <= decision_at
+            }
+            matching_events = [
+                event for event in captured_events
+                if event.kind == "BOOK_POSITION"
+                and dict(event.payload).get("position_state") in {"EXIT_DUE", "EXIT_OVERDUE"}
+                and dict(event.payload).get("entry_day") == due_hash["entry_day"]
+                and event.instrument == due["instrument"]
+            ]
+            if not matching_events or any(event.content_sha256() not in visible_position_hashes
+                                          for event in matching_events):
+                raise PaperAccountBridgeError(
+                    "scheduled exit position evidence was not available by the frozen decision time")
+            due_exit_decision = {
+                "side": due["side"], "instrument": due["instrument"],
+                "quantity": due["quantity"], "position_effect": due["position_effect"],
+                "reason": due["reason"], "scheduled_exit_order_id": due["order_id"],
+                "scheduled_exit_session": due["scheduled_exit_session"],
+                "exit_window": due["exit_window"], "exit_calendar_id": due["calendar_id"],
+                "exit_calendar_source_sha256": due["calendar_source_sha256"],
+            }
         execution_adapter = execution_fn
         bind_updates = getattr(execution_fn, "bind_order_update_callback", None)
         if callable(bind_updates):

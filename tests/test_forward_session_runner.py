@@ -192,6 +192,28 @@ def test_live_paper_order_is_blocked_without_family_evidence_and_owner_approval(
     assert gate["reasons"] == ["FAMILY_EVIDENCE_REQUIRED"]
 
 
+def test_only_sell_side_reductions_bypass_entry_alpha_and_family_gates():
+    config = _config(family_evidence=None, family_owner_approval=None)
+    buy_marked_as_close = {"side": "BUY", "position_effect": "CLOSE"}
+    buy_hurdle = ForwardSessionRunner._apply_net_alpha_hurdle(
+        config, buy_marked_as_close, {"approved": True})
+    buy_family = ForwardSessionRunner._apply_family_automation_gate(
+        config, buy_marked_as_close, buy_hurdle, NOW)
+    assert buy_hurdle["approved"] is False
+    assert buy_hurdle["reason"] == "INVALID_POSITION_EFFECT"
+    assert buy_family["approved"] is False
+    assert buy_family["family_automation_gate"]["required"] is True
+
+    sell_close = {"side": "SELL", "position_effect": "CLOSE"}
+    sell_hurdle = ForwardSessionRunner._apply_net_alpha_hurdle(
+        config, sell_close, {"approved": True})
+    sell_family = ForwardSessionRunner._apply_family_automation_gate(
+        config, sell_close, sell_hurdle, NOW)
+    assert sell_family["approved"] is True
+    assert sell_family["family_automation_gate"] == {
+        "required": False, "approved": True, "reason": "POSITION_REDUCTION"}
+
+
 def test_live_paper_order_is_blocked_when_family_owner_approval_is_expired(tmp_path):
     base = _config()
     assert base.family_evidence is not None and base.family_owner_approval is not None

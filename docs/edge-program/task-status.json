@@ -3469,24 +3469,28 @@
       "id": "PE-0152",
       "status": "PARTIAL",
       "sources": [
-        "src/financial_brain/forward_edge/holding_period_schedule.py",
+        "docs/edge-program/pe-0152-calendar-holding-exits-evidence.json",
+        "docs/edge-program/pe-0152-calendar-holding-exits.md",
         "src/financial_brain/forward_edge/book_adapter.py",
+        "src/financial_brain/forward_edge/holding_period_schedule.py",
         "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "src/financial_brain/forward_edge/session_runner.py",
         "tests/test_forward_book_adapter.py",
         "tests/test_forward_paper_account_bridge.py",
-        "docs/edge-program/pe-0152-calendar-holding-exits.md",
-        "docs/edge-program/pe-0152-calendar-holding-exits-evidence.json"
+        "tests/test_forward_session_runner.py"
       ],
       "tests": [
+        "test_due_exchange_calendar_exit_uses_risk_execution_and_account_reconciliation",
         "test_forward_book_adapter.py",
-        "test_forward_paper_account_bridge.py"
+        "test_forward_paper_account_bridge.py",
+        "test_only_sell_side_reductions_bypass_entry_alpha_and_family_gates"
       ],
-      "test_result": "13 passed; Ruff passed.",
-      "evidence_sha256": "4af175ed26007cd5730e7329786541bc62a3fba7fe8ec9e16baeff450f2fd38f",
+      "test_result": "Calendar schedule and registered paper-service routing suites: 92 passed; Ruff and mypy passed. A registered synthetic long position is closed from a visible due exchange-calendar event through configured risk, simulated quote execution, durable receipt, and account reconciliation. Invalid quantities, BUY/CLOSE misuse, and multiple due exits fail closed.",
+      "evidence_sha256": "b19a7c7e493cdb9b37910df1857cb3d8c82b9677418c69a1a28cf4f88a649155",
       "blockers": [
-        "Authoritative exchange calendar provider and its effective-dated update process are not connected.",
-        "Scheduled exit intents are not yet automatically routed through every runner risk, paper execution, and accounting adapter.",
-        "No prospective overnight session has validated end-to-end exit order behavior."
+        "Authoritative effective-dated exchange calendar feed and automatic BOOK_POSITION construction are not wired.",
+        "The single-intent session runner cannot execute multiple due exits in one session.",
+        "No prospective overnight market session has validated the end-to-end exit behavior."
       ]
     },
     {

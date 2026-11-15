@@ -26,19 +26,19 @@
       }
     },
     {
-      "artifact_sha256": "e9e84a9d7b3c871102146e787c9c18f25aa348ff0d72bb83cfe7ee73b0605369",
+      "artifact_sha256": "7fc558e159414eeb2eeb77978a79a3a92524bdf4a3f5aacd81915e574717fd9b",
       "id": "forward-paper-account-authority",
       "maturity": "partial",
       "sources": {
-        "src/financial_brain/forward_edge/paper_account_bridge.py": "122e3a2a5f8b950d28034f6c71e631573a40617641b61a1070a7618f1eeff238",
-        "src/financial_brain/forward_edge/session_runner.py": "025c182bef6732fb660ce2a729957c3aad5cb14d1439527962e12d40daa68e64",
+        "src/financial_brain/forward_edge/paper_account_bridge.py": "b9220b970a3dc04bda3584db091355221edf811d1135d6297937a1f6591d0b7e",
+        "src/financial_brain/forward_edge/session_runner.py": "e1ea0afc71cb4af0e7e4d796455993c62e3c62c7b048fbe16093652102a670d1",
         "src/financial_brain/kernel/paper_authority.py": "e4f0a17131d3bc331edba0454e113206130d4428101e117e88f2533ffc6cbe7c",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_forward_paper_account_bridge.py": "74b3613544e59096777996341f8cf12b8cf23b264f81054d85f167de6565a71d",
-        "tests/test_forward_session_runner.py": "dbf24d422a9b875c4ea1b290f155e595e9ffee0fd8a7f9c73d58ea1a79d677d7",
+        "tests/test_forward_paper_account_bridge.py": "a2fe8f174eaf41f579823989c80147473787fadf62d2020054678771eb7ee906",
+        "tests/test_forward_session_runner.py": "46e96de6f782847f8528db3ca19a80897ac9ef766785d3728b211770fb18565f",
         "tests/test_paper_execution_authority.py": "8026404c4ed069cf68e3456a4aae1b6e057c5079fa3bd156ee47f7ac11e02c93",
         "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782"
       }
@@ -118,7 +118,7 @@
       }
     }
   ],
-  "manifest_sha256": "4c86c05cb5c9b53961fa235cf251f74fe383272b9d34e28f6fd0a0b49e1bfcdc",
+  "manifest_sha256": "74bdec786b652fa98182efbc2bb35eb9de9aa36673c8d8708a2778bf8e0aaf28",
   "matrix_sha256": "72b9b5b162e4b9239fa078da05a6aa12464900147cf8cb4e7252ba779b2237d2",
   "schema_version": "fb.capability-evidence.v1"
 }

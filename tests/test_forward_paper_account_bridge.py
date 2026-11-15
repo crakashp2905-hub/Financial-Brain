@@ -460,6 +460,74 @@ def test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotent
                         fee_schedule=SCHEDULE).position("NSE:INFY").quantity == 2
 
 
+def test_due_exchange_calendar_exit_uses_risk_execution_and_account_reconciliation(tmp_path):
+    service, config, account, _runner_path, _account_path = _service(tmp_path)
+    entry_events = [_event(DECISION_AT + timedelta(seconds=1)),
+                    _event(DECISION_AT + timedelta(seconds=2), bid="100", ask="100.05")]
+    simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)
+    entered = service.run(
+        config, entry_events, preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _events: {
+            "side": "BUY", "instrument": "NSE:INFY", "quantity": 2,
+            "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1,
+            "forecast_costs_included": True,
+            "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033,
+                                   "benchmark": 0.01, "fees": 0.001,
+                                   "spread": 0.001, "impact": 0.001},
+        },
+        risk_fn=lambda _decision: {"approved": True, "account_cash_reserve_inr": "500"},
+        execution_fn=simulator, decision_at=DECISION_AT,
+        feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+    assert entered["execution"]["status"] == "FILLED"
+    assert account.position("NSE:INFY").quantity == 2
+
+    exit_at = datetime(2026, 11, 16, 4, 0, tzinfo=timezone.utc)
+    exit_config = replace(config, session_id="account-bridge-time-exit", exchange_date="2026-11-16")
+    source_at = exit_at - timedelta(minutes=5)
+    position_event = NormalizedEvent(
+        "BOOK_POSITION", "NSE:INFY", source_at - timedelta(seconds=2),
+        source_at - timedelta(seconds=1), source_at,
+        tuple(sorted({
+            "book_version": "daily-v1", "entry_day": "2026-11-09", "exit_window": "EXCHANGE_CLOSE",
+            "exit_calendar_id": "nse-test-calendar", "exit_calendar_source_sha256": "c" * 64,
+            "exit_schedule_status": "DUE", "horizon_sessions": "5", "held_sessions": "5",
+            "mode": "live", "position_state": "EXIT_DUE", "shares": "2",
+            "signal_day": "2026-11-06", "scheduled_exit_session": "2026-11-16",
+        }.items())), ingested_utc=source_at,
+    )
+    exit_health = FeedHealth(exit_at - timedelta(seconds=1), 0, 0, 0,
+                             last_heartbeat_utc=exit_at - timedelta(seconds=1))
+    exit_events = [position_event, _event(exit_at + timedelta(seconds=1), bid="101", ask="101.05"),
+                   _event(exit_at + timedelta(seconds=2), bid="101.10", ask="101.15")]
+    risk_decisions = []
+
+    def approve_close(decision):
+        risk_decisions.append(decision)
+        assert decision["side"] == "SELL"
+        assert decision["position_effect"] == "CLOSE"
+        assert decision["reason"] == "TIME_EXIT"
+        return {"approved": True}
+
+    closed = service.run(
+        exit_config, exit_events, preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _events: pytest.fail("due scheduled exit must override a fresh entry signal"),
+        risk_fn=approve_close, execution_fn=simulator, decision_at=exit_at,
+        feed_health=exit_health, feed_health_observed_at=exit_at,
+    )
+
+    assert closed["status"] == "PAPER_COMPLETE"
+    assert closed["decision"]["scheduled_exit_session"] == "2026-11-16"
+    assert closed["risk"]["pretrade_gate"] == {
+        "required": False, "approved": True, "reason": "POSITION_REDUCTION"}
+    assert closed["risk"]["net_alpha_hurdle"]["reason"] == "POSITION_REDUCTION"
+    assert closed["risk"]["family_automation_gate"] == {
+        "required": False, "approved": True, "reason": "POSITION_REDUCTION"}
+    assert risk_decisions == [closed["decision"]]
+    assert closed["execution"]["status"] == "FILLED"
+    assert account.position("NSE:INFY").quantity == 0
+
+
 def test_forward_paper_service_rejects_legacy_intraday_authority_before_writing(tmp_path):
     service, config, account, runner_path, _ = _service(tmp_path)
     service.authority_registry = PaperExecutionAuthorityRegistry(
