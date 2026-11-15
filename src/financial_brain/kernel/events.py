@@ -16,7 +16,9 @@ Side-effect outbox semantics (FE-0011, FE-0013):
   is never re-run automatically; ``side_effect`` raises ``UnknownOutcome`` until ``resolve_unknown`` records a
   reconciliation (the effect happened, or it provably did not).
 
-The outbox is in-memory only. Durable write-ahead persistence (FE-0012) is not implemented here.
+When ``journal_path`` is provided, event, outbox and reconciliation state are persisted in SQLite WAL mode with
+FULL synchronous writes. On restore, an unresolved PENDING record is treated as UNKNOWN; only a persisted
+reconciliation proving no effect permits a retry. Without a journal path, state remains in memory.
 """
 from __future__ import annotations
 
