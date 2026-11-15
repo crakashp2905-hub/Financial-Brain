@@ -8,11 +8,12 @@
 - A clock failure after an order intent exists leaves the outbox explicitly UNKNOWN and without execution acknowledgment or session close; the system requires reconciliation instead of claiming no loss.
 - Existing account, position, and risk records remain untouched on feed refusal; the runner never force-flats or overwrites them.
 - `ForwardPaperSessionService`, the registered cash-account path, now requires `require_feed_health`, a preflight snapshot, and its observation time before running. It records that snapshot durably before preflight; retries reuse the identical snapshot, while stale snapshots fail closed before strategy, risk, or execution callbacks.
+- `ForwardRunConfig` now makes feed health mandatory for every `LIVE_PAPER` session by default and rejects an explicit opt-out. The `ForwardSessionRunner.run` entry point validates the complete configuration before claiming paper authority or writing the session journal. Replay and shadow sessions retain their existing opt-in behavior.
 
 ## Verification
 
-`tests/test_forward_session_runner.py`, `tests/test_forward_session_crash_matrix.py`, `tests/test_forward_feed_health.py`, and `tests/test_forward_paper_account_bridge.py`: 80 passed. Ruff and mypy passed. Tests verify stale and missing health, service-level non-bypass, decision-clock failure, execution-clock uncertainty, durable incomplete state, and absence of paper intent/clean close on pre-entry outage.
+The runner, crash-matrix, feed-health, account-bridge, paper-execution, pre-trade, decision-sealing, book-adapter, date-ledger, capture-start, Kite-forward-event, and phase-5 suites: 176 passed. Ruff and mypy passed. Tests verify that disabled health policy is rejected before authority or journal writes, healthy live-paper evidence is accepted, stale/missing health blocks callbacks, and replay/shadow scenarios retain their expected behavior.
 
 ## Remaining evidence gap
 
-The direct `ForwardSessionRunner` still exposes `require_feed_health` as a caller policy, and the Kite poller is not yet connected to the registered account service to enforce health for every observed paper session. Continuous intra-session monitoring is not wired to a production session orchestrator, and no real forward outage drill is claimed. Therefore this task remains PARTIAL.
+The Kite poller is not yet connected to the registered account service to enforce health for every observed paper session. Continuous intra-session monitoring is not wired to a production session orchestrator, and no real forward outage drill is claimed. Therefore this task remains PARTIAL.

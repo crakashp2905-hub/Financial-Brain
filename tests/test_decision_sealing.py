@@ -19,7 +19,7 @@ def _config(session_id="sealed-session"):
         session_id=session_id, exchange_date="2026-11-16", cohort_id="sealed-cohort",
         strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
         constraints_sha256="c" * 64, ledger_id="sealed-ledger", benchmark_id="NIFTY50",
-        instruments=("NSE:INFY",), capital_inr="100000", mode=Mode.LIVE_PAPER,
+        instruments=("NSE:INFY",), capital_inr="100000", mode=Mode.SHADOW,
         authority_strategy_id="test-strategy", authority_account_id="test-account",
     )
 

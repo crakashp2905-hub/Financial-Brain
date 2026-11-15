@@ -127,6 +127,12 @@ class ForwardPaperSessionService:
             pretrade_snapshot_fn: Callable[[ForwardRunConfig, dict, list[NormalizedEvent], datetime],
                                            PreTradeSnapshot] | None = None) -> dict:
         """Persist one preflight, run the session, then reconcile its receipt to PaperAccount."""
+        if config.mode is Mode.LIVE_PAPER and config.require_feed_health is False:
+            raise PaperAccountBridgeError("LIVE_PAPER account service requires feed-health gating")
+        try:
+            config.canonical()
+        except RunnerError as exc:
+            raise PaperAccountBridgeError(f"invalid LIVE_PAPER session configuration: {exc}") from exc
         if (pretrade_policy is None) != (pretrade_snapshot_fn is None):
             raise PaperAccountBridgeError("pre-trade policy requires a matching snapshot adapter")
         if (config.pretrade_policy_sha256 is None) != (pretrade_policy is None):
@@ -146,7 +152,7 @@ class ForwardPaperSessionService:
                            if existing_decision is not None
                            else self.runner.clock_provider.decision_time())
         allocation = self._validate_strategy(config, decision_at)
-        if not config.require_feed_health:
+        if not config.feed_health_required:
             raise PaperAccountBridgeError("LIVE_PAPER account service requires feed-health gating")
         prior_feed_health = []
         if self.runner.journal_path.exists():

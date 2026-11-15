@@ -3534,20 +3534,35 @@
         "docs/edge-program/pe-0154-feed-clock-fail-closed-evidence.json",
         "src/financial_brain/forward_edge/paper_account_bridge.py",
         "tests/test_forward_paper_account_bridge.py",
-        "tests/test_forward_feed_health.py"
+        "tests/test_forward_feed_health.py",
+        "tests/test_forward_paper_execution_adapter.py",
+        "tests/test_pretrade_gates.py",
+        "tests/test_decision_sealing.py",
+        "tests/test_forward_book_adapter.py",
+        "tests/test_session_date_ledger.py",
+        "tests/test_source_capture_start.py",
+        "tests/test_kite_forward_events.py",
+        "tests/test_phase5_intraday_runner.py"
       ],
       "tests": [
         "test_forward_session_runner.py",
         "test_forward_session_crash_matrix.py",
-        "test_live_paper_service_requires_health_snapshot_before_preflight",
-        "test_live_paper_service_stale_health_fails_closed_before_strategy",
-        "test_registered_live_paper_service_cannot_disable_feed_health_gate"
+        "test_forward_feed_health.py",
+        "test_forward_paper_account_bridge.py",
+        "test_forward_paper_execution_adapter.py",
+        "test_pretrade_gates.py",
+        "test_decision_sealing.py",
+        "test_forward_book_adapter.py",
+        "test_session_date_ledger.py",
+        "test_source_capture_start.py",
+        "test_kite_forward_events.py",
+        "test_phase5_intraday_runner.py"
       ],
-      "test_result": "80 tests across runner, crash-matrix, feed-health, and paper-account bridge suites passed; Ruff and mypy passed. The registered account bridge requires and journals feed health before preflight, rejects disabled health gating and stale snapshots, reuses identical snapshots idempotently, and fails closed before decision, risk, or execution.",
-      "evidence_sha256": "d1c4810f737b9039bbf6a6a6370b88f53455ad87773fc819a1e7fedc1818e451",
+      "test_result": "176 passed in 88.46s; Ruff and mypy passed. Tests verify default mandatory LIVE_PAPER feed-health policy, explicit opt-out refusal before authority/journal writes, healthy/stale/missing feed handling, and replay/shadow lifecycle behavior.",
+      "evidence_sha256": "9ab1d1cda0b53f9a7f2cbb61f217f2b70cd885d6e65062944b807c7be5789ccb",
       "blockers": [
-        "Direct ForwardSessionRunner callers can still configure require_feed_health=false, and the Kite poller is not wired to enforce health through the registered account service for every observed paper session.",
-        "Continuous live health monitoring and fault injection across a forward market session remain unverified."
+        "The Kite poller is not yet connected to the registered account service to enforce health for every observed paper session.",
+        "Continuous intra-session monitoring and fault injection across a prospective forward market session remain unverified."
       ]
     },
     {

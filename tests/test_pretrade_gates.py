@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.pretrade_gates import (
@@ -118,10 +118,16 @@ def test_failed_gate_is_written_as_durable_attributable_paper_skip(tmp_path, pol
         strategy_sha256=policy.strategy_sha256, risk_policy_sha256="b" * 64,
         constraints_sha256="c" * 64, ledger_id="pretrade-ledger", benchmark_id="NIFTY50",
         instruments=(snapshot.instrument,), capital_inr="100000", mode=Mode.LIVE_PAPER,
+        require_feed_health=True,
         authority_strategy_id="test-strategy", authority_account_id="test-account",
     )
     runner = ForwardSessionRunner(tmp_path / "paper.jsonl")
     runner.record_preflight(config, {"approved": True, "status": "READY"})
+    runner.record_feed_health(
+        config, FeedHealth(snapshot.quote.available_utc, 0, 0, 0,
+                           last_heartbeat_utc=snapshot.quote.available_utc),
+        observed_at=snapshot.decision_at,
+    )
     failed_snapshot = PreTradeSnapshot(**{**snapshot.__dict__, "model_confidence": 0.2})
     gate = evaluate_pretrade(policy, failed_snapshot)
     result = runner.run(

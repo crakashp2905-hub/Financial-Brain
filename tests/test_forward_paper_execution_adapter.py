@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
 from financial_brain.forward_edge.approvals import Approval
 from financial_brain.forward_edge.governance import FamilyEvidence, family_action_scope_sha256
@@ -150,11 +150,16 @@ def test_quote_simulator_is_connected_to_durable_runner(tmp_path):
         strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
         constraints_sha256="c" * 64, ledger_id="ledger-a", benchmark_id="NIFTY50",
         instruments=("NSE:INFY",), capital_inr=str(capital), mode=Mode.LIVE_PAPER,
+        require_feed_health=True,
         authority_strategy_id="test-strategy", authority_account_id="test-account",
         family_evidence=family, family_owner_approval=approval,
     )
     runner = ForwardSessionRunner(tmp_path / "session.jsonl")
     runner.record_preflight(config, {"approved": True, "status": "PASS"})
+    runner.record_feed_health(
+        config, FeedHealth(DECISION_AT, 0, 0, 0, last_heartbeat_utc=DECISION_AT),
+        observed_at=DECISION_AT,
+    )
     baseline = _quote(DECISION_AT - timedelta(milliseconds=10), bid="99.8", ask="100.0")
     quote = _quote(DECISION_AT + timedelta(milliseconds=50), bid="100.0", ask="100.2")
     simulator = MarketableQuoteSimulator({"NSE:INFY": Decimal("0.05")}, **MODEL_EVIDENCE)

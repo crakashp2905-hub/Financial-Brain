@@ -54,6 +54,7 @@ def test_kite_capture_start_receipt_is_persisted_before_quote_request(tmp_path):
         strategy_sha256="a" * 64, risk_policy_sha256="b" * 64, constraints_sha256="c" * 64,
         ledger_id="ledger-1", benchmark_id="NIFTY50", instruments=("NSE:INFY",),
         capital_inr="100000", mode=Mode.LIVE_PAPER,
+        require_feed_health=True,
         authority_strategy_id="momentum", authority_account_id="paper-1",
     )
     capture_receipt = CaptureStartReceipt(

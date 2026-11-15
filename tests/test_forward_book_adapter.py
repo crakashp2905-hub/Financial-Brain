@@ -46,7 +46,7 @@ def _config():
         session_id="book-horizon-session", exchange_date="2026-11-12", cohort_id="C1",
         strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
         constraints_sha256="c" * 64, ledger_id="LEDGER-1", benchmark_id="NIFTY50",
-        instruments=("NSE:INFY",), capital_inr="1000000", mode=Mode.LIVE_PAPER,
+        instruments=("NSE:INFY",), capital_inr="1000000", mode=Mode.SHADOW,
         authority_strategy_id="test-strategy", authority_account_id="test-account",
     )
 

@@ -39,7 +39,7 @@ NOW = datetime(2026, 11, 12, 4, 0, tzinfo=timezone.utc)
 def test_direct_live_runner_requires_ids_and_claims_authority_before_journal_write(tmp_path):
     journal_path = tmp_path / "session.jsonl"
     runner = ForwardSessionRunner(journal_path)
-    config = _config()
+    config = _live_config()
     registry = PaperExecutionAuthorityRegistry(tmp_path / "paper_authority.sqlite3")
     registry.claim(strategy_id="test-strategy", exchange_date=config.exchange_date,
                    engine_id="legacy_intraday", account_id="legacy-book")
@@ -55,9 +55,9 @@ def test_direct_live_runner_requires_ids_and_claims_authority_before_journal_wri
 def test_direct_live_runner_rejects_missing_authority_identity_before_writes(tmp_path):
     journal_path = tmp_path / "session.jsonl"
     runner = ForwardSessionRunner(journal_path)
-    config = _config(authority_strategy_id=None, authority_account_id=None)
+    config = _live_config(authority_strategy_id=None, authority_account_id=None)
 
-    with pytest.raises(RunnerError, match="authority IDs"):
+    with pytest.raises(RunnerError, match="authority"):
         runner.run(config, [], decision_at=NOW,
                    decision_fn=lambda _events: {}, risk_fn=lambda _decision: {},
                    execution_fn=lambda *_: {})
@@ -65,12 +65,30 @@ def test_direct_live_runner_rejects_missing_authority_identity_before_writes(tmp
     assert not journal_path.exists()
 
 
+def test_direct_live_runner_cannot_disable_feed_health_before_any_write(tmp_path):
+    journal_path = tmp_path / "feed-policy.jsonl"
+    runner = ForwardSessionRunner(journal_path)
+    config = _config(mode=Mode.LIVE_PAPER, require_feed_health=False)
+
+    with pytest.raises(RunnerError, match="requires mandatory feed-health evidence"):
+        runner.run(config, [], decision_at=NOW, decision_fn=lambda _: {},
+                   risk_fn=lambda _: {}, execution_fn=lambda *_: {})
+
+    assert not journal_path.exists()
+
+
+def test_live_paper_defaults_to_required_feed_health_policy():
+    config = _config(mode=Mode.LIVE_PAPER)
+    assert config.feed_health_required is True
+    assert config.canonical()["require_feed_health"] is True
+
+
 def _config(**changes):
     values = dict(session_id="S-1", exchange_date="2026-11-12", cohort_id="C1",
                   strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
                   constraints_sha256="c" * 64, ledger_id="LEDGER-1",
                   benchmark_id="NIFTY50", instruments=("NSE:INFY",),
-                  capital_inr="1000000", mode=Mode.LIVE_PAPER,
+                  capital_inr="1000000", mode=Mode.SHADOW,
                   authority_strategy_id="test-strategy", authority_account_id="test-account")
     values.update(changes)
     if "family_evidence" not in changes and "family_owner_approval" not in changes:
@@ -97,6 +115,19 @@ def _config(**changes):
         values["family_evidence"] = evidence
         values["family_owner_approval"] = approval
     return ForwardRunConfig(**values)
+
+
+def _live_config(**changes):
+    return _config(mode=Mode.LIVE_PAPER, require_feed_health=True, **changes)
+
+
+def _record_healthy_feed(runner, config, observed_at=NOW):
+    runner.record_feed_health(
+        config,
+        FeedHealth(last_available_utc=observed_at - timedelta(seconds=1), gaps=0, disconnects=0,
+                   dropped_updates=0, last_heartbeat_utc=observed_at),
+        observed_at=observed_at,
+    )
 
 
 def _event(available=NOW - timedelta(seconds=1)):
@@ -142,9 +173,11 @@ def _benefit_policy():
 
 def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_path):
     runner = ForwardSessionRunner(tmp_path / "session.jsonl")
-    _approve_preflight(runner)
+    config = _live_config()
+    _approve_preflight(runner, config)
+    _record_healthy_feed(runner, config)
     calls = []
-    result = runner.run(_config(), [_event(), _event(NOW + timedelta(seconds=1))], decision_at=NOW,
+    result = runner.run(config, [_event(), _event(NOW + timedelta(seconds=1))], decision_at=NOW,
                         decision_fn=lambda events: {"side": "BUY", "expected_net_alpha": 0.02, "forecast_horizon_sessions": 1, "forecast_costs_included": True, "net_alpha_forecast": {"horizon": 1, "expected_return": 0.033, "benchmark": 0.01, "fees": 0.001, "spread": 0.001, "impact": 0.001}, "count": len(events)},
                         risk_fn=lambda decision: {"approved": True},
                         execution_fn=lambda decision, intent, events: calls.append((intent, events)) or {
@@ -157,7 +190,7 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     assert len(calls) == 1 and len(calls[0][1]) == 2
     record_types = [r["t"] for r in DurableJournal(tmp_path / "session.jsonl").records()]
     assert record_types == ["SESSION_PLAN", "SESSION_STATE", "SESSION_STATE", "SESSION_STATE",
-                            "PREFLIGHT_RESULT", "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT", "SESSION_STATE",
+                            "PREFLIGHT_RESULT", "FEED_HEALTH", "MARKET_EVENT", "MARKET_EVENT", "DECISION", "RISK_VERDICT", "SESSION_STATE",
                             "PAPER_INTENT", "OUTBOX_PENDING", "PAPER_EXECUTION", "OUTBOX_ACK", "PAPER_ORDER_UPDATE", "PAPER_SKIP",
                             "SESSION_STATE", "SESSION_CLOSED"]
     records = DurableJournal(tmp_path / "session.jsonl").records()
@@ -171,8 +204,9 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
 
 def test_live_paper_order_is_blocked_without_family_evidence_and_owner_approval(tmp_path):
     runner = ForwardSessionRunner(tmp_path / "session.jsonl")
-    config = _config(family_evidence=None, family_owner_approval=None)
+    config = _live_config(family_evidence=None, family_owner_approval=None)
     _approve_preflight(runner, config)
+    _record_healthy_feed(runner, config)
     execution_calls = []
     result = runner.run(
         config, [_event()], decision_at=NOW,
@@ -193,7 +227,7 @@ def test_live_paper_order_is_blocked_without_family_evidence_and_owner_approval(
 
 
 def test_only_sell_side_reductions_bypass_entry_alpha_and_family_gates():
-    config = _config(family_evidence=None, family_owner_approval=None)
+    config = _live_config(family_evidence=None, family_owner_approval=None)
     buy_marked_as_close = {"side": "BUY", "position_effect": "CLOSE"}
     buy_hurdle = ForwardSessionRunner._apply_net_alpha_hurdle(
         config, buy_marked_as_close, {"approved": True})
@@ -215,7 +249,7 @@ def test_only_sell_side_reductions_bypass_entry_alpha_and_family_gates():
 
 
 def test_live_paper_order_is_blocked_when_family_owner_approval_is_expired(tmp_path):
-    base = _config()
+    base = _live_config()
     assert base.family_evidence is not None and base.family_owner_approval is not None
     expired = Approval(
         base.family_owner_approval.kind, base.family_owner_approval.subject,
@@ -223,9 +257,10 @@ def test_live_paper_order_is_blocked_when_family_owner_approval_is_expired(tmp_p
         datetime(2025, 1, 1, tzinfo=timezone.utc),
         datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
-    config = _config(family_evidence=base.family_evidence, family_owner_approval=expired)
+    config = _live_config(family_evidence=base.family_evidence, family_owner_approval=expired)
     runner = ForwardSessionRunner(tmp_path / "expired-approval.jsonl")
     _approve_preflight(runner, config)
+    _record_healthy_feed(runner, config)
     calls = []
     result = runner.run(
         config, [_event()], decision_at=NOW,
@@ -473,7 +508,7 @@ def test_no_trade_signal_never_reaches_execution_adapter(tmp_path):
 
 
 def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
-    assert _config().sha256 == "8f9bc7f06ef12a4da7059b0d51e968c170bf99ba7204a1f7a57c421e90435507"
+    assert _config().sha256 == "bd18f547da071a3f8847bbaf4e305be401b6d59c981d626e847f47d473c17051"
     assert _config(capital_inr="1000000.00").sha256 == _config(capital_inr="1000000").sha256
     assert _config(ledger_id="LEDGER-2").sha256 != _config().sha256
     assert _config(risk_policy_sha256="d" * 64).sha256 != _config().sha256
@@ -1055,9 +1090,10 @@ def _degradation_observation(policy, observation_id, *, alpha=5.0):
 
 def test_runner_persists_closed_session_degradation_observation(tmp_path):
     policy = _degradation_policy()
-    config = _config(degradation_policy_sha256=policy.policy_sha256)
+    config = _live_config(degradation_policy_sha256=policy.policy_sha256)
     journal_path = tmp_path / "session.jsonl"
     runner = ForwardSessionRunner(journal_path)
+    _record_healthy_feed(runner, config)
     observed_sessions = []
 
     def observe(run_config, _result, _records):
@@ -1096,7 +1132,7 @@ def test_runner_persists_closed_session_degradation_observation(tmp_path):
 
 def test_runner_rejects_degradation_policy_for_another_strategy_version(tmp_path):
     policy = _degradation_policy("other-version")
-    config = _config(degradation_policy_sha256=policy.policy_sha256)
+    config = _live_config(degradation_policy_sha256=policy.policy_sha256)
     journal_path = tmp_path / "session.jsonl"
     runner = ForwardSessionRunner(journal_path)
     with pytest.raises(RunnerError, match="strategy digest"):
@@ -1117,9 +1153,10 @@ def test_durable_degradation_pause_blocks_next_runner_candidate(tmp_path):
     assert monitor.observe(_degradation_observation(policy, "prior-session", alpha=-1.0)).action == \
         DegradationAction.PAUSE
 
-    config = _config(session_id="S-2", exchange_date="2026-11-13",
-                     degradation_policy_sha256=policy.policy_sha256)
+    config = _live_config(session_id="S-2", exchange_date="2026-11-13",
+                          degradation_policy_sha256=policy.policy_sha256)
     runner = ForwardSessionRunner(journal_path)
+    _record_healthy_feed(runner, config, observed_at=NOW + timedelta(days=1))
     result = runner.run(
         config, [], decision_at=NOW + timedelta(days=1),
         decision_fn=lambda _: {"side": "BUY", "position_effect": "INCREASE"},
@@ -1143,10 +1180,11 @@ def test_durable_degradation_pause_still_allows_explicit_position_close(tmp_path
     journal_path = tmp_path / "session.jsonl"
     monitor = DegradationMonitor(policy, journal=DurableJournal(journal_path))
     monitor.observe(_degradation_observation(policy, "prior-session", alpha=-1.0))
-    config = _config(session_id="S-2", exchange_date="2026-11-13",
-                     degradation_policy_sha256=policy.policy_sha256)
+    config = _live_config(session_id="S-2", exchange_date="2026-11-13",
+                          degradation_policy_sha256=policy.policy_sha256)
     runner = ForwardSessionRunner(journal_path)
     _approve_preflight(runner, config)
+    _record_healthy_feed(runner, config, observed_at=NOW + timedelta(days=1))
     result = runner.run(
         config, [], decision_at=NOW + timedelta(days=1),
         decision_fn=lambda _: {"side": "SELL", "position_effect": "CLOSE", "quantity": 1},

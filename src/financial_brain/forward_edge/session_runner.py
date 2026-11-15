@@ -81,7 +81,7 @@ class ForwardRunConfig:
     forecast_benefit_policy_sha256: str | None = None
     degradation_policy_sha256: str | None = None
     pretrade_policy_sha256: str | None = None
-    require_feed_health: bool = False
+    require_feed_health: bool | None = None
     family_evidence: FamilyEvidence | None = None
     family_owner_approval: Approval | None = None
     authority_strategy_id: str | None = None
@@ -107,8 +107,10 @@ class ForwardRunConfig:
         if ((self.authority_strategy_id is not None and not self.authority_strategy_id.strip())
                 or (self.authority_account_id is not None and not self.authority_account_id.strip())):
             raise RunnerError("paper authority identifiers must be nonempty when supplied")
-        if type(self.require_feed_health) is not bool:
-            raise RunnerError("require_feed_health must be a boolean")
+        if self.require_feed_health is not None and type(self.require_feed_health) is not bool:
+            raise RunnerError("require_feed_health must be a boolean when supplied")
+        if self.mode is Mode.LIVE_PAPER and self.require_feed_health is False:
+            raise RunnerError("LIVE_PAPER requires mandatory feed-health evidence")
         if (isinstance(self.minimum_forecast_net_alpha, bool)
                 or not isinstance(self.minimum_forecast_net_alpha, (int, float))
                 or not math.isfinite(self.minimum_forecast_net_alpha)
@@ -186,9 +188,14 @@ class ForwardRunConfig:
                 if approval.expires_at_utc.tzinfo is not None else None,
                 "adr_ref": approval.adr_ref,
             }
-        if self.require_feed_health:
+        if self.feed_health_required:
             canonical["require_feed_health"] = True
         return canonical
+
+    @property
+    def feed_health_required(self) -> bool:
+        """LIVE_PAPER always requires feed health; other modes opt in explicitly."""
+        return self.mode is Mode.LIVE_PAPER or self.require_feed_health is True
 
     @property
     def session_key(self) -> str:
@@ -608,6 +615,8 @@ class ForwardSessionRunner:
                                                  RollingObservation] | None = None) -> dict:
         from financial_brain.forward_edge.market_data import decision_visible
 
+        # Validate the full run policy before claiming execution authority or writing evidence.
+        config.canonical()
         if (degradation_policy is None) != (config.degradation_policy_sha256 is None):
             raise RunnerError("configured degradation policy and run-time policy must be supplied together")
         if (degradation_policy is None) != (degradation_observation_fn is None):
@@ -724,7 +733,7 @@ class ForwardSessionRunner:
             )
             allowed, feed_health_reasons = entry_allowed(health, visible_at)
         else:
-            allowed = not config.require_feed_health
+            allowed = not config.feed_health_required
             if not allowed:
                 feed_health_reasons = ["FEED_HEALTH_MISSING"]
         if not allowed:
