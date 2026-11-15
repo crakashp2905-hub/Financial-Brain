@@ -3355,7 +3355,9 @@
         "docs/edge-program/task-status.json",
         "docs/edge-program/source-inventory.json",
         "src/financial_brain/ingest/kite_live.py",
-        "tests/test_kite_forward_events.py"
+        "tests/test_kite_forward_events.py",
+        "src/financial_brain/paper/intraday_runner.py",
+        "tests/test_phase5_intraday_runner.py"
       ],
       "tests": [
         "test_capture_start_is_journaled_before_market_events_with_session_evidence",
@@ -3363,12 +3365,16 @@
         "test_missing_expired_or_disabled_entitlements_are_visible_and_block_eligibility",
         "test_receipt_cannot_be_changed_or_added_after_capture_events",
         "test_clock_evidence_and_capture_identity_are_mandatory",
-        "test_kite_capture_start_receipt_is_persisted_before_quote_request"
+        "test_kite_capture_start_receipt_is_persisted_before_quote_request",
+        "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink",
+        "test_live_runner_rejects_stale_kite_timestamp_before_forward_event_sink",
+        "test_live_runner_can_opt_in_to_authorized_raw_quote_archive",
+        "test_live_forward_sink_without_capture_receipt_is_no_trade_and_emits_no_events"
       ],
-      "test_result": "19 Kite forward-event and capture-start tests passed; Ruff and mypy passed. The Kite adapter can journal a typed capture-start receipt before its quote request when the caller supplies the runner, config, and receipt.",
-      "evidence_sha256": "0469372178252bc3a401a2c19f401ef2bea9004a57883135e26b42e79b81f911",
+      "test_result": "40 intraday-runner, Kite forward-event, and capture-start tests passed; Ruff and mypy passed. The regular live poll loop persists its typed receipt before the first Kite quote request, routes later events, and fail-closes the event sink when evidence is missing.",
+      "evidence_sha256": "790eabe8ae78f7d7c227b6905b5f4386344069affca0051b582cef926bf1f9bc",
       "blockers": [
-        "Live Kite capture startup does not call this receipt API.",
+        "Caller-owned live launch configuration must provide the capture runner/config/receipt; no trusted automatic receipt provider is configured.",
         "Clock and entitlement evidence remains caller-supplied and unauthenticated.",
         "No actual observed capture session was produced."
       ]

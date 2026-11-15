@@ -22,6 +22,7 @@ import re
 import time as _time
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import duckdb
 import numpy as np
@@ -30,6 +31,10 @@ import pandas as pd
 from . import board as BD
 from . import intraday as I
 from ..costs.calculator import bucket_for
+
+if TYPE_CHECKING:
+    from ..forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
+    from ..forward_edge.source_capture_start import CaptureStartReceipt
 
 IST = timezone(timedelta(hours=5, minutes=30))
 POLL_SECONDS = 20
@@ -260,7 +265,9 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
              event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None,
              raw_archive=None, authority_path: Path | None = None,
              source_timestamp_tolerance: timedelta = KITE_SOURCE_TIMESTAMP_TOLERANCE,
-             strategy_registry=None) -> dict:
+             strategy_registry=None, capture_runner: ForwardSessionRunner | None = None,
+             capture_config: ForwardRunConfig | None = None,
+             capture_receipt: CaptureStartReceipt | None = None) -> dict:
     from ..providers import kite_data as kd
     if not isinstance(source_timestamp_tolerance, timedelta) or source_timestamp_tolerance < timedelta(0):
         raise ValueError("Kite source timestamp tolerance must be a non-negative timedelta")
@@ -307,6 +314,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         qcon = None
     polls = failures = capture_failures = 0
     capture_issue = None
+    capture_start_ready = event_sink is None
     session_issue = None
     seen_today = False
     last: dict[str, float] = {}
@@ -315,15 +323,40 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     quote_at = None
     publish(path, eng, now=now, status="Starting paper session", polls=polls)
     if event_sink is not None:
-        if preflight_sink is None or rejection_sink is None:
+        sinks_ready = preflight_sink is not None and rejection_sink is not None
+        if not sinks_ready:
             capture_failures += 1
             capture_issue = "forward evidence requires preflight and rejection sinks"
+        if any(value is not None for value in (capture_runner, capture_config, capture_receipt)):
+            if capture_runner is None or capture_config is None or capture_receipt is None:
+                capture_failures += 1
+                capture_issue = "capture runner, config, and receipt must be supplied together"
+            else:
+                try:
+                    if capture_config.exchange_date != day:
+                        raise ValueError("source capture config date differs from the live market date")
+                    from ..forward_edge.source_capture_start import record_capture_start
+                    capture_marker = record_capture_start(capture_runner, capture_config, capture_receipt)
+                    if capture_marker["entry_allowed_by_entitlement"] is not True:
+                        raise ValueError("source entitlements are missing, invalid, or expired")
+                    capture_start_ready = sinks_ready
+                except Exception as e:  # noqa: BLE001 - invalid provenance blocks forward evidence
+                    capture_failures += 1
+                    capture_issue = f"source capture start failed: {type(e).__name__}"
+                    log.warning("source capture start failed: %s", capture_issue)
+        else:
+            capture_failures += 1
+            capture_issue = "forward evidence requires a durable source-capture start receipt"
         if preflight_sink is not None:
             try:
                 preflight = (preflight_fn() if preflight_fn is not None else
                              {"approved": False, "status": "MISSING", "reason": "PREFLIGHT_NOT_CONFIGURED"})
                 if not isinstance(preflight, dict) or type(preflight.get("approved")) is not bool:
                     preflight = {"approved": False, "status": "INVALID", "reason": "PREFLIGHT_INVALID"}
+                if not capture_start_ready or capture_failures:
+                    preflight = {**preflight, "approved": False, "status": "NO_TRADE",
+                                 "reason": "SOURCE_CAPTURE_START_MISSING_OR_INVALID",
+                                 "capture_error": capture_issue}
                 preflight_sink(preflight)
             except Exception as e:                       # noqa: BLE001 - missing evidence downgrades the paper record
                 capture_failures += 1
@@ -345,13 +378,17 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             # Enforce the same source-age policy on the legacy DayEngine path.
             fresh_q = _fresh_kite_quotes(q, poll_received_at, source_timestamp_tolerance)
             if event_sink is not None:
-                from ..ingest.kite_live import forward_events
                 try:
+                    if not capture_start_ready:
+                        raise RuntimeError("source-capture receipt is unavailable; forward events are blocked")
+                    from ..ingest.kite_live import forward_events
                     rejections: list[dict] = []
-                    events = forward_events(syms, quote_fn=lambda *_args, snapshot=q: snapshot,
-                                            received_at=poll_received_at, rejections_out=rejections,
-                                            raw_archive=raw_archive,
-                                            source_timestamp_tolerance=source_timestamp_tolerance)
+                    events = forward_events(
+                        syms, quote_fn=lambda *_args, snapshot=q: snapshot,
+                        received_at=poll_received_at, rejections_out=rejections,
+                        raw_archive=raw_archive,
+                        source_timestamp_tolerance=source_timestamp_tolerance,
+                    )
                     event_sink(events)
                     if rejections:
                         if rejection_sink is None:

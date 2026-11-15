@@ -18,6 +18,31 @@ class Clock:
         self.t += timedelta(seconds=s)
 
 
+def _capture_context(path, started_at, session_id, instruments=("NSE:X",)):
+    from financial_brain.forward_edge.market_data import FeedHealth
+    from financial_brain.forward_edge.source_capture_start import CaptureStartReceipt, SourceEntitlement
+    from financial_brain.forward_edge.modes import Mode
+    from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
+
+    runner = ForwardSessionRunner(path)
+    config = ForwardRunConfig(
+        session_id=session_id, exchange_date=started_at.date().isoformat(), cohort_id="capture-test",
+        strategy_sha256="a" * 64, risk_policy_sha256="b" * 64, constraints_sha256="c" * 64,
+        ledger_id="capture-test-ledger", benchmark_id="NIFTY50", instruments=instruments,
+        capital_inr="1000000", mode=Mode.SHADOW, authority_strategy_id="capture-test",
+        authority_account_id="capture-test-account",
+    )
+    receipt = CaptureStartReceipt(
+        capture_id=f"capture:{session_id}", capture_started_at=started_at,
+        earliest_decision_at=started_at + timedelta(minutes=1), clock_skew_ms=1.0,
+        clock_evidence_id="fixture:clock",
+        quote_health=FeedHealth(None, 0, 0, 0),
+        entitlements=(SourceEntitlement("kite-quotes", "kite-connect", True,
+                                        "fixture:entitlement", started_at + timedelta(hours=8)),),
+    )
+    return runner, config, receipt
+
+
 def price_at(t):
     m = t.hour * 60 + t.minute
     if m < 570:
@@ -126,24 +151,18 @@ def test_new_orb_gap_monitoring_is_shadow_and_historical_failed_live_rows_remain
 def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, monkeypatch):
     from financial_brain.forward_edge.market_data import NormalizedEvent
     from financial_brain.forward_edge.durable import DurableJournal
-    from financial_brain.forward_edge.modes import Mode
-    from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
 
     c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
     monkeypatch.setattr(R, "universe", lambda n=200: [
         {"tradingsymbol": "X", "adv": 5e9}, {"tradingsymbol": "Y", "adv": 4e9}
     ])
-    forward = ForwardSessionRunner(setup / "forward.jsonl")
-    config = ForwardRunConfig(session_id="PAPER-2026-10-06", exchange_date="2026-10-06", cohort_id="C1",
-                              strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
-                              constraints_sha256="c" * 64, ledger_id="PAPER-LEDGER-1",
-                              benchmark_id="NIFTY50", instruments=("NSE:X", "NSE:Y"), capital_inr="1000000",
-                              mode=Mode.SHADOW,
-                              authority_strategy_id="test-strategy",
-                              authority_account_id="test-account")
-    forward.begin(config)
+    forward, config, capture_receipt = _capture_context(
+        setup / "forward.jsonl", c.now(), "PAPER-2026-10-06", instruments=("NSE:X", "NSE:Y"))
 
     def quote(symbols, kind):
+        if not forward.journal_path.exists() or not any(
+                row.get("t") == "SOURCE_CAPTURE_START" for row in DurableJournal(forward.journal_path).records()):
+            pytest.fail("capture receipt must be durable before the first Kite quote request")
         assert kind == "full"
         return {s: {"timestamp": "invalid" if s == "NSE:Y" else c.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "last_price": 100.0,
@@ -157,7 +176,8 @@ def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, m
                      poll=300, event_sink=lambda events: forward.append_events(config, events),
                      preflight_fn=lambda: {"approved": True, "status": "PASS", "checks": {"kite": True}},
                      preflight_sink=lambda result: forward.record_preflight(config, result),
-                     rejection_sink=lambda rows: forward.record_data_rejections(config, rows))
+                     rejection_sink=lambda rows: forward.record_data_rejections(config, rows),
+                     capture_runner=forward, capture_config=config, capture_receipt=capture_receipt)
     assert out["status"] == "complete"
     stored = [r["event"] for r in DurableJournal(setup / "forward.jsonl").records()
               if r["t"] == "MARKET_EVENT"]
@@ -169,6 +189,9 @@ def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, m
                         datetime.fromisoformat(r["received_utc"]), datetime.fromisoformat(r["available_utc"]),
                         tuple(tuple(p) for p in r["payload"])) for r in stored])
     journal_records = DurableJournal(setup / "forward.jsonl").records()
+    capture_index = next(i for i, row in enumerate(journal_records) if row["t"] == "SOURCE_CAPTURE_START")
+    market_index = next(i for i, row in enumerate(journal_records) if row["t"] == "MARKET_EVENT")
+    assert capture_index < market_index
     assert any(r["t"] == "PREFLIGHT_RESULT" and r["result"]["approved"] for r in journal_records)
     data_rejections = [r for r in journal_records if r["t"] == "DATA_REJECTION"]
     assert data_rejections and all(r["instrument"] == "NSE:Y" for r in data_rejections)
@@ -200,11 +223,15 @@ def test_live_runner_rejects_stale_kite_timestamp_before_forward_event_sink(setu
     def close_after_one_poll(_seconds):
         c.t = c.t.replace(hour=15, minute=31)
 
+    capture_runner, capture_config, capture_receipt = _capture_context(
+        setup / "stale-capture.jsonl", c.now(), "STALE-2026-10-06")
+
     out = R.run_live(
         quote_fn=stale_quote, now_fn=c.now, sleep_fn=close_after_one_poll,
         path=setup / "stale-kite.duckdb", strategies=("ORB",),
         event_sink=captured.extend, preflight_fn=lambda: {"approved": True},
         preflight_sink=lambda _result: None, rejection_sink=rejected.extend,
+        capture_runner=capture_runner, capture_config=capture_config, capture_receipt=capture_receipt,
     )
 
     assert out["status"] == "complete"
@@ -245,6 +272,8 @@ def test_live_runner_can_opt_in_to_authorized_raw_quote_archive(setup, monkeypat
         "permitted_event_kinds": ["QUOTE"], "permitted_sources": ["kite_connect"],
     })
     captured = []
+    capture_runner, capture_config, capture_receipt = _capture_context(
+        setup / "raw-capture.jsonl", c.now(), "RAW-2026-10-06")
 
     def quotes(symbols, kind):
         assert kind == "full"
@@ -260,7 +289,8 @@ def test_live_runner_can_opt_in_to_authorized_raw_quote_archive(setup, monkeypat
         quote_fn=quotes, now_fn=c.now, sleep_fn=close_after_one_poll, path=setup / "raw-run.duckdb",
         event_sink=captured.extend, preflight_fn=lambda: {"approved": True},
         preflight_sink=lambda _result: None, rejection_sink=lambda _rows: None,
-        raw_archive=archive,
+        raw_archive=archive, capture_runner=capture_runner, capture_config=capture_config,
+        capture_receipt=capture_receipt,
     )
 
     assert out["status"] == "complete"
@@ -269,6 +299,28 @@ def test_live_runner_can_opt_in_to_authorized_raw_quote_archive(setup, monkeypat
     raw = archive.records()[0]
     assert event_payload["raw_archive_sha256"] == archive.journal.head
     assert event_payload["raw_sha256"] == raw["payload_sha256"]
+
+
+def test_live_forward_sink_without_capture_receipt_is_no_trade_and_emits_no_events(setup, monkeypatch):
+    c = Clock(datetime(2026, 10, 6, 9, 15, tzinfo=R.IST))
+    monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
+    captured = []
+    preflights = []
+
+    def close_after_one_poll(_seconds):
+        c.t = c.t.replace(hour=15, minute=31)
+
+    out = R.run_live(
+        quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=close_after_one_poll,
+        path=setup / "missing-capture.duckdb", event_sink=captured.extend,
+        preflight_fn=lambda: {"approved": True}, preflight_sink=preflights.append,
+        rejection_sink=lambda _rows: None,
+    )
+
+    assert captured == []
+    assert preflights and preflights[0]["approved"] is False
+    assert preflights[0]["reason"] == "SOURCE_CAPTURE_START_MISSING_OR_INVALID"
+    assert out["status"] == "capture_incomplete"
 
 
 def test_live_view_tracks_open_then_closed_trades_without_a_database_reader(setup):

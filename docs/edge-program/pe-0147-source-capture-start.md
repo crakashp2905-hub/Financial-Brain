@@ -12,17 +12,22 @@ reported as blocking.
 `forward_events()` now accepts the capture runner, frozen run configuration,
 and typed receipt together. It persists the marker before making the Kite quote
 request, so the session journal orders the capture receipt before normalized
-market events. The arguments remain optional for compatibility; the deployed
-launcher must supply them to use this path.
+market events. The regular `run_live()` polling loop now accepts the same
+context, persists it once before its first live quote request, and routes later
+polls into the existing forward-event sink. When an event sink is enabled but
+the receipt is absent, invalid, for another session date, or lacks a valid
+entitlement, forward events are suppressed and its preflight is forced to
+`NO_TRADE`.
 
-Validation: `python -m pytest -q tests/test_kite_forward_events.py
-tests/test_source_capture_start.py` (19 passed), Ruff, and mypy passed. Tests
-verify event ordering through the Kite adapter, pre-decision timing, entitlement
-expiry/missing evidence, initial no-quote health, clock evidence, and immutable
-replay.
+Validation: `python -m pytest tests/test_phase5_intraday_runner.py
+tests/test_source_capture_start.py tests/test_kite_forward_events.py -q` (40
+passed), Ruff, and mypy passed. Tests verify that the live runner journals the
+receipt before the first Kite quote request and before normalized market
+events, and that missing receipts suppress event emission and block preflight.
+Other coverage includes pre-decision timing, entitlement expiry/missing
+evidence, initial no-quote health, clock evidence, and immutable replay.
 
-The regular live Kite polling loop/launcher does not yet supply this API's
-receipt arguments or produce authenticated entitlement and trusted clock
-receipts. The receipt is caller-supplied, and no actual source-capture session
-has been observed. Those integrations remain required before claiming
+The caller still supplies the capture receipt; no authenticated entitlement
+provider or trusted clock service is connected. No actual source-capture session
+has been observed. Those external integrations remain required before claiming
 operational source capture.
