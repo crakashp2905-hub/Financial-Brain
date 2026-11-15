@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0067",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_signal_allocator.py tests/test_target_portfolio.py tests/test_phase5_scanners.py",
+    "result": "33 passed (exit code 0); Ruff and mypy passed for the changed allocator and net-alpha modules."
+  },
+  "implemented": [
+    "NetAlpha calibration is explicit and calibrated forecasts require a nonempty calibration identity.",
+    "The allocator blocks all BUY entry from an uncalibrated forecast even when its provisional net value is positive.",
+    "Configurable maximum forecast-cost-to-gross-benefit ratio can force NO_TRADE; each observation retains the ratio and cost estimate.",
+    "Zero or below-hurdle net forecasts do not authorize entry, including when the configured hurdle is zero."
+  ],
+  "blockers": [
+    "Calibration identity is a contract field, not cryptographic proof that a forecaster was calibrated on an approved development set.",
+    "Cost-benefit ratio limits remain caller-configurable until frozen by the training-only threshold artifact.",
+    "The gate is not wired to every legacy strategy executor, and rejected observations are not yet durably journaled across the platform."
+  ],
+  "scope_note": "Local allocator now fails closed on uncalibrated forecasts and exposes a cost-benefit gate; system-wide wiring and verified calibration are incomplete."
+}

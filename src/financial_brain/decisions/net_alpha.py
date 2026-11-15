@@ -47,6 +47,8 @@ class NetAlpha:
     impact: float
     risk_penalty: float
     source: str = ""
+    calibrated: bool = False
+    calibration_id: str = ""
 
     def __post_init__(self) -> None:
         if isinstance(self.horizon, bool) or not isinstance(self.horizon, int) or self.horizon < 1:
@@ -57,6 +59,8 @@ class NetAlpha:
                 raise ValueError(f"net-alpha {name} must be finite fractional return")
             if name in {"fees", "spread", "impact", "risk_penalty"} and value < 0:
                 raise ValueError(f"net-alpha {name} cannot be negative")
+        if self.calibrated and not self.calibration_id.strip():
+            raise ValueError("a calibrated forecast must identify its calibration")
 
     @property
     def excess(self) -> float:
@@ -94,7 +98,7 @@ class NetAlpha:
 
 def compute(*, excess: float, horizon: int, order_value: float, adv_inr: float, vol_annual: float,
             weight: float, segment: Segment = Segment.DELIVERY, costs: CostModel | None = None,
-            source: str = "") -> NetAlpha:
+            source: str = "", calibrated: bool = False, calibration_id: str = "") -> NetAlpha:
     """Itemise a candidate. ``excess``: the expected return over the benchmark at ``horizon`` sessions."""
     costs = costs or CostModel()
     if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon < 1:
@@ -114,4 +118,5 @@ def compute(*, excess: float, horizon: int, order_value: float, adv_inr: float, 
     sigma_h2 = vol_annual ** 2 * horizon / 252.0
     risk = RISK_AVERSION * max(weight, 0.0) * sigma_h2
     return NetAlpha(horizon=horizon, expected_return=bench + excess, benchmark=bench, fees=float(fees),
-                    spread=float(spread), impact=float(impact), risk_penalty=float(risk), source=source)
+                    spread=float(spread), impact=float(impact), risk_penalty=float(risk), source=source,
+                    calibrated=calibrated, calibration_id=calibration_id)

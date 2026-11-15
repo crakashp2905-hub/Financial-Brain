@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0062",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forecast_hurdle.py tests/test_signal_allocator.py tests/test_target_portfolio.py tests/test_phase5_scanners.py",
+    "result": "37 passed (exit code 0); Ruff and mypy passed. Immutable threshold, period ordering, validation start and changed-policy hash mismatch are tested."
+  },
+  "implemented": [
+    "A frozen hurdle binds its threshold to a development date range, a strictly later validation start, a named selection method and a SHA-256 training-data identity.",
+    "Forward allocation with a frozen policy requires the externally pinned policy digest and rejects policy edits, pre-validation use and a simultaneous mutable threshold argument.",
+    "The hurdle value is applied as a net-alpha floor; risk adjustment remains separate."
+  ],
+  "blockers": [
+    "The threshold selection itself is caller-supplied; this code does not calculate or verify a training-only calibration report.",
+    "The expected policy SHA must be pinned by the strategy/charter registry; no universal runner enforcement is wired yet.",
+    "No actual strategy forecast calibration quality or positive paper result is claimed."
+  ],
+  "scope_note": "The immutability and provenance interface is implemented. Training-only selection evidence and universal freeze enforcement are still required."
+}

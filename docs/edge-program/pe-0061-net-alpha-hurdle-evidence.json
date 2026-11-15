@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0061",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_signal_allocator.py tests/test_target_portfolio.py tests/test_phase5_scanners.py",
+    "result": "33 passed (exit code 0); Ruff and mypy passed for the changed allocator and net-alpha modules."
+  },
+  "implemented": [
+    "Paper-target allocation enforces a minimum expected net-alpha hurdle after itemized fees, spread and impact.",
+    "BUY candidates at or below the hurdle receive NO_TRADE and remain in the immutable counterfactual observation with action, net forecast, horizon, source, costs and reason.",
+    "SELL reduction intent is still allowed to reduce an existing holding; non-entry forecasts do not create exposure."
+  ],
+  "blockers": [
+    "Threshold is supplied by the caller; training-only calibration and frozen validation provenance are not yet enforced (PE-0062).",
+    "Counterfactual observations are returned from the allocator but are not yet persisted in the durable session journal for every strategy adapter.",
+    "No prospective profitability or forecast calibration is claimed."
+  ],
+  "scope_note": "The local admission decision and rejected forecast record are implemented; universal adapter wiring, threshold freeze and durable counterfactual capture remain incomplete."
+}

@@ -13,7 +13,7 @@ DAY = date(2027, 1, 4)
 def _alpha(net: float, horizon: int = 20) -> NetAlpha:
     return NetAlpha(horizon=horizon, expected_return=0.03 + net, benchmark=0.03,
                     fees=0.001, spread=0.001, impact=0.001, risk_penalty=0.0,
-                    source="frozen-research-forecast")
+                    source="frozen-research-forecast", calibrated=True, calibration_id="cal-2026-01")
 
 
 def _allocate(signals, *, previous=None, **over):
@@ -35,6 +35,8 @@ def test_signal_to_target_uses_one_costed_alpha_allocator_and_explicit_cash():
     assert dispositions == {"A": "NET_ALPHA_ABOVE_HURDLE", "B": "NO_TRADE_NET_ALPHA_HURDLE"}
     assert weights["CASH"] >= 0
     assert result.research_only is True
+    assert result.counterfactuals[1].forecast_net_alpha == pytest.approx(_alpha(0.001).net)
+    assert result.counterfactuals[1].reason == "NO_TRADE_NET_ALPHA_HURDLE"
 
 
 def test_sell_signal_reduces_existing_position_and_no_signal_is_not_a_new_entry():
@@ -58,3 +60,36 @@ def test_hurdle_and_covariance_universe_must_be_valid():
     with pytest.raises(SignalAllocatorError, match="covariance universe"):
         _allocate({"A": ("BUY", _alpha(0.02)), "B": ("BUY", _alpha(0.03))},
                   covariance_names=("A",))
+
+
+def test_uncalibrated_positive_forecast_and_zero_net_forecast_never_authorize_entry():
+    uncalibrated = NetAlpha(horizon=20, expected_return=0.20, benchmark=0.03,
+                            fees=0.001, spread=0.001, impact=0.001, risk_penalty=0.0,
+                            source="placeholder")
+    result = _allocate({"A": ("BUY", uncalibrated)}, min_forecast_net_alpha=0.0)
+    assert dict(result.target.weights)["A"] == 0.0
+    assert result.counterfactuals[0].reason == "NO_TRADE_UNCALIBRATED_FORECAST"
+    assert result.counterfactuals[0].forecast_net_alpha == pytest.approx(uncalibrated.net)
+
+    zero = NetAlpha(horizon=20, expected_return=0.03, benchmark=0.03,
+                    fees=0.0, spread=0.0, impact=0.0, risk_penalty=0.0,
+                    calibrated=True, calibration_id="cal-zero")
+    zero_result = _allocate({"A": ("BUY", zero)}, min_forecast_net_alpha=0.0)
+    assert dict(zero_result.target.weights)["A"] == 0.0
+    assert zero_result.counterfactuals[0].reason == "NO_TRADE_NET_ALPHA_HURDLE"
+
+
+def test_calibrated_forecast_requires_calibration_identity():
+    with pytest.raises(ValueError, match="identify its calibration"):
+        NetAlpha(horizon=20, expected_return=0.04, benchmark=0.03,
+                 fees=0.001, spread=0.001, impact=0.001, risk_penalty=0.0,
+                 calibrated=True)
+
+
+def test_cost_to_forecast_benefit_ratio_can_force_abstention():
+    forecast = _alpha(0.02)
+    result = _allocate({"A": ("BUY", forecast)}, max_forecast_cost_to_benefit_ratio=0.01)
+    assert dict(result.target.weights)["A"] == 0.0
+    assert result.counterfactuals[0].reason == "NO_TRADE_COST_BENEFIT_RATIO"
+    assert result.counterfactuals[0].cost_to_benefit_ratio == pytest.approx(
+        forecast.costs / forecast.excess)
