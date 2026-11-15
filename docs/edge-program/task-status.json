@@ -4401,10 +4401,10 @@
         "tests/test_capability_evidence_audit.py",
         "Full Windows local CI-equivalent suite at 4bbf251: 4,143 passed, 1 skipped"
       ],
-      "test_result": "At local commit 4bbf251, full Windows suite: 4,143 passed, 1 skipped (opt-in MCP protocol integration). Ruff, capability matrix, source inventory, mypy, migrations, algorithm/pattern matrices, offline pattern demo, critical and pattern coverage floors, and capability evidence audit passed. Local pip-audit unavailable because pip_audit is not installed; clean wheelhouse install and Linux CI for these local commits remain unverified. PR #32 remote head is still 49dc9de and awaits push plus independent approval.",
+      "test_result": "Historical local Windows suite at 4bbf251: 4,143 passed, 1 skipped; those results predate the current PR head. PR #32 checklist updates are pushed at 07c30e714b4ae256ee514f33a359b6db5e79f117. CI for parent 1126d36 was still running when refreshed; CI for this head had not appeared. Prior cross-platform runs validate c2c1603 only.",
       "blockers": [
-        "Local commits d6dad5e through 4bbf251 are not pushed; git transport fails while starting the DNS resolver, so CI cannot run on this revision.",
-        "PR #32 still needs independent approval and merge to main; self-approval is not performed."
+        "Current-head Ubuntu and Windows CI must pass before merge.",
+        "PR #32 requires an independent approving review; no approval is recorded and branch protection is not bypassed."
       ],
       "evidence_sha256": "b3fbf5e6e7fe6f72c01833dfcfa9e5dfeeb780b1f28fdb74782cdc5ea98c18eb"
     },
