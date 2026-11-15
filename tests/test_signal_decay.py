@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import hashlib
+
 import pytest
 
 from financial_brain.evaluation.signal_decay import (
     SignalDecayError,
     SignalDecayPlan,
     analyze_signal_decay,
+    execute_signal_decay,
 )
 
 
@@ -72,3 +75,56 @@ def test_invalid_metrics_and_plan_are_rejected():
         analyze_signal_decay(plan=_plan(), observations=rows)
     with pytest.raises(SignalDecayError, match="at least three"):
         _plan(horizons=(5, 10))
+
+
+def test_runner_executes_every_family_horizon_session_on_verified_data(tmp_path):
+    data_path = tmp_path / "development.bin"
+    data_path.write_bytes(b"signal-decay-data")
+    plan = _plan(development_data_sha256=hashlib.sha256(data_path.read_bytes()).hexdigest())
+    calls = []
+
+    def evaluator(path, family, horizon, session):
+        calls.append((family, horizon, session))
+        return {
+            "decision_sha256": hashlib.sha256(session.encode()).hexdigest(),
+            "information_coefficient": horizon / 100,
+            "net_alpha_fraction": 0.001,
+            "turnover_fraction": 0.01,
+        }
+
+    report = execute_signal_decay(
+        plan=plan, development_data_path=data_path,
+        training_sessions=["2026-01-02", "2026-01-03"], evaluator=evaluator,
+    )
+    assert len(calls) == len(plan.families) * len(plan.horizons) * 2 == 8
+    assert report["observation_count"] == 8
+    assert report["families"]["momentum"]["horizon_action"].startswith("NO_CHANGE")
+
+
+def test_runner_rejects_digest_mismatch_holdout_and_midrun_data_change(tmp_path):
+    data_path = tmp_path / "development.bin"
+    data_path.write_bytes(b"expected-data")
+    plan = _plan(development_data_sha256=hashlib.sha256(b"different-data").hexdigest())
+    with pytest.raises(SignalDecayError, match="digest differs"):
+        execute_signal_decay(
+            plan=plan, development_data_path=data_path,
+            training_sessions=["2026-01-02"], evaluator=lambda *_: pytest.fail("unexpected run"),
+        )
+    plan = _plan(development_data_sha256=hashlib.sha256(b"expected-data").hexdigest())
+    with pytest.raises(SignalDecayError, match="within development"):
+        execute_signal_decay(
+            plan=plan, development_data_path=data_path,
+            training_sessions=["2026-01-04"], evaluator=lambda *_: {},
+        )
+
+    def mutating(path, _family, _horizon, session):
+        path.write_bytes(b"changed")
+        return {"decision_sha256": hashlib.sha256(session.encode()).hexdigest(),
+                "information_coefficient": 0.1, "net_alpha_fraction": 0.0,
+                "turnover_fraction": 0.01}
+
+    with pytest.raises(SignalDecayError, match="changed during"):
+        execute_signal_decay(
+            plan=plan, development_data_path=data_path,
+            training_sessions=["2026-01-02"], evaluator=mutating,
+        )

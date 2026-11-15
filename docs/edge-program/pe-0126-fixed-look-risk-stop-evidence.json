@@ -32,6 +32,6 @@
   "task_id": "PE-0126",
   "test": {
     "command": "python -m pytest -q; python -m ruff check src tests; python -m mypy; python -m pytest -q tests/test_migrations.py; python scripts/validate_capability_matrix.py; python scripts/source_inventory.py --check docs/edge-program/source-inventory.json; python scripts/algo_progress.py --check; python scripts/chart_patterns_matrix.py --check; offline patterns demo",
-    "result": "Full Windows suite: 4187 passed, 1 skipped (828.89s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff, configured mypy, migration, capability-matrix, source-inventory, algorithm/chart matrices, capability evidence audit and diff checks pass. Synthetic software verification only; no live or prospective trading-performance claim."
+    "result": "Full Windows suite: 4189 passed, 1 skipped (901.07s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff, configured mypy, migration, capability-matrix, source-inventory, algorithm/chart matrices, capability evidence audit and diff checks pass. Synthetic software verification only; no live or prospective trading-performance claim."
   }
 }

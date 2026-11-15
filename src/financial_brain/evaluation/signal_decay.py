@@ -1,12 +1,14 @@
 """Training-window signal-information decay and turnover burden by family."""
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
 import hashlib
 import json
 import math
+from pathlib import Path
+from typing import cast
 
 from .half_life import half_life
 
@@ -89,7 +91,7 @@ def analyze_signal_decay(*, plan: SignalDecayPlan, observations: Iterable[Mappin
         try:
             family = row["family"]
             horizon = row["horizon_sessions"]
-            day = date.fromisoformat(row["session_date"]).isoformat()
+            day = date.fromisoformat(cast(str, row["session_date"])).isoformat()
             decision_id = row["decision_sha256"]
         except (KeyError, TypeError, ValueError) as exc:
             raise SignalDecayError("row requires family, horizon, session date, and decision hash") from exc
@@ -161,3 +163,54 @@ def analyze_signal_decay(*, plan: SignalDecayPlan, observations: Iterable[Mappin
                                                         separators=(",", ":"), allow_nan=False).encode()).hexdigest(),
         "claim_scope": "Development diagnostic only; no existing horizon is changed and no profitability claim is made.",
     }
+
+
+def execute_signal_decay(
+    *, plan: SignalDecayPlan, development_data_path: Path,
+    training_sessions: Sequence[str],
+    evaluator: Callable[[Path, str, int, str], Mapping[str, object]],
+) -> dict:
+    """Run every registered family/horizon/session on one pinned data file."""
+    def digest_file() -> str:
+        digest = hashlib.sha256()
+        try:
+            with Path(development_data_path).open("rb") as stream:
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(block)
+        except OSError as exc:
+            raise SignalDecayError("development dataset is unavailable") from exc
+        return digest.hexdigest()
+
+    if digest_file() != plan.development_data_sha256:
+        raise SignalDecayError("development data digest differs from the frozen plan")
+    try:
+        sessions = tuple(date.fromisoformat(day).isoformat() for day in training_sessions)
+    except (TypeError, ValueError) as exc:
+        raise SignalDecayError("training sessions must be ISO dates") from exc
+    if (not sessions or sessions != tuple(training_sessions)
+            or sessions != tuple(sorted(set(sessions)))
+            or any(not plan.development_start <= day <= plan.development_end for day in sessions)):
+        raise SignalDecayError("training schedule must be ordered within development dates")
+    observations = []
+    for family in plan.families:
+        for horizon in plan.horizons:
+            for session in sessions:
+                try:
+                    result = evaluator(Path(development_data_path), family, horizon, session)
+                except Exception as exc:
+                    raise SignalDecayError(
+                        f"signal evaluator failed for {family}/{horizon}/{session}"
+                    ) from exc
+                if not isinstance(result, Mapping):
+                    raise SignalDecayError("signal evaluator must return a mapping")
+                observations.append({
+                    "split": "DEVELOPMENT", "family": family,
+                    "horizon_sessions": horizon, "session_date": session,
+                    "decision_sha256": result.get("decision_sha256"),
+                    "information_coefficient": result.get("information_coefficient"),
+                    "net_alpha_fraction": result.get("net_alpha_fraction"),
+                    "turnover_fraction": result.get("turnover_fraction"),
+                })
+    if digest_file() != plan.development_data_sha256:
+        raise SignalDecayError("development dataset changed during signal-decay run")
+    return analyze_signal_decay(plan=plan, observations=observations)
