@@ -345,7 +345,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_unexecuted_check_and_duplicate_check_are_not_silently_accepted"), (),
                      "Evidence-gated report covers look-ahead, survivorship, delisting, factor overlap, rejected trades and missed fills; missing/unrun checks produce INSUFFICIENT and no report authorizes promotion. Existing research runs do not yet automatically attach the required source evidence."),
     # ---- F09 ----
-    "FE-0104": Entry("NOT_STARTED", (), (), "Capital allocation not built."),
+    "FE-0104": Entry("PARTIAL", ("test_fixed_allocation_keeps_losing_subbook_and_cash_sleeve_in_combined_return",
+                                  "test_missing_losing_book_cannot_be_silently_removed",
+                                  "test_allocation_weights_and_freeze_date_are_enforced"), (),
+                     "Pre-session fixed candidate-book weights plus explicit cash weight are compounded with every book present on every date; a missing or losing sleeve cannot be silently removed. Production account book integration and frozen book updates under trial governance remain unconnected."),
     "FE-0105": Entry("NOT_STARTED", (), (), "Portfolio exposure limits not built."),
     "FE-0106": Entry("NOT_STARTED", (), (), "Vol targeting not built."),
     "FE-0107": Entry("NOT_STARTED", (), (), "Pending exposure aggregation not built."),
