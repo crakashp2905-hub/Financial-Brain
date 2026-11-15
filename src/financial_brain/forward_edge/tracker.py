@@ -340,7 +340,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_higher_tier_cannot_be_claimed_from_local_only_or_fixture_data",
                                   "test_artifact_has_exactly_one_valid_tier_label"), (),
                      "Evidence tier vocabulary and qualification gates distinguish historical, shadow, local paper, independently attested forward and deployment-validated claims; artifacts reject absent/multiple tiers. Existing chart/table/report renderers are not yet universally wired to the shared label helper."),
-    "FE-0103": Entry("NOT_STARTED", (), (), "Falsification report not built."),
+    "FE-0103": Entry("PARTIAL", ("test_missing_falsification_evidence_downgrades_to_insufficient_not_pass",
+                                  "test_failed_check_and_all_pass_have_distinct_statuses",
+                                  "test_unexecuted_check_and_duplicate_check_are_not_silently_accepted"), (),
+                     "Evidence-gated report covers look-ahead, survivorship, delisting, factor overlap, rejected trades and missed fills; missing/unrun checks produce INSUFFICIENT and no report authorizes promotion. Existing research runs do not yet automatically attach the required source evidence."),
     # ---- F09 ----
     "FE-0104": Entry("NOT_STARTED", (), (), "Capital allocation not built."),
     "FE-0105": Entry("NOT_STARTED", (), (), "Portfolio exposure limits not built."),
