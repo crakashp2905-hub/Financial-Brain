@@ -130,6 +130,37 @@ def test_restart_restores_open_session_and_duplicate_events_do_not_duplicate_row
     resumed.close()
 
 
+def test_explicit_resume_rehydrates_open_session_config_and_event_manifest(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner)
+    event = make_event()
+    runner.ingest("s", make_config(), [event])
+    original = runner.records("s")
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    result = resumed.resume("s")
+    assert result["state"] == "OPEN"
+    assert result["config_sha256"] == make_config().sha256()
+    assert result["records"] == original
+    assert result["unresolved_paper_outbox_keys"] == []
+    assert result["physical_orders_enabled"] is False
+    resumed.close()
+
+
+def test_resume_finishes_a_crash_interrupted_drain_only_when_close_evidence_is_complete(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner)
+    runner.state_store.transition("s", SessionState.DRAINING, now=NOW + timedelta(seconds=1))
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    result = resumed.resume("s")
+    assert result["state"] == "CLOSED"
+    assert result["records"]["session_reports"][0]["status"] == "CLOSED"
+    resumed.close()
+
+
 def test_incomplete_close_is_explicit_and_idempotent(tmp_path):
     runner = make_runner(tmp_path)
     opened(runner)
@@ -253,6 +284,12 @@ def test_unknown_outbox_after_crash_requires_receipt_reconciliation(tmp_path, mo
         execute(runner, event, decided)
     with pytest.raises(ForwardSessionRunnerError, match="pending or UNKNOWN"):
         runner.close_session("s", now=decided + timedelta(seconds=1), complete=True)
+    runner.close()
+    runner = make_runner(tmp_path)
+    recovery = runner.resume("s")
+    assert recovery["state"] == "OPEN"
+    assert recovery["manual_reconciliation_required"] is True
+    assert recovery["unresolved_paper_outbox_keys"] == ["paper:s:order-1"]
     assert runner.reconcile_unknown_paper_intent(session_id="s", order_id="order-1",
                                                   reconciled_by="local-receipt-check") is True
     receipt = execute(runner, event, decided)

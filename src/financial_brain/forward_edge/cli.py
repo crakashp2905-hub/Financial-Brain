@@ -85,6 +85,30 @@ def _report(args: argparse.Namespace) -> int:
     return 0 if report["overall"] == "GREEN" else 2
 
 
+def _resume_session(args: argparse.Namespace) -> int:
+    """Resume one persisted session and report evidence gaps without retrying unknown effects."""
+    from financial_brain.forward_edge.session_runner import ForwardSessionRunner
+    from financial_brain.forward_edge.session_state import ForwardSessionStore
+
+    state_path, journal_path = Path(args.state_db), Path(args.journal)
+    if not state_path.is_file() or not journal_path.is_file():
+        print(json.dumps({"session_id": args.resume, "status": "NOT_FOUND",
+                          "reason": "session state and journal files must already exist",
+                          "physical_orders_enabled": False}, indent=2))
+        return 2
+    runner = ForwardSessionRunner(ForwardSessionStore(state_path), journal_path)
+    try:
+        result = runner.resume(args.resume)
+    except (KeyError, ValueError) as exc:
+        print(json.dumps({"session_id": args.resume, "status": "RESUME_REJECTED",
+                          "reason": str(exc), "physical_orders_enabled": False}, indent=2))
+        return 2
+    finally:
+        runner.close()
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 2 if result["manual_reconciliation_required"] else 0
+
+
 def add_parser(subparsers) -> None:
     """Register `fb forward` commands on the main parser."""
     parser = subparsers.add_parser("forward", help="forward-edge preflight and paper evidence")
@@ -106,3 +130,8 @@ def add_parser(subparsers) -> None:
     report.add_argument("--as-of", required=True)
     report.add_argument("--repo", default=str(_repo()))
     report.set_defaults(fn=_report)
+    resume = commands.add_parser("session", help="resume a durable forward session after a process restart")
+    resume.add_argument("--resume", required=True, metavar="SESSION_ID")
+    resume.add_argument("--state-db", default=str(_repo() / "data" / "forward-edge" / "sessions.sqlite"))
+    resume.add_argument("--journal", default=str(_repo() / "data" / "forward-edge" / "journal.sqlite"))
+    resume.set_defaults(fn=_resume_session)

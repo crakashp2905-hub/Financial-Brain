@@ -103,3 +103,15 @@ def test_strategy_attempt_keys_are_durable_and_never_overwrite_prior_attempt(tmp
     with pytest.raises(SessionStateError, match="different config"):
         store.create(first_id, config(mode="paper", attempt_id="altered"), now=NOW)
     store.close()
+
+
+def test_persisted_run_configuration_can_be_rehydrated_after_restart(tmp_path):
+    original = config(mode="paper", attempt_id="run-restore")
+    store = ForwardSessionStore(tmp_path / "sessions.sqlite")
+    store.create("restore", original, now=NOW)
+    store.close()
+
+    restored = ForwardSessionStore(tmp_path / "sessions.sqlite")
+    assert restored.config("restore") == original
+    assert restored.config_sha256("restore") == original.sha256()
+    restored.close()

@@ -212,3 +212,17 @@ class ForwardSessionStore:
         if row is None:
             raise SessionStateError("unknown forward session")
         return str(row[0])
+
+    def config(self, session_id: str) -> ForwardRunConfig:
+        """Rehydrate the immutable run configuration committed when the session was created."""
+        row = self._con.execute("SELECT config_json FROM forward_sessions WHERE session_id=?",
+                                [session_id]).fetchone()
+        if row is None:
+            raise SessionStateError("unknown forward session")
+        body = json.loads(row[0])
+        return ForwardRunConfig(
+            exchange_date=date.fromisoformat(body["exchange_date"]), cohort=body["cohort"],
+            strategy_sha256=body["strategy_sha256"], benchmark=body["benchmark"],
+            instrument_universe=tuple(body["instrument_universe"]), capital=Decimal(body["capital"]),
+            constraints=body["constraints"], ledger_id=body["ledger_id"],
+            mode=body["mode"], attempt_id=body["attempt_id"], schema=body["schema"])

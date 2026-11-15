@@ -106,6 +106,41 @@ class ForwardSessionRunner:
         self.state_store.transition(session_id, SessionState.OPEN, now=now)
         return SessionState.OPEN
 
+    def resume(self, session_id: str) -> dict[str, Any]:
+        """Reopen durable session context after a process restart without replaying side effects."""
+        config = self.state_store.config(session_id)
+        if self.state_store.config_sha256(session_id) != config.sha256():
+            raise ForwardSessionRunnerError("stored session configuration hash does not match its contents")
+        state = self.state_store.state(session_id)
+        records = self.records(session_id)
+        if state is SessionState.PREFLIGHT:
+            preflight = next((item.get("checks") for item in records["lifecycle"]
+                              if item.get("event") == "PREFLIGHT"), None)
+            if not isinstance(preflight, dict) or not preflight:
+                raise ForwardSessionRunnerError("cannot resume PREFLIGHT without durable preflight checks")
+            state = self.begin(session_id, config, preflight=preflight)
+        elif state is SessionState.DRAINING:
+            try:
+                self.close_session(session_id, complete=True)
+            except ForwardSessionRunnerError as exc:
+                # An unresolved or incomplete close becomes durable INCOMPLETE, never an inferred success.
+                self.close_session(session_id, complete=False,
+                                   reason=f"restart recovery could not attest a complete close: {exc}")
+            state = self.state_store.state(session_id)
+
+        unknown: list[str] = []
+        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
+        if outbox_path.is_file():
+            with sqlite3.connect(str(outbox_path)) as outbox:
+                unknown = [row[0] for row in outbox.execute(
+                    "SELECT key FROM outbox WHERE state IN ('PENDING','UNKNOWN') ORDER BY key")
+                           if row[0].startswith(f"paper:{session_id}:")]
+        return {"session_id": session_id, "state": state.value,
+                "config_sha256": config.sha256(), "records": self.records(session_id),
+                "unresolved_paper_outbox_keys": unknown,
+                "manual_reconciliation_required": bool(unknown),
+                "physical_orders_enabled": False}
+
     def ingest(self, session_id: str, config: ForwardRunConfig,
                events: Iterable[MarketEvent]) -> dict[str, int]:
         """Durably accept normalized source events available during the frozen session."""
@@ -215,8 +250,11 @@ class ForwardSessionRunner:
         receipts = [json.loads(row[0]) for row in self._con.execute(
             "SELECT receipt_json FROM paper_execution_receipts WHERE session_id=? ORDER BY order_id",
             [session_id]).fetchall()]
+        reports = [json.loads(row[0]) for row in self._con.execute(
+            "SELECT report_json FROM runner_session_reports WHERE session_id=? ORDER BY session_id",
+            [session_id]).fetchall()]
         return {"events": events, "decisions": decisions, "lifecycle": lifecycle,
-                "intents": intents, "execution_receipts": receipts}
+                "intents": intents, "execution_receipts": receipts, "session_reports": reports}
 
     def execute_paper_intent(self, *, session_id: str, order_id: str, decision_id: str,
                              event_id: str, side: str, quantity: int, limit_price: Decimal,
@@ -360,11 +398,12 @@ class ForwardSessionRunner:
             if existing:
                 return json.loads(existing[0])
             raise ForwardSessionRunnerError("terminal session has no persisted close report")
-        if state is not SessionState.OPEN:
-            raise ForwardSessionRunnerError("only an OPEN session can close")
+        if state not in {SessionState.OPEN, SessionState.DRAINING}:
+            raise ForwardSessionRunnerError("only an OPEN or DRAINING session can close")
         if complete:
             self._require_resolved_paper_intents(session_id)
-        self.state_store.transition(session_id, SessionState.DRAINING, now=now)
+        if state is SessionState.OPEN:
+            self.state_store.transition(session_id, SessionState.DRAINING, now=now)
         if complete:
             self.state_store.transition(session_id, SessionState.CLOSED, now=now)
             status = "CLOSED"

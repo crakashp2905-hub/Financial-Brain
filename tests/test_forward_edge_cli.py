@@ -1,9 +1,14 @@
 import json
+from datetime import date, datetime, timezone
+from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 
 import duckdb
 
 from financial_brain.forward_edge import cli
+from financial_brain.forward_edge.session_runner import ForwardSessionRunner
+from financial_brain.forward_edge.session_state import ForwardRunConfig, ForwardSessionStore
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,3 +57,22 @@ def test_close_check_is_read_only_and_never_upgrades_replay(tmp_path, capsys):
     assert cli._paper_close(args) == 0
     second = json.loads(capsys.readouterr().out)
     assert second == first
+
+
+def test_session_resume_cli_rehydrates_an_existing_session(tmp_path, capsys):
+    state_path = tmp_path / "state.sqlite"
+    journal_path = tmp_path / "journal.sqlite"
+    config = ForwardRunConfig(
+        date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI", ("NSE:INFY",),
+        Decimal("100000"), {"max_positions": 1}, "ledger-1")
+    runner = ForwardSessionRunner(ForwardSessionStore(state_path), journal_path)
+    runner.begin("cli-resume", config, now=datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc),
+                 preflight={"risk_policy_loaded": True})
+    runner.close()
+
+    args = SimpleNamespace(resume="cli-resume", state_db=str(state_path), journal=str(journal_path))
+    assert cli._resume_session(args) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["session_id"] == "cli-resume"
+    assert result["state"] == "OPEN"
+    assert result["physical_orders_enabled"] is False
