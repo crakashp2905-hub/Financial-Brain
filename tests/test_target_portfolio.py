@@ -57,6 +57,15 @@ def test_turnover_cost_can_keep_a_paper_book_in_cash() -> None:
     assert result.utility == 0
 
 
+def test_no_trade_band_suppresses_small_rebalance_and_preserves_previous_weights():
+    previous = {"A": 0.05, "B": 0.05, "CASH": 0.90}
+    result = _plan(expected_net_alpha={"A": 0.002, "B": 0.0015},
+                   previous_weights=previous, no_trade_band=0.15)
+    assert dict(result.weights) == previous
+    assert result.one_way_turnover == 0
+    assert result.cash_weight == pytest.approx(0.90)
+
+
 def test_cash_days_count_explicit_cash_and_rejects_bad_ledgers() -> None:
     assert cash_days([{"A": 0.8, "CASH": 0.2}, {"A": 1.0, "CASH": 0.0}]) == 1
     with pytest.raises(TargetPortfolioError, match="sum to one"):
@@ -70,3 +79,5 @@ def test_invalid_covariance_and_previous_cash_floor_fail_closed() -> None:
         _plan(previous_weights={"A": 0.5, "B": 0.4, "CASH": 0.1})
     with pytest.raises(TargetPortfolioError, match="outside the frozen target universe"):
         _plan(previous_weights={"A": 0.05, "B": 0.05, "OLD": 0.10, "CASH": 0.80})
+    with pytest.raises(TargetPortfolioError, match="no-trade band"):
+        _plan(no_trade_band=1.1)

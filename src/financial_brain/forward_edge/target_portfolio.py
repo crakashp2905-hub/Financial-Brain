@@ -59,6 +59,7 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
                           covariance_names: tuple[str, ...], previous_weights: Mapping[str, float],
                           max_name_weight: float = 0.10, cash_floor: float = 0.0,
                           max_one_way_turnover: float = 0.20, turnover_cost_per_unit: float = 0.0,
+                          no_trade_band: float = 0.0,
                           risk_aversion: float = 1.0, iterations: int = 500) -> TargetPortfolio:
     """Optimize long-only target weights on a frozen rebalance schedule.
 
@@ -86,6 +87,8 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
             raise TargetPortfolioError(f"{label} must be in [0, 1]")
     if max_name_weight <= 0:
         raise TargetPortfolioError("max_name_weight must be positive")
+    if not isfinite(no_trade_band) or not 0 <= no_trade_band <= 1:
+        raise TargetPortfolioError("no-trade band must be in [0, 1]")
     if not isfinite(turnover_cost_per_unit) or turnover_cost_per_unit < 0 or not isfinite(risk_aversion) \
             or risk_aversion < 0 or iterations < 1:
         raise TargetPortfolioError("risk, turnover cost and iteration settings must be non-negative")
@@ -117,6 +120,8 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
         delta = float(np.abs(weights - prev).sum()) / 2.0
         if delta > max_one_way_turnover and delta > 0:
             weights = prev + (weights - prev) * (max_one_way_turnover / delta)
+        if float(np.abs(weights - prev).sum()) / 2.0 <= no_trade_band:
+            weights = prev.copy()
     else:
         weights = prev.copy()
     cash = max(0.0, 1.0 - float(weights.sum()))
