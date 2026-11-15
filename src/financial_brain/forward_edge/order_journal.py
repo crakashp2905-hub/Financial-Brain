@@ -106,6 +106,11 @@ class OrderJournal:
         return [json.loads(row[0]) for row in self._con.execute(
             "SELECT event_json FROM order_events WHERE order_id=? ORDER BY sequence", [order_id]).fetchall()]
 
+    def order_ids(self) -> tuple[str, ...]:
+        """All journalled paper orders in deterministic order."""
+        return tuple(row[0] for row in self._con.execute(
+            "SELECT DISTINCT order_id FROM order_events ORDER BY order_id").fetchall())
+
     def replay_hash(self, order_id: str) -> str:
         rows = self.replay(order_id)
         return hashlib.sha256(json.dumps(rows, sort_keys=True, separators=(",", ":"),
