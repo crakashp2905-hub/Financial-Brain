@@ -22,6 +22,7 @@ from financial_brain.forward_edge.session_state import (
     ForwardSessionStore,
     SessionState,
 )
+from financial_brain.forward_edge.venue_calendar import VenueCalendar
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -83,7 +84,8 @@ class ForwardSessionRunner:
         now = now or capture_local_time(self.clock, label="session start")
         self.state_store.create(session_id, config, now=now)
         state = self.state_store.state(session_id)
-        if state in {SessionState.OPEN, SessionState.REJECTED, SessionState.CLOSED, SessionState.INCOMPLETE}:
+        if state in {SessionState.OPEN, SessionState.REJECTED, SessionState.CLOSED,
+                     SessionState.NO_TRADE, SessionState.INCOMPLETE}:
             return state
         if not preflight:
             raise ForwardSessionRunnerError("preflight must contain explicit checks")
@@ -112,6 +114,63 @@ class ForwardSessionRunner:
             return SessionState.REJECTED
         self.state_store.transition(session_id, SessionState.OPEN, now=now)
         return SessionState.OPEN
+
+    def plan_calendar_day(self, session_id: str, config: ForwardRunConfig, *, venue: str,
+                          calendar: VenueCalendar, now: datetime, preflight: dict[str, bool],
+                          supported_session_types: frozenset[str] = frozenset({"NORMAL"})) -> SessionState:
+        """Turn a source-covered venue date into an open session, NO_TRADE, or INCOMPLETE."""
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ForwardSessionRunnerError("calendar planning clock must be timezone aware")
+        try:
+            calendar.is_session(venue, calendar.source_as_of)  # validates the venue contract and calendar horizon
+        except ValueError as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
+        self.state_store.create(session_id, config, now=now)
+        state = self.state_store.state(session_id)
+        calendar_digest = calendar.sha256()
+        if state is not SessionState.PLANNED:
+            prior = self._con.execute("SELECT event_json FROM runner_events "
+                                      "WHERE session_id=? AND kind='calendar_plan'", [session_id]).fetchone()
+            if prior is None or json.loads(prior[0]).get("calendar_sha256") != calendar_digest:
+                raise ForwardSessionRunnerError("session already has state without matching calendar-plan evidence")
+            return state
+        if config.exchange_date > calendar.source_as_of:
+            body = {"session_id": session_id, "event": "CALENDAR_PLAN", "outcome": "INCOMPLETE",
+                    "exchange_date": config.exchange_date.isoformat(), "venue": venue,
+                    "calendar_sha256": calendar_digest, "source_as_of": calendar.source_as_of.isoformat(),
+                    "occurred_at": now.astimezone(timezone.utc).isoformat(),
+                    "reason": "official session calendar does not cover the requested date"}
+            self._append_record("calendar_plan", session_id, body)
+            self.state_store.transition(session_id, SessionState.INCOMPLETE, now=now,
+                                        reason=body["reason"])
+            return SessionState.INCOMPLETE
+        market_session = calendar.sessions.get((venue, config.exchange_date))
+        if market_session is None:
+            body = {"session_id": session_id, "event": "CALENDAR_PLAN", "outcome": "NO_TRADE",
+                    "exchange_date": config.exchange_date.isoformat(), "venue": venue,
+                    "calendar_sha256": calendar_digest, "source_as_of": calendar.source_as_of.isoformat(),
+                    "occurred_at": now.astimezone(timezone.utc).isoformat(),
+                    "reason": "no venue session appears in the source-covered calendar"}
+            self._append_record("calendar_plan", session_id, body)
+            self.state_store.transition(session_id, SessionState.NO_TRADE, now=now,
+                                        reason=body["reason"])
+            return SessionState.NO_TRADE
+        session_type = market_session.session_type.strip().upper()
+        opens, closes = calendar.session_bounds_utc(venue, config.exchange_date)
+        supported = {value.strip().upper() for value in supported_session_types}
+        body = {"session_id": session_id, "event": "CALENDAR_PLAN",
+                "outcome": "OPEN" if session_type in supported else "NO_TRADE",
+                "exchange_date": config.exchange_date.isoformat(), "venue": venue,
+                "session_type": session_type, "opens_at": opens.isoformat(), "closes_at": closes.isoformat(),
+                "calendar_sha256": calendar_digest, "source_sha256": market_session.source_sha256,
+                "source_ref": market_session.source_ref,
+                "occurred_at": now.astimezone(timezone.utc).isoformat()}
+        self._append_record("calendar_plan", session_id, body)
+        if session_type not in supported:
+            self.state_store.transition(session_id, SessionState.NO_TRADE, now=now,
+                                        reason=f"unsupported venue session type {session_type}")
+            return SessionState.NO_TRADE
+        return self.begin(session_id, config, now=now, preflight=preflight)
 
     def resume(self, session_id: str) -> dict[str, Any]:
         """Reopen durable session context after a process restart without replaying side effects."""
@@ -167,6 +226,16 @@ class ForwardSessionRunner:
                     raise ForwardSessionRunnerError("event exchange date differs from frozen session date")
                 if event.available_at > event.received_at:
                     raise ForwardSessionRunnerError("event availability cannot be later than local receipt")
+                calendar_plan = self._con.execute(
+                    "SELECT event_json FROM runner_events WHERE session_id=? AND kind='calendar_plan'",
+                    [session_id]).fetchone()
+                if calendar_plan:
+                    planned = json.loads(calendar_plan[0])
+                    if planned.get("outcome") == "OPEN":
+                        event_time = event.event_time.astimezone(timezone.utc)
+                        if (event_time < datetime.fromisoformat(planned["opens_at"]) or
+                                event_time >= datetime.fromisoformat(planned["closes_at"])):
+                            raise ForwardSessionRunnerError("event exchange time is outside the sourced venue session")
                 payload = event.as_dict()
                 canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
                 digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -241,7 +310,8 @@ class ForwardSessionRunner:
         if len(unique_ids) != len(input_event_ids):
             raise ForwardSessionRunnerError("decision input event IDs must be unique")
         rows = self._con.execute(
-            f"SELECT event_id, available_at FROM runner_events WHERE session_id=? AND event_id IN ({','.join('?' for _ in unique_ids)})",
+            f"SELECT event_id, available_at FROM runner_events WHERE session_id=? "
+            f"AND kind NOT IN ('preflight','calendar_plan') AND event_id IN ({','.join('?' for _ in unique_ids)})",
             [session_id, *unique_ids]).fetchall()
         if len(rows) != len(unique_ids):
             raise ForwardSessionRunnerError("decision references an event absent from this session")
@@ -269,11 +339,12 @@ class ForwardSessionRunner:
         events = [json.loads(row[0]) | {"ingested_at": row[1], "ingest_clock_source": row[2]}
                   for row in self._con.execute(
             "SELECT event_json, ingested_at, ingest_clock_source FROM runner_events "
-            "WHERE session_id=? AND kind!='preflight' "
+            "WHERE session_id=? AND kind NOT IN ('preflight','calendar_plan') "
             "ORDER BY available_at, event_id",
             [session_id]).fetchall()]
         lifecycle = [json.loads(row[0]) for row in self._con.execute(
-            "SELECT event_json FROM runner_events WHERE session_id=? AND kind='preflight' ORDER BY event_id",
+            "SELECT event_json FROM runner_events WHERE session_id=? AND kind IN ('preflight','calendar_plan') "
+            "ORDER BY available_at, event_id",
             [session_id]).fetchall()]
         decisions = [json.loads(row[0]) for row in self._con.execute(
             "SELECT record_json FROM runner_decisions WHERE session_id=? ORDER BY decided_at, decision_id",

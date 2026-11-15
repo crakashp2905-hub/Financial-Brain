@@ -14,11 +14,12 @@ from typing import Any
 
 SCHEMA = "fb.forward-session.v1"
 TRANSITIONS: dict[str, frozenset[str]] = {
-    "PLANNED": frozenset({"PREFLIGHT", "REJECTED"}),
+    "PLANNED": frozenset({"PREFLIGHT", "NO_TRADE", "INCOMPLETE", "REJECTED"}),
     "PREFLIGHT": frozenset({"OPEN", "REJECTED", "INCOMPLETE"}),
     "OPEN": frozenset({"DRAINING", "INCOMPLETE"}),
     "DRAINING": frozenset({"CLOSED", "INCOMPLETE"}),
     "CLOSED": frozenset(),
+    "NO_TRADE": frozenset(),
     "INCOMPLETE": frozenset(),
     "REJECTED": frozenset(),
 }
@@ -34,6 +35,7 @@ class SessionState(StrEnum):
     OPEN = "OPEN"
     DRAINING = "DRAINING"
     CLOSED = "CLOSED"
+    NO_TRADE = "NO_TRADE"
     INCOMPLETE = "INCOMPLETE"
     REJECTED = "REJECTED"
 
@@ -188,7 +190,7 @@ class ForwardSessionStore:
         occurred = now.astimezone(timezone.utc)
         if occurred < datetime.fromisoformat(prior_time):
             raise SessionStateError("session transition clock cannot move backwards")
-        if state in {SessionState.INCOMPLETE, SessionState.REJECTED} and not (reason or "").strip():
+        if state in {SessionState.INCOMPLETE, SessionState.REJECTED, SessionState.NO_TRADE} and not (reason or "").strip():
             raise SessionStateError(f"{state.value} transition requires a reason")
         next_seq = int(sequence) + 1
         stable_event_id = event_id or f"{session_id}:{next_seq}:{state.value}"

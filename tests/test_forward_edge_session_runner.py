@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from dataclasses import replace
 from decimal import Decimal
 import sqlite3
@@ -16,6 +16,7 @@ from financial_brain.forward_edge.session_state import (
     ForwardSessionStore,
     SessionState,
 )
+from financial_brain.forward_edge.venue_calendar import Session as VenueSession, VenueCalendar
 
 
 NOW = datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc)
@@ -91,6 +92,62 @@ def test_preflight_failures_reject_the_session_without_accepting_market_events(t
     assert state is SessionState.REJECTED
     with pytest.raises(ForwardSessionRunnerError, match="OPEN session"):
         runner.ingest("s", make_config(), [make_event()])
+    runner.close()
+
+
+def _calendar(day, *, session_type="NORMAL", opens=time(9, 15), closes=time(15, 30),
+              source_as_of=None):
+    row = VenueSession("NSE", day, opens, closes, session_type, "NSE official calendar fixture",
+                       "b" * 64, NOW)
+    return VenueCalendar((row,), source_as_of=source_as_of or day)
+
+
+def test_calendar_planning_distinguishes_holiday_from_missing_source_coverage(tmp_path):
+    runner = make_runner(tmp_path)
+    holiday_calendar = VenueCalendar((), source_as_of=date(2026, 11, 13))
+    holiday = runner.plan_calendar_day("holiday", make_config(), venue="NSE",
+                                       calendar=holiday_calendar, now=NOW, preflight={})
+    assert holiday is SessionState.NO_TRADE
+    assert runner.records("holiday")["lifecycle"][0]["reason"] == \
+        "no venue session appears in the source-covered calendar"
+    assert runner.plan_calendar_day("holiday", make_config(), venue="NSE",
+                                    calendar=holiday_calendar, now=NOW + timedelta(seconds=1),
+                                    preflight={}) is SessionState.NO_TRADE
+    with pytest.raises(ForwardSessionRunnerError, match="matching calendar-plan evidence"):
+        runner.plan_calendar_day("holiday", make_config(), venue="NSE",
+                                 calendar=_calendar(date(2026, 11, 13)), now=NOW + timedelta(seconds=1),
+                                 preflight={})
+
+    uncovered_config = make_config()
+    uncovered_config = replace(uncovered_config, exchange_date=date(2026, 11, 14))
+    uncovered = runner.plan_calendar_day("uncovered", uncovered_config, venue="NSE",
+                                         calendar=holiday_calendar, now=NOW, preflight={})
+    assert uncovered is SessionState.INCOMPLETE
+    assert runner.records("uncovered")["lifecycle"][0]["outcome"] == "INCOMPLETE"
+    runner.close()
+
+
+def test_special_session_requires_explicit_support_and_enforces_sourced_bounds(tmp_path):
+    calendar = _calendar(date(2026, 11, 13), session_type="SPECIAL",
+                         opens=time(10, 0), closes=time(13, 0))
+    runner = make_runner(tmp_path)
+    unsupported = runner.plan_calendar_day("special-off", make_config(), venue="NSE",
+                                           calendar=calendar, now=NOW, preflight={})
+    assert unsupported is SessionState.NO_TRADE
+    assert runner.records("special-off")["lifecycle"][0]["session_type"] == "SPECIAL"
+
+    opened_state = runner.plan_calendar_day(
+        "special-on", make_config(), venue="NSE", calendar=calendar, now=NOW,
+        preflight={"special_session_adapter": True}, supported_session_types=frozenset({"SPECIAL"}))
+    assert opened_state is SessionState.OPEN
+    pre_open = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 09:30:00", "last_price": 100.0, "volume": 100,
+        "depth": {"buy": [{"price": 99.9, "quantity": 10}],
+                  "sell": [{"price": 100.1, "quantity": 10}]},
+    }, received_at=NOW)
+    with pytest.raises(ForwardSessionRunnerError, match="outside the sourced venue session"):
+        runner.ingest("special-on", make_config(), [pre_open],
+                      ingest_metadata={pre_open.event_id: (NOW + timedelta(milliseconds=1), "FIXTURE")})
     runner.close()
 
 
