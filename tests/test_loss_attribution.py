@@ -72,3 +72,40 @@ def test_duplicate_trade_id_and_invalid_tolerance_are_rejected():
         daily_loss_bridge([_row(), _row()])
     with pytest.raises(LossAttributionError, match="tolerance"):
         daily_loss_bridge([_row()], tolerance_inr=-0.1)
+
+
+def test_scheduled_cash_day_without_trade_rows_is_retained_and_reconciled_at_zero():
+    loss = _row(realized_net_inr=-20.0, selection_effect_inr=-80.0)
+    report = daily_loss_bridge(
+        [loss], scheduled_days=["2026-11-12", "2026-11-13"],
+        daily_realized_net_inr={"2026-11-12": -20.0, "2026-11-13": 0.0},
+    )
+    assert [day["status"] for day in report["days"]] == ["RECONCILED", "RECONCILED"]
+    assert report["days"][1]["trade_count"] == 0
+    assert report["days"][1]["components_inr"] == {name: 0.0 for name in COMPONENTS}
+
+
+def test_missing_daily_ledger_and_unattributed_nonzero_day_remain_incomplete():
+    row = _row(realized_net_inr=-20.0, selection_effect_inr=-80.0)
+    missing = daily_loss_bridge(
+        [row], scheduled_days=["2026-11-12"],
+        daily_realized_net_inr={"2026-11-12": None},
+    )
+    assert missing["days"][0]["status"] == "INCOMPLETE"
+    assert missing["days"][0]["realized_net_inr"] is None
+    no_trades = daily_loss_bridge(
+        [], scheduled_days=["2026-11-12"],
+        daily_realized_net_inr={"2026-11-12": -10.0},
+    )
+    assert no_trades["days"][0]["status"] == "INCOMPLETE"
+    assert no_trades["days"][0]["portfolio_loss_inr"] == 10.0
+
+
+def test_daily_ledger_total_must_reconcile_to_trade_rows():
+    row = _row(realized_net_inr=-20.0, selection_effect_inr=-80.0)
+    report = daily_loss_bridge(
+        [row], scheduled_days=["2026-11-12"],
+        daily_realized_net_inr={"2026-11-12": -19.0},
+    )
+    assert report["days"][0]["status"] == "INCOMPLETE"
+    assert report["days"][0]["daily_ledger_residual_inr"] == 1.0

@@ -2934,8 +2934,8 @@
         "test_preregistration_is_durable_immutable_and_idempotent",
         "test_preregistration_rejects_unsigned_mismatch_or_late_freeze"
       ],
-      "test_result": "6 edge-confirmation and preregistration tests passed; full Windows suite: 4178 passed, 1 skipped (877.87s); Ruff and targeted mypy passed. Durable preregistration recovery pins protocol, schedule, timestamps, and receipt identity; missing or mismatched registry records cannot produce EDGE_CONFIRMED. Signed fixture remains synthetic.",
-      "evidence_sha256": "fba0f70c6348576ebde64dd89043a3ccf05e82d9eef87c49d776a5b258cc84f9",
+      "test_result": "6 edge-confirmation and preregistration tests passed; full Windows suite: 4181 passed, 1 skipped (863.67s); Ruff and targeted mypy passed. Durable preregistration recovery pins protocol, schedule, timestamps, and receipt identity; missing or mismatched registry records cannot produce EDGE_CONFIRMED. Signed fixture remains synthetic.",
+      "evidence_sha256": "7620e13dcbffc8bc4327a7ef753d152d634415cfc6a81989d06873bff879c65f",
       "blockers": [
         "No approved independent timestamp provider or deployment-pinned trust roots are configured; a caller-provided key map is not proof of deployment authority.",
         "The local registry is not connected to external immutable custody or deployment-level access controls.",
@@ -2960,10 +2960,13 @@
         "test_missing_component_is_not_filled_with_zero_and_residual_is_withheld",
         "test_nonzero_residual_cannot_be_labeled_reconciled",
         "test_nonfinite_or_non_numeric_effects_are_rejected",
-        "test_duplicate_trade_id_and_invalid_tolerance_are_rejected"
+        "test_duplicate_trade_id_and_invalid_tolerance_are_rejected",
+        "test_scheduled_cash_day_without_trade_rows_is_retained_and_reconciled_at_zero",
+        "test_missing_daily_ledger_and_unattributed_nonzero_day_remain_incomplete",
+        "test_daily_ledger_total_must_reconcile_to_trade_rows"
       ],
-      "test_result": "15 passed across the new bridge and existing loss-review tests; Ruff passed. Arithmetic reconciles complete supplied bridges and withholds incomplete days.",
-      "evidence_sha256": "b233c5778e714902584c1c393ed0b03db9294d232348ca1507686b266be88397",
+      "test_result": "12 daily P&L bridge tests passed; full Windows suite: 4181 passed, 1 skipped (863.67s); Ruff and targeted mypy passed. Scheduled dates remain in the report, zero-trade zero-net days reconcile, and missing daily totals, unattributed nonzero days, or trade-to-ledger residuals remain incomplete.",
+      "evidence_sha256": "f575a9e03ca85e4d13bb824513f486c5ca74f0f9bfb222eeaa0eeffd93ce327d",
       "blockers": [
         "Current paper ledger does not capture all component effects or frozen forecast baseline.",
         "No authoritative daily bridge integration verifies all losing days.",
