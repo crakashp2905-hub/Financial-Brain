@@ -3179,10 +3179,12 @@
         "test_quote_depth_is_shared_between_rejected_orders_and_not_reused",
         "test_registered_controls_do_not_upgrade_shadow_evidence_or_allow_promotion",
         "test_shadow_journal_is_idempotent_and_cannot_replace_a_book",
-        "test_invalid_quote_or_nonrejected_opportunity_fails_closed"
+        "test_invalid_quote_or_nonrejected_opportunity_fails_closed",
+        "test_shadow_book_replays_authorized_durable_quote_archive",
+        "test_shadow_book_archive_requires_local_read_scope"
       ],
-      "test_result": "20 shadow-book and F07 tests passed; Ruff passed. Shared quote depth, explicit partial/no fills, cost modeling, immutable shadow labels and promotion block verified.",
-      "evidence_sha256": "a62fd2c24a65cac0c23954a3bf8a24f3efc7b1e461d8a460f002f804c7b01f01",
+      "test_result": "34 shadow-book, raw-archive and F07 tests passed; Ruff passed. Shadow simulations can consume integrity-verified normalized quote events under archive local_read/source scopes.",
+      "evidence_sha256": "8000cf7b25fb22c0dc13aacc4a384fc03c7ea5d1f8ec7eb2d4b35b63d7297d70",
       "blockers": [
         "Caller-supplied quotes and rejected decisions are not wired to durable live evidence.",
         "No shared portfolio cash/margin accounting or independently registered matched controls."

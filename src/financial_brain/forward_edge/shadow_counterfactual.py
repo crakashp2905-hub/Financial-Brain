@@ -10,6 +10,7 @@ import math
 from pathlib import Path
 
 from .durable import DurableJournal
+from .raw_quote_archive import RawQuoteArchive
 
 
 class ShadowCounterfactualError(ValueError):
@@ -256,6 +257,53 @@ def simulate_rejected_shadow_book(
             ),
             "unclosed_quantity": sum(row["unclosed_quantity"] for row in results),
             "claim_scope": "Hypothetical quote-depth simulation only; never observed cash P&L or formal forward evidence."}
+
+
+def simulate_rejected_shadow_book_from_archive(
+    *, decisions: Sequence[Mapping[str, object]], archive: RawQuoteArchive,
+    policy: ShadowFillPolicy, registered_control_ids: Sequence[str] = (),
+) -> dict:
+    """Replay authorized, hash-chained normalized quote events into a shadow book.
+
+    This reuses the existing archive permission gate. Event availability timestamps
+    determine when a quote can be used; exchange timestamps determine quote age.
+    The archive attestation and hash chain are evidence supplied by the local
+    operator, not an independently authenticated data entitlement.
+    """
+    if not archive.verify():
+        raise ShadowCounterfactualError("quote archive integrity verification failed")
+    rows = archive.records()  # Enforces local_read and source/event-kind scopes.
+    quotes = []
+    for row in rows:
+        if row.get("t") != "MARKET_EVENT_CAPTURE" or row.get("kind") != "QUOTE":
+            continue
+        try:
+            payload = json.loads(row["payload_json"])
+            instrument = row["instrument"]
+            event_id = f"{row['archive_seq']}:{row['event_sha256']}"
+            bid, ask = float(payload["bid_price"]), float(payload["ask_price"])
+            bid_size, ask_size = int(payload["bid_qty"]), int(payload["ask_qty"])
+            quote = {
+                "event_id": event_id,
+                "symbol": instrument.split(":", 1)[-1],
+                "exchange_at_utc": row["event_utc"],
+                "observed_at_utc": row["available_utc"],
+                "bid": bid,
+                "ask": ask,
+                "bid_size": bid_size,
+                "ask_size": ask_size,
+            }
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ShadowCounterfactualError("archived quote is missing executable normalized fields") from exc
+        quotes.append(quote)
+    report = simulate_rejected_shadow_book(
+        decisions=decisions, quotes=quotes, policy=policy,
+        registered_control_ids=registered_control_ids,
+    )
+    report["quote_source"] = "AUTHORIZED_HASH_CHAINED_RAW_QUOTE_ARCHIVE"
+    report["archive_head_sha256"] = archive.journal.head
+    report["archive_quote_count"] = len(quotes)
+    return report
 
 
 class ShadowBookJournal:

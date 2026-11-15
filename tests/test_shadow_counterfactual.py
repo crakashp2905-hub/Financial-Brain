@@ -9,7 +9,10 @@ from financial_brain.forward_edge.shadow_counterfactual import (
     ShadowCounterfactualError,
     ShadowFillPolicy,
     simulate_rejected_shadow_book,
+    simulate_rejected_shadow_book_from_archive,
 )
+from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.forward_edge.raw_quote_archive import RawArchiveError, RawQuoteArchive
 
 
 UTC = timezone.utc
@@ -150,3 +153,40 @@ def test_invalid_quote_or_nonrejected_opportunity_fails_closed():
     with pytest.raises(ShadowCounterfactualError, match="non-crossed"):
         simulate_rejected_shadow_book(decisions=[_decision()], quotes=[_quote("crossed", 1, bid=101, ask=100)],
                                       policy=_policy())
+
+
+def test_shadow_book_replays_authorized_durable_quote_archive(tmp_path):
+    attestation = {"approved": True, "authorization_id": "local-paper-test",
+                   "controller": "synthetic-fixture", "purpose": "paper research",
+                   "evidence_sha256": "d" * 64, "approved_at_utc": _stamp(0, 0),
+                   "permitted_actions": ["persist", "local_read"],
+                   "permitted_event_kinds": ["QUOTE"], "permitted_sources": ["KITE"]}
+    archive = RawQuoteArchive(tmp_path / "market.jsonl", retention_attestation=attestation)
+    for event_at, available_at, payload in [
+        (_stamp(3, 1), _stamp(3, 1, 1),
+         (("bid_price", "99.9"), ("ask_price", "100.0"), ("bid_qty", "10"), ("ask_qty", "10"))),
+        (_stamp(4, 0), _stamp(4, 0, 1),
+         (("bid_price", "102.0"), ("ask_price", "102.1"), ("bid_qty", "10"), ("ask_qty", "10"))),
+    ]:
+        event = NormalizedEvent("QUOTE", "NSE:ABC", datetime.fromisoformat(event_at),
+                                datetime.fromisoformat(available_at), datetime.fromisoformat(available_at),
+                                    tuple(sorted(payload)))
+        archive.append_market_event(event, source="KITE")
+    report = simulate_rejected_shadow_book_from_archive(
+        decisions=[_decision()], archive=archive, policy=_policy())
+    assert report["quote_source"] == "AUTHORIZED_HASH_CHAINED_RAW_QUOTE_ARCHIVE"
+    assert report["archive_quote_count"] == 2
+    assert report["archive_head_sha256"] == archive.journal.head
+    assert report["orders"][0]["status"] == "CLOSED"
+
+
+def test_shadow_book_archive_requires_local_read_scope(tmp_path):
+    attestation = {"approved": True, "authorization_id": "write-only",
+                   "controller": "synthetic-fixture", "purpose": "paper research",
+                   "evidence_sha256": "d" * 64, "approved_at_utc": _stamp(0, 0),
+                   "permitted_actions": ["persist"],
+                   "permitted_event_kinds": ["QUOTE"], "permitted_sources": ["KITE"]}
+    archive = RawQuoteArchive(tmp_path / "write-only.jsonl", retention_attestation=attestation)
+    with pytest.raises(RawArchiveError, match="does not permit local_read"):
+        simulate_rejected_shadow_book_from_archive(
+            decisions=[_decision()], archive=archive, policy=_policy())
