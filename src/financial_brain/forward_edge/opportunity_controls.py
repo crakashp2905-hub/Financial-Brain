@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date
 import hashlib
 import json
 import math
+from typing import cast
 
 
 class OpportunityControlError(ValueError):
@@ -54,13 +56,23 @@ def _validate(rows: Sequence[Mapping[str, object]], identity: str, label: str) -
         for name in _REQUIRED:
             value = parsed.get(name)
             if name == "session_date":
-                if not isinstance(value, str) or not value.strip():
-                    raise OpportunityControlError(f"{label} session_date is required")
+                if not isinstance(value, str):
+                    raise OpportunityControlError(f"{label} session_date must be an ISO date")
+                try:
+                    canonical_date = date.fromisoformat(value).isoformat()
+                except (TypeError, ValueError) as exc:
+                    raise OpportunityControlError(
+                        f"{label} session_date must be an ISO date"
+                    ) from exc
+                if value != canonical_date:
+                    raise OpportunityControlError(f"{label} session_date must be an ISO date")
                 continue
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise OpportunityControlError(f"{label} {name} must be finite")
             parsed[name] = float(value)
-        if parsed["notional_inr"] <= 0 or parsed["risk_budget_inr"] <= 0 or parsed["liquidity_bp"] < 0:
+        if (cast(float, parsed["notional_inr"]) <= 0
+                or cast(float, parsed["risk_budget_inr"]) <= 0
+                or cast(float, parsed["liquidity_bp"]) < 0):
             raise OpportunityControlError(f"{label} requires positive size/risk and nonnegative spread")
         result.append(parsed)
     return result
@@ -138,9 +150,23 @@ def compare_matched_controls(
                      "liquidity_relative_difference": _relative_difference(t["liquidity_bp"], c["liquidity_bp"]),
                      "risk_relative_difference": _relative_difference(t["risk_budget_inr"], c["risk_budget_inr"])})
     differences = [row["net_difference_bp"] for row in rows if row["status"] == "MATCHED"]
-    return {
+    population = {
+        "treated": [
+            {key: row[key] for key in ("trade_id", *_REQUIRED)}
+            for row in sorted(ts, key=lambda item: item["trade_id"])
+        ],
+        "controls": [
+            {key: row[key] for key in ("control_id", *_REQUIRED)}
+            for row in sorted(cs, key=lambda item: item["control_id"])
+        ],
+    }
+    population_sha = hashlib.sha256(json.dumps(
+        population, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()).hexdigest()
+    report = {
         "policy_id": policy.policy_id,
         "policy_sha256": policy.sha256(),
+        "population_sha256": population_sha,
         "treated_count": len(ts),
         "matched_count": len(differences),
         "unmatched_count": len(ts) - len(differences),
@@ -153,3 +179,7 @@ def compare_matched_controls(
             "No inferential confidence interval or strategy promotion claim is produced.",
         ],
     }
+    report["report_sha256"] = hashlib.sha256(json.dumps(
+        report, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()).hexdigest()
+    return report

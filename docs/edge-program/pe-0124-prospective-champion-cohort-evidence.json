@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_prospective_cohort.py",
-    "result": "15 focused cohort/registry tests passed; full Windows suite: 4183 passed, 1 skipped (865.19s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only; timestamps and outcome digests remain caller-supplied."
+    "result": "15 focused cohort/registry tests passed; full Windows suite: 4185 passed, 1 skipped (796.89s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only; timestamps and outcome digests remain caller-supplied."
   },
   "implemented": [
     "Champion selection receives development returns only; confirmation outcomes are not part of the selection API.",

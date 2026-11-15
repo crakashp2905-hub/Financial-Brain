@@ -65,3 +65,22 @@ def test_invalid_inputs_and_empty_treated_population_are_rejected():
         compare_matched_controls([_treated("t", risk_budget_inr=0)], [], policy=MatchPolicy("v1"))
     with pytest.raises(OpportunityControlError, match="max_risk"):
         MatchPolicy("bad", max_risk_relative_difference=-0.1)
+
+
+def test_population_and_report_hashes_are_order_independent_and_data_bound():
+    treated = [_treated("t1"), _treated("t2", net_return_bp=5.0)]
+    controls = [_control("c1"), _control("c2", net_return_bp=1.0)]
+    policy = MatchPolicy("frozen-v1")
+    first = compare_matched_controls(treated, controls, policy=policy)
+    reordered = compare_matched_controls(list(reversed(treated)), list(reversed(controls)), policy=policy)
+    changed = compare_matched_controls(treated, [_control("c1"), _control("c2", net_return_bp=2.0)],
+                                       policy=policy)
+    assert first["population_sha256"] == reordered["population_sha256"]
+    assert first["report_sha256"] == reordered["report_sha256"]
+    assert first["population_sha256"] != changed["population_sha256"]
+    assert first["report_sha256"] != changed["report_sha256"]
+
+
+def test_noncanonical_session_dates_are_rejected():
+    with pytest.raises(OpportunityControlError, match="ISO date"):
+        compare_matched_controls([_treated("t1", day="2026-2-3")], [], policy=MatchPolicy("v1"))
