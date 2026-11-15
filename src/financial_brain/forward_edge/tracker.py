@@ -419,7 +419,11 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_optional_signature_is_only_trusted_with_external_matching_public_key",
                                   "test_bundle_refuses_traversal_names_and_detects_content_tampering"), (),
                      "Deterministic ZIP export includes an input-hash manifest, checksums, reanalysis notebook and optional Ed25519 signature; signing is explicitly untrusted unless an external public key verifies it. Analyst-supplied frozen experiment files and exact reproduction command must still be selected for each report."),
-    "FE-0122": Entry("NOT_STARTED", (), (), "Read-only UI not built."),
+    "FE-0122": Entry("PARTIAL", ("test_read_only_actions_are_allowed_without_approvals",
+                                  "test_ui_can_never_submit_or_cancel_orders_even_with_live_approval",
+                                  "test_staging_requires_exact_unexpired_human_approval",
+                                  "test_software_actor_cannot_authorize_live_staging"), (),
+                     "Central UI action policy allows view/export/analyze, scopes paper/live staging to exact expiring human approval, and permanently denies UI submit/cancel actions. Existing paper terminal is view-only, but every UI route still needs to call this policy before any mutating staging action."),
     "FE-0123": Entry("NOT_STARTED", (), (), "Operator decisions not built."),
     # ---- F11 ----
     "FE-0124": Entry("NOT_STARTED", (), (), "Outcome maturation queue not built."),
