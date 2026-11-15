@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -18,6 +18,7 @@ from pathlib import Path
 
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 from financial_brain.forward_edge.quote_archive import QuoteArchive
+from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_market_clocks
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -70,10 +71,11 @@ def _exchange_timestamp(value: Any) -> datetime:
     return parsed.replace(tzinfo=IST) if parsed.tzinfo is None else parsed
 
 
-def normalize_kite_quote(instrument: str, quote: dict[str, Any], *, received_at: datetime) -> MarketEvent:
+def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
+                         received_at: datetime | None = None,
+                         clock: ClockProvider | None = None,
+                         availability_delay: timedelta = timedelta(0)) -> MarketEvent:
     """Convert one full Kite quote to a source-labeled event with explicit clocks."""
-    if received_at.tzinfo is None or received_at.utcoffset() is None:
-        raise KiteQuoteNormalizationError("received_at must be timezone aware")
     try:
         venue, symbol = instrument.split(":", 1)
     except ValueError as exc:
@@ -81,6 +83,19 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *, received_at:
     if not venue.strip() or not symbol.strip():
         raise KiteQuoteNormalizationError("instrument venue and symbol are required")
     timestamp = _exchange_timestamp(quote.get("timestamp"))
+    if received_at is None:
+        try:
+            clocks = capture_market_clocks(exchange_at=timestamp, provider=clock or SystemClock(),
+                                           availability_delay=availability_delay)
+        except ValueError as exc:
+            raise KiteQuoteNormalizationError(str(exc)) from exc
+        received_at, available_at = clocks.received_at, clocks.available_at
+    else:
+        if received_at.tzinfo is None or received_at.utcoffset() is None:
+            raise KiteQuoteNormalizationError("received_at must be timezone aware")
+        if availability_delay < timedelta(0):
+            raise KiteQuoteNormalizationError("availability delay cannot be negative")
+        available_at = received_at + availability_delay
     try:
         last_price = float(quote["last_price"])
         volume = int(quote.get("volume", 0))
@@ -131,14 +146,17 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *, received_at:
     event_id = f"kite:{venue.upper()}:{symbol}:{timestamp.isoformat()}:{receipt_iso}:{packet_hash[:16]}"
     return MarketEvent(event_id=event_id, kind=kind, venue=venue.upper(),
                        instrument_id=f"{venue.upper()}:{symbol}", event_time=timestamp,
-                       received_at=received_at, available_at=received_at, payload=payload,
+                       received_at=received_at, available_at=available_at, payload=payload,
                        source="KITE_CONNECT_READ_ONLY", evidence_id=packet_hash)
 
 
 def archive_kite_quote_batch(archive: QuoteArchive, quotes: dict[str, dict[str, Any]], *,
-                             received_at: datetime) -> dict[str, int]:
+                             received_at: datetime | None = None,
+                             clock: ClockProvider | None = None) -> dict[str, int]:
     """Append normalized observations from one existing Kite quote response batch."""
     counts = {"received": len(quotes), "archived": 0, "rejected": 0}
+    if received_at is None and quotes:
+        received_at = (clock or SystemClock()).now()
     for instrument, quote in sorted(quotes.items()):
         try:
             event = normalize_kite_quote(instrument, quote, received_at=received_at)
@@ -150,10 +168,11 @@ def archive_kite_quote_batch(archive: QuoteArchive, quotes: dict[str, dict[str, 
 
 
 def archive_kite_quote_batch_to_path(path: Path, quotes: dict[str, dict[str, Any]], *,
-                                    received_at: datetime) -> dict[str, int]:
+                                    received_at: datetime | None = None,
+                                    clock: ClockProvider | None = None) -> dict[str, int]:
     """Persist one poll batch durably without retaining a file handle across runner exits."""
     archive = QuoteArchive(path)
     try:
-        return archive_kite_quote_batch(archive, quotes, received_at=received_at)
+        return archive_kite_quote_batch(archive, quotes, received_at=received_at, clock=clock)
     finally:
         archive.close()

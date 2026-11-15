@@ -200,6 +200,41 @@ def test_ltp_only_cannot_create_paper_fill_intent(tmp_path):
     runner.close()
 
 
+def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
+    class SequenceClock:
+        def __init__(self, values):
+            self.values = iter(values)
+
+        def now(self):
+            return next(self.values)
+
+    decided_at = NOW + timedelta(seconds=1)
+    executed_at = decided_at + timedelta(milliseconds=100)
+    closed_at = executed_at + timedelta(seconds=1)
+    clock = SequenceClock([NOW, decided_at, executed_at, closed_at])
+    runner = ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"),
+                                  tmp_path / "journal.sqlite", clock=clock)
+    assert runner.begin("clock-session", make_config(),
+                        preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+    event = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+        "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                  "sell": [{"price": 100.05, "quantity": 3}]},
+    }, received_at=NOW)
+    runner.ingest("clock-session", make_config(), [event])
+    runner.decide(session_id="clock-session", strategy_id="momentum", decision_id="clock-trade",
+                  outcome="TRADE", input_event_ids=(event.event_id,))
+    receipt = runner.execute_paper_intent(
+        session_id="clock-session", order_id="clock-order", decision_id="clock-trade",
+        event_id=event.event_id, side="BUY", quantity=2, limit_price=Decimal("100.30"),
+        tick_size=Decimal("0.05"), freeze_limit=10, slice_size=10,
+        adverse_slippage_bps=Decimal("10"), latency_ms=100)
+    assert receipt["simulated_at"] == executed_at.isoformat()
+    report = runner.close_session("clock-session", complete=True)
+    assert report["closed_at"] == closed_at.isoformat()
+    runner.close()
+
+
 def test_unknown_outbox_after_crash_requires_receipt_reconciliation(tmp_path, monkeypatch):
     from financial_brain.kernel.events import UnknownOutcome
 

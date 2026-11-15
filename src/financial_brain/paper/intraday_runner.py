@@ -141,8 +141,13 @@ def daily_view(before: date | None = None):
         log.warning("daily view unavailable: %s", str(e)[:120])
         return None, None, None
     try:
-        asof = (rcon.execute("SELECT MAX(business_date) FROM features WHERE business_date < ?", [before]).fetchone()[0]
-                if before else rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0])
+        row = (rcon.execute("SELECT MAX(business_date) FROM features WHERE business_date < ?", [before]).fetchone()
+               if before else rcon.execute("SELECT MAX(business_date) FROM features").fetchone())
+        asof = row[0] if row else None
+        if asof is None:
+            log.info("daily view skipped: no eligible feature date")
+            rcon.close()
+            return None, None, None
         cs = S.cross_section(rcon, asof)
         events = {r[0] for r in rcon.execute("""
             SELECT DISTINCT l.lineage FROM announcements a JOIN security_lineage l ON l.isin = a.isin
@@ -213,10 +218,16 @@ def opening_from_candles(symbols, day: date, *, candles_fn, token_fn) -> dict[st
 def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None, now_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
-             rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
+             rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
+             clock=None) -> dict:
     from ..providers import kite_data as kd
+    from ..forward_edge.clock import ClockProvider, SystemClock
+
+    if clock is not None and now_fn is not None:
+        raise ValueError("pass either clock or legacy now_fn, not both")
+    clock_provider: ClockProvider = clock or SystemClock()
     quote_fn = quote_fn or kd.quote
-    now_fn = now_fn or (lambda: datetime.now(IST))
+    now_fn = now_fn or (lambda: clock_provider.now().astimezone(IST))
     now = now_fn()
     day = now.date().isoformat()
     if now.time() > CLOSE or now.weekday() >= 5:

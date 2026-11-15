@@ -11,6 +11,7 @@ from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
 from financial_brain.forward_edge.execution_scenario import evaluate_scenario
+from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_local_time
 from financial_brain.forward_edge.intent_timing import create_timed_intent
 from financial_brain.forward_edge.market_data import executable_quote
 from financial_brain.forward_edge.market_events import MarketEvent
@@ -36,8 +37,10 @@ class ForwardSessionRunner:
     custody and close valuation still require integration before a full session can be claimed.
     """
 
-    def __init__(self, state: ForwardSessionStore, journal_path: Path) -> None:
+    def __init__(self, state: ForwardSessionStore, journal_path: Path, *,
+                 clock: ClockProvider | None = None) -> None:
         self.state_store = state
+        self.clock = clock or SystemClock()
         self.journal_path = Path(journal_path)
         self.journal_path.parent.mkdir(parents=True, exist_ok=True)
         self._con = sqlite3.connect(str(self.journal_path))
@@ -67,9 +70,10 @@ class ForwardSessionRunner:
         self._con.close()
         self.state_store.close()
 
-    def begin(self, session_id: str, config: ForwardRunConfig, *, now: datetime,
+    def begin(self, session_id: str, config: ForwardRunConfig, *, now: datetime | None = None,
               preflight: dict[str, bool]) -> SessionState:
         """Create or resume a session, recording every preflight check before opening it."""
+        now = now or capture_local_time(self.clock, label="session start")
         self.state_store.create(session_id, config, now=now)
         state = self.state_store.state(session_id)
         if state in {SessionState.OPEN, SessionState.REJECTED, SessionState.CLOSED, SessionState.INCOMPLETE}:
@@ -150,7 +154,7 @@ class ForwardSessionRunner:
         return self.ingest(session_id, config, events)
 
     def decide(self, *, session_id: str, strategy_id: str, decision_id: str,
-               outcome: str, decided_at: datetime, input_event_ids: tuple[str, ...],
+               outcome: str, input_event_ids: tuple[str, ...], decided_at: datetime | None = None,
                reason_codes: tuple[str, ...] = (), payload: dict[str, Any] | None = None) -> bool:
         """Record a decision only when every referenced source event was already available."""
         if self.state_store.state(session_id) is not SessionState.OPEN:
@@ -159,6 +163,7 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("strategy and decision IDs are required")
         if outcome not in {"TRADE", "NO_TRADE", "WITHHELD", "NO_SIGNAL"}:
             raise ForwardSessionRunnerError("unsupported forward decision outcome")
+        decided_at = decided_at or capture_local_time(self.clock, label="decision timestamp")
         if decided_at.tzinfo is None or decided_at.utcoffset() is None:
             raise ForwardSessionRunnerError("decision time must be timezone aware")
         if outcome != "TRADE" and not reason_codes:
@@ -217,7 +222,7 @@ class ForwardSessionRunner:
                              event_id: str, side: str, quantity: int, limit_price: Decimal,
                              tick_size: Decimal, freeze_limit: int, slice_size: int,
                              adverse_slippage_bps: Decimal, latency_ms: int,
-                             simulated_at: datetime) -> dict[str, Any]:
+                             simulated_at: datetime | None = None) -> dict[str, Any]:
         """Create one durable paper execution receipt from an eligible observed quote.
 
         The deterministic simulation is behind the kernel's durable outbox. A missing or
@@ -227,6 +232,7 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("paper execution is allowed only in an OPEN session")
         if not all(value.strip() for value in (order_id, decision_id, event_id)):
             raise ForwardSessionRunnerError("paper order and source decision identities are required")
+        simulated_at = simulated_at or capture_local_time(self.clock, label="simulated execution timestamp")
         if side not in {"BUY", "SELL"} or type(quantity) is not int or quantity < 1:
             raise ForwardSessionRunnerError("paper order side or quantity is invalid")
         if simulated_at.tzinfo is None or simulated_at.utcoffset() is None:
@@ -343,9 +349,10 @@ class ForwardSessionRunner:
         finally:
             outbox.close()
 
-    def close_session(self, session_id: str, *, now: datetime, complete: bool,
+    def close_session(self, session_id: str, *, complete: bool, now: datetime | None = None,
                       reason: str | None = None) -> dict[str, Any]:
         """Close evidence with a deterministic digest; incomplete sessions remain incomplete."""
+        now = now or capture_local_time(self.clock, label="session close")
         state = self.state_store.state(session_id)
         if state in {SessionState.CLOSED, SessionState.INCOMPLETE}:
             existing = self._con.execute("SELECT report_json FROM runner_session_reports WHERE session_id=?",

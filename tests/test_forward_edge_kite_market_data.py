@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -8,6 +8,7 @@ from financial_brain.forward_edge.market_data import (
     executable_quote,
     normalize_kite_quote,
 )
+from financial_brain.forward_edge.clock import FixedClock
 from financial_brain.forward_edge.market_events import EventKind
 
 
@@ -74,3 +75,13 @@ def test_repeated_exchange_snapshot_at_a_later_receipt_keeps_both_observations()
                                   received_at=datetime(2026, 11, 13, 4, 45, 2, tzinfo=timezone.utc))
     assert first.event_time == second.event_time
     assert first.event_id != second.event_id
+
+
+def test_injected_clock_supplies_receipt_and_explicit_availability_delay():
+    received = datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc)
+    clock = FixedClock(received)
+    event = normalize_kite_quote("NSE:INFY", quote(), clock=clock,
+                                 availability_delay=timedelta(milliseconds=25))
+    assert event.event_time.isoformat() == "2026-11-13T04:45:00+00:00"
+    assert event.received_at == received
+    assert event.available_at == received.replace(microsecond=25000)
