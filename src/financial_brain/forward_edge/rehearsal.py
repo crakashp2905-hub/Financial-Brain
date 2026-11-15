@@ -10,8 +10,10 @@ from datetime import datetime
 from decimal import Decimal
 import hashlib
 import json
+from pathlib import Path
 
 from financial_brain.forward_edge.approvals import Approval, ApprovalError, validate_approval
+from financial_brain.forward_edge.durable import DurableJournal
 
 
 class RehearsalError(RuntimeError):
@@ -202,12 +204,40 @@ class DisarmLatch:
         "UNEXPECTED_EXECUTION",
     )
 
-    def __init__(self) -> None:
+    def __init__(self, journal_path: Path | None = None) -> None:
         self.armed = True
         self.reason: str | None = None
+        self.journal = DurableJournal(Path(journal_path)) if journal_path is not None else None
+        if self.journal is not None:
+            records = self.journal.records()
+            if not records:
+                self.journal.append({"t": "DISARM_LATCH_INIT", "schema_version": 1})
+            else:
+                self._restore(records)
+
+    def _restore(self, records: list[dict]) -> None:
+        if records[0] != {"t": "DISARM_LATCH_INIT", "schema_version": 1}:
+            raise RehearsalError("disarm latch journal has an unknown header")
+        for row in records[1:]:
+            kind = row.get("t")
+            if kind == "DISARM_TRIGGER":
+                trigger = row.get("trigger")
+                if trigger not in self.TRIGGERS:
+                    raise RehearsalError("disarm latch journal contains an unknown trigger")
+                self.armed, self.reason = False, trigger
+            elif kind == "DISARM_RESET":
+                if (not isinstance(row.get("actor_id"), str) or not row["actor_id"].strip()
+                        or row.get("actor_type") != "human" or not isinstance(row.get("scope_sha256"), str)
+                        or len(row["scope_sha256"]) != 64):
+                    raise RehearsalError("disarm latch journal contains an invalid reset record")
+                self.armed, self.reason = True, None
+            else:
+                raise RehearsalError("disarm latch journal contains an unknown event")
 
     def observe(self, trigger: str) -> None:
         if trigger in self.TRIGGERS:
+            if self.journal is not None and (self.armed or self.reason != trigger):
+                self.journal.append({"t": "DISARM_TRIGGER", "trigger": trigger})
             self.armed = False
             self.reason = trigger
 
@@ -218,6 +248,11 @@ class DisarmLatch:
             validate_approval(approval, kind="DISARM_RESET", subject="disarm_latch", scope_sha256=scope_sha256, now=now)
         except ApprovalError as exc:
             raise RehearsalError(f"re-arm refused: {exc}") from exc
+        if self.journal is not None:
+            self.journal.append({
+                "t": "DISARM_RESET", "actor_id": approval.actor_id, "actor_type": approval.actor_type,
+                "scope_sha256": scope_sha256, "approved_at_utc": approval.approved_at_utc.isoformat(),
+            })
         self.armed, self.reason = True, None
 
 

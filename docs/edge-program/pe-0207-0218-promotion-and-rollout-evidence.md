@@ -11,6 +11,7 @@
 - The rehearsal adapter is read-only and rejects order submission/cancellation. The separate mock adapter is labeled mock and only produces `DRY_RUN_ACCEPTED` responses.
 - `RiskProposal` binds capital-at-risk, per-order limit, daily-loss limit, margin limit, and emergency-exit policy hash. Approval must match the proposal's computed hash.
 - The disarm latch recognizes stale feed, custody failure, abnormal costs, ledger mismatch, reconciliation mismatch, risk breach, unexpected execution, stale broker state, and lost heartbeat. Re-arming requires a scoped human `DISARM_RESET` approval. `scaling_evidence_gate` blocks scaling on statement mismatches, fill-model error, risk, reviewer, or owner-approval failures.
+- `DisarmLatch` now accepts an optional durable journal path. In durable mode, trigger and approved reset events are hash-chained, and restart recovers the disarmed state until an approved reset is recorded. This is a local persistence control; authenticated monitor inputs and owner-controlled reset evidence remain operational requirements.
 - India retail-algo primary-source findings and the distinction between this project's read-only/paper scope and any future order path are recorded in [`pe-0214-indian-retail-algo-regulatory-evidence.md`](pe-0214-indian-retail-algo-regulatory-evidence.md). No regulatory or broker permission is inferred; PE-0214 remains blocked on the missing external review and approvals.
 
 ## Validation
@@ -19,6 +20,7 @@
 - `python -m mypy ...` on promotion, approval and rehearsal source: **passed**.
 - Combined focused promotion, rehearsal, confirmation, challenger-registry, fixed-look and Kite-provider suite: **109 passed**. The prior full run had 4,077 passed, 1 skipped and only the two old assertions forbidding GET-only order-status reads failing; those assertions were updated, and this combined regression set passes. The entire suite has not yet been rerun after that update; CI is validating the pushed revision.
 - Promotion-ledger tests cover failed decisions, immutable idempotence, changed-evidence rejection, and tamper detection.
+- `tests/test_forward_edge_f12.py`: 29 passed; Ruff and targeted mypy passed. The durable-latch restart test confirms a stale-feed trip survives reconstruction and only a human-approved reset rearms it.
 - These are code and synthetic-test results. They are not evidence that any strategy is profitable or that broker, custody, rights, legal, or live-session checks have occurred.
 
 ## Per-task status
@@ -35,7 +37,7 @@
 | PE-0214 | PARTIAL | Compliance gate fails closed on missing permission facts; verified venue/broker and applicable Indian regulatory evidence is not present. |
 | PE-0215 | PARTIAL | Proposal captures all required risk fields and exact-scope human approval; no owner-confirmed proposal exists. |
 | PE-0216 | PARTIAL | Scaling gate requires observed reconciliation and fill error evidence, but no contract-note/fill sample is available. |
-| PE-0217 | PARTIAL | Trigger recognition and human-only re-arm are tested; production monitors are not wired to persistently actuate the latch. |
+| PE-0217 | PARTIAL | Durable hash-chained latch persistence and human-only re-arm are implemented; production monitors are not wired to actuate it, and owner reset evidence is absent. |
 | PE-0218 | DONE | Immutable failure decisions are preserved in a hash-chained ledger; no live cash permission or physical-order unlock is emitted. |
 
 **No strategy promotion, capital authorization, or live-order enablement follows from this package.**

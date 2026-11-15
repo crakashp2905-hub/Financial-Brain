@@ -4896,11 +4896,11 @@
       "tests": [
         "tests/test_forward_edge_f12.py"
       ],
-      "test_result": "All enumerated disarm triggers and human-only re-arm are tested.",
+      "test_result": "DisarmLatch supports an optional durable hash-chained journal. Trip state survives restart; an approved human DISARM_RESET is persisted and survives restart. Focused promotion/rehearsal suite: 29 passed; Ruff and targeted mypy passed.",
       "blockers": [
-        "Live monitors are not wired to persistent latch actuation; owner reset evidence is not present."
+        "Live production monitors are not wired to actuate the persistent latch; owner-controlled reset evidence and monitor-source authenticity are not present."
       ],
-      "evidence_sha256": "7941c1e0fe4a7b5eaa7de8f8f0697c6c2c4ec1354943f2888091a5710cfd2a49"
+      "evidence_sha256": "03067200e3d72aea128525d110c1fd834986e5b139b2df4c4e2937d43e140a8e"
     },
     {
       "id": "PE-0218",

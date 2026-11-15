@@ -134,6 +134,21 @@ def test_unrelated_events_do_not_disarm() -> None:
     assert latch.armed is True
 
 
+def test_disarm_state_persists_across_restart_and_only_approved_reset_rearms(tmp_path) -> None:
+    path = tmp_path / "disarm-latch.jsonl"
+    latch = H.DisarmLatch(path)
+    latch.observe("STALE_FEED")
+
+    restored = H.DisarmLatch(path)
+    assert restored.armed is False and restored.reason == "STALE_FEED"
+    with pytest.raises(H.RehearsalError, match="human"):
+        restored.rearm(None, scope_sha256=SHA, now=NOW)
+
+    restored.rearm(_approval("DISARM_RESET", "disarm_latch"), scope_sha256=SHA, now=NOW)
+    after_reset = H.DisarmLatch(path)
+    assert after_reset.armed is True and after_reset.reason is None
+
+
 # ---- FE-0140 ----
 
 def test_slippage_gap_is_reported_and_execution_models_are_versioned_not_edited() -> None:
