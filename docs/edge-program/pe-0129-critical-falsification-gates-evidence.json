@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_forward_edge_f08.py tests/test_pattern_study.py tests/test_falsification_registry.py",
-    "result": "57 focused tests passed, covering each critical check, durable recovery, cohort binding, required artifact digests and registry-derived promotion blocking. Full Windows suite: 4181 passed, 1 skipped (863.67s); Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only."
+    "result": "57 focused tests passed, covering each critical check, durable recovery, cohort binding, required artifact digests and registry-derived promotion blocking. Full Windows suite: 4183 passed, 1 skipped (865.19s); Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only."
   },
   "implemented": [
     "The falsification contract includes look-ahead, survivorship, delisting, corporate actions, stale quote, missing fills and factor overlap.",

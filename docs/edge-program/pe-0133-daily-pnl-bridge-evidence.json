@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_loss_attribution.py tests/test_phase5_loss_review.py; ruff check src/financial_brain/paper/loss_attribution.py tests/test_loss_attribution.py",
-    "result": "12 daily P&L bridge tests passed; full Windows suite: 4181 passed, 1 skipped (863.67s); Ruff and targeted mypy passed. Scheduled dates remain in the report, zero-trade zero-net days reconcile, and missing daily totals, unattributed nonzero days, or trade-to-ledger residuals remain incomplete."
+    "result": "12 daily P&L bridge tests passed; full Windows suite: 4183 passed, 1 skipped (865.19s); Ruff and targeted mypy passed. Scheduled dates remain in the report, zero-trade zero-net days reconcile, and missing daily totals, unattributed nonzero days, or trade-to-ledger residuals remain incomplete."
   },
   "implemented": [
     "Aggregates signed forecast gross, selection, spread, impact, charges, timing, and risk-sizing effects by day.",

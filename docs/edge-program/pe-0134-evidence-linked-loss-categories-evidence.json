@@ -3,23 +3,25 @@
   "task_id": "PE-0134",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_loss_classification.py; ruff check src/financial_brain/paper/loss_classification.py tests/test_loss_classification.py",
-    "result": "6 passed; Ruff passed."
+    "command": "python -m pytest -q tests/test_loss_classification.py; ruff check src/financial_brain/paper/loss_classification.py tests/test_loss_classification.py; mypy src/financial_brain/paper/loss_classification.py",
+    "result": "8 loss-classification and evidence-registry tests passed; full Windows suite: 4183 passed, 1 skipped (865.19s); Ruff and targeted mypy passed. The durable registry binds evidence IDs to categories and artifact digests; unknown IDs and category mismatches fail closed. Artifact sources remain caller-supplied and unauthenticated."
   },
   "implemented": [
     "Supports the eight requested evidence-linked reason categories and explicit UNKNOWN when a losing trade has no evidence identifiers.",
     "Preserves one or more category/evidence-ID pairs and produces deterministic output.",
     "Labels non-loss rows NOT_A_LOSS rather than assigning a loss cause.",
     "Persists classifications in DuckDB with deterministic identity, idempotent replays, and conflict rejection for retroactive edits.",
-    "Revalidates persisted result contents against their evidence before writing."
+    "Revalidates persisted result contents against their evidence before writing.",
+    "Adds an append-only loss evidence registry and a verified classification path that resolves evidence IDs, enforces registered categories, and stores artifact digests with the classification."
   ],
   "blockers": [
-    "Evidence IDs are caller-provided and are not resolved against a trusted immutable evidence registry.",
+    "Registered artifact hashes do not authenticate the referenced source system or establish evidence truth.",
     "Classifier is not yet integrated into the canonical paper trade ledger or loss-review report.",
     "Categories do not establish causal root cause; independent review and supporting data remain required."
   ],
   "source_sha256": {
-    "src/financial_brain/paper/loss_classification.py": "f75f246fb053f7a73e992dc1792a0bdd632735b5cad1beea0cf1f34f940f5555",
-    "tests/test_loss_classification.py": "b8db55f80708d345ce30d7385914021bfb6701b7a9032991842d3ef3b321f606"
+    "src/financial_brain/paper/loss_classification.py": "000a3a03f4156f87cabb7f47d3852dee7c803971a84453fb83678dda15d2efb7",
+    "tests/test_loss_classification.py": "7e492576fc9b82ab12f3bc07eb7d5e99266bd50dc683022c4c46dc0c2af995bc",
+    "docs/edge-program/pe-0134-evidence-linked-loss-categories.md": "35e3e0dc6648f93bb599328fd4f2a0d2453714877f000c9375bae462c58d52b9"
   }
 }

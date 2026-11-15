@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_queue_fill_scenarios.py",
-    "result": "14 queue-scenario tests passed; full Windows suite: 4181 passed, 1 skipped (863.67s). Ruff, targeted mypy, capability evidence audit, source inventory and diff checks passed. No-fill scenarios incur no fixed order charge; any partial fill incurs the frozen fixed charge once while variable costs remain quantity-scaled. Synthetic software scenario only; no broker execution evidence."
+    "result": "14 queue-scenario tests passed; full Windows suite: 4183 passed, 1 skipped (865.19s). Ruff, targeted mypy, capability evidence audit, source inventory and diff checks passed. No-fill scenarios incur no fixed order charge; any partial fill incurs the frozen fixed charge once while variable costs remain quantity-scaled. Synthetic software scenario only; no broker execution evidence."
   },
   "implemented": [
     "Reports no fill, queue best/mid/worst case and full fill for every frozen intention.",
