@@ -113,8 +113,11 @@ OVERRIDES: dict[str, Entry] = {
     "FE-0021": Entry("NOT_STARTED", (), (), "Journal rollover, compaction and backup restore not built."),
     # ---- F02 ----
     "FE-0022": Entry("NOT_STARTED", (), (), "Strategy inventory: next wave."),
-    "FE-0023": Entry("NOT_STARTED", (), (), "StrategySpec schema not built."),
-    "FE-0024": Entry("NOT_STARTED", (), (), "Status taxonomy not implemented in code."),
+    "FE-0023": Entry("DONE", ("test_forward_strategy_spec_validates_all_required_execution_metadata",), (),
+                     "Shared StrategySpec now hashes and round-trips every required contract field; forward validation fails closed on missing or malformed metadata."),
+    "FE-0024": Entry("PARTIAL", ("test_strategy_eligibility_cannot_omit_lineage_or_use_unrecognized_state",
+                                  "test_catalogue_covers_source_registry_and_historical_trials_with_explanations"), (),
+                     "Seven strict eligibility states and hash-linked exclusion records exist. Catalogue candidates are classified; runtime registry transitions and universal strategy mapping are not yet wired."),
     "FE-0025": Entry("NOT_STARTED", (), (), "Benchmark registry not built."),
     "FE-0026": Entry("NOT_STARTED", (), (), "Shadow adapters not built."),
     "FE-0027": Entry("BLOCKED", (), (BLK_GOV,),
