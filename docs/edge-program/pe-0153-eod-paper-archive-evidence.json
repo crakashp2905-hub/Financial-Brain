@@ -12,10 +12,11 @@
     "NAV snapshot requires account equity, cash ledger, total return, inventory, mark, and cash-flow reconciliation.",
     "Canonical immutable archive includes account journal head, cash/NAV, orders, positions, marks, and provenance hashes.",
     "Restart verification compares reopened cash, NAV, quantities, average costs, marks, order closure, and snapshot content hash.",
-    "Atomic archive file creation is deterministic and retry-safe."
+    "Atomic archive file creation is deterministic and retry-safe.",
+    "PE-0155 adds the multi-book daily-paper-cycle command, a Windows finalization wrapper, and an opt-in Task Scheduler registration script; the scheduler job itself is not registered."
   ],
   "blockers": [
-    "No scheduled daily launcher invokes the close workflow yet.",
+    "The Windows Task Scheduler job has not been registered or enabled by the owner; the launcher and registration script are available.",
     "Authoritative close-price feed and data entitlement are not bound to the service.",
     "No prospective EOD-to-next-open market cycle has been recorded."
   ],

@@ -15,4 +15,4 @@
 
 ## Remaining evidence gap
 
-The close workflow is implemented as a callable service but is not yet attached to a scheduled daily launcher. Mark evidence must be supplied by an entitled, authoritative close-price feed, and no observed market close/open cycle has been claimed. The item remains PARTIAL.
+The daily cycle and Windows launcher/Task Scheduler registration script are implemented in PE-0155 (`daily-paper-run`, `scripts/paper_daily_finalize.cmd`, and `scripts/register_paper_daily_task.ps1`). The owner has not registered or enabled the scheduled task, so automated daily invocation is not yet operational. Mark evidence must still come from an entitled, authoritative close-price feed, and no observed market close/open cycle has been claimed. The item remains PARTIAL.
