@@ -4,11 +4,15 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
+from financial_brain.forward_edge.execution_scenario import evaluate_scenario
+from financial_brain.forward_edge.intent_timing import create_timed_intent
+from financial_brain.forward_edge.market_data import executable_quote
 from financial_brain.forward_edge.market_events import MarketEvent
 from financial_brain.forward_edge.quote_archive import QuoteArchive
 from financial_brain.forward_edge.session_state import (
@@ -50,10 +54,18 @@ class ForwardSessionRunner:
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_session_reports (
             session_id TEXT PRIMARY KEY, status TEXT NOT NULL, report_sha256 TEXT NOT NULL,
             report_json TEXT NOT NULL)""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS paper_intents (
+            session_id TEXT NOT NULL, order_id TEXT NOT NULL, decision_id TEXT NOT NULL,
+            event_id TEXT NOT NULL, request_sha256 TEXT NOT NULL, request_json TEXT NOT NULL,
+            PRIMARY KEY(session_id, order_id))""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS paper_execution_receipts (
+            session_id TEXT NOT NULL, order_id TEXT NOT NULL, receipt_sha256 TEXT NOT NULL,
+            receipt_json TEXT NOT NULL, PRIMARY KEY(session_id, order_id))""")
         self._con.commit()
 
     def close(self) -> None:
         self._con.close()
+        self.state_store.close()
 
     def begin(self, session_id: str, config: ForwardRunConfig, *, now: datetime,
               preflight: dict[str, bool]) -> SessionState:
@@ -192,7 +204,144 @@ class ForwardSessionRunner:
         decisions = [json.loads(row[0]) for row in self._con.execute(
             "SELECT record_json FROM runner_decisions WHERE session_id=? ORDER BY decided_at, decision_id",
             [session_id]).fetchall()]
-        return {"events": events, "decisions": decisions, "lifecycle": lifecycle}
+        intents = [json.loads(row[0]) for row in self._con.execute(
+            "SELECT request_json FROM paper_intents WHERE session_id=? ORDER BY order_id",
+            [session_id]).fetchall()]
+        receipts = [json.loads(row[0]) for row in self._con.execute(
+            "SELECT receipt_json FROM paper_execution_receipts WHERE session_id=? ORDER BY order_id",
+            [session_id]).fetchall()]
+        return {"events": events, "decisions": decisions, "lifecycle": lifecycle,
+                "intents": intents, "execution_receipts": receipts}
+
+    def execute_paper_intent(self, *, session_id: str, order_id: str, decision_id: str,
+                             event_id: str, side: str, quantity: int, limit_price: Decimal,
+                             tick_size: Decimal, freeze_limit: int, slice_size: int,
+                             adverse_slippage_bps: Decimal, latency_ms: int,
+                             simulated_at: datetime) -> dict[str, Any]:
+        """Create one durable paper execution receipt from an eligible observed quote.
+
+        The deterministic simulation is behind the kernel's durable outbox. A missing or
+        ambiguous receipt is never retried automatically; callers must reconcile UNKNOWN.
+        """
+        if self.state_store.state(session_id) is not SessionState.OPEN:
+            raise ForwardSessionRunnerError("paper execution is allowed only in an OPEN session")
+        if not all(value.strip() for value in (order_id, decision_id, event_id)):
+            raise ForwardSessionRunnerError("paper order and source decision identities are required")
+        if side not in {"BUY", "SELL"} or type(quantity) is not int or quantity < 1:
+            raise ForwardSessionRunnerError("paper order side or quantity is invalid")
+        if simulated_at.tzinfo is None or simulated_at.utcoffset() is None:
+            raise ForwardSessionRunnerError("simulated execution clock must be timezone aware")
+        if latency_ms < 0:
+            raise ForwardSessionRunnerError("simulated latency cannot be negative")
+        try:
+            limit = Decimal(limit_price)
+            tick = Decimal(tick_size)
+            slippage = Decimal(adverse_slippage_bps)
+        except Exception as exc:  # noqa: BLE001 - Decimal rejects malformed numeric inputs
+            raise ForwardSessionRunnerError("limit, tick and slippage must be decimals") from exc
+        if any(not value.is_finite() for value in (limit, tick, slippage)) or min(limit, tick) <= 0 or slippage < 0:
+            raise ForwardSessionRunnerError("limit/tick must be positive and slippage non-negative")
+        decision_row = self._con.execute("SELECT outcome, record_json FROM runner_decisions "
+                                         "WHERE session_id=? AND decision_id=?",
+                                         [session_id, decision_id]).fetchone()
+        if decision_row is None or decision_row[0] != "TRADE":
+            raise ForwardSessionRunnerError("paper intent requires a journaled TRADE decision")
+        decision = json.loads(decision_row[1])
+        if event_id not in decision["input_event_ids"]:
+            raise ForwardSessionRunnerError("paper quote must be an input to the recorded decision")
+        event_row = self._con.execute("SELECT event_json FROM runner_events WHERE session_id=? AND event_id=?",
+                                      [session_id, event_id]).fetchone()
+        if event_row is None:
+            raise ForwardSessionRunnerError("paper quote is absent from the session event journal")
+        event = MarketEvent.from_dict(json.loads(event_row[0]))
+        quote = executable_quote(event)
+        if quote is None:
+            raise ForwardSessionRunnerError("paper fill requires a two-sided quote with positive visible depth")
+        decision_at = datetime.fromisoformat(decision["decided_at"])
+        timed = create_timed_intent(decision_id=decision_id, event=event, side=side, quantity=quantity,
+                                    decision_time=decision_at,
+                                    latency=timedelta(milliseconds=latency_ms))
+        if simulated_at.astimezone(timezone.utc) < timed.earliest_fill_time:
+            raise ForwardSessionRunnerError("simulated fill precedes decision plus configured latency")
+        touch = quote["ask"] if side == "BUY" else quote["bid"]
+        visible = quote["ask_quantity"] if side == "BUY" else quote["bid_quantity"]
+        request = {"session_id": session_id, "order_id": order_id, "decision_id": decision_id,
+                   "event_id": event_id, "side": side, "quantity": quantity,
+                   "limit_price": str(limit), "tick_size": str(tick), "freeze_limit": freeze_limit,
+                   "slice_size": slice_size, "adverse_slippage_bps": str(slippage),
+                   "latency_ms": latency_ms, "earliest_fill_time": timed.earliest_fill_time.isoformat(),
+                   "simulated_at": simulated_at.astimezone(timezone.utc).isoformat()}
+        request_json = json.dumps(request, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        request_sha = hashlib.sha256(request_json.encode("utf-8")).hexdigest()
+        existing = self._con.execute("SELECT request_sha256 FROM paper_intents WHERE session_id=? AND order_id=?",
+                                     [session_id, order_id]).fetchone()
+        if existing and existing[0] != request_sha:
+            raise ForwardSessionRunnerError("order ID reused with different paper intent")
+        if not existing:
+            self._con.execute("INSERT INTO paper_intents VALUES (?, ?, ?, ?, ?, ?)",
+                              [session_id, order_id, decision_id, event_id, request_sha, request_json])
+            self._con.commit()
+
+        def persist_simulation() -> None:
+            scenario = evaluate_scenario(side=side, quantity=quantity, touch_price=touch,
+                                         limit_price=limit, tick_size=tick, visible_quantity=visible,
+                                         freeze_limit=freeze_limit, slice_size=slice_size,
+                                         adverse_slippage_bps=slippage)
+            body = {"session_id": session_id, "order_id": order_id, "status": scenario.status,
+                    "requested_quantity": scenario.requested_quantity,
+                    "filled_quantity": scenario.filled_quantity, "inventory_delta": scenario.inventory_delta,
+                    "average_price": str(scenario.average_price) if scenario.average_price is not None else None,
+                    "child_quantities": list(scenario.child_quantities), "reject_reason": scenario.reject_reason,
+                    "adverse_slippage_bps": str(scenario.adverse_slippage_bps),
+                    "quote_event_id": event_id, "source": event.source,
+                    "simulated_at": simulated_at.astimezone(timezone.utc).isoformat(),
+                    "physical_order_submitted": False}
+            self._persist_paper_receipt(session_id, order_id, body)
+
+        from financial_brain.kernel.events import EventKernel
+        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
+        outbox = EventKernel(journal_path=str(outbox_path))
+        try:
+            outbox.side_effect(f"paper:{session_id}:{order_id}", persist_simulation)
+        finally:
+            outbox.close()
+        receipt = self._con.execute("SELECT receipt_json FROM paper_execution_receipts "
+                                    "WHERE session_id=? AND order_id=?", [session_id, order_id]).fetchone()
+        if receipt is None:
+            raise ForwardSessionRunnerError("outbox acknowledged without a persisted simulation receipt")
+        return json.loads(receipt[0])
+
+    def _persist_paper_receipt(self, session_id: str, order_id: str,
+                               body: dict[str, Any]) -> None:
+        canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        previous = self._con.execute("SELECT receipt_sha256 FROM paper_execution_receipts "
+                                     "WHERE session_id=? AND order_id=?", [session_id, order_id]).fetchone()
+        if previous and previous[0] != digest:
+            raise ForwardSessionRunnerError("paper execution receipt conflicts with existing result")
+        if not previous:
+            self._con.execute("INSERT INTO paper_execution_receipts VALUES (?, ?, ?, ?)",
+                              [session_id, order_id, digest, canonical])
+            self._con.commit()
+
+    def reconcile_unknown_paper_intent(self, *, session_id: str, order_id: str,
+                                       reconciled_by: str) -> bool:
+        """Reconcile a crash-ambiguous local simulation against its durable receipt row."""
+        if not reconciled_by.strip():
+            raise ForwardSessionRunnerError("paper simulation reconciliation needs an actor")
+        from financial_brain.kernel.events import EventKernel
+        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
+        outbox = EventKernel(journal_path=str(outbox_path))
+        key = f"paper:{session_id}:{order_id}"
+        try:
+            if key not in outbox.unknown_keys:
+                raise ForwardSessionRunnerError("paper intent has no UNKNOWN outbox state")
+            receipt = self._con.execute("SELECT receipt_sha256 FROM paper_execution_receipts "
+                                        "WHERE session_id=? AND order_id=?", [session_id, order_id]).fetchone()
+            outbox.resolve_unknown(key, took_effect=receipt is not None, reconciled_by=reconciled_by)
+            return receipt is not None
+        finally:
+            outbox.close()
 
     def close_session(self, session_id: str, *, now: datetime, complete: bool,
                       reason: str | None = None) -> dict[str, Any]:
@@ -206,6 +355,8 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("terminal session has no persisted close report")
         if state is not SessionState.OPEN:
             raise ForwardSessionRunnerError("only an OPEN session can close")
+        if complete:
+            self._require_resolved_paper_intents(session_id)
         self.state_store.transition(session_id, SessionState.DRAINING, now=now)
         if complete:
             self.state_store.transition(session_id, SessionState.CLOSED, now=now)
@@ -217,6 +368,8 @@ class ForwardSessionRunner:
         records = self.records(session_id)
         body = {"session_id": session_id, "status": status, "closed_at": now.astimezone(timezone.utc).isoformat(),
                 "event_count": len(records["events"]), "decision_count": len(records["decisions"]),
+                "intent_count": len(records["intents"]),
+                "execution_receipt_count": len(records["execution_receipts"]),
                 "reason": reason, "records_sha256": hashlib.sha256(json.dumps(
                     records, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -226,6 +379,26 @@ class ForwardSessionRunner:
                           [session_id, status, report["report_sha256"], report_json])
         self._con.commit()
         return report
+
+    def _require_resolved_paper_intents(self, session_id: str) -> None:
+        intents = self._con.execute("SELECT order_id FROM paper_intents WHERE session_id=?",
+                                    [session_id]).fetchall()
+        if not intents:
+            return
+        receipts = self._con.execute("SELECT order_id FROM paper_execution_receipts WHERE session_id=?",
+                                     [session_id]).fetchall()
+        if {row[0] for row in intents} != {row[0] for row in receipts}:
+            raise ForwardSessionRunnerError("cannot close complete with missing paper execution receipts")
+        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
+        if not outbox_path.is_file():
+            raise ForwardSessionRunnerError("cannot close complete without durable outbox evidence")
+        with sqlite3.connect(str(outbox_path)) as outbox:
+            rows = outbox.execute("SELECT key, state FROM outbox WHERE key LIKE ?",
+                                  [f"paper:{session_id}:%"]).fetchall()
+        expected = {f"paper:{session_id}:{row[0]}" for row in intents}
+        actual = {key for key, state in rows if state == "DISPATCHED"}
+        if expected != actual:
+            raise ForwardSessionRunnerError("cannot close complete with pending or UNKNOWN paper outbox state")
 
     def _append_record(self, kind: str, session_id: str, record: dict[str, Any]) -> None:
         canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)

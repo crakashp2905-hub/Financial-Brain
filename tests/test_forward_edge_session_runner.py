@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -137,4 +137,92 @@ def test_incomplete_close_is_explicit_and_idempotent(tmp_path):
     assert report["status"] == "INCOMPLETE"
     assert runner.close_session("s", now=NOW, complete=False, reason="different retry detail") == report
     assert runner.state_store.state("s") is SessionState.INCOMPLETE
+    runner.close()
+
+
+def trade_setup(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+             "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                       "sell": [{"price": 100.05, "quantity": 3}]}}
+    event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    runner.ingest("s", make_config(), [event])
+    decided = NOW + timedelta(seconds=1)
+    runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
+                  decided_at=decided, input_event_ids=(event.event_id,))
+    return runner, event, decided
+
+
+def execute(runner, event, decided, *, order_id="order-1", qty=2, limit="100.30"):
+    return runner.execute_paper_intent(
+        session_id="s", order_id=order_id, decision_id="trade-1", event_id=event.event_id,
+        side="BUY", quantity=qty, limit_price=Decimal(limit), tick_size=Decimal("0.05"),
+        freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
+        simulated_at=decided + timedelta(milliseconds=100))
+
+
+def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    first = execute(runner, event, decided)
+    second = execute(runner, event, decided)
+    assert first == second
+    assert first["status"] == "FILLED" and first["filled_quantity"] == 2
+    assert first["average_price"] == "100.20"
+    assert first["physical_order_submitted"] is False
+    assert runner.records("s")["execution_receipts"] == [first]
+    assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
+    runner.close()
+
+
+def test_partial_missed_and_rejected_scenarios_keep_requested_vs_filled_separate(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    partial = execute(runner, event, decided, order_id="partial", qty=5)
+    assert partial["status"] == "PARTIAL" and partial["filled_quantity"] == 3
+    missed = execute(runner, event, decided, order_id="missed", qty=2, limit="100.00")
+    assert missed["status"] == "MISSED" and missed["filled_quantity"] == 0
+    rejected = execute(runner, event, decided, order_id="freeze", qty=11)
+    assert rejected["status"] == "REJECTED" and rejected["filled_quantity"] == 0
+    runner.close()
+
+
+def test_ltp_only_cannot_create_paper_fill_intent(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner)
+    tick = normalize_kite_quote("NSE:INFY", {"timestamp": "2026-11-13 10:15:00",
+                                  "last_price": 100.0, "volume": 1000}, received_at=NOW)
+    runner.ingest("s", make_config(), [tick])
+    decided = NOW + timedelta(seconds=1)
+    runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
+                  decided_at=decided, input_event_ids=(tick.event_id,))
+    with pytest.raises(ForwardSessionRunnerError, match="two-sided quote"):
+        execute(runner, tick, decided)
+    runner.close()
+
+
+def test_unknown_outbox_after_crash_requires_receipt_reconciliation(tmp_path, monkeypatch):
+    from financial_brain.kernel.events import UnknownOutcome
+
+    runner, event, decided = trade_setup(tmp_path)
+    persist = runner._persist_paper_receipt
+
+    def crash_after_persist(session_id, order_id, body):
+        persist(session_id, order_id, body)
+        raise RuntimeError("injected crash before outbox acknowledgement")
+
+    monkeypatch.setattr(runner, "_persist_paper_receipt", crash_after_persist)
+    with pytest.raises(UnknownOutcome):
+        execute(runner, event, decided)
+    monkeypatch.setattr(runner, "_persist_paper_receipt", persist)
+    with pytest.raises(UnknownOutcome):
+        execute(runner, event, decided)
+    with pytest.raises(ForwardSessionRunnerError, match="pending or UNKNOWN"):
+        runner.close_session("s", now=decided + timedelta(seconds=1), complete=True)
+    assert runner.reconcile_unknown_paper_intent(session_id="s", order_id="order-1",
+                                                  reconciled_by="local-receipt-check") is True
+    receipt = execute(runner, event, decided)
+    assert receipt["status"] == "FILLED"
+    assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
+    report = runner.close_session("s", now=decided + timedelta(seconds=1), complete=True)
+    assert report["status"] == "CLOSED" and report["execution_receipt_count"] == 1
     runner.close()
