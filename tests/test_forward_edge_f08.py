@@ -92,9 +92,13 @@ def test_required_sessions_scale_with_noise_and_target_precision() -> None:
 
 # ---- FE-0098 / FE-0099 / FE-0100 / FE-0101 / FE-0102 / FE-0103 + verdict ----
 
+_FALSIFICATION = {name: {"passed": True, "observed": 100, "expected": 100,
+                         "source_sha256": "a" * 64, "method": "frozen-audit-v1"}
+                  for name in E.FALSIFICATION_CHECKS}
+
 GOOD_KW = dict(eligible_independent_sessions=120, tier=ClaimTier.INDEPENDENT_FORWARD,
                net_by_cost_multiplier={1.0: 0.004, 1.5: 0.003, 2.0: 0.002}, best_block=0.35,
-               sample_design_predeclared=True, falsification_status="NO_FALSIFICATION_FOUND",
+               sample_design_predeclared=True, falsification_status=_FALSIFICATION,
                net_by_cost_and_fill={(c, f): 0.001 for c in E.EXECUTION_STRESS_COSTS
                                       for f in E.EXECUTION_STRESS_FILL_RATES})
 
@@ -173,6 +177,24 @@ def test_every_reported_row_carries_exactly_one_claim_tier() -> None:
 
 def test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail() -> None:
     assert E.falsification_report({})["status"] == "INSUFFICIENT_EVIDENCE"
-    full = {c: True for c in E.FALSIFICATION_CHECKS}
-    assert E.falsification_report(full)["status"] == "NO_FALSIFICATION_FOUND"
-    assert E.falsification_report({**full, "lookahead": False})["status"] == "FAIL"
+    # Legacy booleans lack a denominator and source identity, so they cannot pass.
+    asserted = {c: True for c in E.FALSIFICATION_CHECKS}
+    assert E.falsification_report(asserted)["status"] == "INSUFFICIENT_EVIDENCE"
+    full = {c: dict(v) for c, v in _FALSIFICATION.items()}
+    report = E.falsification_report(full)
+    assert report["status"] == "NO_FALSIFICATION_FOUND"
+    assert report["all_checks_have_full_coverage"] is True
+    assert report["checks"]["lookahead"]["coverage"] == 1.0
+    assert E.falsification_report({**full, "lookahead": {**full["lookahead"], "passed": False}})["status"] == "FAIL"
+
+
+def test_falsification_report_fails_closed_on_partial_or_unidentified_evidence() -> None:
+    partial = {c: dict(v) for c, v in _FALSIFICATION.items()}
+    partial["missed_fills"]["observed"] = 80
+    assert E.falsification_report(partial)["status"] == "INSUFFICIENT_EVIDENCE"
+    assert E.falsification_report(partial)["checks"]["missed_fills"]["coverage"] == 0.8
+    unidentified = {c: dict(v) for c, v in _FALSIFICATION.items()}
+    unidentified["factor_overlap"]["source_sha256"] = "not-a-digest"
+    report = E.falsification_report(unidentified)
+    assert report["status"] == "INSUFFICIENT_EVIDENCE"
+    assert "factor_overlap" in report["missing"]

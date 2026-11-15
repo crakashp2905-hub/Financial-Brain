@@ -242,19 +242,65 @@ def label_rows(rows: list[dict]) -> list[dict]:
 FALSIFICATION_CHECKS = ("lookahead", "survivorship", "delisting", "factor_overlap", "rejected_trades", "missed_fills")
 
 
-def falsification_report(results: dict[str, bool | None]) -> dict:
-    """True = check passed, False = check failed, None/absent = no evidence. No evidence is INSUFFICIENT, never a win."""
-    failed = [c for c in FALSIFICATION_CHECKS if results.get(c) is False]
-    missing = [c for c in FALSIFICATION_CHECKS if results.get(c) is None]
+def falsification_report(results: dict[str, object]) -> dict:
+    """Summarize six falsification checks without turning absent or weak evidence into a pass.
+
+    Each check must carry a verdict, a non-zero observed denominator, a source digest and a
+    method identifier. The boolean form remains accepted only as a compatibility input and
+    is deliberately reported as insufficient: a bare assertion has no auditable population.
+    """
+    checks: dict[str, dict] = {}
+    failed: list[str] = []
+    missing: list[str] = []
+    for name in FALSIFICATION_CHECKS:
+        raw = results.get(name)
+        if not isinstance(raw, dict):
+            missing.append(name)
+            checks[name] = {"status": "INSUFFICIENT_EVIDENCE", "reason": "AUDIT_RECORD_REQUIRED"}
+            continue
+        passed = raw.get("passed")
+        observed = raw.get("observed")
+        expected = raw.get("expected")
+        digest = raw.get("source_sha256")
+        method = raw.get("method")
+        observed_count = observed if type(observed) is int else None
+        expected_count = expected if type(expected) is int else None
+        valid_counts = (observed_count is not None and expected_count is not None
+                        and observed_count > 0 and expected_count > 0 and observed_count <= expected_count)
+        coverage = (observed_count / expected_count
+                    if valid_counts and observed_count is not None and expected_count is not None else None)
+        valid_digest = (isinstance(digest, str) and len(digest) == 64
+                        and all(ch in "0123456789abcdef" for ch in digest))
+        valid_method = isinstance(method, str) and bool(method.strip())
+        if passed is False:
+            failed.append(name)
+            checks[name] = {"status": "FAIL", "observed": observed, "expected": expected,
+                            "coverage": coverage,
+                            "source_sha256": digest if valid_digest else None,
+                            "method": method if valid_method else None}
+        elif passed is True and valid_counts and observed_count == expected_count and valid_digest and valid_method:
+            checks[name] = {"status": "PASS", "observed": observed, "expected": expected,
+                            "coverage": 1.0, "source_sha256": digest, "method": method}
+        else:
+            missing.append(name)
+            reason = ("INCOMPLETE_COVERAGE" if valid_counts and observed_count is not None
+                      and expected_count is not None and observed_count < expected_count else "INVALID_AUDIT_RECORD")
+            checks[name] = {"status": "INSUFFICIENT_EVIDENCE", "reason": reason,
+                            "observed": observed if type(observed) is int else None,
+                            "expected": expected if type(expected) is int else None,
+                            "coverage": coverage,
+                            "source_sha256": digest if valid_digest else None,
+                            "method": method if valid_method else None}
     status = "FAIL" if failed else ("INSUFFICIENT_EVIDENCE" if missing else "NO_FALSIFICATION_FOUND")
-    return {"status": status, "failed": failed, "missing": missing}
+    return {"status": status, "failed": failed, "missing": missing, "checks": checks,
+            "all_checks_have_full_coverage": not missing and not failed}
 
 
 # ---- verdict ----
 
 def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sessions: int, tier: ClaimTier,
                       net_by_cost_multiplier: dict[float, float], best_block: float, sample_design_predeclared: bool,
-                      falsification_status: str,
+                      falsification_status: str | dict,
                       net_by_cost_and_fill: dict[tuple[float, float], float] | None = None,
                       min_sessions: int = 60, lags: int = 5, z: float = 1.96,
                       max_block_share: float = 0.6) -> dict:
@@ -270,8 +316,10 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         reasons.append("BELOW_SESSION_FLOOR")
     if not sample_design_predeclared:
         reasons.append("SAMPLE_DESIGN_NOT_PREDECLARED")
-    if falsification_status != "NO_FALSIFICATION_FOUND":
-        reasons.append("FALSIFICATION_" + falsification_status)
+    falsification_verdict = (falsification_report(falsification_status)["status"]
+                             if isinstance(falsification_status, dict) else falsification_status)
+    if falsification_verdict != "NO_FALSIFICATION_FOUND":
+        reasons.append("FALSIFICATION_" + falsification_verdict)
     if best_block > max_block_share:
         reasons.append("REGIME_CONCENTRATION")
     if not stress_robust(net_by_cost_multiplier):

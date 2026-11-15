@@ -196,16 +196,17 @@
         "src/financial_brain/paper/intraday_runner.py",
         "src/financial_brain/forward_edge/session_runner.py",
         "src/financial_brain/forward_edge/pipeline.py",
-        "src/financial_brain/kernel/paper_account.py"
+        "src/financial_brain/kernel/paper_account.py",
+        "docs/edge-program/pe-0011-engine-authority-evidence.json"
       ],
       "tests": [
         "test_inventory_covers_all_python_sources_without_inventing_owners",
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
       ],
-      "test_result": "Committed inventory captures 550 Python sources and a deterministic local import graph rooted at the legacy intraday runner, fixture pipeline, forward session runner, and Kite live ingest. It records 543 unassessed and 300 role-unassigned modules. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
-      "evidence_sha256": "1b34f279de2e17a297690cccfbafb65edaf0fb67d5fa34f480f059ae8145d40c",
+      "test_result": "Committed inventory captures 588 Python files (581 unassessed, 329 role-unassigned), hash 86aa2de9e9136f920678b426b4656d0c5b6f85e912149d69b2937da538569080. Source-inventory and paper-portfolio authority tests: 6 passed. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
+      "evidence_sha256": "bdfa9846f1e23f85b7ad1818c8f096ce5aa72ed56ea70bb5a40c160ec8cfb4a8",
       "blockers": [
-        "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state"
+        "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state."
       ]
     },
     {

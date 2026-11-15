@@ -516,8 +516,9 @@ OVERRIDES.update({
                      "StoppingPolicy exists; promotion_verdict does not yet consult it."),
     "FE-0102": Entry("PARTIAL", ("test_every_reported_row_carries_exactly_one_claim_tier",), (),
                      "Tier enum and row check; not yet applied to every real report."),
-    "FE-0103": Entry("PARTIAL", ("test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail",), (),
-                     "Verdict logic for the six checks. The checks themselves are not implemented."),
+    "FE-0103": Entry("PARTIAL", ("test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail",
+                                 "test_falsification_report_fails_closed_on_partial_or_unidentified_evidence"), (),
+                     "Six-check report requires per-check verdict, denominator, complete coverage, method and source SHA-256; bare booleans are insufficient. External source validity and the underlying look-ahead, survivorship, delisting, factor, rejection and fill analyses remain caller responsibilities."),
 })
 
 
@@ -654,8 +655,8 @@ _DUR = "forward_edge/durable.py; the legacy in-memory EventKernel and pilot are 
 OVERRIDES.update({
     "FE-0003": Entry("PARTIAL", ("test_every_known_strategy_has_one_status_lineage_and_reason",
                                  "test_committed_eligibility_list_matches_the_generator_so_a_new_strategy_needs_a_decision",
-                                 "test_all_thirteen_recorded_trials_are_failed_in_the_list"), (),
-                     "docs/forward-edge/strategy-eligibility.json: 13 failed trials and the strategies/ modules. Families outside those paths (paper zoo, patterns) are not enumerated."),
+                                 "test_all_fourteen_recorded_trials_are_failed_in_the_list"), (),
+                     "docs/forward-edge/strategy-eligibility.json: 14 failed trials and the strategies/ modules. Families outside those paths (paper zoo, patterns) are not enumerated."),
     "FE-0009": Entry("DONE", ("test_scratch_database_is_temporary_and_needs_no_credentials",
                               "test_real_data_paths_are_refused"), (), "forward_edge/disposable.py."),
     "FE-0011": Entry("DONE", ("test_outbox_is_written_before_the_action_and_an_unacked_key_is_never_blindly_resent",
@@ -724,13 +725,12 @@ OVERRIDES.update({
 def capability_matrix() -> dict:
     """FE-0149: implemented, partial, blocked, not started, and independently evidenced (always empty offline)."""
     table = entries()
-    out: dict[str, list[str] | str] = {"implemented": [], "partial": [], "blocked": [], "not_started": []}
+    buckets: dict[str, list[str]] = {"implemented": [], "partial": [], "blocked": [], "not_started": []}
     for fe_id, e in sorted(table.items()):
-        out[{"DONE": "implemented", "PARTIAL": "partial", "BLOCKED": "blocked", "NOT_STARTED": "not_started"}[e.status]].append(fe_id)
-    out["independently_evidenced"] = []
-    out["note"] = ("implemented means a passing executable test in the stated scope. Nothing is independently evidenced: "
-                   "no independent timestamp receipts, no observed broker fills and no live market sessions exist offline.")
-    return out
+        buckets[{"DONE": "implemented", "PARTIAL": "partial", "BLOCKED": "blocked", "NOT_STARTED": "not_started"}[e.status]].append(fe_id)
+    return {**buckets, "independently_evidenced": [],
+            "note": ("implemented means a passing executable test in the stated scope. Nothing is independently evidenced: "
+                     "no independent timestamp receipts, no observed broker fills and no live market sessions exist offline.")}
 
 
 def render_capability_matrix(path: Path | None = None) -> str:

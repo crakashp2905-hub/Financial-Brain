@@ -20,6 +20,11 @@ FRONTMATTER = re.compile(r"^---.*?---", re.S)
 WIKILINK = re.compile(r"\[\[([^\]|#]+)")
 
 
+def _targets(text: str) -> list[str]:
+    """Return canonical wiki-link targets; line wrapping inside ``[[...]]`` is whitespace."""
+    return [" ".join(target.split()) for target in WIKILINK.findall(text)]
+
+
 def summarise(text: str, limit: int = 220) -> str:
     body = FRONTMATTER.sub("", text)
     for line in body.splitlines():
@@ -38,7 +43,7 @@ def graph(root: Path) -> dict:
         text = f.read_text(encoding="utf-8")
         folder = f.parent.relative_to(root).parts[0] if f.parent != root else "root"
         notes[f.stem] = {"i": f.stem, "f": folder, "s": summarise(text), "d": 0}
-        edges += [(f.stem, t.strip()) for t in WIKILINK.findall(text)]
+        edges += [(f.stem, target) for target in _targets(text)]
 
     links = [[s, t] for s, t in edges if t in notes and s != t]
     for s, t in links:
@@ -54,8 +59,7 @@ def write(root: Path, out: Path) -> dict:
     broken = sorted({t for _, t in
                      [(s, t) for f in root.rglob("*.md")
                       for s in [f.stem]
-                      for t in (x.strip() for x in WIKILINK.findall(
-                          f.read_text(encoding="utf-8")))]
+                      for t in _targets(f.read_text(encoding="utf-8"))]
                      if t not in {n["i"] for n in data["n"]}})
     return {"notes": len(data["n"]), "links": len(data["l"]), "broken_links": broken,
             "out": str(out)}

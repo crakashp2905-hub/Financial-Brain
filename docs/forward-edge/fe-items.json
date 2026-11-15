@@ -10,7 +10,7 @@
   "id": "FE-0002",
   "wave": "F00",
   "wave_title": "Baseline, evidence firewall, and deployment safety",
-  "item": "Mark all Q4 2026 research trials exhausted (13/13); preserve historical trial ledger byte-for-byte.",
+  "item": "Mark all Q4 2026 research trials exhausted (14/14); preserve historical trial ledger byte-for-byte.",
   "pass": "A test rejects retrospective edits or new protected trials absent a valid ADR."
  },
  {
@@ -613,7 +613,7 @@
   "wave": "F07",
   "wave_title": "Incremental strategy alpha research without leakage",
   "item": "Keep new hypotheses research-only during exhausted 2026Q4 trial budget unless formal governance amendment.",
-  "pass": "No bypass of 13/13 preregistration limit."
+  "pass": "No bypass of 14/14 preregistration limit."
  },
  {
   "id": "FE-0089",

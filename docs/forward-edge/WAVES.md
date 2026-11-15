@@ -119,3 +119,15 @@ Tracker after this wave: DONE 84, PARTIAL 56, BLOCKED 12, NOT_STARTED 0. Forward
 | F13 | 3202 passed, 1 skipped | `logs/full-suite-f13-tip.txt` |
 | F14 | 3250 passed, 1 skipped | `logs/full-suite-f14-tip.txt` |
 | F15 | 3264 passed, 1 skipped | `logs/full-suite-f15-tip.txt` |
+
+## Post-integration evidence refresh (2026-11-15)
+
+The recorded trial ledger now contains 14 Q4 trials, all failed. The generated strategy eligibility list has been refreshed
+from the ledger: the V2 intraday family is recorded as `FAILED` with `prospective_observation: false`; no new strategy was
+approved for prospective observation. The stale eligibility artifact had caused a full forward-edge suite failure.
+
+The F00-F15 forward-edge test set now passes with 387 passed and 6 skipped on Windows. FE-0103 falsification reports now
+require a result, non-zero observed/expected denominator, complete coverage, method identifier and source SHA-256 for each
+of six checks; bare booleans and partial/unidentified records remain insufficient. This remains a software evidence contract:
+the caller still performs the underlying look-ahead, survivorship, delisting, factor-overlap, rejected-trade and missed-fill
+analyses, and the reports do not prove source truth or profitability.

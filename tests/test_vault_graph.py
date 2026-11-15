@@ -42,6 +42,18 @@ def test_a_link_to_a_note_that_does_not_exist_is_not_an_edge(tmp_path):
     assert g["l"] == [] and g["n"][0]["d"] == 0
 
 
+def test_line_wrapped_wiki_link_target_resolves_as_normalized_whitespace(tmp_path):
+    _note(tmp_path, "07-Research", "Source notes - Bulkowski Encyclopedia of Chart Patterns", "# Source\n")
+    _note(tmp_path, "07-Research", "Pre-registration",
+          "# Plan\n\nSee [[Source notes - Bulkowski Encyclopedia\nof Chart Patterns]].\n")
+
+    g = vault.graph(tmp_path)
+
+    assert g["l"] == [["Pre-registration", "Source notes - Bulkowski Encyclopedia of Chart Patterns"]]
+    out = vault.write(tmp_path, tmp_path / "graph.json")
+    assert out["broken_links"] == []
+
+
 def test_the_real_vault_has_no_broken_links():
     """A broken wiki-link is a note someone meant to write, or a rename that was missed."""
     root = Path("brain")
