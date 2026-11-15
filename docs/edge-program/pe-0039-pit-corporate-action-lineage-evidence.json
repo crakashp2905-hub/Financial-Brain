@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0039",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_phase4_paper_engine.py::test_a_position_survives_an_isin_succession_instead_of_going_dark tests/test_phase4_paper_engine.py::test_a_suspended_holding_is_marked_at_its_last_value_not_dropped tests/test_phase4_paper_engine.py::test_a_name_that_delists_does_not_flatter_the_control tests/test_paper_account_corporate_actions.py tests/test_champion_executable.py::test_full_universe_rejects_and_missing_paths_are_reported_with_action_sensitivity",
+    "result": "Existing coverage passes in the focused run; the complete combined command including the market calendar suite reports 43 passed."
+  },
+  "implemented": [
+    "Historical research holds by security lineage so an ISIN succession does not make a continuing holding disappear.",
+    "Suspensions and delistings remain visible in outcome/equity treatment; missing price paths are explicitly counted and sensitivity-penalized.",
+    "Paper-account corporate-action events support source-hash-bound split, dividend, withholding and delisting cash-settlement entries."
+  ],
+  "blockers": [
+    "Corporate-action records are not fully wired as point-in-time events into every forward paper position and OMS lifecycle.",
+    "Feed completeness, action announcement/availability timestamps and symbol/ISIN succession source evidence are not independently reconciled to an official source.",
+    "Non-cash demergers, rights entitlements, successor-instrument delivery and delisted outcome-denominator completeness need dedicated handling and evidence."
+  ],
+  "scope_note": "Existing historical lineage and paper-account accounting components are evidenced, but this does not establish full point-in-time corporate-action correctness for forward holdings."
+}

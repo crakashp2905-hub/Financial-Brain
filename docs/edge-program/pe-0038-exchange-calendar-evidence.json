@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0038",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f03.py",
+    "result": "Calendar tests pass within the focused market-data set; special-session, expiry, instrument-window, missing-window and invalid-window behavior are covered with synthetic fixtures."
+  },
+  "implemented": [
+    "Versioned explicit calendars accept holidays, special-session dates, expiry dates and per-instrument local open/close windows.",
+    "Special-session entries override a holiday/weekday closure; unknown instruments and missing windows fail closed for time-window checks.",
+    "Invalid timezone, reversed time range and duplicate instrument windows are rejected."
+  ],
+  "blockers": [
+    "No official exchange calendar source is bundled or provenance-attested; current dates and holiday coverage require owner-supplied source records.",
+    "No historical golden dataset currently validates actual expiry schedules and known NSE/BSE special-session mechanics.",
+    "Instrument windows and expiry schedules are not automatically resolved from effective-dated instrument master rules into every runner."
+  ],
+  "scope_note": "The software contract and synthetic mechanics tests exist; production calendar completeness and exchange-specific evidence remain external and unverified."
+}

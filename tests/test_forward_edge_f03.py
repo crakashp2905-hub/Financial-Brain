@@ -69,6 +69,38 @@ def test_calendar_needs_a_version_and_holiday_list(tmp_path: Path) -> None:
         M.load_calendar(p)
 
 
+def test_calendar_applies_instrument_windows_expiries_and_explicit_special_sessions(tmp_path: Path) -> None:
+    p = tmp_path / "calendar-detail.json"
+    p.write_text(json.dumps({
+        "version": "synthetic-contract-fixture-1",
+        "holidays": ["2027-01-26"],
+        "special_sessions": ["2027-01-26"],
+        "expiry_dates": ["2027-01-28"],
+        "instrument_windows": [{"instrument": "NSE:FIXTURE", "opens_at": "09:15",
+                                 "closes_at": "15:30", "timezone": "Asia/Kolkata"}],
+    }), encoding="utf-8")
+    cal = M.load_calendar(p)
+    # This is an explicit fixture of override mechanics; it does not claim to be an actual exchange session.
+    assert cal.is_tradable(date(2027, 1, 26))
+    assert cal.is_expiry(date(2027, 1, 28))
+    assert cal.is_instrument_open("NSE:FIXTURE", datetime.fromisoformat("2027-01-26T03:45:00+00:00"))
+    assert not cal.is_instrument_open("NSE:FIXTURE", datetime.fromisoformat("2027-01-26T10:01:00+00:00"))
+    assert not cal.is_instrument_open("NSE:UNKNOWN", datetime.fromisoformat("2027-01-26T03:45:00+00:00"))
+
+
+def test_calendar_rejects_invalid_or_duplicate_instrument_windows(tmp_path: Path) -> None:
+    p = tmp_path / "duplicate-calendar.json"
+    window = {"instrument": "NSE:FIXTURE", "opens_at": "09:15", "closes_at": "15:30"}
+    p.write_text(json.dumps({"version": "v1", "holidays": [],
+                             "instrument_windows": [window, window]}), encoding="utf-8")
+    with pytest.raises(M.DataError, match="duplicate instrument"):
+        M.load_calendar(p)
+    p.write_text(json.dumps({"version": "v1", "holidays": [],
+                             "instrument_windows": [{**window, "closes_at": "08:00"}]}), encoding="utf-8")
+    with pytest.raises(M.DataError, match="increasing times"):
+        M.load_calendar(p)
+
+
 # ---- FE-0035 offline fixture feed ----
 
 def test_fixture_feed_replays_in_deterministic_order(tmp_path: Path) -> None:

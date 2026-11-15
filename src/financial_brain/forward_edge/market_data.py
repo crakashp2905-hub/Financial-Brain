@@ -16,10 +16,11 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from math import isfinite
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 class DataError(ValueError):
@@ -174,10 +175,44 @@ def _truthy(value: str | None) -> bool:
 # ---- calendar (FE-0034) ----
 
 @dataclass(frozen=True)
+class InstrumentSessionWindow:
+    """Explicit local trading window for one instrument, sourced by its caller."""
+
+    instrument: str
+    opens_at: time
+    closes_at: time
+    timezone_name: str = "Asia/Kolkata"
+
+    def __post_init__(self) -> None:
+        if (not self.instrument.strip() or self.opens_at.tzinfo is not None or
+                self.closes_at.tzinfo is not None or self.opens_at >= self.closes_at):
+            raise DataError("instrument session window needs an instrument and increasing times")
+        try:
+            ZoneInfo(self.timezone_name)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise DataError("instrument session window has an unknown timezone") from exc
+
+    def contains(self, instant: datetime) -> bool:
+        if instant.tzinfo is None or instant.utcoffset() is None:
+            raise DataError("session-window timestamp must be timezone-aware")
+        local = instant.astimezone(ZoneInfo(self.timezone_name))
+        return self.opens_at <= local.timetz().replace(tzinfo=None) < self.closes_at
+
+
+@dataclass(frozen=True)
 class Calendar:
     version: str
     holidays: frozenset[date]
     special_sessions: frozenset[date] = frozenset()
+    expiry_dates: frozenset[date] = frozenset()
+    instrument_windows: tuple[InstrumentSessionWindow, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.version.strip():
+            raise DataError("calendar needs a version")
+        names = [window.instrument for window in self.instrument_windows]
+        if len(set(names)) != len(names):
+            raise DataError("calendar has duplicate instrument session windows")
 
     def is_tradable(self, day: date) -> bool:
         if day in self.special_sessions:
@@ -192,14 +227,32 @@ class Calendar:
             day += timedelta(days=1)
         raise DataError("no tradable session within 60 days: calendar is wrong")
 
+    def is_expiry(self, day: date) -> bool:
+        return day in self.expiry_dates
+
+    def is_instrument_open(self, instrument: str, instant: datetime) -> bool:
+        """Fail closed when the explicit calendar has no window for the instrument."""
+        window = next((row for row in self.instrument_windows if row.instrument == instrument), None)
+        if window is None or instant.tzinfo is None or instant.utcoffset() is None:
+            return False
+        day = instant.astimezone(ZoneInfo(window.timezone_name)).date()
+        return self.is_tradable(day) and window.contains(instant)
+
 
 def load_calendar(path: Path) -> Calendar:
     data = json.loads(path.read_text(encoding="utf-8"))
     if "version" not in data or "holidays" not in data:
         raise DataError("calendar needs version and holidays")
+    windows = tuple(InstrumentSessionWindow(
+        instrument=str(row["instrument"]), opens_at=time.fromisoformat(row["opens_at"]),
+        closes_at=time.fromisoformat(row["closes_at"]),
+        timezone_name=str(row.get("timezone", "Asia/Kolkata")))
+        for row in data.get("instrument_windows", []))
     return Calendar(version=str(data["version"]),
                     holidays=frozenset(date.fromisoformat(d) for d in data["holidays"]),
-                    special_sessions=frozenset(date.fromisoformat(d) for d in data.get("special_sessions", [])))
+                    special_sessions=frozenset(date.fromisoformat(d) for d in data.get("special_sessions", [])),
+                    expiry_dates=frozenset(date.fromisoformat(d) for d in data.get("expiry_dates", [])),
+                    instrument_windows=windows)
 
 
 # ---- fixture feed (FE-0035 offline half) ----

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 86,
-  "unrecorded_tasks": 132,
+  "recorded_tasks": 88,
+  "unrecorded_tasks": 130,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1344,6 +1344,53 @@
       "blockers": [
         "The existing live intraday caller does not yet provide a source-specific maximum-age policy, so old Kite timestamps can still be admitted when the optional tolerance is omitted.",
         "The provider timestamp's exact semantics can vary between last trade time and quote/depth capture time; policy must account for feed type before this becomes a universal fill gate."
+      ]
+    },
+    {
+      "id": "PE-0038",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/market_data.py",
+        "tests/test_forward_edge_f03.py",
+        "docs/edge-program/pe-0038-exchange-calendar-evidence.json"
+      ],
+      "tests": [
+        "test_next_session_skips_weekends_and_holidays",
+        "test_calendar_applies_instrument_windows_expiries_and_explicit_special_sessions",
+        "test_calendar_rejects_invalid_or_duplicate_instrument_windows"
+      ],
+      "test_result": "Explicit calendar supports supplied expiry dates, special sessions and instrument-local windows with fail-closed unknown-window behavior. Synthetic fixture contract tests pass; official calendar coverage and effective-dated runner wiring remain incomplete.",
+      "evidence_sha256": "babd4c629c3abf89b96b4ac3a6d44c3bd213bcac4a389e6e4af05b98e5a82ce7",
+      "blockers": [
+        "No official exchange calendar source is bundled or provenance-attested.",
+        "Actual expiry and special-session golden cases are not independently verified.",
+        "Effective-dated windows are not automatically wired to every runner."
+      ]
+    },
+    {
+      "id": "PE-0039",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/evaluation/champion.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/paper_portfolio.py",
+        "tests/test_phase4_paper_engine.py",
+        "tests/test_paper_account_corporate_actions.py",
+        "tests/test_champion_executable.py",
+        "docs/edge-program/pe-0039-pit-corporate-action-lineage-evidence.json"
+      ],
+      "tests": [
+        "test_a_position_survives_an_isin_succession_instead_of_going_dark",
+        "test_a_suspended_holding_is_marked_at_its_last_value_not_dropped",
+        "test_a_name_that_delists_does_not_flatter_the_control",
+        "test_full_universe_rejects_and_missing_paths_are_reported_with_action_sensitivity"
+      ],
+      "test_result": "Historical lineage tests preserve a position through ISIN succession; suspended/delisted names and missing-path penalties remain represented. Source-hash-bound corporate-action accounting is tested. Combined focused command: 43 passed. Full forward point-in-time source integration is incomplete.",
+      "evidence_sha256": "ac1fe1e77a0dbd0390123c89ad9a736acf8f30d16d13b5502d6c56bf7c48783d",
+      "blockers": [
+        "Point-in-time action/source availability is not integrated across the forward OMS and holdings lifecycle.",
+        "Official feed completeness and symbol/ISIN source history are not independently reconciled.",
+        "Non-cash demergers, rights and successor-instrument handling remain incomplete."
       ]
     },
     {
