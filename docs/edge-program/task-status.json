@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 98,
-  "unrecorded_tasks": 120,
+  "recorded_tasks": 99,
+  "unrecorded_tasks": 119,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -206,8 +206,8 @@
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots",
         "test_portfolio_rejects_shared_authoritative_state_between_books"
       ],
-      "test_result": "Committed inventory captures 590 Python files (583 unassessed, 331 role-unassigned), hash b74400c2e91bef9c1b4e47910bebba6fbbbe21c1864b631dc9800524bbf19a21. Source-inventory and paper-portfolio authority tests: 9 passed. PaperAccountPortfolio rejects duplicate OMS, ledger and position-state owners across registered books. Cross-runner/global authority remains unenforced.",
-      "evidence_sha256": "af8a068717d1502f37b6f9dcff20df67f89b679044e35ef53c921fdb766e7798",
+      "test_result": "Committed inventory captures 590 Python files (583 unassessed, 331 role-unassigned), hash 1316fdc8f07912e09debf796f67215049e725c30234df29b316e82ee7d92fd0f. Source-inventory and paper-portfolio authority tests: 9 passed. PaperAccountPortfolio rejects duplicate OMS, ledger and position-state owners across registered books. Cross-runner/global authority remains unenforced.",
+      "evidence_sha256": "afc0bb5e5ba608a457ee349c0e34dfc4be21958344720f952c166167bc88f341",
       "blockers": [
         "The runtime guard covers only accounts registered in one PaperAccountPortfolio; it does not prevent legacy and forward runner composition roots from owning competing order, ledger or position state for the same logical book."
       ]
@@ -2091,12 +2091,32 @@
         "test_capacity_is_limited_by_adv_participation_and_visible_depth",
         "test_capacity_verdict_withholds_orders_without_fresh_evidence_or_above_haircut"
       ],
-      "test_result": "Capacity uses min(ADV × participation, visible depth) × explicit safety factor; stale, missing, future or insufficient evidence returns NO_TRADE. F09 tests: 16 passed; Ruff and mypy passed. Universal adapter wiring and independently verified liquidity sources remain pending.",
+      "test_result": "Capacity uses min(ADV Ã— participation, visible depth) Ã— explicit safety factor; stale, missing, future or insufficient evidence returns NO_TRADE. F09 tests: 16 passed; Ruff and mypy passed. Universal adapter wiring and independently verified liquidity sources remain pending.",
       "evidence_sha256": "657af7f2a7f7116597f9445a5e511f3d2040e78508f6ec7555ec72a2aa0cd3e5",
       "blockers": [
         "No universal runner/order-adapter integration.",
         "Liquidity input source and timestamp policy remain caller-supplied.",
         "Safety factor is configurable and not empirically calibrated."
+      ]
+    },
+    {
+      "id": "PE-0072",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/portfolio_risk.py",
+        "tests/test_forward_edge_f09.py",
+        "docs/edge-program/pe-0072-cross-book-exposure-evidence.json"
+      ],
+      "tests": [
+        "test_strategy_books_aggregate_gross_market_and_correlation_risk",
+        "test_hedged_books_net_market_beta_but_keep_gross_limit_and_require_complete_correlation"
+      ],
+      "test_result": "A shared gate aggregates gross, net market exposure and correlation-aware risk across named strategy books. Synthetic limit breach, hedge and missing-correlation cases pass: 18 F09 tests; Ruff and mypy passed. Wiring to PaperAccountPortfolio and order admission remains outstanding.",
+      "evidence_sha256": "bef76b294b24c00c5e34dc0e3a831e767c03fffe3c68fcf3f1647d2616dc317f",
+      "blockers": [
+        "The gate is not invoked by all paper runners/order adapters.",
+        "Correlation and risk-unit data have no enforced point-in-time provenance/horizon contract.",
+        "Portfolio accounting/margin reconciliation is not part of this gate."
       ]
     }
   ]

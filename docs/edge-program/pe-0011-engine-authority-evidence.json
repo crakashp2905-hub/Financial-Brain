@@ -4,7 +4,7 @@
   "scope": "Within a PaperAccountPortfolio, strategy books now require distinct durable journals, OMS objects, ledger objects and position maps. Repository-wide and cross-runner ownership remains outside this composition root.",
   "inventory": {
     "path": "docs/edge-program/source-inventory.json",
-    "sha256": "b74400c2e91bef9c1b4e47910bebba6fbbbe21c1864b631dc9800524bbf19a21",
+    "sha256": "1316fdc8f07912e09debf796f67215049e725c30234df29b316e82ee7d92fd0f",
     "python_files": 590,
     "unassessed": 583,
     "role_unassigned": 331

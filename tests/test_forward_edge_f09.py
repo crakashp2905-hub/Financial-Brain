@@ -146,6 +146,43 @@ def test_capacity_verdict_withholds_orders_without_fresh_evidence_or_above_hairc
     assert future.reason == "STALE_OR_FUTURE_LIQUIDITY_EVIDENCE"
 
 
+def test_strategy_books_aggregate_gross_market_and_correlation_risk():
+    books = {"momentum": D("60000"), "breakout": D("60000")}
+    correlation = {(left, right): D("1") if left == right else D("0.9")
+                   for left in books for right in books}
+    verdict = P.aggregate_strategy_book_risk(
+        gross_by_book=books, market_exposure_by_book=books, risk_units_by_book=books,
+        correlation=correlation, max_gross_notional=D("100000"),
+        max_market_exposure=D("100000"), max_correlated_risk_notional=D("100000"),
+    )
+    assert verdict.decision == "NO_TRADE"
+    assert set(verdict.reasons) == {
+        "GROSS_EXPOSURE_LIMIT", "MARKET_EXPOSURE_LIMIT", "CORRELATED_BOOK_RISK_LIMIT"
+    }
+    assert verdict.correlated_risk_notional > D("100000")
+
+
+def test_hedged_books_net_market_beta_but_keep_gross_limit_and_require_complete_correlation():
+    books = {"long": D("60000"), "hedge": D("60000")}
+    correlation = {(left, right): D("1") if left == right else D("0.9")
+                   for left in books for right in books}
+    verdict = P.aggregate_strategy_book_risk(
+        gross_by_book=books,
+        market_exposure_by_book={"long": D("60000"), "hedge": D("-60000")},
+        risk_units_by_book={"long": D("60000"), "hedge": D("-60000")},
+        correlation=correlation, max_gross_notional=D("100000"),
+        max_market_exposure=D("100000"), max_correlated_risk_notional=D("100000"),
+    )
+    assert verdict.market_exposure == 0
+    assert verdict.reasons == ("GROSS_EXPOSURE_LIMIT",)
+    with pytest.raises(P.RiskError, match="complete pairwise"):
+        P.aggregate_strategy_book_risk(
+            gross_by_book=books, market_exposure_by_book=books, risk_units_by_book=books,
+            correlation={("long", "long"): D("1")}, max_gross_notional=D("1"),
+            max_market_exposure=D("1"), max_correlated_risk_notional=D("1"),
+        )
+
+
 # ---- FE-0112 ----
 
 @pytest.mark.parametrize("shock", [{"A": D("-0.2")}, {"A": D("-0.1"), "B": D("-0.1")}, {"A": D("0.3")}])

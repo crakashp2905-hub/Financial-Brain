@@ -3,10 +3,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from math import sqrt
 from pathlib import Path
+
+import numpy as np
 
 from financial_brain.forward_edge.approvals import Approval, ApprovalError, validate_approval
 
@@ -208,6 +212,64 @@ class CapacityVerdict:
     decision: str
     reason: str
     capacity_notional: Decimal | None
+
+
+@dataclass(frozen=True)
+class AggregateBookRiskVerdict:
+    decision: str
+    reasons: tuple[str, ...]
+    gross_notional: Decimal
+    market_exposure: Decimal
+    correlated_risk_notional: Decimal
+
+
+def aggregate_strategy_book_risk(*, gross_by_book: Mapping[str, Decimal],
+                                 market_exposure_by_book: Mapping[str, Decimal],
+                                 risk_units_by_book: Mapping[str, Decimal],
+                                 correlation: Mapping[tuple[str, str], Decimal],
+                                 max_gross_notional: Decimal, max_market_exposure: Decimal,
+                                 max_correlated_risk_notional: Decimal) -> AggregateBookRiskVerdict:
+    """Aggregate all strategy books before entry under gross, market and correlation-aware limits.
+
+    `risk_units_by_book` must contain each book's signed one-period risk exposure in currency units;
+    correlation and units must share the same horizon and valuation timestamp.
+    """
+    names = tuple(sorted(gross_by_book))
+    if (not names or set(names) != set(market_exposure_by_book) or set(names) != set(risk_units_by_book)
+            or any(not name.strip() for name in names)):
+        raise RiskError("aggregate risk inputs must contain the same named strategy books")
+    limits = (max_gross_notional, max_market_exposure, max_correlated_risk_notional)
+    if any(not value.is_finite() or value < 0 for value in limits):
+        raise RiskError("aggregate exposure limits must be finite and non-negative")
+    for book in names:
+        gross = gross_by_book[book]
+        market = market_exposure_by_book[book]
+        risk = risk_units_by_book[book]
+        if not gross.is_finite() or gross < 0 or not market.is_finite() or not risk.is_finite():
+            raise RiskError("strategy book exposures must be finite; gross notional must be non-negative")
+    required_pairs = {(left, right) for left in names for right in names}
+    if not required_pairs.issubset(correlation):
+        raise RiskError("complete pairwise strategy correlation evidence is required")
+    matrix = np.asarray([[float(correlation[(left, right)]) for right in names] for left in names])
+    if (not np.isfinite(matrix).all() or not np.allclose(matrix, matrix.T, atol=1e-10)
+            or not np.allclose(np.diag(matrix), 1.0, atol=1e-10)
+            or np.any(matrix < -1.0) or np.any(matrix > 1.0)
+            or float(np.linalg.eigvalsh(matrix).min()) < -1e-8):
+        raise RiskError("book correlation matrix must be finite, symmetric, bounded and positive semidefinite")
+    gross_total = sum(gross_by_book.values(), Decimal(0))
+    market_total = abs(sum(market_exposure_by_book.values(), Decimal(0)))
+    risk_vector = np.asarray([float(risk_units_by_book[name]) for name in names], dtype=float)
+    variance = max(float(risk_vector @ matrix @ risk_vector), 0.0)
+    correlated_risk = Decimal(str(sqrt(variance)))
+    reasons = []
+    if gross_total > max_gross_notional:
+        reasons.append("GROSS_EXPOSURE_LIMIT")
+    if market_total > max_market_exposure:
+        reasons.append("MARKET_EXPOSURE_LIMIT")
+    if correlated_risk > max_correlated_risk_notional:
+        reasons.append("CORRELATED_BOOK_RISK_LIMIT")
+    return AggregateBookRiskVerdict("NO_TRADE" if reasons else "ALLOW", tuple(reasons),
+                                    gross_total, market_total, correlated_risk)
 
 
 def check_order_capacity(*, proposed_notional: Decimal, adv_notional: Decimal | None,
