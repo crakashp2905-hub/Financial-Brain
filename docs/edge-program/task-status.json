@@ -2697,8 +2697,8 @@
         "test_durable_registry_rejects_invalid_observation_receipts",
         "test_durable_registry_rejects_forged_cohort_plan"
       ],
-      "test_result": "15 focused cohort/registry tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only; timestamps and outcome digests remain caller-supplied.",
-      "evidence_sha256": "99fc67f1e49db69929b4206cd6bbaf5e4f1bb3f2c3bc895047c72116ef97fe8b",
+      "test_result": "15 focused cohort/registry tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only; timestamps and outcome digests remain caller-supplied.",
+      "evidence_sha256": "233df3d47c85e8dc127635a00c75c3f497deaf0d2d2efc843f2af5e611e0c63e",
       "blockers": [
         "Freeze timestamps and outcome digests remain caller-supplied and are not independently attested.",
         "Outcome receipts are not automatically reconciled against the receipt-verified paper-account ledger.",
@@ -2730,8 +2730,8 @@
         "test_registered_confirmation_withholds_when_design_requires_more_sessions",
         "test_confirmation_alpha_is_allocated_across_metrics_and_registered_looks"
       ],
-      "test_result": "Nine focused confirmation tests pass; the registry integration is covered by 24 combined confirmation and prospective-cohort tests. Full Windows suite: 4189 passed, 1 skipped (901.07s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only.",
-      "evidence_sha256": "3756a2a68922ed0a21ecdeae0d422cacfc1340796c4dbb1f6756eb5362f22c89",
+      "test_result": "Nine focused confirmation tests pass; the registry integration is covered by 24 combined confirmation and prospective-cohort tests. Full Windows suite: 4191 passed, 1 skipped (930.68s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only.",
+      "evidence_sha256": "db3866340b507b89bb92a1fdbc4a20d1551276617a36b5fdd9be759127a809e9",
       "blockers": [
         "The report is not yet enforced by the authoritative strategy promotion gate.",
         "After-cost utility fee and risk-accounting lineage remains caller-supplied and is not independently recomputed from paper-account events.",
@@ -2769,8 +2769,8 @@
         "test_registry_rejects_policy_after_charter_revision",
         "test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart"
       ],
-      "test_result": "Full Windows suite: 4189 passed, 1 skipped (901.07s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff, configured mypy, migration, capability-matrix, source-inventory, algorithm/chart matrices, capability evidence audit and diff checks pass. Synthetic software verification only; no live or prospective trading-performance claim.",
-      "evidence_sha256": "3441cbdf3f82729275c6656429dad90ee8e23df4852ee13499874507d858f90c",
+      "test_result": "Full Windows suite: 4191 passed, 1 skipped (930.68s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff, configured mypy, migration, capability-matrix, source-inventory, algorithm/chart matrices, capability evidence audit and diff checks pass. Synthetic software verification only; no live or prospective trading-performance claim.",
+      "evidence_sha256": "a39200b349b2e9566b05170d6c1f2fefd0d9c6895012e5acb20a036c213a73af",
       "blockers": [
         "Production session configuration does not yet require the registry or bind its observation callback to receipt-derived, independently attested cohort metrics.",
         "The fixed-look package is not yet enforced by the authoritative promotion gate, and no prospective market-performance result is claimed."
@@ -2822,8 +2822,8 @@
         "test_frozen_stratification_plan_rejects_invalid_aggregation_digest",
         "test_registered_stratification_verifies_each_durable_session_outcome_digest"
       ],
-      "test_result": "14 focused stratification tests passed; registry-bound integration is covered by 29 combined prospective-cohort and stratification tests. Full Windows suite: 4189 passed, 1 skipped (901.07s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software checks only.",
-      "evidence_sha256": "3111e4d5d19c4238b59e8b66f08cec267b1dece7da9ed392b50fda01f9683875",
+      "test_result": "14 focused stratification tests passed; registry-bound integration is covered by 29 combined prospective-cohort and stratification tests. Full Windows suite: 4191 passed, 1 skipped (930.68s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software checks only.",
+      "evidence_sha256": "b80ea6d8d3c28178b8f0c94af359e23ca45b4039266d9e7a52415eebbf4245ae",
       "blockers": [
         "The aggregation-policy digest is caller-supplied and its underlying weights and instrument-level calculations are not independently resolved or recomputed.",
         "Cohort timestamps and observation digests are not independently attested; no real prospective cohort observations are available."
@@ -2852,8 +2852,8 @@
         "test_caller_clean_status_without_registered_artifacts_cannot_promote",
         "test_registered_critical_falsification_failure_blocks_positive_candidate"
       ],
-      "test_result": "57 focused tests passed, covering each critical check, durable recovery, cohort binding, required artifact digests and registry-derived promotion blocking. Full Windows suite: 4189 passed, 1 skipped (901.07s); Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only.",
-      "evidence_sha256": "3a80b0eb60628cb68d230e47e058b0ea6660ab81f8c9bcea1903733842207907",
+      "test_result": "57 focused tests passed, covering each critical check, durable recovery, cohort binding, required artifact digests and registry-derived promotion blocking. Full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only.",
+      "evidence_sha256": "e78c0a70d0086f5563c9ebd785c01a9333b0dc874b1b5fbbed64a01c23f357bb",
       "blockers": [
         "Artifact digests and check outcomes remain caller-supplied assertions; no independent custodian proves the checks ran or validates the underlying datasets.",
         "Look-ahead, survivorship, corporate-action, stale-quote, fill and factor-overlap evidence still lacks complete data-backed adapters and independent review."
@@ -2877,8 +2877,8 @@
         "test_partial_fill_retains_one_fixed_order_charge_and_no_fill_pays_none",
         "test_invalid_fixed_order_cost_is_rejected"
       ],
-      "test_result": "14 queue-scenario tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s). Ruff, targeted mypy, capability evidence audit, source inventory and diff checks passed. No-fill scenarios incur no fixed order charge; any partial fill incurs the frozen fixed charge once while variable costs remain quantity-scaled. Synthetic software scenario only; no broker execution evidence.",
-      "evidence_sha256": "0829f8000449374d8e583fc0d70fe694d37e050c7b4509a178835c4f7e1ab63e",
+      "test_result": "14 queue-scenario tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s). Ruff, targeted mypy, capability evidence audit, source inventory and diff checks passed. No-fill scenarios incur no fixed order charge; any partial fill incurs the frozen fixed charge once while variable costs remain quantity-scaled. Synthetic software scenario only; no broker execution evidence.",
+      "evidence_sha256": "d98291740b6b9114073e116ebc26fdcf650b6e7eb58439f790d96fdcf36dfc12",
       "blockers": [
         "Queue intervals, trade-through volumes, and fixed charge are supplied by the caller; no licensed observed depth/trade evidence is connected.",
         "Gross P&L and variable costs still scale linearly; adverse selection, per-execution charges, price impact and intratrade risk are not independently modeled.",
@@ -2907,8 +2907,8 @@
         "test_registered_contribution_report_cannot_be_replaced",
         "test_missing_source_digest_and_unregistered_report_fail_closed"
       ],
-      "test_result": "11 contribution-report and durable registry tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s). Ruff and targeted mypy passed. The registry binds source digests and recomputes reports against the frozen prospective cohort; caller digests do not authenticate source ledgers.",
-      "evidence_sha256": "b90aa0fe14b22aa8df0aaece0ad969252b93b0d1894385d665b2c9d78d3bf9be",
+      "test_result": "11 contribution-report and durable registry tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s). Ruff and targeted mypy passed. The registry binds source digests and recomputes reports against the frozen prospective cohort; caller digests do not authenticate source ledgers.",
+      "evidence_sha256": "b44b19eb73e2f69bd7da10793fd69412e47003a8503f1a1a83870c7f8472f551",
       "blockers": [
         "Attribution rows and source digests remain caller-supplied and are not independently authenticated against the paper ledger.",
         "The report is not included in the final promotion gate.",
@@ -2934,8 +2934,8 @@
         "test_preregistration_is_durable_immutable_and_idempotent",
         "test_preregistration_rejects_unsigned_mismatch_or_late_freeze"
       ],
-      "test_result": "6 edge-confirmation and preregistration tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s); Ruff and targeted mypy passed. Durable preregistration recovery pins protocol, schedule, timestamps, and receipt identity; missing or mismatched registry records cannot produce EDGE_CONFIRMED. Signed fixture remains synthetic.",
-      "evidence_sha256": "3e32fc0950ceabb54f8e45fb4fd1af3f15043576af022bba0d0b5ad8b65cbe9c",
+      "test_result": "6 edge-confirmation and preregistration tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. Durable preregistration recovery pins protocol, schedule, timestamps, and receipt identity; missing or mismatched registry records cannot produce EDGE_CONFIRMED. Signed fixture remains synthetic.",
+      "evidence_sha256": "11449421518ac804a8484a42673e6b4083595a25befc806594bc244eb7a3e285",
       "blockers": [
         "No approved independent timestamp provider or deployment-pinned trust roots are configured; a caller-provided key map is not proof of deployment authority.",
         "The local registry is not connected to external immutable custody or deployment-level access controls.",
@@ -2965,8 +2965,8 @@
         "test_missing_daily_ledger_and_unattributed_nonzero_day_remain_incomplete",
         "test_daily_ledger_total_must_reconcile_to_trade_rows"
       ],
-      "test_result": "12 daily P&L bridge tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s); Ruff and targeted mypy passed. Scheduled dates remain in the report, zero-trade zero-net days reconcile, and missing daily totals, unattributed nonzero days, or trade-to-ledger residuals remain incomplete.",
-      "evidence_sha256": "a6a1f43ae8596699a0fee3e430df44a342c9f23fa892d7bddc8c1a6a9a9cf8ad",
+      "test_result": "12 daily P&L bridge tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. Scheduled dates remain in the report, zero-trade zero-net days reconcile, and missing daily totals, unattributed nonzero days, or trade-to-ledger residuals remain incomplete.",
+      "evidence_sha256": "8b0c2d4f749be6abca79a7837839bc399118f3beadfe43192a8eb02b7080e546",
       "blockers": [
         "Current paper ledger does not capture all component effects or frozen forecast baseline.",
         "No authoritative daily bridge integration verifies all losing days.",
@@ -2994,8 +2994,8 @@
         "test_registered_artifact_digest_is_required_and_bound_to_loss_classification",
         "test_unregistered_or_wrong_category_evidence_cannot_be_classified"
       ],
-      "test_result": "8 loss-classification and evidence-registry tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s); Ruff and targeted mypy passed. The durable registry binds evidence IDs to categories and artifact digests; unknown IDs and category mismatches fail closed. Artifact sources remain caller-supplied and unauthenticated.",
-      "evidence_sha256": "7e45ff31e0702fe679d679e8f76b09278c757ece57621eaa04774f518be544e1",
+      "test_result": "8 loss-classification and evidence-registry tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. The durable registry binds evidence IDs to categories and artifact digests; unknown IDs and category mismatches fail closed. Artifact sources remain caller-supplied and unauthenticated.",
+      "evidence_sha256": "9bedc654d95a31d256bc28cc97917d0bcf3ad3d979e7bb5a5ab0c7b8bc4e4ca1",
       "blockers": [
         "Registered artifact hashes do not authenticate the referenced source system or establish evidence truth.",
         "Classifier is not yet integrated into the canonical paper trade ledger or loss-review report.",
@@ -3044,8 +3044,8 @@
         "test_population_and_report_hashes_are_order_independent_and_data_bound",
         "test_noncanonical_session_dates_are_rejected"
       ],
-      "test_result": "7 matched-opportunity tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s); Ruff and targeted mypy passed. ISO dates are canonicalized, and population/report digests are stable under input reordering and change when a matched input changes.",
-      "evidence_sha256": "f9562565260961057b4097863dab2444752f0eccd86ae9d2803cd4a239ce8553",
+      "test_result": "7 matched-opportunity tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. ISO dates are canonicalized, and population/report digests are stable under input reordering and change when a matched input changes.",
+      "evidence_sha256": "95f59197ec70d4b20c407d2fa058b427865682126053530503f56fd32400cad5",
       "blockers": [
         "No frozen paper control-book outcomes or authoritative binding of control inputs.",
         "Observational matched comparisons do not establish causal filter benefit; no confidence interval or promotion gate is implemented."
@@ -3071,8 +3071,8 @@
         "test_frozen_runner_hashes_data_and_executes_every_grid_session_cell",
         "test_frozen_runner_rejects_wrong_digest_holdout_or_midrun_data_change"
       ],
-      "test_result": "7 frozen-ablation tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s); Ruff and targeted mypy passed. Exhaustive runner executes each combination/session, verifies exact data digest before and after, and rejects holdout schedules or midrun data changes.",
-      "evidence_sha256": "4e8665c4b9f3693b0faef1d65730cd6bc2bcd538d9ee98a05216660f0b641ed8",
+      "test_result": "7 frozen-ablation tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. Exhaustive runner executes each combination/session, verifies exact data digest before and after, and rejects holdout schedules or midrun data changes.",
+      "evidence_sha256": "41ae516fbc0a2a97741fdd4018049183657ccee3e2ed0d05403df46a6ca8a9f8",
       "blockers": [
         "The runner delegates actual portfolio economics to a caller-supplied evaluator; no in-house production simulator adapter is selected and validated.",
         "Development digest and evaluator output provenance need binding to an authoritative dataset and paper-ledger manifest.",
@@ -3098,8 +3098,8 @@
         "test_runner_executes_every_family_horizon_session_on_verified_data",
         "test_runner_rejects_digest_mismatch_holdout_and_midrun_data_change"
       ],
-      "test_result": "6 signal-decay tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s); Ruff and targeted mypy passed. The exhaustive runner verifies the dataset digest before/after all family/horizon/session cells and rejects holdout schedules or midrun data changes.",
-      "evidence_sha256": "8a5ca4349632e8e535aec2770809c4e81f297c829f421155453433c82be9d3c4",
+      "test_result": "6 signal-decay tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. The exhaustive runner verifies the dataset digest before/after all family/horizon/session cells and rejects holdout schedules or midrun data changes.",
+      "evidence_sha256": "c4bfbc9f508b2686ebd89cd6ab04a9acfc5d0347c1945dc11bdd8458d69a1cb6",
       "blockers": [
         "The runner delegates signal and portfolio calculations to a caller-supplied evaluator; outputs are not independently recomputed from the canonical portfolio simulator.",
         "Dataset and outcome provenance is not bound to the authoritative registry or independently attested prospective evidence.",
@@ -3121,14 +3121,16 @@
         "test_same_bar_collision_is_stop_first_and_penalizes_the_trade",
         "test_complete_grid_reports_negative_trades_and_costed_outcomes",
         "test_protected_final_window_and_non_development_rows_are_rejected",
-        "test_invalid_bars_budget_or_parameters_are_rejected"
+        "test_invalid_bars_budget_or_parameters_are_rejected",
+        "test_file_runner_verifies_exact_data_digest_and_evaluates_frozen_grid",
+        "test_file_runner_rejects_changed_digest_and_malformed_dataset"
       ],
-      "test_result": "24 stop-target sensitivity, fill-kernel, and ORB tests passed; Ruff passed. Frozen grid includes costs and penalizes same-bar ambiguity.",
-      "evidence_sha256": "c20c69a881d6ba29d77f1eda8a75e0750a523ef9f2f3b3dc9e60c0593eaabba6",
+      "test_result": "6 stop/target sensitivity tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. JSON file runner verifies frozen dataset digest before and after evaluating the full stop/target grid; digest mismatch and malformed files fail closed.",
+      "evidence_sha256": "6531d0e716d78262aeaed1b49bb09cee2e887705f430bf98635655fc6ca8c960",
       "blockers": [
-        "No verified development dataset run or central data-provenance binding.",
-        "Cost assumptions are caller-supplied and not calibrated by this package.",
-        "Bar data cannot reveal intrabar path; adverse stop-first penalty is a model assumption."
+        "Dataset digest remains caller-declared and is not bound to an authoritative rights/provenance registry.",
+        "Costs are caller-supplied per trade; daily OHLC cannot reveal true intrabar path. Ambiguous stop/target bars are deliberately resolved adversely.",
+        "No verified full development study or profitability claim exists."
       ]
     },
     {

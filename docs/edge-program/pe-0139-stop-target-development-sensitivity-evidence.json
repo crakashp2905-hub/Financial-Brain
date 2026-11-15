@@ -3,22 +3,24 @@
   "task_id": "PE-0139",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_stop_target_sensitivity.py tests/test_kernel_fills.py tests/test_phase5_orb.py; ruff check src/financial_brain/evaluation/stop_target_sensitivity.py tests/test_stop_target_sensitivity.py",
-    "result": "24 passed; Ruff passed."
+    "command": "python -m pytest -q tests/test_stop_target_sensitivity.py; ruff check src/financial_brain/evaluation/stop_target_sensitivity.py tests/test_stop_target_sensitivity.py; mypy src/financial_brain/evaluation/stop_target_sensitivity.py",
+    "result": "6 stop/target sensitivity tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. JSON file runner verifies frozen dataset digest before and after evaluating the full stop/target grid; digest mismatch and malformed files fail closed."
   },
   "implemented": [
     "Freezes a bounded stop/target grid and restricts trade and OHLC dates to the development window.",
     "Uses the shared stop-first adverse resolver for same-bar stop/target collisions and exposes collision counts.",
     "Includes declared round-trip cost in every per-trade net outcome and retains all grid/trade rows, including losses.",
-    "Rejects invalid bars, final-window access, non-development inputs, and over-budget plans."
+    "Rejects invalid bars, final-window access, non-development inputs, and over-budget plans.",
+    "Adds a JSON development-trade file runner that checks exact dataset bytes against the frozen plan before and after grid evaluation."
   ],
   "blockers": [
-    "No verified development dataset run or authoritative input-data registry binding is included.",
-    "Round-trip costs are supplied by the caller and are not independently calibrated here.",
-    "Daily bars cannot identify intrabar order; collision outcomes are conservatively penalized rather than observed."
+    "Dataset digest remains caller-declared and is not bound to an authoritative rights/provenance registry.",
+    "Costs are caller-supplied per trade; daily OHLC cannot reveal true intrabar path. Ambiguous stop/target bars are deliberately resolved adversely.",
+    "No verified full development study or profitability claim exists."
   ],
   "source_sha256": {
-    "src/financial_brain/evaluation/stop_target_sensitivity.py": "85cf262eb4e08e24d215a9787a83411f2dec7d468086e6323d2883541807b678",
-    "tests/test_stop_target_sensitivity.py": "42317ab2be8eadfc648a778f6e7f0aa01cb61b3ca4b864f2e780684d4efd9ef5"
+    "src/financial_brain/evaluation/stop_target_sensitivity.py": "cd7fde17f44944d79eaebaee28703cacf1b21a27448f9bd55941c846b287662b",
+    "tests/test_stop_target_sensitivity.py": "9ba0250a8a1a7a77e43a1b8c08c010df293e880db954f33c55262a872c950046",
+    "docs/edge-program/pe-0139-stop-target-development-sensitivity.md": "43eba87d3a8ca029fe2268ffe3b184dfcff8e2c2f559e3101de4b86f50c8c0e3"
   }
 }

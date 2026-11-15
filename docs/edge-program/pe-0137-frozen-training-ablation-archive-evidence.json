@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_ablation_plan.py; ruff check src/financial_brain/evaluation/ablation_plan.py tests/test_ablation_plan.py; mypy src/financial_brain/evaluation/ablation_plan.py",
-    "result": "7 frozen-ablation tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s); Ruff and targeted mypy passed. Exhaustive runner executes each combination/session, verifies exact data digest before and after, and rejects holdout schedules or midrun data changes."
+    "result": "7 frozen-ablation tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. Exhaustive runner executes each combination/session, verifies exact data digest before and after, and rejects holdout schedules or midrun data changes."
   },
   "implemented": [
     "Freezes a bounded complete Cartesian grid for entry, exit, horizon, portfolio width, and turnover before outcomes.",

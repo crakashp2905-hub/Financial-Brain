@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import json
+
 import pytest
 
 from financial_brain.evaluation.stop_target_sensitivity import (
     StopTargetPlan,
     StopTargetSensitivityError,
     evaluate_stop_target_sensitivity,
+    run_stop_target_sensitivity_from_file,
 )
 
 
@@ -65,3 +69,26 @@ def test_invalid_bars_budget_or_parameters_are_rejected():
         _plan(stop_fractions=(0.1, 0.2), max_combinations=1)
     with pytest.raises(StopTargetSensitivityError, match="between 0 and 1"):
         _plan(target_fractions=(1.0,))
+
+
+def test_file_runner_verifies_exact_data_digest_and_evaluates_frozen_grid(tmp_path):
+    trade = _trade()
+    raw = json.dumps([trade], sort_keys=True, separators=(",", ":")).encode()
+    path = tmp_path / "development-trades.json"
+    path.write_bytes(raw)
+    plan = _plan(development_data_sha256=hashlib.sha256(raw).hexdigest())
+    report = run_stop_target_sensitivity_from_file(plan=plan, development_data_path=path)
+    assert report["development_data_sha256"] == plan.development_data_sha256
+    assert report["combination_count"] == 1
+
+
+def test_file_runner_rejects_changed_digest_and_malformed_dataset(tmp_path):
+    path = tmp_path / "development-trades.json"
+    path.write_text("[]", encoding="utf-8")
+    with pytest.raises(StopTargetSensitivityError, match="digest differs"):
+        run_stop_target_sensitivity_from_file(plan=_plan(), development_data_path=path)
+    raw = b"not-json"
+    path.write_bytes(raw)
+    plan = _plan(development_data_sha256=hashlib.sha256(raw).hexdigest())
+    with pytest.raises(StopTargetSensitivityError, match="JSON trade list"):
+        run_stop_target_sensitivity_from_file(plan=plan, development_data_path=path)

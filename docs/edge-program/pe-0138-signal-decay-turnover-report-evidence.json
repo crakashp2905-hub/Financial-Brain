@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_signal_decay.py; ruff check src/financial_brain/evaluation/signal_decay.py tests/test_signal_decay.py; mypy src/financial_brain/evaluation/signal_decay.py",
-    "result": "6 signal-decay tests passed; full Windows suite: 4189 passed, 1 skipped (901.07s); Ruff and targeted mypy passed. The exhaustive runner verifies the dataset digest before/after all family/horizon/session cells and rejects holdout schedules or midrun data changes."
+    "result": "6 signal-decay tests passed; full Windows suite: 4191 passed, 1 skipped (930.68s); Ruff and targeted mypy passed. The exhaustive runner verifies the dataset digest before/after all family/horizon/session cells and rejects holdout schedules or midrun data changes."
   },
   "implemented": [
     "Computes peak information horizon and interpolated half-life for every registered family.",

@@ -7,6 +7,8 @@ from datetime import date, datetime
 import hashlib
 import json
 import math
+from pathlib import Path
+from typing import cast
 
 from financial_brain.kernel.fills import OhlcBar, resolve_stop_target
 
@@ -76,7 +78,7 @@ def _validate_paths(rows: Iterable[Mapping[str, object]], plan: StopTargetPlan) 
             raise StopTargetSensitivityError("sensitivity study accepts DEVELOPMENT trades only")
         try:
             trade_id = row["trade_id"]
-            trade_day = date.fromisoformat(row["session_date"]).isoformat()
+            trade_day = date.fromisoformat(cast(str, row["session_date"])).isoformat()
             decision_sha = row["decision_sha256"]
             side = row["side"]
             bars = row["bars"]
@@ -101,7 +103,7 @@ def _validate_paths(rows: Iterable[Mapping[str, object]], plan: StopTargetPlan) 
         normalized_bars = []
         for bar in bars:
             try:
-                bar_day = date.fromisoformat(bar["session_date"]).isoformat()
+                bar_day = date.fromisoformat(cast(str, bar["session_date"])).isoformat()
             except (KeyError, TypeError, ValueError) as exc:
                 raise StopTargetSensitivityError("each OHLC bar requires session_date") from exc
             if not plan.development_start <= bar_day <= plan.development_end or bar_day >= plan.protected_final_start:
@@ -169,3 +171,29 @@ def evaluate_stop_target_sensitivity(*, plan: StopTargetPlan,
             "bar_collision_policy": "Same-bar stop and target hits resolve to adverse stop; no favorable path ordering is assumed.",
             "claim_scope": "Training-window sensitivity only; no validation or profitability claim.",
             "protected_final_window": [plan.protected_final_start, plan.protected_final_end]}
+
+
+def run_stop_target_sensitivity_from_file(*, plan: StopTargetPlan,
+                                          development_data_path: Path) -> dict:
+    """Load a JSON trade-path dataset only when its exact bytes match the plan."""
+    path = Path(development_data_path)
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise StopTargetSensitivityError("development data file is unavailable") from exc
+    if hashlib.sha256(raw).hexdigest() != plan.development_data_sha256:
+        raise StopTargetSensitivityError("development data digest differs from frozen plan")
+    try:
+        trades = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise StopTargetSensitivityError("development data must be a JSON trade list") from exc
+    if not isinstance(trades, list) or any(not isinstance(row, Mapping) for row in trades):
+        raise StopTargetSensitivityError("development data must contain a JSON trade list")
+    report = evaluate_stop_target_sensitivity(plan=plan, trades=trades)
+    try:
+        final_digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise StopTargetSensitivityError("development data file disappeared during evaluation") from exc
+    if final_digest != plan.development_data_sha256:
+        raise StopTargetSensitivityError("development data changed during sensitivity evaluation")
+    return report
