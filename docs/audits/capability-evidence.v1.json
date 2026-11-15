@@ -26,19 +26,19 @@
       }
     },
     {
-      "artifact_sha256": "3e24608b97e0f571a4a6d58873a1c16e970cc8e3ba36388aa8c260abb25b3c07",
+      "artifact_sha256": "e9e84a9d7b3c871102146e787c9c18f25aa348ff0d72bb83cfe7ee73b0605369",
       "id": "forward-paper-account-authority",
       "maturity": "partial",
       "sources": {
-        "src/financial_brain/forward_edge/paper_account_bridge.py": "d31add88b446935fb6d5d8773bc96abe13270c99ad46ae5fedd96673065c6488",
-        "src/financial_brain/forward_edge/session_runner.py": "cf9b840888123a5e150c10ed90d17d5b2bfc478aa5288e7c7ef76761f5cf44af",
+        "src/financial_brain/forward_edge/paper_account_bridge.py": "122e3a2a5f8b950d28034f6c71e631573a40617641b61a1070a7618f1eeff238",
+        "src/financial_brain/forward_edge/session_runner.py": "025c182bef6732fb660ce2a729957c3aad5cb14d1439527962e12d40daa68e64",
         "src/financial_brain/kernel/paper_authority.py": "e4f0a17131d3bc331edba0454e113206130d4428101e117e88f2533ffc6cbe7c",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_forward_paper_account_bridge.py": "28cbe1677ad548ae7461e74a82e3fd20e223ad14c53c0cd3fecb703249162418",
-        "tests/test_forward_session_runner.py": "a4ab35fcb52835b037fdc3d13ace2a8811375f6e72b40562f6af6c0d81f6bc82",
+        "tests/test_forward_paper_account_bridge.py": "74b3613544e59096777996341f8cf12b8cf23b264f81054d85f167de6565a71d",
+        "tests/test_forward_session_runner.py": "dbf24d422a9b875c4ea1b290f155e595e9ffee0fd8a7f9c73d58ea1a79d677d7",
         "tests/test_paper_execution_authority.py": "8026404c4ed069cf68e3456a4aae1b6e057c5079fa3bd156ee47f7ac11e02c93",
         "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782"
       }
@@ -56,17 +56,17 @@
       }
     },
     {
-      "artifact_sha256": "2dbb0b7d7f5e91e5c852a0e391eb3f1376ad82629788192423e5d1dd12231b71",
+      "artifact_sha256": "91175fd3dfc59574eec55705066089deac948d3aa5915dee962f829cf5c38e68",
       "id": "market-data-availability-lineage",
       "maturity": "partial",
       "sources": {
         "src/financial_brain/forward_edge/market_data.py": "c36a09edeadffca3f7cff579c75872644e499c81bf168c9f1536a94753b79e54",
-        "src/financial_brain/ingest/kite_live.py": "327204d26cb39c832e73f7a6c74f15b48e9afd9b1228a21fb873cfb3b360554a",
+        "src/financial_brain/ingest/kite_live.py": "ebf5afb7ced6285bfa664477ae46587582b3830e21e4450386896b83fd615e57",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_kite_forward_events.py": "b2a169656979316fb3cfaff36504c0df347de7fb93139a0485710b689b4ffc22",
+        "tests/test_kite_forward_events.py": "49fea53e1aed2ea1e0a84dececef08e23dac22a557f7b878b2e8c063184b359b",
         "tests/test_kite_history_refresh.py": "47e657b735678f5ecfd24a44a71485883727f9e2d01f5a35835d9de959b54149",
         "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782"
       }
@@ -100,12 +100,12 @@
       }
     },
     {
-      "artifact_sha256": "02b4dcb315fe2a8c2cd3c38550bb915181e88a4f1bd825ffc46c1a471cab568b",
+      "artifact_sha256": "4550c5b8ad67f410c4ece1f9909a1c319c28a0a539bc71e58dcfdd1ecbe05f90",
       "id": "registered-paper-book-isolation",
       "maturity": "partial",
       "sources": {
         "src/financial_brain/forward_edge/registry.py": "7c9707962f01b958719d7e9cccf4b2973de144d6f74501caacceb0332a13f7c4",
-        "src/financial_brain/kernel/paper_account.py": "9c10a115239da3913a20dbfcd682c5db5579c56d39392dd10ad2454eaf7827ad",
+        "src/financial_brain/kernel/paper_account.py": "df6e09b97a3daef2a5b432dd04e772b0f6abc22533ab04280b185e933533fd20",
         "src/financial_brain/kernel/registered_paper_books.py": "17be756b22e8af5030f2964a3d2bcff76be56dd65841ded1b9c8258bbd143878",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
@@ -118,7 +118,7 @@
       }
     }
   ],
-  "manifest_sha256": "cb4c8e1008acd3f7c182d1826eb8497cc80dee3c53e1bf152dcfd4321146bf76",
+  "manifest_sha256": "4c86c05cb5c9b53961fa235cf251f74fe383272b9d34e28f6fd0a0b49e1bfcdc",
   "matrix_sha256": "72b9b5b162e4b9239fa078da05a6aa12464900147cf8cb4e7252ba779b2237d2",
   "schema_version": "fb.capability-evidence.v1"
 }
