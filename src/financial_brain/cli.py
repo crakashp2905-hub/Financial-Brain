@@ -2599,6 +2599,9 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
     sub = p.add_subparsers(dest="cmd", required=True)
 
+    from .forward_edge.cli import add_parser as add_forward_parser
+    add_forward_parser(sub)
+
     sub.add_parser("migrate", help="create/update the schema").set_defaults(fn=cmd_migrate)
     sub.add_parser("status", help="what the system currently holds").set_defaults(fn=cmd_status)
     sub.add_parser("agent-eval", help="run versioned read-only agent guardrail cases").set_defaults(fn=cmd_agent_eval)
