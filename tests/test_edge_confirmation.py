@@ -14,6 +14,7 @@ from financial_brain.forward_edge.edge_confirmation import (
     evaluate_edge_confirmation,
     frozen_protocol_sha256,
 )
+from financial_brain.forward_edge.edge_preregistration import EdgePreregistrationRegistry
 from financial_brain.forward_edge.evidence_stats import FALSIFICATION_CHECKS
 from financial_brain.forward_edge.sample_size import design_sample_size
 
@@ -117,7 +118,7 @@ def _sign(private_key, digest, anchored):
     return Receipt(PROVIDER, KEY_ID, digest, anchored, signature)
 
 
-def test_signed_full_evidence_can_clear_the_gate_when_all_requirements_pass():
+def test_signed_full_evidence_can_clear_the_gate_when_all_requirements_pass(tmp_path):
     crypto = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
     serialization = pytest.importorskip("cryptography.hazmat.primitives.serialization")
     private = crypto.Ed25519PrivateKey.generate()
@@ -146,6 +147,14 @@ def test_signed_full_evidence_can_clear_the_gate_when_all_requirements_pass():
     kwargs["registration_receipt"] = _sign(
         private, protocol, datetime(2026, 1, 1, 0, 0, 5, tzinfo=UTC)
     )
+    preregistry = EdgePreregistrationRegistry(tmp_path / "edge-preregistrations.jsonl")
+    preregistry.register(
+        trial_id="trial-1", protocol_sha256=protocol, scheduled_sessions=sessions,
+        registered_at_utc=kwargs["registered_at_utc"],
+        first_observation_at_utc=first,
+        registration_receipt=kwargs["registration_receipt"],
+    )
+    kwargs.update(preregistration_registry=preregistry, trial_id="trial-1")
     evidence = []
     for i, day in enumerate(sessions):
         start = datetime.fromisoformat(day).replace(tzinfo=UTC)

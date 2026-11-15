@@ -20,6 +20,10 @@ from financial_brain.forward_edge.evidence_stats import (
     falsification_report,
     stress_robust,
 )
+from financial_brain.forward_edge.edge_preregistration import (
+    EdgePreregistrationError,
+    EdgePreregistrationRegistry,
+)
 from financial_brain.forward_edge.sample_size import SampleSizePlan
 from .confirmation_bounds import confirmation_bounds
 
@@ -42,7 +46,7 @@ class SessionEvidence:
     outcome_receipt: Receipt | None
 
 
-def _digest(value: str, name: str) -> None:
+def _digest(value: str | None, name: str) -> None:
     if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
         raise EdgeConfirmationError(f"{name} must be lowercase SHA-256")
 
@@ -145,6 +149,8 @@ def evaluate_edge_confirmation(
     completed_at_utc: str,
     release_deadline_utc: str,
     release_receipt: Receipt | None,
+    preregistration_registry: EdgePreregistrationRegistry | None = None,
+    trial_id: str | None = None,
 ) -> dict:
     """Issue EDGE_CONFIRMED only after every policy and independently signed cohort gate passes.
 
@@ -181,6 +187,22 @@ def evaluate_edge_confirmation(
         )
     if registration_status is not CustodyStatus.VERIFIED:
         reasons.append("PREREGISTRATION_RECEIPT_NOT_VERIFIED")
+    preregistration = None
+    if preregistration_registry is None or trial_id is None:
+        reasons.append("AUTHORITATIVE_PREREGISTRATION_NOT_REGISTERED")
+    else:
+        try:
+            preregistration = preregistration_registry.resolve(trial_id)
+        except EdgePreregistrationError:
+            reasons.append("AUTHORITATIVE_PREREGISTRATION_NOT_REGISTERED")
+        if preregistration is not None and (
+            preregistration["protocol_sha256"] != protocol_sha
+            or tuple(preregistration["scheduled_sessions"]) != sessions
+            or preregistration["registered_at_utc"] != registered.isoformat()
+            or preregistration["first_observation_at_utc"] != first.isoformat()
+            or preregistration["registration_receipt"] != _receipt_payload(registration_receipt)
+        ):
+            reasons.append("AUTHORITATIVE_PREREGISTRATION_MISMATCH")
 
     by_session: dict[str, SessionEvidence] = {}
     for row in session_evidence:
@@ -255,6 +277,10 @@ def evaluate_edge_confirmation(
 
     evidence_payload = {
         "protocol_sha256": protocol_sha,
+        "trial_id": trial_id,
+        "preregistration_evidence_sha256": (
+            None if preregistration is None else preregistration["evidence_sha256"]
+        ),
         "scheduled_sessions": sessions,
         "registration_status": registration_status.value,
         "registration_receipt": _receipt_payload(registration_receipt),

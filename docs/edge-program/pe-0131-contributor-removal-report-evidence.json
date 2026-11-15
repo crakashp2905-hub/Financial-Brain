@@ -4,7 +4,7 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_contribution_report.py tests/test_contribution_registry.py",
-    "result": "11 contribution-report and durable registry tests passed; full Windows suite: 4176 passed, 1 skipped (803.38s). Ruff and targeted mypy passed. The registry binds source digests and recomputes reports against the frozen prospective cohort; caller digests do not authenticate source ledgers."
+    "result": "11 contribution-report and durable registry tests passed; full Windows suite: 4178 passed, 1 skipped (877.87s). Ruff and targeted mypy passed. The registry binds source digests and recomputes reports against the frozen prospective cohort; caller digests do not authenticate source ledgers."
   },
   "implemented": [
     "Reports daily return mean, median, standard deviation, quantiles, minimum, maximum and positive/negative fractions.",
