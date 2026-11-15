@@ -15,6 +15,7 @@ from financial_brain.forward_edge.governance import FamilyEvidence, family_actio
 from financial_brain.forward_edge.durable import DurableJournal
 import financial_brain.forward_edge.paper_account_bridge as paper_bridge
 from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
+from financial_brain.forward_edge.holding_period_schedule import ExchangeSessionCalendar
 from financial_brain.forward_edge.pretrade_gates import PreTradePolicy, PreTradeSnapshot
 from financial_brain.forward_edge.sample_size import design_sample_size
 from financial_brain.forward_edge.paper_account_bridge import (
@@ -27,6 +28,7 @@ from financial_brain.forward_edge.registry import Benchmark, MechanismHypothesis
 from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount
 from financial_brain.kernel.paper_authority import PaperExecutionAuthorityRegistry
 from financial_brain.kernel.oms import State
+from financial_brain.paper import book as daily_paper_book
 from financial_brain.kernel.registered_paper_books import (
     FamilyCapitalAuthorization,
     FrozenPaperBookPlan,
@@ -526,6 +528,56 @@ def test_due_exchange_calendar_exit_uses_risk_execution_and_account_reconciliati
     assert risk_decisions == [closed["decision"]]
     assert closed["execution"]["status"] == "FILLED"
     assert account.position("NSE:INFY").quantity == 0
+
+
+def test_registered_paper_service_builds_positions_from_daily_book_adapter(tmp_path, monkeypatch):
+    service, config, _account, _runner_path, _account_path = _service(tmp_path)
+    event = NormalizedEvent(
+        "BOOK_POSITION", "NSE:INFY", DECISION_AT - timedelta(seconds=3),
+        DECISION_AT - timedelta(seconds=2), DECISION_AT - timedelta(seconds=1),
+        tuple(sorted({"position_state": "ACTIVE", "shares": "0"}.items())),
+        ingested_utc=DECISION_AT,
+    )
+    captured = {}
+
+    def build_positions(book, *, mode, spec, as_of, clock_provider, session_calendar):
+        captured.update({"book": book, "mode": mode, "spec": spec, "as_of": as_of,
+                         "clock_provider": clock_provider, "calendar": session_calendar})
+        return [event]
+
+    monkeypatch.setattr(paper_bridge, "forward_position_events", build_positions)
+    calendar = ExchangeSessionCalendar(
+        "nse-test-calendar", (date(2026, 11, 12), date(2026, 11, 13)), "c" * 64)
+    observed = []
+    result = service.run_with_daily_book(
+        config, [], daily_book=object(), daily_book_mode="live",
+        daily_book_spec=daily_paper_book.MOMENTUM, session_calendar=calendar,
+        preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda events: observed.extend(events) or {"side": "NONE", "reason": "NO_SIGNAL"},
+        risk_fn=lambda _decision: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("no-trade book state must not execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH,
+        feed_health_observed_at=DECISION_AT,
+    )
+
+    assert result["status"] == "NO_TRADE"
+    assert observed == [event]
+    assert captured["book"] is not None
+    assert captured["mode"] == "live"
+    assert captured["spec"] == daily_paper_book.MOMENTUM
+    assert captured["as_of"] == date(2026, 11, 12)
+    assert captured["clock_provider"] is service.runner.clock_provider
+    assert captured["calendar"] is calendar
+
+
+def test_daily_book_runner_requires_calendar_before_any_session_writes(tmp_path):
+    service, config, _account, runner_path, _account_path = _service(tmp_path)
+    with pytest.raises(PaperAccountBridgeError, match="requires an exchange-session calendar"):
+        service.run_with_daily_book(
+            config, [], daily_book=object(), daily_book_mode="live",
+            daily_book_spec=daily_paper_book.MOMENTUM, session_calendar=None,
+        )
+    assert not runner_path.exists()
 
 
 def test_forward_paper_service_rejects_legacy_intraday_authority_before_writing(tmp_path):

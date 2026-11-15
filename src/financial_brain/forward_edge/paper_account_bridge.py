@@ -7,11 +7,13 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from collections.abc import Callable, Iterable
+from typing import Any
 
 from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.book_adapter import BookAdapterError, forward_position_events
 from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
 from financial_brain.forward_edge.holding_period_schedule import (
-    HoldingScheduleError, scheduled_exit_order_intents,
+    ExchangeSessionCalendar, HoldingScheduleError, scheduled_exit_order_intents,
 )
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
@@ -44,6 +46,7 @@ from financial_brain.kernel.registered_paper_books import (
     PaperBookRegistryError,
     RegisteredPaperBooks,
 )
+from financial_brain.paper.book import Spec
 
 
 class PaperAccountBridgeError(ValueError):
@@ -371,6 +374,33 @@ class ForwardPaperSessionService:
             )
             return {**result, "account_reconciliation": evidence}
         return result
+
+    def run_with_daily_book(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
+                            daily_book: Any, daily_book_mode: str, daily_book_spec: Spec,
+                            session_calendar: ExchangeSessionCalendar,
+                            **run_kwargs: Any) -> dict:
+        """Build calendar-aware position events from the daily paper book before running a session.
+
+        This keeps persisted book state, the exchange-session schedule, the forward decision, and
+        the registered cash-account close on one path. The caller must supply the exchange calendar;
+        an absent or incomplete calendar is never replaced with calendar-day arithmetic.
+        """
+        if not isinstance(daily_book_spec, Spec):
+            raise PaperAccountBridgeError("daily-book runner requires a validated paper-book specification")
+        if not isinstance(session_calendar, ExchangeSessionCalendar):
+            raise PaperAccountBridgeError("daily-book runner requires an exchange-session calendar")
+        try:
+            session_date = date.fromisoformat(config.exchange_date)
+            if session_date not in session_calendar.session_dates:
+                raise ValueError("current session is missing from the supplied exchange calendar")
+            book_events = forward_position_events(
+                daily_book, mode=daily_book_mode, spec=daily_book_spec,
+                as_of=session_date,
+                clock_provider=self.runner.clock_provider, session_calendar=session_calendar,
+            )
+        except (BookAdapterError, ValueError) as exc:
+            raise PaperAccountBridgeError(f"daily-book positions cannot be scheduled for this session: {exc}") from exc
+        return self.run(config, [*events, *book_events], **run_kwargs)
 
 
 def _persisted_session_events(journal_path: Path, session_id: str) -> list[NormalizedEvent]:

@@ -3475,20 +3475,23 @@
         "src/financial_brain/forward_edge/holding_period_schedule.py",
         "src/financial_brain/forward_edge/paper_account_bridge.py",
         "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/paper/book.py",
         "tests/test_forward_book_adapter.py",
         "tests/test_forward_paper_account_bridge.py",
         "tests/test_forward_session_runner.py"
       ],
       "tests": [
+        "test_daily_book_runner_requires_calendar_before_any_session_writes",
         "test_due_exchange_calendar_exit_uses_risk_execution_and_account_reconciliation",
         "test_forward_book_adapter.py",
         "test_forward_paper_account_bridge.py",
-        "test_only_sell_side_reductions_bypass_entry_alpha_and_family_gates"
+        "test_only_sell_side_reductions_bypass_entry_alpha_and_family_gates",
+        "test_registered_paper_service_builds_positions_from_daily_book_adapter"
       ],
-      "test_result": "Calendar schedule and registered paper-service routing suites: 92 passed; Ruff and mypy passed. A registered synthetic long position is closed from a visible due exchange-calendar event through configured risk, simulated quote execution, durable receipt, and account reconciliation. Invalid quantities, BUY/CLOSE misuse, and multiple due exits fail closed.",
-      "evidence_sha256": "b19a7c7e493cdb9b37910df1857cb3d8c82b9677418c69a1a28cf4f88a649155",
+      "test_result": "Calendar schedule and registered paper-service routing suites: 94 passed; Ruff and mypy passed. The service builds position events through the daily-book adapter using a required session calendar, then closes a registered synthetic long position from a visible due event through configured risk, simulated quote execution, durable receipt, and account reconciliation. Missing calendars, invalid quantities, BUY/CLOSE misuse, and multiple due exits fail closed.",
+      "evidence_sha256": "c0dda2e932908aeb37f5c2ff02a6db27c93d8354c97855aabdbf91204178d6c7",
       "blockers": [
-        "Authoritative effective-dated exchange calendar feed and automatic BOOK_POSITION construction are not wired.",
+        "An authoritative effective-dated exchange calendar feed is not wired; the caller must supply the calendar.",
         "The single-intent session runner cannot execute multiple due exits in one session.",
         "No prospective overnight market session has validated the end-to-end exit behavior."
       ]
