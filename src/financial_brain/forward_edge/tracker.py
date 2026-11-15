@@ -286,7 +286,10 @@ OVERRIDES: dict[str, Entry] = {
     "FE-0089": Entry("PARTIAL", ("test_negative_inconclusive_and_no_signal_cohorts_are_archived_and_discoverable",
                                   "test_archive_is_immutable_and_no_signal_requires_zero_opportunities"), (),
                      "Append-only cohort archive preserves positive, negative, inconclusive, no-signal and unresolved results with version/evidence hashes and discovery queries. Automatic capture by all research/evaluation runners is not yet wired."),
-    "FE-0090": Entry("NOT_STARTED", (), (), "Parameter-freeze enforcement not built."),
+    "FE-0090": Entry("PARTIAL", ("test_exact_frozen_strategy_is_allowed_and_parameter_changes_are_refused",
+                                  "test_unknown_or_pre_cohort_runs_fail_closed",
+                                  "test_cohort_binding_cannot_be_overwritten"), (),
+                     "Immutable cohort binding freezes strategy/code/model/parameter hashes before first eligible date and blocks prospective runs on changed hashes. Runtime adapters and required human approval/ADRs for new protected trials are not yet connected."),
     # ---- F08 ----
     "FE-0091": Entry("NOT_STARTED", (), (), "Daily portfolio return not built for forward cohorts."),
     "FE-0092": Entry("NOT_STARTED", (), (), "HAC or block bootstrap not built."),
