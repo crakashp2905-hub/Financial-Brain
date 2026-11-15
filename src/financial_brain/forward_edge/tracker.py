@@ -239,7 +239,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_only_complete_incident_free_session_is_eligible",
                                   "test_completeness_journal_is_immutable_idempotent_and_restartable"), (),
                      "Immutable SQLite session completeness report hashes declared/received segments, incidents and close-report evidence; missing data or incidents downgrade eligibility. Live session runner and independently attested source evidence are not connected."),
-    "FE-0077": Entry("NOT_STARTED", (), (), "Backup and restore drill not built."),
+    "FE-0077": Entry("PARTIAL", ("test_backup_restore_drill_preserves_sqlite_and_manifest_bytes",
+                                  "test_backup_rejects_overwrite_and_restore_detects_tampering",
+                                  "test_restore_rejects_manifest_path_traversal_and_hash_edit"), (),
+                     "Verified SQLite online snapshots and file backups restore into an isolated new directory after manifest/content hash and SQLite integrity checks. Scheduling, offsite retention, production source discovery and a full OMS/archive/manifest restore rehearsal remain unconnected."),
     "FE-0078": Entry("NOT_STARTED", (), (), "Runbooks not written."),
     # ---- F07 ----
     "FE-0079": Entry("NOT_STARTED", (), (BLK_MARKET,), "Shadow logging needs live observations."),
