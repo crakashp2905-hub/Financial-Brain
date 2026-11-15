@@ -11,6 +11,7 @@ import json
 from enum import Enum
 from math import sqrt
 from collections.abc import Mapping, Sequence
+from typing import Protocol
 
 import numpy as np
 
@@ -19,6 +20,10 @@ from financial_brain.forward_edge.evidence_labels import EvidenceLabelError, cla
 
 class StatsError(ValueError):
     pass
+
+
+class FalsificationResolver(Protocol):
+    def resolve(self, *, trial_id: str, cohort_id: str) -> dict: ...
 
 
 # ---- FE-0091 daily returns ----
@@ -316,7 +321,10 @@ def falsification_report(results: dict[str, bool | None]) -> dict:
 
 def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sessions: int, tier: ClaimTier,
                       net_by_cost_multiplier: dict[float, float], best_block: float, sample_design_predeclared: bool,
-                      falsification_status: str,
+                      falsification_status: str | None = None,
+                      falsification_registry: FalsificationResolver | None = None,
+                      falsification_trial_id: str | None = None,
+                      falsification_cohort_id: str | None = None,
                       net_by_cost_and_fill: dict[tuple[float, float], float] | None = None,
                       min_sessions: int = 60, lags: int = 5, z: float = 1.96,
                       max_block_share: float = 0.6) -> dict:
@@ -324,6 +332,30 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
     n = len(daily_net_alpha)
     mean = float(np.mean(daily_net_alpha)) if n else 0.0
     lcb = None
+    falsification_evidence_sha256 = None
+    falsification_status_from_registry = "INSUFFICIENT_EVIDENCE"
+    if (falsification_registry is not None and falsification_trial_id is not None
+            and falsification_cohort_id is not None):
+        try:
+            evidence = falsification_registry.resolve(
+                trial_id=falsification_trial_id, cohort_id=falsification_cohort_id)
+            if not isinstance(evidence, dict):
+                raise ValueError("registry returned an invalid evidence record")
+            falsification_status_from_registry = str(evidence.get("status", "INSUFFICIENT_EVIDENCE"))
+            falsification_evidence_sha256 = evidence.get("evidence_sha256")
+            if (not isinstance(falsification_evidence_sha256, str)
+                    or len(falsification_evidence_sha256) != 64
+                    or any(ch not in "0123456789abcdef" for ch in falsification_evidence_sha256)):
+                falsification_status_from_registry = "INSUFFICIENT_EVIDENCE"
+                falsification_evidence_sha256 = None
+        except Exception:  # noqa: BLE001 - unavailable registry evidence must block promotion
+            falsification_status_from_registry = "INSUFFICIENT_EVIDENCE"
+    effective_falsification_status = falsification_status_from_registry
+    # A legacy caller status may make the verdict stricter, but can never make it pass.
+    if (falsification_status is not None
+            and falsification_status != "NO_FALSIFICATION_FOUND"
+            and effective_falsification_status == "NO_FALSIFICATION_FOUND"):
+        effective_falsification_status = falsification_status
     if n >= 3 and lags < n:
         lcb = mean - z * newey_west_se(daily_net_alpha, min(lags, n - 1))
     if tier is not ClaimTier.INDEPENDENT_FORWARD:
@@ -332,8 +364,10 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         reasons.append("BELOW_SESSION_FLOOR")
     if not sample_design_predeclared:
         reasons.append("SAMPLE_DESIGN_NOT_PREDECLARED")
-    if falsification_status != "NO_FALSIFICATION_FOUND":
-        reasons.append("FALSIFICATION_" + falsification_status)
+    if effective_falsification_status != "NO_FALSIFICATION_FOUND":
+        if falsification_registry is None or falsification_trial_id is None or falsification_cohort_id is None:
+            reasons.append("FALSIFICATION_EVIDENCE_UNREGISTERED")
+        reasons.append("FALSIFICATION_" + effective_falsification_status)
     if best_block > max_block_share:
         reasons.append("REGIME_CONCENTRATION")
     if not stress_robust(net_by_cost_multiplier):
@@ -347,8 +381,10 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         reasons.append("LOWER_BOUND_NOT_POSITIVE")
     if not reasons:
         return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": [],
-                "execution_stress": execution_stress}
+                "execution_stress": execution_stress,
+                "falsification_evidence_sha256": falsification_evidence_sha256}
     hard_fail = (mean <= 0 and n >= 3 or "FAILS_COST_STRESS" in reasons
                  or "FAILS_EXECUTION_STRESS" in reasons or "FALSIFICATION_FAIL" in reasons)
     return {"verdict": "FAIL" if hard_fail else "INSUFFICIENT_EVIDENCE", "mean": mean, "lower_bound": lcb,
-            "reasons": reasons, "execution_stress": execution_stress}
+            "reasons": reasons, "execution_stress": execution_stress,
+            "falsification_evidence_sha256": falsification_evidence_sha256}

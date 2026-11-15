@@ -224,8 +224,8 @@
         "test_source_capture_start.py",
         "test_capability_matrix.py"
       ],
-      "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (630 Python sources; 614 unassessed; 362 role-unassigned).",
-      "evidence_sha256": "dde7aa8c42fb7fe593c22c3060e9c4b6d6bb40eefbba1263072784e19819de92",
+      "test_result": "Cross-engine authority, LIVE_PAPER runner/recovery, account bridge, execution adapter, legacy intraday, gates, book adapters, and inventory suites: 159 passed; Ruff and mypy passed. Capability evidence and source inventory checks passed (631 Python sources; 615 unassessed; 363 role-unassigned).",
+      "evidence_sha256": "d1350b581d3a9f0cf73bc9c98db0e6e06344368160ccc1253e6564bfe3556ad5",
       "blockers": [
         "Deployment must configure a shared registry path and canonical matching strategy IDs; this has not been verified in the owner environment.",
         "Other direct/manual paper writers, authenticated owner identity, and account closure/release governance are not bound to this control.",
@@ -2697,8 +2697,8 @@
         "test_durable_registry_rejects_invalid_observation_receipts",
         "test_durable_registry_rejects_forged_cohort_plan"
       ],
-      "test_result": "15 focused cohort/registry tests passed; full Windows suite: 4164 passed, 1 skipped (1002.58s). Ruff and mypy pass. Synthetic software verification only; timestamps and outcome digests remain caller-supplied.",
-      "evidence_sha256": "8b1d9968d9651ab1973c563f8af02703527c205fb080fc071d476c00050fa215",
+      "test_result": "15 focused cohort/registry tests passed; full Windows suite: 4169 passed, 1 skipped (936.52s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only; timestamps and outcome digests remain caller-supplied.",
+      "evidence_sha256": "bb3916eb91e8242a702aa3eb573f0b7f341e00d7bb71f2e87cacb66f419cf0c2",
       "blockers": [
         "Freeze timestamps and outcome digests remain caller-supplied and are not independently attested.",
         "Outcome receipts are not automatically reconciled against the receipt-verified paper-account ledger.",
@@ -2730,8 +2730,8 @@
         "test_registered_confirmation_withholds_when_design_requires_more_sessions",
         "test_confirmation_alpha_is_allocated_across_metrics_and_registered_looks"
       ],
-      "test_result": "Nine focused confirmation tests pass; the registry integration is covered by 24 combined confirmation and prospective-cohort tests. Full Windows suite: 4164 passed, 1 skipped (1002.58s). Ruff and mypy pass. Synthetic software verification only.",
-      "evidence_sha256": "698bfeadacfe608c4b85df84d61fe42a7c9a8417fff5b0a1b3ecdabd7179e81f",
+      "test_result": "Nine focused confirmation tests pass; the registry integration is covered by 24 combined confirmation and prospective-cohort tests. Full Windows suite: 4169 passed, 1 skipped (936.52s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only.",
+      "evidence_sha256": "f9afe857b2b4808aa7a081c1fd51dd55da7eb016192abefe74b9f6c6b427f5b6",
       "blockers": [
         "The report is not yet enforced by the authoritative strategy promotion gate.",
         "After-cost utility fee and risk-accounting lineage remains caller-supplied and is not independently recomputed from paper-account events.",
@@ -2769,8 +2769,8 @@
         "test_registry_rejects_policy_after_charter_revision",
         "test_fixed_look_risk_harm_persists_account_latch_and_blocks_after_restart"
       ],
-      "test_result": "Full Windows suite: 4164 passed, 1 skipped (1002.58s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff, configured mypy, migration, capability-matrix, source-inventory, algorithm/chart matrices and offline pattern demo pass. Synthetic software verification only; no live or prospective trading-performance claim.",
-      "evidence_sha256": "c10e8fbfe26c5807912b2518db90f49680489c8f36936985ee25eef1a26f3921",
+      "test_result": "Full Windows suite: 4169 passed, 1 skipped (936.52s). Focused fixed-look/registry/sample-size/charter/paper-bridge/evaluation identity suite: 104 passed. Ruff, configured mypy, migration, capability-matrix, source-inventory, algorithm/chart matrices, capability evidence audit and diff checks pass. Synthetic software verification only; no live or prospective trading-performance claim.",
+      "evidence_sha256": "f6bf3770d142d755cc613ced762777f27fe22b45a435fd7e3d256991f7225f76",
       "blockers": [
         "Production session configuration does not yet require the registry or bind its observation callback to receipt-derived, independently attested cohort metrics.",
         "The fixed-look package is not yet enforced by the authoritative promotion gate, and no prospective market-performance result is claimed."
@@ -2822,8 +2822,8 @@
         "test_frozen_stratification_plan_rejects_invalid_aggregation_digest",
         "test_registered_stratification_verifies_each_durable_session_outcome_digest"
       ],
-      "test_result": "14 focused stratification tests passed; registry-bound integration is covered by 29 combined prospective-cohort and stratification tests. Full Windows suite: 4164 passed, 1 skipped (1002.58s). Ruff and mypy pass. Synthetic software checks only.",
-      "evidence_sha256": "36131a6b3c4759235abe1f735c3a49a555738ef17642d86836b38e65b03424f6",
+      "test_result": "14 focused stratification tests passed; registry-bound integration is covered by 29 combined prospective-cohort and stratification tests. Full Windows suite: 4169 passed, 1 skipped (936.52s). Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software checks only.",
+      "evidence_sha256": "fd75dd31ef741a77364b30bd10ef6e7e7d05031d1c7371a4a6b400d34a4ad742",
       "blockers": [
         "The aggregation-policy digest is caller-supplied and its underlying weights and instrument-level calculations are not independently resolved or recomputed.",
         "Cohort timestamps and observation digests are not independently attested; no real prospective cohort observations are available."
@@ -2834,20 +2834,29 @@
       "status": "PARTIAL",
       "sources": [
         "src/financial_brain/forward_edge/evidence_stats.py",
+        "src/financial_brain/forward_edge/falsification_registry.py",
+        "src/financial_brain/forward_edge/prospective_registry.py",
         "tests/test_forward_edge_f08.py",
+        "tests/test_pattern_study.py",
+        "tests/test_falsification_registry.py",
         "docs/edge-program/pe-0129-critical-falsification-gates.md",
         "docs/edge-program/pe-0129-critical-falsification-gates-evidence.json"
       ],
       "tests": [
         "test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail",
         "test_every_critical_falsification_failure_blocks_a_clean_report",
-        "test_falsification_report_rejects_unknown_or_non_boolean_results"
+        "test_falsification_report_rejects_unknown_or_non_boolean_results",
+        "test_complete_report_is_durably_bound_to_the_frozen_cohort_and_recovered",
+        "test_incomplete_or_failed_checks_are_not_registered_as_clean",
+        "test_registered_result_requires_an_artifact_digest_and_cannot_be_replaced",
+        "test_caller_clean_status_without_registered_artifacts_cannot_promote",
+        "test_registered_critical_falsification_failure_blocks_positive_candidate"
       ],
-      "test_result": "52 related tests passed; Ruff passed. Critical falsification failures are independently shown to yield FAIL; absent checks, unknown names and non-boolean values are fail-closed.",
-      "evidence_sha256": "8ec0fde3c31f1f6bb4d700519eb266e8e8eb172933ef12c6d14f49b249e61aaa",
+      "test_result": "57 focused tests passed, covering each critical check, durable recovery, cohort binding, required artifact digests and registry-derived promotion blocking. Full Windows suite: 4169 passed, 1 skipped (936.52s); Ruff, mypy, migration, capability matrix, source inventory, algorithm/chart matrices, capability evidence audit and diff checks passed. Synthetic software verification only.",
+      "evidence_sha256": "b157e005407c2ab5689b6b2901dde30847e2729d91188e1801bffa0db393cb2b",
       "blockers": [
-        "Checks remain caller assertions rather than registered, data-backed tests.",
-        "The status report and promotion evaluator are not bound in one immutable evidence object."
+        "Artifact digests and check outcomes remain caller-supplied assertions; no independent custodian proves the checks ran or validates the underlying datasets.",
+        "Look-ahead, survivorship, corporate-action, stale-quote, fill and factor-overlap evidence still lacks complete data-backed adapters and independent review."
       ]
     },
     {

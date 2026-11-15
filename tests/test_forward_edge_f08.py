@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 import random
+from datetime import datetime, timezone
 
 import pytest
 
 from financial_brain.forward_edge import evidence_stats as E
 from financial_brain.forward_edge.evidence_stats import ClaimTier
+from financial_brain.forward_edge.falsification_registry import FalsificationRegistry
+from financial_brain.forward_edge.prospective_cohort import freeze_champion
+from financial_brain.forward_edge.prospective_registry import ProspectiveCohortRegistry
 
 
 def _ar1(n: int, phi: float, seed: int, mu: float = 0.0) -> list[float]:
@@ -92,25 +96,47 @@ def test_required_sessions_scale_with_noise_and_target_precision() -> None:
 
 # ---- FE-0098 / FE-0099 / FE-0100 / FE-0101 / FE-0102 / FE-0103 + verdict ----
 
-GOOD_KW = dict(eligible_independent_sessions=120, tier=ClaimTier.INDEPENDENT_FORWARD,
-               net_by_cost_multiplier={1.0: 0.004, 1.5: 0.003, 2.0: 0.002}, best_block=0.35,
-               sample_design_predeclared=True, falsification_status="NO_FALSIFICATION_FOUND",
-               net_by_cost_and_fill={(c, f): 0.001 for c in E.EXECUTION_STRESS_COSTS
-                                      for f in E.EXECUTION_STRESS_FILL_RATES})
+@pytest.fixture
+def good_kwargs(tmp_path):
+    cohort = freeze_champion(
+        development_returns={"candidate": [0.01, 0.02]},
+        development_sessions=["2025-12-30", "2025-12-31"],
+        confirmation_sessions=["2026-01-02", "2026-01-03"],
+        frozen_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        first_confirmation_observation_at=datetime(2026, 1, 2, 3, tzinfo=timezone.utc),
+    )
+    cohort_registry = ProspectiveCohortRegistry(tmp_path / "cohort.jsonl")
+    cohort_registry.register("f08-cohort", cohort)
+    registry = FalsificationRegistry(tmp_path / "falsification.jsonl", cohort_registry)
+    registry.register(
+        trial_id="f08-trial", cohort_id="f08-cohort",
+        results={check: True for check in E.FALSIFICATION_CHECKS},
+        artifact_sha256={check: "a" * 64 for check in E.FALSIFICATION_CHECKS},
+    )
+    return dict(
+        eligible_independent_sessions=120, tier=ClaimTier.INDEPENDENT_FORWARD,
+        net_by_cost_multiplier={1.0: 0.004, 1.5: 0.003, 2.0: 0.002}, best_block=0.35,
+        sample_design_predeclared=True, falsification_status="NO_FALSIFICATION_FOUND",
+        falsification_registry=registry, falsification_trial_id="f08-trial",
+        falsification_cohort_id="f08-cohort",
+        net_by_cost_and_fill={(c, f): 0.001 for c in E.EXECUTION_STRESS_COSTS
+                              for f in E.EXECUTION_STRESS_FILL_RATES},
+    )
 
 
-def test_a_clear_effect_with_everything_in_order_is_promotion_grade() -> None:
+def test_a_clear_effect_with_everything_in_order_is_promotion_grade(good_kwargs) -> None:
     x = _ar1(250, 0.1, seed=11, mu=0.004)
-    v = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW)
+    v = E.promotion_verdict(daily_net_alpha=x, **good_kwargs)
     assert v["verdict"] == "PROMOTION_GRADE" and v["lower_bound"] > 0
+    assert len(v["falsification_evidence_sha256"]) == 64
 
 
-def test_positive_mean_with_interval_including_zero_is_not_promoted() -> None:
+def test_positive_mean_with_interval_including_zero_is_not_promoted(good_kwargs) -> None:
     raw = _ar1(250, 0.1, seed=12)
     centre = sum(raw) / len(raw)
     x = [r - centre + 0.0003 for r in raw]          # sample mean is exactly +0.0003, well inside the noise
     assert sum(x) / len(x) == pytest.approx(0.0003)
-    v = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW)
+    v = E.promotion_verdict(daily_net_alpha=x, **good_kwargs)
     assert v["verdict"] != "PROMOTION_GRADE" and "LOWER_BOUND_NOT_POSITIVE" in v["reasons"]
     assert v["mean"] > 0 and v["lower_bound"] < 0
 
@@ -129,23 +155,50 @@ def test_positive_mean_with_interval_including_zero_is_not_promoted() -> None:
         ({"falsification_status": "INSUFFICIENT_EVIDENCE"}, "FALSIFICATION_INSUFFICIENT_EVIDENCE"),
     ],
 )
-def test_each_gate_independently_blocks_promotion(override: dict, reason: str) -> None:
+def test_each_gate_independently_blocks_promotion(override: dict, reason: str, good_kwargs) -> None:
     x = _ar1(250, 0.1, seed=11, mu=0.004)
-    v = E.promotion_verdict(daily_net_alpha=x, **{**GOOD_KW, **override})
+    v = E.promotion_verdict(daily_net_alpha=x, **{**good_kwargs, **override})
     assert v["verdict"] != "PROMOTION_GRADE" and reason in v["reasons"]
 
 
-def test_missing_cost_by_fill_rate_grid_blocks_promotion_as_insufficient_evidence():
+def test_missing_cost_by_fill_rate_grid_blocks_promotion_as_insufficient_evidence(good_kwargs):
     x = _ar1(250, 0.1, seed=11, mu=0.004)
-    v = E.promotion_verdict(daily_net_alpha=x, **{**GOOD_KW, "net_by_cost_and_fill": None})
+    v = E.promotion_verdict(daily_net_alpha=x, **{**good_kwargs, "net_by_cost_and_fill": None})
     assert v["verdict"] == "INSUFFICIENT_EVIDENCE"
     assert "EXECUTION_STRESS_MISSING" in v["reasons"]
     assert v["execution_stress"]["status"] == "MISSING"
 
 
-def test_a_losing_strategy_fails_rather_than_staying_insufficient() -> None:
+def test_a_losing_strategy_fails_rather_than_staying_insufficient(good_kwargs) -> None:
     x = _ar1(250, 0.1, seed=13, mu=-0.002)
-    assert E.promotion_verdict(daily_net_alpha=x, **GOOD_KW)["verdict"] == "FAIL"
+    assert E.promotion_verdict(daily_net_alpha=x, **good_kwargs)["verdict"] == "FAIL"
+
+
+def test_caller_clean_status_without_registered_artifacts_cannot_promote():
+    result = E.promotion_verdict(
+        daily_net_alpha=[0.1] * 100, eligible_independent_sessions=120,
+        tier=ClaimTier.INDEPENDENT_FORWARD,
+        net_by_cost_multiplier={1.0: 1, 1.5: 1, 2.0: 1}, best_block=0.2,
+        sample_design_predeclared=True, falsification_status="NO_FALSIFICATION_FOUND",
+        net_by_cost_and_fill={(c, f): 1 for c in E.EXECUTION_STRESS_COSTS
+                              for f in E.EXECUTION_STRESS_FILL_RATES},
+    )
+    assert result["verdict"] == "INSUFFICIENT_EVIDENCE"
+    assert "FALSIFICATION_EVIDENCE_UNREGISTERED" in result["reasons"]
+
+
+def test_registered_critical_falsification_failure_blocks_positive_candidate(good_kwargs):
+    registry = good_kwargs["falsification_registry"]
+    registry.register(
+        trial_id="f08-failed-trial", cohort_id="f08-cohort",
+        results={**{check: True for check in E.FALSIFICATION_CHECKS}, "lookahead": False},
+        artifact_sha256={check: "b" * 64 for check in E.FALSIFICATION_CHECKS},
+    )
+    x = _ar1(250, 0.1, seed=11, mu=0.004)
+    kwargs = {**good_kwargs, "falsification_trial_id": "f08-failed-trial"}
+    result = E.promotion_verdict(daily_net_alpha=x, **kwargs)
+    assert result["verdict"] == "FAIL"
+    assert "FALSIFICATION_FAIL" in result["reasons"]
 
 
 def test_peeking_between_checkpoints_cannot_speed_promotion_but_harm_can_stop() -> None:
