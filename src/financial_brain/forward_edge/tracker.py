@@ -215,7 +215,10 @@ OVERRIDES: dict[str, Entry] = {
     "FE-0065": Entry("NOT_STARTED", (), (), "Execution receipts not built."),
     "FE-0066": Entry("NOT_STARTED", (), (), "Counterfactual fills not built."),
     "FE-0067": Entry("NOT_STARTED", (), (), "Settlement identity checks not built."),
-    "FE-0068": Entry("NOT_STARTED", (), (), "Outage no-trade outcome not built."),
+    "FE-0068": Entry("PARTIAL", ("test_live_complete_inputs_can_continue_but_stale_and_down_are_no_trade",
+                                  "test_missing_inputs_and_unknown_broker_state_are_journaled_without_fallback",
+                                  "test_no_trade_writer_refuses_evaluate_result"), (),
+                     "Stale/down feed, unknown broker state and missing required inputs create explicit NO_TRADE decisions and durable journal records with fallback_fill=False. Live adapters still need to call the gate before all entry paths."),
     # ---- F06 ----
     "FE-0069": Entry("NOT_STARTED", (), (), "Preflight not built."),
     "FE-0070": Entry("NOT_STARTED", (), (BLK_MARKET,), "Session supervisor not built; injected-clock tests possible."),
