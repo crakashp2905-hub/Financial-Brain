@@ -243,7 +243,8 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_backup_rejects_overwrite_and_restore_detects_tampering",
                                   "test_restore_rejects_manifest_path_traversal_and_hash_edit"), (),
                      "Verified SQLite online snapshots and file backups restore into an isolated new directory after manifest/content hash and SQLite integrity checks. Scheduling, offsite retention, production source discovery and a full OMS/archive/manifest restore rehearsal remain unconnected."),
-    "FE-0078": Entry("NOT_STARTED", (), (), "Runbooks not written."),
+    "FE-0078": Entry("PARTIAL", ("test_forward_edge_runbooks_cover_fail_closed_operational_recovery",), (),
+                     "Paper-only runbooks cover preflight, feed/token failure, unknown orders, reconciliation, close/carry, backup/restore, evidence and escalation. Automated runbook execution and live provider-specific procedures remain unavailable."),
     # ---- F07 ----
     "FE-0079": Entry("NOT_STARTED", (), (BLK_MARKET,), "Shadow logging needs live observations."),
     "FE-0080": Entry("NOT_STARTED", (), (), "Horizon freeze not built."),
