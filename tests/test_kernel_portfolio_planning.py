@@ -36,6 +36,19 @@ def test_rebalance_preview_moves_units_to_targets() -> None:
     assert trades == {"A": 40, "B": 100}  # A: 50 target - 10 held; B: 100 target - 0 held
 
 
+def test_rebalance_preview_emits_only_net_inventory_changes():
+    trades = rebalance_preview({"A": 100, "B": 20}, {"A": 1.0},
+                               {"A": 100.0, "B": 50.0}, equity=10000.0)
+    assert trades == {"B": -20}  # A is held at target; omitted B is one net liquidation.
+
+
+def test_rebalance_preview_fails_closed_on_missing_held_price_and_bad_inputs():
+    with pytest.raises(ValueError, match="missing price for B"):
+        rebalance_preview({"B": 10}, {}, {}, equity=10000.0)
+    with pytest.raises(ValueError, match="finite and positive"):
+        rebalance_preview({}, {}, {}, equity=float("nan"))
+
+
 def test_risk_profiles_are_fixed_and_unknown_is_refused() -> None:
     assert get_profile("intraday")["max_drawdown"] == Decimal("0.03")
     with pytest.raises(KeyError):

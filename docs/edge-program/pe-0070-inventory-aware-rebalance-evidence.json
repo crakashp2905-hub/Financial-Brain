@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0070",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_kernel_portfolio_planning.py tests/test_kernel_allocation_indicators.py tests/test_paper_account.py tests/test_paper_account_corporate_actions.py",
+    "result": "32 passed (exit code 0); Ruff and mypy passed. Rebalance planner emits only net per-symbol inventory deltas, includes omitted existing inventory as a sell-to-zero target, and fails closed on missing prices."
+  },
+  "implemented": [
+    "Portfolio rebalance preview calculates one signed target-minus-current quantity for each symbol, avoiding close-then-reopen gross-order construction.",
+    "Existing holdings missing from the new target are explicit zero-weight targets and require a valid price to liquidate.",
+    "Zero inventory deltas are omitted; invalid equity, quantities, target weights or missing prices are rejected.",
+    "PaperAccount transaction fees are posted on actual fills, not previewed target changes."
+  ],
+  "blockers": [
+    "The preview is not yet the universal paper-runner order planner; strategies and adapters may use other rebalance paths.",
+    "Actual execution, partial fills and fee attribution need runner-level prospective reconciliation.",
+    "No reduction in real or simulated fees is claimed from this standalone delta helper."
+  ],
+  "scope_note": "Net inventory delta planning and actual-fill fee behavior are tested. Universal runner wiring and execution evidence remain incomplete."
+}

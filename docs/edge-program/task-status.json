@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 96,
-  "unrecorded_tasks": 122,
+  "recorded_tasks": 97,
+  "unrecorded_tasks": 121,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2055,6 +2055,28 @@
         "No independently verified cash-rate provider or source completeness evidence.",
         "Daily end-of-session accrual is caller-invoked, not automatically scheduled for every paper runner.",
         "Time-weighted return is unavailable without at least two synchronized NAV snapshots per book."
+      ]
+    },
+    {
+      "id": "PE-0070",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/portfolio_planning.py",
+        "src/financial_brain/kernel/paper_account.py",
+        "tests/test_kernel_portfolio_planning.py",
+        "tests/test_paper_account.py",
+        "docs/edge-program/pe-0070-inventory-aware-rebalance-evidence.json"
+      ],
+      "tests": [
+        "test_rebalance_preview_emits_only_net_inventory_changes",
+        "test_rebalance_preview_fails_closed_on_missing_held_price_and_bad_inputs"
+      ],
+      "test_result": "Rebalance preview emits one net target-minus-current unit delta per symbol, including omitted holdings as zero targets, and refuses missing prices. Fees are posted on fills. Focused planning/account suite: 32 passed; Ruff and mypy passed. Universal runner integration remains incomplete.",
+      "evidence_sha256": "3cafc459dbb3332ba2f235615120926f51b8967312d1194179a9e8d8c088a64e",
+      "blockers": [
+        "Not every paper strategy runner consumes this inventory-aware planner.",
+        "Fill and fee reconciliation across all adapters remains outstanding.",
+        "No measured cost reduction is claimed."
       ]
     }
   ]

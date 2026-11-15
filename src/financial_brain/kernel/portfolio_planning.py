@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from decimal import Decimal
+import math
 
 RISK_PROFILES: dict[str, dict[str, Decimal]] = {
     "investor": {"max_drawdown": Decimal("0.20"), "max_leverage": Decimal("1")},
@@ -49,12 +50,25 @@ def rebalance_preview(
     prices: Mapping[str, float],
     equity: float,
 ) -> dict[str, int]:
+    """Return net inventory deltas once per symbol; omitted targets mean explicit zero weight.
+
+    Existing holdings are included even when omitted from the new target, so they become one
+    net sell delta. A held name with no valid price fails closed instead of being dropped.
+    """
+    if not math.isfinite(equity) or equity <= 0:
+        raise ValueError("equity must be finite and positive")
+    if any(type(quantity) is not int or quantity < 0 for quantity in current_units.values()):
+        raise ValueError("current inventory must use nonnegative whole quantities")
+    if any(not math.isfinite(float(weight)) or weight < 0 for weight in target_weights.values()):
+        raise ValueError("target weights must be finite and nonnegative")
     trades: dict[str, int] = {}
-    for asset, weight in target_weights.items():
-        if asset not in prices or prices[asset] <= 0:
+    for asset in sorted(set(current_units) | set(target_weights)):
+        if asset not in prices or not math.isfinite(prices[asset]) or prices[asset] <= 0:
             raise ValueError(f"missing price for {asset}")
-        target_units = int(equity * weight / prices[asset])
-        trades[asset] = target_units - current_units.get(asset, 0)
+        target_units = int(equity * target_weights.get(asset, 0.0) / prices[asset])
+        delta = target_units - current_units.get(asset, 0)
+        if delta:
+            trades[asset] = delta
     return trades
 
 
