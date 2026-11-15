@@ -455,6 +455,8 @@ def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
     assert _config(capital_inr="1000000.00").sha256 == _config(capital_inr="1000000").sha256
     assert _config(ledger_id="LEDGER-2").sha256 != _config().sha256
     assert _config(risk_policy_sha256="d" * 64).sha256 != _config().sha256
+    assert _config(pretrade_policy_sha256="e" * 64).sha256 != _config().sha256
+    assert _config(pretrade_policy_sha256="e" * 64).session_key != _config().session_key
     with pytest.raises(RunnerError, match="unique"):
         _config(instruments=("NSE:INFY", "NSE:INFY")).canonical()
 

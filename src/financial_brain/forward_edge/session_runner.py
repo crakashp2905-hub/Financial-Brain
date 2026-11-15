@@ -80,6 +80,7 @@ class ForwardRunConfig:
     uncertainty_sizing_policy_sha256: str | None = None
     forecast_benefit_policy_sha256: str | None = None
     degradation_policy_sha256: str | None = None
+    pretrade_policy_sha256: str | None = None
     require_feed_health: bool = False
     family_evidence: FamilyEvidence | None = None
     family_owner_approval: Approval | None = None
@@ -129,6 +130,10 @@ class ForwardRunConfig:
                 len(self.degradation_policy_sha256) != 64
                 or any(ch not in "0123456789abcdef" for ch in self.degradation_policy_sha256)):
             raise RunnerError("degradation policy identity must be a SHA-256 digest")
+        if self.pretrade_policy_sha256 is not None and (
+                len(self.pretrade_policy_sha256) != 64
+                or any(ch not in "0123456789abcdef" for ch in self.pretrade_policy_sha256)):
+            raise RunnerError("pre-trade policy identity must be a SHA-256 digest")
         try:
             if date.fromisoformat(self.exchange_date).isoformat() != self.exchange_date:
                 raise ValueError
@@ -163,6 +168,8 @@ class ForwardRunConfig:
             canonical["forecast_benefit_policy_sha256"] = self.forecast_benefit_policy_sha256
         if self.degradation_policy_sha256 is not None:
             canonical["degradation_policy_sha256"] = self.degradation_policy_sha256
+        if self.pretrade_policy_sha256 is not None:
+            canonical["pretrade_policy_sha256"] = self.pretrade_policy_sha256
         if self.family_evidence is not None:
             canonical["family_evidence_sha256"] = self.family_evidence.evidence_sha256
         if self.family_owner_approval is not None:
@@ -192,6 +199,8 @@ class ForwardRunConfig:
                     "authority_account_id": self.authority_account_id}
         if self.degradation_policy_sha256 is not None:
             identity["degradation_policy_sha256"] = self.degradation_policy_sha256
+        if self.pretrade_policy_sha256 is not None:
+            identity["pretrade_policy_sha256"] = self.pretrade_policy_sha256
         body = json.dumps(identity, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(body.encode()).hexdigest()
 

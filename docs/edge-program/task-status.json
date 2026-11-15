@@ -3421,15 +3421,19 @@
         "tests/test_pretrade_gates.py",
         "tests/test_forward_session_runner.py",
         "docs/edge-program/pe-0150-pretrade-gates-and-skips.md",
-        "docs/edge-program/pe-0150-pretrade-gates-and-skips-evidence.json"
+        "docs/edge-program/pe-0150-pretrade-gates-and-skips-evidence.json",
+        "src/financial_brain/forward_edge/paper_account_bridge.py",
+        "tests/test_forward_paper_account_bridge.py"
       ],
       "tests": [
         "test_pretrade_gates.py",
         "test_forward_session_runner.py",
-        "test_decision_sealing.py"
+        "test_decision_sealing.py",
+        "test_session_bound_pretrade_policy_blocks_order_and_persists_verdict",
+        "test_session_bound_pretrade_policy_cannot_be_omitted_or_changed"
       ],
-      "test_result": "58 passed; Ruff passed.",
-      "evidence_sha256": "4ca10c9f4250be45381906c66462c1d147d796854e85e2959d5b9e5a17e72c7d",
+      "test_result": "94 pre-trade, decision-sealing, registered paper bridge, and session-runner tests passed; Ruff and mypy passed. A declared policy hash is bound to the session and its gate verdict is durably composed with risk. Binding remains optional until authoritative policies/data are configured.",
+      "evidence_sha256": "5a0afde302d958c9e743a4d74f8edc7aa95a652d67b2ca11b33b0330ef716882",
       "blockers": [
         "Frozen gate policies and evidence sources are not automatically bound to every strategy/session.",
         "Authoritative ADV/cost feeds, exposure-book integration, calibrated confidence, and formal eligibility wiring remain unverified."

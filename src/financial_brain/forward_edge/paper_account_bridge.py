@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from collections.abc import Callable, Iterable
@@ -12,6 +12,12 @@ from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
 from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent
 from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.pretrade_gates import (
+    PreTradeGateError,
+    PreTradePolicy,
+    PreTradeSnapshot,
+    evaluate_pretrade,
+)
 from financial_brain.forward_edge.registry import Registry, StrategySpec, order_intent_allowed
 from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner, RunnerError
 from financial_brain.kernel.schemas import (
@@ -110,8 +116,22 @@ class ForwardPaperSessionService:
             feed_health_observed_at: datetime | None = None,
             fixed_look_registry: FixedLookRegistry | None = None,
             fixed_look_policy_id: str | None = None,
-            fixed_look_observation_fn: Callable[[], dict] | None = None) -> dict:
+            fixed_look_observation_fn: Callable[[], dict] | None = None,
+            pretrade_policy: PreTradePolicy | None = None,
+            pretrade_snapshot_fn: Callable[[ForwardRunConfig, dict, list[NormalizedEvent], datetime],
+                                           PreTradeSnapshot] | None = None) -> dict:
         """Persist one preflight, run the session, then reconcile its receipt to PaperAccount."""
+        if (pretrade_policy is None) != (pretrade_snapshot_fn is None):
+            raise PaperAccountBridgeError("pre-trade policy requires a matching snapshot adapter")
+        if (config.pretrade_policy_sha256 is None) != (pretrade_policy is None):
+            raise PaperAccountBridgeError("frozen session pre-trade policy and runtime policy must match")
+        if pretrade_policy is not None:
+            if pretrade_policy.sha256 != config.pretrade_policy_sha256:
+                raise PaperAccountBridgeError("runtime pre-trade policy differs from the session-bound policy")
+            if pretrade_policy.strategy_sha256 != config.strategy_sha256:
+                raise PaperAccountBridgeError("pre-trade policy does not match the frozen strategy digest")
+            if pretrade_policy.strategy_version != str(self.strategy_spec.version):
+                raise PaperAccountBridgeError("pre-trade policy does not match the registered strategy version")
         if decision_at is None:
             existing_decision = next((row for row in DurableJournal(self.runner.journal_path).records()
                                       if row.get("t") == "DECISION"
@@ -233,7 +253,45 @@ class ForwardPaperSessionService:
                 if risk_stop_report is not None:
                     result["fixed_look_risk_stop"] = risk_stop_report
                 return result
-            return risk_fn(decision)
+            base_risk = risk_fn(decision)
+            if pretrade_policy is None or pretrade_snapshot_fn is None or decision.get("side") not in {"BUY", "SELL"}:
+                return base_risk
+            try:
+                visible = [event for event in captured_events if event.available_utc <= decision_at]
+                snapshot = pretrade_snapshot_fn(config, decision, visible, decision_at)
+                if not isinstance(snapshot, PreTradeSnapshot):
+                    raise PreTradeGateError("snapshot adapter must return a validated PreTradeSnapshot")
+                visible_quote_hashes = {event.content_sha256() for event in visible}
+                if (snapshot.session_id != config.session_id
+                        or snapshot.strategy_sha256 != config.strategy_sha256
+                        or snapshot.instrument not in config.instruments
+                        or snapshot.instrument != decision.get("instrument")
+                        or snapshot.side != decision.get("side")
+                        or snapshot.quantity != decision.get("quantity")
+                        or snapshot.quote is None
+                        or snapshot.quote.content_sha256() not in visible_quote_hashes
+                        or not isinstance(snapshot.decision_at, datetime)
+                        or snapshot.decision_at.tzinfo is None
+                        or snapshot.decision_at.utcoffset() is None
+                        or snapshot.decision_at.astimezone(timezone.utc)
+                        != decision_at.astimezone(timezone.utc)):
+                    raise PreTradeGateError("pre-trade snapshot identity differs from the sealed decision")
+                gate = evaluate_pretrade(pretrade_policy, snapshot).as_risk_verdict()
+            except Exception as exc:  # noqa: BLE001 - failed pre-trade evidence must block the intent
+                return {
+                    "approved": False,
+                    "reason": "PRETRADE_EVIDENCE_INVALID",
+                    "pretrade_policy_sha256": pretrade_policy.sha256,
+                    "pretrade_error_type": type(exc).__name__,
+                }
+            if not isinstance(base_risk, dict) or type(base_risk.get("approved")) is not bool:
+                return base_risk
+            result = {**base_risk, "pretrade_gate": gate,
+                      "approved": base_risk["approved"] and gate["approved"]}
+            if not gate["approved"]:
+                result["reason"] = gate["reason"]
+                result["reasons"] = list(gate["reasons"])
+            return result
 
         captured_events = list(events)
         execution_adapter = execution_fn

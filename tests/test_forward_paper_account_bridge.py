@@ -15,6 +15,7 @@ from financial_brain.forward_edge.governance import FamilyEvidence, family_actio
 from financial_brain.forward_edge.durable import DurableJournal
 import financial_brain.forward_edge.paper_account_bridge as paper_bridge
 from financial_brain.forward_edge.fixed_look_registry import FixedLookRegistry
+from financial_brain.forward_edge.pretrade_gates import PreTradePolicy, PreTradeSnapshot
 from financial_brain.forward_edge.sample_size import design_sample_size
 from financial_brain.forward_edge.paper_account_bridge import (
     ForwardPaperSessionService,
@@ -181,6 +182,75 @@ def test_live_paper_service_requires_health_snapshot_before_preflight(tmp_path):
         )
     assert preflight_calls == []
     assert account.cash == Decimal("10000")
+    assert not runner_path.exists()
+
+
+def test_session_bound_pretrade_policy_blocks_order_and_persists_verdict(tmp_path):
+    service, config, account, runner_path, _ = _service(tmp_path)
+    policy = PreTradePolicy(
+        strategy_sha256=config.strategy_sha256, strategy_version=str(service.strategy_spec.version),
+        frozen_at=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        session_starts_at=datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc),
+        max_quote_age_s=5, max_spread_bps=20, max_adv_age_days=1,
+        max_adv_participation=0.1, minimum_net_alpha_bps=0,
+        max_abs_exposure_inr=Decimal("5000"), minimum_model_confidence=0.6,
+    )
+    config = replace(config, pretrade_policy_sha256=policy.sha256)
+    quote = _event(DECISION_AT - timedelta(seconds=2))
+    calls = []
+
+    def snapshot_fn(run_config, decision, visible_events, decision_at):
+        calls.append(tuple(event.content_sha256() for event in visible_events))
+        return PreTradeSnapshot(
+            session_id=run_config.session_id, strategy_sha256=run_config.strategy_sha256,
+            instrument=decision["instrument"], side=decision["side"], quantity=decision["quantity"],
+            decision_at=decision_at, quote=visible_events[-1], adv_quantity=1000,
+            adv_as_of=date(2026, 11, 12), adv_source_sha256="d" * 64,
+            current_signed_exposure_inr=Decimal(0), exposure_evidence_sha256="e" * 64,
+            gross_alpha_bps=10, fees_bps=10, spread_cost_bps=2, impact_bps=2,
+            cost_evidence_sha256="f" * 64, model_confidence=0.9, model_evidence_sha256="1" * 64,
+        )
+
+    result = service.run(
+        config, [quote], preflight_fn=lambda: {"approved": True},
+        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 1},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: pytest.fail("failed net-alpha gate cannot execute"),
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+        pretrade_policy=policy, pretrade_snapshot_fn=snapshot_fn,
+    )
+    records = DurableJournal(runner_path).records()
+    risk = next(row["risk"] for row in records if row.get("t") == "RISK_VERDICT")
+    assert result["status"] == "REJECTED"
+    assert calls == [(quote.content_sha256(),)]
+    assert risk["approved"] is False
+    assert risk["pretrade_gate"]["policy_sha256"] == policy.sha256
+    assert risk["pretrade_gate"]["expected_net_alpha_bps"] == -4
+    assert account.cash == Decimal("10000")
+
+
+def test_session_bound_pretrade_policy_cannot_be_omitted_or_changed(tmp_path):
+    service, config, _account, runner_path, _ = _service(tmp_path)
+    policy = PreTradePolicy(
+        strategy_sha256=config.strategy_sha256, strategy_version=str(service.strategy_spec.version),
+        frozen_at=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        session_starts_at=datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc),
+        max_quote_age_s=5, max_spread_bps=20, max_adv_age_days=1,
+        max_adv_participation=0.1, minimum_net_alpha_bps=0,
+        max_abs_exposure_inr=Decimal("5000"), minimum_model_confidence=0.6,
+    )
+    config = replace(config, pretrade_policy_sha256=policy.sha256)
+    arguments = dict(
+        preflight_fn=lambda: {"approved": True}, decision_fn=lambda _: {"side": "NONE"},
+        risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {},
+        decision_at=DECISION_AT, feed_health=FEED_HEALTH, feed_health_observed_at=DECISION_AT,
+    )
+    with pytest.raises(PaperAccountBridgeError, match="matching snapshot adapter"):
+        service.run(config, [], **arguments, pretrade_policy=policy)
+    changed = replace(policy, minimum_net_alpha_bps=1)
+    with pytest.raises(PaperAccountBridgeError, match="differs from the session-bound"):
+        service.run(config, [], **arguments, pretrade_policy=changed,
+                    pretrade_snapshot_fn=lambda *_: None)
     assert not runner_path.exists()
 
 
