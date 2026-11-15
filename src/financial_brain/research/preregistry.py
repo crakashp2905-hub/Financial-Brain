@@ -20,6 +20,10 @@ and gives each a status:
     CHANGED_AFTER_RESULT    the hypothesis was edited after its result existed - the cardinal violation
 
 A changed hypothesis is a new one: it gets a new file and a new name, never an edit.
+
+Editorial repair (ADR-0004 amendment 6): an edit whose only change is the whitespace inside a ``[[wiki-link]]`` (for
+example a line break that splits a link target, which makes the link broken) is EDITORIAL, not a change to the
+hypothesis. It is reported under ``editorial`` and does not count as an edit. Any other change still does.
 """
 from __future__ import annotations
 
@@ -49,6 +53,19 @@ def _sha(repo: Path, commit: str, rel: str) -> str:
     return hashlib.sha256(text.replace("\r\n", "\n").encode("utf-8")).hexdigest()
 
 
+_WIKILINK = re.compile(r"\[\[[^\]]*\]\]")
+
+
+def _editorial_only(old: str, new: str) -> bool:
+    """True when ``new`` differs from ``old`` only by whitespace inside wiki-links (and is not identical)."""
+    old, new = old.replace("\r\n", "\n"), new.replace("\r\n", "\n")
+
+    def squash(t: str) -> str:
+        return _WIKILINK.sub(lambda m: " ".join(m.group(0).split()), t)
+
+    return old != new and squash(old) == squash(new)
+
+
 def audit(repo: Path = Path(".")) -> list[dict]:
     repo = Path(repo)
     folder = repo / RESEARCH
@@ -58,7 +75,7 @@ def audit(repo: Path = Path(".")) -> list[dict]:
         rel = (RESEARCH / name).as_posix()
         commits = _commits(repo, rel)
         if not commits:
-            out.append({"prereg": name, "status": "UNCOMMITTED", "registered": None, "results": [], "edits": []})
+            out.append({"prereg": name, "status": "UNCOMMITTED", "registered": None, "results": [], "edits": [], "editorial": []})
             continue
         reg_hash, reg_time = commits[0]
         stem = re.escape(name[:-3])
@@ -75,8 +92,13 @@ def audit(repo: Path = Path(".")) -> list[dict]:
                 origins.append(n)
                 continue
             results.append({"note": n, "commit": c[0][0], "time": c[0][1]})
-        edits = [{"commit": h, "time": t} for h, t in commits[1:]
-                 if _sha(repo, h, rel) != _sha(repo, reg_hash, rel)]
+        reg_text = first_text
+        edits, editorial = [], []
+        for h, t in commits[1:]:
+            if _sha(repo, h, rel) == _sha(repo, reg_hash, rel):
+                continue
+            text = _git(repo, "show", f"{h}:{rel}")
+            (editorial if _editorial_only(reg_text, text) else edits).append({"commit": h, "time": t})
         first_result = min((r["time"] for r in results), default="")
         if not results:
             status = "NO_RESULT_YET"
@@ -90,7 +112,7 @@ def audit(repo: Path = Path(".")) -> list[dict]:
             status = "OK"
         out.append({"prereg": name, "status": status, "registered": reg_time, "registered_commit": reg_hash[:8],
                     "sha256": _sha(repo, reg_hash, rel)[:16], "results": results, "origins": origins,
-                    "edits": edits})
+                    "edits": edits, "editorial": editorial})
     return out
 
 

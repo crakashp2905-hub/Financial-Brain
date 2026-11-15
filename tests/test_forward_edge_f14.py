@@ -163,7 +163,7 @@ def test_every_known_strategy_has_one_status_lineage_and_reason() -> None:
     data = json.loads((REPO / eligibility.OUT_REL).read_text(encoding="utf-8"))
     ids = [e["id"] for e in data["entries"]]
     assert len(ids) == len(set(ids))
-    assert sum(e["id"].startswith("TRIAL:") for e in data["entries"]) == 13
+    assert sum(e["id"].startswith("TRIAL:") for e in data["entries"]) == 14
     for e in data["entries"]:
         assert e["status"] in ("FAILED", "SHADOW_ONLY") and e["lineage"] and e["exclusion_reason"]
         assert e["prospective_observation"] is False
@@ -173,7 +173,7 @@ def test_committed_eligibility_list_matches_the_generator_so_a_new_strategy_need
     assert (REPO / eligibility.OUT_REL).read_text(encoding="utf-8") == eligibility.render(REPO)
 
 
-def test_all_thirteen_recorded_trials_are_failed_in_the_list() -> None:
+def test_all_fourteen_recorded_trials_are_failed_in_the_list() -> None:
     data = json.loads((REPO / eligibility.OUT_REL).read_text(encoding="utf-8"))
     assert {e["status"] for e in data["entries"] if e["id"].startswith("TRIAL:")} == {"FAILED"}
 

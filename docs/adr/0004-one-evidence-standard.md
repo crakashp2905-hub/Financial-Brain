@@ -97,3 +97,7 @@ The bars are not moved. Every candidate must clear G1-G4 on its own, the family 
 Reality Check / Hansen's SPA and the probability of backtest overfitting, and a candidate that clears only some gates is
 a lead for forward paper, not an edge. The registration is committed before any result exists. The ledger row, when
 written, is a deliberate pin update in `docs/forward-edge/protected-pins.json`.
+
+## Amendment 6 (2026-11-15, owner decision)
+
+Editorial repair, not a change to any hypothesis or budget: the line break inside the wiki-link to `[[Source notes - Bulkowski Encyclopedia of Chart Patterns]]` in `PRE-REGISTERED intraday chart candle and indicator family` split the link target, so the link was broken. The break is joined into one space. No word of the hypothesis, rule, gate, bar or budget changes. `research/preregistry.py` now classifies an edit whose only change is whitespace inside wiki-links as EDITORIAL (reported separately, not an edit); any other change to a registered note still counts as `CHANGED_AFTER_RESULT`. Recorded by the owner's decision of 2026-11-15, after the vault test surfaced the broken link in CI.

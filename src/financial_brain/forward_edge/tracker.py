@@ -654,8 +654,8 @@ _DUR = "forward_edge/durable.py; the legacy in-memory EventKernel and pilot are 
 OVERRIDES.update({
     "FE-0003": Entry("PARTIAL", ("test_every_known_strategy_has_one_status_lineage_and_reason",
                                  "test_committed_eligibility_list_matches_the_generator_so_a_new_strategy_needs_a_decision",
-                                 "test_all_thirteen_recorded_trials_are_failed_in_the_list"), (),
-                     "docs/forward-edge/strategy-eligibility.json: 13 failed trials and the strategies/ modules. Families outside those paths (paper zoo, patterns) are not enumerated."),
+                                 "test_all_fourteen_recorded_trials_are_failed_in_the_list"), (),
+                     "docs/forward-edge/strategy-eligibility.json: 14 failed trials and the strategies/ modules. Families outside those paths (paper zoo, patterns) are not enumerated."),
     "FE-0009": Entry("DONE", ("test_scratch_database_is_temporary_and_needs_no_credentials",
                               "test_real_data_paths_are_refused"), (), "forward_edge/disposable.py."),
     "FE-0011": Entry("DONE", ("test_outbox_is_written_before_the_action_and_an_unacked_key_is_never_blindly_resent",

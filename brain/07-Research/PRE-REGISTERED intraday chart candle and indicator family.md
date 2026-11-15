@@ -11,8 +11,7 @@ One trial, one family: forty candidate intraday strategies for a `live-v2`, test
 history. Authority: [[ADR-0004 one evidence standard]], amendment 5 (2026Q4 budget 13 to 14), owner decision on
 2026-11-11. The candidates come from the two lists the owner reviewed on 2026-11-11: twenty variants and reuses of
 existing algorithms (`L1`-`L20`) and twenty chart, candle and indicator strategies (`P1`-`P20`). Sources for the
-definitions: [[Source notes - Nison Japanese Candlestick Charting Techniques]], [[Source notes - Bulkowski Encyclopedia
-of Chart Patterns]], [[Chart patterns and candles - what is testable and how]]. This note is committed before any
+definitions: [[Source notes - Nison Japanese Candlestick Charting Techniques]], [[Source notes - Bulkowski Encyclopedia of Chart Patterns]], [[Chart patterns and candles - what is testable and how]]. This note is committed before any
 result exists; a change after a result is a new hypothesis with a new name, never an edit.
 
 ## What is expected
