@@ -175,7 +175,10 @@ OVERRIDES: dict[str, Entry] = {
                      "LOCAL_ONLY downgrade at classification level; the pipeline that uses it is FE-0051."),
     "FE-0054": Entry("NOT_STARTED", (), (), "Daily attestation bundle not built."),
     # ---- F05 ----
-    "FE-0055": Entry("NOT_STARTED", (), (), "Engine adapter not built."),
+    "FE-0055": Entry("PARTIAL", ("test_same_candidate_produces_equivalent_versioned_engine_intents",
+                                  "test_adapter_rejects_spec_mismatch_or_missing_forward_contract",
+                                  "test_intent_identity_changes_with_decision_or_signal_payload"), (),
+                     "Versioned adapter creates deterministic canonical intents and projections for kernel OMS and legacy paper. Existing session runners have not yet adopted the adapter; equivalence is contract-tested rather than end-to-end."),
     "FE-0056": Entry("PARTIAL", ("test_completed_bar_or_quote_yields_latency_delayed_timed_intent",
                                   "test_incomplete_bar_future_event_and_wrong_event_kind_are_rejected"), (),
                      "Shared timed-intent contract requires an explicitly completed bar or available quote and enforces decision plus latency before fill. Existing paper adapters have not all been wired through it."),
