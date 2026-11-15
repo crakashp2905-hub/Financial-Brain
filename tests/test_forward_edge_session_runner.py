@@ -1,5 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
+from dataclasses import replace
 from decimal import Decimal
+import sqlite3
 
 import pytest
 
@@ -55,10 +57,31 @@ def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
     archive.append(observed)
     prior_day = quote | {"timestamp": "2026-11-12 10:15:00"}
     archive.append(normalize_kite_quote("NSE:INFY", prior_day, received_at=NOW))
+    archived_at = archive.ingest_time(observed.event_id)
     assert runner.ingest_kite_archive("kite-session", make_config(), archive)["persisted"] == 1
-    archive.close()
     records = runner.records("kite-session")
     assert records["events"][0]["source"] == "KITE_CONNECT_READ_ONLY"
+    assert records["events"][0]["evidence_id"] == observed.evidence_id
+    assert records["events"][0]["ingested_at"] == archived_at.isoformat()
+    assert records["events"][0]["ingest_clock_source"] == "QUOTE_ARCHIVE"
+    archive.close()
+    runner.close()
+
+
+def test_runner_event_schema_migration_adds_ingest_provenance_columns(tmp_path):
+    journal = tmp_path / "journal.sqlite"
+    with sqlite3.connect(journal) as con:
+        con.execute("""CREATE TABLE runner_events (
+            session_id TEXT NOT NULL, event_id TEXT NOT NULL, kind TEXT NOT NULL,
+            available_at TEXT NOT NULL, event_sha256 TEXT NOT NULL, event_json TEXT NOT NULL,
+            PRIMARY KEY(session_id, event_id))""")
+    runner = make_runner(tmp_path)
+    opened(runner)
+    runner.ingest("s", make_config(), [make_event()],
+                  ingest_metadata={"fixture-1": (NOW + timedelta(milliseconds=1), "MIGRATION_TEST")})
+    event = runner.records("s")["events"][0]
+    assert event["ingested_at"] == (NOW + timedelta(milliseconds=1)).isoformat()
+    assert event["ingest_clock_source"] == "MIGRATION_TEST"
     runner.close()
 
 
@@ -231,6 +254,30 @@ def test_ltp_only_cannot_create_paper_fill_intent(tmp_path):
     runner.close()
 
 
+def test_paper_fill_requires_hashed_raw_source_evidence(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+             "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                       "sell": [{"price": 100.05, "quantity": 3}]}}
+    event = replace(normalize_kite_quote("NSE:INFY", quote, received_at=NOW),
+                    event_id="quote-without-source-hash", evidence_id=None)
+    runner.ingest("s", make_config(), [event],
+                  ingest_metadata={event.event_id: (NOW + timedelta(milliseconds=10), "FIXTURE_CLOCK")})
+    decided = NOW + timedelta(seconds=1)
+    runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
+                  decided_at=decided, input_event_ids=(event.event_id,))
+    with pytest.raises(ForwardSessionRunnerError, match="SHA-256 source-payload"):
+        runner.execute_paper_intent(
+            session_id="s", order_id="no-evidence-order", decision_id="trade-1",
+            event_id=event.event_id, side="BUY", quantity=1, limit_price=Decimal("101"),
+            tick_size=Decimal("0.05"), freeze_limit=10, slice_size=10,
+            adverse_slippage_bps=Decimal("10"), latency_ms=100,
+            simulated_at=decided + timedelta(milliseconds=100))
+    assert runner.records("s")["intents"] == []
+    runner.close()
+
+
 def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
     class SequenceClock:
         def __init__(self, values):
@@ -252,7 +299,8 @@ def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
         "depth": {"buy": [{"price": 99.95, "quantity": 20}],
                   "sell": [{"price": 100.05, "quantity": 3}]},
     }, received_at=NOW)
-    runner.ingest("clock-session", make_config(), [event])
+    runner.ingest("clock-session", make_config(), [event],
+                  ingest_metadata={event.event_id: (NOW + timedelta(milliseconds=10), "FIXTURE_CLOCK")})
     runner.decide(session_id="clock-session", strategy_id="momentum", decision_id="clock-trade",
                   outcome="TRADE", input_event_ids=(event.event_id,))
     receipt = runner.execute_paper_intent(

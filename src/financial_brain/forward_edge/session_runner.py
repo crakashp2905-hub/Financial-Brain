@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -48,8 +49,14 @@ class ForwardSessionRunner:
         self._con.execute("PRAGMA synchronous=FULL")
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_events (
             session_id TEXT NOT NULL, event_id TEXT NOT NULL, kind TEXT NOT NULL,
-            available_at TEXT NOT NULL, event_sha256 TEXT NOT NULL, event_json TEXT NOT NULL,
+            available_at TEXT NOT NULL, ingested_at TEXT, ingest_clock_source TEXT,
+            event_sha256 TEXT NOT NULL, event_json TEXT NOT NULL,
             PRIMARY KEY(session_id, event_id))""")
+        event_columns = {row[1] for row in self._con.execute("PRAGMA table_info(runner_events)")}
+        if "ingested_at" not in event_columns:
+            self._con.execute("ALTER TABLE runner_events ADD COLUMN ingested_at TEXT")
+        if "ingest_clock_source" not in event_columns:
+            self._con.execute("ALTER TABLE runner_events ADD COLUMN ingest_clock_source TEXT")
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_decisions (
             session_id TEXT NOT NULL, decision_id TEXT NOT NULL, strategy_id TEXT NOT NULL,
             outcome TEXT NOT NULL, decided_at TEXT NOT NULL, record_sha256 TEXT NOT NULL,
@@ -142,7 +149,8 @@ class ForwardSessionRunner:
                 "physical_orders_enabled": False}
 
     def ingest(self, session_id: str, config: ForwardRunConfig,
-               events: Iterable[MarketEvent]) -> dict[str, int]:
+               events: Iterable[MarketEvent], *,
+               ingest_metadata: dict[str, tuple[datetime, str]] | None = None) -> dict[str, int]:
         """Durably accept normalized source events available during the frozen session."""
         if self.state_store.state(session_id) is not SessionState.OPEN:
             raise ForwardSessionRunnerError("market events are accepted only in an OPEN session")
@@ -169,9 +177,26 @@ class ForwardSessionRunner:
                         raise ForwardSessionRunnerError("event ID reused with conflicting content")
                     counts["duplicate"] += 1
                     continue
-                self._con.execute("INSERT INTO runner_events VALUES (?, ?, ?, ?, ?, ?)",
+                metadata = (ingest_metadata or {}).get(event.event_id)
+                if metadata is None:
+                    ingested_at = capture_local_time(self.clock, label="event ingest timestamp")
+                    ingest_source = "SESSION_RUNNER_CLOCK"
+                else:
+                    ingested_at, ingest_source = metadata
+                if ingested_at.tzinfo is None or ingested_at.utcoffset() is None:
+                    raise ForwardSessionRunnerError("event ingest timestamp must be timezone aware")
+                if not ingest_source.strip():
+                    raise ForwardSessionRunnerError("event ingest clock source is required")
+                ingested_at = ingested_at.astimezone(timezone.utc)
+                if ingested_at < event.available_at:
+                    raise ForwardSessionRunnerError("event ingest time cannot precede availability")
+                self._con.execute("""INSERT INTO runner_events (
+                                    session_id, event_id, kind, available_at, ingested_at,
+                                    ingest_clock_source, event_sha256, event_json)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                                   [session_id, event.event_id, event.kind.value,
-                                   event.available_at.astimezone(timezone.utc).isoformat(), digest, canonical])
+                                   event.available_at.astimezone(timezone.utc).isoformat(),
+                                   ingested_at.isoformat(), ingest_source, digest, canonical])
                 counts["persisted"] += 1
         except Exception:
             self._con.execute("ROLLBACK TO ingest_batch")
@@ -186,7 +211,14 @@ class ForwardSessionRunner:
                              archive: QuoteArchive) -> dict[str, int]:
         """Actual-market adapter: read only archived Kite events, then use the canonical ingest path."""
         events = archive.events_for_session(config.exchange_date, source="KITE_CONNECT_READ_ONLY")
-        return self.ingest(session_id, config, events)
+        metadata = {}
+        for event in events:
+            ingested_at = archive.ingest_time(event.event_id)
+            metadata[event.event_id] = (
+                (ingested_at, "QUOTE_ARCHIVE") if ingested_at is not None else
+                (capture_local_time(self.clock, label="legacy event import timestamp"),
+                 "LEGACY_ARCHIVE_IMPORT"))
+        return self.ingest(session_id, config, events, ingest_metadata=metadata)
 
     def decide(self, *, session_id: str, strategy_id: str, decision_id: str,
                outcome: str, input_event_ids: tuple[str, ...], decided_at: datetime | None = None,
@@ -234,8 +266,10 @@ class ForwardSessionRunner:
 
     def records(self, session_id: str) -> dict[str, list[dict[str, Any]]]:
         """Return the deterministic persisted event and decision trace for reanalysis."""
-        events = [json.loads(row[0]) for row in self._con.execute(
-            "SELECT event_json FROM runner_events WHERE session_id=? AND kind!='preflight' "
+        events = [json.loads(row[0]) | {"ingested_at": row[1], "ingest_clock_source": row[2]}
+                  for row in self._con.execute(
+            "SELECT event_json, ingested_at, ingest_clock_source FROM runner_events "
+            "WHERE session_id=? AND kind!='preflight' "
             "ORDER BY available_at, event_id",
             [session_id]).fetchall()]
         lifecycle = [json.loads(row[0]) for row in self._con.execute(
@@ -301,6 +335,8 @@ class ForwardSessionRunner:
         quote = executable_quote(event)
         if quote is None:
             raise ForwardSessionRunnerError("paper fill requires a two-sided quote with positive visible depth")
+        if not event.evidence_id or re.fullmatch(r"[0-9a-f]{64}", event.evidence_id) is None:
+            raise ForwardSessionRunnerError("paper fill requires an immutable SHA-256 source-payload evidence ID")
         decision_at = datetime.fromisoformat(decision["decided_at"])
         timed = create_timed_intent(decision_id=decision_id, event=event, side=side, quantity=quantity,
                                     decision_time=decision_at,
@@ -455,7 +491,10 @@ class ForwardSessionRunner:
         if previous and previous[0] != digest:
             raise ForwardSessionRunnerError("session lifecycle record conflicts with prior evidence")
         if not previous:
-            self._con.execute("INSERT INTO runner_events VALUES (?, ?, ?, ?, ?, ?)",
+            self._con.execute("""INSERT INTO runner_events (
+                                session_id, event_id, kind, available_at, ingested_at,
+                                ingest_clock_source, event_sha256, event_json)
+                                VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)""",
                               [session_id, event_id, kind, record["occurred_at"], digest, canonical])
             self._con.commit()
 

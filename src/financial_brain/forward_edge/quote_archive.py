@@ -78,6 +78,8 @@ class QuoteArchive:
         if ingested_at.tzinfo is None or ingested_at.utcoffset() is None:
             raise QuoteArchiveError("ingest clock must be timezone aware")
         ingested_at = ingested_at.astimezone(timezone.utc)
+        if ingested_at < event.available_at:
+            raise QuoteArchiveError("ingest time cannot precede event availability")
         body = event.as_dict()
         digest = event.sha256()
         previous = self._con.execute("SELECT event_sha256 FROM market_events WHERE event_id=?",

@@ -82,6 +82,7 @@ def test_ingest_timestamp_is_injected_immutable_and_not_part_of_source_event_ide
 
 def test_legacy_archive_migration_does_not_invent_prior_ingest_times(tmp_path) -> None:
     path = tmp_path / "legacy.sqlite3"
+    ingested = T0 + timedelta(minutes=1)
     legacy = _quote(8)
     with sqlite3.connect(path) as con:
         con.execute("""CREATE TABLE market_events (
@@ -95,11 +96,11 @@ def test_legacy_archive_migration_does_not_invent_prior_ingest_times(tmp_path) -
                      legacy.available_at.isoformat(), legacy.sequence, legacy.source,
                      legacy.evidence_id, legacy.sha256(),
                      json.dumps(legacy.as_dict(), sort_keys=True, separators=(",", ":"))])
-    archive = QuoteArchive(path, clock=FixedClock(T0))
+    archive = QuoteArchive(path, clock=FixedClock(ingested))
     try:
         assert archive.ingest_time("q-8") is None
         assert archive.append(_quote(9))
-        assert archive.ingest_time("q-9") == T0
+        assert archive.ingest_time("q-9") == ingested
     finally:
         archive.close()
 
