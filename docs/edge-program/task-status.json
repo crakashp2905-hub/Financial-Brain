@@ -2873,14 +2873,16 @@
         "test_economic_best_and_worst_bounds_do_not_assume_more_fills_are_better",
         "test_each_intention_exposes_fill_fraction_and_population_hash_is_order_independent",
         "test_malformed_queue_and_economic_inputs_fail_closed",
-        "test_duplicate_ids_and_empty_populations_are_rejected"
+        "test_duplicate_ids_and_empty_populations_are_rejected",
+        "test_partial_fill_retains_one_fixed_order_charge_and_no_fill_pays_none",
+        "test_invalid_fixed_order_cost_is_rejected"
       ],
-      "test_result": "10 queue-scenario tests passed; Ruff passed. All alternate fill cases and non-monotone economic bounds are explicit.",
-      "evidence_sha256": "cf075d7a5091e37c82ab605f2ac518af841b27c2e187d21745afffc1f25e93f8",
+      "test_result": "14 queue-scenario tests passed; full Windows suite: 4173 passed, 1 skipped (826.37s). Ruff, targeted mypy, capability evidence audit, source inventory and diff checks passed. No-fill scenarios incur no fixed order charge; any partial fill incurs the frozen fixed charge once while variable costs remain quantity-scaled. Synthetic software scenario only; no broker execution evidence.",
+      "evidence_sha256": "3182e575a29ffe5cc4b75a1adc0765f47089b0f9e5cf0d9192545b16c4de7a03",
       "blockers": [
-        "No licensed observed queue/depth evidence is wired.",
-        "Partial-fill gross and costs rely on a linear scaling assumption.",
-        "Queue scenario result is not connected to promotion."
+        "Queue intervals, trade-through volumes, and fixed charge are supplied by the caller; no licensed observed depth/trade evidence is connected.",
+        "Gross P&L and variable costs still scale linearly; adverse selection, per-execution charges, price impact and intratrade risk are not independently modeled.",
+        "Scenario output is not wired to the authoritative alpha promotion gate."
       ]
     },
     {

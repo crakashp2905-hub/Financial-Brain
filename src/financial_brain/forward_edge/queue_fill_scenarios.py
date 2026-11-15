@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 import hashlib
 import json
 import math
+from typing import cast
 
 
 class QueueFillError(ValueError):
@@ -26,8 +27,9 @@ def queue_fill_scenarios(
     """Aggregate scenario bounds without presenting queue estimates as observed fills.
 
     Each intention's trade-through volume and low/high queue estimates must be frozen
-    inputs. Gross P&L and cost are scaled linearly by filled quantity; the report
-    explicitly labels this an assumption because partial fills may change outcomes.
+    inputs. Variable costs scale linearly by filled quantity. An optional fixed
+    order-level charge is applied once to any nonzero fill; this makes partial-fill
+    scenarios retain charges that do not shrink with executed quantity.
     """
     if not intentions:
         raise QueueFillError("at least one frozen passive intention is required")
@@ -45,19 +47,24 @@ def queue_fill_scenarios(
             queue_min = row["queue_ahead_min"]
             queue_max = row["queue_ahead_max"]
             traded = row["traded_through_quantity"]
-            gross = float(row["gross_pnl_full_fill_inr"])
-            cost = float(row["cost_full_fill_inr"])
+            gross = float(cast(float, row["gross_pnl_full_fill_inr"]))
+            cost = float(cast(float, row["cost_full_fill_inr"]))
+            fixed_order_cost = float(cast(float, row.get("fixed_order_cost_inr", 0.0)))
         except (KeyError, TypeError, ValueError) as exc:
             raise QueueFillError(f"intention {identity} is missing queue or P&L inputs") from exc
         if any(type(value) is not int for value in (quantity, queue_min, queue_max, traded)):
             raise QueueFillError("order, queue and trade-through quantities must be integers")
+        quantity, queue_min, queue_max, traded = (
+            cast(int, value) for value in (quantity, queue_min, queue_max, traded)
+        )
         if quantity <= 0 or queue_min < 0 or queue_max < queue_min or traded < 0:
             raise QueueFillError(f"intention {identity} has invalid queue bounds")
-        if not math.isfinite(gross) or not math.isfinite(cost) or cost < 0:
+        if (not math.isfinite(gross) or not math.isfinite(cost) or cost < 0
+                or not math.isfinite(fixed_order_cost) or fixed_order_cost < 0):
             raise QueueFillError(f"intention {identity} has invalid gross P&L or cost")
         normalized.append({"id": identity, "quantity": quantity, "queue_min": queue_min,
                            "queue_max": queue_max, "traded": traded, "gross": gross,
-                           "cost": cost})
+                           "cost": cost, "fixed_order_cost": fixed_order_cost})
 
     source = sorted(normalized, key=lambda item: str(item["id"]))
     source_hash = hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":"),
@@ -80,14 +87,19 @@ def queue_fill_scenarios(
         for name, filled_quantity in filled.items():
             fraction = filled_quantity / quantity
             gross = float(item["gross"]) * fraction
-            cost = float(item["cost"]) * fraction
+            variable_cost = float(item["cost"]) * fraction
+            fixed_cost = float(item["fixed_order_cost"]) if filled_quantity else 0.0
+            cost = variable_cost + fixed_cost
             total = totals[name]
             total["gross_pnl_inr"] += gross
             total["execution_cost_inr"] += cost
             total["filled_quantity"] += filled_quantity
             total["intended_quantity"] += quantity
             row_scenarios[name] = {"fill_fraction": fraction, "filled_quantity": filled_quantity,
-                                   "gross_pnl_inr": gross, "execution_cost_inr": cost,
+                                   "gross_pnl_inr": gross,
+                                   "variable_execution_cost_inr": variable_cost,
+                                   "fixed_order_cost_inr": fixed_cost,
+                                   "execution_cost_inr": cost,
                                    "net_pnl_inr": gross - cost}
         rows.append({"intention_id": item["id"], "queue_ahead_interval": [item["queue_min"], item["queue_max"]],
                      "traded_through_quantity": item["traded"], "scenarios": row_scenarios})
@@ -113,7 +125,7 @@ def queue_fill_scenarios(
         "evidence_class": "QUEUE_POSITION_SCENARIO",
         "intention_count": len(normalized),
         "intention_population_sha256": source_hash,
-        "assumption": "Trade-through volume is applied to low/mid/high queue-ahead estimates; partial-fill gross and cost scale linearly. These are bounds under the supplied interval, not observed broker fills.",
+        "assumption": "Trade-through volume is applied to low/mid/high queue-ahead estimates; gross and variable costs scale linearly with filled quantity, while fixed_order_cost_inr is charged once for any nonzero fill. One intention represents one order; order-level charges are not multiplied for multiple partial executions. These are bounds under supplied inputs, not observed broker fills.",
         "scenario_totals": scenario_totals,
         "queue_position_net_pnl_bounds_inr": {
             "lower": scenario_totals[queue_lower_name]["net_pnl_inr"],

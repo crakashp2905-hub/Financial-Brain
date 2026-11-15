@@ -4,18 +4,23 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_queue_fill_scenarios.py",
-    "result": "10 passed; Ruff passed for the new module and test file."
+    "result": "14 queue-scenario tests passed; full Windows suite: 4173 passed, 1 skipped (826.37s). Ruff, targeted mypy, capability evidence audit, source inventory and diff checks passed. No-fill scenarios incur no fixed order charge; any partial fill incurs the frozen fixed charge once while variable costs remain quantity-scaled. Synthetic software scenario only; no broker execution evidence."
   },
   "implemented": [
     "Reports no fill, queue best/mid/worst case and full fill for every frozen intention.",
     "Calculates explicit fill quantities and fractions from supplied trade-through volume and low/high queue-ahead bounds.",
     "Reports queue-position net P&L bounds from both queue endpoints; economic best/worst scenarios account for losses and need not be monotone in fill rate.",
-    "Hashes the frozen intention population and exposes gross P&L, costs and net results per intention and aggregate scenario."
+    "Hashes the frozen intention population and exposes gross P&L, costs and net results per intention and aggregate scenario.",
+    "Supports an explicit fixed order-level charge that is applied once for any nonzero fill; no-fill remains zero-cost and variable costs are separately exposed."
   ],
   "blockers": [
-    "Queue intervals and trade-through volumes are supplied by the caller; no licensed observed depth/trade evidence is connected.",
-    "Partial-fill gross P&L and execution costs scale linearly from full-fill values and do not capture fill-dependent adverse selection or nonlinear minimum fees.",
+    "Queue intervals, trade-through volumes, and fixed charge are supplied by the caller; no licensed observed depth/trade evidence is connected.",
+    "Gross P&L and variable costs still scale linearly; adverse selection, per-execution charges, price impact and intratrade risk are not independently modeled.",
     "Scenario output is not wired to the authoritative alpha promotion gate."
   ],
-  "source_sha256": {}
+  "source_sha256": {
+    "src/financial_brain/forward_edge/queue_fill_scenarios.py": "da8dce655926bd5b5101a6791b3320acdeba93612e6707e46687dd2e669e9b45",
+    "tests/test_queue_fill_scenarios.py": "96db28f5d1cf4118a448cb875bea0c4c06a87332fa9825dd68f09ab5d663fee8",
+    "docs/edge-program/pe-0130-queue-fill-boundaries.md": "59abfb198492f32c2acb0e66c7b249457971e2863ad486d7fe6aefe8d7296195"
+  }
 }

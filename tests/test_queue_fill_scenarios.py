@@ -59,6 +59,27 @@ def test_each_intention_exposes_fill_fraction_and_population_hash_is_order_indep
     assert row["scenarios"]["QUEUE_WORST_CASE"]["fill_fraction"] == pytest.approx(0.2)
 
 
+def test_partial_fill_retains_one_fixed_order_charge_and_no_fill_pays_none():
+    report = queue_fill_scenarios(
+        [_intention(fixed_order_cost_inr=5.0)], nav_inr=10_000
+    )
+    row = report["intentions"][0]["scenarios"]
+    assert row["NO_FILL"]["fixed_order_cost_inr"] == 0
+    assert row["QUEUE_WORST_CASE"]["variable_execution_cost_inr"] == pytest.approx(4)
+    assert row["QUEUE_WORST_CASE"]["fixed_order_cost_inr"] == 5
+    assert row["QUEUE_WORST_CASE"]["execution_cost_inr"] == pytest.approx(9)
+    assert row["FULL_FILL"]["execution_cost_inr"] == pytest.approx(25)
+    assert "not observed broker fills" in report["assumption"]
+
+
+@pytest.mark.parametrize("fixed_cost", [-0.01, float("nan"), float("inf")])
+def test_invalid_fixed_order_cost_is_rejected(fixed_cost):
+    with pytest.raises(QueueFillError, match="invalid gross P&L or cost"):
+        queue_fill_scenarios(
+            [_intention(fixed_order_cost_inr=fixed_cost)], nav_inr=10_000
+        )
+
+
 @pytest.mark.parametrize(
     "changes, message",
     [
