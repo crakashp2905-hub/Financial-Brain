@@ -336,7 +336,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_no_harm_continues_or_requests_review_without_promoting",
                                   "test_plan_freeze_and_session_order_are_enforced"), (),
                      "Predeclared daily-loss, drawdown, ledger-mismatch and critical-incident rules stop at first breach; reaching the sample review floor returns review-only and never promotes. Runtime runner/kill-switch wiring and owner-approved thresholds remain pending."),
-    "FE-0102": Entry("NOT_STARTED", (), (), "Claim-tier labels not implemented."),
+    "FE-0102": Entry("PARTIAL", ("test_each_tier_requires_its_own_evidence_and_returns_one_label",
+                                  "test_higher_tier_cannot_be_claimed_from_local_only_or_fixture_data",
+                                  "test_artifact_has_exactly_one_valid_tier_label"), (),
+                     "Evidence tier vocabulary and qualification gates distinguish historical, shadow, local paper, independently attested forward and deployment-validated claims; artifacts reject absent/multiple tiers. Existing chart/table/report renderers are not yet universally wired to the shared label helper."),
     "FE-0103": Entry("NOT_STARTED", (), (), "Falsification report not built."),
     # ---- F09 ----
     "FE-0104": Entry("NOT_STARTED", (), (), "Capital allocation not built."),
