@@ -80,6 +80,52 @@ def test_dividend_posts_gross_income_withholding_and_net_cash_once(tmp_path):
     assert reopened.ledger.trial_balance_ok()
 
 
+def test_effective_dated_cash_yield_replays_and_reconciles_external_capital_flow(tmp_path):
+    path = tmp_path / "cash-yield.jsonl"
+    account = _account(path)
+    account.record_nav_snapshot(date(2026, 11, 11), snapshot_id="nav-open",
+                                captured_at=datetime(2026, 11, 11, 15, 0, tzinfo=timezone.utc))
+    account.record_external_cash_flow("deposit-1", Decimal("500"),
+                                      occurred_at=datetime(2026, 11, 12, 15, 0, 1, tzinfo=timezone.utc),
+                                      reference="cash funding")
+    account.apply_cash_yield("yield-2026-11-12", effective_on=date(2026, 11, 12),
+                             annual_rate=Decimal("0.365"), withholding_rate=Decimal("0.10"),
+                             source_id="owner-cash-rate-v1", source_sha256=SOURCE_SHA)
+    account.apply_cash_yield("yield-2026-11-12", effective_on=date(2026, 11, 12),
+                             annual_rate=Decimal("0.365"), withholding_rate=Decimal("0.10"),
+                             source_id="owner-cash-rate-v1", source_sha256=SOURCE_SHA)
+    account.record_nav_snapshot(date(2026, 11, 12), snapshot_id="nav-yield",
+                                captured_at=datetime(2026, 11, 12, 15, 1, tzinfo=timezone.utc))
+
+    from financial_brain.kernel.paper_portfolio import PaperAccountPortfolio
+
+    reopened = _account(path)
+    report = PaperAccountPortfolio({"corp-book": reopened}).report()
+    assert reopened.cash == Decimal("1501.35")
+    assert reopened.cash_yield_income == Decimal("1.50")
+    assert reopened.taxes == Decimal("0.15")
+    assert reopened.net_realized_pnl == Decimal("1.35")
+    assert reopened.net_pnl == Decimal("1.35")
+    assert report["books"]["TOTAL"]["net_pnl_after_flows"] == "1.35"
+    assert Decimal(report["time_weighted_return"]) == Decimal("0.00135")
+    assert report["ledger_trial_balance_ok"] is True
+
+
+def test_cash_yield_rejects_unverified_source_and_duplicate_effective_date(tmp_path):
+    account = _account(tmp_path / "cash-yield-gates.jsonl")
+    with pytest.raises(PaperAccountError, match="source SHA-256"):
+        account.apply_cash_yield("yield-bad", effective_on=date(2026, 11, 12),
+                                 annual_rate=Decimal("0.05"), withholding_rate=Decimal("0"),
+                                 source_id="unverified", source_sha256="bad")
+    account.apply_cash_yield("yield-1", effective_on=date(2026, 11, 12),
+                             annual_rate=Decimal("0.365"), withholding_rate=Decimal("0"),
+                             source_id="owner-cash-rate-v1", source_sha256=SOURCE_SHA)
+    with pytest.raises(PaperAccountError, match="strictly increasing"):
+        account.apply_cash_yield("yield-duplicate-day", effective_on=date(2026, 11, 12),
+                                 annual_rate=Decimal("0.365"), withholding_rate=Decimal("0"),
+                                 source_id="owner-cash-rate-v1", source_sha256=SOURCE_SHA)
+
+
 def test_suspension_blocks_intents_until_a_sourced_resumption(tmp_path):
     account = _account(tmp_path / "suspension.jsonl")
     account.set_instrument_suspended("suspend-1", "NSE:INFY", suspended=True,

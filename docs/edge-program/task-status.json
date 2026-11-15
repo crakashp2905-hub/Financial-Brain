@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 95,
-  "unrecorded_tasks": 123,
+  "recorded_tasks": 96,
+  "unrecorded_tasks": 122,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -2032,6 +2032,29 @@
         "Calibration identity is declarative, not verified against approved training data.",
         "Ratio threshold remains caller-configurable pending PE-0062 freeze.",
         "Legacy executor wiring and durable rejected-forecast capture remain incomplete."
+      ]
+    },
+    {
+      "id": "PE-0069",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/kernel/paper_account.py",
+        "src/financial_brain/kernel/paper_portfolio.py",
+        "tests/test_paper_account_corporate_actions.py",
+        "tests/test_paper_account_portfolio.py",
+        "docs/edge-program/pe-0069-effective-dated-carry-income-evidence.json"
+      ],
+      "tests": [
+        "test_effective_dated_cash_yield_replays_and_reconciles_external_capital_flow",
+        "test_cash_yield_rejects_unverified_source_and_duplicate_effective_date",
+        "test_dividend_posts_gross_income_withholding_and_net_cash_once"
+      ],
+      "test_result": "Paper-account cash yield and dividends post gross income, withholding, and net cash with effective dates and durable source hashes. Portfolio NAV reporting removes synchronized external flows when linking return. Focused paper-account suite: 20 passed; Ruff and mypy passed. Automatic accrual/source-provider wiring remains incomplete.",
+      "evidence_sha256": "40e8ce7d1dad128ed0be05a451b88ee31c827b7a083d83ea17782790a5bf7626",
+      "blockers": [
+        "No independently verified cash-rate provider or source completeness evidence.",
+        "Daily end-of-session accrual is caller-invoked, not automatically scheduled for every paper runner.",
+        "Time-weighted return is unavailable without at least two synchronized NAV snapshots per book."
       ]
     }
   ]

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0069",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_paper_account_corporate_actions.py tests/test_paper_account_portfolio.py tests/test_paper_account.py",
+    "result": "20 passed (exit code 0); Ruff and mypy passed. One-day cash yield uses current post-flow cash, source-bound annual rate, withholding and effective date; duplicate/reordered accrual dates fail closed. NAV snapshots remove external flows from synchronized portfolio return."
+  },
+  "implemented": [
+    "Paper accounts record effective-dated, source-hash-bound daily residual-cash yield using the current end-of-session cash balance and an explicit annual rate.",
+    "Gross yield and withholding post through OMS and the double-entry ledger; replay, duplicate action id and cash reconciliation are tested.",
+    "Paper portfolio reports cash-yield income, external capital flows, flow-adjusted net P&L and synchronized time-weighted NAV return; return is unavailable without at least two common NAV dates.",
+    "Cash dividends remain keyed to ex-date eligibility and payment date with gross income and withholding."
+  ],
+  "blockers": [
+    "Rates and source digests are owner-supplied; no bank, broker or tax source is configured or independently validated.",
+    "Daily accrual requires the caller to submit the event after that date\u2019s cash activity; no automatic daily accrual scheduler is wired.",
+    "The linked portfolio return needs synchronized complete NAV snapshots; no prospective profitability or external cash-yield entitlement is claimed."
+  ],
+  "scope_note": "Income and capital-flow accounting are integrated in paper books. External rate provenance, automatic accrual scheduling and complete forward NAV coverage remain outstanding."
+}
