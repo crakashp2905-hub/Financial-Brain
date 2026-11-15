@@ -53,6 +53,9 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
                      max_forecast_cost_to_benefit_ratio: float = 1.0,
                      cash_floor: float = 0.0, max_one_way_turnover: float = 0.20,
                      turnover_cost_per_unit: float = 0.0, no_trade_band: float = 0.0,
+                     max_positions: int | None = None,
+                     sector_by_name: Mapping[str, str] | None = None,
+                     max_sector_weight: float | None = None,
                      risk_aversion: float = 1.0,
                      iterations: int = 500) -> SignalTargetResult:
     """Route every named signal through one allocator; input NetAlpha already itemizes trade costs.
@@ -121,6 +124,8 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
         previous_weights=previous_weights, max_name_weight=max_name_weight,
         cash_floor=cash_floor, max_one_way_turnover=max_one_way_turnover,
         turnover_cost_per_unit=turnover_cost_per_unit, no_trade_band=no_trade_band,
+        max_positions=max_positions, sector_by_name=sector_by_name,
+        max_sector_weight=max_sector_weight,
         risk_aversion=risk_aversion,
         iterations=iterations,
     )

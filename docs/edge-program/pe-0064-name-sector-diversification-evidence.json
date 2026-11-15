@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0064",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_target_portfolio.py tests/test_signal_allocator.py tests/test_forecast_hurdle.py",
+    "result": "19 passed (exit code 0); Ruff and mypy passed. Synthetic three-name concentration is limited to two ranked names and a sector exposure ceiling, with the residual allocated to CASH."
+  },
+  "implemented": [
+    "The shared portfolio optimizer can cap active names by ranking expected net alpha, with deterministic name tie-breaking.",
+    "An optional sector ceiling proportionally scales excess sector weight down and leaves the balance in explicit CASH.",
+    "The optimizer refuses prior books that already violate frozen position or sector limits and fails closed if turnover constraints prevent attaining the position cap.",
+    "Signal allocation passes the diversification constraints through to the shared target optimizer."
+  ],
+  "blockers": [
+    "Name count, sector identities and limits are caller-supplied and are not pinned into all strategy charters/runners.",
+    "Sector exposure controls are opt-in; no automated point-in-time sector master integration is claimed.",
+    "The optimizer does not reallocate sector-capped weight to other sectors, favoring conservative cash; prospective allocation quality is unmeasured."
+  ],
+  "scope_note": "Common optimizer supports tested count and sector ceilings with cash fallback. Standardized policy, sector provenance and system-wide use remain incomplete."
+}

@@ -66,6 +66,27 @@ def test_no_trade_band_suppresses_small_rebalance_and_preserves_previous_weights
     assert result.cash_weight == pytest.approx(0.90)
 
 
+def test_max_positions_and_sector_caps_leave_excess_exposure_in_cash():
+    result = _plan(
+        expected_net_alpha={"A": 0.05, "B": 0.04, "C": 0.03},
+        covariance=np.eye(3) * 0.01, covariance_names=("A", "B", "C"),
+        previous_weights={"CASH": 1.0}, max_name_weight=0.60, cash_floor=0.0,
+        max_one_way_turnover=1.0, max_positions=2,
+        sector_by_name={"A": "TECH", "B": "TECH", "C": "BANKS"},
+        max_sector_weight=0.25, risk_aversion=0.0,
+    )
+    weights = dict(result.weights)
+    assert weights["C"] == 0.0  # rank outside the explicit two-name limit
+    assert weights["A"] + weights["B"] <= 0.25 + 1e-8
+    assert weights["CASH"] >= 0.75 - 1e-8
+    assert sum(weight > 1e-12 for name, weight in weights.items() if name != "CASH") <= 2
+
+
+def test_diversification_refuses_a_previous_book_that_cannot_meet_frozen_caps():
+    with pytest.raises(TargetPortfolioError, match="previous book exceeds max_positions"):
+        _plan(previous_weights={"A": 0.05, "B": 0.05, "CASH": 0.90}, max_positions=1)
+
+
 def test_cash_days_count_explicit_cash_and_rejects_bad_ledgers() -> None:
     assert cash_days([{"A": 0.8, "CASH": 0.2}, {"A": 1.0, "CASH": 0.0}]) == 1
     with pytest.raises(TargetPortfolioError, match="sum to one"):

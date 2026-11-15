@@ -26,20 +26,22 @@ class TargetPortfolio:
     utility: float
 
 
-def _project_capped_simplex(values: np.ndarray, *, budget: float, cap: float) -> np.ndarray:
+def _project_capped_simplex(values: np.ndarray, *, budget: float, cap: float,
+                            name_caps: np.ndarray | None = None) -> np.ndarray:
     """Euclidean projection onto 0 <= w_i <= cap, sum(w) <= budget."""
-    clipped = np.clip(values, 0.0, cap)
+    caps = np.full_like(values, cap) if name_caps is None else name_caps
+    clipped = np.clip(values, 0.0, caps)
     if float(clipped.sum()) <= budget:
         return clipped
-    lo, hi = float(np.min(values - cap)), float(np.max(values))
+    lo, hi = float(np.min(values - caps)), float(np.max(values))
     for _ in range(80):
         threshold = (lo + hi) / 2
-        projected = np.clip(values - threshold, 0.0, cap)
+        projected = np.clip(values - threshold, 0.0, caps)
         if float(projected.sum()) > budget:
             lo = threshold
         else:
             hi = threshold
-    return np.clip(values - hi, 0.0, cap)
+    return np.clip(values - hi, 0.0, caps)
 
 
 def cash_days(weight_history: list[Mapping[str, float]], *, epsilon: float = 1e-12) -> int:
@@ -60,6 +62,9 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
                           max_name_weight: float = 0.10, cash_floor: float = 0.0,
                           max_one_way_turnover: float = 0.20, turnover_cost_per_unit: float = 0.0,
                           no_trade_band: float = 0.0,
+                          max_positions: int | None = None,
+                          sector_by_name: Mapping[str, str] | None = None,
+                          max_sector_weight: float | None = None,
                           risk_aversion: float = 1.0, iterations: int = 500) -> TargetPortfolio:
     """Optimize long-only target weights on a frozen rebalance schedule.
 
@@ -89,6 +94,13 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
         raise TargetPortfolioError("max_name_weight must be positive")
     if not isfinite(no_trade_band) or not 0 <= no_trade_band <= 1:
         raise TargetPortfolioError("no-trade band must be in [0, 1]")
+    if max_positions is not None and (isinstance(max_positions, bool) or max_positions < 1):
+        raise TargetPortfolioError("max_positions must be a positive integer")
+    if max_sector_weight is not None and (not isfinite(max_sector_weight) or not 0 <= max_sector_weight <= 1):
+        raise TargetPortfolioError("max_sector_weight must be in [0, 1]")
+    if max_sector_weight is not None and (sector_by_name is None or set(sector_by_name) != set(names) or
+                                          any(not value.strip() for value in sector_by_name.values())):
+        raise TargetPortfolioError("sector caps require one non-empty sector per target name")
     if not isfinite(turnover_cost_per_unit) or turnover_cost_per_unit < 0 or not isfinite(risk_aversion) \
             or risk_aversion < 0 or iterations < 1:
         raise TargetPortfolioError("risk, turnover cost and iteration settings must be non-negative")
@@ -97,6 +109,15 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
     if not np.isfinite(prev).all() or not isfinite(prev_cash) or np.any(prev < 0) or not 0 <= prev_cash <= 1 \
             or abs(float(prev.sum()) + prev_cash - 1.0) > 1e-8:
         raise TargetPortfolioError("previous weights must be finite, non-negative and sum to one with CASH")
+    if max_positions is not None and int(np.count_nonzero(prev > 1e-12)) > max_positions:
+        raise TargetPortfolioError("previous book exceeds max_positions; reduce holdings before optimization")
+    if max_sector_weight is not None:
+        previous_sector_totals: dict[str, float] = {}
+        for index, name in enumerate(names):
+            sector = sector_by_name[name]  # type: ignore[index]
+            previous_sector_totals[sector] = previous_sector_totals.get(sector, 0.0) + float(prev[index])
+        if any(weight > max_sector_weight + 1e-8 for weight in previous_sector_totals.values()):
+            raise TargetPortfolioError("previous book exceeds max_sector_weight; reduce holdings before optimization")
     scheduled = as_of in scheduled_rebalances
     if scheduled and (np.any(prev > max_name_weight + 1e-8) or float(prev.sum()) > 1.0 - cash_floor + 1e-8):
         raise TargetPortfolioError("previous book violates name cap or cash floor; resolve outside turnover-constrained rebalance")
@@ -105,6 +126,10 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
         matrix = covariance[np.ix_([covariance_names.index(name) for name in names],
                                    [covariance_names.index(name) for name in names])]
         eig = max(float(np.linalg.eigvalsh(matrix).max()), 0.0)
+        name_caps = np.full(len(names), max_name_weight, dtype=float)
+        if max_positions is not None and max_positions < len(names):
+            ranked = sorted(range(len(names)), key=lambda index: (-mu[index], names[index]))
+            name_caps[[index for index in ranked[max_positions:]]] = 0.0
         step_size = 1.0 / max(risk_aversion * eig, turnover_cost_per_unit, 1e-6)
         weights = prev.copy()
         budget = 1.0 - cash_floor
@@ -112,7 +137,8 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
             z = weights + step_size * (mu - risk_aversion * (matrix @ weights))
             diff = z - prev
             shrink = np.sign(diff) * np.maximum(np.abs(diff) - step_size * turnover_cost_per_unit, 0.0)
-            next_weights = _project_capped_simplex(prev + shrink, budget=budget, cap=max_name_weight)
+            next_weights = _project_capped_simplex(prev + shrink, budget=budget, cap=max_name_weight,
+                                                   name_caps=name_caps)
             if float(np.abs(next_weights - weights).max()) < 1e-10:
                 weights = next_weights
                 break
@@ -122,6 +148,22 @@ def plan_target_portfolio(*, as_of: date, scheduled_rebalances: frozenset[date],
             weights = prev + (weights - prev) * (max_one_way_turnover / delta)
         if float(np.abs(weights - prev).sum()) / 2.0 <= no_trade_band:
             weights = prev.copy()
+        if max_sector_weight is not None:
+            sector_totals: dict[str, float] = {}
+            for index, name in enumerate(names):
+                sector = sector_by_name[name]  # type: ignore[index]
+                sector_totals[sector] = sector_totals.get(sector, 0.0) + float(weights[index])
+            for sector, total in sector_totals.items():
+                if total > max_sector_weight and total > 0:
+                    scale = max_sector_weight / total
+                    for index, name in enumerate(names):
+                        if sector_by_name[name] == sector:  # type: ignore[index]
+                            weights[index] *= scale
+        if max_positions is not None and int(np.count_nonzero(weights > 1e-12)) > max_positions:
+            raise TargetPortfolioError("turnover cap prevents reaching max_positions; no target returned")
+        final_turnover = float(np.abs(weights - prev).sum()) / 2.0
+        if final_turnover > max_one_way_turnover + 1e-8:
+            raise TargetPortfolioError("sector and position caps require turnover above the configured limit")
     else:
         weights = prev.copy()
     cash = max(0.0, 1.0 - float(weights.sum()))

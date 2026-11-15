@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 92,
-  "unrecorded_tasks": 126,
+  "recorded_tasks": 93,
+  "unrecorded_tasks": 125,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1946,6 +1946,27 @@
         "The band is not pinned and wired into all strategy runners.",
         "Observed price drift and signal changes are not separated for empirical threshold calibration.",
         "No forward cost reduction is claimed."
+      ]
+    },
+    {
+      "id": "PE-0064",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/target_portfolio.py",
+        "src/financial_brain/forward_edge/signal_allocator.py",
+        "tests/test_target_portfolio.py",
+        "docs/edge-program/pe-0064-name-sector-diversification-evidence.json"
+      ],
+      "tests": [
+        "test_max_positions_and_sector_caps_leave_excess_exposure_in_cash",
+        "test_diversification_refuses_a_previous_book_that_cannot_meet_frozen_caps"
+      ],
+      "test_result": "Shared optimizer applies a ranked max-position constraint and optional sector ceiling; over-cap sector exposure remains cash. It rejects prior books that violate those constraints. Focused optimizer/allocator tests: 19 passed; Ruff and mypy passed. Runner-wide frozen policy and point-in-time sector mapping remain incomplete.",
+      "evidence_sha256": "0a08a8c7a4233ea7bc2c4c03984723254e9c8eb5f643250fbf90f024464e27bb",
+      "blockers": [
+        "Limits and sector mapping are not pinned in every strategy charter.",
+        "Point-in-time sector master and universal runner wiring remain incomplete.",
+        "Cash fallback is conservative; no optimality or profitability claim is made."
       ]
     },
     {
