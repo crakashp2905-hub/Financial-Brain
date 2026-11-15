@@ -92,7 +92,8 @@ def audit(repo: Path = Path(".")) -> list[dict]:
                 origins.append(n)
                 continue
             results.append({"note": n, "commit": c[0][0], "time": c[0][1]})
-        edits, editorial = [], []
+        edits: list[dict] = []
+        editorial: list[dict] = []
         prev_text = first_text
         for h, t in commits[1:]:
             text = _git(repo, "show", f"{h}:{rel}")
