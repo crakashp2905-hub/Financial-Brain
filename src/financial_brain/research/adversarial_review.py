@@ -142,12 +142,72 @@ def make_adversarial_review(
 class AdversarialReviewJournal:
     """Append-only review decisions keyed by their immutable review ID."""
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, trust_roots: Mapping[tuple[str, str], TrustRoot] | None = None) -> None:
         self.journal = DurableJournal(path)
+        self.trust_roots = trust_roots or {}
 
     def record(self, review: Mapping[str, object]) -> str:
         if not isinstance(review.get("review_id"), str) or not review.get("review_id"):
             raise AdversarialReviewError("review_id is required")
+        body_keys = (
+            "review_id", "proposal_sha256", "strategy_draft_sha256", "proposal_author_id",
+            "reviewer_id", "reviewer_independent_of_author", "reviewed_at_utc",
+            "registration_at_utc", "findings",
+        )
+        try:
+            body = {key: review[key] for key in body_keys}
+            expected_review_sha = hashlib.sha256(json.dumps(
+                body, sort_keys=True, separators=(",", ":"), allow_nan=False
+            ).encode()).hexdigest()
+        except (KeyError, TypeError, ValueError) as exc:
+            raise AdversarialReviewError("review body is incomplete or not canonical JSON") from exc
+        if review.get("review_sha256") != expected_review_sha:
+            raise AdversarialReviewError("review digest does not match its findings and identities")
+        independent = body["reviewer_id"] != body["proposal_author_id"]
+        if (body["reviewer_independent_of_author"] is not independent
+                or review.get("strategy_mutated") is not False):
+            raise AdversarialReviewError("review identity or no-mutation invariant is inconsistent")
+        receipt_data = review.get("review_receipt")
+        receipt = None
+        if receipt_data is not None:
+            try:
+                receipt = Receipt(
+                    provider_id=receipt_data["provider_id"], key_id=receipt_data["key_id"],
+                    digest_sha256=receipt_data["digest_sha256"],
+                    anchored_at_utc=_utc(receipt_data["anchored_at_utc"], "receipt timestamp"),
+                    signature_b64=receipt_data["signature_b64"],
+                )
+                actual_status = classify_custody(
+                    manifest_sha256=expected_review_sha,
+                    decision_at_utc=_utc(body["reviewed_at_utc"], "reviewed_at_utc"),
+                    entry_earliest_at_utc=_utc(body["registration_at_utc"], "registration_at_utc"),
+                    receipt=receipt, trust_roots=self.trust_roots,
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise AdversarialReviewError("review receipt is malformed") from exc
+        else:
+            actual_status = classify_custody(
+                manifest_sha256=expected_review_sha,
+                decision_at_utc=_utc(body["reviewed_at_utc"], "reviewed_at_utc"),
+                entry_earliest_at_utc=_utc(body["registration_at_utc"], "registration_at_utc"),
+                receipt=None, trust_roots=self.trust_roots,
+            )
+        if review.get("receipt_status") != actual_status.value:
+            raise AdversarialReviewError("review receipt status does not verify against configured trust roots")
+        if review.get("registration_eligible") is True:
+            findings = body["findings"]
+            if (review.get("decision") != "APPROVED" or not independent
+                    or review.get("receipt_status") != CustodyStatus.VERIFIED.value
+                    or review.get("review_receipt") is None
+                    or _utc(body["reviewed_at_utc"], "reviewed_at_utc")
+                    >= _utc(body["registration_at_utc"], "registration_at_utc")
+                    or not isinstance(findings, Mapping)
+                    or set(findings) != set(REVIEW_AREAS)
+                    or any(not isinstance(row, Mapping) for row in findings.values())
+                    or any(row.get("outcome") != "PASS" for row in findings.values())):
+                raise AdversarialReviewError("registration eligibility invariants are inconsistent")
+        elif review.get("registration_eligible") is not False or review.get("decision") == "APPROVED":
+            raise AdversarialReviewError("noneligible review cannot claim approval")
         body = dict(review)
         digest = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
                                           allow_nan=False).encode()).hexdigest()

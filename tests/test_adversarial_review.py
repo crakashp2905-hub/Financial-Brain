@@ -49,7 +49,7 @@ def test_all_five_adversarial_areas_need_explicit_evidence_and_failures_reject()
     assert failed["failed_areas"] == ["COSTS"]
 
 
-def test_signed_distinct_reviewer_can_approve_only_before_registration():
+def test_signed_distinct_reviewer_can_approve_only_before_registration(tmp_path):
     crypto = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
     serialization = pytest.importorskip("cryptography.hazmat.primitives.serialization")
     private = crypto.Ed25519PrivateKey.generate()
@@ -63,6 +63,10 @@ def test_signed_distinct_reviewer_can_approve_only_before_registration():
     assert review["decision"] == "APPROVED"
     assert review["registration_eligible"] is True
     assert review["strategy_mutated"] is False
+    journal = AdversarialReviewJournal(tmp_path / "trusted-reviews.jsonl", trust_roots=roots)
+    assert journal.record(review)
+    with pytest.raises(AdversarialReviewError, match="trust roots"):
+        AdversarialReviewJournal(tmp_path / "untrusted-reviews.jsonl").record(review)
     late = make_adversarial_review(**_args(
         reviewed_at_utc="2026-01-01T00:00:40Z",
         registration_at_utc="2026-01-01T00:00:30Z", trust_roots=roots, receipt=receipt))
@@ -97,5 +101,5 @@ def test_review_journal_is_idempotent_and_immutable(tmp_path):
     journal = AdversarialReviewJournal(tmp_path / "reviews.jsonl")
     digest = journal.record(review)
     assert journal.record(review) == digest
-    with pytest.raises(AdversarialReviewError, match="immutable"):
+    with pytest.raises(AdversarialReviewError, match="cannot claim approval"):
         journal.record({**review, "decision": "APPROVED"})
