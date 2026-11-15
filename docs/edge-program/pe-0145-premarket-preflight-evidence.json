@@ -4,18 +4,22 @@
   "status": "PARTIAL",
   "test": {
     "command": "python -m pytest -q tests/test_premarket_preflight.py; ruff check src/financial_brain/forward_edge/premarket_preflight.py tests/test_premarket_preflight.py",
-    "result": "19 passed; Ruff passed."
+    "result": "21 passed; Ruff passed."
   },
   "implemented": [
     "Covers market calendar, data entitlement, read-only broker session, disk capacity, archive write probe, effective cost schedule, strategy identity/version, approved risk configuration, and clock skew.",
     "Missing, invalid, stale, or out-of-policy inputs create explicit failed checks and operator-visible reason codes.",
     "Any failed mandatory check returns status NO_TRADE and approved=false in a JSON-compatible record accepted by ForwardSessionRunner.record_preflight.",
-    "The immutable report is content-addressed together with its policy, check results, and input snapshot."
+    "The immutable report is content-addressed together with its policy, check results, and input snapshot.",
+    "Adds an actual local free-space and archive write/fsync/delete probe with explicitly local evidence scope."
   ],
   "blockers": [
-    "No authoritative live service probes are connected for calendar, entitlement, broker session, archive, or clock evidence.",
+    "Authoritative live probes are still missing for calendar, entitlement, broker session, cost, and clock; the filesystem probe is local only.",
     "Daily paper launcher and session orchestration do not yet invoke this preflight automatically.",
     "No real-market preflight run has been observed or attested."
   ],
-  "source_sha256": {}
+  "source_sha256": {
+    "src/financial_brain/forward_edge/premarket_preflight.py": "5b206be99094b510bff509a2db105f0730dea196d1c98a84a57a058ed75df872",
+    "tests/test_premarket_preflight.py": "6ef14b23b4bd4c136b62c5aeab1b6c0831d6dcd7dfe182226984ca36b97a7df3"
+  }
 }

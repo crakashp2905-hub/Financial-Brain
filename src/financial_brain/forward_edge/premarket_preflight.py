@@ -6,7 +6,11 @@ from datetime import date, datetime, timezone
 import hashlib
 import json
 import math
+import os
+from pathlib import Path
 import re
+import shutil
+import tempfile
 
 
 class PremarketError(ValueError):
@@ -116,6 +120,59 @@ class PremarketReport:
             "report_sha256": self.report_sha256,
             "checks": [{"name": c.name, "passed": c.passed, "reason": c.reason} for c in self.checks],
         }
+
+
+def probe_local_archive_storage(archive_directory: Path, *, probe_id: str) -> dict:
+    """Probe local free space and write/fsync/delete access for an existing archive directory.
+
+    The returned digest identifies this local probe result; it is not an external
+    timestamp, entitlement receipt, or proof that the directory is production storage.
+    """
+    if not isinstance(probe_id, str) or not probe_id.strip():
+        raise PremarketError("local storage probe ID is required")
+    path = Path(archive_directory)
+    checked_at = datetime.now(timezone.utc)
+    resolved = None
+    free_bytes = None
+    writable = False
+    reason = "archive directory is unavailable"
+    try:
+        resolved = path.resolve(strict=True)
+        if not resolved.is_dir():
+            raise NotADirectoryError(str(resolved))
+        free_bytes = shutil.disk_usage(resolved).free
+        descriptor, temporary_path = tempfile.mkstemp(prefix=".fb-preflight-", dir=resolved)
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(b"financial-brain-premarket-probe\\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            writable = True
+            reason = "OK"
+        finally:
+            Path(temporary_path).unlink(missing_ok=True)
+    except OSError as exc:
+        reason = f"local archive probe failed: {type(exc).__name__}"
+    evidence = {
+        "probe_id": probe_id,
+        "path": str(resolved) if resolved is not None else str(path),
+        "checked_at_utc": checked_at.isoformat(),
+        "disk_free_bytes": free_bytes,
+        "archive_writable": writable,
+        "reason": reason,
+    }
+    digest = hashlib.sha256(json.dumps(evidence, sort_keys=True, separators=(",", ":"),
+                                 allow_nan=False).encode()).hexdigest()
+    return {
+        "disk_free_bytes": free_bytes,
+        "disk_probe_evidence_id": f"local-storage:{probe_id}:{digest}",
+        "archive_writable": writable,
+        "archive_probe_evidence_id": f"local-archive:{probe_id}:{digest}",
+        "checked_at_utc": checked_at.isoformat(),
+        "probe_sha256": digest,
+        "reason": reason,
+        "evidence_scope": "LOCAL_FILESYSTEM_PROBE_ONLY",
+    }
 
 
 def evaluate_premarket(snapshot: PremarketSnapshot, policy: PremarketPolicy) -> PremarketReport:

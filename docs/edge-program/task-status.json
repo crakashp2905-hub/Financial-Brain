@@ -3294,10 +3294,12 @@
         "test_any_missing_mandatory_preflight_item_yields_operator_visible_no_trade",
         "test_cost_table_must_cover_exchange_session_and_hashes_are_valid",
         "test_clock_must_be_aware_and_policy_limits_must_be_valid",
-        "test_operator_reason_lists_all_simultaneous_blockers"
+        "test_operator_reason_lists_all_simultaneous_blockers",
+        "test_local_storage_probe_checks_real_free_space_and_cleans_probe_file",
+        "test_local_storage_probe_fails_closed_for_missing_archive_directory"
       ],
-      "test_result": "19 premarket preflight tests passed; Ruff passed. Mandatory checks, NO_TRADE output, operator-visible reasons, cost freshness, hash validation, and runner-compatible JSON verified.",
-      "evidence_sha256": "051438250c1b1e9aa7ab2ececf1101af803eeb3e212c624cc81c68be7a7e8543",
+      "test_result": "21 premarket preflight tests passed; Ruff passed. Local free-space and archive write/fsync/delete probing is available with local-only evidence scope.",
+      "evidence_sha256": "c458990e424609f3f5c957cd14e2308beb88d38f25754690f9718988069d8819",
       "blockers": [
         "Authoritative live service probes are not wired.",
         "Daily launcher/session orchestration does not invoke this automatically.",

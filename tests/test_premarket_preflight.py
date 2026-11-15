@@ -9,6 +9,7 @@ from financial_brain.forward_edge.premarket_preflight import (
     PremarketPolicy,
     PremarketSnapshot,
     evaluate_premarket,
+    probe_local_archive_storage,
 )
 
 
@@ -120,3 +121,21 @@ def test_operator_reason_lists_all_simultaneous_blockers(inputs, policy):
                                         risk_approved=False, data_entitlement_active=False), policy)
     assert report.status == "NO_TRADE"
     assert {"archive_writable", "risk_configuration", "data_entitlement"} <= set(report.reason_codes)
+
+
+def test_local_storage_probe_checks_real_free_space_and_cleans_probe_file(tmp_path):
+    result = probe_local_archive_storage(tmp_path, probe_id="session-2026-01-02")
+    assert result["disk_free_bytes"] > 0
+    assert result["archive_writable"] is True
+    assert result["evidence_scope"] == "LOCAL_FILESYSTEM_PROBE_ONLY"
+    assert len(result["probe_sha256"]) == 64
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_local_storage_probe_fails_closed_for_missing_archive_directory(tmp_path):
+    result = probe_local_archive_storage(tmp_path / "missing", probe_id="missing-dir")
+    assert result["disk_free_bytes"] is None
+    assert result["archive_writable"] is False
+    assert "local archive probe failed" in result["reason"]
+    with pytest.raises(PremarketError, match="probe ID"):
+        probe_local_archive_storage(tmp_path, probe_id=" ")
