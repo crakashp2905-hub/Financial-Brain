@@ -388,7 +388,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_abstention_writer_rejects_trade_decision"), (),
                      "Unified policy boundary returns explicit reason-coded NO_TRADE for invalid data, liquidity, margin, risk or non-positive/unknown after-cost alpha; abstentions are idempotently journaled with fallback_fill=false. Trade submission and all paper adapters still need to call this boundary."),
     # ---- F10 ----
-    "FE-0114": Entry("NOT_STARTED", (), (), "Cockpit not built."),
+    "FE-0114": Entry("PARTIAL", ("test_cockpit_renders_ready_only_when_required_states_are_explicit",
+                                  "test_unknown_stale_or_blocked_snapshot_fails_closed",
+                                  "test_cockpit_html_escapes_untrusted_ids_and_validates_states"), (),
+                     "Static forward-session cockpit renders explicit market/feed/broker health, risk gates, paper modes, source IDs and a digest; missing/stale/unknown states produce NOT READY. Live adapters do not yet populate the snapshot and the cockpit is not wired into the paper terminal."),
     "FE-0115": Entry("NOT_STARTED", (), (), "Strategy list not built."),
     "FE-0116": Entry("NOT_STARTED", (), (), "Signal trace view not built."),
     "FE-0117": Entry("NOT_STARTED", (), (), "Order blotter not built."),
