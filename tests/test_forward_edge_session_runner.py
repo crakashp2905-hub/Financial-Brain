@@ -50,7 +50,13 @@ def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
              "depth": {"buy": [{"price": 100.0, "quantity": 50}],
                        "sell": [{"price": 100.1, "quantity": 40}]}}
     observed = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
-    assert runner.ingest("kite-session", make_config(), [observed])["persisted"] == 1
+    from financial_brain.forward_edge.quote_archive import QuoteArchive
+    archive = QuoteArchive(tmp_path / "kite-events.sqlite")
+    archive.append(observed)
+    prior_day = quote | {"timestamp": "2026-11-12 10:15:00"}
+    archive.append(normalize_kite_quote("NSE:INFY", prior_day, received_at=NOW))
+    assert runner.ingest_kite_archive("kite-session", make_config(), archive)["persisted"] == 1
+    archive.close()
     records = runner.records("kite-session")
     assert records["events"][0]["source"] == "KITE_CONNECT_READ_ONLY"
     runner.close()

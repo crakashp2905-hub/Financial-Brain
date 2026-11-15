@@ -10,6 +10,7 @@ from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
 from financial_brain.forward_edge.market_events import MarketEvent
+from financial_brain.forward_edge.quote_archive import QuoteArchive
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
     ForwardSessionStore,
@@ -129,6 +130,12 @@ class ForwardSessionRunner:
         self._con.execute("RELEASE ingest_batch")
         self._con.commit()
         return counts
+
+    def ingest_kite_archive(self, session_id: str, config: ForwardRunConfig,
+                             archive: QuoteArchive) -> dict[str, int]:
+        """Actual-market adapter: read only archived Kite events, then use the canonical ingest path."""
+        events = archive.events_for_session(config.exchange_date, source="KITE_CONNECT_READ_ONLY")
+        return self.ingest(session_id, config, events)
 
     def decide(self, *, session_id: str, strategy_id: str, decision_id: str,
                outcome: str, decided_at: datetime, input_event_ids: tuple[str, ...],

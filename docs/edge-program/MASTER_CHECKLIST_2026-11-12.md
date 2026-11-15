@@ -139,7 +139,7 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
 - **Completion evidence:** canonical JSON/date/decimal/universe hashes persist with the session; `tests/test_forward_edge_session_state.py` (4 passed).
 - [x] **PE-0017** — Implement `ForwardSessionRunner` that consumes normalized event streams, not fixture dictionaries.  
   **Acceptance:** One fixture adapter and one actual-market adapter call the exact same runner.
-- **Completion evidence:** `src/financial_brain/forward_edge/session_runner.py`; `tests/test_forward_edge_session_runner.py` (10 passed with PE-0015/0016 tests; the test proves the same runner ingests fixture and Kite-normalized events).
+- **Completion evidence:** `session_runner.py::ingest` and `ingest_kite_archive`; `tests/test_forward_edge_session_runner.py::test_fixture_and_kite_adapters_enter_the_same_normalized_runner` (fixture and persisted Kite events use the same runner; archived non-session-date quotes are excluded).
 - [ ] **PE-0018** — Refactor fixture-only `pipeline.run_session` to delegate to the canonical runner without changing golden outcomes.  
   **Acceptance:** All existing fixture tests pass and a trace diff shows equivalent behavior.
 - [ ] **PE-0019** — Connect existing `paper/intraday_runner.py` as a read-only producer of observed quote events.  

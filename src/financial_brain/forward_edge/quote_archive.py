@@ -8,8 +8,9 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from financial_brain.forward_edge.market_events import MarketEvent
 
@@ -87,6 +88,24 @@ class QuoteArchive:
         if row is None:
             raise KeyError(event_id)
         return MarketEvent.from_dict(json.loads(row[0]))
+
+    def events_for_session(self, session_date: date, *, venue: str | None = None,
+                           source: str | None = None) -> list[MarketEvent]:
+        """Read normalized events whose exchange timestamp belongs to the India session date."""
+        ist = ZoneInfo("Asia/Kolkata")
+        start = datetime.combine(session_date, time.min, ist).astimezone(timezone.utc).isoformat()
+        end = (datetime.combine(session_date, time.min, ist) + timedelta(days=1)).astimezone(timezone.utc).isoformat()
+        clauses = ["event_time>=?", "event_time<?"]
+        params: list[str] = [start, end]
+        if venue is not None:
+            clauses.append("venue=?")
+            params.append(venue.upper())
+        if source is not None:
+            clauses.append("source=?")
+            params.append(source)
+        rows = self._con.execute("SELECT event_json FROM market_events WHERE " + " AND ".join(clauses) +
+                                 " ORDER BY available_at, event_id", params).fetchall()
+        return [MarketEvent.from_dict(json.loads(row[0])) for row in rows]
 
     def snapshot(self, *, decision_id: str, venue: str, instrument_id: str, decision_time: datetime) -> dict[str, object]:
         """Freeze exactly those archived events available no later than the decision clock."""
