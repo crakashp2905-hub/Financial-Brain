@@ -29,6 +29,11 @@ class PaperAccountPortfolio:
         paths = [account.path.resolve() for account in books.values()]
         if len(set(paths)) != len(paths):
             raise PaperPortfolioError("strategy books must use distinct durable journals")
+        for component, label in (("oms", "order state"), ("ledger", "ledger state"),
+                                 ("_positions", "position state")):
+            owners = [id(getattr(account, component)) for account in books.values()]
+            if len(set(owners)) != len(owners):
+                raise PaperPortfolioError(f"each strategy book must own distinct {label}")
         currencies = {account.currency for account in books.values()}
         if len(currencies) != 1:
             raise PaperPortfolioError("portfolio books must use one currency until FX translation is implemented")

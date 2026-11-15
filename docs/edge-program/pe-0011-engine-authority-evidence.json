@@ -1,7 +1,7 @@
 {
   "task_id": "PE-0011",
   "status": "PARTIAL",
-  "scope": "Repository-wide Python source ownership and deterministic engine dependency roots; the runtime single-authority guard remains unimplemented.",
+  "scope": "Within a PaperAccountPortfolio, strategy books now require distinct durable journals, OMS objects, ledger objects and position maps. Repository-wide and cross-runner ownership remains outside this composition root.",
   "inventory": {
     "path": "docs/edge-program/source-inventory.json",
     "sha256": "86aa2de9e9136f920678b426b4656d0c5b6f85e912149d69b2937da538569080",
@@ -11,11 +11,12 @@
   },
   "tests": {
     "command": "pytest tests/test_source_inventory.py tests/test_paper_account_portfolio.py -q",
-    "result": "6 passed"
+    "result": "9 passed"
   },
-  "remaining_blocker": "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state.",
+  "remaining_blocker": "The runtime guard covers only accounts registered in one PaperAccountPortfolio; it does not prevent legacy and forward runner composition roots from owning competing order, ledger or position state for the same logical book.",
   "limitations": [
-    "No runtime guard rejects duplicate global authoritative state across legacy and newer paper engines.",
-    "The inventory numbers measure coverage gaps, not completeness of system ownership."
+    "No repository-wide registry coordinates ownership across legacy and newer engines.",
+    "The inventory numbers measure coverage gaps, not completeness of system ownership.",
+    "Callers must construct all books that share a portfolio through this guarded composition root."
   ]
 }

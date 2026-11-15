@@ -72,3 +72,17 @@ def test_portfolio_refuses_ambiguous_duplicate_book_authority(tmp_path):
     same_path.path = account.path
     with pytest.raises(PaperPortfolioError, match="distinct durable journals"):
         PaperAccountPortfolio({"book-a": account, "book-b": same_path})
+
+
+@pytest.mark.parametrize(
+    ("component", "message"),
+    [("oms", "distinct order state"), ("ledger", "distinct ledger state"),
+     ("_positions", "distinct position state")],
+)
+def test_portfolio_rejects_shared_authoritative_state_between_books(tmp_path, component, message):
+    first = _account(tmp_path / "first.jsonl", "first")
+    second = _account(tmp_path / "second.jsonl", "second")
+    setattr(second, component, getattr(first, component))
+
+    with pytest.raises(PaperPortfolioError, match=message):
+        PaperAccountPortfolio({"first": first, "second": second})

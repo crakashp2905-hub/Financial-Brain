@@ -197,16 +197,19 @@
         "src/financial_brain/forward_edge/session_runner.py",
         "src/financial_brain/forward_edge/pipeline.py",
         "src/financial_brain/kernel/paper_account.py",
-        "docs/edge-program/pe-0011-engine-authority-evidence.json"
+        "docs/edge-program/pe-0011-engine-authority-evidence.json",
+        "src/financial_brain/kernel/paper_portfolio.py",
+        "tests/test_paper_account_portfolio.py"
       ],
       "tests": [
         "test_inventory_covers_all_python_sources_without_inventing_owners",
-        "test_inventory_captures_old_and_new_engine_dependency_graph_roots"
+        "test_inventory_captures_old_and_new_engine_dependency_graph_roots",
+        "test_portfolio_rejects_shared_authoritative_state_between_books"
       ],
-      "test_result": "Committed inventory captures 588 Python files (581 unassessed, 329 role-unassigned), hash 86aa2de9e9136f920678b426b4656d0c5b6f85e912149d69b2937da538569080. Source-inventory and paper-portfolio authority tests: 6 passed. Separate legacy and newer paper stores remain; no runtime guard yet rejects duplicate global authoritative order/ledger/position ownership.",
-      "evidence_sha256": "bdfa9846f1e23f85b7ad1818c8f096ce5aa72ed56ea70bb5a40c160ec8cfb4a8",
+      "test_result": "Committed inventory captures 588 Python files (581 unassessed, 329 role-unassigned), hash 86aa2de9e9136f920678b426b4656d0c5b6f85e912149d69b2937da538569080. Source-inventory and paper-portfolio authority tests: 9 passed. PaperAccountPortfolio rejects duplicate OMS, ledger and position-state owners across registered books. Cross-runner/global authority remains unenforced.",
+      "evidence_sha256": "e4eac01e71f9fe04148006cd9d6503a66ba1e0c490ab170f699f8dd31f110fab",
       "blockers": [
-        "Unify or explicitly isolate book scopes and add a runtime-enforced single-authority contract for order, ledger, and position state."
+        "The runtime guard covers only accounts registered in one PaperAccountPortfolio; it does not prevent legacy and forward runner composition roots from owning competing order, ledger or position state for the same logical book."
       ]
     },
     {
