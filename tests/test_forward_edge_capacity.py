@@ -1,9 +1,12 @@
 import pytest
+from datetime import date, datetime, timezone
 
 from financial_brain.forward_edge.capacity import (
     CapacityCostPoint,
     CapacityError,
+    CapacityUniverseInput,
     evaluate_capacity,
+    report_capacity_universe,
 )
 
 
@@ -47,3 +50,36 @@ def test_cost_curve_must_be_monotone_and_no_extrapolation_is_allowed() -> None:
     row = _report().scenarios[-1]
     assert row.cost_bps is None
     assert row.expected_net_alpha_bps is None
+
+
+def test_universe_capacity_report_hashes_dated_adv_depth_and_impact_rows() -> None:
+    as_of = datetime(2026, 11, 16, 4, 0, tzinfo=timezone.utc)
+    fresh = CapacityUniverseInput(
+        "NSE:ABC", 20, 1_000_000, 15_000, (5_000, 10_000), _curve(),
+        "snapshot-hash", date(2026, 11, 13),
+        datetime(2026, 11, 16, 3, 59, 59, tzinfo=timezone.utc), 0.98, True)
+    stale_depth = CapacityUniverseInput(
+        "NSE:OLD", 20, 1_000_000, 15_000, (5_000, 10_000), _curve(),
+        "old-hash", date(2026, 11, 13),
+        datetime(2026, 11, 16, 3, 0, tzinfo=timezone.utc), 0.98, True)
+    report = report_capacity_universe(as_of=as_of, session=date(2026, 11, 16),
+                                      instruments=(stale_depth, fresh))
+    assert report.rows[0].instrument_id == "NSE:ABC"
+    assert report.rows[0].report is not None
+    assert report.rows[0].report.recommended_max_notional == 10_000
+    assert report.rows[1].report is None
+    assert report.rows[1].status == "NO_RECOMMENDATION_STALE_DEPTH"
+    assert len(report.report_hash) == 64
+
+
+def test_universe_capacity_report_rejects_future_and_duplicate_inputs() -> None:
+    as_of = datetime(2026, 11, 16, 4, 0, tzinfo=timezone.utc)
+    later = CapacityUniverseInput(
+        "NSE:ABC", 20, 1_000_000, 15_000, (5_000, 10_000), _curve(),
+        "snapshot-hash", date(2026, 11, 17),
+        datetime(2026, 11, 16, 3, 59, tzinfo=timezone.utc), 0.98)
+    with pytest.raises(CapacityError, match="future"):
+        report_capacity_universe(as_of=as_of, session=date(2026, 11, 16), instruments=(later,))
+    with pytest.raises(CapacityError, match="unique"):
+        report_capacity_universe(as_of=as_of, session=date(2026, 11, 16),
+                                 instruments=(later, later))

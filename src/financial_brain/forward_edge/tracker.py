@@ -373,7 +373,11 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_unknown_regime_and_future_input_fail_closed",
                                   "test_threshold_plan_is_immutable_and_must_be_frozen_pre_cohort"), (),
                      "SQLite freezes versioned regime and volatility thresholds; as-of checks reject future inputs and unknown regimes default to zero risk. Forward-session adapters, empirical threshold calibration and paper-book risk propagation remain unwired."),
-    "FE-0111": Entry("NOT_STARTED", (), (BLK_DATA,), "Capacity report needs ADV and depth."),
+    "FE-0111": Entry("PARTIAL", ("test_universe_capacity_report_hashes_dated_adv_depth_and_impact_rows",
+                                  "test_universe_capacity_report_rejects_future_and_duplicate_inputs",
+                                  "test_capacity_curve_degrades_net_alpha_and_caps_at_supported_depth"),
+                     (BLK_DATA,),
+                     "Universe capacity reports hash per-instrument ADV age, visible-depth age and calibrated net-alpha scenarios; stale/future inputs fail closed. Real quote/depth entitlements, session-calendar freshness, provenance attestation and runner/dashboard integration remain outstanding."),
     "FE-0112": Entry("NOT_STARTED", (), (), "Disaster stress tests not built."),
     "FE-0113": Entry("NOT_STARTED", (), (), "NO_TRADE as explicit decisions in the forward path not built."),
     # ---- F10 ----

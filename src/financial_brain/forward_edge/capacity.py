@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass
+from datetime import date, datetime
 
 
 class CapacityError(ValueError):
@@ -42,6 +43,39 @@ class CapacityReport:
     recommended_max_notional: float | None
     recommendation_status: str
     source_hash: str
+    report_hash: str
+
+
+@dataclass(frozen=True)
+class CapacityUniverseInput:
+    """One instrument's dated ADV/depth and observed market-impact calibration."""
+
+    instrument_id: str
+    gross_alpha_bps: float
+    adv_notional: float
+    visible_depth_notional: float
+    notionals: tuple[float, ...]
+    cost_curve: tuple[CapacityCostPoint, ...]
+    source_hash: str
+    adv_as_of: date
+    depth_observed_at: datetime
+    quote_coverage: float
+    owner_attested_live_observations: bool = False
+
+
+@dataclass(frozen=True)
+class CapacityUniverseRow:
+    instrument_id: str
+    adv_age_calendar_days: int
+    depth_age_seconds: float
+    report: CapacityReport | None
+    status: str
+
+
+@dataclass(frozen=True)
+class CapacityUniverseReport:
+    as_of: datetime
+    rows: tuple[CapacityUniverseRow, ...]
     report_hash: str
 
 
@@ -125,3 +159,61 @@ def evaluate_capacity(*, gross_alpha_bps: float, adv_notional: float,
     digest = hashlib.sha256(json.dumps(fields, sort_keys=True, separators=(",", ":"),
                                       allow_nan=False).encode()).hexdigest()
     return CapacityReport(tuple(scenarios), recommendation, status, source_hash, digest)
+
+
+def report_capacity_universe(*, as_of: datetime, session: date,
+                             instruments: tuple[CapacityUniverseInput, ...],
+                             max_adv_age_calendar_days: int = 7,
+                             max_depth_age_seconds: float = 2.0) -> CapacityUniverseReport:
+    """Build a reproducible, fail-closed capacity report over dated instrument inputs.
+
+    This is a calculation/reporting layer: caller-provided attestation is not itself proof
+    of data entitlement or provenance. Stale ADV/depth produces a row without a capacity
+    recommendation, instead of silently reusing stale liquidity.
+    """
+    if as_of.tzinfo is None or as_of.utcoffset() is None:
+        raise CapacityError("capacity report as_of must be timezone aware")
+    if max_adv_age_calendar_days < 0 or not math.isfinite(max_depth_age_seconds) or max_depth_age_seconds < 0:
+        raise CapacityError("capacity freshness limits must be non-negative")
+    if not instruments:
+        raise CapacityError("capacity report needs at least one instrument")
+    ids = [item.instrument_id.strip() for item in instruments]
+    if any(not instrument_id for instrument_id in ids) or len(set(ids)) != len(ids):
+        raise CapacityError("instrument IDs must be non-blank and unique")
+
+    rows: list[CapacityUniverseRow] = []
+    for item in sorted(instruments, key=lambda candidate: candidate.instrument_id):
+        adv_age = (session - item.adv_as_of).days
+        depth_age = (as_of - item.depth_observed_at).total_seconds()
+        if item.depth_observed_at.tzinfo is None or item.depth_observed_at.utcoffset() is None:
+            raise CapacityError("depth observation time must be timezone aware")
+        if adv_age < 0 or depth_age < 0:
+            raise CapacityError("future ADV or depth observations are not allowed")
+        if adv_age > max_adv_age_calendar_days:
+            rows.append(CapacityUniverseRow(item.instrument_id, adv_age, depth_age, None,
+                                            "NO_RECOMMENDATION_STALE_ADV"))
+            continue
+        if depth_age > max_depth_age_seconds:
+            rows.append(CapacityUniverseRow(item.instrument_id, adv_age, depth_age, None,
+                                            "NO_RECOMMENDATION_STALE_DEPTH"))
+            continue
+        report = evaluate_capacity(
+            gross_alpha_bps=item.gross_alpha_bps, adv_notional=item.adv_notional,
+            visible_depth_notional=item.visible_depth_notional, notionals=item.notionals,
+            cost_curve=item.cost_curve, source_hash=item.source_hash,
+            owner_attested_live_observations=item.owner_attested_live_observations,
+            observed_quote_coverage=item.quote_coverage)
+        rows.append(CapacityUniverseRow(item.instrument_id, adv_age, depth_age, report,
+                                        report.recommendation_status))
+
+    payload = {
+        "as_of": as_of.isoformat(), "session": session.isoformat(),
+        "rows": [{"instrument_id": row.instrument_id,
+                  "adv_age_calendar_days": row.adv_age_calendar_days,
+                  "depth_age_seconds": row.depth_age_seconds, "status": row.status,
+                  "report_hash": row.report.report_hash if row.report else None}
+                 for row in rows],
+    }
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                                      allow_nan=False).encode()).hexdigest()
+    return CapacityUniverseReport(as_of, tuple(rows), digest)
