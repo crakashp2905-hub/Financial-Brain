@@ -12,6 +12,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from financial_brain.forward_edge.clock import ClockProvider, SystemClock
 from financial_brain.forward_edge.market_events import MarketEvent
 
 
@@ -47,8 +48,9 @@ class CoverageReport:
 
 
 class QuoteArchive:
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, clock: ClockProvider | None = None) -> None:
         self.path = Path(path)
+        self.clock = clock or SystemClock()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._con = sqlite3.connect(str(self.path))
         self._con.execute("PRAGMA journal_mode=WAL")
@@ -58,15 +60,24 @@ class QuoteArchive:
                 event_id TEXT PRIMARY KEY, kind TEXT NOT NULL, venue TEXT NOT NULL,
                 instrument_id TEXT NOT NULL, event_time TEXT NOT NULL, received_at TEXT NOT NULL,
                 available_at TEXT NOT NULL, sequence INTEGER, source TEXT NOT NULL,
-                evidence_id TEXT, event_sha256 TEXT NOT NULL, event_json TEXT NOT NULL
+                evidence_id TEXT, event_sha256 TEXT NOT NULL, event_json TEXT NOT NULL,
+                ingested_at TEXT
             )
         """)
+        columns = {row[1] for row in self._con.execute("PRAGMA table_info(market_events)")}
+        if "ingested_at" not in columns:
+            # Older archives cannot recover their original write time; NULL preserves that fact.
+            self._con.execute("ALTER TABLE market_events ADD COLUMN ingested_at TEXT")
         self._con.commit()
 
     def close(self) -> None:
         self._con.close()
 
-    def append(self, event: MarketEvent) -> bool:
+    def append(self, event: MarketEvent, *, ingested_at: datetime | None = None) -> bool:
+        ingested_at = ingested_at or self.clock.now()
+        if ingested_at.tzinfo is None or ingested_at.utcoffset() is None:
+            raise QuoteArchiveError("ingest clock must be timezone aware")
+        ingested_at = ingested_at.astimezone(timezone.utc)
         body = event.as_dict()
         digest = event.sha256()
         previous = self._con.execute("SELECT event_sha256 FROM market_events WHERE event_id=?",
@@ -75,13 +86,24 @@ class QuoteArchive:
             if previous[0] != digest:
                 raise QuoteArchiveError("event_id reused with different content")
             return False
-        self._con.execute("INSERT INTO market_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        self._con.execute("""INSERT INTO market_events (
+                              event_id, kind, venue, instrument_id, event_time, received_at,
+                              available_at, sequence, source, evidence_id, event_sha256, event_json,
+                              ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                           [event.event_id, event.kind.value, event.venue, event.instrument_id,
                            event.event_time.isoformat(), event.received_at.isoformat(),
                            event.available_at.isoformat(), event.sequence, event.source,
-                           event.evidence_id, digest, json.dumps(body, sort_keys=True, separators=(",", ":"))])
+                           event.evidence_id, digest, json.dumps(body, sort_keys=True, separators=(",", ":")),
+                           ingested_at.isoformat()])
         self._con.commit()
         return True
+
+    def ingest_time(self, event_id: str) -> datetime | None:
+        """Return the original archive append clock; legacy rows remain explicitly unknown."""
+        row = self._con.execute("SELECT ingested_at FROM market_events WHERE event_id=?", [event_id]).fetchone()
+        if row is None:
+            raise KeyError(event_id)
+        return datetime.fromisoformat(row[0]) if row[0] is not None else None
 
     def get(self, event_id: str) -> MarketEvent:
         row = self._con.execute("SELECT event_json FROM market_events WHERE event_id=?", [event_id]).fetchone()

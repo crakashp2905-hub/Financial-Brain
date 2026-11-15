@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import json
+import sqlite3
 
 import pytest
 
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
+from financial_brain.forward_edge.clock import FixedClock
 from financial_brain.forward_edge.quote_archive import QuoteArchive, QuoteArchiveError
 
 T0 = datetime(2026, 11, 15, 4, 0, tzinfo=timezone.utc)
@@ -61,6 +64,44 @@ def test_archive_recovers_rows_after_close_and_reopen(tmp_path) -> None:
         assert second.get("q-7").sequence == 7
     finally:
         second.close()
+
+
+def test_ingest_timestamp_is_injected_immutable_and_not_part_of_source_event_identity(tmp_path) -> None:
+    path = tmp_path / "quotes.sqlite3"
+    ingested = T0 + timedelta(minutes=1)
+    archive = QuoteArchive(path, clock=FixedClock(ingested))
+    try:
+        event = _quote(1)
+        assert archive.append(event)
+        assert archive.ingest_time(event.event_id) == ingested
+        assert not archive.append(event, ingested_at=ingested + timedelta(minutes=1))
+        assert archive.ingest_time(event.event_id) == ingested
+    finally:
+        archive.close()
+
+
+def test_legacy_archive_migration_does_not_invent_prior_ingest_times(tmp_path) -> None:
+    path = tmp_path / "legacy.sqlite3"
+    legacy = _quote(8)
+    with sqlite3.connect(path) as con:
+        con.execute("""CREATE TABLE market_events (
+            event_id TEXT PRIMARY KEY, kind TEXT NOT NULL, venue TEXT NOT NULL,
+            instrument_id TEXT NOT NULL, event_time TEXT NOT NULL, received_at TEXT NOT NULL,
+            available_at TEXT NOT NULL, sequence INTEGER, source TEXT NOT NULL,
+            evidence_id TEXT, event_sha256 TEXT NOT NULL, event_json TEXT NOT NULL)""")
+        con.execute("INSERT INTO market_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [legacy.event_id, legacy.kind.value, legacy.venue, legacy.instrument_id,
+                     legacy.event_time.isoformat(), legacy.received_at.isoformat(),
+                     legacy.available_at.isoformat(), legacy.sequence, legacy.source,
+                     legacy.evidence_id, legacy.sha256(),
+                     json.dumps(legacy.as_dict(), sort_keys=True, separators=(",", ":"))])
+    archive = QuoteArchive(path, clock=FixedClock(T0))
+    try:
+        assert archive.ingest_time("q-8") is None
+        assert archive.append(_quote(9))
+        assert archive.ingest_time("q-9") == T0
+    finally:
+        archive.close()
 
 
 def test_decision_snapshot_excludes_late_data_and_is_reproducible(tmp_path) -> None:

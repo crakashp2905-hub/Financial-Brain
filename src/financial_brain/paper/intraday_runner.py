@@ -309,7 +309,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             from ..forward_edge.market_data import archive_kite_quote_batch_to_path
 
             event_path = path.with_name(f"{path.stem}-forward-events.sqlite")
-            observed = archive_kite_quote_batch_to_path(event_path, q, received_at=quote_at)
+            observed = archive_kite_quote_batch_to_path(event_path, q, received_at=quote_at,
+                                                        clock=clock_provider)
             for key, value in observed.items():
                 forward_quote_archive_stats[key] += value
         except Exception as e:                          # noqa: BLE001 - archive failure must be visible, not fatal

@@ -171,7 +171,7 @@ def archive_kite_quote_batch_to_path(path: Path, quotes: dict[str, dict[str, Any
                                     received_at: datetime | None = None,
                                     clock: ClockProvider | None = None) -> dict[str, int]:
     """Persist one poll batch durably without retaining a file handle across runner exits."""
-    archive = QuoteArchive(path)
+    archive = QuoteArchive(path, clock=clock)
     try:
         return archive_kite_quote_batch(archive, quotes, received_at=received_at, clock=clock)
     finally:
