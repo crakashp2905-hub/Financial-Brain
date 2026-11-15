@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 import pytest
 
 from financial_brain.forward_edge.market_data import (
     KiteQuoteNormalizationError,
+    executable_quote,
     normalize_kite_quote,
 )
 from financial_brain.forward_edge.market_events import EventKind
@@ -43,6 +45,21 @@ def test_ltp_only_observation_is_archived_as_non_executable_tick():
     assert event.payload["price"] == 101.5
     assert event.payload["non_executable_reason"] == "TWO_SIDED_DEPTH_UNAVAILABLE"
     assert "bid" not in event.payload and "ask" not in event.payload
+    assert executable_quote(event) is None
+
+
+def test_executable_quote_requires_two_sided_positive_displayed_liquidity():
+    received = datetime.now(timezone.utc)
+    event = normalize_kite_quote("NSE:INFY", quote(), received_at=received)
+    execution = executable_quote(event)
+    assert execution is not None
+    assert execution["bid"] == Decimal("101.4") and execution["ask"] == Decimal("101.6")
+    assert execution["bid_quantity"] == 12 and execution["ask_quantity"] == 9
+
+    no_liquidity = quote() | {"depth": {"buy": [{"price": 101.4, "quantity": 0}],
+                                      "sell": [{"price": 101.6, "quantity": 0}]}}
+    assert executable_quote(normalize_kite_quote("NSE:INFY", no_liquidity,
+                                                  received_at=received)) is None
 
 
 def test_naive_receipt_clock_is_rejected_instead_of_claimed_as_observed_time():

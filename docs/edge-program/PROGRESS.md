@@ -16,7 +16,7 @@ completion evidence only after acceptance criteria pass. The original Downloads 
 | PE-0023 | Partial | `tests/test_forward_edge_session_runner.py` verifies persisted preflight, market events and immutable causal decisions | Data rejection, strategy/risk verdict, order intent and fill events need the integrated strategy/OMS path. |
 | PE-0019 | Partial | `tests/test_forward_edge_kite_market_data.py`, `tests/test_phase5_intraday_runner.py`; commit `53ca3e3` and receipt identity fix `22e4c24` | A genuinely observed Kite session and account entitlement/retention record are not present in the repository. |
 | PE-0030 | Partial | `normalize_kite_quote()` retains available best bid/ask, visible quantities, depth, volume, session OHLC and circuit limits | Legacy `ingest/kite_live.forward_events` is absent and the normalized fields are not yet consumed by an execution gate. |
-| PE-0031 | Partial | `test_ltp_only_observation_is_archived_as_non_executable_tick` separates LTP-only `TICK` from fill-capable `QUOTE` events | All strategy and promotion adapters still need to enforce the event-kind distinction at execution entry points. |
+| PE-0031 | Partial | `test_ltp_only_observation_is_archived_as_non_executable_tick` and `test_executable_quote_requires_two_sided_positive_displayed_liquidity` | `executable_quote()` now rejects ticks, missing depth and zero displayed liquidity; all strategy and promotion adapters still need to call it at execution entry points. |
 | PE-0110 | Partial | `tests/test_executable_outcomes.py`; commit `abfa1db` | Resolver currently consumes supplied outcomes; it is not populated from actual forward orders and marks or wired into promotion cohorts. |
 
 ## Current external gates

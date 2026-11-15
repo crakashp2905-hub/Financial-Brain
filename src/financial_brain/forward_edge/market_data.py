@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -23,6 +24,35 @@ IST = ZoneInfo("Asia/Kolkata")
 
 class KiteQuoteNormalizationError(ValueError):
     """Kite quote did not contain trustworthy clocks and a two-sided top of book."""
+
+
+def executable_quote(event: MarketEvent) -> dict[str, Any] | None:
+    """Return fill inputs only for a complete, positive-liquidity two-sided quote event.
+
+    Informational ticks and quotes without depth/quantity stay available for analysis but
+    cannot be mistaken for executable prices.
+    """
+    if event.kind is not EventKind.QUOTE:
+        return None
+    payload = event.payload
+    try:
+        bid = Decimal(str(payload["bid"]))
+        ask = Decimal(str(payload["ask"]))
+        bid_quantity = int(payload["bid_quantity"])
+        ask_quantity = int(payload["ask_quantity"])
+        volume = int(payload["volume"])
+    except (KeyError, TypeError, ValueError, InvalidOperation, OverflowError):
+        return None
+    depth = payload.get("depth")
+    if (not bid.is_finite() or not ask.is_finite() or bid <= 0 or ask < bid or
+            bid_quantity <= 0 or ask_quantity <= 0 or volume <= 0 or
+            not isinstance(depth, dict) or not depth.get("buy") or not depth.get("sell")):
+        return None
+    return {"bid": bid, "ask": ask, "bid_quantity": bid_quantity,
+            "ask_quantity": ask_quantity, "volume": volume,
+            "depth": depth, "source": event.source, "event_id": event.event_id,
+            "event_time": event.event_time, "received_at": event.received_at,
+            "available_at": event.available_at}
 
 
 def _exchange_timestamp(value: Any) -> datetime:
