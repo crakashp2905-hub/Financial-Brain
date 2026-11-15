@@ -1,4 +1,4 @@
-"""Durable normalized-event session runner foundation (PE-0017/0023)."""
+"""Durable normalized-event, manifest, risk and paper execution session runner."""
 from __future__ import annotations
 
 import hashlib
@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
+from financial_brain.evidence.decision_manifest import ManifestError, canonical_bytes
 from financial_brain.forward_edge.execution_scenario import evaluate_scenario
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_local_time
 from financial_brain.forward_edge.intent_timing import create_timed_intent
@@ -35,9 +36,9 @@ class ForwardSessionRunnerError(ValueError):
 class ForwardSessionRunner:
     """Persist event and decision evidence from any adapter using normalized MarketEvent rows.
 
-    This runner deliberately has no physical-order operation and does not create fills. The current
-    implementation is the shared durable intake/decision journal boundary; risk, paper OMS, accounting,
-    custody and close valuation still require integration before a full session can be claimed.
+    This runner deliberately has no physical-order operation. It persists source events, canonical decision
+    manifests, risk verdicts and simulated paper execution receipts; it does not claim independent timestamp
+    custody or cost-complete net P&L.
     """
 
     def __init__(self, state: ForwardSessionStore, journal_path: Path, *,
@@ -67,6 +68,9 @@ class ForwardSessionRunner:
             session_id TEXT NOT NULL, decision_id TEXT NOT NULL, verdict_id TEXT NOT NULL,
             allowed INTEGER NOT NULL, record_sha256 TEXT NOT NULL, record_json TEXT NOT NULL,
             PRIMARY KEY(session_id, decision_id))""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS runner_decision_manifests (
+            session_id TEXT NOT NULL, decision_id TEXT NOT NULL, manifest_sha256 TEXT NOT NULL,
+            manifest_json TEXT NOT NULL, PRIMARY KEY(session_id, decision_id))""")
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_data_rejections (
             session_id TEXT NOT NULL, rejection_id TEXT NOT NULL, record_sha256 TEXT NOT NULL,
             record_json TEXT NOT NULL, PRIMARY KEY(session_id, rejection_id))""")
@@ -401,6 +405,60 @@ class ForwardSessionRunner:
         self._con.commit()
         return True
 
+    def record_decision_manifest(self, *, session_id: str, decision_id: str,
+                                 manifest: dict[str, Any]) -> str:
+        """Bind a strict canonical decision manifest to its journaled source events."""
+        if self.state_store.state(session_id) is not SessionState.OPEN:
+            raise ForwardSessionRunnerError("decision manifests are accepted only in an OPEN session")
+        try:
+            canonical = canonical_bytes(manifest)
+        except ManifestError as exc:
+            raise ForwardSessionRunnerError(f"invalid canonical decision manifest: {exc}") from exc
+        digest = hashlib.sha256(canonical).hexdigest()
+        config = self.state_store.config(session_id)
+        decision_row = self._con.execute("SELECT record_json FROM runner_decisions "
+                                          "WHERE session_id=? AND decision_id=?",
+                                          [session_id, decision_id]).fetchone()
+        if decision_row is None:
+            raise ForwardSessionRunnerError("decision manifest requires a persisted decision")
+        decision = json.loads(decision_row[0])
+        decision_at = datetime.fromisoformat(decision["decided_at"].replace("Z", "+00:00"))
+        manifest_at = datetime.fromisoformat(manifest["decision_at_utc"].replace("Z", "+00:00"))
+        if manifest["decision_id"] != decision_id or manifest["day"] != config.exchange_date.isoformat():
+            raise ForwardSessionRunnerError("decision manifest identity or exchange date mismatches session")
+        if manifest_at.astimezone(timezone.utc) != decision_at.astimezone(timezone.utc):
+            raise ForwardSessionRunnerError("decision manifest time differs from the durable decision")
+        source_ids = {source["source_id"] for source in manifest["sources"]}
+        if source_ids != set(decision["input_event_ids"]):
+            raise ForwardSessionRunnerError("decision manifest sources must exactly match decision inputs")
+        for source in manifest["sources"]:
+            row = self._con.execute("SELECT event_sha256, event_json FROM runner_events "
+                                    "WHERE session_id=? AND event_id=?",
+                                    [session_id, source["source_id"]]).fetchone()
+            if row is None or row[0] != source["sha256"]:
+                raise ForwardSessionRunnerError("decision manifest source hash differs from journaled market event")
+            event = json.loads(row[1])
+            for manifest_key, event_key in (("published_at_utc", "event_time"),
+                                            ("received_at_utc", "received_at"),
+                                            ("available_at_utc", "available_at")):
+                source_time = datetime.fromisoformat(source[manifest_key].replace("Z", "+00:00"))
+                event_time = datetime.fromisoformat(event[event_key].replace("Z", "+00:00"))
+                if source_time.astimezone(timezone.utc) != event_time.astimezone(timezone.utc):
+                    raise ForwardSessionRunnerError("decision manifest source clock differs from market event")
+        encoded = canonical.decode("utf-8")
+        previous = self._con.execute("SELECT manifest_sha256 FROM runner_decision_manifests "
+                                     "WHERE session_id=? AND decision_id=?", [session_id, decision_id]).fetchone()
+        if previous:
+            if previous[0] != digest:
+                raise ForwardSessionRunnerError("decision manifest conflicts with immutable prior manifest")
+            return digest
+        self._con.execute("INSERT INTO runner_decision_manifests VALUES (?, ?, ?, ?)",
+                          [session_id, decision_id, digest, encoded])
+        self._append_audit("decision_manifest", session_id, decision_id, decision_at,
+                           {"decision_id": decision_id, "manifest_sha256": digest, "manifest": json.loads(encoded)})
+        self._con.commit()
+        return digest
+
     def records(self, session_id: str) -> dict[str, Any]:
         """Return the deterministic persisted event and decision trace for reanalysis."""
         events = [json.loads(row[0]) | {"ingested_at": row[1], "ingest_clock_source": row[2]}
@@ -429,6 +487,9 @@ class ForwardSessionRunner:
         risk_verdicts = [json.loads(row[0]) for row in self._con.execute(
             "SELECT record_json FROM runner_risk_verdicts WHERE session_id=? ORDER BY decision_id",
             [session_id]).fetchall()]
+        decision_manifests = [json.loads(row[0]) for row in self._con.execute(
+            "SELECT manifest_json FROM runner_decision_manifests WHERE session_id=? ORDER BY decision_id",
+            [session_id]).fetchall()]
         data_rejections = [json.loads(row[0]) for row in self._con.execute(
             "SELECT record_json FROM runner_data_rejections WHERE session_id=? ORDER BY rejection_id",
             [session_id]).fetchall()]
@@ -439,7 +500,8 @@ class ForwardSessionRunner:
             "FROM runner_audit_log WHERE session_id=? ORDER BY sequence", [session_id]).fetchall()]
         return {"events": events, "decisions": decisions, "lifecycle": lifecycle,
                 "intents": intents, "execution_receipts": receipts, "session_reports": reports,
-                "risk_verdicts": risk_verdicts, "data_rejections": data_rejections,
+                "risk_verdicts": risk_verdicts, "decision_manifests": decision_manifests,
+                "data_rejections": data_rejections,
                 "audit_log": audit_log, "accounting": accounting}
 
     def rebuild_materialized_views(self, session_id: str) -> None:
@@ -453,6 +515,7 @@ class ForwardSessionRunner:
         self._con.execute("BEGIN IMMEDIATE")
         try:
             for table in ("runner_events", "runner_decisions", "runner_risk_verdicts",
+                          "runner_decision_manifests",
                           "runner_data_rejections", "paper_intents", "paper_execution_receipts",
                           "runner_session_reports"):
                 self._con.execute(f"DELETE FROM {table} WHERE session_id=?", [session_id])
@@ -483,6 +546,11 @@ class ForwardSessionRunner:
                     self._con.execute("INSERT INTO runner_risk_verdicts VALUES (?,?,?,?,?,?)",
                                       [session_id, body["decision_id"], body["verdict_id"],
                                        int(body["allowed"]), self._sha256(body), encoded])
+                elif kind == "decision_manifest":
+                    manifest_json = json.dumps(body["manifest"], sort_keys=True,
+                                               separators=(",", ":"), allow_nan=False)
+                    self._con.execute("INSERT INTO runner_decision_manifests VALUES (?,?,?,?)",
+                                      [session_id, body["decision_id"], body["manifest_sha256"], manifest_json])
                 elif kind == "data_rejection":
                     self._con.execute("INSERT INTO runner_data_rejections VALUES (?,?,?,?)",
                                       [session_id, body["rejection_id"], self._sha256(body), encoded])
@@ -543,7 +611,8 @@ class ForwardSessionRunner:
                                    "SELECT key, state, reconciled_by FROM outbox "
                                    "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
         hashes = {name: self._sha256(records[name])
-                  for name in ("events", "decisions", "lifecycle", "intents", "execution_receipts")}
+                  for name in ("events", "decisions", "decision_manifests", "lifecycle", "intents",
+                               "execution_receipts")}
         hashes["accounting"] = self._sha256(records["accounting"])
         hashes["ledger"] = str(records["accounting"]["ledger_sha256"])
         hashes["outbox"] = self._sha256(outbox_rows)
@@ -590,7 +659,8 @@ class ForwardSessionRunner:
     def _checkpoint_hashes(self, session_id: str) -> dict[str, str]:
         records = self.records(session_id)
         hashes = {name: self._sha256(records[name])
-                  for name in ("events", "decisions", "lifecycle", "intents", "execution_receipts")}
+                  for name in ("events", "decisions", "decision_manifests", "lifecycle", "intents",
+                               "execution_receipts")}
         hashes["accounting"] = self._sha256(records["accounting"])
         hashes["ledger"] = str(records["accounting"]["ledger_sha256"])
         outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
@@ -648,6 +718,12 @@ class ForwardSessionRunner:
                                   "WHERE session_id=? AND decision_id=?", [session_id, decision_id]).fetchone()
         if risk is None or risk[0] != 1:
             raise ForwardSessionRunnerError("paper intent requires an explicit persisted allow risk verdict")
+        manifest_row = self._con.execute("SELECT manifest_sha256, manifest_json FROM runner_decision_manifests "
+                                         "WHERE session_id=? AND decision_id=?",
+                                         [session_id, decision_id]).fetchone()
+        if manifest_row is None:
+            raise ForwardSessionRunnerError("paper intent requires a canonical persisted decision manifest")
+        manifest = json.loads(manifest_row[1])
         if event_id not in decision["input_event_ids"]:
             raise ForwardSessionRunnerError("paper quote must be an input to the recorded decision")
         event_row = self._con.execute("SELECT event_json FROM runner_events WHERE session_id=? AND event_id=?",
@@ -655,6 +731,10 @@ class ForwardSessionRunner:
         if event_row is None:
             raise ForwardSessionRunnerError("paper quote is absent from the session event journal")
         event = MarketEvent.from_dict(json.loads(event_row[0]))
+        selected = next((row for row in manifest["selections"]
+                         if row["symbol"] == event.instrument_id), None)
+        if selected is None or quantity > selected["quantity"]:
+            raise ForwardSessionRunnerError("paper intent exceeds the manifest's selected instrument quantity")
         quote = executable_quote(event)
         if quote is None:
             raise ForwardSessionRunnerError("paper fill requires a two-sided quote with positive visible depth")
@@ -678,6 +758,7 @@ class ForwardSessionRunner:
         visible = quote["ask_quantity"] if side == "BUY" else quote["bid_quantity"]
         request = {"session_id": session_id, "order_id": order_id, "decision_id": decision_id,
                    "event_id": event_id, "side": side, "quantity": quantity,
+                   "decision_manifest_sha256": manifest_row[0],
                    "limit_price": str(limit), "tick_size": str(tick), "freeze_limit": freeze_limit,
                    "slice_size": slice_size, "adverse_slippage_bps": str(slippage),
                    "latency_ms": latency_ms, "earliest_fill_time": timed.earliest_fill_time.isoformat(),

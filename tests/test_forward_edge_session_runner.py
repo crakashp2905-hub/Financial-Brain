@@ -251,7 +251,7 @@ def test_incomplete_close_is_explicit_and_idempotent(tmp_path):
     runner.close()
 
 
-def trade_setup(tmp_path, *, risk_allowed=True):
+def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True):
     runner = make_runner(tmp_path)
     opened(runner)
     quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
@@ -262,10 +262,42 @@ def trade_setup(tmp_path, *, risk_allowed=True):
     decided = NOW + timedelta(seconds=1)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
                   decided_at=decided, input_event_ids=(event.event_id,))
+    if include_manifest:
+        record_manifest(runner, session_id="s", decision_id="trade-1", event=event,
+                        decided_at=decided, quantity=11)
     runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
                                allowed=risk_allowed, policy_id="test-risk-v1", policy_sha256="a" * 64,
                                reason_codes=() if risk_allowed else ("DAILY_LOSS_LIMIT",), assessed_at=decided)
     return runner, event, decided
+
+
+def record_manifest(runner, *, session_id, decision_id, event, decided_at, quantity):
+    event_sha = runner._con.execute("SELECT event_sha256 FROM runner_events "
+                                    "WHERE session_id=? AND event_id=?",
+                                    [session_id, event.event_id]).fetchone()[0]
+    manifest = {
+        "schema": "fb.decision.v1", "day": "2026-11-13", "decision_id": decision_id,
+        "author": "test-runner", "strategy_sha256": "1" * 64, "model_sha256": "2" * 64,
+        "data_sha256": event_sha, "universe_sha256": "3" * 64, "picks_sha256": "4" * 64,
+        "calendar_sha256": "5" * 64, "cost_model_sha256": "6" * 64,
+        "risk_limits_sha256": "7" * 64, "decision_at_utc": decided_at.isoformat(),
+        "entry_earliest_at_utc": (decided_at + timedelta(milliseconds=100)).isoformat(),
+        "exit_scheduled_at_utc": (decided_at + timedelta(hours=8)).isoformat(),
+        "data_watermark_at_utc": event.available_at.isoformat(),
+        "exchange_session_id": "NSE-2026-11-13", "holding_sessions": 1,
+        "benchmark_id": "NIFTY50", "capital_inr": "100000",
+        "predicted_return_fraction": "0.01", "predicted_cost_fraction": "0.001",
+        "forecast": {"p10_fraction": "-0.01", "p50_fraction": "0.01",
+                     "p90_fraction": "0.02", "probability_exceeds_cost": "0.6"},
+        "selections": [{"lineage": event.instrument_id, "symbol": event.instrument_id,
+                        "weight_fraction": "0.1", "quantity": quantity}],
+        "exclusions": [], "sources": [{"source_id": event.event_id, "sha256": event_sha,
+                                         "published_at_utc": event.event_time.isoformat(),
+                                         "received_at_utc": event.received_at.isoformat(),
+                                         "available_at_utc": event.available_at.isoformat()}],
+        "no_trade_reasons": [],
+    }
+    return runner.record_decision_manifest(session_id=session_id, decision_id=decision_id, manifest=manifest)
 
 
 def execute(runner, event, decided, *, order_id="order-1", qty=2, limit="100.30"):
@@ -304,6 +336,8 @@ def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path
     sell_decision_at = decided + timedelta(seconds=1)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="sell-1", outcome="TRADE",
                   decided_at=sell_decision_at, input_event_ids=(event.event_id,))
+    record_manifest(runner, session_id="s", decision_id="sell-1", event=event,
+                    decided_at=sell_decision_at, quantity=2)
     runner.record_risk_verdict(session_id="s", decision_id="sell-1", verdict_id="risk-sell-1",
                                allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
                                assessed_at=sell_decision_at)
@@ -341,12 +375,25 @@ def test_paper_intent_requires_an_explicit_allowed_risk_verdict(tmp_path):
     runner.close()
 
 
+def test_paper_intent_requires_canonical_manifest_and_respects_its_quantity(tmp_path):
+    runner, event, decided = trade_setup(tmp_path, include_manifest=False)
+    with pytest.raises(ForwardSessionRunnerError, match="canonical persisted decision manifest"):
+        execute(runner, event, decided)
+    runner.close()
+
+    runner, event, decided = trade_setup(tmp_path / "oversize", include_manifest=True)
+    with pytest.raises(ForwardSessionRunnerError, match="exceeds the manifest's selected instrument quantity"):
+        execute(runner, event, decided, qty=12)
+    runner.close()
+
+
 def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_path):
     runner, event, decided = trade_setup(tmp_path)
     execute(runner, event, decided)
     baseline = runner.records("s")
     assert [item["kind"] for item in baseline["audit_log"]] == [
-        "preflight", "market_event", "decision", "risk_verdict", "paper_intent", "execution_receipt"]
+        "preflight", "market_event", "decision", "decision_manifest", "risk_verdict",
+        "paper_intent", "execution_receipt"]
     with pytest.raises(Exception, match="append-only"):
         runner._con.execute("UPDATE runner_audit_log SET record_json='{}' WHERE session_id='s'")
     runner.rebuild_materialized_views("s")
@@ -387,6 +434,8 @@ def test_ltp_only_cannot_create_paper_fill_intent(tmp_path):
     decided = NOW + timedelta(seconds=1)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
                   decided_at=decided, input_event_ids=(tick.event_id,))
+    record_manifest(runner, session_id="s", decision_id="trade-1", event=tick,
+                    decided_at=decided, quantity=2)
     runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
                                allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
                                assessed_at=decided)
@@ -408,6 +457,8 @@ def test_paper_fill_requires_hashed_raw_source_evidence(tmp_path):
     decided = NOW + timedelta(seconds=1)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
                   decided_at=decided, input_event_ids=(event.event_id,))
+    record_manifest(runner, session_id="s", decision_id="trade-1", event=event,
+                    decided_at=decided, quantity=1)
     runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
                                allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
                                assessed_at=decided)
@@ -447,6 +498,8 @@ def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
                   ingest_metadata={event.event_id: (NOW + timedelta(milliseconds=10), "FIXTURE_CLOCK")})
     runner.decide(session_id="clock-session", strategy_id="momentum", decision_id="clock-trade",
                   outcome="TRADE", input_event_ids=(event.event_id,))
+    record_manifest(runner, session_id="clock-session", decision_id="clock-trade", event=event,
+                    decided_at=decided_at, quantity=2)
     runner.record_risk_verdict(session_id="clock-session", decision_id="clock-trade",
                                verdict_id="clock-risk", allowed=True, policy_id="test-risk-v1",
                                policy_sha256="a" * 64, assessed_at=decided_at)
