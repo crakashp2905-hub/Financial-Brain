@@ -176,7 +176,9 @@ OVERRIDES: dict[str, Entry] = {
     "FE-0054": Entry("NOT_STARTED", (), (), "Daily attestation bundle not built."),
     # ---- F05 ----
     "FE-0055": Entry("NOT_STARTED", (), (), "Engine adapter not built."),
-    "FE-0056": Entry("NOT_STARTED", (), (), "Bar-completion fill timing not built for the forward path."),
+    "FE-0056": Entry("PARTIAL", ("test_completed_bar_or_quote_yields_latency_delayed_timed_intent",
+                                  "test_incomplete_bar_future_event_and_wrong_event_kind_are_rejected"), (),
+                     "Shared timed-intent contract requires an explicitly completed bar or available quote and enforces decision plus latency before fill. Existing paper adapters have not all been wired through it."),
     "FE-0057": Entry("NOT_STARTED", (), (), "Marketable-limit simulator not built."),
     "FE-0058": Entry("NOT_STARTED", (), (), "Queue model not built."),
     "FE-0059": Entry("NOT_STARTED", (), (), "Adverse selection and partial fills not built."),
