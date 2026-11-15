@@ -462,7 +462,7 @@ def r_P9(D):
     fs = _formation_signals(D, lambda n: n == "rectangle" or n.startswith("triangle") or n.startswith("flag")
                             or n.startswith("pennant"))
     best = None
-    for jc, d, f in fs:
+    for jc, d, _formation in fs:
         for k in range(jc + 1, min(jc + 12, MAX_SIG) + 1):
             a = D.atr5[k]
             if not np.isfinite(a):
