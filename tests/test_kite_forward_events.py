@@ -4,8 +4,12 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from financial_brain.forward_edge.market_data import (
-    DataError, decision_visible, executable_quote, quote_quality_reasons,
+    DataError, FeedHealth, decision_visible, executable_quote, quote_quality_reasons,
 )
+from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
+from financial_brain.forward_edge.source_capture_start import CaptureStartReceipt, SourceEntitlement
 from financial_brain.ingest.kite_live import forward_events
 
 
@@ -41,6 +45,38 @@ def test_full_quote_becomes_timestamped_forward_event():
     assert len(payload["raw_sha256"]) == 64
     assert executable_quote(event) == (True, "EXECUTABLE_TOP_OF_BOOK")
     assert not decision_visible(event, datetime(2026, 11, 12, 3, 59, 59, tzinfo=timezone.utc))
+
+
+def test_kite_capture_start_receipt_is_persisted_before_quote_request(tmp_path):
+    runner = ForwardSessionRunner(tmp_path / "capture-session.jsonl")
+    config = ForwardRunConfig(
+        session_id="kite-capture-session", exchange_date="2026-11-12", cohort_id="cohort-1",
+        strategy_sha256="a" * 64, risk_policy_sha256="b" * 64, constraints_sha256="c" * 64,
+        ledger_id="ledger-1", benchmark_id="NIFTY50", instruments=("NSE:INFY",),
+        capital_inr="100000", mode=Mode.LIVE_PAPER,
+        authority_strategy_id="momentum", authority_account_id="paper-1",
+    )
+    capture_receipt = CaptureStartReceipt(
+        capture_id="kite-capture-1", capture_started_at=RECEIPT - timedelta(seconds=2),
+        earliest_decision_at=RECEIPT + timedelta(minutes=1), clock_skew_ms=12,
+        clock_evidence_id="clock:local-probe", quote_health=FeedHealth(None, 0, 0, 0),
+        entitlements=(SourceEntitlement("kite-quotes", "Kite Connect", True,
+                                        "entitlement:operator", RECEIPT + timedelta(hours=1)),),
+    )
+
+    def quote(keys, kind):
+        rows = DurableJournal(runner.journal_path).records()
+        assert any(row.get("t") == "SOURCE_CAPTURE_START" for row in rows)
+        return {"NSE:INFY": {"timestamp": "2026-11-12 09:29:59", "last_price": 1500.5}}
+
+    events = forward_events(["INFY"], quote_fn=quote, received_at=RECEIPT,
+                            capture_runner=runner, capture_config=config,
+                            capture_receipt=capture_receipt)
+    runner.append_events(config, events)
+    records = DurableJournal(runner.journal_path).records()
+    marker_i = next(i for i, row in enumerate(records) if row.get("t") == "SOURCE_CAPTURE_START")
+    market_i = next(i for i, row in enumerate(records) if row.get("t") == "MARKET_EVENT")
+    assert marker_i < market_i
 
 
 @pytest.mark.parametrize("reply", [

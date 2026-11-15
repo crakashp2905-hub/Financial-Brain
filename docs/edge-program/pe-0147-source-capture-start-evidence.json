@@ -3,19 +3,25 @@
   "task_id": "PE-0147",
   "status": "PARTIAL",
   "test": {
-    "command": "python -m pytest -q tests/test_source_capture_start.py; ruff check src/financial_brain/forward_edge/source_capture_start.py tests/test_source_capture_start.py",
-    "result": "5 passed; Ruff passed."
+    "command": "python -m pytest -q tests/test_kite_forward_events.py tests/test_source_capture_start.py; ruff check src/financial_brain/ingest/kite_live.py tests/test_kite_forward_events.py; mypy src/financial_brain/ingest/kite_live.py",
+    "result": "19 passed; Ruff and mypy passed."
   },
   "implemented": [
     "Captures a unique source session ID and verifies capture start precedes the earliest decision time.",
     "Persists the capture-start marker before the first market event, with monotonic immutable replay semantics.",
     "Records measured clock skew, clock evidence ID, initial quote-health facts/reasons, and source entitlement evidence with validity windows.",
-    "Missing or expired source entitlements are visible and block the capture receipt's entry-eligibility indicator."
+    "Missing or expired source entitlements are visible and block the capture receipt's entry-eligibility indicator.",
+    "Kite forward_events accepts runner/config/receipt together and durably records capture start before calling the quote provider."
   ],
   "blockers": [
-    "Live Kite capture startup is not wired to invoke the receipt API.",
+    "The application launcher and recurring live polling loop do not yet supply the optional capture receipt arguments.",
     "Clock and entitlement evidence is supplied by callers and is not independently authenticated.",
     "No actual observed source-capture session has been produced."
   ],
-  "source_sha256": {}
+  "source_sha256": {
+    "src/financial_brain/forward_edge/source_capture_start.py": "2e33bea43c880cf7e2e687307511fcfe917f08ffcdde81f7e4b75b23f88433e4",
+    "tests/test_source_capture_start.py": "066f5b0295cbba668935e48b5d40d00b8a34ab3b53dd66310fe964f9c65ff15e",
+    "src/financial_brain/ingest/kite_live.py": "cb41c9067496d1e29fa83e4389884061f8257c985b7be3b2bbaee6cb50d94cb2",
+    "tests/test_kite_forward_events.py": "e8a9acc13270b5db5e94e30c8c2b7a97b2c95c085216d8b5239c7188a6d36b85"
+  }
 }

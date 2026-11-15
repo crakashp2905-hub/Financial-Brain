@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..forward_edge.raw_quote_archive import RawQuoteArchive
+    from ..forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
+    from ..forward_edge.source_capture_start import CaptureStartReceipt
 
 IST = timezone(timedelta(hours=5, minutes=30))
 OPEN, CLOSE = time(9, 15), time(15, 30)
@@ -65,6 +67,9 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
                    ingested_at: datetime | None = None,
                    rejections_out: list[dict] | None = None, clock_provider=None,
                    raw_archive: RawQuoteArchive | None = None,
+                   capture_runner: ForwardSessionRunner | None = None,
+                   capture_config: ForwardRunConfig | None = None,
+                   capture_receipt: CaptureStartReceipt | None = None,
                    source_timestamp_tolerance: timedelta | None = None):
     """Capture read-only Kite full quotes as forward-edge events.
 
@@ -75,6 +80,7 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
     """
     from ..forward_edge.market_data import DataError, NormalizedEvent
     from ..forward_edge.session_clock import ClockError, SessionClockProvider
+    from ..forward_edge.source_capture_start import record_capture_start
     from ..providers import kite_data as kd
 
     if not symbols or len(set(symbols)) != len(symbols):
@@ -96,6 +102,11 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
         ingested_at = ingested_at.astimezone(timezone.utc)
     if received_at is not None and ingested_at is not None and ingested_at < received_at:
         raise DataError("ingest clock cannot precede source availability")
+    if any(part is not None for part in (capture_runner, capture_config, capture_receipt)):
+        if capture_runner is None or capture_config is None or capture_receipt is None:
+            raise DataError("capture runner, config, and receipt must be supplied together")
+        # Persist capture provenance before the first Kite request/event is observed.
+        record_capture_start(capture_runner, capture_config, capture_receipt)
     raw = (quote_fn or kd.quote)(keys, "full")
     events = []
 
