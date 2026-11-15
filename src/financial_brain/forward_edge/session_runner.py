@@ -65,6 +65,10 @@ class ForwardSessionRunner:
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_session_reports (
             session_id TEXT PRIMARY KEY, status TEXT NOT NULL, report_sha256 TEXT NOT NULL,
             report_json TEXT NOT NULL)""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS runner_checkpoints (
+            session_id TEXT NOT NULL, checkpoint_id TEXT NOT NULL, phase TEXT NOT NULL,
+            checkpoint_sha256 TEXT NOT NULL, checkpoint_json TEXT NOT NULL,
+            PRIMARY KEY(session_id, checkpoint_id))""")
         self._con.execute("""CREATE TABLE IF NOT EXISTS paper_intents (
             session_id TEXT NOT NULL, order_id TEXT NOT NULL, decision_id TEXT NOT NULL,
             event_id TEXT NOT NULL, request_sha256 TEXT NOT NULL, request_json TEXT NOT NULL,
@@ -360,6 +364,95 @@ class ForwardSessionRunner:
             [session_id]).fetchall()]
         return {"events": events, "decisions": decisions, "lifecycle": lifecycle,
                 "intents": intents, "execution_receipts": receipts, "session_reports": reports}
+
+    def checkpoint(self, session_id: str, *, phase: str, now: datetime | None = None) -> dict[str, Any]:
+        """Freeze a START or END journal/outbox snapshot; ledger absence is explicit."""
+        phase = phase.strip().upper()
+        if phase not in {"START", "END"}:
+            raise ForwardSessionRunnerError("checkpoint phase must be START or END")
+        now = now or capture_local_time(self.clock, label="checkpoint timestamp")
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ForwardSessionRunnerError("checkpoint timestamp must be timezone aware")
+        checkpoint_id = f"{session_id}:{phase.lower()}"
+        existing = self._con.execute("SELECT checkpoint_sha256, checkpoint_json FROM runner_checkpoints "
+                                     "WHERE session_id=? AND checkpoint_id=?",
+                                     [session_id, checkpoint_id]).fetchone()
+        if existing and phase == "START":
+            return json.loads(existing[1]) | {"checkpoint_sha256": existing[0]}
+        state = self.state_store.state(session_id)
+        records = self.records(session_id)
+        if phase == "START" and any(records[name] for name in ("events", "decisions", "intents", "execution_receipts")):
+            raise ForwardSessionRunnerError("START checkpoint must precede market events and decisions")
+        if phase == "END" and state not in {SessionState.CLOSED, SessionState.NO_TRADE, SessionState.INCOMPLETE}:
+            raise ForwardSessionRunnerError("END checkpoint requires a terminal session state")
+        outbox_rows: list[dict[str, Any]] = []
+        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
+        if outbox_path.is_file():
+            with sqlite3.connect(str(outbox_path)) as outbox:
+                outbox_rows = [{"key": row[0], "state": row[1], "reconciled_by": row[2]}
+                               for row in outbox.execute(
+                                   "SELECT key, state, reconciled_by FROM outbox "
+                                   "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
+        hashes = {name: self._sha256(records[name])
+                  for name in ("events", "decisions", "lifecycle", "intents", "execution_receipts")}
+        hashes["outbox"] = self._sha256(outbox_rows)
+        if existing:
+            prior = json.loads(existing[1])
+            if prior.get("session_state") != state.value or prior.get("record_hashes") != hashes:
+                raise ForwardSessionRunnerError("END checkpoint ID already contains different immutable evidence")
+            return prior | {"checkpoint_sha256": existing[0]}
+        body = {"schema": "fb.forward-session-checkpoint.v1", "session_id": session_id,
+                "checkpoint_id": checkpoint_id, "phase": phase,
+                "captured_at": now.astimezone(timezone.utc).isoformat(),
+                "session_state": state.value, "record_hashes": hashes,
+                "ledger_sha256": None, "ledger_status": "NOT_INTEGRATED",
+                "atomic_with_ledger": False}
+        canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        self._con.execute("INSERT INTO runner_checkpoints VALUES (?, ?, ?, ?, ?)",
+                          [session_id, checkpoint_id, phase, digest, canonical])
+        self._con.commit()
+        return body | {"checkpoint_sha256": digest}
+
+    def verify_checkpoint(self, session_id: str, checkpoint_id: str) -> dict[str, Any]:
+        """Verify immutable checkpoint bytes and, for END, compare them with current journal contents."""
+        row = self._con.execute("SELECT phase, checkpoint_sha256, checkpoint_json FROM runner_checkpoints "
+                                "WHERE session_id=? AND checkpoint_id=?",
+                                [session_id, checkpoint_id]).fetchone()
+        if row is None:
+            raise ForwardSessionRunnerError("unknown checkpoint")
+        phase, expected_digest, encoded = row
+        actual_digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+        body = json.loads(encoded)
+        immutable_ok = actual_digest == expected_digest
+        current_ok: bool | None = None
+        if phase == "END" and immutable_ok:
+            current = self._checkpoint_hashes(session_id)
+            current_ok = current == body["record_hashes"]
+        return {"session_id": session_id, "checkpoint_id": checkpoint_id,
+                "immutable_evidence_valid": immutable_ok, "current_records_match": current_ok,
+                "ledger_sha256": body["ledger_sha256"], "ledger_status": body["ledger_status"],
+                "verification_complete": immutable_ok and current_ok is True and body["ledger_sha256"] is not None}
+
+    def _checkpoint_hashes(self, session_id: str) -> dict[str, str]:
+        records = self.records(session_id)
+        hashes = {name: self._sha256(records[name])
+                  for name in ("events", "decisions", "lifecycle", "intents", "execution_receipts")}
+        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
+        outbox_rows: list[dict[str, Any]] = []
+        if outbox_path.is_file():
+            with sqlite3.connect(str(outbox_path)) as outbox:
+                outbox_rows = [{"key": row[0], "state": row[1], "reconciled_by": row[2]}
+                               for row in outbox.execute(
+                                   "SELECT key, state, reconciled_by FROM outbox "
+                                   "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
+        hashes["outbox"] = self._sha256(outbox_rows)
+        return hashes
+
+    @staticmethod
+    def _sha256(value: Any) -> str:
+        canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def execute_paper_intent(self, *, session_id: str, order_id: str, decision_id: str,
                              event_id: str, side: str, quantity: int, limit_price: Decimal,
