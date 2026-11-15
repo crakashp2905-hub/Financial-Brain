@@ -291,7 +291,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_cohort_binding_cannot_be_overwritten"), (),
                      "Immutable cohort binding freezes strategy/code/model/parameter hashes before first eligible date and blocks prospective runs on changed hashes. Runtime adapters and required human approval/ADRs for new protected trials are not yet connected."),
     # ---- F08 ----
-    "FE-0091": Entry("NOT_STARTED", (), (), "Daily portfolio return not built for forward cohorts."),
+    "FE-0091": Entry("PARTIAL", ("test_daily_after_cost_portfolio_pnl_reconciles_to_ledger_accounts",
+                                  "test_mismatch_is_explicit_and_can_fail_closed",
+                                  "test_ledger_reconciliation_requires_explicit_pnl_accounts"), (),
+                     "FE-0081 daily capital-weighted return model now has an exact-decimal bridge to opening/closing double-entry P&L accounts and an explicit fail-closed mismatch gate. Production paper OMS daily account snapshots and full cash/position valuation wiring remain unconnected."),
     "FE-0092": Entry("NOT_STARTED", (), (), "HAC or block bootstrap not built."),
     "FE-0093": Entry("NOT_STARTED", (), (), "Cluster-robust attribution not built."),
     "FE-0094": Entry("NOT_STARTED", (), (), "Family-wise error control not built."),
