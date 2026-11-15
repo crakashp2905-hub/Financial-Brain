@@ -26,21 +26,21 @@
       }
     },
     {
-      "artifact_sha256": "ae7940b26491e439ed36fcccbae92f281747191bf9eb01fe47eb1c857124808e",
+      "artifact_sha256": "31858d2d77cba94a9272572b6e791fe79ba8f6eb495dd367ef66d1175ce762e2",
       "id": "forward-paper-account-authority",
       "maturity": "partial",
       "sources": {
-        "src/financial_brain/forward_edge/paper_account_bridge.py": "24c9395f67839da315919ac2918c8036d7802fea2d9dfccce4ab472a628fa3d2",
-        "src/financial_brain/forward_edge/session_runner.py": "e1ea0afc71cb4af0e7e4d796455993c62e3c62c7b048fbe16093652102a670d1",
+        "src/financial_brain/forward_edge/paper_account_bridge.py": "746baed5d7a11bec71986e1765b63a0def9b850d0163e985f81c9f5d7dcea372",
+        "src/financial_brain/forward_edge/session_runner.py": "1616231071ccaf383ea816b394fea27a7582805c97e7d1d5d97214ddb1ba5a13",
         "src/financial_brain/kernel/paper_authority.py": "e4f0a17131d3bc331edba0454e113206130d4428101e117e88f2533ffc6cbe7c",
         "src/financial_brain/paper/intraday_runner.py": "6f7ce92c70bcf53f86baf0d287d8eae069493c175f90d46014edf976ad391992"
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
         "tests/test_forward_paper_account_bridge.py": "773d0a7edcc9309a6fdc1e4152963ae41be25b6eccf77fbce35e5664c7c3ceeb",
-        "tests/test_forward_session_runner.py": "46e96de6f782847f8528db3ca19a80897ac9ef766785d3728b211770fb18565f",
+        "tests/test_forward_session_runner.py": "4c91bd2654f4f891e6325e870f1af1d56f038afe32a97725f04632b9493b049a",
         "tests/test_paper_execution_authority.py": "8026404c4ed069cf68e3456a4aae1b6e057c5079fa3bd156ee47f7ac11e02c93",
-        "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782"
+        "tests/test_phase5_intraday_runner.py": "e40c667c59db13bba344e4a216c40f59ae6c737b972bf53e6a7d00d4ca359cef"
       }
     },
     {
@@ -56,7 +56,7 @@
       }
     },
     {
-      "artifact_sha256": "91175fd3dfc59574eec55705066089deac948d3aa5915dee962f829cf5c38e68",
+      "artifact_sha256": "d21ad7447300a05d2d3951bf0761402d64dca82b3ce93f9650addee2bf381a30",
       "id": "market-data-availability-lineage",
       "maturity": "partial",
       "sources": {
@@ -66,9 +66,9 @@
       },
       "test_scope": "full-pytest-suite-required-by-ci",
       "tests": {
-        "tests/test_kite_forward_events.py": "49fea53e1aed2ea1e0a84dececef08e23dac22a557f7b878b2e8c063184b359b",
+        "tests/test_kite_forward_events.py": "0fa896c32ff9b4f8167208dc1282a9a5dd10bfa31325648defc73a1bddf9fd6c",
         "tests/test_kite_history_refresh.py": "47e657b735678f5ecfd24a44a71485883727f9e2d01f5a35835d9de959b54149",
-        "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782"
+        "tests/test_phase5_intraday_runner.py": "e40c667c59db13bba344e4a216c40f59ae6c737b972bf53e6a7d00d4ca359cef"
       }
     },
     {
@@ -100,7 +100,7 @@
       }
     },
     {
-      "artifact_sha256": "4550c5b8ad67f410c4ece1f9909a1c319c28a0a539bc71e58dcfdd1ecbe05f90",
+      "artifact_sha256": "0254a1be44a3a2354e41c10691f63c69b7d9b5fb89069c11710b3e6993fdc104",
       "id": "registered-paper-book-isolation",
       "maturity": "partial",
       "sources": {
@@ -113,12 +113,12 @@
       "tests": {
         "tests/test_forward_edge_f02.py": "50f9b0d149f605a273463f042aeea2e9ffc0faefc17d5b688be1937af055cebc",
         "tests/test_paper_account_portfolio.py": "e6a8cb44ecb97046ddd9f387db1d166be6d0c8d83cd8b9c56e145376eec30c45",
-        "tests/test_phase5_intraday_runner.py": "c697076397e4f7cf5424fbef74d833fb41c6cc664f7c7383d0cc5091b8073782",
+        "tests/test_phase5_intraday_runner.py": "e40c667c59db13bba344e4a216c40f59ae6c737b972bf53e6a7d00d4ca359cef",
         "tests/test_registered_paper_books.py": "751f464ce876d6de790970716333010c63b5f5216ff2da251092c7af4a01c317"
       }
     }
   ],
-  "manifest_sha256": "aee85ab5ba60f4b60446f2e7a814c4ab71a52718abf943efeb23de42a0c4bd4c",
+  "manifest_sha256": "332e4acb045fbb33545d2e76b05833ef720726b1373bf3a744d6e77f08c9e636",
   "matrix_sha256": "72b9b5b162e4b9239fa078da05a6aa12464900147cf8cb4e7252ba779b2237d2",
   "schema_version": "fb.capability-evidence.v1"
 }
