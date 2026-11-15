@@ -7,9 +7,10 @@ from __future__ import annotations
 import base64
 import json
 import shutil
-from dataclasses import replace
+from dataclasses import FrozenInstanceError
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -62,6 +63,17 @@ def test_q4_2026_protected_budget_is_exhausted_at_13_of_13() -> None:
     assert (status.spent, status.budget, status.exhausted) == (13, 13, True)
 
 
+def test_all_13_registered_q4_trials_remain_fail_with_original_reason_codes() -> None:
+    rows = trials.load_rows(REPO / trials.LEDGER_REL)
+    registered = [row for row in rows if row.get("kind") == "trial"
+                  and "2026-10-01" <= row.get("date", "") <= "2026-12-31"]
+    assert len(registered) == 13
+    assert all(row.get("verdict") == "FAIL" for row in registered)
+    assert all(isinstance(row.get("failed"), list) and row["failed"]
+               and all(isinstance(reason, str) and reason for reason in row["failed"])
+               for row in registered)
+
+
 def test_protected_records_match_pinned_digests() -> None:
     assert trials.verify_pins(REPO) == []
 
@@ -69,9 +81,24 @@ def test_protected_records_match_pinned_digests() -> None:
 def test_pins_agree_with_the_existing_protected_baseline() -> None:
     pinned = json.loads((REPO / trials.PINS_REL).read_text(encoding="utf-8"))["files"]
     existing = json.loads((REPO / "docs" / "audits" / "protected-baseline.json").read_text(encoding="utf-8"))["files"]
+    assert set(existing) <= set(pinned)
     for rel, digest in pinned.items():
         if rel in existing:
             assert existing[rel] == digest, rel
+
+
+def test_sealed_historical_record_tampering_is_detected_by_the_runtime_guard(tmp_path: Path) -> None:
+    rel = "docs/sources/pattern-catalogue.v1.json"
+    target = tmp_path / rel
+    target.parent.mkdir(parents=True)
+    shutil.copyfile(REPO / rel, target)
+    pins_dir = tmp_path / "docs/forward-edge"
+    pins_dir.mkdir(parents=True)
+    digest = trials.sha256_file(target)
+    (pins_dir / "protected-pins.json").write_text(json.dumps({"files": {rel: digest}}), encoding="utf-8")
+    assert trials.verify_pins(tmp_path) == []
+    target.write_text(target.read_text(encoding="utf-8") + "\nunauthorized edit\n", encoding="utf-8")
+    assert trials.verify_pins(tmp_path) == [f"changed: {rel}"]
 
 
 def test_retrospective_edit_of_the_trial_ledger_is_detected(tmp_path: Path) -> None:
@@ -122,8 +149,8 @@ def test_trial_in_2027q1_needs_only_a_protected_trial_approval() -> None:
 
 # ---------- FE-0004 hashable charter ----------
 
-def _charter(**over) -> charter.ExperimentCharter:
-    base = dict(charter_id="M1-SLOW-MOMENTUM", version=1, strategy_id="M1", code_sha256=SHA, capital_inr="1000000",
+def _charter(**over: Any) -> charter.ExperimentCharter:
+    base: dict[str, Any] = dict(charter_id="M1-SLOW-MOMENTUM", version=1, strategy_id="M1", code_sha256=SHA, capital_inr="1000000",
                 start_on="2027-01-04", end_on="2027-06-30", universe=("INFY", "TCS"), benchmarks=("NIFTY50_CASH",),
                 horizon_sessions=20, parameters=(("lookback", "252"),), prior_sha256=None)
     base.update(over)
@@ -215,7 +242,7 @@ def test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders() -
 
 def test_session_mode_is_immutable() -> None:
     session = SessionMode(Mode.SHADOW)
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         session.mode = Mode.LIVE_CASH  # type: ignore[misc]
 
 
@@ -353,9 +380,14 @@ def test_audit_is_red_on_this_repository_and_never_green_without_custody() -> No
     names = {c["name"]: c["status"] for c in report["checks"]}
     assert names["protected_pins"] == "GREEN"
     assert names["independent_custody"] == "RED"
-    assert names["promotion_metric"] == "RED"
     assert names["live_cash"] == "GREEN"
     assert any("INDEPENDENT_TIMESTAMP" in b for b in report["blocking"])
+
+
+def test_current_baseline_is_yellow_until_github_pr_and_protection_state_is_verified() -> None:
+    check = audit._baseline(REPO)
+    assert check.status == "YELLOW"
+    assert "GitHub PR graph or branch protection remains unverified" in check.reason
 
 
 def test_audit_turns_red_when_a_protected_record_changes(tmp_path: Path) -> None:

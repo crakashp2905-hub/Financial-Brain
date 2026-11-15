@@ -101,10 +101,12 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
   **Acceptance:** The baseline lists observed SHA, data freshness, access limitations and link to each evidence source.
 - [ ] **PE-0002** — Prohibit edits to protected trial records and sealed historical outcomes.  
   **Acceptance:** Byte-for-byte or pre-existing canonical-hash comparison fails on any unauthorized change.
-- [ ] **PE-0003** — Snapshot and hash any actual local paper DuckDB, normalized tick archive, and strategy manifests before migration.  
+- [x] **PE-0003** — Snapshot and hash any actual local paper DuckDB, normalized tick archive, and strategy manifests before migration.
   **Acceptance:** Backup manifest restores original database and compares canonical checksums.
-- [ ] **PE-0004** — Classify all 13 Q4 2026 registered failures as FAIL, retaining the original reasons.  
+  **Completion evidence:** `docs/edge-program/pre-migration-backup-2026-11-15.json` records the manifest digest and restore result. A local-only backup covers 14 present artifacts (all top-level `paper*.duckdb`, portfolio/OMS databases, normalized quote archive, protected pins and three trial strategy manifests); every restored file is byte-identical to its recorded SHA-256, and every DuckDB opens read-only. Raw databases remain in ignored local `data/edge_program_backups/pre-migration-20261115/` and are not pushed.
+- [x] **PE-0004** — Classify all 13 Q4 2026 registered failures as FAIL, retaining the original reasons.
   **Acceptance:** A registry diff detects any silent reclassification or deletion.
+  **Completion evidence:** `tests/test_forward_edge_f00.py::test_all_13_registered_q4_trials_remain_fail_with_original_reason_codes` verifies all 13 Q4 trial rows remain `FAIL` with non-empty original failure-code lists. The full ledger SHA is pinned in `docs/forward-edge/protected-pins.json`; `test_retrospective_edit_of_the_trial_ledger_is_detected` verifies a reclassification changes the guard result.
 - [ ] **PE-0005** — Expose CI lint failures and skip counts instead of reporting only the local pytest total.  
   **Acceptance:** Release gate blocks if lint, type checks, migrations, coverage or any OS required job fails.
 - [ ] **PE-0006** — Require `main` review and status checks; verify settings via GitHub rather than a README assertion.  

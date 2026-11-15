@@ -1,0 +1,115 @@
+{
+  "schema": "fb.financial_brain.current_baseline.v1",
+  "captured_at_utc": "2026-11-15T14:12:46Z",
+  "repository": "https://github.com/crakashp2905-hub/Financial-Brain",
+  "git": {
+    "observed_main_ref": {
+      "sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
+      "evidence": "git rev-parse refs/remotes/origin/main",
+      "limitation": "Local remote-tracking reference; not refreshed from GitHub during this capture."
+    },
+    "head": {
+      "branch": "feature/forward-edge-f00-f01",
+      "sha": "c1aeb19230afdf97b45658a8b8cac724079b57d7",
+      "evidence": "git rev-parse HEAD"
+    },
+    "open_pull_requests": {
+      "status": "UNVERIFIED",
+      "evidence": "GitHub app repository lookup returned 404; PR search returned 422; gh auth status reports invalid token.",
+      "items": null
+    },
+    "branch_protection": {
+      "status": "UNVERIFIED",
+      "evidence": "No successful GitHub branch-protection API response; local gh token is invalid."
+    },
+    "working_tree": {
+      "tracked_changes": 0,
+      "untracked_paths": [
+        ".pytest_tmp_live2/",
+        ".pytest_tmp_live4/",
+        ".worktrees/",
+        "docs/forward-edge/exploratory/",
+        "docs/forward-edge/logs/f04-fix-exit.txt",
+        "docs/forward-edge/logs/f04-tip-exit.txt",
+        "docs/forward-edge/logs/full-suite-f04-fixed.txt",
+        "docs/forward-edge/logs/full-suite-f04-tip.txt",
+        "scripts/exploratory/"
+      ]
+    }
+  },
+  "runtime": {
+    "os": "Windows",
+    "python": "3.13.5",
+    "timezone": "Asia/Calcutta",
+    "evidence": "python --version; process timezone from workspace context"
+  },
+  "market_data": {
+    "quote_archive": {
+      "path": "data/quote_archive.duckdb",
+      "query": "SELECT count(*), min(ts), max(ts), count(distinct symbol) FROM quotes",
+      "rows": 2432910,
+      "symbols": 228,
+      "first_quote_local_time": "2026-10-07T09:15:00.000559",
+      "latest_quote_local_time": "2026-11-13T15:29:59.233090",
+      "freshness": "Through the last observed NSE session in the archive; not live on capture date.",
+      "source_entitlement_and_retention_rights": "UNVERIFIED"
+    },
+    "credentials_present": {
+      "KITE_API_KEY": false,
+      "KITE_ACCESS_TOKEN": false,
+      "FB_TIMESTAMP_PROVIDER": false,
+      "FB_TRUST_ROOTS": false
+    },
+    "access_limitations": [
+      "No Kite credentials were present in the process environment at capture.",
+      "Quote archive provenance, Kite entitlement and retention rights are not proved by the local rows.",
+      "No independent timestamp provider or pinned trust root is configured."
+    ]
+  },
+  "source_capabilities": {
+    "read_only_kite_quotes": {
+      "status": "CODE_PRESENT_CREDENTIALS_MISSING",
+      "evidence": ["src/financial_brain/forward_edge/session_runner.py::ingest_kite_archive", "src/financial_brain/forward_edge/quote_archive.py"],
+      "limitation": "No current live session or entitlement evidence."
+    },
+    "historical_replay": {
+      "status": "CODE_PRESENT",
+      "evidence": ["src/financial_brain/forward_edge/cli.py", "src/financial_brain/paper/intraday_runner.py::run_replay"],
+      "limitation": "Replay does not prove prospective performance."
+    },
+    "shadow": {
+      "status": "MODE_DEFINED_RUNTIME_UNVERIFIED",
+      "evidence": ["src/financial_brain/forward_edge/modes.py::Mode.SHADOW"],
+      "limitation": "Continuous scheduled shadow operation is not evidenced here."
+    },
+    "local_paper": {
+      "status": "SIMULATION_CODE_AND_LOCAL_BOOKS_PRESENT",
+      "evidence": ["src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/kernel/oms.py", "data/paper_live.duckdb", "data/paper_book.duckdb"],
+      "limitation": "Latest local paper database mtime is 2026-11-13; this baseline does not establish cost-complete profitability."
+    },
+    "broker_dryrun": {
+      "status": "MODE_DEFINED_EXTERNAL_COMPLIANCE_UNVERIFIED",
+      "evidence": ["src/financial_brain/forward_edge/modes.py::Mode.BROKER_DRYRUN"],
+      "limitation": "No broker account or compliance evidence was inspected."
+    },
+    "live_cash": {
+      "status": "DISABLED",
+      "evidence": ["src/financial_brain/forward_edge/modes.py::PHYSICAL_ORDERS_ENABLED"],
+      "limitation": "Build policy disables physical orders; no live authorization is asserted."
+    }
+  },
+  "release_state": {
+    "infrastructure": "YELLOW_UNVERIFIED_GITHUB_PROTECTION_AND_CI_GRAPH",
+    "research": "RED_NO_PROMOTION_GRADE_INDEPENDENT_FORWARD_EVIDENCE",
+    "trading": "RED_LIVE_CASH_DISABLED"
+  },
+  "evidence_sources": [
+    "git rev-parse HEAD refs/remotes/origin/main",
+    "git status --porcelain=v1",
+    "gh auth status",
+    "read-only DuckDB query against data/quote_archive.duckdb",
+    "src/financial_brain/forward_edge/modes.py",
+    "src/financial_brain/forward_edge/session_runner.py",
+    "docs/edge-program/PROGRESS.md"
+  ]
+}
