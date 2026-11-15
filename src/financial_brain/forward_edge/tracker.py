@@ -235,7 +235,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_stale_missing_and_late_marks_never_authorize_carry",
                                   "test_session_close_journal_is_immutable_and_idempotent"), (),
                      "Deterministic paper valuation, expiry disposition, explicit next-session carry authorization and immutable SQLite close reports are implemented. Existing OMS/session runners, authoritative settlement marks and automatic close orders remain unconnected."),
-    "FE-0076": Entry("NOT_STARTED", (), (), "Completeness report not built."),
+    "FE-0076": Entry("PARTIAL", ("test_missing_segments_or_close_marks_downgrade_evidence",
+                                  "test_only_complete_incident_free_session_is_eligible",
+                                  "test_completeness_journal_is_immutable_idempotent_and_restartable"), (),
+                     "Immutable SQLite session completeness report hashes declared/received segments, incidents and close-report evidence; missing data or incidents downgrade eligibility. Live session runner and independently attested source evidence are not connected."),
     "FE-0077": Entry("NOT_STARTED", (), (), "Backup and restore drill not built."),
     "FE-0078": Entry("NOT_STARTED", (), (), "Runbooks not written."),
     # ---- F07 ----
