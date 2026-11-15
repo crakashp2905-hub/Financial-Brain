@@ -5,6 +5,8 @@ This tracker belongs to the 218 unique `PE-####` tasks in
 substitute for this checklist. Task wording is retained from the attachment; the repo copy adds checked boxes and
 completion evidence only after acceptance criteria pass. The original Downloads file is untouched.
 
+Verified checklist count: **4 / 218 complete**. Partial tasks are reported separately and are not included in this count.
+
 ## Current package status
 
 | Task | Status | Evidence | Remaining acceptance gap |
@@ -15,6 +17,7 @@ completion evidence only after acceptance criteria pass. The original Downloads 
 | PE-0021 | Partial | `ForwardSessionStore` and `ForwardSessionRunner` persist lifecycle, source events, decisions and report hashes in SQLite WAL | Shared durable journal and decision-manifest integration, transaction boundaries and fault-injection proof remain open. |
 | PE-0022 | Partial | Durable kernel outbox now wraps deterministic paper execution receipts; tests cover filled/partial/missed/rejected, crash-after-receipt UNKNOWN, explicit reconciliation and no duplicate receipt | Canonical OMS order acknowledgements and double-entry account postings are not integrated. |
 | PE-0023 | Partial | `tests/test_forward_edge_session_runner.py` verifies persisted preflight, market events, causal decisions, paper intents and execution receipts | Strategy-driven data rejection and risk verdicts, OMS state and canonical fill/cost accounting still need the integrated strategy/OMS path. |
+| PE-0024 | Complete in session identity scope | `tests/test_forward_edge_session_state.py::test_strategy_attempt_keys_are_durable_and_never_overwrite_prior_attempt` verifies stable strategy/date/cohort/mode/attempt keys, immutable config binding and separate persisted attempts | Callers must use `session_attempt_key()` and unique operator or scheduler `attempt_id` values for intentional reruns; automatic scheduling is a separate integration task. |
 | PE-0019 | Partial | `tests/test_forward_edge_kite_market_data.py`, `tests/test_phase5_intraday_runner.py`; commit `53ca3e3` and receipt identity fix `22e4c24` | A genuinely observed Kite session and account entitlement/retention record are not present in the repository. |
 | PE-0030 | Partial | `normalize_kite_quote()` retains available best bid/ask, visible quantities, depth, volume, session OHLC and circuit limits | Legacy `ingest/kite_live.forward_events` is absent and the normalized fields are not yet consumed by an execution gate. |
 | PE-0031 | Partial | `test_ltp_only_observation_is_archived_as_non_executable_tick` and `test_executable_quote_requires_two_sided_positive_displayed_liquidity` | `executable_quote()` now rejects ticks, missing depth and zero displayed liquidity; all strategy and promotion adapters still need to call it at execution entry points. |

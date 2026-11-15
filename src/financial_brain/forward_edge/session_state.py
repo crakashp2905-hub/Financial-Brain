@@ -38,6 +38,27 @@ class SessionState(StrEnum):
     REJECTED = "REJECTED"
 
 
+def session_attempt_key(*, strategy_sha256: str, exchange_date: date, cohort: str,
+                        mode: str, attempt_id: str) -> str:
+    """Return a stable, immutable key for one strategy/date/cohort/mode attempt.
+
+    Repeating the same attempt identity is idempotent; a deliberate rerun must use a
+    fresh ``attempt_id`` and therefore cannot overwrite the earlier session record.
+    The digest avoids unsafe or excessively long caller supplied identifiers.
+    """
+    if len(strategy_sha256) != 64 or any(c not in "0123456789abcdef" for c in strategy_sha256):
+        raise SessionStateError("strategy_sha256 must be lowercase SHA-256")
+    if not isinstance(exchange_date, date):
+        raise SessionStateError("exchange_date must be a date")
+    if not all(isinstance(value, str) and value.strip()
+               for value in (cohort, mode, attempt_id)):
+        raise SessionStateError("cohort, mode and attempt_id are required")
+    body = {"strategy_sha256": strategy_sha256, "exchange_date": exchange_date.isoformat(),
+            "cohort": cohort, "mode": mode, "attempt_id": attempt_id}
+    encoded = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return "forward-attempt:" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 @dataclass(frozen=True)
 class ForwardRunConfig:
     exchange_date: date
@@ -48,13 +69,16 @@ class ForwardRunConfig:
     capital: Decimal
     constraints: dict[str, Any]
     ledger_id: str
+    mode: str = "paper"
+    attempt_id: str = "default"
     schema: str = SCHEMA
 
     def __post_init__(self) -> None:
         if self.schema != SCHEMA:
             raise SessionStateError(f"unsupported run config schema: {self.schema}")
-        if not self.cohort.strip() or not self.benchmark.strip() or not self.ledger_id.strip():
-            raise SessionStateError("cohort, benchmark and ledger_id are required")
+        if not all(value.strip() for value in (self.cohort, self.benchmark, self.ledger_id,
+                                               self.mode, self.attempt_id)):
+            raise SessionStateError("cohort, benchmark, ledger_id, mode and attempt_id are required")
         if len(self.strategy_sha256) != 64 or any(c not in "0123456789abcdef" for c in self.strategy_sha256):
             raise SessionStateError("strategy_sha256 must be lowercase SHA-256")
         try:
@@ -78,7 +102,8 @@ class ForwardRunConfig:
                 "benchmark": self.benchmark,
                 "instrument_universe": sorted(self.instrument_universe),
                 "capital": format(Decimal(self.capital).normalize(), "f"),
-                "constraints": self.constraints, "ledger_id": self.ledger_id}
+                "constraints": self.constraints, "ledger_id": self.ledger_id,
+                "mode": self.mode, "attempt_id": self.attempt_id}
 
     def canonical_json(self) -> str:
         return json.dumps(self.body(), sort_keys=True, separators=(",", ":"), allow_nan=False)

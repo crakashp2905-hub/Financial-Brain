@@ -8,6 +8,7 @@ from financial_brain.forward_edge.session_state import (
     ForwardSessionStore,
     SessionState,
     SessionStateError,
+    session_attempt_key,
 )
 
 
@@ -73,4 +74,32 @@ def test_transitions_are_reasoned_idempotent_and_clock_monotonic(tmp_path):
         store.transition("s", SessionState.REJECTED, now=event_time)
     with pytest.raises(SessionStateError, match="move backwards"):
         store.transition("s", SessionState.OPEN, now=NOW)
+    store.close()
+
+
+def test_strategy_attempt_keys_are_durable_and_never_overwrite_prior_attempt(tmp_path):
+    first = config(mode="paper", attempt_id="run-001")
+    second = config(mode="paper", attempt_id="run-002")
+    first_id = session_attempt_key(strategy_sha256=first.strategy_sha256,
+                                   exchange_date=first.exchange_date, cohort=first.cohort,
+                                   mode=first.mode, attempt_id=first.attempt_id)
+    second_id = session_attempt_key(strategy_sha256=second.strategy_sha256,
+                                    exchange_date=second.exchange_date, cohort=second.cohort,
+                                    mode=second.mode, attempt_id=second.attempt_id)
+    assert first_id != second_id
+    assert session_attempt_key(strategy_sha256=first.strategy_sha256,
+                               exchange_date=first.exchange_date, cohort=first.cohort,
+                               mode=first.mode, attempt_id=first.attempt_id) == first_id
+
+    store = ForwardSessionStore(tmp_path / "sessions.sqlite")
+    assert store.create(first_id, first, now=NOW)
+    assert store.create(second_id, second, now=NOW + timedelta(seconds=1))
+    first_digest = store.config_sha256(first_id)
+    store.transition(first_id, SessionState.PREFLIGHT, now=NOW + timedelta(seconds=2))
+    assert store.create(first_id, first, now=NOW + timedelta(seconds=3)) is False
+    assert store.config_sha256(first_id) == first_digest
+    assert store.state(first_id) is SessionState.PREFLIGHT
+    assert store.state(second_id) is SessionState.PLANNED
+    with pytest.raises(SessionStateError, match="different config"):
+        store.create(first_id, config(mode="paper", attempt_id="altered"), now=NOW)
     store.close()
