@@ -92,13 +92,15 @@ def audit(repo: Path = Path(".")) -> list[dict]:
                 origins.append(n)
                 continue
             results.append({"note": n, "commit": c[0][0], "time": c[0][1]})
-        reg_text = first_text
         edits, editorial = [], []
+        prev_text = first_text
         for h, t in commits[1:]:
-            if _sha(repo, h, rel) == _sha(repo, reg_hash, rel):
-                continue
             text = _git(repo, "show", f"{h}:{rel}")
-            (editorial if _editorial_only(reg_text, text) else edits).append({"commit": h, "time": t})
+            if _sha(repo, h, rel) != _sha(repo, reg_hash, rel):
+                # Each edit is judged against the version just before it, so a later editorial repair is not
+                # held to the original text; a hypothesis change is caught at the commit that made it.
+                (editorial if _editorial_only(prev_text, text) else edits).append({"commit": h, "time": t})
+            prev_text = text
         first_result = min((r["time"] for r in results), default="")
         if not results:
             status = "NO_RESULT_YET"

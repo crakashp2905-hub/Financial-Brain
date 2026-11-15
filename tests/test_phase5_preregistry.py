@@ -96,3 +96,24 @@ def test_this_repository_has_no_violations():
     root = Path(__file__).resolve().parents[1]
     bad = [r["prereg"] for r in PR.audit(root) if r["status"] in PR.VIOLATIONS]
     assert bad == []
+
+
+def test_a_wikilink_line_break_repair_after_a_result_is_editorial_not_a_change(repo):
+    write(repo, "PRE-REGISTERED a.md", "claim A see [[Source notes - Some\nBook]]")
+    commit(repo, "reg", "2026-01-01T10:00:00+05:30")
+    write(repo, "Result of a.md", "see [[PRE-REGISTERED a]]")
+    commit(repo, "res", "2026-01-02T10:00:00+05:30")
+    write(repo, "PRE-REGISTERED a.md", "claim A see [[Source notes - Some Book]]")
+    commit(repo, "repair", "2026-01-03T10:00:00+05:30")
+    assert status(repo, "PRE-REGISTERED a.md") == "OK"
+    assert len(next(r for r in PR.audit(repo) if r["prereg"] == "PRE-REGISTERED a.md")["editorial"]) == 1
+
+
+def test_a_wording_change_hidden_inside_a_link_repair_is_still_a_change(repo):
+    write(repo, "PRE-REGISTERED a.md", "claim A see [[Source notes - Some\nBook]]")
+    commit(repo, "reg", "2026-01-01T10:00:00+05:30")
+    write(repo, "Result of a.md", "see [[PRE-REGISTERED a]]")
+    commit(repo, "res", "2026-01-02T10:00:00+05:30")
+    write(repo, "PRE-REGISTERED a.md", "claim B see [[Source notes - Some Book]]")
+    commit(repo, "edit", "2026-01-03T10:00:00+05:30")
+    assert status(repo, "PRE-REGISTERED a.md") == "CHANGED_AFTER_RESULT"
