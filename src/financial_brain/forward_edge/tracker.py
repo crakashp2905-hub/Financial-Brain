@@ -378,7 +378,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_capacity_curve_degrades_net_alpha_and_caps_at_supported_depth"),
                      (BLK_DATA,),
                      "Universe capacity reports hash per-instrument ADV age, visible-depth age and calibrated net-alpha scenarios; stale/future inputs fail closed. Real quote/depth entitlements, session-calendar freshness, provenance attestation and runner/dashboard integration remain outstanding."),
-    "FE-0112": Entry("NOT_STARTED", (), (), "Disaster stress tests not built."),
+    "FE-0112": Entry("PARTIAL", ("test_disaster_scenarios_bound_loss_and_report_execution_and_expiry_effects",
+                                  "test_disaster_suite_requires_each_scenario_class_and_complete_shock_coverage",
+                                  "test_network_partition_cannot_be_declared_without_disabling_entries"), (),
+                     "Deterministic gap, limit-down, spread blowout, expiry and network-partition scenarios report mark loss, execution cost, unfilled exposure, entry disablement and reconciliation requirements. Scenarios are not calibrated forecasts and are not yet run against production book snapshots or operational recovery drills."),
     "FE-0113": Entry("NOT_STARTED", (), (), "NO_TRADE as explicit decisions in the forward path not built."),
     # ---- F10 ----
     "FE-0114": Entry("NOT_STARTED", (), (), "Cockpit not built."),
