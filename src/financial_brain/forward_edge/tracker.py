@@ -156,7 +156,9 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_lookahead_contract_rejects_naive_and_duplicate_inputs",
                                   "test_prefix_output_survives_future_perturbations_and_detects_leakage"), (),
                      "Reusable point-in-time input hash and future-perturbation contract are implemented. Existing strategy feature families are not yet universally evaluated against this contract."),
-    "FE-0044": Entry("NOT_STARTED", (), (), "Coverage score not built."),
+    "FE-0044": Entry("PARTIAL", ("test_coverage_report_uses_explicit_denominators_and_labels_fixture_sources",
+                                  "test_coverage_rejects_intents_outside_declared_sessions_and_naive_clock"), (BLK_DATA,),
+                     "Coverage report calculates session, name, quote/depth and intent-notional fractions against caller-declared expected populations. Fixture sources are labeled; live provenance is not authenticated and the report is not yet attached to P&L claims."),
     # ---- F04 ----
     "FE-0045": Entry("NOT_STARTED", (), (BLK_MARKET, BLK_TIME), "Cohort schedule freeze not built."),
     "FE-0046": Entry("PARTIAL", (), (), "Canonical manifest exists (evidence/decision_manifest.py); cross-platform hash not verified."),

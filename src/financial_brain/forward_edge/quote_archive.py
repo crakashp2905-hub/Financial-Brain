@@ -27,6 +27,24 @@ class FeedHealth:
     last_received_at: datetime | None
 
 
+@dataclass(frozen=True)
+class CoverageReport:
+    expected_sessions: int
+    covered_sessions: int
+    expected_names: int
+    covered_names: int
+    requested_intent_notional: float
+    covered_intent_notional: float
+    quote_coverage_fraction: float
+    depth_coverage_fraction: float
+    source_classes: tuple[str, ...]
+    missing_keys: tuple[str, ...]
+
+    @property
+    def claim_scope(self) -> str:
+        return "LIVE_OBSERVED" if self.source_classes == ("live",) else "FIXTURE_OR_MIXED"
+
+
 class QuoteArchive:
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
@@ -117,3 +135,59 @@ class QuoteArchive:
         names = [x[1] for x in self._con.execute("PRAGMA table_info(market_events)").fetchall()]
         return [dict(zip(names, row, strict=True)) for row in self._con.execute(
             "SELECT * FROM market_events ORDER BY received_at, event_id").fetchall()]
+
+    def coverage(self, *, expected_sessions: set[str],
+                 intents: dict[tuple[str, str], float], as_of: datetime) -> CoverageReport:
+        """Measure session/name/notional quote and depth coverage against explicit denominators.
+
+        `intents` keys are `(session_id, instrument_id)` and values are requested INR notional.
+        Source values equal to `kite` or `exchange` are treated as live labels; this report does
+        not authenticate them, so independent evidence is still required for formal claims.
+        """
+        if as_of.tzinfo is None or as_of.utcoffset() is None:
+            raise ValueError("as_of must be timezone aware")
+        if not expected_sessions or any(not k[0] or not k[1] for k in intents):
+            raise ValueError("coverage needs expected sessions and valid intent keys")
+        if any(not isinstance(value, (int, float)) or value < 0 for value in intents.values()):
+            raise ValueError("intent notionals must be finite non-negative numbers")
+        by_session_names: dict[str, set[str]] = {s: set() for s in expected_sessions}
+        covered_quotes: set[tuple[str, str]] = set()
+        covered_depth: set[tuple[str, str]] = set()
+        sources: set[str] = set()
+        missing: list[str] = []
+        cutoff = as_of.astimezone(timezone.utc)
+        for session_id, instrument_id in intents:
+            if session_id not in expected_sessions:
+                raise ValueError(f"intent session {session_id} is not in expected_sessions")
+            by_session_names[session_id].add(instrument_id)
+            quote = self._con.execute("""
+                SELECT kind, event_time, received_at, source FROM market_events
+                WHERE instrument_id = ? AND available_at <= ? AND kind IN ('quote','book_depth')
+                ORDER BY available_at DESC, event_id LIMIT 10
+            """, [instrument_id, cutoff.isoformat()]).fetchall()
+            quote_ok = any(kind == "quote" for kind, *_ in quote)
+            depth_ok = any(kind == "book_depth" for kind, *_ in quote)
+            key = (session_id, instrument_id)
+            if quote_ok:
+                covered_quotes.add(key)
+            if depth_ok:
+                covered_depth.add(key)
+            if not quote_ok:
+                missing.append(f"{session_id}:{instrument_id}:QUOTE")
+            if not depth_ok:
+                missing.append(f"{session_id}:{instrument_id}:DEPTH")
+            sources.update("live" if source.lower() in {"kite", "exchange", "zerodha_kite"} else "fixture"
+                           for _, _, _, source in quote)
+        expected_name_keys = [(s, name) for s in expected_sessions
+                              for session, name in intents if session == s]
+        expected_notional = sum(float(v) for v in intents.values())
+        quote_notional = sum(float(intents[k]) for k in covered_quotes)
+        depth_notional = sum(float(intents[k]) for k in covered_depth)
+        quote_fraction = quote_notional / expected_notional if expected_notional else 0.0
+        depth_fraction = depth_notional / expected_notional if expected_notional else 0.0
+        covered_sessions = {session for session, _ in covered_quotes}
+        covered_names = {instrument for _, instrument in covered_quotes}
+        name_count = len({instrument for _, instrument in expected_name_keys})
+        return CoverageReport(len(expected_sessions), len(covered_sessions), name_count, len(covered_names),
+                              expected_notional, quote_notional, quote_fraction, depth_fraction,
+                              tuple(sorted(sources)), tuple(sorted(missing)))

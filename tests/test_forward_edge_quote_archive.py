@@ -81,3 +81,37 @@ def test_decision_snapshot_excludes_late_data_and_is_reproducible(tmp_path) -> N
                              decision_time=T0 - timedelta(seconds=1))
     finally:
         archive.close()
+
+
+
+
+def test_coverage_report_uses_explicit_denominators_and_labels_fixture_sources(tmp_path) -> None:
+    archive = QuoteArchive(tmp_path / "quotes.sqlite3")
+    try:
+        archive.append(_quote(1))
+        report = archive.coverage(expected_sessions={"2026-11-15", "2026-11-16"},
+                                  intents={("2026-11-15", "NSE:INFY"): 1000,
+                                           ("2026-11-16", "NSE:RELIANCE"): 3000},
+                                  as_of=T0 + timedelta(seconds=10))
+        assert report.expected_sessions == 2 and report.covered_sessions == 1
+        assert report.expected_names == 2 and report.covered_names == 1
+        assert report.requested_intent_notional == 4000
+        assert report.covered_intent_notional == 1000
+        assert report.quote_coverage_fraction == pytest.approx(0.25)
+        assert report.depth_coverage_fraction == 0
+        assert report.claim_scope == "FIXTURE_OR_MIXED"
+        assert "2026-11-16:NSE:RELIANCE:QUOTE" in report.missing_keys
+    finally:
+        archive.close()
+
+
+def test_coverage_rejects_intents_outside_declared_sessions_and_naive_clock(tmp_path) -> None:
+    archive = QuoteArchive(tmp_path / "quotes.sqlite3")
+    try:
+        with pytest.raises(ValueError, match="not in expected_sessions"):
+            archive.coverage(expected_sessions={"s1"}, intents={("s2", "NSE:INFY"): 100}, as_of=T0)
+        with pytest.raises(ValueError, match="timezone aware"):
+            archive.coverage(expected_sessions={"s1"}, intents={("s1", "NSE:INFY"): 100},
+                             as_of=datetime(2026, 11, 15))
+    finally:
+        archive.close()
