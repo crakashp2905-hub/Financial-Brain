@@ -319,6 +319,23 @@ def cmd_daily_finalize(*, account_journal_path: str, session_date: str, captured
     }, EXIT["OK"]
 
 
+def cmd_daily_restore(*, bundle_dir: str, destination: str,
+                      trusted_public_key_sha256: str | None = None) -> tuple[dict, int]:
+    """Verify then restore a portable paper evidence bundle to a new directory."""
+    from financial_brain.forward_edge.daily_evidence_bundle import (
+        restore_daily_bundle,
+    )
+
+    try:
+        result = restore_daily_bundle(
+            Path(bundle_dir), Path(destination),
+            trusted_public_key_sha256=trusted_public_key_sha256,
+        )
+    except (OSError, ValueError) as exc:
+        return {"error": str(exc), "physical_orders": False}, EXIT["INCOMPLETE"]
+    return result, EXIT["OK"]
+
+
 def cmd_eod_reconcile(account_journal_path: str, reference_snapshot_path: str,
                       gate_journal_path: str) -> tuple[dict, int]:
     """Audit the local account and apply an explicit independent EOD snapshot."""
@@ -449,6 +466,10 @@ def main(argv: list[str] | None = None) -> int:
     df.add_argument("--session-id", required=True)
     df.add_argument("--archive-dir", required=True)
     df.add_argument("--bundle-root", required=True)
+    dr = sub.add_parser("daily-restore", help="verify and restore a portable paper evidence bundle")
+    dr.add_argument("--bundle", required=True, help="source daily evidence bundle directory")
+    dr.add_argument("--destination", required=True, help="new isolated restore directory")
+    dr.add_argument("--trusted-public-key-sha256", help="optional pinned Ed25519 public-key hash")
     er = sub.add_parser("eod-reconcile", help="reconcile paper account against an independent snapshot")
     er.add_argument("--account-journal", required=True, help="durable local paper account journal JSONL")
     er.add_argument("--reference-snapshot", required=True, help="independent OMS/venue snapshot JSON")
@@ -490,6 +511,11 @@ def main(argv: list[str] | None = None) -> int:
             captured_at=args.captured_at, marks_path=args.marks,
             runner_journal_path=args.runner_journal, session_id=args.session_id,
             archive_dir=args.archive_dir, bundle_root=args.bundle_root,
+        )
+    elif args.cmd == "daily-restore":
+        out, code = cmd_daily_restore(
+            bundle_dir=args.bundle, destination=args.destination,
+            trusted_public_key_sha256=args.trusted_public_key_sha256,
         )
     elif args.cmd == "eod-reconcile":
         out, code = cmd_eod_reconcile(args.account_journal, args.reference_snapshot, args.gate_journal)

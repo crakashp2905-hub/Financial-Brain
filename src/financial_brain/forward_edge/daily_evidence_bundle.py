@@ -364,3 +364,46 @@ def verify_daily_bundle(bundle_dir: Path, *, trusted_public_key_sha256: str | No
     return {"verified": True, "manifest_sha256": digest,
             "signature_status": signature_status, "input_count": len(inputs),
             "report_reproduced": True}
+
+
+def restore_daily_bundle(bundle_dir: Path, destination: Path, *,
+                         trusted_public_key_sha256: str | None = None) -> dict:
+    """Restore a verified daily bundle to a new isolated directory.
+
+    Verification is performed before any destination is created. The restore is
+    immutable and refuses an existing destination so a previous recovery cannot
+    be silently overwritten. This restores evidence files; it does not grant
+    authority to resume live collection or trading.
+    """
+    source = Path(bundle_dir).resolve()
+    target = Path(destination).resolve()
+    if source == target or source in target.parents or target in source.parents:
+        raise DailyBundleError("restore source and destination must be separate trees")
+    verified = verify_daily_bundle(source, trusted_public_key_sha256=trusted_public_key_sha256)
+    if target.exists():
+        raise DailyBundleError("restore destination already exists; restored bundles are immutable")
+    manifest = json.loads((source / "manifest.json").read_bytes())
+    staging: Path | None = None
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        staging = Path(tempfile.mkdtemp(prefix=f".{target.name}.restore-", dir=target.parent))
+        staging.rmdir()
+        shutil.copytree(source, staging)
+        restored = verify_daily_bundle(staging, trusted_public_key_sha256=trusted_public_key_sha256)
+        if restored != verified:
+            raise DailyBundleError("restored bundle verification differs from source")
+        os.rename(staging, target)
+    except BaseException:
+        if staging is not None and staging.exists():
+            shutil.rmtree(staging, ignore_errors=True)
+        raise
+    inputs = {entry["role"]: str(target.joinpath(*PurePosixPath(entry["path"]).parts))
+              for entry in manifest["inputs"]}
+    return {
+        **restored,
+        "session_date": manifest["session_date"],
+        "session_id": manifest["session_id"],
+        "restore_dir": str(target),
+        "inputs": inputs,
+        "physical_orders": False,
+    }

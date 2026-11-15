@@ -4519,15 +4519,18 @@
         "test_backup_restores_to_recorded_hashes_and_detects_corruption",
         "test_backup_preserves_dependency_paths_and_restores_without_source_tree",
         "test_backup_rejects_overwrite_and_manifest_path_traversal",
+        "test_daily_bundle_restore_verifies_before_copy_and_returns_replay_inputs",
+        "test_daily_restore_cli_refuses_tampered_bundle_before_creating_destination",
         "tests/test_daily_evidence_bundle.py",
-        "tests/test_eod_paper_archive.py"
+        "tests/test_source_inventory.py",
+        "tests/test_capability_evidence_audit.py"
       ],
-      "test_result": "28 passed; Ruff and targeted mypy passed. Tests cover immutable path-preserving restore, daily-finalize CLI retry and gating, account/runner journal replay, close reconciliation, and tamper refusal.",
+      "test_result": "34 passed in 28.09s; Ruff and targeted mypy passed. Includes verification-before-copy, staged atomic publication, isolated-copy revalidation, immutable destination, tamper refusal before destination creation, source inventory, and capability evidence audit.",
       "blockers": [
         "Automatic discovery and packaging of observed quote archives, strategy/configuration inputs, registry and authority state, and all other runtime dependencies are not wired.",
-        "No end-to-end restore drill has reconstructed and resumed a complete owner-authorized observed market session."
+        "No owner-authorized observed market session has been restored and resumed; the restore drill uses synthetic evidence and proves artifact recovery only."
       ],
-      "evidence_sha256": "4cbebf83261dfa6b0c85bc776ed9bb70dc201d5b6597aa911c2a464cd6d917cc"
+      "evidence_sha256": "971f004e65a4501a5e40c9c127ad716939e0b1d4ce0019f8cde1b380029d6a29"
     },
     {
       "id": "PE-0203",

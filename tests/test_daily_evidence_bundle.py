@@ -10,11 +10,12 @@ from financial_brain.forward_edge.daily_evidence_bundle import (
     DailyBundleError,
     build_daily_bundle,
     close_and_bundle_paper_session,
+    restore_daily_bundle,
     verify_daily_bundle,
 )
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.forward_edge.eod_paper_archive import close_and_archive_paper_session
-from financial_brain.forward_edge.cli import EXIT, cmd_daily_finalize
+from financial_brain.forward_edge.cli import EXIT, cmd_daily_finalize, cmd_daily_restore
 from financial_brain.kernel.oms import State
 from financial_brain.kernel.paper_account import PaperAccount
 
@@ -75,6 +76,44 @@ def test_signed_daily_bundle_reproduces_on_copied_workstation(tmp_path):
     assert "NAV: 1004" in report
     assert "MARKET_EVENT: 1" in report
     assert "does not claim live execution or profitability" in report
+
+
+def test_daily_bundle_restore_verifies_before_copy_and_returns_replay_inputs(tmp_path):
+    bundle = tmp_path / "bundle"
+    build_daily_bundle(
+        session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+        artifact_paths=_inputs(tmp_path), output_dir=bundle,
+    )
+    destination = tmp_path / "isolated" / "restored"
+    result = restore_daily_bundle(bundle, destination)
+
+    assert result["verified"] is True
+    assert result["session_date"] == SESSION.isoformat()
+    assert result["session_id"] == "S-2026-11-12"
+    assert result["physical_orders"] is False
+    assert set(result["inputs"]) == {
+        "paper_account_archive", "paper_account_journal", "runner_journal",
+    }
+    assert verify_daily_bundle(destination)["report_reproduced"] is True
+    with pytest.raises(DailyBundleError, match="already exists"):
+        restore_daily_bundle(bundle, destination)
+
+
+def test_daily_restore_cli_refuses_tampered_bundle_before_creating_destination(tmp_path):
+    bundle = tmp_path / "bundle"
+    build_daily_bundle(
+        session_date=SESSION.isoformat(), session_id="S-2026-11-12",
+        artifact_paths=_inputs(tmp_path), output_dir=bundle,
+    )
+    report = bundle / "operator-report.txt"
+    report.write_bytes(report.read_bytes() + b"tamper")
+    destination = tmp_path / "restored"
+
+    result, code = cmd_daily_restore(bundle_dir=str(bundle), destination=str(destination))
+
+    assert code == EXIT["INCOMPLETE"]
+    assert "hash" in result["error"]
+    assert destination.exists() is False
 
 
 def test_daily_bundle_refuses_input_tamper_and_untrusted_signing_key(tmp_path):
