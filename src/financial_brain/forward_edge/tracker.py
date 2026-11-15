@@ -246,7 +246,10 @@ OVERRIDES: dict[str, Entry] = {
     "FE-0078": Entry("PARTIAL", ("test_forward_edge_runbooks_cover_fail_closed_operational_recovery",), (),
                      "Paper-only runbooks cover preflight, feed/token failure, unknown orders, reconciliation, close/carry, backup/restore, evidence and escalation. Automated runbook execution and live provider-specific procedures remain unavailable."),
     # ---- F07 ----
-    "FE-0079": Entry("NOT_STARTED", (), (BLK_MARKET,), "Shadow logging needs live observations."),
+    "FE-0079": Entry("PARTIAL", ("test_shadow_log_captures_every_family_scan_including_no_signal_and_no_outcomes",
+                                  "test_shadow_scan_is_idempotent_and_conflicts_are_rejected",
+                                  "test_shadow_scan_rejects_duplicate_candidates_and_naive_time"), (BLK_MARKET,),
+                     "Immutable outcome-blind scan journal covers all seven requested strategy families, including explicit zero-opportunity scans and session coverage. Live passive observations and real-feed source evidence remain blocked."),
     "FE-0080": Entry("NOT_STARTED", (), (), "Horizon freeze not built."),
     "FE-0081": Entry("NOT_STARTED", (), (), "Portfolio net alpha not built."),
     "FE-0082": Entry("NOT_STARTED", (), (), "Paired controls not built."),
