@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0066",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_beta_neutral_candidate.py tests/test_forward_edge_f02.py tests/test_signal_allocator.py",
+    "result": "46 passed (exit code 0); Ruff and mypy passed. Residual score is orthogonal to the fitted intercept and beta vector in the synthetic fixture; candidate receives an independent exploratory StrategySpec code hash."
+  },
+  "implemented": [
+    "A standalone beta-neutral transformation residualizes expected net alpha against a cross-sectional market-beta exposure with an intercept.",
+    "The transformation rejects mismatched, undersized, non-finite and constant-beta universes.",
+    "A separately identified exploratory strategy spec has its own module-derived code SHA and immutable parameters; it is not silently applied to the base strategy."
+  ],
+  "blockers": [
+    "The candidate has no completed performance record or matched-control comparison.",
+    "Point-in-time beta source, estimation horizon, uncertainty and rebalance policy are not validated.",
+    "It remains EXPLORATORY and cannot be promoted without a separate preregistered charter and performance evidence."
+  ],
+  "scope_note": "Distinct beta-neutral candidate and registry identity are implemented; acceptance remains PARTIAL until its separate performance record and comparison exist."
+}

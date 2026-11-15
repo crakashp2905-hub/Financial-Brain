@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 94,
-  "unrecorded_tasks": 124,
+  "recorded_tasks": 95,
+  "unrecorded_tasks": 123,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -206,8 +206,8 @@
         "test_inventory_captures_old_and_new_engine_dependency_graph_roots",
         "test_portfolio_rejects_shared_authoritative_state_between_books"
       ],
-      "test_result": "Committed inventory captures 589 Python files (582 unassessed, 330 role-unassigned), hash 54cc26690a16c22872c6812f34fd5440106bfdba323f89ea32bd7d00e27f5cc7. Source-inventory and paper-portfolio authority tests: 9 passed. PaperAccountPortfolio rejects duplicate OMS, ledger and position-state owners across registered books. Cross-runner/global authority remains unenforced.",
-      "evidence_sha256": "19dd349253a5bf020c065d4e0c771d1c43dd3625af4cf8c1a90e2043aec937b6",
+      "test_result": "Committed inventory captures 590 Python files (583 unassessed, 331 role-unassigned), hash b74400c2e91bef9c1b4e47910bebba6fbbbe21c1864b631dc9800524bbf19a21. Source-inventory and paper-portfolio authority tests: 9 passed. PaperAccountPortfolio rejects duplicate OMS, ledger and position-state owners across registered books. Cross-runner/global authority remains unenforced.",
+      "evidence_sha256": "af8a068717d1502f37b6f9dcff20df67f89b679044e35ef53c921fdb766e7798",
       "blockers": [
         "The runtime guard covers only accounts registered in one PaperAccountPortfolio; it does not prevent legacy and forward runner composition roots from owning competing order, ledger or position state for the same logical book."
       ]
@@ -1987,6 +1987,29 @@
         "No calibrated, frozen uncertainty model is bound to every strategy version.",
         "Prospective size-response and paper outcome evidence are not yet available.",
         "Universal runner and durable journal wiring remain incomplete."
+      ]
+    },
+    {
+      "id": "PE-0066",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/forward_edge/beta_neutral_candidate.py",
+        "src/financial_brain/forward_edge/registry.py",
+        "tests/test_beta_neutral_candidate.py",
+        "tests/test_forward_edge_f02.py",
+        "docs/edge-program/pe-0066-beta-neutral-candidate-evidence.json"
+      ],
+      "tests": [
+        "test_beta_neutral_candidate_removes_linear_market_beta_exposure",
+        "test_beta_neutral_candidate_requires_matched_finite_varied_inputs",
+        "test_beta_neutral_alternative_has_separate_code_identity_and_remains_exploratory"
+      ],
+      "test_result": "A separate beta-neutral exploratory candidate has its own StrategySpec code SHA and residualizes net alpha against beta exposure. Synthetic orthogonality, invalid input and registry identity tests pass: 46 tests; Ruff and mypy passed. No candidate performance record exists yet.",
+      "evidence_sha256": "e6dfc5c87b8d083d26aa0b42ecdf6374f9dc349e6a5754aca7c0299b5de3381e",
+      "blockers": [
+        "No independent performance record or matched control exists.",
+        "Point-in-time beta data and estimation contract remain unvalidated.",
+        "Candidate remains exploratory pending preregistration and separate validation."
       ]
     },
     {
