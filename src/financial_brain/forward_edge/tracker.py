@@ -424,7 +424,11 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_staging_requires_exact_unexpired_human_approval",
                                   "test_software_actor_cannot_authorize_live_staging"), (),
                      "Central UI action policy allows view/export/analyze, scopes paper/live staging to exact expiring human approval, and permanently denies UI submit/cancel actions. Existing paper terminal is view-only, but every UI route still needs to call this policy before any mutating staging action."),
-    "FE-0123": Entry("NOT_STARTED", (), (), "Operator decisions not built."),
+    "FE-0123": Entry("PARTIAL", ("test_operator_choice_journal_is_idempotent_restart_safe_and_immutable",
+                                  "test_all_five_operator_decisions_are_supported_without_granting_execution",
+                                  "test_live_lock_reasons_and_operator_page_never_claim_live_enabled",
+                                  "test_nonhuman_actors_and_explicit_evidence_identity_are_required"), (),
+                     "Continue-paper, pause, investigate, reject and request-review decisions can be stored as immutable, evidence-hashed human records; the page shows current audit blockers plus the permanent physical-order lock. The static view and audit API are not connected to an authenticated operator workflow or mode transitions."),
     # ---- F11 ----
     "FE-0124": Entry("NOT_STARTED", (), (), "Outcome maturation queue not built."),
     "FE-0125": Entry("NOT_STARTED", (), (), "Versioned training not built."),
