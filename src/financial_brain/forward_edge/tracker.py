@@ -148,7 +148,10 @@ OVERRIDES: dict[str, Entry] = {
                      "Existing effective-dated instrument master now validates ISIN, expiry, option strike, rights status, tick/lot/freeze rules, lifecycle status and trading phase. No authoritative exchange/broker instrument-master ingestion or mapping is configured."),
     "FE-0040": Entry("NOT_STARTED", (), (BLK_DATA,), "Option depth snapshots need licensed depth data."),
     "FE-0041": Entry("NOT_STARTED", (), (), "Minute OHLCV archive not built."),
-    "FE-0042": Entry("NOT_STARTED", (), (), "Data gate reason codes not built."),
+    "FE-0042": Entry("PARTIAL", ("test_good_observed_quote_passes_and_reason_order_is_stable",
+                                  "test_each_bad_data_condition_abstains_with_reason",
+                                  "test_future_and_naive_quote_timestamps_are_rejected"), (),
+                     "A shared deterministic data gate abstains on missing/stale/future quotes, wide spread, zero volume, circuit limits, freeze limits, non-continuous sessions and missing auction data. Kite adapters and every paper runner still need to consume the gate."),
     "FE-0043": Entry("NOT_STARTED", (), (), "Prefix-invariance tests not built for the forward path."),
     "FE-0044": Entry("NOT_STARTED", (), (), "Coverage score not built."),
     # ---- F04 ----
