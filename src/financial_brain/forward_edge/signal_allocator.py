@@ -27,12 +27,14 @@ class ForecastObservation:
     action: str
     reason: str
     forecast_net_alpha: float
+    uncertainty_adjusted_net_alpha: float
     horizon: int
     source: str
     calibrated: bool
     calibration_id: str
     estimated_costs: float
     cost_to_benefit_ratio: float | None
+    forecast_uncertainty: float | None
 
 
 @dataclass(frozen=True)
@@ -56,6 +58,7 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
                      max_positions: int | None = None,
                      sector_by_name: Mapping[str, str] | None = None,
                      max_sector_weight: float | None = None,
+                     uncertainty_z: float = 0.0,
                      risk_aversion: float = 1.0,
                      iterations: int = 500) -> SignalTargetResult:
     """Route every named signal through one allocator; input NetAlpha already itemizes trade costs.
@@ -81,6 +84,8 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
         effective_hurdle = min_forecast_net_alpha
     if not isfinite(max_forecast_cost_to_benefit_ratio) or max_forecast_cost_to_benefit_ratio < 0:
         raise SignalAllocatorError("maximum forecast cost-to-benefit ratio must be finite and non-negative")
+    if not isfinite(uncertainty_z) or uncertainty_z < 0:
+        raise SignalAllocatorError("uncertainty scale must be finite and non-negative")
     names = tuple(sorted(signals))
     if not names or set(names) != set(covariance_names) or len(set(covariance_names)) != len(covariance_names):
         raise SignalAllocatorError("signals and covariance universe must contain the same unique names")
@@ -102,19 +107,24 @@ def allocate_signals(*, as_of: date, scheduled_rebalances: frozenset[date],
             score, reason = 0.0, "NO_SIGNAL"
         elif not forecast.calibrated:
             score, reason = 0.0, "NO_TRADE_UNCALIBRATED_FORECAST"
-        elif forecast.net <= effective_hurdle:
+        elif uncertainty_z > 0 and not forecast.uncertainty_calibrated:
+            score, reason = 0.0, "NO_TRADE_UNCALIBRATED_UNCERTAINTY"
+        elif forecast.net - uncertainty_z * (forecast.forecast_uncertainty or 0.0) <= effective_hurdle:
             score, reason = 0.0, "NO_TRADE_NET_ALPHA_HURDLE"
         elif forecast.excess <= 0 or forecast.costs / forecast.excess > max_forecast_cost_to_benefit_ratio:
             score, reason = 0.0, "NO_TRADE_COST_BENEFIT_RATIO"
         else:
-            score, reason = forecast.net, "NET_ALPHA_ABOVE_HURDLE"
+            score, reason = forecast.net - uncertainty_z * (forecast.forecast_uncertainty or 0.0), \
+                "NET_ALPHA_ABOVE_HURDLE"
         alpha[name] = score
         dispositions.append((name, reason, forecast.net))
         observations.append(ForecastObservation(
             instrument=name, action=action, reason=reason, forecast_net_alpha=forecast.net,
+            uncertainty_adjusted_net_alpha=forecast.net - uncertainty_z * (forecast.forecast_uncertainty or 0.0),
             horizon=forecast.horizon, source=forecast.source, calibrated=forecast.calibrated,
             calibration_id=forecast.calibration_id, estimated_costs=forecast.costs,
             cost_to_benefit_ratio=(forecast.costs / forecast.excess if forecast.excess > 0 else None),
+            forecast_uncertainty=forecast.forecast_uncertainty,
         ))
     if len(horizons) != 1:
         raise SignalAllocatorError("all forecasts in one target book must share the same holding horizon")

@@ -49,6 +49,9 @@ class NetAlpha:
     source: str = ""
     calibrated: bool = False
     calibration_id: str = ""
+    forecast_uncertainty: float | None = None
+    uncertainty_calibrated: bool = False
+    uncertainty_id: str = ""
 
     def __post_init__(self) -> None:
         if isinstance(self.horizon, bool) or not isinstance(self.horizon, int) or self.horizon < 1:
@@ -61,6 +64,11 @@ class NetAlpha:
                 raise ValueError(f"net-alpha {name} cannot be negative")
         if self.calibrated and not self.calibration_id.strip():
             raise ValueError("a calibrated forecast must identify its calibration")
+        if self.forecast_uncertainty is not None and (
+                not isfinite(self.forecast_uncertainty) or self.forecast_uncertainty < 0):
+            raise ValueError("forecast uncertainty must be finite and non-negative")
+        if self.uncertainty_calibrated and (self.forecast_uncertainty is None or not self.uncertainty_id.strip()):
+            raise ValueError("calibrated forecast uncertainty must identify its calibration")
 
     @property
     def excess(self) -> float:
@@ -98,7 +106,9 @@ class NetAlpha:
 
 def compute(*, excess: float, horizon: int, order_value: float, adv_inr: float, vol_annual: float,
             weight: float, segment: Segment = Segment.DELIVERY, costs: CostModel | None = None,
-            source: str = "", calibrated: bool = False, calibration_id: str = "") -> NetAlpha:
+            source: str = "", calibrated: bool = False, calibration_id: str = "",
+            forecast_uncertainty: float | None = None, uncertainty_calibrated: bool = False,
+            uncertainty_id: str = "") -> NetAlpha:
     """Itemise a candidate. ``excess``: the expected return over the benchmark at ``horizon`` sessions."""
     costs = costs or CostModel()
     if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon < 1:
@@ -119,4 +129,6 @@ def compute(*, excess: float, horizon: int, order_value: float, adv_inr: float, 
     risk = RISK_AVERSION * max(weight, 0.0) * sigma_h2
     return NetAlpha(horizon=horizon, expected_return=bench + excess, benchmark=bench, fees=float(fees),
                     spread=float(spread), impact=float(impact), risk_penalty=float(risk), source=source,
-                    calibrated=calibrated, calibration_id=calibration_id)
+                    calibrated=calibrated, calibration_id=calibration_id,
+                    forecast_uncertainty=forecast_uncertainty,
+                    uncertainty_calibrated=uncertainty_calibrated, uncertainty_id=uncertainty_id)

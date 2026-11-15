@@ -93,3 +93,21 @@ def test_cost_to_forecast_benefit_ratio_can_force_abstention():
     assert result.counterfactuals[0].reason == "NO_TRADE_COST_BENEFIT_RATIO"
     assert result.counterfactuals[0].cost_to_benefit_ratio == pytest.approx(
         forecast.costs / forecast.excess)
+
+
+def test_uncertainty_scaling_reduces_exposure_and_uncalibrated_uncertainty_abstains():
+    def forecast(uncertainty: float, calibrated: bool = True) -> NetAlpha:
+        return NetAlpha(horizon=20, expected_return=0.04, benchmark=0.03,
+                        fees=0.001, spread=0.001, impact=0.001, risk_penalty=0.0,
+                        source="forecast", calibrated=True, calibration_id="cal-1",
+                        forecast_uncertainty=uncertainty, uncertainty_calibrated=calibrated,
+                        uncertainty_id="uncertainty-cal-1" if calibrated else "")
+
+    low = _allocate({"A": ("BUY", forecast(0.001))}, uncertainty_z=1.0)
+    high = _allocate({"A": ("BUY", forecast(0.008))}, uncertainty_z=1.0)
+    assert dict(high.target.weights)["A"] < dict(low.target.weights)["A"]
+    assert high.counterfactuals[0].uncertainty_adjusted_net_alpha < low.counterfactuals[0].uncertainty_adjusted_net_alpha
+
+    missing = _allocate({"A": ("BUY", forecast(0.0, calibrated=False))}, uncertainty_z=1.0)
+    assert dict(missing.target.weights)["A"] == 0.0
+    assert missing.counterfactuals[0].reason == "NO_TRADE_UNCALIBRATED_UNCERTAINTY"

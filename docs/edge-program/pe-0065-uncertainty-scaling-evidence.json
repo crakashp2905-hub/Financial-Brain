@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0065",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_signal_allocator.py tests/test_target_portfolio.py tests/test_forecast_hurdle.py tests/test_phase5_scanners.py",
+    "result": "41 passed (exit code 0); Ruff and mypy passed. Higher calibrated forecast uncertainty lowers the allocator score and exposure; uncalibrated uncertainty blocks entry when scaling is enabled."
+  },
+  "implemented": [
+    "NetAlpha can carry a non-negative forecast uncertainty estimate with explicit calibration identity.",
+    "The common allocator accepts a non-negative uncertainty multiplier and uses net alpha minus z times uncertainty as the entry score.",
+    "When uncertainty scaling is requested, missing calibration identity fails closed; the raw and adjusted forecast values remain in the candidate observation.",
+    "Uncertainty can only reduce the forecast score; no rule increases exposure to meet a target profit."
+  ],
+  "blockers": [
+    "The allocator multiplier and uncertainty calibration are not yet frozen/pinned with a validated forecasting model for every strategy.",
+    "No calibrated uncertainty coverage or empirical size-response validation has been collected on prospective paper sessions.",
+    "System-wide strategy adapter and durable journal integration are incomplete."
+  ],
+  "scope_note": "Uncertainty scaling and fail-closed calibration contract are implemented in the shared allocator. Strategy-specific calibration and forward validation are outstanding."
+}

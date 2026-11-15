@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "checklist": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
   "checklist_tasks": 218,
-  "recorded_tasks": 93,
-  "unrecorded_tasks": 125,
+  "recorded_tasks": 94,
+  "unrecorded_tasks": 124,
   "status_semantics": {
     "DONE": "acceptance test passes for the complete stated criterion",
     "PARTIAL": "some implementation exists; criterion is not fully met",
@@ -1967,6 +1967,26 @@
         "Limits and sector mapping are not pinned in every strategy charter.",
         "Point-in-time sector master and universal runner wiring remain incomplete.",
         "Cash fallback is conservative; no optimality or profitability claim is made."
+      ]
+    },
+    {
+      "id": "PE-0065",
+      "status": "PARTIAL",
+      "sources": [
+        "src/financial_brain/decisions/net_alpha.py",
+        "src/financial_brain/forward_edge/signal_allocator.py",
+        "tests/test_signal_allocator.py",
+        "docs/edge-program/pe-0065-uncertainty-scaling-evidence.json"
+      ],
+      "tests": [
+        "test_uncertainty_scaling_reduces_exposure_and_uncalibrated_uncertainty_abstains"
+      ],
+      "test_result": "NetAlpha now carries optional calibrated forecast uncertainty; configured uncertainty scaling lowers the common target score and blocks entry when its calibration identity is missing. Focused allocator, portfolio, hurdle and scanner suite: 41 passed; Ruff and mypy passed. Per-strategy calibration pin and forward evidence remain incomplete.",
+      "evidence_sha256": "67a7646c920ef647eb1c6052180acc703a8dc4f53f53f50353154ce9f61abbff",
+      "blockers": [
+        "No calibrated, frozen uncertainty model is bound to every strategy version.",
+        "Prospective size-response and paper outcome evidence are not yet available.",
+        "Universal runner and durable journal wiring remain incomplete."
       ]
     },
     {
