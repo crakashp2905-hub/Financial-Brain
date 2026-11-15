@@ -248,6 +248,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         log.warning("quote archive unavailable: %s", str(e)[:120])
         qcon = None
     polls = failures = 0
+    forward_quote_archive_stats = {"received": 0, "archived": 0, "rejected": 0}
     session_issue = None
     seen_today = False
     last: dict[str, float] = {}
@@ -292,7 +293,17 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             sleep_fn(poll)
             continue
         polls += 1
-        quote_at = now
+        quote_at = now_fn()
+        try:
+            from ..forward_edge.market_data import archive_kite_quote_batch_to_path
+
+            event_path = path.with_name(f"{path.stem}-forward-events.sqlite")
+            observed = archive_kite_quote_batch_to_path(event_path, q, received_at=quote_at)
+            for key, value in observed.items():
+                forward_quote_archive_stats[key] += value
+        except Exception as e:                          # noqa: BLE001 - archive failure must be visible, not fatal
+            log.warning("forward market-event archive failed: %s", str(e)[:120])
+            forward_quote_archive_stats["rejected"] += len(q)
         if qcon is not None:
             try:
                 QA.store(qcon, now.replace(tzinfo=None), q)
@@ -385,7 +396,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         qcon.close()
     if session_issue is None and _has_board(con):
         BD.resolve_close(con, day, "live", last)
-    out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls}
+    out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls,
+           "forward_quote_archive": forward_quote_archive_stats}
     publish(path, eng, now=now_fn(), status="Session complete" if status == "complete" else "Session unavailable",
             polls=polls, prices=last, quote_at=quote_at)
     write_report(con, day, "live", eng, cohort=cohort)

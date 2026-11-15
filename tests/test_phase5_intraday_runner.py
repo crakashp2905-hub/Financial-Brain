@@ -220,10 +220,20 @@ def test_live_fills_use_the_order_book_from_full_quotes(setup):
         kinds.append(kind)
         out = base(symbols, kind)
         for v in out.values():
-            v["depth"] = {"buy": [{"price": v["last_price"] - 0.05}], "sell": [{"price": v["last_price"] + 0.05}]}
+            v["timestamp"] = c.now().isoformat()
+            v["depth"] = {"buy": [{"price": v["last_price"] - 0.05, "quantity": 10}],
+                          "sell": [{"price": v["last_price"] + 0.05, "quantity": 12}]}
         return out
-    R.run_live(quote_fn=q, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
+    out = R.run_live(quote_fn=q, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
     assert set(kinds) == {"full"}
+    assert out["forward_quote_archive"]["archived"] > 0
+    from financial_brain.forward_edge.quote_archive import QuoteArchive
+    archive = QuoteArchive(setup / "l-forward-events.sqlite")
+    event = archive.get(archive._con.execute("SELECT event_id FROM market_events LIMIT 1").fetchone()[0])
+    archive.close()
+    assert event.source == "KITE_CONNECT_READ_ONLY" and event.venue == "NSE"
+    assert event.received_at == event.available_at
+    assert event.event_time <= event.received_at
     row = R.ledger(setup / "l.duckdb").execute(
         "SELECT entry_px, entry_decision_px, spread_bp, shortfall_bp FROM trades").fetchone()
     assert row[0] == pytest.approx(row[1] + 0.05) and row[2] > 0 and row[3] > 0
