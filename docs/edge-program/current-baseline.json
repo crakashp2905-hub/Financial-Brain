@@ -1,6 +1,6 @@
 {
   "schema": "fb.financial_brain.current_baseline.v1",
-  "captured_at_utc": "2026-11-16T12:25:46Z",
+  "captured_at_utc": "2026-11-16T12:38:12Z",
   "repository": "https://github.com/crakashp2905-hub/Financial-Brain",
   "git": {
     "observed_main_ref": {
@@ -10,12 +10,12 @@
     },
     "head": {
       "branch": "feature/forward-edge-f00-f01",
-      "sha": "9c9e04961c7aa4ccb66b97f020a35b6c64d5e990",
-      "evidence": "git rev-parse HEAD and git ls-remote origin refs/heads/feature/forward-edge-f00-f01 agree; https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43865138413"
+      "sha": "164aedf9e9b8a42bb7b75d8f5f77411a3f346052",
+      "evidence": "git rev-parse HEAD and git ls-remote origin refs/heads/feature/forward-edge-f00-f01 agreed at capture; https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43868266721"
     },
     "open_pull_requests": {
       "status": "OBSERVED",
-      "evidence": "gh pr list --state all and gh pr view for #32/#33 at 2026-11-16T12:21:46Z",
+      "evidence": "gh pr list --state all and gh pr view for #32/#33 last queried at 2026-11-16T12:21:46Z",
       "items": [
         {"number": 16, "state": "OPEN", "head": "codex/protocol-date-validation-20261103", "base": "main", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/16"},
         {"number": 17, "state": "OPEN", "head": "codex/ops-reliability-20261104", "base": "main", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/17"},
@@ -116,7 +116,7 @@
     "git ls-remote origin refs/heads/main refs/heads/feature/forward-edge-f00-f01",
     "gh pr list --state all; gh pr view 32/33",
     "gh api repos/crakashp2905-hub/Financial-Brain/branches/main/protection (HTTP 403: plan limitation)",
-    "gh run view 43865138413 and job annotation (hosted jobs blocked before start by account billing/spending limit)",
+    "gh run view 43868266721 and job annotation (hosted jobs blocked before start by account billing/spending limit)",
     "git status --porcelain=v1",
     "read-only DuckDB query against data/quote_archive.duckdb",
     "src/financial_brain/forward_edge/modes.py",
