@@ -721,6 +721,34 @@ OVERRIDES.update({
 })
 
 
+
+
+# ---- F16 (reconciled against later work on main), added in wave F16 ----
+# Other sessions merged a durable forward runner, a reconciled paper account, a read-only Kite quote adapter and an
+# executable champion resolver after F15. These entries cite their tests; nothing is upgraded without an executable test.
+OVERRIDES.update({
+    "FE-0015": Entry("DONE", ("test_full_buy_reduces_buying_power", "test_buy_sell_fees_and_restart_reconcile",
+                              "test_replayed_intent_fill_and_fee_have_one_economic_effect",
+                              "test_sell_reservations_prevent_overselling_and_release_on_cancel",
+                              "test_randomized_partial_fill_cancel_sequences_preserve_buying_power"), (),
+                     "kernel/paper_account.py is one cash, inventory and fee ledger with reservations; tested through restarts. Legacy engines outside it keep their own books."),
+    "FE-0035": Entry("PARTIAL", ("test_fixture_feed_replays_in_deterministic_order", "test_full_quote_becomes_timestamped_forward_event",
+                                 "test_missing_or_invalid_exchange_evidence_fails_closed", "test_ltp_only_is_analyzable_but_not_fill_capable",
+                                 "test_crossed_or_empty_depth_is_not_executable"), (BLK_DATA, BLK_BROKER),
+                     "A read-only Kite full-quote adapter exists (ingest/kite_live.py) and is tested on fixtures. No live capture has been performed: that needs valid credentials and data rights."),
+    "FE-0049": Entry("PARTIAL", ("test_zero_signal_and_unsuccessful_sessions_stay_in_the_denominator",
+                                 "test_decision_records_persist_and_replay_to_the_same_head_hash",
+                                 "test_no_trade_signal_never_reaches_execution_adapter",
+                                 "test_incomplete_session_is_preserved_and_cannot_be_reused"), (),
+                     "The durable forward runner persists decisions, no-trades and incomplete sessions. The session denominator is still computed from the in-memory custody journal."),
+    "FE-0091": Entry("DONE", ("test_daily_returns_use_previous_close_and_remove_external_flows",
+                              "test_executable_cohort_uses_actual_partial_fill_fees_marks_and_cash_days",
+                              "test_explicit_no_order_cash_cohort_resolves_to_zero_instead_of_disappearing",
+                              "test_missing_mark_or_unresolved_order_withholds_cohort_return"), (),
+                     "Daily return maths plus the executable champion cohort resolver, which reconciles to the paper account and keeps cash days."),
+})
+
+
 def capability_matrix() -> dict:
     """FE-0149: implemented, partial, blocked, not started, and independently evidenced (always empty offline)."""
     table = entries()

@@ -12,7 +12,7 @@ REPO = Path(__file__).resolve().parents[1]
 
 def _test_names() -> set[str]:
     names: set[str] = set()
-    for path in (REPO / "tests").glob("test_forward_edge_*.py"):
+    for path in (REPO / "tests").glob("test_*.py"):
         names |= set(re.findall(r"^def (test_\w+)", path.read_text(encoding="utf-8"), re.M))
     return names
 
