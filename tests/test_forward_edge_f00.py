@@ -48,11 +48,22 @@ def test_baseline_records_git_head_sources_and_missing_prerequisites() -> None:
     assert "custody:trusted_timestamp_roots_not_pinned" in record["missing_prerequisites"]
 
 
-def test_baseline_write_is_deterministic_for_fixed_clock(tmp_path: Path) -> None:
+def test_baseline_write_is_deterministic_for_fixed_clock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repo"
+    (root / "data").mkdir(parents=True)
+    (root / "data" / "fixture.bin").write_bytes(b"stable fixture")
+    git_values = {
+        "rev-parse HEAD": "a" * 40,
+        "status --porcelain": "",
+        "rev-parse --abbrev-ref HEAD": "test-branch",
+    }
+    monkeypatch.setattr(baseline, "_git", lambda _root, *args: git_values.get(" ".join(args)))
     out = tmp_path / "b.json"
-    first = baseline.write_baseline(REPO, out, now=NOW)
+    first = baseline.write_baseline(root, out, now=NOW)
     text = out.read_text(encoding="utf-8")
-    again = baseline.write_baseline(REPO, out, now=NOW)
+    again = baseline.write_baseline(root, out, now=NOW)
     assert json.loads(text) == first == again
 
 
