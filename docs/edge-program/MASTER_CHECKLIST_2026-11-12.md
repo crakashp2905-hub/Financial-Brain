@@ -154,8 +154,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
 - [x] **PE-0019** — Connect existing `paper/intraday_runner.py` as a read-only producer of observed quote events.
   **Acceptance:** Actual paper-runner events are normalized with exchange, receive and availability clocks.
   **Completion evidence:** `paper.intraday_runner.run_live` passes the observed read-only Kite full-quote batch to `archive_kite_quote_batch_to_path`, persisting normalized market events. `tests/test_phase5_intraday_runner.py::test_live_fills_use_the_order_book_from_full_quotes` verifies `KITE_CONNECT_READ_ONLY`, NSE venue, event/exchange timestamp, receipt timestamp, availability timestamp, and `event_time <= received_at`. This completes the event-producer contract; runner strategy/session integration is tracked separately.
-- [ ] **PE-0020** — Connect swing/position/momentum paper books through horizon-aware adapters, not intraday callbacks.  
+- [x] **PE-0020** — Connect swing/position/momentum paper books through horizon-aware adapters, not intraday callbacks.
   **Acceptance:** A 20-session signal survives overnight and never receives same-day forced expiry.
+- **Completion evidence:** `forward_edge.paper_book_adapter` bridges position, swing and momentum book rows into the same journaled runner lifecycle. Parametrized `tests/test_forward_edge_session_runner.py::test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell` verifies each book version's frozen horizon, no same-day expiry, sourced next-session marks, stop/time exits, and idempotent sell reconciliation; it also verifies scheduled-charge attribution and fail-closed unpriced outcomes. Six version/cost cases pass. Session age remains an explicit sourced scheduler input; partial fills remain review-required rather than silently retried.
 - [ ] **PE-0021** — Wire `forward_edge/durable.py` to the runner's event journal and decision manifests.  
   **Acceptance:** Crash at each lifecycle boundary produces exactly one economic event after recovery.
 - [x] **PE-0022** — Implement a transactional outbox for simulated execution and journal acknowledgements.

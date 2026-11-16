@@ -1022,7 +1022,11 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
 
 
 @pytest.mark.parametrize("with_cost_schedule", [False, True])
-def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path, with_cost_schedule):
+@pytest.mark.parametrize(("version", "horizon"), [
+    ("book-v1", 20), ("swing-v1", 7), ("momentum-v1", 20),
+])
+def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(
+        tmp_path, with_cost_schedule, version, horizon):
     runner = make_runner(tmp_path)
     if with_cost_schedule:
         from financial_brain.costs.india import CostModel, Segment
@@ -1057,15 +1061,15 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path, wi
     book.execute("INSERT INTO positions (version, mode, signal_day, rank, ticker, lineage, type, horizon, shares, "
                  "stop, ref_price, expected_net, cost, entry_day, entry_px, exit_day, exit_px) "
                  "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                 ["swing-v1", "live", date(2026, 11, 12), 1, "INFY", "INFY-LINEAGE", "swing",
-                  20, 2, 95.0, 100.0, 0.02, 0.003, None, None, None, None])
-    signal, = pending_signals(book, mode="live", version="swing-v1", exchange_date=date(2026, 11, 13),
+                 [version, "live", date(2026, 11, 12), 1, "INFY", "INFY-LINEAGE", version,
+                  horizon, 2, 95.0, 100.0, 0.02, 0.003, None, None, None, None])
+    signal, = pending_signals(book, mode="live", version=version, exchange_date=date(2026, 11, 13),
                               instrument_ids={"INFY": "NSE:INFY"})
     entry_decision_id = signal.signal_id + ":s"
     entry_manifest = record_manifest(runner, session_id="s", decision_id=entry_decision_id,
                                      event=signal_quote, decided_at=decision_at, quantity=signal.shares,
                                      cost_model_sha256=cost_digest, selection_lineage=signal.lineage,
-                                     holding_sessions=20, persist=False)
+                                     holding_sessions=signal.horizon_sessions, persist=False)
     record_signal_decision(runner=runner, session_id="s", signal=signal,
                            quote_event_id=signal_quote.event_id, decided_at=decision_at,
                            manifest=entry_manifest)
@@ -1089,7 +1093,7 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path, wi
     assert reconcile_entry_receipt(book=book, runner=runner, session_id="s", signal=signal,
                                    decision_id=entry_decision_id, order_id="book-entry",
                                    receipt=entry_receipt) == "FILLED"
-    assert due_exits(book, runner=runner, session_id="s", mode="live", version="swing-v1",
+    assert due_exits(book, runner=runner, session_id="s", mode="live", version=version,
                      exchange_date=date(2026, 11, 13), completed_sessions_held={signal.signal_id: 0},
                      instrument_ids={"INFY": "NSE:INFY"},
                      quote_events={"NSE:INFY": entry_quote}) == ()
@@ -1105,18 +1109,19 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path, wi
                   "sell": [{"price": 95.05, "quantity": 20}]},
     }, received_at=exit_start)
     runner.ingest("s2", exit_config, [stop_quote])
-    exits = due_exits(book, runner=runner, session_id="s2", mode="live", version="swing-v1",
+    exits = due_exits(book, runner=runner, session_id="s2", mode="live", version=version,
                       exchange_date=exit_day, completed_sessions_held={signal.signal_id: 1},
                       instrument_ids={"INFY": "NSE:INFY"}, quote_events={"NSE:INFY": stop_quote})
     assert len(exits) == 1 and exits[0].reason == "STOP"
     assert exits[0].completed_sessions_held == 1
-    book.execute("UPDATE positions SET stop=90 WHERE version='swing-v1'")
-    time_exits = due_exits(book, runner=runner, session_id="s2", mode="live", version="swing-v1",
-                           exchange_date=exit_day, completed_sessions_held={signal.signal_id: 20},
+    book.execute("UPDATE positions SET stop=90 WHERE version=?", [version])
+    time_exits = due_exits(book, runner=runner, session_id="s2", mode="live", version=version,
+                           exchange_date=exit_day,
+                           completed_sessions_held={signal.signal_id: signal.horizon_sessions},
                            instrument_ids={"INFY": "NSE:INFY"},
                            quote_events={"NSE:INFY": stop_quote})
     assert len(time_exits) == 1 and time_exits[0].reason == "TIME"
-    book.execute("UPDATE positions SET stop=95 WHERE version='swing-v1'")
+    book.execute("UPDATE positions SET stop=95 WHERE version=?", [version])
     exit_decision_at = exit_start + timedelta(seconds=1)
     exit_decision_id = f"paper-book-exit:{signal.signal_id}:s2"
     exit_manifest = record_manifest(runner, session_id="s2", decision_id=exit_decision_id,
@@ -1151,11 +1156,11 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path, wi
     assert reconcile_exit_receipt(book=book, runner=runner, session_id="s2", exit_signal=exits[0],
                                   decision_id=exit_decision_id, order_id="book-exit",
                                   receipt=exit_receipt) == "CLOSED"
-    assert book.execute("SELECT exit_day,exit_reason,held FROM positions WHERE version='swing-v1'").fetchone() == (
+    assert book.execute("SELECT exit_day,exit_reason,held FROM positions WHERE version=?", [version]).fetchone() == (
         exit_day, "STOP", 1)
     from financial_brain.paper import book as paper_book
-    spec = replace(paper_book.POSITION, version="swing-v1")
-    position_cost = book.execute("SELECT cost FROM positions WHERE version='swing-v1'").fetchone()[0]
+    spec = paper_book.BOOKS[version]
+    position_cost = book.execute("SELECT cost FROM positions WHERE version=?", [version]).fetchone()[0]
     bridge_costs = book.execute("SELECT state,simulated_charges_inr FROM paper_book_bridge "
                                 "WHERE signal_id=? ORDER BY order_id", [signal.signal_id]).fetchall()
     if with_cost_schedule:
