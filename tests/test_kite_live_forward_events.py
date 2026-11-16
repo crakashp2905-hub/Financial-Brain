@@ -46,6 +46,40 @@ def test_forward_events_preserves_executable_depth_ohlc_status_and_source_hash()
     assert event.source == "KITE_CONNECT_READ_ONLY"
 
 
+def test_mock_and_default_kite_provider_use_the_same_sanitized_event_contract(monkeypatch, capsys):
+    from financial_brain.providers import kite_data
+
+    secret = "credential-that-must-not-escape"
+    raw = full_quote() | {"api_key": secret, "access_token": secret}
+    keys_seen = []
+
+    def provider(keys, mode):
+        keys_seen.append((keys, mode))
+        return {keys[0]: raw}
+
+    monkeypatch.setattr(kite_data, "quote", provider)
+    through_provider, = forward_events(["INFY"], received_at=RECEIVED)
+    through_mock, = forward_events(["INFY"], quote_fn=provider, received_at=RECEIVED)
+
+    assert keys_seen == [(["NSE:INFY"], "full"), (["NSE:INFY"], "full")]
+    assert through_provider.as_dict() == through_mock.as_dict()
+    assert secret not in str(through_provider.as_dict())
+    assert capsys.readouterr().out == ""
+
+
+def test_rejection_ledger_hashes_invalid_source_without_logging_quote_secrets(capsys):
+    secret = "private-kite-token"
+    rejected = []
+    events = forward_events(["INFY"], quote_fn=lambda keys, mode: {
+        keys[0]: full_quote(timestamp=None, access_token=secret)},
+        received_at=RECEIVED, rejections_out=rejected)
+
+    assert events == []
+    assert len(rejected) == 1 and len(rejected[0]["event_sha256"]) == 64
+    assert secret not in str(rejected)
+    assert capsys.readouterr().out == ""
+
+
 def test_forward_events_keeps_ltp_only_data_non_executable():
     event, = forward_events(["INFY"], quote_fn=lambda keys, mode: {
         keys[0]: full_quote(depth=None)}, received_at=RECEIVED)
