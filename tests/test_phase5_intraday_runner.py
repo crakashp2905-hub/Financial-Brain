@@ -91,8 +91,17 @@ def test_a_failing_feed_aborts_after_the_limit_rather_than_spinning_all_day(setu
 
     def broken(symbols, kind):
         raise RuntimeError("token expired")
-    out = R.run_live(quote_fn=broken, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb", max_failures=5)
+    out = R.run_live(quote_fn=broken, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb",
+                     max_failures=5, poll=30)
     assert out["status"] == "aborted" and "token expired" in out["why"]
+    assert out["feed_health"]["status"] == "STALE"
+    assert out["feed_health"]["decision_status"] == "NO_TRADE"
+    assert out["feed_health"]["poll_attempts"] == out["feed_health"]["failed_polls"] == 5
+    assert out["feed_health"]["dropped_packet_count"] is None
+    note = R.ledger(setup / "l.duckdb").execute(
+        "SELECT note FROM runs WHERE mode = 'live'").fetchone()[0]
+    assert '"decision_status":"NO_TRADE"' in note
+    assert '"failed_polls":5' in note
 
 
 def test_missing_session_retries_then_resumes_without_aborting(setup):
@@ -116,6 +125,8 @@ def test_missing_session_retries_then_resumes_without_aborting(setup):
                      path=setup / "l.duckdb", max_failures=1)
     assert out["status"] == "complete" and out["polls"] > 0
     assert attempts > 2
+    assert out["feed_health"]["reconnects"] == 1
+    assert out["feed_health"]["successful_polls"] == out["polls"]
 
 
 def test_missing_session_at_close_is_not_recorded_as_complete(setup):

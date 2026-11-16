@@ -236,6 +236,17 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     con = ledger(path)
     uni = universe(n)
     syms = [u["tradingsymbol"] for u in uni]
+    from ..forward_edge.feed_health import FeedHealthMonitor
+
+    feed_health = FeedHealthMonitor(tuple(f"NSE:{symbol}" for symbol in syms),
+                                    poll_interval_seconds=float(poll),
+                                    stale_after_seconds=max(90.0, float(poll) * 2))
+
+    def feed_health_note(**extra) -> str:
+        body = {"feed_health": feed_health.snapshot(now=now_fn())}
+        body.update(extra)
+        return json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
     eng = I.DayEngine(day, strategies=strategies, rules=rules)
     eng.daily_up = daily_up(date.fromisoformat(day))
@@ -251,7 +262,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     if daily is not None and daily.attrs.get("opportunities"):
         from ..opportunity import scanners as S
         S.save(con, daily.attrs["opportunities"], day)
-    record_run(con, day, "live", started=started, status="running", symbols=len(syms), version=fingerprint)
+    record_run(con, day, "live", started=started, status="running", symbols=len(syms), version=fingerprint,
+               note=feed_health_note())
     try:
         from ..ingest import quote_archive as QA
         qcon = QA.connect()
@@ -259,6 +271,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         log.warning("quote archive unavailable: %s", str(e)[:120])
         qcon = None
     polls = failures = 0
+    health_persist_every = max(1, 300 // max(1, poll))
     forward_quote_archive_stats = {"received": 0, "archived": 0, "rejected": 0}
     session_issue = None
     seen_today = False
@@ -275,6 +288,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         if clock < OPEN:
             sleep_fn(min(60, (datetime.combine(now.date(), OPEN, IST) - now).total_seconds()))
             continue
+        feed_health.record_attempt(now)
         try:
             q = {}
             for i in range(0, len(syms), 450):
@@ -284,27 +298,40 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                 log.info("Kite session recovered; paper polling resumed")
                 session_issue = None
         except (kd.KiteNotConfigured, kd.KiteAuthError) as e:
+            feed_health.record_failure(now, e)
             issue = type(e).__name__
             if issue != session_issue:
                 log.warning("Kite session unavailable: %s. Complete scripts\\kite_login.cmd or check API access; paper polling will retry.", issue)
             session_issue = issue
             publish(path, eng, now=now, status="Kite session unavailable — waiting for login",
                     polls=polls, prices=last, quote_at=quote_at)
+            record_run(con, day, "live", started=started, status="running", symbols=len(syms), polls=polls,
+                       note=feed_health_note(), version=fingerprint)
             sleep_fn(max(poll, 60))
             continue
         except Exception as e:                          # noqa: BLE001 - a bad poll is not the end of the day
             failures += 1
+            feed_health.record_failure(now, e)
             log.warning("quote failed (%s/%s): %s", failures, max_failures, str(e)[:120])
             publish(path, eng, now=now, status="Quote polling aborted" if failures >= max_failures else "Quote unavailable — retrying",
                     polls=polls, prices=last, quote_at=quote_at)
             if failures >= max_failures:
                 record_run(con, day, "live", started=started, finished=now.isoformat(), status="aborted",
-                           symbols=len(syms), polls=polls, note=f"quotes failing: {str(e)[:120]}", version=fingerprint)
-                return {"day": day, "status": "aborted", "why": str(e)[:200]}
+                           symbols=len(syms), polls=polls,
+                           note=feed_health_note(failure_class=type(e).__name__), version=fingerprint)
+                return {"day": day, "status": "aborted", "why": str(e)[:200],
+                        "feed_health": feed_health.snapshot(now=now_fn())}
+            record_run(con, day, "live", started=started, status="running", symbols=len(syms), polls=polls,
+                       note=feed_health_note(), version=fingerprint)
             sleep_fn(poll)
             continue
         polls += 1
         quote_at = now_fn()
+        recovered = feed_health.consecutive_failures > 0
+        feed_health.record_success(quote_at, q)
+        if recovered or polls % health_persist_every == 0:
+            record_run(con, day, "live", started=started, status="running", symbols=len(syms), polls=polls,
+                       note=feed_health_note(), version=fingerprint)
         try:
             from ..forward_edge.market_data import archive_kite_quote_batch_to_path
 
@@ -336,9 +363,10 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             publish(path, eng, now=now, status="No market session detected", polls=polls,
                     prices=last, quote_at=quote_at)
             record_run(con, day, "live", started=started, finished=now.isoformat(), status="closed",
-                       symbols=len(syms), polls=polls, note="no trade printed today: holiday or no session",
+                       symbols=len(syms), polls=polls,
+                       note=feed_health_note(reason="NO_TRADE_NO_MARKET_SESSION"),
                        version=fingerprint)
-            return {"day": day, "status": "closed"}
+            return {"day": day, "status": "closed", "feed_health": feed_health.snapshot(now=now_fn())}
         if not opened and clock >= I.OR_END:
             if clock > LATE_START:
                 # Started late (the Kite login came after 09:30): take the range from the exact candles.
@@ -402,14 +430,15 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             save(con, t, "live")
     status = "session_unavailable" if session_issue is not None else "complete"
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,
-               symbols=len(syms), polls=polls, note=json.dumps({"skipped": len(eng.skipped)}),
+               symbols=len(syms), polls=polls, note=feed_health_note(skipped=len(eng.skipped)),
                version=fingerprint)
     if qcon is not None:
         qcon.close()
     if session_issue is None and _has_board(con):
         BD.resolve_close(con, day, "live", last)
     out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls,
-           "forward_quote_archive": forward_quote_archive_stats}
+           "forward_quote_archive": forward_quote_archive_stats,
+           "feed_health": feed_health.snapshot(now=now_fn())}
     publish(path, eng, now=now_fn(), status="Session complete" if status == "complete" else "Session unavailable",
             polls=polls, prices=last, quote_at=quote_at)
     write_report(con, day, "live", eng, cohort=cohort)
