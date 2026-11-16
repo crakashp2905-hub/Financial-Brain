@@ -325,19 +325,22 @@ def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=Non
     quote = quote or {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
                       "depth": {"buy": [{"price": 99.95, "quantity": 20}],
                                 "sell": [{"price": 100.05, "quantity": 3}]}}
-    event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
-    runner.ingest("s", config, [event])
+    signal_event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    runner.ingest("s", config, [signal_event])
     decided = NOW + timedelta(milliseconds=decision_offset_ms)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
-                  decided_at=decided, input_event_ids=(event.event_id,))
+                  decided_at=decided, input_event_ids=(signal_event.event_id,))
     if include_manifest:
-        record_manifest(runner, session_id="s", decision_id="trade-1", event=event,
+        record_manifest(runner, session_id="s", decision_id="trade-1", event=signal_event,
                         decided_at=decided, quantity=11)
     runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
                                allowed=risk_allowed, policy_id="test-risk-v1", policy_sha256="a" * 64,
                                reason_codes=() if risk_allowed else ("DAILY_LOSS_LIMIT",),
                                assessed_at=decided + timedelta(milliseconds=risk_assessment_offset_ms))
-    return runner, event, decided
+    fill_event = normalize_kite_quote("NSE:INFY", quote, received_at=decided + timedelta(milliseconds=100))
+    runner.ingest("s", config, [fill_event], ingest_metadata={
+        fill_event.event_id: (fill_event.available_at + timedelta(milliseconds=1), "TEST_FILL_QUOTE_CLOCK")})
+    return runner, fill_event, decided
 
 
 def record_manifest(runner, *, session_id, decision_id, event, decided_at, quantity,
@@ -370,12 +373,22 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
     return runner.record_decision_manifest(session_id=session_id, decision_id=decision_id, manifest=manifest)
 
 
-def execute(runner, event, decided, *, order_id="order-1", qty=2, limit="100.30"):
+def execute(runner, event, decided, *, order_id="order-1", qty=2, limit="100.30",
+            execution_offset_ms=100):
     return runner.execute_paper_intent(
         session_id="s", order_id=order_id, decision_id="trade-1", event_id=event.event_id,
         side="BUY", quantity=qty, limit_price=Decimal(limit), tick_size=Decimal("0.05"),
         freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
-        simulated_at=decided + timedelta(milliseconds=100))
+        simulated_at=decided + timedelta(milliseconds=execution_offset_ms))
+
+
+def append_fill_quote(runner, config, signal_event, *, event_id, available_at):
+    quote = MarketEvent(event_id, EventKind.QUOTE, signal_event.venue, signal_event.instrument_id,
+                        available_at, available_at, available_at, signal_event.payload,
+                        signal_event.source, evidence_id=signal_event.evidence_id or "f" * 64)
+    runner.ingest("s", config, [quote], ingest_metadata={
+        quote.event_id: (available_at + timedelta(milliseconds=1), "TEST_FILL_QUOTE_CLOCK")})
+    return quote
 
 
 def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path):
@@ -395,6 +408,70 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert accounting["ledger_balanced"] and accounting["cash_reconciled"]
     assert accounting["charges_assessed"] is False and accounting["net_pnl_eligible"] is False
     runner.close()
+
+
+def test_fill_uses_a_new_executable_quote_received_after_the_decision(tmp_path):
+    runner, signal_event, decided = trade_setup(tmp_path)
+    early_time = decided + timedelta(milliseconds=50)
+    early_event = MarketEvent(
+        "pre-eligible-fill-quote", EventKind.QUOTE, "NSE", "NSE:INFY", early_time, early_time, early_time,
+        {"bid": 100.0, "ask": 100.1, "bid_quantity": 20, "ask_quantity": 20, "volume": 100,
+         "depth": {"buy": [[100.0, 20]], "sell": [[100.1, 20]]}},
+        "FIXTURE", evidence_id="a" * 64)
+    runner.ingest("s", make_config(), [early_event],
+                  ingest_metadata={early_event.event_id: (early_time + timedelta(milliseconds=1), "TEST_CLOCK")})
+    with pytest.raises(ForwardSessionRunnerError, match="quote predates order eligibility"):
+        runner.execute_paper_intent(
+            session_id="s", order_id="pre-eligible-fill", decision_id="trade-1",
+            event_id=early_event.event_id, side="BUY", quantity=2,
+            limit_price=Decimal("100.30"), tick_size=Decimal("0.05"), freeze_limit=10,
+            slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
+            simulated_at=decided + timedelta(milliseconds=100))
+    assert runner.records("s")["intents"] == []
+    quote_time = decided + timedelta(milliseconds=150)
+    fill_event = MarketEvent(
+        "post-decision-fill-quote", EventKind.QUOTE, "NSE", "NSE:INFY", quote_time, quote_time, quote_time,
+        {"bid": 100.0, "ask": 100.1, "bid_quantity": 20, "ask_quantity": 20, "volume": 100,
+         "depth": {"buy": [[100.0, 20]], "sell": [[100.1, 20]]}},
+        "FIXTURE", evidence_id="e" * 64)
+    runner.ingest("s", make_config(), [fill_event],
+                  ingest_metadata={fill_event.event_id: (quote_time + timedelta(milliseconds=1), "TEST_CLOCK")})
+    with pytest.raises(ForwardSessionRunnerError, match="unavailable at simulated execution time"):
+        runner.execute_paper_intent(
+            session_id="s", order_id="early-fill", decision_id="trade-1", event_id=fill_event.event_id,
+            side="BUY", quantity=2, limit_price=Decimal("100.30"), tick_size=Decimal("0.05"),
+            freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
+            simulated_at=decided + timedelta(milliseconds=120))
+    assert runner.records("s")["intents"] == []
+    receipt = runner.execute_paper_intent(
+        session_id="s", order_id="post-decision-fill", decision_id="trade-1",
+        event_id=fill_event.event_id, side="BUY", quantity=2, limit_price=Decimal("100.30"),
+        tick_size=Decimal("0.05"), freeze_limit=10, slice_size=10,
+        adverse_slippage_bps=Decimal("10"), latency_ms=100,
+        simulated_at=decided + timedelta(milliseconds=200))
+    assert receipt["status"] == "FILLED"
+    assert receipt["quote_event_id"] == fill_event.event_id
+    decision_inputs = runner.records("s")["decisions"][0]["input_event_ids"]
+    assert decision_inputs
+    assert signal_event.event_id not in decision_inputs
+    assert fill_event.event_id not in runner.records("s")["decisions"][0]["input_event_ids"]
+    runner.close()
+
+
+def test_one_tick_worse_post_decision_quote_worsens_simulated_buy_fill(tmp_path):
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+             "depth": {"buy": [{"price": 100.0, "quantity": 20}],
+                       "sell": [{"price": 100.1, "quantity": 20}]}}
+    baseline_runner, baseline_event, baseline_decided = trade_setup(tmp_path / "baseline", quote=quote)
+    baseline = execute(baseline_runner, baseline_event, baseline_decided)
+    baseline_runner.close()
+
+    worse_quote = {**quote, "depth": {"buy": quote["depth"]["buy"],
+                                       "sell": [{"price": 100.15, "quantity": 20}]}}
+    worse_runner, worse_event, worse_decided = trade_setup(tmp_path / "worse", quote=worse_quote)
+    worse = execute(worse_runner, worse_event, worse_decided)
+    worse_runner.close()
+    assert Decimal(worse["average_price"]) == Decimal(baseline["average_price"]) + Decimal("0.05")
 
 
 def test_ltp_only_trade_decision_is_recordable_but_never_produces_paper_fill(tmp_path):
@@ -427,7 +504,7 @@ def test_stale_quote_is_refused_at_decision_time_by_the_frozen_age_limit(tmp_pat
 def test_quote_that_ages_out_during_simulated_latency_cannot_create_an_intent(tmp_path):
     runner, event, decided = trade_setup(tmp_path, max_quote_age_ms=150, decision_offset_ms=100)
     with pytest.raises(ForwardSessionRunnerError, match="paper fill quote exceeds configured maximum age of 150ms"):
-        execute(runner, event, decided)
+        execute(runner, event, decided, execution_offset_ms=500)
     assert runner.records("s")["intents"] == []
     assert runner.records("s")["execution_receipts"] == []
     runner.close()
@@ -456,6 +533,7 @@ def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path
     assert before["positions"] == {"NSE:INFY": 2}
 
     sell_decision_at = decided + timedelta(seconds=1)
+    config = make_config()
     runner.decide(session_id="s", strategy_id="momentum", decision_id="sell-1", outcome="TRADE",
                   decided_at=sell_decision_at, input_event_ids=(event.event_id,))
     record_manifest(runner, session_id="s", decision_id="sell-1", event=event,
@@ -463,8 +541,10 @@ def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path
     runner.record_risk_verdict(session_id="s", decision_id="sell-1", verdict_id="risk-sell-1",
                                allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
                                assessed_at=sell_decision_at)
+    sell_event = append_fill_quote(runner, config, event, event_id="sell-quote",
+                                   available_at=sell_decision_at + timedelta(milliseconds=100))
     sold = runner.execute_paper_intent(
-        session_id="s", order_id="sell-order", decision_id="sell-1", event_id=event.event_id,
+        session_id="s", order_id="sell-order", decision_id="sell-1", event_id=sell_event.event_id,
         side="SELL", quantity=2, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),
         freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
         simulated_at=sell_decision_at + timedelta(milliseconds=100))
@@ -508,14 +588,17 @@ def test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net(t
     runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
                                allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
                                assessed_at=decided)
+    fill_event = append_fill_quote(runner, make_config_with_constraints(constraints), event,
+                                   event_id="cost-fill-quote",
+                                   available_at=decided + timedelta(milliseconds=100))
     buy = runner.execute_paper_intent(
-        session_id="s", order_id="buy", decision_id="trade-1", event_id=event.event_id,
+        session_id="s", order_id="buy", decision_id="trade-1", event_id=fill_event.event_id,
         side="BUY", quantity=2, limit_price=Decimal("100.30"), tick_size=Decimal("0.05"),
         freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
         simulated_at=decided + timedelta(milliseconds=100))
     assert buy["charges_inr"] > "0"
     sell = runner.execute_paper_intent(
-        session_id="s", order_id="sell", decision_id="trade-1", event_id=event.event_id,
+        session_id="s", order_id="sell", decision_id="trade-1", event_id=fill_event.event_id,
         side="SELL", quantity=2, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),
         freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
         simulated_at=decided + timedelta(milliseconds=100))
@@ -558,7 +641,9 @@ def test_forward_mixed_costed_and_uncosted_fills_are_not_net_eligible(tmp_path):
     runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
                                allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
                                assessed_at=decided)
-    execute(runner, event, decided)
+    fill_event = append_fill_quote(runner, config, event, event_id="legacy-fill-quote",
+                                   available_at=decided + timedelta(milliseconds=100))
+    execute(runner, fill_event, decided)
     # A legacy persisted receipt without cost evidence must remain gross-only.
     row = runner._con.execute("SELECT receipt_json FROM paper_execution_receipts WHERE order_id='order-1'").fetchone()
     receipt = __import__("json").loads(row[0])
@@ -641,7 +726,7 @@ def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_p
     execute(runner, event, decided)
     baseline = runner.records("s")
     assert [item["kind"] for item in baseline["audit_log"]] == [
-        "preflight", "market_event", "decision", "decision_manifest", "risk_verdict",
+        "preflight", "market_event", "decision", "decision_manifest", "risk_verdict", "market_event",
         "paper_intent", "execution_receipt"]
     with pytest.raises(sqlite3.IntegrityError, match="append-only"):
         runner._con.execute("UPDATE runner_audit_log SET record_json='{}' WHERE session_id='s'")
@@ -788,23 +873,30 @@ def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
                                   tmp_path / "journal.sqlite", clock=clock)
     assert runner.begin("clock-session", make_config(),
                         preflight={"risk_policy_loaded": True}) is SessionState.OPEN
-    event = normalize_kite_quote("NSE:INFY", {
+    signal_event = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
         "depth": {"buy": [{"price": 99.95, "quantity": 20}],
                   "sell": [{"price": 100.05, "quantity": 3}]},
     }, received_at=NOW)
-    runner.ingest("clock-session", make_config(), [event],
-                  ingest_metadata={event.event_id: (NOW + timedelta(milliseconds=10), "FIXTURE_CLOCK")})
+    runner.ingest("clock-session", make_config(), [signal_event],
+                  ingest_metadata={signal_event.event_id: (NOW + timedelta(milliseconds=10), "FIXTURE_CLOCK")})
     runner.decide(session_id="clock-session", strategy_id="momentum", decision_id="clock-trade",
-                  outcome="TRADE", input_event_ids=(event.event_id,))
-    record_manifest(runner, session_id="clock-session", decision_id="clock-trade", event=event,
+                  outcome="TRADE", input_event_ids=(signal_event.event_id,))
+    record_manifest(runner, session_id="clock-session", decision_id="clock-trade", event=signal_event,
                     decided_at=decided_at, quantity=2)
     runner.record_risk_verdict(session_id="clock-session", decision_id="clock-trade",
                                verdict_id="clock-risk", allowed=True, policy_id="test-risk-v1",
                                policy_sha256="a" * 64, assessed_at=decided_at)
+    fill_event = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+        "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                  "sell": [{"price": 100.05, "quantity": 3}]},
+    }, received_at=executed_at)
+    runner.ingest("clock-session", make_config(), [fill_event],
+                  ingest_metadata={fill_event.event_id: (executed_at, "FIXTURE_FILL_CLOCK")})
     receipt = runner.execute_paper_intent(
         session_id="clock-session", order_id="clock-order", decision_id="clock-trade",
-        event_id=event.event_id, side="BUY", quantity=2, limit_price=Decimal("100.30"),
+        event_id=fill_event.event_id, side="BUY", quantity=2, limit_price=Decimal("100.30"),
         tick_size=Decimal("0.05"), freeze_limit=10, slice_size=10,
         adverse_slippage_bps=Decimal("10"), latency_ms=100)
     assert receipt["simulated_at"] == executed_at.isoformat()

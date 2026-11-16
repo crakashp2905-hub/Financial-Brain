@@ -874,13 +874,24 @@ class ForwardSessionRunner:
             if manifest.get("cost_model_sha256") != schedule.digest():
                 raise ForwardSessionRunnerError(
                     "decision manifest cost-model hash differs from the run's versioned cost schedule")
-        if event_id not in decision["input_event_ids"]:
-            raise ForwardSessionRunnerError("paper quote must be an input to the recorded decision")
         event_row = self._con.execute("SELECT event_json FROM runner_events WHERE session_id=? AND event_id=?",
                                       [session_id, event_id]).fetchone()
         if event_row is None:
             raise ForwardSessionRunnerError("paper quote is absent from the session event journal")
         event = MarketEvent.from_dict(json.loads(event_row[0]))
+        if event_id in decision["input_event_ids"]:
+            signal_event = event
+        else:
+            input_rows = self._con.execute(
+                f"SELECT event_json FROM runner_events WHERE session_id=? AND event_id IN "
+                f"({','.join('?' for _ in decision['input_event_ids'])}) ORDER BY available_at, event_id",
+                [session_id, *decision["input_event_ids"]]).fetchall()
+            signal_events = [MarketEvent.from_dict(json.loads(row[0])) for row in input_rows]
+            matching = [candidate for candidate in signal_events
+                        if candidate.instrument_id == event.instrument_id]
+            signal_event = (matching or signal_events)[0]
+        if event.available_at > simulated_at.astimezone(timezone.utc):
+            raise ForwardSessionRunnerError("paper fill quote was unavailable at simulated execution time")
         quote_age = simulated_at.astimezone(timezone.utc) - event.available_at
         max_quote_age = self._max_quote_age(session_id)
         if quote_age > timedelta(milliseconds=max_quote_age):
@@ -910,11 +921,13 @@ class ForwardSessionRunner:
         if side == "BUY" and Decimal(str(accounting["cash_inr"])) < limit * quantity:
             raise ForwardSessionRunnerError("paper buy exceeds reconciled available cash")
         decision_at = datetime.fromisoformat(decision["decided_at"])
-        timed = create_timed_intent(decision_id=decision_id, event=event, side=side, quantity=quantity,
+        timed = create_timed_intent(decision_id=decision_id, event=signal_event, side=side, quantity=quantity,
                                     decision_time=decision_at,
                                     latency=timedelta(milliseconds=latency_ms))
         if simulated_at.astimezone(timezone.utc) < timed.earliest_fill_time:
             raise ForwardSessionRunnerError("simulated fill precedes decision plus configured latency")
+        if event.available_at < timed.earliest_fill_time:
+            raise ForwardSessionRunnerError("paper fill quote predates order eligibility after modeled latency")
         touch = quote["ask"] if side == "BUY" else quote["bid"]
         visible = quote["ask_quantity"] if side == "BUY" else quote["bid_quantity"]
         request = {"session_id": session_id, "order_id": order_id, "decision_id": decision_id,
