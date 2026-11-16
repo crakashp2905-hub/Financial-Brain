@@ -38,6 +38,12 @@ jobs:
         run: python scripts/validate_release_semantics.py
       - name: Inventory source ownership gaps
         run: python scripts/source_inventory.py
+      - name: Verify source inventory snapshot
+        run: python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check
+      - name: Verify old/new forward-engine dependency graph
+        run: python scripts/forward_engine_graph.py --check
+      - name: Verify scoped authoritative state ownership
+        run: python scripts/state_ownership.py
       - name: Type check (OMS, evidence standard, pre-registry)
         run: python -m mypy
       - name: Schema migrations

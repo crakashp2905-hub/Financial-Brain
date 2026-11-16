@@ -1,7 +1,12 @@
 """Inventory includes every Python source while preserving unknown status."""
+import hashlib
 from pathlib import Path
 
-from scripts.source_inventory import build, canonical_bytes
+import pytest
+
+from scripts.forward_engine_graph import build as build_graph, rendered_bytes as graph_bytes
+from scripts.source_inventory import build, canonical_bytes, rendered_bytes
+from scripts.state_ownership import load as load_ownership, validate as validate_ownership
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,3 +31,26 @@ def test_curated_source_has_exact_existing_tests_and_stable_serialization():
     assert manifest["maturity"] == "locally_mapped"
     assert "tests/test_decision_manifest.py" in manifest["test_paths"]
     assert all((ROOT / test).is_file() for row in one["sources"] for test in row["test_paths"])
+    assert all(row["source_sha256"] == hashlib.sha256(
+        (ROOT / row["source"]).read_bytes()).hexdigest() for row in one["sources"])
+
+
+def test_committed_source_and_runner_graph_snapshots_are_current():
+    inventory_path = ROOT / "docs/edge-program/source-inventory.v2.json"
+    graph_path = ROOT / "docs/edge-program/forward-engine-dependency-graph.v1.json"
+    assert inventory_path.read_bytes() == rendered_bytes(build(ROOT))
+    graph = build_graph(ROOT)
+    assert graph_path.read_bytes() == graph_bytes(graph)
+    assert graph["source_count"] == build(ROOT)["source_count"]
+    assert graph["entrypoints"]["legacy_intraday_paper"] in graph["closures"]["legacy_intraday_paper"]
+    assert graph["entrypoints"]["forward_session_runner"] in graph["closures"]["forward_session_runner"]
+
+
+def test_state_ownership_is_scoped_and_duplicate_authorities_are_rejected():
+    registry = load_ownership(ROOT)
+    assert len(registry["unresolved_domains"]) == 2
+    assert all(row["status"] == "not_established" for row in registry["unresolved_domains"])
+    duplicate = dict(registry)
+    duplicate["authorities"] = [*registry["authorities"], dict(registry["authorities"][0])]
+    with pytest.raises(ValueError, match="duplicate authoritative owner"):
+        validate_ownership(duplicate, ROOT)
