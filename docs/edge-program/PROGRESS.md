@@ -5,9 +5,18 @@ This tracker belongs to the 218 unique `PE-####` tasks in
 substitute for this checklist. Task wording is retained from the attachment; the repo copy adds checked boxes and
 completion evidence only after acceptance criteria pass. The original Downloads file is untouched.
 
-Verified checklist count: **10 / 218 complete**. Partial tasks are reported separately and are not included in this count.
+Verified checklist count: **10 / 218 complete (4.6%)**. Partial tasks are reported separately and are not included in this count.
 
-Count basis: this file reports completed PE-#### checkboxes in the 218-task master checklist. The separate FE-0001..FE-0152 tracker currently reports 20 DONE, 97 PARTIAL, 11 BLOCKED and 24 NOT_STARTED; DONE plus PARTIAL is 117/152 (77%) with some implementation activity, not 77% complete. Do not compare that combined progress figure with the PE completion count.
+Count basis: this file reports completed PE-#### checkboxes in the 218-task master checklist. Other charts in this repository use different task sets and status rules, so their percentages do not measure completion of this checklist:
+
+| Tracker | Scope | Current count | What the percentage means |
+|---|---|---:|---|
+| PE master checklist | 218 PE-#### requirements | 10 complete / 218 (4.6%) | Fully checked PE requirements only; partial rows do not count. |
+| Forward-edge tracker | 152 FE-#### requirements | 20 DONE, 97 PARTIAL, 11 BLOCKED, 24 NOT_STARTED | 117/152 (76.97%) have at least some implementation activity; only 20/152 (13.2%) are DONE under its stated test-linked scope. |
+| Chart-pattern completion matrix | 406 CP-#### engineering requirements | 378 implemented, 9 not-applicable with evidence, 19 incomplete | 387/406 (95.3%) have PASS results in this engineering matrix. This is chart-pattern software completion, not forward-edge or market-edge proof. |
+| Unified platform tracker | 711 FB-#### requirements | 246 implemented, 187 partial, 181 open, 97 external-blocked | 433/711 (60.9%) are implemented or partial; 246/711 (34.6%) are marked implemented. |
+
+The 218-task source checklist's introductory evidence records an older FE-tracker snapshot (84 DONE / 56 PARTIAL / 12 BLOCKED, with 0 independently evidenced) at the checklist's audited main SHA. It is historical context, not the current FE tracker totals. At the current checkout, `docs/forward-edge/TRACKER.md` is generated from `fe-items.json` and reports 20 DONE / 97 PARTIAL / 11 BLOCKED / 24 NOT_STARTED. These trackers differ in scope and status definitions; do not combine their numerators or present “started” as “completed.”
 
 ## Current package status
 
