@@ -327,6 +327,22 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     runner.close()
 
 
+def test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags(tmp_path, monkeypatch):
+    from financial_brain.execution.oms.kite_broker import KiteBroker
+    from financial_brain.forward_edge import modes
+
+    calls = []
+    monkeypatch.setattr(KiteBroker, "place", lambda *_args, **_kwargs: calls.append("place"))
+    monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
+    monkeypatch.setenv("FB_LIVE_ORDERS", "1")
+    runner, event, decided = trade_setup(tmp_path)
+    receipt = execute(runner, event, decided)
+    assert receipt["status"] == "FILLED"
+    assert receipt["physical_order_submitted"] is False
+    assert calls == []
+    runner.close()
+
+
 def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path):
     runner, event, decided = trade_setup(tmp_path)
     execute(runner, event, decided)

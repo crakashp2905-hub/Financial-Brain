@@ -320,7 +320,11 @@ def test_broker_dryrun_needs_verified_compliance() -> None:
     assert modes.resolve_mode(Mode.SHADOW, now=NOW).mode is Mode.SHADOW
 
 
-def test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders() -> None:
+def test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    # Deliberately forge the build enable flag: simulation mode authorization must
+    # remain nonphysical even under this compromised configuration.
+    monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
     assert SessionMode(Mode.LIVE_PAPER).may_emit_paper_fill is True
     for mode in (Mode.RESEARCH_REPLAY, Mode.SHADOW, Mode.BROKER_DRYRUN):
         assert SessionMode(mode).may_emit_paper_fill is False

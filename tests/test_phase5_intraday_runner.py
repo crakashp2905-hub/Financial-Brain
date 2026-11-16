@@ -155,6 +155,41 @@ def test_replay_runs_the_same_engine_on_minute_candles_and_labels_it(setup):
     assert ev[0]["mode"] == "replay" and ev[0]["status"] == "COLLECTING"
 
 
+def test_live_paper_and_replay_never_call_physical_broker_even_with_forged_flags(setup, monkeypatch):
+    """Exercise both intraday simulation entry points under a forged live-order config."""
+    from financial_brain.execution.oms.kite_broker import KiteBroker
+    from financial_brain.forward_edge import modes
+
+    calls = []
+    monkeypatch.setattr(KiteBroker, "place", lambda *_args, **_kwargs: calls.append("place"))
+    monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
+    monkeypatch.setenv("FB_LIVE_ORDERS", "1")
+
+    def candles(tok, start, end, interval):
+        if interval == "day":
+            return [{"ts": "2026-10-01T00:00:00+0530", "close": 100.0},
+                    {"ts": "2026-10-05T00:00:00+0530", "close": 105.0}]
+        return [{"ts": (datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)).strftime(
+                    "%Y-%m-%dT%H:%M:%S+0530"), "open": price_at(datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)),
+                 "high": price_at(datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)) + 0.05,
+                 "low": price_at(datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)) - 0.05,
+                 "close": price_at(datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)), "volume": 1000}
+                for k in range(360)]
+
+    clock = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    live = R.run_live(poll=3600, quote_fn=fake_quotes(clock), now_fn=clock.now, sleep_fn=clock.sleep,
+                      candles_fn=candles, token_fn=lambda _symbol: 1,
+                      path=setup / "forged-live-paper.duckdb")
+    assert live["status"] == "complete"
+    assert R.ledger(setup / "forged-live-paper.duckdb").execute(
+        "SELECT COUNT(*) FROM trades").fetchone()[0] > 0
+
+    replay = R.run_replay(date(2026, 10, 5), candles_fn=candles, token_fn=lambda _symbol: 1,
+                          path=setup / "forged-replay.duckdb")
+    assert replay["summary"]["ORB"]["trades"] > 0
+    assert calls == []
+
+
 def test_a_late_start_takes_the_opening_range_from_candles_not_from_the_days_high_and_low(setup):
     c = Clock(datetime(2026, 10, 6, 9, 50, tzinfo=R.IST))         # logged in late
     asked = []
