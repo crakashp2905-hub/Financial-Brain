@@ -57,9 +57,12 @@ class Event:
 
 class EventKernel:
     def __init__(self, *, max_queue: int = 10_000, lateness: timedelta = timedelta(seconds=5),
-                 journal_path: str | None = None) -> None:
+                 journal_path: str | None = None,
+                 connection: sqlite3.Connection | None = None) -> None:
         if max_queue < 1:
             raise ValueError("max_queue must be positive")
+        if journal_path is not None and connection is not None:
+            raise ValueError("pass journal_path or connection, not both")
         self._max = max_queue
         self._lateness = lateness
         self._queue: list[Event] = []
@@ -71,11 +74,14 @@ class EventKernel:
         self.side_effects: list[str] = []
         self.reconciliations: list[tuple[str, bool, str]] = []
         self._journal_path = journal_path
-        self._store: sqlite3.Connection | None = None
+        self._store: sqlite3.Connection | None = connection
+        self._owns_store = False
         if journal_path is not None:
             path = os.path.abspath(journal_path)
             os.makedirs(os.path.dirname(path), exist_ok=True)
             self._store = sqlite3.connect(path)
+            self._owns_store = True
+        if self._store is not None:
             self._store.execute("PRAGMA journal_mode=WAL")
             self._store.execute("PRAGMA synchronous=FULL")
             self._store.executescript("""
@@ -109,9 +115,9 @@ class EventKernel:
             self._restore_store()
 
     def close(self) -> None:
-        if self._store is not None:
+        if self._store is not None and self._owns_store:
             self._store.close()
-            self._store = None
+        self._store = None
 
     def _restore_store(self) -> None:
         assert self._store is not None

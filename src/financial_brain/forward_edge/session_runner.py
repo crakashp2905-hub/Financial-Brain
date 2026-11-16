@@ -100,6 +100,56 @@ class ForwardSessionRunner:
             session_id TEXT NOT NULL, order_id TEXT NOT NULL, receipt_sha256 TEXT NOT NULL,
             receipt_json TEXT NOT NULL, PRIMARY KEY(session_id, order_id))""")
         self._con.commit()
+        # Keep simulated execution acknowledgements beside the journal and receipt rows.
+        # Existing per-run outbox files are imported once so a restart across this migration
+        # does not forget a PENDING, DISPATCHED, or reconciled outcome.
+        from financial_brain.kernel.events import EventKernel
+
+        EventKernel(connection=self._con).close()
+        self._con.execute("CREATE TABLE IF NOT EXISTS runner_migrations (migration_id TEXT PRIMARY KEY)")
+        self._migrate_legacy_outbox()
+
+    def _migrate_legacy_outbox(self) -> None:
+        migration_id = "paper_outbox_to_session_journal_v1"
+        done = self._con.execute("SELECT 1 FROM runner_migrations WHERE migration_id=?",
+                                 [migration_id]).fetchone()
+        legacy_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
+        if done or not legacy_path.is_file():
+            return
+        try:
+            with sqlite3.connect(str(legacy_path)) as legacy:
+                outbox_rows = legacy.execute(
+                    "SELECT key, state, reconciled_by FROM outbox ORDER BY key").fetchall()
+                reconciliation_rows = legacy.execute(
+                    "SELECT key, took_effect, reconciled_by FROM reconciliations "
+                    "ORDER BY reconciliation_id").fetchall()
+        except sqlite3.Error as exc:
+            raise ForwardSessionRunnerError("legacy paper outbox cannot be migrated") from exc
+        try:
+            self._con.execute("BEGIN IMMEDIATE")
+            for row in outbox_rows:
+                existing = self._con.execute("SELECT state, reconciled_by FROM outbox WHERE key=?",
+                                             [row[0]]).fetchone()
+                if existing is not None and tuple(existing) != tuple(row[1:]):
+                    raise ForwardSessionRunnerError("legacy outbox conflicts with journal outbox state")
+                self._con.execute("INSERT OR IGNORE INTO outbox (key,state,reconciled_by) VALUES (?,?,?)", row)
+            for key, took_effect, actor in reconciliation_rows:
+                present = self._con.execute(
+                    "SELECT 1 FROM reconciliations WHERE key=? AND took_effect=? AND reconciled_by=?",
+                    [key, took_effect, actor]).fetchone()
+                if present is None:
+                    self._con.execute("INSERT INTO reconciliations (key,took_effect,reconciled_by) VALUES (?,?,?)",
+                                      [key, took_effect, actor])
+            self._con.execute("INSERT INTO runner_migrations VALUES (?)", [migration_id])
+            self._con.commit()
+        except Exception:
+            self._con.rollback()
+            raise
+
+    def _outbox_kernel(self):
+        from financial_brain.kernel.events import EventKernel
+
+        return EventKernel(connection=self._con)
 
     def close(self) -> None:
         self._con.close()
@@ -233,13 +283,9 @@ class ForwardSessionRunner:
                 )
                 state = self.state_store.state(session_id)
 
-        unknown: list[str] = []
-        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
-        if outbox_path.is_file():
-            with sqlite3.connect(str(outbox_path)) as outbox:
-                unknown = [row[0] for row in outbox.execute(
-                    "SELECT key FROM outbox WHERE state IN ('PENDING','UNKNOWN') ORDER BY key")
-                           if row[0].startswith(f"paper:{session_id}:")]
+        unknown = [row[0] for row in self._con.execute(
+            "SELECT key FROM outbox WHERE state IN ('PENDING','UNKNOWN') AND key LIKE ? ORDER BY key",
+            [f"paper:{session_id}:%"]).fetchall()]
         return {"session_id": session_id, "state": state.value,
                 "config_sha256": config.sha256(), "records": self.records(session_id),
                 "unresolved_paper_outbox_keys": unknown,
@@ -645,7 +691,7 @@ class ForwardSessionRunner:
                                         events=events, intents=intents, receipts=receipts)
 
     def checkpoint(self, session_id: str, *, phase: str, now: datetime | None = None) -> dict[str, Any]:
-        """Freeze a START or END journal/outbox snapshot; ledger absence is explicit."""
+        """Atomically freeze one START or END journal, outbox, and accounting snapshot."""
         phase = phase.strip().upper()
         if phase not in {"START", "END"}:
             raise ForwardSessionRunnerError("checkpoint phase must be START or END")
@@ -653,49 +699,58 @@ class ForwardSessionRunner:
         if now.tzinfo is None or now.utcoffset() is None:
             raise ForwardSessionRunnerError("checkpoint timestamp must be timezone aware")
         checkpoint_id = f"{session_id}:{phase.lower()}"
-        existing = self._con.execute("SELECT checkpoint_sha256, checkpoint_json FROM runner_checkpoints "
-                                     "WHERE session_id=? AND checkpoint_id=?",
-                                     [session_id, checkpoint_id]).fetchone()
-        if existing and phase == "START":
-            return json.loads(existing[1]) | {"checkpoint_sha256": existing[0]}
-        state = self.state_store.state(session_id)
-        records = self.records(session_id)
-        if phase == "START" and any(records[name] for name in ("events", "decisions", "intents", "execution_receipts")):
-            raise ForwardSessionRunnerError("START checkpoint must precede market events and decisions")
-        if phase == "END" and state not in {SessionState.CLOSED, SessionState.NO_TRADE, SessionState.INCOMPLETE}:
-            raise ForwardSessionRunnerError("END checkpoint requires a terminal session state")
-        outbox_rows: list[dict[str, Any]] = []
-        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
-        if outbox_path.is_file():
-            with sqlite3.connect(str(outbox_path)) as outbox:
-                outbox_rows = [{"key": row[0], "state": row[1], "reconciled_by": row[2]}
-                               for row in outbox.execute(
-                                   "SELECT key, state, reconciled_by FROM outbox "
-                                   "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
-        hashes = {name: self._sha256(records[name])
-                  for name in ("events", "decisions", "decision_manifests", "lifecycle", "intents",
-                               "execution_receipts")}
-        hashes["accounting"] = self._sha256(records["accounting"])
-        hashes["ledger"] = str(records["accounting"]["ledger_sha256"])
-        hashes["outbox"] = self._sha256(outbox_rows)
-        if existing:
-            prior = json.loads(existing[1])
-            if prior.get("session_state") != state.value or prior.get("record_hashes") != hashes:
-                raise ForwardSessionRunnerError("END checkpoint ID already contains different immutable evidence")
-            return prior | {"checkpoint_sha256": existing[0]}
-        body = {"schema": "fb.forward-session-checkpoint.v1", "session_id": session_id,
-                "checkpoint_id": checkpoint_id, "phase": phase,
-                "captured_at": now.astimezone(timezone.utc).isoformat(),
-                "session_state": state.value, "record_hashes": hashes,
-                "ledger_sha256": records["accounting"]["ledger_sha256"],
-                "ledger_status": records["accounting"]["status"],
-                "atomic_with_ledger": False}
-        canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
-        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-        self._con.execute("INSERT INTO runner_checkpoints VALUES (?, ?, ?, ?, ?)",
-                          [session_id, checkpoint_id, phase, digest, canonical])
-        self._con.commit()
-        return body | {"checkpoint_sha256": digest}
+        self._con.execute("BEGIN IMMEDIATE")
+        try:
+            existing = self._con.execute("SELECT checkpoint_sha256, checkpoint_json FROM runner_checkpoints "
+                                         "WHERE session_id=? AND checkpoint_id=?",
+                                         [session_id, checkpoint_id]).fetchone()
+            if existing and phase == "START":
+                result = json.loads(existing[1]) | {"checkpoint_sha256": existing[0]}
+                self._con.commit()
+                return result
+            state = self.state_store.state(session_id)
+            records = self.records(session_id)
+            if phase == "START" and any(
+                    records[name] for name in ("events", "decisions", "intents", "execution_receipts")):
+                raise ForwardSessionRunnerError("START checkpoint must precede market events and decisions")
+            if phase == "END" and state not in {
+                    SessionState.CLOSED, SessionState.NO_TRADE, SessionState.INCOMPLETE}:
+                raise ForwardSessionRunnerError("END checkpoint requires a terminal session state")
+            outbox_rows = [{"key": row[0], "state": row[1], "reconciled_by": row[2]}
+                           for row in self._con.execute(
+                               "SELECT key, state, reconciled_by FROM outbox "
+                               "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
+            hashes = {name: self._sha256(records[name])
+                      for name in ("events", "decisions", "decision_manifests", "lifecycle", "intents",
+                                   "execution_receipts")}
+            hashes["accounting"] = self._sha256(records["accounting"])
+            hashes["ledger"] = str(records["accounting"]["ledger_sha256"])
+            hashes["outbox"] = self._sha256(outbox_rows)
+            if existing:
+                prior = json.loads(existing[1])
+                if prior.get("session_state") != state.value or prior.get("record_hashes") != hashes:
+                    raise ForwardSessionRunnerError(
+                        "END checkpoint ID already contains different immutable evidence")
+                self._con.commit()
+                return prior | {"checkpoint_sha256": existing[0]}
+            unresolved = any(row["state"] in {"PENDING", "UNKNOWN"} for row in outbox_rows)
+            ledger_bound = records["accounting"]["status"] == "RECONCILED_GROSS" and not unresolved
+            body = {"schema": "fb.forward-session-checkpoint.v1", "session_id": session_id,
+                    "checkpoint_id": checkpoint_id, "phase": phase,
+                    "captured_at": now.astimezone(timezone.utc).isoformat(),
+                    "session_state": state.value, "record_hashes": hashes,
+                    "ledger_sha256": records["accounting"]["ledger_sha256"],
+                    "ledger_status": records["accounting"]["status"],
+                    "atomic_with_ledger": ledger_bound}
+            canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+            digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            self._con.execute("INSERT INTO runner_checkpoints VALUES (?, ?, ?, ?, ?)",
+                              [session_id, checkpoint_id, phase, digest, canonical])
+            self._con.commit()
+            return body | {"checkpoint_sha256": digest}
+        except Exception:
+            self._con.rollback()
+            raise
 
     def verify_checkpoint(self, session_id: str, checkpoint_id: str) -> dict[str, Any]:
         """Verify immutable checkpoint bytes and, for END, compare them with current journal contents."""
@@ -725,14 +780,10 @@ class ForwardSessionRunner:
                                "execution_receipts")}
         hashes["accounting"] = self._sha256(records["accounting"])
         hashes["ledger"] = str(records["accounting"]["ledger_sha256"])
-        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
-        outbox_rows: list[dict[str, Any]] = []
-        if outbox_path.is_file():
-            with sqlite3.connect(str(outbox_path)) as outbox:
-                outbox_rows = [{"key": row[0], "state": row[1], "reconciled_by": row[2]}
-                               for row in outbox.execute(
-                                   "SELECT key, state, reconciled_by FROM outbox "
-                                   "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
+        outbox_rows = [{"key": row[0], "state": row[1], "reconciled_by": row[2]}
+                       for row in self._con.execute(
+                           "SELECT key, state, reconciled_by FROM outbox "
+                           "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
         hashes["outbox"] = self._sha256(outbox_rows)
         return hashes
 
@@ -857,11 +908,9 @@ class ForwardSessionRunner:
                     "quote_event_id": event_id, "source": event.source,
                     "simulated_at": simulated_at.astimezone(timezone.utc).isoformat(),
                     "physical_order_submitted": False}
-            self._persist_paper_receipt(session_id, order_id, body)
+            self._persist_paper_receipt(session_id, order_id, body, commit=False)
 
-        from financial_brain.kernel.events import EventKernel
-        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
-        outbox = EventKernel(journal_path=str(outbox_path))
+        outbox = self._outbox_kernel()
         try:
             outbox.side_effect(f"paper:{session_id}:{order_id}", persist_simulation)
         finally:
@@ -873,7 +922,7 @@ class ForwardSessionRunner:
         return json.loads(receipt[0])
 
     def _persist_paper_receipt(self, session_id: str, order_id: str,
-                               body: dict[str, Any]) -> None:
+                               body: dict[str, Any], *, commit: bool = True) -> None:
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
         digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         previous = self._con.execute("SELECT receipt_sha256 FROM paper_execution_receipts "
@@ -885,20 +934,17 @@ class ForwardSessionRunner:
                               [session_id, order_id, digest, canonical])
             self._append_audit("execution_receipt", session_id, order_id,
                                datetime.fromisoformat(body["simulated_at"]), body)
-            self._con.commit()
+            if commit:
+                self._con.commit()
 
     def _paper_retry_reconciled_without_effect(self, session_id: str, order_id: str) -> bool:
         """Permit retry only after durable evidence says this exact UNKNOWN simulation did not occur."""
-        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
-        if not outbox_path.is_file():
-            return False
         key = f"paper:{session_id}:{order_id}"
         try:
-            with sqlite3.connect(str(outbox_path)) as outbox:
-                state = outbox.execute("SELECT state, reconciled_by FROM outbox WHERE key=?", [key]).fetchone()
-                reconciliation = outbox.execute(
-                    "SELECT took_effect, reconciled_by FROM reconciliations WHERE key=? "
-                    "ORDER BY reconciliation_id DESC LIMIT 1", [key]).fetchone()
+            state = self._con.execute("SELECT state, reconciled_by FROM outbox WHERE key=?", [key]).fetchone()
+            reconciliation = self._con.execute(
+                "SELECT took_effect, reconciled_by FROM reconciliations WHERE key=? "
+                "ORDER BY reconciliation_id DESC LIMIT 1", [key]).fetchone()
         except sqlite3.Error:
             return False
         return bool(
@@ -912,9 +958,7 @@ class ForwardSessionRunner:
         """Reconcile a crash-ambiguous local simulation against its durable receipt row."""
         if not reconciled_by.strip():
             raise ForwardSessionRunnerError("paper simulation reconciliation needs an actor")
-        from financial_brain.kernel.events import EventKernel
-        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
-        outbox = EventKernel(journal_path=str(outbox_path))
+        outbox = self._outbox_kernel()
         key = f"paper:{session_id}:{order_id}"
         try:
             if key not in outbox.unknown_keys:
@@ -978,12 +1022,8 @@ class ForwardSessionRunner:
                                      [session_id]).fetchall()
         if {row[0] for row in intents} != {row[0] for row in receipts}:
             raise ForwardSessionRunnerError("cannot close complete with missing paper execution receipts")
-        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
-        if not outbox_path.is_file():
-            raise ForwardSessionRunnerError("cannot close complete without durable outbox evidence")
-        with sqlite3.connect(str(outbox_path)) as outbox:
-            rows = outbox.execute("SELECT key, state FROM outbox WHERE key LIKE ?",
-                                  [f"paper:{session_id}:%"]).fetchall()
+        rows = self._con.execute("SELECT key, state FROM outbox WHERE key LIKE ?",
+                                 [f"paper:{session_id}:%"]).fetchall()
         expected = {f"paper:{session_id}:{row[0]}" for row in intents}
         actual = {key for key, state in rows if state == "DISPATCHED"}
         if expected != actual:

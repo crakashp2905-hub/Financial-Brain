@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -33,6 +33,7 @@ def test_start_and_end_checkpoints_are_immutable_and_detect_journal_changes(tmp_
     start = runner.checkpoint("s", phase="START", now=NOW)
     assert start["ledger_status"] == "RECONCILED_GROSS"
     assert len(start["ledger_sha256"]) == 64
+    assert start["atomic_with_ledger"] is True
 
     runner.ingest("s", _config(), [_event()], ingest_metadata={
         "quote-1": (NOW, "TEST_CLOCK")})
@@ -43,7 +44,7 @@ def test_start_and_end_checkpoints_are_immutable_and_detect_journal_changes(tmp_
     verified = runner.verify_checkpoint("s", end["checkpoint_id"])
     assert verified["immutable_evidence_valid"] is True
     assert verified["current_records_match"] is True
-    assert verified["verification_complete"] is False  # The journal checkpoint is not atomically bound to the ledger.
+    assert verified["verification_complete"] is True
 
     runner._con.execute("UPDATE runner_events SET ingested_at=? WHERE session_id=? AND event_id=?",
                         [(NOW.replace(second=4)).isoformat(), "s", "quote-1"])
@@ -51,6 +52,18 @@ def test_start_and_end_checkpoints_are_immutable_and_detect_journal_changes(tmp_
     changed = runner.verify_checkpoint("s", end["checkpoint_id"])
     assert changed["immutable_evidence_valid"] is True
     assert changed["current_records_match"] is False
+    runner.close()
+
+
+def test_complete_session_checkpoint_binds_execution_outbox_and_accounting_in_one_database(tmp_path):
+    runner = _runner(tmp_path)
+    runner.begin("s", _config(), now=NOW, preflight={"risk_policy_loaded": True})
+    runner.close_session("s", complete=True, now=NOW + timedelta(seconds=1))
+    end = runner.checkpoint("s", phase="END", now=NOW + timedelta(seconds=2))
+    assert end["atomic_with_ledger"] is True
+    assert runner.verify_checkpoint("s", end["checkpoint_id"])["verification_complete"] is True
+    assert not (tmp_path / "journal-outbox.sqlite").exists()
+    assert runner._con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='outbox'").fetchone()
     runner.close()
 
 

@@ -439,6 +439,28 @@ def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path
     runner.close()
 
 
+def test_legacy_file_outbox_states_migrate_into_the_runner_journal(tmp_path):
+    from financial_brain.kernel.events import EventKernel, UnknownOutcome
+
+    legacy_path = tmp_path / "journal-outbox.sqlite"
+    legacy = EventKernel(journal_path=str(legacy_path))
+    with pytest.raises(UnknownOutcome):
+        legacy.side_effect("paper:legacy:unknown", lambda: (_ for _ in ()).throw(RuntimeError("crash")))
+    with pytest.raises(UnknownOutcome):
+        legacy.side_effect("paper:legacy:retry", lambda: (_ for _ in ()).throw(RuntimeError("crash")))
+    legacy.resolve_unknown("paper:legacy:retry", took_effect=False, reconciled_by="test-operator")
+    legacy.close()
+
+    runner = make_runner(tmp_path)
+    states = dict(runner._con.execute("SELECT key, state FROM outbox ORDER BY key"))
+    assert states == {"paper:legacy:retry": "PENDING", "paper:legacy:unknown": "UNKNOWN"}
+    reconciliation = runner._con.execute(
+        "SELECT took_effect, reconciled_by FROM reconciliations WHERE key='paper:legacy:retry'"
+    ).fetchone()
+    assert reconciliation == (0, "test-operator")
+    runner.close()
+
+
 def test_paper_sell_is_rejected_when_long_inventory_is_insufficient(tmp_path):
     runner, event, decided = trade_setup(tmp_path)
     with pytest.raises(ForwardSessionRunnerError, match="exceeds reconciled long inventory"):
@@ -654,8 +676,8 @@ def test_unknown_outbox_after_crash_requires_receipt_reconciliation(tmp_path, mo
     runner, event, decided = trade_setup(tmp_path)
     persist = runner._persist_paper_receipt
 
-    def crash_after_persist(session_id, order_id, body):
-        persist(session_id, order_id, body)
+    def crash_after_persist(session_id, order_id, body, *, commit=True):
+        persist(session_id, order_id, body, commit=commit)
         raise RuntimeError("injected crash before outbox acknowledgement")
 
     monkeypatch.setattr(runner, "_persist_paper_receipt", crash_after_persist)
