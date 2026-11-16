@@ -1021,9 +1021,24 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
     runner.close()
 
 
-def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path):
+@pytest.mark.parametrize("with_cost_schedule", [False, True])
+def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path, with_cost_schedule):
     runner = make_runner(tmp_path)
-    entry_config = make_config()
+    if with_cost_schedule:
+        from financial_brain.costs.india import CostModel, Segment
+        from financial_brain.forward_edge.cost_schedule import CostSchedule
+
+        constraints = {"liquidity_bucket": "large", "cost_schedule": {
+            "schedule_id": "test-india", "version": "v1", "effective_from": "2026-01-01",
+            "effective_to": None, "segment": "delivery", "model": CostModel().as_dict(),
+            "source_ref": "test tariff fixture", "source_sha256": "c" * 64}}
+        schedule = CostSchedule("test-india", "v1", date(2026, 1, 1), None, Segment.DELIVERY,
+                                CostModel(), "test tariff fixture", "c" * 64)
+        cost_digest = schedule.digest()
+        entry_config = make_config_with_constraints(constraints)
+    else:
+        cost_digest = "6" * 64
+        entry_config = make_config()
     opened(runner, "s", entry_config)
     signal_quote = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
@@ -1049,7 +1064,8 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path):
     entry_decision_id = signal.signal_id + ":s"
     entry_manifest = record_manifest(runner, session_id="s", decision_id=entry_decision_id,
                                      event=signal_quote, decided_at=decision_at, quantity=signal.shares,
-                                     selection_lineage=signal.lineage, holding_sessions=20, persist=False)
+                                     cost_model_sha256=cost_digest, selection_lineage=signal.lineage,
+                                     holding_sessions=20, persist=False)
     record_signal_decision(runner=runner, session_id="s", signal=signal,
                            quote_event_id=signal_quote.event_id, decided_at=decision_at,
                            manifest=entry_manifest)
@@ -1080,7 +1096,7 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path):
     runner.close_session("s", complete=True, now=entry_fill_at + timedelta(seconds=2))
 
     exit_day = date(2026, 11, 16)
-    exit_config = replace(make_config(), exchange_date=exit_day)
+    exit_config = replace(entry_config, exchange_date=exit_day)
     exit_start = NOW + timedelta(days=3)
     runner.begin("s2", exit_config, now=exit_start, preflight={"risk_policy_loaded": True})
     stop_quote = normalize_kite_quote("NSE:INFY", {
@@ -1106,6 +1122,7 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path):
     exit_manifest = record_manifest(runner, session_id="s2", decision_id=exit_decision_id,
                                     event=stop_quote, decided_at=exit_decision_at,
                                     quantity=signal.shares, day=exit_day.isoformat(),
+                                    cost_model_sha256=cost_digest,
                                     holding_sessions=signal.horizon_sessions,
                                     selection_lineage=signal.lineage, persist=False)
     record_exit_decision(runner=runner, session_id="s2", exit_signal=exits[0],
@@ -1136,6 +1153,26 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path):
                                   receipt=exit_receipt) == "CLOSED"
     assert book.execute("SELECT exit_day,exit_reason,held FROM positions WHERE version='swing-v1'").fetchone() == (
         exit_day, "STOP", 1)
+    from financial_brain.paper import book as paper_book
+    spec = replace(paper_book.POSITION, version="swing-v1")
+    position_cost = book.execute("SELECT cost FROM positions WHERE version='swing-v1'").fetchone()[0]
+    bridge_costs = book.execute("SELECT state,simulated_charges_inr FROM paper_book_bridge "
+                                "WHERE signal_id=? ORDER BY order_id", [signal.signal_id]).fetchall()
+    if with_cost_schedule:
+        assert position_cost is not None and position_cost > 0
+        assert all(amount is not None and amount > 0 for _, amount in bridge_costs)
+        assert paper_book.frame(book, "live", spec).iloc[0]["cost_basis"] == "SIMULATED_SCHEDULE"
+    else:
+        assert position_cost is None
+        assert all(amount is None for _, amount in bridge_costs)
+        assert paper_book.frame(book, "live", spec).iloc[0]["cost_basis"] == "UNPRICED"
+    summary = paper_book.summary(book, "live", spec)
+    assert summary["closed"] == 1
+    if with_cost_schedule:
+        assert summary["cost_priced_closed"] == 1 and summary["cost_unpriced_closed"] == 0
+    else:
+        assert summary["cost_unpriced_closed"] == 1
+        assert summary["verdict"] == "COST EVIDENCE INCOMPLETE"
     assert runner.records("s2")["accounting"]["positions"] == {}
     runner.close_session("s2", complete=True, now=exit_fill_at + timedelta(seconds=2))
     book.close()

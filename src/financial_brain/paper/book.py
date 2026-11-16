@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS paper_book_bridge (
     version VARCHAR NOT NULL, mode VARCHAR NOT NULL, signal_day DATE NOT NULL, ticker VARCHAR NOT NULL,
     signal_id VARCHAR NOT NULL, session_id VARCHAR NOT NULL, order_id VARCHAR NOT NULL,
     state VARCHAR NOT NULL, requested_shares INTEGER NOT NULL, filled_shares INTEGER NOT NULL,
-    receipt_sha256 VARCHAR NOT NULL, updated_at TIMESTAMP NOT NULL,
+    receipt_sha256 VARCHAR NOT NULL, updated_at TIMESTAMP NOT NULL, simulated_charges_inr DOUBLE,
     PRIMARY KEY (signal_id, session_id, order_id));
 """
 
@@ -96,6 +96,7 @@ def connect(path: Path = PATH, read_only: bool = False) -> duckdb.DuckDBPyConnec
     path.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(path))
     con.execute(SCHEMA)
+    con.execute("ALTER TABLE paper_book_bridge ADD COLUMN IF NOT EXISTS simulated_charges_inr DOUBLE")
     old_row = con.execute(
         "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'book_positions'").fetchone()
     old = int(old_row[0]) if old_row is not None else 0
@@ -388,8 +389,31 @@ def live(rcon, book, *, spec: Spec = POSITION, capital: float = CAPITAL) -> dict
 # ---------------------------------------------------------------- the record
 
 def frame(book, mode: str, spec: Spec = POSITION) -> pd.DataFrame:
-    df = book.execute("SELECT * FROM positions WHERE mode = ? AND version = ? ORDER BY signal_day, rank",
-                      [mode, spec.version]).df()
+    bridge_exists = book.execute("SELECT COUNT(*) FROM information_schema.tables "
+                                 "WHERE table_name='paper_book_bridge'").fetchone()[0] > 0
+    if bridge_exists:
+        df = book.execute("""SELECT p.*,
+            CASE WHEN EXISTS (SELECT 1 FROM paper_book_bridge b WHERE b.version=p.version AND b.mode=p.mode
+                AND b.signal_day=p.signal_day AND b.ticker=p.ticker AND b.state LIKE 'PARTIAL%')
+                 THEN 'REVIEW_REQUIRED'
+                 WHEN EXISTS (SELECT 1 FROM paper_book_bridge b WHERE b.version=p.version AND b.mode=p.mode
+                AND b.signal_day=p.signal_day AND b.ticker=p.ticker AND b.state='CLOSED')
+                 THEN CASE WHEN p.cost IS NULL OR
+                     (SELECT COUNT(*) FROM paper_book_bridge b WHERE b.version=p.version AND b.mode=p.mode
+                       AND b.signal_id=(SELECT b2.signal_id FROM paper_book_bridge b2
+                           WHERE b2.version=p.version AND b2.mode=p.mode AND b2.signal_day=p.signal_day
+                             AND b2.ticker=p.ticker AND b2.state='CLOSED' LIMIT 1)
+                       AND b.state='CLOSED' AND b.simulated_charges_inr IS NOT NULL) < 2
+                     THEN 'UNPRICED' ELSE 'SIMULATED_SCHEDULE' END
+                 WHEN EXISTS (SELECT 1 FROM paper_book_bridge b WHERE b.version=p.version AND b.mode=p.mode
+                AND b.signal_day=p.signal_day AND b.ticker=p.ticker AND b.state='FILLED')
+                 THEN 'RUNNER_PENDING' ELSE 'MODEL_ESTIMATE' END AS cost_basis
+            FROM positions p WHERE p.mode=? AND p.version=? ORDER BY p.signal_day,p.rank""",
+                          [mode, spec.version]).df()
+    else:
+        df = book.execute("SELECT * FROM positions WHERE mode = ? AND version = ? ORDER BY signal_day, rank",
+                          [mode, spec.version]).df()
+        df["cost_basis"] = "MODEL_ESTIMATE"
     if df.empty:
         return df
     df["notional"] = df["shares"] * df["entry_px"]
@@ -410,12 +434,20 @@ def summary(book, mode: str, spec: Spec = POSITION, *, capital: float = CAPITAL)
     closed = df[df["status"] == "SOLD"] if len(df) else df
     out = {"mode": mode, "version": spec.version, "closed": int(len(closed)),
            "open": int((df["status"] != "SOLD").sum()) if len(df) else 0}
+    priced_closed = closed[closed["cost"].notna()] if len(closed) else closed
+    unpriced_closed = len(closed) - len(priced_closed)
+    out["cost_priced_closed"] = int(len(priced_closed))
+    out["cost_unpriced_closed"] = int(unpriced_closed)
     held = df[df["status"] == "OPEN"] if len(df) else df
     if len(held):
         out.update(open_net_rs=float(held["net_rs"].sum()), open_bench_rs=float((held["notional"] * held["bench"]).sum()))
     if closed.empty:
         out["verdict"] = "COLLECTING"
         return out
+    if priced_closed.empty:
+        out["verdict"] = "COST EVIDENCE INCOMPLETE"
+        return out
+    closed = priced_closed
     per_day = closed.groupby("entry_day")["excess"].mean()
     se = per_day.std(ddof=1) / np.sqrt(len(per_day)) if len(per_day) > 1 else float("nan")
     t = float(per_day.mean() / se) if se and se == se and se > 0 else float("nan")
@@ -435,6 +467,8 @@ def summary(book, mode: str, spec: Spec = POSITION, *, capital: float = CAPITAL)
                first=str(closed["entry_day"].min()), last=str(closed["exit_day"].max()))
     if mode != "live":
         out["verdict"] = "REPLAY (in-sample model; a demonstration, not evidence)"
+    elif unpriced_closed:
+        out["verdict"] = f"COST EVIDENCE INCOMPLETE ({unpriced_closed} closed trades unpriced)"
     elif len(closed) < VERDICT_TRADES or len(per_day) < VERDICT_DAYS:
         out["verdict"] = f"COLLECTING ({len(closed)}/{VERDICT_TRADES} trades, {len(per_day)}/{VERDICT_DAYS} entry days)"
     else:

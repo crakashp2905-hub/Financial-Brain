@@ -6,6 +6,7 @@ import json
 import math
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any, Mapping
 
 from financial_brain.evidence.decision_manifest import ManifestError, canonical_bytes
@@ -22,7 +23,7 @@ BRIDGE_SCHEMA = """CREATE TABLE IF NOT EXISTS paper_book_bridge (
     version VARCHAR NOT NULL, mode VARCHAR NOT NULL, signal_day DATE NOT NULL, ticker VARCHAR NOT NULL,
     signal_id VARCHAR NOT NULL, session_id VARCHAR NOT NULL, order_id VARCHAR NOT NULL,
     state VARCHAR NOT NULL, requested_shares INTEGER NOT NULL, filled_shares INTEGER NOT NULL,
-    receipt_sha256 VARCHAR NOT NULL, updated_at TIMESTAMP NOT NULL,
+    receipt_sha256 VARCHAR NOT NULL, updated_at TIMESTAMP NOT NULL, simulated_charges_inr DOUBLE,
     PRIMARY KEY (signal_id, session_id, order_id))"""
 
 
@@ -68,6 +69,31 @@ class PaperBookExit:
     completed_sessions_held: int
     quote_event_id: str
     bid_price: float
+
+
+def _simulated_charges(receipt: dict[str, Any], order_id: str) -> float | None:
+    """Validate receipt line items; missing schedule evidence stays explicitly unpriced."""
+    raw_total = receipt.get("charges_inr")
+    items = receipt.get("cost_items")
+    if raw_total is None:
+        if items is not None:
+            raise PaperBookAdapterError("runner receipt has cost items without a charge total")
+        return None
+    if not isinstance(items, list) or not items:
+        raise PaperBookAdapterError("runner receipt charge total lacks itemized cost evidence")
+    try:
+        total = Decimal(str(raw_total))
+        item_total = Decimal(0)
+        for item in items:
+            line_total = Decimal(str(item["total"]))
+            if item.get("order_id") != order_id or not line_total.is_finite() or line_total < 0:
+                raise ValueError("cost line has invalid order identity or amount")
+            item_total += line_total
+    except (InvalidOperation, KeyError, TypeError, ValueError) as exc:
+        raise PaperBookAdapterError(f"runner receipt has invalid itemized charges: {exc}") from exc
+    if not total.is_finite() or total < 0 or item_total != total:
+        raise PaperBookAdapterError("runner receipt charge total differs from its line items")
+    return float(total)
 
 
 def pending_signals(book: Any, *, mode: str, version: str, exchange_date: date,
@@ -206,9 +232,11 @@ def reconcile_entry_receipt(*, book: Any, runner: ForwardSessionRunner, session_
         raise PaperBookAdapterError(f"unsupported entry receipt state {status!r}")
     encoded = json.dumps(receipt, sort_keys=True, separators=(",", ":"), allow_nan=False)
     digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    charges = _simulated_charges(receipt, order_id)
     config = runner.state_store.config(session_id)
     occurred = datetime.fromisoformat(str(receipt["simulated_at"]).replace("Z", "+00:00"))
     book.execute(BRIDGE_SCHEMA)
+    book.execute("ALTER TABLE paper_book_bridge ADD COLUMN IF NOT EXISTS simulated_charges_inr DOUBLE")
     book.execute("BEGIN TRANSACTION")
     try:
         previous = book.execute(
@@ -229,9 +257,11 @@ def reconcile_entry_receipt(*, book: Any, runner: ForwardSessionRunner, session_
                  float(receipt["average_price"]), signal.version, signal.signal_day, signal.ticker]).fetchone()
             if result is None:
                 raise PaperBookAdapterError("unentered live book row is missing or already reconciled")
-        book.execute("INSERT INTO paper_book_bridge VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        book.execute("INSERT INTO paper_book_bridge (version,mode,signal_day,ticker,signal_id,session_id,order_id,"
+                     "state,requested_shares,filled_shares,receipt_sha256,updated_at,simulated_charges_inr) "
+                     "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                      [signal.version, signal.mode, signal.signal_day, signal.ticker, signal.signal_id,
-                      session_id, order_id, state, requested, filled, digest, occurred])
+                      session_id, order_id, state, requested, filled, digest, occurred, charges])
         book.execute("COMMIT")
         return state
     except Exception:
@@ -392,9 +422,11 @@ def reconcile_exit_receipt(*, book: Any, runner: ForwardSessionRunner, session_i
         raise PaperBookAdapterError(f"unsupported exit receipt state {status!r}")
     encoded = json.dumps(receipt, sort_keys=True, separators=(",", ":"), allow_nan=False)
     digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    charges = _simulated_charges(receipt, order_id)
     config = runner.state_store.config(session_id)
     occurred = datetime.fromisoformat(str(receipt["simulated_at"]).replace("Z", "+00:00"))
     book.execute(BRIDGE_SCHEMA)
+    book.execute("ALTER TABLE paper_book_bridge ADD COLUMN IF NOT EXISTS simulated_charges_inr DOUBLE")
     book.execute("BEGIN TRANSACTION")
     try:
         previous = book.execute("SELECT state,receipt_sha256 FROM paper_book_bridge "
@@ -406,12 +438,27 @@ def reconcile_exit_receipt(*, book: Any, runner: ForwardSessionRunner, session_i
             book.execute("COMMIT")
             return str(previous[0])
         if state == "CLOSED":
+            entry_cost_row = book.execute(
+                "SELECT simulated_charges_inr FROM paper_book_bridge "
+                "WHERE signal_id=? AND state='FILLED' ORDER BY updated_at LIMIT 1",
+                [signal.signal_id]).fetchone()
+            position_row = book.execute(
+                "SELECT entry_px,shares FROM positions WHERE version=? AND mode='live' "
+                "AND signal_day=? AND ticker=? AND exit_day IS NULL",
+                [signal.version, signal.signal_day, signal.ticker]).fetchone()
+            if entry_cost_row is None or position_row is None:
+                raise PaperBookAdapterError("runner entry fill or open position is missing from bridge")
+            entry_charges = entry_cost_row[0]
+            entry_notional = float(position_row[0]) * int(position_row[1])
+            actual_cost = (float(Decimal(str(entry_charges)) + Decimal(str(charges))) / entry_notional
+                           if entry_charges is not None and charges is not None and entry_notional > 0 else None)
             result = book.execute(
-                "UPDATE positions SET exit_day=?,exit_px=?,exit_reason=?,last_day=?,last_px=?,held=? "
+                "UPDATE positions SET exit_day=?,exit_px=?,exit_reason=?,last_day=?,last_px=?,held=?,cost=? "
                 "WHERE version=? AND mode='live' AND signal_day=? AND ticker=? AND exit_day IS NULL "
                 "RETURNING ticker",
                 [config.exchange_date, float(receipt["average_price"]), exit_signal.reason,
                  config.exchange_date, float(receipt["average_price"]), exit_signal.completed_sessions_held,
+                 actual_cost,
                  signal.version, signal.signal_day, signal.ticker]).fetchone()
             if result is None:
                 raise PaperBookAdapterError("open DuckDB position is missing or already closed")
@@ -420,9 +467,11 @@ def reconcile_exit_receipt(*, book: Any, runner: ForwardSessionRunner, session_i
         elif state == "PARTIAL_EXIT_REVIEW":
             book.execute("UPDATE paper_book_bridge SET state=? WHERE signal_id=? AND state='FILLED'",
                          [state, signal.signal_id])
-        book.execute("INSERT INTO paper_book_bridge VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        book.execute("INSERT INTO paper_book_bridge (version,mode,signal_day,ticker,signal_id,session_id,order_id,"
+                     "state,requested_shares,filled_shares,receipt_sha256,updated_at,simulated_charges_inr) "
+                     "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                      [signal.version, signal.mode, signal.signal_day, signal.ticker, signal.signal_id,
-                      session_id, order_id, state, requested, filled, digest, occurred])
+                      session_id, order_id, state, requested, filled, digest, occurred, charges])
         book.execute("COMMIT")
         return state
     except Exception:
