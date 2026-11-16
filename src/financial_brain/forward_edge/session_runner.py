@@ -18,6 +18,7 @@ from financial_brain.forward_edge.execution_scenario import (
     evaluate_passive_scenario,
     evaluate_scenario,
 )
+from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_local_time
 from financial_brain.forward_edge.intent_timing import create_timed_intent
@@ -80,17 +81,7 @@ class ForwardSessionRunner:
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_data_rejections (
             session_id TEXT NOT NULL, rejection_id TEXT NOT NULL, record_sha256 TEXT NOT NULL,
             record_json TEXT NOT NULL, PRIMARY KEY(session_id, rejection_id))""")
-        self._con.execute("""CREATE TABLE IF NOT EXISTS runner_audit_log (
-            sequence INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL,
-            record_id TEXT NOT NULL, kind TEXT NOT NULL, occurred_at TEXT NOT NULL,
-            record_sha256 TEXT NOT NULL, record_json TEXT NOT NULL,
-            UNIQUE(session_id, record_id))""")
-        self._con.executescript("""
-            CREATE TRIGGER IF NOT EXISTS runner_audit_no_update
-            BEFORE UPDATE ON runner_audit_log BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
-            CREATE TRIGGER IF NOT EXISTS runner_audit_no_delete
-            BEFORE DELETE ON runner_audit_log BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
-        """)
+        self.durable = DurableSessionJournal(self._con)
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_session_reports (
             session_id TEXT PRIMARY KEY, status TEXT NOT NULL, report_sha256 TEXT NOT NULL,
             report_json TEXT NOT NULL)""")
@@ -625,11 +616,7 @@ class ForwardSessionRunner:
         data_rejections = [json.loads(row[0]) for row in self._con.execute(
             "SELECT record_json FROM runner_data_rejections WHERE session_id=? ORDER BY rejection_id",
             [session_id]).fetchall()]
-        audit_log = [{"kind": row[0], "record_id": row[1], "occurred_at": row[2],
-                      "record_sha256": row[3], "record": json.loads(row[4])}
-                     for row in self._con.execute(
-            "SELECT kind, record_id, occurred_at, record_sha256, record_json "
-            "FROM runner_audit_log WHERE session_id=? ORDER BY sequence", [session_id]).fetchall()]
+        audit_log = self.durable.audit_records(session_id)
         return {"events": events, "decisions": decisions, "lifecycle": lifecycle,
                 "intents": intents, "execution_receipts": receipts, "session_reports": reports,
                 "risk_verdicts": risk_verdicts, "decision_manifests": decision_manifests,
@@ -638,9 +625,9 @@ class ForwardSessionRunner:
 
     def rebuild_materialized_views(self, session_id: str) -> None:
         """Rebuild query tables for a day from the immutable append-only audit log."""
-        audit = self._con.execute(
-            "SELECT kind, record_json FROM runner_audit_log WHERE session_id=? ORDER BY sequence",
-            [session_id]).fetchall()
+        audit = [(row["kind"], json.dumps(row["record"], sort_keys=True, separators=(",", ":"),
+                                           allow_nan=False))
+                 for row in self.durable.audit_records(session_id)]
         if not audit:
             raise ForwardSessionRunnerError("cannot rebuild session views without canonical audit events")
         self._con.commit()
@@ -1263,39 +1250,21 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("cannot close complete with pending or UNKNOWN paper outbox state")
 
     def _append_record(self, kind: str, session_id: str, record: dict[str, Any]) -> None:
-        canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)
         event_id = f"{session_id}:{kind}"
-        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-        previous = self._con.execute("SELECT event_sha256 FROM runner_events WHERE session_id=? AND event_id=?",
-                                     [session_id, event_id]).fetchone()
-        if previous and previous[0] != digest:
-            raise ForwardSessionRunnerError("session lifecycle record conflicts with prior evidence")
-        if not previous:
-            self._con.execute("""INSERT INTO runner_events (
-                                session_id, event_id, kind, available_at, ingested_at,
-                                ingest_clock_source, event_sha256, event_json)
-                                VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)""",
-                              [session_id, event_id, kind, record["occurred_at"], digest, canonical])
-            self._append_audit(kind, session_id, event_id, datetime.fromisoformat(record["occurred_at"]), record)
-            self._con.commit()
+        try:
+            self.durable.append_lifecycle_record(
+                session_id=session_id, kind=kind, event_id=event_id,
+                occurred_at=datetime.fromisoformat(record["occurred_at"]), record=record)
+        except (DurableJournalError, sqlite3.Error) as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
 
     def _append_audit(self, kind: str, session_id: str, record_id: str, occurred_at: datetime,
                       record: dict[str, Any]) -> None:
-        canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)
-        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-        stable_id = f"{kind}:{record_id}"
-        previous = self._con.execute(
-            "SELECT record_sha256 FROM runner_audit_log WHERE session_id=? AND record_id=?",
-            [session_id, stable_id]).fetchone()
-        if previous:
-            if previous[0] != digest:
-                raise ForwardSessionRunnerError("append-only audit record conflicts with prior evidence")
-            return
-        self._con.execute("INSERT INTO runner_audit_log "
-                          "(session_id, record_id, kind, occurred_at, record_sha256, record_json) "
-                          "VALUES (?, ?, ?, ?, ?, ?)",
-                          [session_id, stable_id, kind, occurred_at.astimezone(timezone.utc).isoformat(),
-                           digest, canonical])
+        try:
+            self.durable.append_audit(session_id=session_id, kind=kind, record_id=record_id,
+                                      occurred_at=occurred_at, record=record)
+        except (DurableJournalError, sqlite3.Error) as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
 
     def _record_data_rejection(self, session_id: str, operation: str, reason: str,
                                events: list[MarketEvent]) -> None:

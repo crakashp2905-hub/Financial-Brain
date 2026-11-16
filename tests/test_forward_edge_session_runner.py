@@ -822,6 +822,35 @@ def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_p
     runner.close()
 
 
+def test_lifecycle_event_and_audit_append_roll_back_and_resume_atomically(tmp_path, monkeypatch):
+    runner = make_runner(tmp_path)
+    record = {"session_id": "s", "occurred_at": NOW.isoformat(), "status": "OPEN"}
+    append_audit = runner.durable.append_audit
+
+    def fail_audit(**kwargs):
+        raise RuntimeError("simulated audit write failure")
+
+    monkeypatch.setattr(runner.durable, "append_audit", fail_audit)
+    with pytest.raises(RuntimeError, match="simulated audit write failure"):
+        runner._append_record("preflight", "s", record)
+    assert runner._con.execute(
+        "SELECT COUNT(*) FROM runner_events WHERE session_id='s'").fetchone()[0] == 0
+    assert runner._con.execute(
+        "SELECT COUNT(*) FROM runner_audit_log WHERE session_id='s'").fetchone()[0] == 0
+
+    monkeypatch.setattr(runner.durable, "append_audit", append_audit)
+    runner._append_record("preflight", "s", record)
+    expected = runner.durable.audit_records("s")
+    assert len(expected) == 1
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    assert resumed.durable.audit_records("s") == expected
+    assert resumed._append_record("preflight", "s", record) is None
+    assert resumed.durable.audit_records("s") == expected
+    resumed.close()
+
+
 def test_decision_manifest_and_risk_verdict_replay_idempotently_after_restart(tmp_path):
     runner, _, _ = trade_setup(tmp_path)
     baseline = runner.records("s")
