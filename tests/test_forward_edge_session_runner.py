@@ -603,6 +603,8 @@ def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receip
     with pytest.raises(UnknownOutcome):
         execute(runner, event, decided)
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 0
+    incomplete = runner.records("s")["accounting"]
+    assert incomplete["status"] == "INCOMPLETE" and incomplete["completed_order_ids"] == []
     with pytest.raises(ForwardSessionRunnerError, match="accounting projection is incomplete"):
         execute(runner, event, decided)
     runner.close()
