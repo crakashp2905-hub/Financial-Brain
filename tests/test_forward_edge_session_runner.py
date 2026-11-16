@@ -81,6 +81,25 @@ def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
     runner.close()
 
 
+def test_ingest_requires_availability_to_follow_local_receipt(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner, "available-after-receipt")
+    received = NOW
+    available = NOW + timedelta(milliseconds=5)
+    delayed = MarketEvent("delayed-availability", EventKind.QUOTE, "NSE", "NSE:INFY", NOW,
+                          received, available, {"bid": 100.0, "ask": 100.1}, "FIXTURE")
+    assert runner.ingest("available-after-receipt", make_config(), [delayed], ingest_metadata={
+        delayed.event_id: (available + timedelta(milliseconds=1), "FIXTURE_CLOCK")})["persisted"] == 1
+
+    opened(runner, "availability-before-receipt")
+    reversed_clocks = MarketEvent("reversed-availability", EventKind.QUOTE, "NSE", "NSE:INFY", NOW,
+                                  received, received - timedelta(milliseconds=1),
+                                  {"bid": 100.0, "ask": 100.1}, "FIXTURE")
+    with pytest.raises(ForwardSessionRunnerError, match="availability cannot precede local receipt"):
+        runner.ingest("availability-before-receipt", make_config(), [reversed_clocks])
+    runner.close()
+
+
 def test_runner_event_schema_migration_adds_ingest_provenance_columns(tmp_path):
     journal = tmp_path / "journal.sqlite"
     with sqlite3.connect(journal) as con:

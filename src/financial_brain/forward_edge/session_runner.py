@@ -368,8 +368,8 @@ class ForwardSessionRunner:
                     raise ForwardSessionRunnerError("event instrument is outside frozen universe")
                 if event.event_time.astimezone(IST).date() != config.exchange_date:
                     raise ForwardSessionRunnerError("event exchange date differs from frozen session date")
-                if event.available_at > event.received_at:
-                    raise ForwardSessionRunnerError("event availability cannot be later than local receipt")
+                if event.available_at < event.received_at:
+                    raise ForwardSessionRunnerError("event availability cannot precede local receipt")
                 calendar_plan = self._con.execute(
                     "SELECT event_json FROM runner_events WHERE session_id=? AND kind='calendar_plan'",
                     [session_id]).fetchone()

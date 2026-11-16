@@ -148,6 +148,12 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
               "cash_equals_net": ledger.balance("cash", CCY) == net if outcome in ("WIN", "LOSS", "FLAT") else True,
               "segments": sorted(segments), "trace": trace}
     result["signature"] = hashlib.sha256(_canon({k: v for k, v in result.items()}).encode("utf-8")).hexdigest()
+    # Keep the historic economic result signature stable while the canonical journal is wired in.
+    # The runner's report remains INCOMPLETE for trade outcomes until its execution receipts and
+    # accounting projection, rather than the legacy helper above, own those outcomes.
+    from financial_brain.forward_edge.fixture_adapter import record_fixture_decision
+
+    result["forward_runner"] = record_fixture_decision(fx, result)
     return result
 
 
