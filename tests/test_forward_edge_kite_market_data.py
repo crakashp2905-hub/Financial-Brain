@@ -14,7 +14,8 @@ from financial_brain.forward_edge.market_events import EventKind
 
 def quote():
     return {"timestamp": "2026-11-13 10:15:00", "last_trade_time": "2026-11-13 10:14:59",
-            "last_price": 101.5, "volume": 1000, "ohlc": {"open": 100.0, "high": 102.0, "low": 99.0},
+            "last_price": 101.5, "volume": 1000,
+            "ohlc": {"open": 100.0, "high": 102.0, "low": 99.0, "close": 98.5},
             "depth": {"buy": [{"price": 101.4, "quantity": 12}],
                       "sell": [{"price": 101.6, "quantity": 9}]}}
 
@@ -31,6 +32,13 @@ def test_kite_quote_event_preserves_exchange_and_receipt_clocks_and_source():
     assert event.source == "KITE_CONNECT_READ_ONLY"
     assert event.payload["bid"] == 101.4 and event.payload["ask"] == 101.6
     assert event.payload["session_high"] == 102.0 and event.payload["session_low"] == 99.0
+    assert event.payload["previous_close"] == 98.5
+
+
+def test_invalid_previous_close_is_rejected_instead_of_becoming_gap_strategy_input():
+    with pytest.raises(KiteQuoteNormalizationError, match="OHLC close must be positive and finite"):
+        normalize_kite_quote("NSE:INFY", quote() | {"ohlc": quote()["ohlc"] | {"close": float("nan")}},
+                             received_at=datetime.now(timezone.utc))
 
 
 def test_missing_exchange_clock_is_refused():

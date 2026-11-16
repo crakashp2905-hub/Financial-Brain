@@ -134,9 +134,15 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
     ohlc = quote.get("ohlc") or {}
     if isinstance(ohlc, dict):
         for source_key, payload_key in (("open", "session_open"), ("high", "session_high"),
-                                        ("low", "session_low")):
+                                        ("low", "session_low"), ("close", "previous_close")):
             if ohlc.get(source_key) is not None:
-                payload[payload_key] = float(ohlc[source_key])
+                try:
+                    value = float(ohlc[source_key])
+                except (TypeError, ValueError, OverflowError) as exc:
+                    raise KiteQuoteNormalizationError(f"Kite OHLC {source_key} is invalid") from exc
+                if not math.isfinite(value) or value <= 0:
+                    raise KiteQuoteNormalizationError(f"Kite OHLC {source_key} must be positive and finite")
+                payload[payload_key] = value
     for key in ("lower_circuit_limit", "upper_circuit_limit"):
         if quote.get(key) is not None:
             payload[key] = float(quote[key])
