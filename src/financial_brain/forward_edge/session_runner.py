@@ -484,6 +484,10 @@ class ForwardSessionRunner:
             if existing[0] != digest:
                 raise ForwardSessionRunnerError("decision ID reused with conflicting content")
             return False
+        prior = self._con.execute("SELECT MAX(decided_at) FROM runner_decisions WHERE session_id=?",
+                                  [session_id]).fetchone()[0]
+        if prior is not None and clock < datetime.fromisoformat(prior):
+            raise ForwardSessionRunnerError("decision clock cannot move backwards within a session")
         self._con.execute("INSERT INTO runner_decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
                           [session_id, decision_id, strategy_id, outcome, clock.isoformat(), digest, canonical])
         self._append_audit("decision", session_id, decision_id, clock, body)
@@ -848,10 +852,13 @@ class ForwardSessionRunner:
         if decision_row is None or decision_row[0] != "TRADE":
             raise ForwardSessionRunnerError("paper intent requires a journaled TRADE decision")
         decision = json.loads(decision_row[1])
-        risk = self._con.execute("SELECT allowed FROM runner_risk_verdicts "
+        risk = self._con.execute("SELECT allowed, record_json FROM runner_risk_verdicts "
                                   "WHERE session_id=? AND decision_id=?", [session_id, decision_id]).fetchone()
         if risk is None or risk[0] != 1:
             raise ForwardSessionRunnerError("paper intent requires an explicit persisted allow risk verdict")
+        risk_record = json.loads(risk[1])
+        if simulated_at.astimezone(timezone.utc) < datetime.fromisoformat(risk_record["assessed_at"]):
+            raise ForwardSessionRunnerError("simulated fill cannot precede the persisted risk assessment")
         manifest_row = self._con.execute("SELECT manifest_sha256, manifest_json FROM runner_decision_manifests "
                                          "WHERE session_id=? AND decision_id=?",
                                          [session_id, decision_id]).fetchone()

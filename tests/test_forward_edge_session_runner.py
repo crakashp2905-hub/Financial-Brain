@@ -255,6 +255,10 @@ def test_decisions_require_available_inputs_and_are_immutable(tmp_path):
     with pytest.raises(ForwardSessionRunnerError, match="conflicting content"):
         runner.decide(session_id="s", strategy_id="momentum", decision_id="d1", outcome="NO_TRADE",
                       decided_at=decision_time, input_event_ids=("fixture-1",), reason_codes=("OTHER",))
+    with pytest.raises(ForwardSessionRunnerError, match="clock cannot move backwards"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="d2", outcome="NO_TRADE",
+                      decided_at=decision_time - timedelta(milliseconds=1), input_event_ids=("fixture-1",),
+                      reason_codes=("REORDERED_CLOCK",))
     runner.close()
 
 
@@ -314,7 +318,7 @@ def test_incomplete_close_is_explicit_and_idempotent(tmp_path):
 
 
 def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=None,
-                max_quote_age_ms=None, decision_offset_ms=1000):
+                max_quote_age_ms=None, decision_offset_ms=1000, risk_assessment_offset_ms=0):
     runner = make_runner(tmp_path)
     config = make_config(max_quote_age_ms=max_quote_age_ms)
     opened(runner, config=config)
@@ -331,7 +335,8 @@ def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=Non
                         decided_at=decided, quantity=11)
     runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
                                allowed=risk_allowed, policy_id="test-risk-v1", policy_sha256="a" * 64,
-                               reason_codes=() if risk_allowed else ("DAILY_LOSS_LIMIT",), assessed_at=decided)
+                               reason_codes=() if risk_allowed else ("DAILY_LOSS_LIMIT",),
+                               assessed_at=decided + timedelta(milliseconds=risk_assessment_offset_ms))
     return runner, event, decided
 
 
@@ -606,6 +611,14 @@ def test_paper_sell_is_rejected_when_long_inventory_is_insufficient(tmp_path):
 def test_paper_intent_requires_an_explicit_allowed_risk_verdict(tmp_path):
     runner, event, decided = trade_setup(tmp_path, risk_allowed=False)
     with pytest.raises(ForwardSessionRunnerError, match="explicit persisted allow risk verdict"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    runner.close()
+
+
+def test_paper_fill_cannot_precede_risk_assessment_clock(tmp_path):
+    runner, event, decided = trade_setup(tmp_path, risk_assessment_offset_ms=200)
+    with pytest.raises(ForwardSessionRunnerError, match="cannot precede the persisted risk assessment"):
         execute(runner, event, decided)
     assert runner.records("s")["intents"] == []
     runner.close()
