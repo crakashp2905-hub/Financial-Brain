@@ -117,8 +117,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
 - [x] **PE-0008** — Build a single capability matrix for real feed, replay, shadow, paper, broker dry-run and live-cash.
   **Acceptance:** Every displayed capability includes tested mode, fidelity, and evidence path.
   **Completion evidence:** `docs/audits/capability-matrix.v2.json` provides one row per critical software capability and explicitly covers REAL_FEED, RESEARCH_REPLAY, SHADOW, LIVE_PAPER, BROKER_DRYRUN, and LIVE_CASH. Every row records its tested mode, fidelity limits, test evidence, source paths, and remaining blockers. `scripts/validate_capability_matrix.py` rejects missing modes, evidence, or source/test paths; `scripts/source_inventory.py` reads the v2 matrix.
-- [ ] **PE-0009** — Write exact red/yellow/green release semantics for infrastructure, research and trading separately.  
+- [x] **PE-0009** — Write exact red/yellow/green release semantics for infrastructure, research and trading separately.
   **Acceptance:** A green test suite cannot turn research profitability or live trading green.
+  **Completion evidence:** `docs/edge-program/release-semantics.v1.json` defines independent RED/YELLOW/GREEN conditions for infrastructure, research, paper trading, and live cash, plus unknown-evidence and overall aggregation rules. Research GREEN requires independent custody and positive after-cost confidence bounds; live-cash GREEN additionally requires research/paper GREEN, verified broker compliance, human approval, and rehearsal. Test success and infrastructure GREEN are explicit non-inputs to research or live-cash GREEN. `scripts/validate_release_semantics.py` enforces these separation rules in CI.
 - [ ] **PE-0010** — Pin repository lockfile, Python version, seed, timezone and computational environment for reproducibility.  
   **Acceptance:** A clean offline install on Windows/Linux reproduces deterministic fixture hashes.
 - [ ] **PE-0011** — Capture source inventory and old/new forward-engine import dependency graph.  
