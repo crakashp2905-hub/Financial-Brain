@@ -397,12 +397,14 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
 
 
 def execute(runner, event, decided, *, order_id="order-1", qty=2, limit="100.30",
-            execution_offset_ms=100):
+            execution_offset_ms=100, max_wait_ms=None, price_band=None,
+            passive_trade_event_ids=()):
     return runner.execute_paper_intent(
         session_id="s", order_id=order_id, decision_id="trade-1", event_id=event.event_id,
         side="BUY", quantity=qty, limit_price=Decimal(limit), tick_size=Decimal("0.05"),
         freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
-        simulated_at=decided + timedelta(milliseconds=execution_offset_ms))
+        simulated_at=decided + timedelta(milliseconds=execution_offset_ms), max_wait_ms=max_wait_ms,
+        price_band=price_band, passive_trade_event_ids=passive_trade_event_ids)
 
 
 def append_fill_quote(runner, config, signal_event, *, event_id, available_at):
@@ -444,6 +446,41 @@ def test_paper_order_refuses_quantity_that_violates_effective_instrument_lot(tmp
     with pytest.raises(ForwardSessionRunnerError, match="multiple of lot size 5"):
         execute(runner, event, decided, qty=2)
     assert runner.records("s")["intents"] == []
+    runner.close()
+
+
+def test_execution_receipt_records_price_band_rejection_and_late_quote(tmp_path):
+    runner, event, decided = trade_setup(tmp_path / "band")
+    rejected = execute(runner, event, decided, order_id="band-reject", price_band=(Decimal("90"), Decimal("100")))
+    assert rejected["status"] == "REJECTED" and rejected["reject_reason"] == "PRICE_BAND"
+    runner.close()
+
+    runner, signal_event, decided = trade_setup(tmp_path / "late")
+    delayed = append_fill_quote(runner, make_config(), signal_event, event_id="late-fill-quote",
+                                available_at=decided + timedelta(milliseconds=300))
+    missed = execute(runner, delayed, decided, order_id="late-order", limit="101", max_wait_ms=100,
+                     execution_offset_ms=300)
+    assert missed["status"] == "MISSED"
+    assert missed["reject_reason"] == "FIRST_QUOTE_AFTER_MAX_WAIT"
+    assert runner.records("s")["accounting"]["completed_order_ids"] == ["late-order"]
+    runner.close()
+
+
+def test_passive_paper_receipt_uses_journaled_trade_through_ticks(tmp_path):
+    runner, quote, decided = trade_setup(tmp_path)
+    tick_at = decided + timedelta(milliseconds=100)
+    tick = MarketEvent("passive-trade-through", EventKind.TICK, "NSE", quote.instrument_id,
+                       tick_at, tick_at, tick_at, {"price": 99.95, "quantity": 2}, "FIXTURE",
+                       evidence_id="e" * 64)
+    runner.ingest("s", make_config(), [tick], ingest_metadata={
+        tick.event_id: (tick_at + timedelta(milliseconds=1), "FIXTURE_CLOCK")})
+    receipt = execute(runner, quote, decided, order_id="passive-order", qty=2, limit="100",
+                      passive_trade_event_ids=(tick.event_id,))
+    assert receipt["status"] == "FILLED" and receipt["execution_style"] == "PASSIVE_LIMIT"
+    assert receipt["average_price"] == "100"
+    assert receipt["simulated_adverse_selection_cost_inr"] == "0.20"
+    assert "charges_inr" not in receipt
+    assert receipt["execution_evidence_event_ids"] == [quote.event_id, tick.event_id]
     runner.close()
 
 

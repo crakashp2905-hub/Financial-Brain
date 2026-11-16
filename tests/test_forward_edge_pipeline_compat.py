@@ -23,12 +23,13 @@ def test_historical_fixture_runs_through_runner_without_changing_legacy_contract
     assert result["physical_orders"] is False
     assert result["broker"] == "NONE"
     assert result["forward_runner"]["physical_orders"] is False
-    if EXPECTED[name] == "NO_TRADE":
-        assert result["forward_runner"]["report_status"] == "CLOSED"
-        assert result["forward_runner"]["decision_count"] == 1
-    else:
-        assert result["forward_runner"]["report_status"] == "INCOMPLETE"
-        assert result["forward_runner"]["paper_intent_count"] == 0
+    assert result["forward_runner"]["economic_outcome"] == EXPECTED[name]
+    assert result["forward_runner"]["ledger_balanced"] is True
+    assert result["forward_runner"]["cash_reconciled"] is True
+    assert result["forward_runner"]["report_status"] == (
+        "INCOMPLETE" if name == "unknown_order" else "CLOSED")
+    assert result["forward_runner"]["net_pnl_eligible"] is (
+        EXPECTED[name] in {"WIN", "LOSS"})
 
 
 def test_golden_signatures_cover_the_complete_fixture_pack() -> None:

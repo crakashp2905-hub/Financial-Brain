@@ -1,7 +1,7 @@
 """FE-0059 deterministic execution scenarios and resulting inventory."""
 from decimal import Decimal
 
-from financial_brain.forward_edge.execution_scenario import evaluate_scenario
+from financial_brain.forward_edge.execution_scenario import evaluate_passive_scenario, evaluate_scenario
 
 
 def _run(**changes):
@@ -39,3 +39,25 @@ def test_sell_slippage_is_adverse_and_inventory_direction_is_negative() -> None:
                 adverse_slippage_bps=Decimal("25"))
     assert sell.average_price == Decimal("99.75")
     assert sell.inventory_delta == -10
+
+
+def test_price_band_rejects_before_inventory_is_created() -> None:
+    rejected = _run(price_band=(Decimal("90"), Decimal("100")))
+    assert rejected.status == "REJECTED" and rejected.reject_reason == "PRICE_BAND"
+    assert rejected.filled_quantity == 0 and rejected.inventory_delta == 0
+
+
+def test_passive_limits_need_a_trade_through_and_apply_adverse_selection() -> None:
+    missed = evaluate_passive_scenario(
+        side="BUY", quantity=10, limit_price=Decimal("100"), tick_size=Decimal("0.05"),
+        freeze_limit=20, slice_size=4, adverse_slippage_bps=Decimal("20"),
+        trade_prints=((Decimal("100"), 10),),
+    )
+    filled = evaluate_passive_scenario(
+        side="BUY", quantity=10, limit_price=Decimal("100"), tick_size=Decimal("0.05"),
+        freeze_limit=20, slice_size=4, adverse_slippage_bps=Decimal("20"),
+        trade_prints=((Decimal("99.95"), 6), (Decimal("99.90"), 4),),
+    )
+    assert missed.status == "MISSED" and missed.reject_reason == "NO_TRADE_THROUGH_LIMIT"
+    assert filled.status == "FILLED" and filled.average_price == Decimal("100.00")
+    assert filled.child_quantities == (4, 4, 2)

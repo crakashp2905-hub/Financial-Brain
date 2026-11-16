@@ -7,18 +7,22 @@ import re
 import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
 from financial_brain.evidence.decision_manifest import ManifestError, canonical_bytes
-from financial_brain.forward_edge.execution_scenario import evaluate_scenario
+from financial_brain.forward_edge.execution_scenario import (
+    ScenarioFill,
+    evaluate_passive_scenario,
+    evaluate_scenario,
+)
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_local_time
 from financial_brain.forward_edge.intent_timing import create_timed_intent
 from financial_brain.forward_edge.market_data import executable_quote
-from financial_brain.forward_edge.market_events import MarketEvent
+from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 from financial_brain.forward_edge.quote_archive import QuoteArchive
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
@@ -822,7 +826,9 @@ class ForwardSessionRunner:
                              event_id: str, side: str, quantity: int, limit_price: Decimal,
                              tick_size: Decimal, freeze_limit: int, slice_size: int,
                              adverse_slippage_bps: Decimal, latency_ms: int,
-                             simulated_at: datetime | None = None) -> dict[str, Any]:
+                             simulated_at: datetime | None = None, max_wait_ms: int | None = None,
+                             price_band: tuple[Decimal, Decimal] | None = None,
+                             passive_trade_event_ids: tuple[str, ...] = ()) -> dict[str, Any]:
         """Create one durable paper execution receipt from an eligible observed quote.
 
         The deterministic simulation is behind the kernel's durable outbox. A missing or
@@ -839,14 +845,22 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("simulated execution clock must be timezone aware")
         if latency_ms < 0:
             raise ForwardSessionRunnerError("simulated latency cannot be negative")
+        if max_wait_ms is not None and (type(max_wait_ms) is not int or max_wait_ms < 0):
+            raise ForwardSessionRunnerError("max_wait_ms must be a non-negative integer when configured")
+        if len(set(passive_trade_event_ids)) != len(passive_trade_event_ids):
+            raise ForwardSessionRunnerError("passive trade event IDs must be unique")
         try:
             limit = Decimal(limit_price)
             tick = Decimal(tick_size)
             slippage = Decimal(adverse_slippage_bps)
+            band = tuple(Decimal(value) for value in price_band) if price_band is not None else None
         except Exception as exc:  # noqa: BLE001 - Decimal rejects malformed numeric inputs
-            raise ForwardSessionRunnerError("limit, tick and slippage must be decimals") from exc
+            raise ForwardSessionRunnerError("limit, tick, slippage and price band must be decimals") from exc
         if any(not value.is_finite() for value in (limit, tick, slippage)) or min(limit, tick) <= 0 or slippage < 0:
             raise ForwardSessionRunnerError("limit/tick must be positive and slippage non-negative")
+        if band is not None and (len(band) != 2 or not all(value.is_finite() for value in band)
+                                 or band[0] <= 0 or band[0] > band[1]):
+            raise ForwardSessionRunnerError("price band must contain ordered positive finite bounds")
         decision_row = self._con.execute("SELECT outcome, record_json FROM runner_decisions "
                                          "WHERE session_id=? AND decision_id=?",
                                          [session_id, decision_id]).fetchone()
@@ -944,6 +958,27 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("simulated fill precedes decision plus configured latency")
         if event.available_at < timed.earliest_fill_time:
             raise ForwardSessionRunnerError("paper fill quote predates order eligibility after modeled latency")
+        passive_events: list[MarketEvent] = []
+        if passive_trade_event_ids:
+            rows = self._con.execute(
+                f"SELECT event_json FROM runner_events WHERE session_id=? AND event_id IN "
+                f"({','.join('?' for _ in passive_trade_event_ids)})",
+                [session_id, *passive_trade_event_ids]).fetchall()
+            if len(rows) != len(passive_trade_event_ids):
+                raise ForwardSessionRunnerError("passive fill references an unjournaled trade print")
+            passive_events = [MarketEvent.from_dict(json.loads(row[0])) for row in rows]
+            if any(trade.kind is not EventKind.TICK or trade.instrument_id != event.instrument_id
+                   for trade in passive_events):
+                raise ForwardSessionRunnerError("passive fills require same-instrument journaled trade ticks")
+            if any(type(trade.payload.get("quantity")) is not int or trade.payload["quantity"] < 1
+                   for trade in passive_events):
+                raise ForwardSessionRunnerError("passive trade prints need positive integral quantities")
+            if any(trade.available_at < timed.earliest_fill_time or trade.available_at >
+                   simulated_at.astimezone(timezone.utc) for trade in passive_events):
+                raise ForwardSessionRunnerError("passive trade print was outside the eligible execution window")
+            if any(not trade.evidence_id or re.fullmatch(r"[0-9a-f]{64}", trade.evidence_id) is None
+                   for trade in passive_events):
+                raise ForwardSessionRunnerError("passive trade print requires immutable payload evidence")
         touch = quote["ask"] if side == "BUY" else quote["bid"]
         visible = quote["ask_quantity"] if side == "BUY" else quote["bid_quantity"]
         effective_rule = {"effective_from": rule.effective_from.isoformat(),
@@ -958,6 +993,10 @@ class ForwardSessionRunner:
                    "effective_instrument_rule": effective_rule,
                    "limit_price": str(limit), "tick_size": str(tick), "freeze_limit": freeze_limit,
                    "slice_size": slice_size, "adverse_slippage_bps": str(slippage),
+                   "max_wait_ms": max_wait_ms,
+                   "price_band": [str(value) for value in band] if band is not None else None,
+                   "execution_style": "PASSIVE_LIMIT" if passive_trade_event_ids else "MARKETABLE_LIMIT",
+                   "passive_trade_event_ids": list(passive_trade_event_ids),
                    "latency_ms": latency_ms, "earliest_fill_time": timed.earliest_fill_time.isoformat(),
                    "simulated_at": simulated_at.astimezone(timezone.utc).isoformat()}
         request_json = json.dumps(request, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -973,10 +1012,23 @@ class ForwardSessionRunner:
             self._con.commit()
 
         def persist_simulation() -> None:
-            scenario = evaluate_scenario(side=side, quantity=quantity, touch_price=touch,
-                                         limit_price=limit, tick_size=tick, visible_quantity=visible,
-                                         freeze_limit=freeze_limit, slice_size=slice_size,
-                                         adverse_slippage_bps=slippage)
+            deadline = (timed.earliest_fill_time + timedelta(milliseconds=max_wait_ms)
+                        if max_wait_ms is not None else None)
+            if deadline is not None and event.available_at > deadline:
+                scenario = ScenarioFill("MISSED", quantity, 0, 0, None, (),
+                                        "FIRST_QUOTE_AFTER_MAX_WAIT", slippage)
+            elif passive_trade_event_ids:
+                prints = tuple((Decimal(str(trade.payload["price"])), int(trade.payload.get("quantity", 0)))
+                               for trade in sorted(passive_events, key=lambda row: row.available_at))
+                scenario = evaluate_passive_scenario(
+                    side=side, quantity=quantity, limit_price=limit, tick_size=tick,
+                    freeze_limit=freeze_limit, slice_size=slice_size, adverse_slippage_bps=slippage,
+                    trade_prints=prints, price_band=band)
+            else:
+                scenario = evaluate_scenario(side=side, quantity=quantity, touch_price=touch,
+                                             limit_price=limit, tick_size=tick, visible_quantity=visible,
+                                             freeze_limit=freeze_limit, slice_size=slice_size,
+                                             adverse_slippage_bps=slippage, price_band=band)
             body = {"session_id": session_id, "order_id": order_id, "status": scenario.status,
                     "requested_quantity": scenario.requested_quantity,
                     "filled_quantity": scenario.filled_quantity, "inventory_delta": scenario.inventory_delta,
@@ -986,6 +1038,9 @@ class ForwardSessionRunner:
                     "instrument_rulebook_sha256": rulebook.digest,
                     "effective_instrument_rule": effective_rule,
                     "quote_event_id": event_id, "source": event.source,
+                    "execution_style": request["execution_style"],
+                    "execution_evidence_event_ids": [event_id, *passive_trade_event_ids],
+                    "max_wait_ms": max_wait_ms,
                     "simulated_at": simulated_at.astimezone(timezone.utc).isoformat(),
                     "physical_order_submitted": False}
             if scenario.filled_quantity:
@@ -1016,6 +1071,8 @@ class ForwardSessionRunner:
         config = self.state_store.config(session_id)
         bucket = config.constraints.get("liquidity_bucket")
         if config.constraints.get("cost_schedule") is None:
+            receipt["simulated_adverse_selection_cost_inr"] = self._passive_adverse_cost(
+                session_id, request, price, filled_quantity)
             return
         if price is None or bucket not in {"mega", "large", "mid", "small", "micro"}:
             raise ForwardSessionRunnerError("costed fills require a valid price and declared liquidity bucket")
@@ -1026,8 +1083,48 @@ class ForwardSessionRunner:
             lines = schedule.one_way(day=config.exchange_date, turnover=turnover, side=side, bucket=bucket)
         except (KeyError, TypeError, ValueError) as exc:
             raise ForwardSessionRunnerError(f"invalid configured cost schedule: {exc}") from exc
-        receipt["cost_items"] = [{"order_id": request["order_id"], **lines}]
-        receipt["charges_inr"] = format(Decimal(str(lines["total"])), "f")
+        schedule_charge = Decimal(str(lines["total"]))
+        adverse_bps = Decimal(str(request["adverse_slippage_bps"]))
+        adverse_charge = (price * filled_quantity * adverse_bps / Decimal(10_000)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+        if request.get("execution_style") == "PASSIVE_LIMIT":
+            adverse_charge = Decimal(self._passive_adverse_cost(
+                session_id, request, price, filled_quantity))
+        receipt["simulated_adverse_selection_cost_inr"] = format(adverse_charge, "f")
+        cost_items = [{"order_id": request["order_id"], **lines}]
+        if adverse_charge:
+            cost_items.append({"order_id": request["order_id"], "type": "SIMULATED_ADVERSE_SELECTION",
+                               "total": format(adverse_charge, "f")})
+        total_charges = schedule_charge + adverse_charge
+        receipt["cost_items"] = cost_items
+        receipt["simulated_adverse_selection_cost_inr"] = format(adverse_charge, "f")
+        receipt["charges_inr"] = format(total_charges, "f")
+
+    def _passive_adverse_cost(self, session_id: str, request: dict[str, Any],
+                              price: Decimal | None, filled_quantity: int) -> str:
+        if price is None or request.get("execution_style") != "PASSIVE_LIMIT":
+            return "0.00"
+        event_ids = request.get("passive_trade_event_ids", [])
+        if not event_ids:
+            return "0.00"
+        rows = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? AND event_id IN ("
+            + ",".join("?" for _ in event_ids) + ") ORDER BY available_at, event_id",
+            [session_id, *event_ids]).fetchall()
+        limit = Decimal(str(request["limit_price"]))
+        prices = [Decimal(str(event["payload"]["price"])) for row in rows
+                  if (event := json.loads(row[0]))["kind"] == "tick"]
+        through = [value for value in prices if
+                   (value < limit if request["side"] == "BUY" else value > limit)]
+        if not through:
+            through_cost = Decimal(0)
+        else:
+            move = (limit - min(through)) if request["side"] == "BUY" else (max(through) - limit)
+            through_cost = move * filled_quantity
+        modeled_cost = price * filled_quantity * Decimal(str(request["adverse_slippage_bps"])) \
+            / Decimal(10_000)
+        cost = max(through_cost, modeled_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+        return format(cost, "f")
 
     def _resolved_cost_schedule(self, session_id: str):
         from datetime import date
