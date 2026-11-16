@@ -24,7 +24,7 @@ ROLE_BY_PACKAGE = {
 def build(root: Path) -> dict:
     root = root.resolve()
     source_root = root / "src" / "financial_brain"
-    matrix = json.loads((root / "docs/audits/capability-matrix.v1.json").read_text(encoding="utf-8"))
+    matrix = json.loads((root / "docs/audits/capability-matrix.v2.json").read_text(encoding="utf-8"))
     curated: dict[str, list[dict]] = {}
     for capability in matrix["capabilities"]:
         for source in capability["source"]:
