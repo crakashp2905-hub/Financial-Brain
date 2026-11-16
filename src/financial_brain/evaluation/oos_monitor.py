@@ -62,6 +62,10 @@ REGISTERED = (
     Registration("edge_p3_frog_in_pan", "PRE-REGISTERED frog-in-the-pan momentum under the dynamic standard",
                  "2026-11-16", 21, "docs/trials/dynamic/momentum-excess-series.parquet",
                  column="P3 frog in the pan"),
+    Registration("edge_h003_riskadj_mom", "PRE-REGISTERED the hundred candidates under the dynamic standard",
+                 "2026-11-17", 21, "docs/trials/dynamic/hundred/survivors.parquet", column="H003"),
+    Registration("edge_h005_industry_mom", "PRE-REGISTERED the hundred candidates under the dynamic standard",
+                 "2026-11-17", 21, "docs/trials/dynamic/hundred/survivors.parquet", column="H005"),
 )
 
 

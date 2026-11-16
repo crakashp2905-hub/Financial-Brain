@@ -28,7 +28,8 @@ KIND = {**{r: "long_only" for r in RULES}, "pairs_distance": "long_short", "pair
         "pca_statarb": "long_short", "vix_mean_reversion": "index", "scale_trader": "index", "grid": "index",
         "martingale": "index", "anti_martingale": "index", "carry_basis_10": "carry", "sharpe_allocator": "allocator",
         "results_reaction_short": "long_short",
-        **{k: "edge" for k in ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan", "edge_s1_no_news_reversal",
+        **{k: "edge" for k in ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan", "edge_h003_riskadj_mom",
+                               "edge_h005_industry_mom", "edge_s1_no_news_reversal",
                                "edge_s2_reaction_drift", "edge_f1_long_buildup", "edge_f2_short_covering", "edge_z1_turn_of_month",
                                "edge_i1_index_intraday", "edge_w1_reversal_ls", "edge_w2_52wh_ls", "edge_w3_momentum_ls",
                                "edge_e1_mom_ensemble", "edge_x1_overnight", "edge_x2_opening_fade", "edge_i2_seasonality_ls", "edge_l2_learned_ls",
@@ -338,7 +339,8 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
         "SELECT DISTINCT business_date FROM features WHERE business_date <= ? ORDER BY 1 DESC LIMIT 30", [day]).fetchall()][::-1]
     closes = pd.DataFrame({lin: b.set_index("d")["c"] for lin, b in by.items()}).sort_index()
     # monthly: P1, P2, P3
-    names = ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan")
+    names = ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan", "edge_h003_riskadj_mom",
+             "edge_h005_industry_mom")
     st = ZE.state(z, "edge_monthly")
     if ZE._first_of_month(z, day) or not st.get("targets"):
         st = {"targets": ZE.monthly_targets(rcon, day), "set": str(day)}
