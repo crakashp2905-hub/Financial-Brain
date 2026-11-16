@@ -111,8 +111,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
   **Acceptance:** Release gate blocks if lint, type checks, migrations, coverage or any OS required job fails.
 - [ ] **PE-0006** — Require `main` review and status checks; verify settings via GitHub rather than a README assertion.  
   **Acceptance:** Branch protection API confirms required checks and reviews; until then a release stays blocked.
-- [ ] **PE-0007** — Inventory every market-data source, authorization, latency, access credential flag, and retention right without leaking secrets.  
+- [x] **PE-0007** — Inventory every market-data source, authorization, latency, access credential flag, and retention right without leaking secrets.
   **Acceptance:** Machine-readable source matrix labels MISSING, LICENSED, UNVERIFIED, and READY.
+  **Completion evidence:** `docs/edge-program/market-data-sources.v1.json` records implemented Kite, exchange, index, filing, fund, news and macro sources plus missing licensed depth, expired-option history and US-market feeds. It records authorization/retention/latency evidence and credential-presence booleans only; `scripts/validate_market_data_sources.py` validates all four status labels, evidence paths, and credential-field shape in CI. Unknown rights and unmeasured latency remain explicitly `UNVERIFIED`; no source is promoted to `READY` without evidence.
 - [ ] **PE-0008** — Build a single capability matrix for real feed, replay, shadow, paper, broker dry-run and live-cash.  
   **Acceptance:** Every displayed capability includes tested mode, fidelity, and evidence path.
 - [ ] **PE-0009** — Write exact red/yellow/green release semantics for infrastructure, research and trading separately.  
