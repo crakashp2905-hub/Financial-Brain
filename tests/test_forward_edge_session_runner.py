@@ -367,12 +367,12 @@ def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=Non
 
 
 def record_manifest(runner, *, session_id, decision_id, event, decided_at, quantity,
-                    cost_model_sha256="6" * 64):
+                    cost_model_sha256="6" * 64, day="2026-11-13", holding_sessions=1):
     event_sha = runner._con.execute("SELECT event_sha256 FROM runner_events "
                                     "WHERE session_id=? AND event_id=?",
                                     [session_id, event.event_id]).fetchone()[0]
     manifest = {
-        "schema": "fb.decision.v1", "day": "2026-11-13", "decision_id": decision_id,
+        "schema": "fb.decision.v1", "day": day, "decision_id": decision_id,
         "author": "test-runner", "strategy_sha256": "1" * 64, "model_sha256": "2" * 64,
         "data_sha256": event_sha, "universe_sha256": "3" * 64, "picks_sha256": "4" * 64,
         "calendar_sha256": "5" * 64, "cost_model_sha256": cost_model_sha256,
@@ -380,7 +380,7 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
         "entry_earliest_at_utc": (decided_at + timedelta(milliseconds=100)).isoformat(),
         "exit_scheduled_at_utc": (decided_at + timedelta(hours=8)).isoformat(),
         "data_watermark_at_utc": event.available_at.isoformat(),
-        "exchange_session_id": "NSE-2026-11-13", "holding_sessions": 1,
+        "exchange_session_id": f"NSE-{day}", "holding_sessions": holding_sessions,
         "benchmark_id": "NIFTY50", "capital_inr": "100000",
         "predicted_return_fraction": "0.01", "predicted_cost_fraction": "0.001",
         "forecast": {"p10_fraction": "-0.01", "p50_fraction": "0.01",
@@ -849,6 +849,65 @@ def test_lifecycle_event_and_audit_append_roll_back_and_resume_atomically(tmp_pa
     assert resumed._append_record("preflight", "s", record) is None
     assert resumed.durable.audit_records("s") == expected
     resumed.close()
+
+
+def test_shared_paper_ledger_carries_inventory_across_sessions_without_expiry(tmp_path):
+    runner, buy_quote, buy_decision_at = trade_setup(tmp_path)
+    buy_receipt = execute(runner, buy_quote, buy_decision_at, order_id="same-local-order-id", qty=2)
+    first_close_at = buy_decision_at + timedelta(seconds=2)
+    runner.close_session("s", complete=True, now=first_close_at)
+    first_day_accounting = runner.records("s")["accounting"]
+    assert first_day_accounting["positions"] == {"NSE:INFY": 2}
+    assert buy_receipt["filled_quantity"] == 2
+
+    second_day = date(2026, 11, 16)
+    second_config = replace(make_config(), exchange_date=second_day)
+    second_start = NOW + timedelta(days=3)
+    assert runner.begin("s2", second_config, now=second_start,
+                        preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+    before_sell = runner.records("s2")["accounting"]
+    assert before_sell["positions"] == {"NSE:INFY": 2}
+    assert before_sell["cash_inr"] == first_day_accounting["cash_inr"]
+
+    signal = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-16 10:15:00", "last_price": 101.0, "volume": 1000,
+        "depth": {"buy": [{"price": 100.95, "quantity": 20}],
+                  "sell": [{"price": 101.05, "quantity": 20}]},
+    }, received_at=second_start)
+    runner.ingest("s2", second_config, [signal])
+    decision_at = second_start + timedelta(seconds=1)
+    runner.decide(session_id="s2", strategy_id="momentum", decision_id="sell-trade",
+                  outcome="TRADE", input_event_ids=(signal.event_id,), decided_at=decision_at)
+    record_manifest(runner, session_id="s2", decision_id="sell-trade", event=signal,
+                    decided_at=decision_at, quantity=2, day=second_day.isoformat(),
+                    holding_sessions=20)
+    runner.record_risk_verdict(session_id="s2", decision_id="sell-trade", verdict_id="sell-risk",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               reason_codes=(), assessed_at=decision_at)
+    fill_at = decision_at + timedelta(milliseconds=100)
+    fill_quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-16 10:15:01", "last_price": 101.0, "volume": 1000,
+        "depth": {"buy": [{"price": 100.95, "quantity": 20}],
+                  "sell": [{"price": 101.05, "quantity": 20}]},
+    }, received_at=fill_at)
+    runner.ingest("s2", second_config, [fill_quote], ingest_metadata={
+        fill_quote.event_id: (fill_at + timedelta(milliseconds=1), "TEST_FILL_QUOTE_CLOCK")})
+    sell_receipt = runner.execute_paper_intent(
+        session_id="s2", order_id="same-local-order-id", decision_id="sell-trade",
+        event_id=fill_quote.event_id, side="SELL", quantity=2, limit_price=Decimal("100.90"),
+        tick_size=Decimal("0.05"), freeze_limit=10, slice_size=10,
+        adverse_slippage_bps=Decimal("0"), latency_ms=100,
+        simulated_at=fill_at + timedelta(milliseconds=50))
+    assert sell_receipt["filled_quantity"] == 2
+    second_close_at = fill_at + timedelta(seconds=1)
+    second_day_accounting = runner.records("s2")["accounting"]
+    assert second_day_accounting["positions"] == {}
+    assert second_day_accounting["filled_order_count"] == 2
+    runner.close_session("s2", complete=True, now=second_close_at)
+
+    # A later session must not mutate an earlier session's frozen account projection.
+    assert runner.records("s")["accounting"] == first_day_accounting
+    runner.close()
 
 
 def test_decision_manifest_and_risk_verdict_replay_idempotently_after_restart(tmp_path):

@@ -23,11 +23,12 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
     """Replay the durable receipt set into a paper OMS and balanced gross ledger."""
     if not account_id.strip() or not capital.is_finite() or capital <= 0:
         raise PaperAccountingError("paper account ID and positive finite capital are required")
-    event_by_id = {event["event_id"]: event for event in events}
-    intent_by_id: dict[str, dict[str, Any]] = {intent["order_id"]: intent for intent in intents}
+    event_by_id = {event.get("accounting_event_id", event["event_id"]): event for event in events}
+    intent_by_id: dict[str, dict[str, Any]] = {
+        intent.get("accounting_order_id", intent["order_id"]): intent for intent in intents}
     receipt_by_id: dict[str, dict[str, Any]] = {}
     for receipt in receipts:
-        order_id = str(receipt.get("order_id", ""))
+        order_id = str(receipt.get("accounting_order_id", receipt.get("order_id", "")))
         if not order_id or order_id in receipt_by_id:
             raise PaperAccountingError("execution receipt identities must be unique and non-empty")
         receipt_by_id[order_id] = receipt
@@ -49,16 +50,18 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
     orphan_receipts = sorted(set(receipt_by_id) - set(intent_by_id))
     errors.extend(f"{order_id}: execution receipt has no durable intent" for order_id in orphan_receipts)
 
-    receipt_order = {str(receipt["order_id"]): index for index, receipt in enumerate(receipts)}
+    receipt_order = {str(receipt.get("accounting_order_id", receipt["order_id"])): index
+                     for index, receipt in enumerate(receipts)}
     ordered_intents = sorted(intents, key=lambda item: (
-        receipt_order.get(str(item["order_id"]), len(receipt_order)),
+        receipt_order.get(str(item.get("accounting_order_id", item["order_id"])), len(receipt_order)),
         str(item.get("simulated_at", "")), str(item["order_id"])))
     for intent in ordered_intents:
-        order_id = str(intent["order_id"])
+        order_id = str(intent.get("accounting_order_id", intent["order_id"]))
         if order_id not in receipt_by_id:
             continue
         receipt = receipt_by_id[order_id]
-        event = event_by_id.get(str(intent["event_id"]))
+        source_order_id = str(intent["order_id"])
+        event = event_by_id.get(str(intent.get("accounting_event_id", intent["event_id"])))
         if event is None:
             errors.append(f"{order_id}: source market event is missing")
             continue
@@ -92,7 +95,7 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
                 item_total = sum(Decimal(str(item["total"])) for item in cost_items)
                 if not charge_total.is_finite() or charge_total < 0 or item_total != charge_total:
                     raise ValueError("charge total differs from immutable line items")
-                if any(item.get("order_id") != order_id for item in cost_items):
+                if any(item.get("order_id") != source_order_id for item in cost_items):
                     raise ValueError("cost line item order identity mismatch")
                 charged_orders.append({"order_id": order_id, "charges_inr": format(charge_total, "f"),
                                        "cost_items": cost_items})
@@ -173,7 +176,8 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
     charges = sum((Decimal(item["charges_inr"]) for item in charged_orders), Decimal(0))
     charged_fill_orders = {item["order_id"] for item in charged_orders}
     all_fills_costed = all(
-        not int(receipt.get("filled_quantity", 0)) or str(receipt.get("order_id")) in charged_fill_orders
+        not int(receipt.get("filled_quantity", 0)) or
+        str(receipt.get("accounting_order_id", receipt.get("order_id"))) in charged_fill_orders
         for receipt in receipts
     )
     has_filled_orders = any(int(receipt.get("filled_quantity", 0)) > 0 for receipt in receipts)

@@ -698,6 +698,43 @@ class ForwardSessionRunner:
         from financial_brain.forward_edge.paper_accounting import rebuild_paper_accounting
 
         config = self.state_store.config(session_id)
+        account_sessions: list[tuple[str, ForwardRunConfig]] = []
+        for candidate_id in self.state_store.session_ids():
+            candidate = self.state_store.config(candidate_id)
+            if candidate.ledger_id != config.ledger_id:
+                continue
+            # Later trading dates must not change an earlier session's frozen accounting.
+            if candidate.exchange_date < config.exchange_date or candidate_id == session_id:
+                account_sessions.append((candidate_id, candidate))
+        account_sessions.sort(key=lambda row: (row[1].exchange_date, row[0]))
+        if any(candidate.capital != config.capital for _, candidate in account_sessions):
+            raise ForwardSessionRunnerError("sessions sharing a paper ledger must use identical opening capital")
+        if len(account_sessions) > 1:
+            all_events: list[dict[str, Any]] = []
+            all_intents: list[dict[str, Any]] = []
+            all_receipts: list[dict[str, Any]] = []
+            for candidate_id, _ in account_sessions:
+                for (encoded,) in self._con.execute(
+                        "SELECT event_json FROM runner_events WHERE session_id=? "
+                        "AND kind NOT IN ('preflight','calendar_plan') ORDER BY available_at,event_id",
+                        [candidate_id]).fetchall():
+                    event = json.loads(encoded)
+                    event["accounting_event_id"] = f"{candidate_id}:{event['event_id']}"
+                    all_events.append(event)
+                for (encoded,) in self._con.execute(
+                        "SELECT request_json FROM paper_intents WHERE session_id=? ORDER BY rowid",
+                        [candidate_id]).fetchall():
+                    intent = json.loads(encoded)
+                    intent["accounting_order_id"] = f"{candidate_id}:{intent['order_id']}"
+                    intent["accounting_event_id"] = f"{candidate_id}:{intent['event_id']}"
+                    all_intents.append(intent)
+                for (encoded,) in self._con.execute(
+                        "SELECT receipt_json FROM paper_execution_receipts WHERE session_id=? ORDER BY rowid",
+                        [candidate_id]).fetchall():
+                    receipt = json.loads(encoded)
+                    receipt["accounting_order_id"] = f"{candidate_id}:{receipt['order_id']}"
+                    all_receipts.append(receipt)
+            events, intents, receipts = all_events, all_intents, all_receipts
         return rebuild_paper_accounting(account_id=config.ledger_id, capital=Decimal(config.capital),
                                         events=events, intents=intents, receipts=receipts)
 
