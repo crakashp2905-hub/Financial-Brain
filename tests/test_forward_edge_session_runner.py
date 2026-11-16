@@ -22,9 +22,12 @@ from financial_brain.forward_edge.venue_calendar import Session as VenueSession,
 NOW = datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc)
 
 
-def make_config():
+def make_config(*, max_quote_age_ms=None):
+    constraints = {"max_positions": 1}
+    if max_quote_age_ms is not None:
+        constraints["max_quote_age_ms"] = max_quote_age_ms
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
-                            ("NSE:INFY",), Decimal("100000"), {"max_positions": 1}, "ledger-1")
+                            ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
 
 
 def make_event(*, event_id="fixture-1", available_at=NOW, event_time=NOW):
@@ -36,8 +39,8 @@ def make_runner(tmp_path):
     return ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"), tmp_path / "journal.sqlite")
 
 
-def opened(runner, session_id="s"):
-    return runner.begin(session_id, make_config(), now=NOW,
+def opened(runner, session_id="s", config=None):
+    return runner.begin(session_id, config or make_config(), now=NOW,
                         preflight={"data_rights_configured": True, "risk_policy_loaded": True})
 
 
@@ -305,15 +308,17 @@ def test_incomplete_close_is_explicit_and_idempotent(tmp_path):
     runner.close()
 
 
-def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=None):
+def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=None,
+                max_quote_age_ms=None, decision_offset_ms=1000):
     runner = make_runner(tmp_path)
-    opened(runner)
+    config = make_config(max_quote_age_ms=max_quote_age_ms)
+    opened(runner, config=config)
     quote = quote or {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
                       "depth": {"buy": [{"price": 99.95, "quantity": 20}],
                                 "sell": [{"price": 100.05, "quantity": 3}]}}
     event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
-    runner.ingest("s", make_config(), [event])
-    decided = NOW + timedelta(seconds=1)
+    runner.ingest("s", config, [event])
+    decided = NOW + timedelta(milliseconds=decision_offset_ms)
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
                   decided_at=decided, input_event_ids=(event.event_id,))
     if include_manifest:
@@ -389,6 +394,28 @@ def test_ltp_only_trade_decision_is_recordable_but_never_produces_paper_fill(tmp
     assert event.kind is EventKind.TICK
     assert runner.records("s")["decisions"][0]["outcome"] == "TRADE"
     with pytest.raises(ForwardSessionRunnerError, match="two-sided quote with positive visible depth"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    assert runner.records("s")["execution_receipts"] == []
+    runner.close()
+
+
+def test_stale_quote_is_refused_at_decision_time_by_the_frozen_age_limit(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config(max_quote_age_ms=500)
+    opened(runner, config=config)
+    event = make_event()
+    runner.ingest("s", config, [event])
+    with pytest.raises(ForwardSessionRunnerError, match="decision quote exceeds configured maximum age of 500ms"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="stale-trade", outcome="TRADE",
+                      input_event_ids=(event.event_id,), decided_at=NOW + timedelta(seconds=1))
+    assert runner.records("s")["decisions"] == []
+    runner.close()
+
+
+def test_quote_that_ages_out_during_simulated_latency_cannot_create_an_intent(tmp_path):
+    runner, event, decided = trade_setup(tmp_path, max_quote_age_ms=150, decision_offset_ms=100)
+    with pytest.raises(ForwardSessionRunnerError, match="paper fill quote exceeds configured maximum age of 150ms"):
         execute(runner, event, decided)
     assert runner.records("s")["intents"] == []
     assert runner.records("s")["execution_receipts"] == []

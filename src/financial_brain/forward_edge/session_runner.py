@@ -27,6 +27,7 @@ from financial_brain.forward_edge.session_state import (
 from financial_brain.forward_edge.venue_calendar import VenueCalendar
 
 IST = ZoneInfo("Asia/Kolkata")
+DEFAULT_MAX_QUOTE_AGE_MS = 5_000
 
 
 class ForwardSessionRunnerError(ValueError):
@@ -150,6 +151,13 @@ class ForwardSessionRunner:
         from financial_brain.kernel.events import EventKernel
 
         return EventKernel(connection=self._con)
+
+    def _max_quote_age(self, session_id: str) -> int:
+        value = self.state_store.config(session_id).constraints.get(
+            "max_quote_age_ms", DEFAULT_MAX_QUOTE_AGE_MS)
+        if type(value) is not int or value < 0:
+            raise ForwardSessionRunnerError("max_quote_age_ms must be a non-negative integer in run constraints")
+        return value
 
     def close(self) -> None:
         self._con.close()
@@ -450,14 +458,21 @@ class ForwardSessionRunner:
         if len(unique_ids) != len(input_event_ids):
             raise ForwardSessionRunnerError("decision input event IDs must be unique")
         rows = self._con.execute(
-            f"SELECT event_id, available_at FROM runner_events WHERE session_id=? "
+            f"SELECT event_id, kind, available_at FROM runner_events WHERE session_id=? "
             f"AND kind NOT IN ('preflight','calendar_plan') AND event_id IN ({','.join('?' for _ in unique_ids)})",
             [session_id, *unique_ids]).fetchall()
         if len(rows) != len(unique_ids):
             raise ForwardSessionRunnerError("decision references an event absent from this session")
         clock = decided_at.astimezone(timezone.utc)
-        if any(datetime.fromisoformat(available) > clock for _, available in rows):
+        if any(datetime.fromisoformat(available) > clock for _, _, available in rows):
             raise ForwardSessionRunnerError("decision uses a source event unavailable at decision time")
+        max_quote_age = self._max_quote_age(session_id)
+        stale = [event_id for event_id, kind, available in rows
+                 if kind == "quote" and clock - datetime.fromisoformat(available) >
+                 timedelta(milliseconds=max_quote_age)]
+        if stale:
+            raise ForwardSessionRunnerError(
+                f"decision quote exceeds configured maximum age of {max_quote_age}ms: {', '.join(sorted(stale))}")
         body = {"session_id": session_id, "strategy_id": strategy_id, "decision_id": decision_id,
                 "outcome": outcome, "decided_at": clock.isoformat(), "input_event_ids": list(unique_ids),
                 "reason_codes": sorted(set(reason_codes)), "payload": payload or {}}
@@ -844,6 +859,11 @@ class ForwardSessionRunner:
         if event_row is None:
             raise ForwardSessionRunnerError("paper quote is absent from the session event journal")
         event = MarketEvent.from_dict(json.loads(event_row[0]))
+        quote_age = simulated_at.astimezone(timezone.utc) - event.available_at
+        max_quote_age = self._max_quote_age(session_id)
+        if quote_age > timedelta(milliseconds=max_quote_age):
+            raise ForwardSessionRunnerError(
+                f"paper fill quote exceeds configured maximum age of {max_quote_age}ms")
         selected = next((row for row in manifest["selections"]
                          if row["symbol"] == event.instrument_id), None)
         if selected is None or quantity > selected["quantity"]:
