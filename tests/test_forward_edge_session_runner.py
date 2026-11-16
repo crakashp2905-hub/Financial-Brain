@@ -305,12 +305,12 @@ def test_incomplete_close_is_explicit_and_idempotent(tmp_path):
     runner.close()
 
 
-def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True):
+def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=None):
     runner = make_runner(tmp_path)
     opened(runner)
-    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
-             "depth": {"buy": [{"price": 99.95, "quantity": 20}],
-                       "sell": [{"price": 100.05, "quantity": 3}]}}
+    quote = quote or {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+                      "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                                "sell": [{"price": 100.05, "quantity": 3}]}}
     event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
     runner.ingest("s", make_config(), [event])
     decided = NOW + timedelta(seconds=1)
@@ -378,6 +378,20 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert accounting["positions"] == {"NSE:INFY": 2}
     assert accounting["ledger_balanced"] and accounting["cash_reconciled"]
     assert accounting["charges_assessed"] is False and accounting["net_pnl_eligible"] is False
+    runner.close()
+
+
+def test_ltp_only_trade_decision_is_recordable_but_never_produces_paper_fill(tmp_path):
+    runner, event, decided = trade_setup(
+        tmp_path,
+        quote={"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000},
+    )
+    assert event.kind is EventKind.TICK
+    assert runner.records("s")["decisions"][0]["outcome"] == "TRADE"
+    with pytest.raises(ForwardSessionRunnerError, match="two-sided quote with positive visible depth"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    assert runner.records("s")["execution_receipts"] == []
     runner.close()
 
 
