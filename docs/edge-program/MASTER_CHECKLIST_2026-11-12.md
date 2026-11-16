@@ -197,7 +197,7 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
   **Acceptance:** Fault injection triggers stale-feed NO_TRADE and leaves a count in session completeness.
 - [ ] **PE-0036** — Archive bid/ask/depth alongside time-aligned trades and minute candles where source permits.  
   **Acceptance:** Each proposed execution receipt references the exact input quote IDs and fill-fidelity tier.
-- [ ] **PE-0037** — Use source-specific timestamp tolerances; never silently replace missing exchange time with receipt time.  
+- [x] **PE-0037** — Use source-specific timestamp tolerances; never silently replace missing exchange time with receipt time.
   **Acceptance:** Test missing, naive, reversed, future and stale timestamps.
 - [ ] **PE-0038** — Construct full exchange calendar for eligible dates, holidays, special sessions and instrument-specific trading windows.  
   **Acceptance:** Golden tests cover weekends, expiries and known special-session mechanics.

@@ -74,8 +74,13 @@ def _exchange_timestamp(value: Any) -> datetime:
 def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
                          received_at: datetime | None = None,
                          clock: ClockProvider | None = None,
-                         availability_delay: timedelta = timedelta(0)) -> MarketEvent:
+                         availability_delay: timedelta = timedelta(0),
+                         max_future_skew: timedelta = timedelta(seconds=2)) -> MarketEvent:
     """Convert one full Kite quote to a source-labeled event with explicit clocks."""
+    if not isinstance(availability_delay, timedelta) or availability_delay < timedelta(0):
+        raise KiteQuoteNormalizationError("availability delay cannot be negative")
+    if not isinstance(max_future_skew, timedelta) or max_future_skew < timedelta(0):
+        raise KiteQuoteNormalizationError("maximum future skew must be a non-negative duration")
     try:
         venue, symbol = instrument.split(":", 1)
     except ValueError as exc:
@@ -93,9 +98,11 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
     else:
         if received_at.tzinfo is None or received_at.utcoffset() is None:
             raise KiteQuoteNormalizationError("received_at must be timezone aware")
-        if availability_delay < timedelta(0):
-            raise KiteQuoteNormalizationError("availability delay cannot be negative")
         available_at = received_at + availability_delay
+    if timestamp.astimezone(received_at.tzinfo) > received_at + max_future_skew:
+        raise KiteQuoteNormalizationError(
+            f"Kite exchange timestamp exceeds the configured future-skew tolerance of {max_future_skew}"
+        )
     try:
         last_price = float(quote["last_price"])
         volume = int(quote.get("volume", 0))

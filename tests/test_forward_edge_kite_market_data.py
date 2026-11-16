@@ -47,6 +47,44 @@ def test_missing_exchange_clock_is_refused():
                              received_at=datetime.now(timezone.utc))
 
 
+def test_naive_kite_exchange_timestamp_uses_documented_ist_clock_not_receipt_clock():
+    received = datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc)
+    event = normalize_kite_quote("NSE:INFY", quote(), received_at=received)
+    assert event.event_time == datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc)
+    assert event.event_time != received
+
+
+def test_exchange_clock_ahead_of_receipt_beyond_kite_skew_tolerance_is_rejected():
+    received = datetime(2026, 11, 13, 4, 45, 0, tzinfo=timezone.utc)
+    future = quote() | {"timestamp": "2026-11-13 10:15:03"}
+    with pytest.raises(KiteQuoteNormalizationError, match="future-skew tolerance"):
+        normalize_kite_quote("NSE:INFY", future, received_at=received)
+
+    # A caller can declare the source's measured clock allowance explicitly.
+    accepted = normalize_kite_quote("NSE:INFY", future, received_at=received,
+                                    max_future_skew=timedelta(seconds=3))
+    assert accepted.event_time == datetime(2026, 11, 13, 4, 45, 3, tzinfo=timezone.utc)
+
+
+def test_stale_exchange_observation_is_preserved_for_audit_not_retimed():
+    received = datetime(2026, 11, 13, 5, 0, tzinfo=timezone.utc)
+    stale = quote() | {"timestamp": "2026-11-13 10:15:00"}
+    event = normalize_kite_quote("NSE:INFY", stale, received_at=received)
+    assert event.event_time == datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc)
+    assert event.received_at == received
+    assert event.event_time < event.received_at
+
+
+def test_negative_source_clock_tolerances_are_rejected():
+    received = datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc)
+    with pytest.raises(KiteQuoteNormalizationError, match="availability delay"):
+        normalize_kite_quote("NSE:INFY", quote(), received_at=received,
+                             availability_delay=-timedelta(milliseconds=1))
+    with pytest.raises(KiteQuoteNormalizationError, match="future skew"):
+        normalize_kite_quote("NSE:INFY", quote(), received_at=received,
+                             max_future_skew=-timedelta(milliseconds=1))
+
+
 def test_ltp_only_observation_is_archived_as_non_executable_tick():
     event = normalize_kite_quote("NSE:INFY", quote() | {"depth": None},
                                  received_at=datetime.now(timezone.utc))
