@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import duckdb
+import pytest
 
 from financial_brain.forward_edge import cli
 from financial_brain.forward_edge.session_runner import ForwardSessionRunner
@@ -34,6 +35,43 @@ def test_replay_run_defaults_to_non_mutating_dry_run(capsys):
     assert result["dry_run"] is True
     assert result["broker_orders"] is False
     assert result["mode"] == "RESEARCH_REPLAY"
+
+
+def test_real_paper_requires_explicit_confirmation_and_never_calls_runner(capsys):
+    args = SimpleNamespace(date="2026-11-16", cohort="momentum-v1", confirm_paper_only=False,
+                           names=200, poll=5)
+    called = []
+    assert cli._real_paper(args, today=date(2026, 11, 16),
+                           run_live=lambda **kwargs: called.append(kwargs)) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "CONFIRMATION_REQUIRED"
+    assert result["broker_orders"] is False
+    assert result["verified_forward_evidence"] is False
+    assert called == []
+
+
+def test_real_paper_is_same_day_cohort_scoped_and_brokerless(capsys):
+    args = SimpleNamespace(date="2026-11-16", cohort="momentum-v1", confirm_paper_only=True,
+                           names=100, poll=3)
+    calls = []
+
+    def live(**kwargs):
+        calls.append(kwargs)
+        return {"day": "2026-11-16", "status": "complete", "symbols": 100}
+
+    assert cli._real_paper(args, today=date(2026, 11, 16), run_live=live) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert calls == [{"n": 100, "poll": 3, "cohort": "momentum-v1"}]
+    assert result["broker_orders"] is False
+    assert result["forward_session_journaled"] is False
+
+
+def test_real_paper_rejects_historical_date_even_when_confirmed(capsys):
+    args = SimpleNamespace(date="2026-11-13", cohort="momentum-v1", confirm_paper_only=True,
+                           names=100, poll=3)
+    assert cli._real_paper(args, today=date(2026, 11, 16), run_live=lambda **kwargs: pytest.fail()) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "DATE_REJECTED"
 
 
 def test_preflight_never_calls_readiness_green_a_forward_session(capsys):

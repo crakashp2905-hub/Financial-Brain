@@ -7,8 +7,11 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def _repo() -> Path:
@@ -50,6 +53,44 @@ def _paper_run(args: argparse.Namespace) -> int:
     result = run_replay(session_date, n=args.names)
     print(json.dumps({**plan, "result": str(result)}, indent=2))
     return 0
+
+
+def _real_paper(args: argparse.Namespace, *, today: date | None = None, run_live=None) -> int:
+    """Run the existing Kite live-data paper engine for today's session only.
+
+    This command has no broker-order capability and does not assert that the legacy
+    paper ledger is a canonical, independently attested forward session.
+    """
+    try:
+        requested = date.fromisoformat(args.date)
+    except ValueError:
+        print(json.dumps({"status": "DATE_REJECTED", "reason": "date must use YYYY-MM-DD",
+                          "broker_orders": False}, indent=2))
+        return 2
+    session_day = today or datetime.now(IST).date()
+    plan = {"date": requested.isoformat(), "cohort": args.cohort, "mode": "LIVE_DATA_PAPER",
+            "broker_orders": False, "forward_session_journaled": False,
+            "verified_forward_evidence": False}
+    if not args.confirm_paper_only:
+        print(json.dumps({**plan, "status": "CONFIRMATION_REQUIRED",
+                          "reason": "pass --confirm-paper-only to start the Kite-backed paper session"}, indent=2))
+        return 2
+    if args.names < 1 or args.poll < 1 or not args.cohort.strip():
+        print(json.dumps({**plan, "status": "CONFIG_REJECTED",
+                          "reason": "names, poll interval and cohort must be positive/non-empty"}, indent=2))
+        return 2
+    if requested != session_day:
+        print(json.dumps({**plan, "status": "DATE_REJECTED",
+                          "reason": "live-data paper sessions may only run for the current India date",
+                          "india_date": session_day.isoformat()}, indent=2))
+        return 2
+    if run_live is None:
+        from financial_brain.paper.intraday_runner import run_live as run_live_impl
+        run_live = run_live_impl
+    result = run_live(n=args.names, poll=args.poll, cohort=args.cohort)
+    status = str(result.get("status", "unknown"))
+    print(json.dumps({**plan, "status": status, "result": result}, indent=2, sort_keys=True))
+    return 0 if status in {"complete", "closed", "not_a_session"} else 2
 
 
 def _paper_close(args: argparse.Namespace) -> int:
@@ -145,6 +186,15 @@ def add_parser(subparsers) -> None:
     run.add_argument("--names", type=int, default=200)
     run.add_argument("--execute", action="store_true", help="write historical replay to the paper ledger")
     run.set_defaults(fn=_paper_run)
+    live = commands.add_parser(
+        "real-paper", help="run today's Kite live-data paper session; no broker order route")
+    live.add_argument("--date", required=True, help="today's India session date, YYYY-MM-DD")
+    live.add_argument("--cohort", required=True, help="immutable strategy cohort identifier")
+    live.add_argument("--confirm-paper-only", action="store_true",
+                      help="confirm this is a paper-only run with no broker orders")
+    live.add_argument("--names", type=int, default=200)
+    live.add_argument("--poll", type=int, default=5)
+    live.set_defaults(fn=_real_paper)
     close = commands.add_parser("close", help="idempotently inspect replay closure; does not attest forward evidence")
     close.add_argument("--date", required=True)
     close.add_argument("--ledger", default="data/paper_live.duckdb")
