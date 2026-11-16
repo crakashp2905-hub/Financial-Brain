@@ -77,6 +77,12 @@ CREATE TABLE IF NOT EXISTS positions (
 CREATE TABLE IF NOT EXISTS skips (
     version VARCHAR, mode VARCHAR, signal_day DATE, ticker VARCHAR, rank INTEGER, expected_net DOUBLE, reason VARCHAR,
     PRIMARY KEY (version, mode, signal_day, ticker));
+CREATE TABLE IF NOT EXISTS paper_book_bridge (
+    version VARCHAR NOT NULL, mode VARCHAR NOT NULL, signal_day DATE NOT NULL, ticker VARCHAR NOT NULL,
+    signal_id VARCHAR NOT NULL, session_id VARCHAR NOT NULL, order_id VARCHAR NOT NULL,
+    state VARCHAR NOT NULL, requested_shares INTEGER NOT NULL, filled_shares INTEGER NOT NULL,
+    receipt_sha256 VARCHAR NOT NULL, updated_at TIMESTAMP NOT NULL,
+    PRIMARY KEY (signal_id, session_id, order_id));
 """
 
 
@@ -90,7 +96,9 @@ def connect(path: Path = PATH, read_only: bool = False) -> duckdb.DuckDBPyConnec
     path.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(path))
     con.execute(SCHEMA)
-    old = con.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'book_positions'").fetchone()[0]
+    old_row = con.execute(
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'book_positions'").fetchone()
+    old = int(old_row[0]) if old_row is not None else 0
     con.execute("ALTER TABLE positions ADD COLUMN IF NOT EXISTS why VARCHAR")      # the combination behind a buy
     if old:                                     # the first layout keyed rows without the book's version
         con.execute("INSERT OR IGNORE INTO positions SELECT * FROM book_positions")
@@ -187,6 +195,8 @@ def swing_ranking(rcon, day: date, spec: Spec = SWING, capital: float = CAPITAL,
     from ..decisions import plan as P
     from ..opportunity import engine as E
     from ..opportunity import scanners as S
+    if spec.horizon is None:
+        raise BookError("swing book requires a fixed session horizon")
     costs = costs or CostModel()
     cs = S.cross_section(rcon, day)
     if cs.empty:
@@ -255,7 +265,12 @@ def _plan_shares(r, capital: float, spec: Spec = POSITION) -> int:
 def _resolve(rcon, book, mode: str, upto: date, spec: Spec = POSITION) -> int:
     """Bring every position not yet sold up to ``upto``."""
     rows = book.execute("""SELECT signal_day, ticker, lineage, horizon, stop FROM positions
-                           WHERE mode = ? AND version = ? AND exit_day IS NULL""", [mode, spec.version]).fetchall()
+                           WHERE mode = ? AND version = ? AND exit_day IS NULL
+                           AND NOT EXISTS (SELECT 1 FROM paper_book_bridge b
+                             WHERE b.version=positions.version AND b.mode=positions.mode
+                               AND b.signal_day=positions.signal_day AND b.ticker=positions.ticker
+                               AND (b.state='FILLED' OR b.state LIKE 'PARTIAL%'))""",
+                        [mode, spec.version]).fetchall()
     for sd, tk, lin, h, stop in rows:
         w = walk(_closes(rcon, lin, sd, upto), stop=stop, horizon=h)
         end = w["exit_day"] or w["last_day"]
@@ -404,9 +419,10 @@ def summary(book, mode: str, spec: Spec = POSITION, *, capital: float = CAPITAL)
     per_day = closed.groupby("entry_day")["excess"].mean()
     se = per_day.std(ddof=1) / np.sqrt(len(per_day)) if len(per_day) > 1 else float("nan")
     t = float(per_day.mean() / se) if se and se == se and se > 0 else float("nan")
+    mean_excess = float(closed["excess"].mean())
     out.update(entry_days=int(len(per_day)), win_rate=float((closed["net"] > 0).mean()),
                beat_universe=float((closed["excess"] > 0).mean()), mean_net=float(closed["net"].mean()),
-               mean_excess=float(closed["excess"].mean()), t_excess=t, net_rs=float(closed["net_rs"].sum()),
+               mean_excess=mean_excess, t_excess=t, net_rs=float(closed["net_rs"].sum()),
                gross_rs=float((closed["notional"] * closed["gross"]).sum()),
                costs_rs=float((closed["notional"] * closed["cost"]).sum()),
                traded_entry_notional_rs=float(closed["notional"].sum()),
@@ -422,7 +438,7 @@ def summary(book, mode: str, spec: Spec = POSITION, *, capital: float = CAPITAL)
     elif len(closed) < VERDICT_TRADES or len(per_day) < VERDICT_DAYS:
         out["verdict"] = f"COLLECTING ({len(closed)}/{VERDICT_TRADES} trades, {len(per_day)}/{VERDICT_DAYS} entry days)"
     else:
-        out["verdict"] = "WORKING" if t >= 2 and out["mean_excess"] > 0 else "NOT DEMONSTRATED"
+        out["verdict"] = "WORKING" if t >= 2 and mean_excess > 0 else "NOT DEMONSTRATED"
     return out
 
 

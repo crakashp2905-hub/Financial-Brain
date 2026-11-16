@@ -13,7 +13,11 @@ from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunner,
     ForwardSessionRunnerError,
 )
-from financial_brain.forward_edge.paper_book_adapter import pending_signals, record_signal_decision
+from financial_brain.forward_edge.paper_book_adapter import (
+    pending_signals,
+    record_signal_decision,
+    reconcile_entry_receipt,
+)
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
     ForwardSessionStore,
@@ -935,8 +939,11 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
         version VARCHAR, mode VARCHAR, signal_day DATE, rank INTEGER, ticker VARCHAR, lineage VARCHAR,
         type VARCHAR, horizon INTEGER, shares INTEGER, stop DOUBLE, ref_price DOUBLE,
         expected_net DOUBLE, cost DOUBLE, entry_day DATE, entry_px DOUBLE,
-        exit_day DATE, exit_px DOUBLE)""")
-    book.execute("INSERT INTO positions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        exit_day DATE, exit_px DOUBLE, exit_reason VARCHAR, last_day DATE, last_px DOUBLE,
+        held INTEGER, bench DOUBLE, why VARCHAR)""")
+    book.execute("INSERT INTO positions (version, mode, signal_day, rank, ticker, lineage, type, horizon, shares, "
+                 "stop, ref_price, expected_net, cost, entry_day, entry_px, exit_day, exit_px) "
+                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                  ["swing-v1", "live", date(2026, 11, 13), 1, "INFY", "INFY-LINEAGE", "swing",
                   7, 2, 95.0, 100.0, 0.02, 0.003, None, None, None, None])
     signal, = pending_signals(book, mode="live", version="swing-v1", exchange_date=exchange_day,
@@ -981,9 +988,20 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
         simulated_at=fill_at + timedelta(milliseconds=50))
     assert receipt["filled_quantity"] == signal.shares
     assert runner.records("book-adapter")["accounting"]["positions"] == {"NSE:INFY": signal.shares}
+    assert reconcile_entry_receipt(book=book, runner=runner, session_id="book-adapter", signal=signal,
+                                   decision_id=decision_id, order_id="book-order", receipt=receipt) == "FILLED"
+    assert reconcile_entry_receipt(book=book, runner=runner, session_id="book-adapter", signal=signal,
+                                   decision_id=decision_id, order_id="book-order", receipt=receipt) == "FILLED"
+    position = book.execute("SELECT entry_day, entry_px, shares, held FROM positions "
+                            "WHERE version='swing-v1'").fetchone()
+    assert position == (exchange_day, float(receipt["average_price"]), signal.shares, 0)
+    assert pending_signals(book, mode="live", version="swing-v1", exchange_date=exchange_day + timedelta(days=1),
+                          instrument_ids={"INFY": "NSE:INFY"}) == ()
 
     book.execute("DELETE FROM positions")
-    book.execute("INSERT INTO positions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    book.execute("INSERT INTO positions (version, mode, signal_day, rank, ticker, lineage, type, horizon, shares, "
+                 "stop, ref_price, expected_net, cost, entry_day, entry_px, exit_day, exit_px) "
+                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                  ["momentum-v1", "live", date(2026, 11, 13), 1, "INFY", "INFY-LINEAGE", "momentum",
                   20, 2, 95.0, 100.0, 0.0, 0.003, None, None, None, None])
     uncalibrated, = pending_signals(book, mode="live", version="momentum-v1", exchange_date=exchange_day,
