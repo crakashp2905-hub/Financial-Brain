@@ -18,7 +18,7 @@ def full_quote(**overrides):
         "timestamp": "2026-11-13 10:15:00",
         "last_price": 101.5,
         "volume": 1000,
-        "mode": "OPEN",
+        "exchange_status": "OPEN",
         "ohlc": {"open": 100.0, "high": 102.0, "low": 99.0, "close": 98.5},
         "depth": {
             "buy": [{"price": 101.4, "quantity": 12}, {"price": 101.3, "quantity": 20}],

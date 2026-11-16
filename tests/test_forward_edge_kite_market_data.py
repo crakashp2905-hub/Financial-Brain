@@ -109,6 +109,50 @@ def test_executable_quote_requires_two_sided_positive_displayed_liquidity():
                                                   received_at=received)) is None
 
 
+def test_locked_or_crossed_books_are_not_executable():
+    received = datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc)
+    locked = quote() | {"depth": {
+        "buy": [{"price": 101.6, "quantity": 12}],
+        "sell": [{"price": 101.6, "quantity": 9}],
+    }}
+    locked_event = normalize_kite_quote("NSE:INFY", locked, received_at=received)
+    assert executable_quote(locked_event) is None
+
+    crossed = quote() | {"depth": {
+        "buy": [{"price": 101.7, "quantity": 12}],
+        "sell": [{"price": 101.6, "quantity": 9}],
+    }}
+    with pytest.raises(ValueError, match="bid cannot exceed ask"):
+        normalize_kite_quote("NSE:INFY", crossed, received_at=received)
+
+
+def test_circuit_limit_touch_and_non_continuous_status_are_not_executable():
+    received = datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc)
+    base = normalize_kite_quote("NSE:INFY", quote(), received_at=received)
+    assert executable_quote(base) is not None
+
+    at_lower = normalize_kite_quote("NSE:INFY", quote() | {"lower_circuit_limit": 101.4},
+                                    received_at=received)
+    at_upper = normalize_kite_quote("NSE:INFY", quote() | {"upper_circuit_limit": 101.6},
+                                    received_at=received)
+    assert executable_quote(at_lower) is None
+    assert executable_quote(at_upper) is None
+
+    auction = normalize_kite_quote("NSE:INFY", quote() | {"exchange_status": "AUCTION"},
+                                   received_at=received)
+    assert executable_quote(auction) is None
+
+
+def test_unsorted_or_malformed_depth_is_not_executable():
+    received = datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc)
+    unsorted = quote() | {"depth": {
+        "buy": [{"price": 101.4, "quantity": 12}, {"price": 101.5, "quantity": 2}],
+        "sell": [{"price": 101.6, "quantity": 9}],
+    }}
+    assert executable_quote(normalize_kite_quote("NSE:INFY", unsorted,
+                                                  received_at=received)) is None
+
+
 def test_naive_receipt_clock_is_rejected_instead_of_claimed_as_observed_time():
     with pytest.raises(KiteQuoteNormalizationError, match="timezone aware"):
         normalize_kite_quote("NSE:INFY", quote(), received_at=datetime(2026, 11, 13, 10, 15))

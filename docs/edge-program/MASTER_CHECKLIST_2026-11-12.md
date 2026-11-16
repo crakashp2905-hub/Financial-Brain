@@ -204,8 +204,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
   **Acceptance:** Golden tests cover weekends, expiries and known special-session mechanics.
 - [ ] **PE-0039** — Apply point-in-time corporate actions and symbol/ISIN succession for equity holdings.  
   **Acceptance:** Delisted and suspended securities remain in outcome denominators.
-- [ ] **PE-0040** — Build quote-quality rules for crossed books, locked books, zero depth, circuit bands and auction periods.  
+- [x] **PE-0040** — Build quote-quality rules for crossed books, locked books, zero depth, circuit bands and auction periods.
   **Acceptance:** Invalid quotes disable execution rather than interpolate a favorable spread.
+  **Completion evidence:** The shared `executable_quote()` gate refuses locked/crossed markets, zero or inconsistent depth, unsorted depth, circuit-limit touches and explicit auction/non-continuous phases. Crossed top-of-book packets are rejected by the `MarketEvent` contract before they can be archived as executable. `tests/test_forward_edge_kite_market_data.py` covers each condition; `ForwardSessionRunner.execute_paper_intent()` only fills from this gate.
 - [ ] **PE-0041** — Preserve market-data source access rights, including what may be persisted or redistributed.  
   **Acceptance:** Right-not-known causes usage block rather than unlicensed capture.
 - [ ] **PE-0042** — Compute opportunity-weighted coverage: dates, instruments, notional, candidate signals, filled/missed quotes.  

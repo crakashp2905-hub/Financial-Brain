@@ -100,7 +100,7 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
             reject(key, quote, str(exc))
             continue
         payload = dict(event.payload)
-        status = quote.get("mode", quote.get("exchange_status"))
+        status = quote.get("exchange_status", quote.get("market_status"))
         if status is not None:
             payload["exchange_status"] = str(status)
         events.append(MarketEvent(

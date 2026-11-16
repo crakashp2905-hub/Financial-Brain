@@ -45,9 +45,42 @@ def executable_quote(event: MarketEvent) -> dict[str, Any] | None:
     except (KeyError, TypeError, ValueError, InvalidOperation, OverflowError):
         return None
     depth = payload.get("depth")
-    if (not bid.is_finite() or not ask.is_finite() or bid <= 0 or ask < bid or
+    if (not bid.is_finite() or not ask.is_finite() or bid <= 0 or ask <= bid or
             bid_quantity <= 0 or ask_quantity <= 0 or volume <= 0 or
             not isinstance(depth, dict) or not depth.get("buy") or not depth.get("sell")):
+        return None
+
+    def level(row: Any) -> tuple[Decimal, int]:
+        if isinstance(row, dict):
+            raw_price, raw_quantity = row["price"], row["quantity"]
+        elif isinstance(row, (list, tuple)) and len(row) == 2:
+            raw_price, raw_quantity = row
+        else:
+            raise ValueError("invalid depth level")
+        return Decimal(str(raw_price)), int(raw_quantity)
+
+    try:
+        bid_levels = [level(row) for row in depth["buy"]]
+        ask_levels = [level(row) for row in depth["sell"]]
+    except (KeyError, TypeError, ValueError, InvalidOperation, OverflowError):
+        return None
+    if (any(not price.is_finite() or price <= 0 or quantity <= 0 for price, quantity in bid_levels + ask_levels)
+            or any(bid_levels[index][0] < bid_levels[index + 1][0] for index in range(len(bid_levels) - 1))
+            or any(ask_levels[index][0] > ask_levels[index + 1][0] for index in range(len(ask_levels) - 1))
+            or bid_levels[0] != (bid, bid_quantity) or ask_levels[0] != (ask, ask_quantity)):
+        return None
+    try:
+        lower = Decimal(str(payload["lower_circuit_limit"])) if payload.get("lower_circuit_limit") is not None else None
+        upper = Decimal(str(payload["upper_circuit_limit"])) if payload.get("upper_circuit_limit") is not None else None
+    except InvalidOperation:
+        return None
+    if ((lower is not None and (not lower.is_finite() or lower <= 0 or bid <= lower))
+            or (upper is not None and (not upper.is_finite() or upper <= 0 or ask >= upper))):
+        return None
+    status = str(payload.get("exchange_status", "")).strip().upper()
+    phase = str(payload.get("session_phase", "")).strip().upper()
+    if (status and status not in {"OPEN", "NORMAL", "CONTINUOUS", "TRADING"}) or \
+            (phase and phase != "CONTINUOUS"):
         return None
     return {"bid": bid, "ask": ask, "bid_quantity": bid_quantity,
             "ask_quantity": ask_quantity, "volume": volume,
@@ -153,6 +186,11 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
     for key in ("lower_circuit_limit", "upper_circuit_limit"):
         if quote.get(key) is not None:
             payload[key] = float(quote[key])
+    exchange_status = quote.get("exchange_status", quote.get("market_status"))
+    if exchange_status is not None:
+        payload["exchange_status"] = str(exchange_status)
+    if quote.get("session_phase") is not None:
+        payload["session_phase"] = str(quote["session_phase"])
     packet_hash = hashlib.sha256(json.dumps(quote, sort_keys=True, default=str,
                                              separators=(",", ":")).encode("utf-8")).hexdigest()
     receipt_iso = received_at.isoformat()
