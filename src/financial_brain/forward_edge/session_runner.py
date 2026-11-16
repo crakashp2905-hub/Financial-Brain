@@ -246,6 +246,56 @@ class ForwardSessionRunner:
                 "manual_reconciliation_required": bool(unknown),
                 "physical_orders_enabled": False}
 
+    def supervise_open_sessions(self, *, now: datetime | None = None,
+                                max_feed_silence: timedelta = timedelta(seconds=90)) -> list[dict[str, Any]]:
+        """Sweep OPEN sessions and durably fail closed on missing calendar, stale feed, or missed close."""
+        now = now or capture_local_time(self.clock, label="session supervisor clock")
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ForwardSessionRunnerError("session supervisor clock must be timezone aware")
+        if max_feed_silence <= timedelta(0):
+            raise ForwardSessionRunnerError("maximum feed silence must be positive")
+        results: list[dict[str, Any]] = []
+        for session_id in self.state_store.session_ids():
+            if self.state_store.state(session_id) is not SessionState.OPEN:
+                continue
+            plan_row = self._con.execute(
+                "SELECT event_json FROM runner_events WHERE session_id=? AND kind='calendar_plan'",
+                [session_id]).fetchone()
+            reason: str | None = None
+            stale_seconds: float | None = None
+            if plan_row is None:
+                reason = "supervisor cannot verify feed or close because sourced venue calendar plan is missing"
+            else:
+                plan = json.loads(plan_row[0])
+                if plan.get("outcome") != "OPEN" or not plan.get("opens_at") or not plan.get("closes_at"):
+                    reason = "supervisor found an OPEN state without supported sourced venue bounds"
+                else:
+                    utc_now = now.astimezone(timezone.utc)
+                    opens_at = datetime.fromisoformat(plan["opens_at"])
+                    closes_at = datetime.fromisoformat(plan["closes_at"])
+                    if utc_now >= closes_at:
+                        reason = "supervisor observed the sourced venue close without a durable session close"
+                    elif utc_now >= opens_at:
+                        latest = self._con.execute(
+                            "SELECT MAX(available_at) FROM runner_events WHERE session_id=? "
+                            "AND kind NOT IN ('preflight','calendar_plan')", [session_id]).fetchone()[0]
+                        last_observed = datetime.fromisoformat(latest) if latest else opens_at
+                        stale = utc_now - last_observed
+                        stale_seconds = stale.total_seconds()
+                        if stale < timedelta(0):
+                            raise ForwardSessionRunnerError("supervisor clock precedes latest available market event")
+                        if stale >= max_feed_silence:
+                            reason = (f"market feed silent for {stale_seconds:.3f}s; "
+                                      f"limit is {max_feed_silence.total_seconds():.3f}s")
+            if reason is not None:
+                report = self.close_session(session_id, complete=False, now=now, reason=reason)
+                results.append({"session_id": session_id, "state": report["status"],
+                                "reason": reason, "stale_seconds": stale_seconds})
+            else:
+                results.append({"session_id": session_id, "state": SessionState.OPEN.value,
+                                "reason": None, "stale_seconds": stale_seconds})
+        return results
+
     def ingest(self, session_id: str, config: ForwardRunConfig,
                events: Iterable[MarketEvent], *,
                ingest_metadata: dict[str, tuple[datetime, str]] | None = None) -> dict[str, int]:

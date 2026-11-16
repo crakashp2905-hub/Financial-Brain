@@ -208,6 +208,11 @@ class ForwardSessionStore:
             raise SessionStateError("unknown forward session")
         return SessionState(row[0])
 
+    def session_ids(self) -> tuple[str, ...]:
+        """List durable session identities for supervisor sweeps."""
+        rows = self._con.execute("SELECT session_id FROM forward_sessions ORDER BY created_at, session_id").fetchall()
+        return tuple(str(row[0]) for row in rows)
+
     def config_sha256(self, session_id: str) -> str:
         row = self._con.execute("SELECT config_sha256 FROM forward_sessions WHERE session_id=?",
                                 [session_id]).fetchone()

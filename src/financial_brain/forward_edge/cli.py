@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 
@@ -109,6 +109,29 @@ def _resume_session(args: argparse.Namespace) -> int:
     return 2 if result["manual_reconciliation_required"] else 0
 
 
+def _supervise(args: argparse.Namespace) -> int:
+    """Sweep durable OPEN sessions for stale feeds and missed sourced closes; never accesses a broker."""
+    from financial_brain.forward_edge.session_runner import ForwardSessionRunner
+    from financial_brain.forward_edge.session_state import ForwardSessionStore
+
+    state_path, journal_path = Path(args.state_db), Path(args.journal)
+    if not state_path.is_file() or not journal_path.is_file():
+        print(json.dumps({"status": "NOT_FOUND", "sessions": [],
+                          "reason": "session state and journal files must already exist",
+                          "physical_orders_enabled": False}, indent=2))
+        return 2
+    runner = ForwardSessionRunner(ForwardSessionStore(state_path), journal_path)
+    try:
+        rows = runner.supervise_open_sessions(
+            max_feed_silence=timedelta(seconds=args.max_feed_silence_seconds))
+    finally:
+        runner.close()
+    print(json.dumps({"status": "INCOMPLETE" if any(row["state"] == "INCOMPLETE" for row in rows)
+                      else "HEALTHY", "sessions": rows, "physical_orders_enabled": False},
+                     indent=2, sort_keys=True))
+    return 2 if any(row["state"] == "INCOMPLETE" for row in rows) else 0
+
+
 def add_parser(subparsers) -> None:
     """Register `fb forward` commands on the main parser."""
     parser = subparsers.add_parser("forward", help="forward-edge preflight and paper evidence")
@@ -135,3 +158,8 @@ def add_parser(subparsers) -> None:
     resume.add_argument("--state-db", default=str(_repo() / "data" / "forward-edge" / "sessions.sqlite"))
     resume.add_argument("--journal", default=str(_repo() / "data" / "forward-edge" / "journal.sqlite"))
     resume.set_defaults(fn=_resume_session)
+    supervise = commands.add_parser("supervise", help="fail closed on stale feeds or missed sourced session closes")
+    supervise.add_argument("--state-db", default=str(_repo() / "data" / "forward-edge" / "sessions.sqlite"))
+    supervise.add_argument("--journal", default=str(_repo() / "data" / "forward-edge" / "journal.sqlite"))
+    supervise.add_argument("--max-feed-silence-seconds", type=float, default=90.0)
+    supervise.set_defaults(fn=_supervise)

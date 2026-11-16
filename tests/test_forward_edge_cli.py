@@ -76,3 +76,22 @@ def test_session_resume_cli_rehydrates_an_existing_session(tmp_path, capsys):
     assert result["session_id"] == "cli-resume"
     assert result["state"] == "OPEN"
     assert result["physical_orders_enabled"] is False
+
+
+def test_supervise_cli_fails_closed_and_is_brokerless(tmp_path, capsys):
+    state_path = tmp_path / "state.sqlite"
+    journal_path = tmp_path / "journal.sqlite"
+    config = ForwardRunConfig(
+        date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI", ("NSE:INFY",),
+        Decimal("100000"), {"max_positions": 1}, "ledger-1")
+    runner = ForwardSessionRunner(ForwardSessionStore(state_path), journal_path)
+    runner.begin("cli-supervise", config, now=datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc),
+                 preflight={"risk_policy_loaded": True})
+    runner.close()
+
+    args = SimpleNamespace(state_db=str(state_path), journal=str(journal_path), max_feed_silence_seconds=90.0)
+    assert cli._supervise(args) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "INCOMPLETE"
+    assert result["physical_orders_enabled"] is False
+    assert result["sessions"][0]["state"] == "INCOMPLETE"

@@ -170,6 +170,41 @@ def test_planned_session_resumed_after_source_close_becomes_durable_incomplete(t
     resumed.close()
 
 
+def test_supervisor_marks_stale_feed_incomplete_and_keeps_fresh_feed_open(tmp_path):
+    calendar = _calendar(date(2026, 11, 13))
+    runner = make_runner(tmp_path)
+    for session_id in ("stale", "fresh"):
+        assert runner.plan_calendar_day(session_id, make_config(), venue="NSE", calendar=calendar,
+                                        now=NOW, preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+    event = make_event(event_id="fresh-quote")
+    runner.ingest("fresh", make_config(), [event],
+                  ingest_metadata={event.event_id: (NOW, "SUPERVISOR_TEST_CLOCK")})
+
+    active = runner.supervise_open_sessions(now=NOW + timedelta(seconds=30),
+                                            max_feed_silence=timedelta(seconds=90))
+    assert {row["session_id"]: row["state"] for row in active} == {
+        "fresh": "OPEN", "stale": "INCOMPLETE"}
+    stale_report = runner.records("stale")["session_reports"][0]
+    assert stale_report["status"] == "INCOMPLETE" and "market feed silent" in stale_report["reason"]
+
+    expired = runner.supervise_open_sessions(now=NOW + timedelta(seconds=91),
+                                             max_feed_silence=timedelta(seconds=90))
+    assert expired == [{"session_id": "fresh", "state": "INCOMPLETE",
+                        "reason": "market feed silent for 91.000s; limit is 90.000s",
+                        "stale_seconds": 91.0}]
+    runner.close()
+
+
+def test_supervisor_fails_closed_for_open_sessions_without_calendar_plan(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner)
+    result = runner.supervise_open_sessions(now=NOW + timedelta(seconds=1))
+    assert result[0]["state"] == "INCOMPLETE"
+    assert "sourced venue calendar plan is missing" in result[0]["reason"]
+    assert runner.records("s")["session_reports"][0]["status"] == "INCOMPLETE"
+    runner.close()
+
+
 def test_events_must_match_frozen_universe_and_exchange_date(tmp_path):
     runner = make_runner(tmp_path)
     opened(runner)
