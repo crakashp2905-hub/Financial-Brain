@@ -511,6 +511,29 @@ def test_decision_manifest_and_risk_verdict_replay_idempotently_after_restart(tm
     resumed.close()
 
 
+def test_restart_restores_risk_positions_and_cash_without_repeating_paper_fill(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    original_receipt = execute(runner, event, decided)
+    before_restart = runner.records("s")
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    restored = resumed.resume("s")
+    after_restart = restored["records"]
+    assert restored["state"] == "OPEN"
+    assert after_restart["risk_verdicts"] == before_restart["risk_verdicts"]
+    assert after_restart["accounting"]["positions"] == before_restart["accounting"]["positions"]
+    assert after_restart["accounting"]["cash_inr"] == before_restart["accounting"]["cash_inr"]
+    assert after_restart["execution_receipts"] == [original_receipt]
+
+    repeated = execute(resumed, event, decided)
+    assert repeated == original_receipt
+    assert len(resumed.records("s")["execution_receipts"]) == 1
+    report = resumed.close_session("s", complete=True, now=decided + timedelta(seconds=2))
+    assert report["status"] == "CLOSED" and report["execution_receipt_count"] == 1
+    resumed.close()
+
+
 def test_partial_missed_and_rejected_scenarios_keep_requested_vs_filled_separate(tmp_path):
     runner, event, decided = trade_setup(tmp_path)
     partial = execute(runner, event, decided, order_id="partial", qty=5)
