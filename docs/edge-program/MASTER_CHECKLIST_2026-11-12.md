@@ -107,7 +107,7 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
 - [x] **PE-0004** — Classify all 13 Q4 2026 registered failures as FAIL, retaining the original reasons.
   **Acceptance:** A registry diff detects any silent reclassification or deletion.
   **Completion evidence:** `tests/test_forward_edge_f00.py::test_all_13_registered_q4_trials_remain_fail_with_original_reason_codes` verifies all 13 Q4 trial rows remain `FAIL` with non-empty original failure-code lists. The full ledger SHA is pinned in `docs/forward-edge/protected-pins.json`; `test_retrospective_edit_of_the_trial_ledger_is_detected` verifies a reclassification changes the guard result.
-- [ ] **PE-0005** — Expose CI lint failures and skip counts instead of reporting only the local pytest total.  
+- [x] **PE-0005** — Expose CI lint failures and skip counts instead of reporting only the local pytest total.
   **Acceptance:** Release gate blocks if lint, type checks, migrations, coverage or any OS required job fails.
 - [ ] **PE-0006** — Require `main` review and status checks; verify settings via GitHub rather than a README assertion.  
   **Acceptance:** Branch protection API confirms required checks and reviews; until then a release stays blocked.
