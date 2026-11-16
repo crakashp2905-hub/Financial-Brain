@@ -741,7 +741,13 @@ class ForwardSessionRunner:
         if not event.evidence_id or re.fullmatch(r"[0-9a-f]{64}", event.evidence_id) is None:
             raise ForwardSessionRunnerError("paper fill requires an immutable SHA-256 source-payload evidence ID")
         accounting = self.records(session_id)["accounting"]
-        if accounting["status"] != "RECONCILED_GROSS":
+        safely_reconciled_retry = (
+            accounting["status"] == "INCOMPLETE"
+            and not accounting["errors"]
+            and accounting["unresolved_order_ids"] == [order_id]
+            and self._paper_retry_reconciled_without_effect(session_id, order_id)
+        )
+        if accounting["status"] != "RECONCILED_GROSS" and not safely_reconciled_retry:
             raise ForwardSessionRunnerError("paper execution is blocked while the OMS/accounting projection is incomplete")
         instrument = event.instrument_id
         if side == "SELL" and int(accounting["positions"].get(instrument, 0)) < quantity:
@@ -818,6 +824,26 @@ class ForwardSessionRunner:
             self._append_audit("execution_receipt", session_id, order_id,
                                datetime.fromisoformat(body["simulated_at"]), body)
             self._con.commit()
+
+    def _paper_retry_reconciled_without_effect(self, session_id: str, order_id: str) -> bool:
+        """Permit retry only after durable evidence says this exact UNKNOWN simulation did not occur."""
+        outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")
+        if not outbox_path.is_file():
+            return False
+        key = f"paper:{session_id}:{order_id}"
+        try:
+            with sqlite3.connect(str(outbox_path)) as outbox:
+                state = outbox.execute("SELECT state, reconciled_by FROM outbox WHERE key=?", [key]).fetchone()
+                reconciliation = outbox.execute(
+                    "SELECT took_effect, reconciled_by FROM reconciliations WHERE key=? "
+                    "ORDER BY reconciliation_id DESC LIMIT 1", [key]).fetchone()
+        except sqlite3.Error:
+            return False
+        return bool(
+            state and state[0] == "PENDING" and state[1]
+            and reconciliation and reconciliation[0] == 0
+            and reconciliation[1] == state[1]
+        )
 
     def reconcile_unknown_paper_intent(self, *, session_id: str, order_id: str,
                                        reconciled_by: str) -> bool:

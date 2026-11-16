@@ -589,3 +589,31 @@ def test_unknown_outbox_after_crash_requires_receipt_reconciliation(tmp_path, mo
     report = runner.close_session("s", now=decided + timedelta(seconds=1), complete=True)
     assert report["status"] == "CLOSED" and report["execution_receipt_count"] == 1
     runner.close()
+
+
+def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receipt(tmp_path, monkeypatch):
+    from financial_brain.kernel.events import UnknownOutcome
+
+    runner, event, decided = trade_setup(tmp_path)
+
+    def crash_before_persist(*_args, **_kwargs):
+        raise RuntimeError("injected crash before simulation receipt")
+
+    monkeypatch.setattr(runner, "_persist_paper_receipt", crash_before_persist)
+    with pytest.raises(UnknownOutcome):
+        execute(runner, event, decided)
+    assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 0
+    with pytest.raises(ForwardSessionRunnerError, match="accounting projection is incomplete"):
+        execute(runner, event, decided)
+    runner.close()
+
+    runner = make_runner(tmp_path)
+    recovery = runner.resume("s")
+    assert recovery["manual_reconciliation_required"] is True
+    assert runner.reconcile_unknown_paper_intent(session_id="s", order_id="order-1",
+                                                  reconciled_by="local-receipt-check") is False
+    receipt = execute(runner, event, decided)
+    assert receipt["status"] == "FILLED"
+    assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
+    assert len(runner.records("s")["execution_receipts"]) == 1
+    runner.close()
