@@ -54,6 +54,65 @@ def snapshot(con, symbols: list[str], *, quote_fn=None, now: datetime | None = N
     return {"taken_at": now, "stored": len(rows), "missing": missing, "market_open": market_open(now)}
 
 
+def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime | None = None,
+                   rejections_out: list[dict] | None = None):
+    """Normalize read-only Kite full quotes into the canonical forward-event contract.
+
+    A complete two-sided quote retains displayed quantities, all available depth, volume,
+    session OHLC and the raw-payload digest. LTP-only observations remain informational
+    ticks and cannot be used as executable paper fills. Missing or malformed observations
+    fail the batch unless the caller explicitly requests a rejection ledger.
+    """
+    import hashlib
+    import json
+
+    from ..forward_edge.market_data import KiteQuoteNormalizationError, normalize_kite_quote
+    from ..forward_edge.market_events import MarketEvent
+    from ..providers import kite_data as kd
+
+    if not symbols or any(not isinstance(symbol, str) or not symbol.strip() for symbol in symbols):
+        raise ValueError("symbols must be non-empty strings")
+    if len(set(symbols)) != len(symbols):
+        raise ValueError("symbols must be unique")
+    keys = [f"NSE:{symbol}" for symbol in symbols]
+    raw = (quote_fn or kd.quote)(keys, "full")
+    receipt = received_at or datetime.now(timezone.utc)
+    if receipt.tzinfo is None or receipt.utcoffset() is None:
+        raise ValueError("received_at must be timezone-aware")
+    receipt = receipt.astimezone(timezone.utc)
+    events: list[MarketEvent] = []
+
+    def reject(key: str, quote: object, reason: str) -> None:
+        if rejections_out is None:
+            raise KiteQuoteNormalizationError(f"{reason} for {key}")
+        raw_hash = hashlib.sha256(json.dumps(quote, sort_keys=True, separators=(",", ":"),
+                                           default=str).encode("utf-8")).hexdigest()
+        rejections_out.append({"event_sha256": raw_hash, "instrument": key, "reason": reason})
+
+    for key in keys:
+        quote = raw.get(key) if isinstance(raw, dict) else None
+        if not isinstance(quote, dict):
+            reject(key, {"missing_quote": True}, "MISSING_KITE_QUOTE")
+            continue
+        try:
+            event = normalize_kite_quote(key, quote, received_at=receipt)
+        except (KiteQuoteNormalizationError, TypeError, ValueError) as exc:
+            reject(key, quote, str(exc))
+            continue
+        payload = dict(event.payload)
+        status = quote.get("mode", quote.get("exchange_status"))
+        if status is not None:
+            payload["exchange_status"] = str(status)
+        events.append(MarketEvent(
+            event_id=event.event_id, kind=event.kind, venue=event.venue,
+            instrument_id=event.instrument_id, event_time=event.event_time,
+            received_at=event.received_at, available_at=event.available_at,
+            payload=payload, source=event.source, sequence=event.sequence,
+            decision_time=event.decision_time, evidence_id=event.evidence_id,
+        ))
+    return events
+
+
 def divergence(con, *, tolerance: float = 0.03) -> list[dict]:
     """Latest snapshot against the archive's latest adjusted close, largest gaps first."""
     rows = con.execute("""

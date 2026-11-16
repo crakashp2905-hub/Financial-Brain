@@ -183,8 +183,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
 **Goal:** A positive result is meaningful only when quotes, depth and latency justify executable costs.
 
 **Repository integration points:** `ingest/kite_live.py`, `providers/kite_data.py`, `forward_edge/market_data.py`, `forward_edge/execution.py`, `paper/intraday_runner.py`
-- [ ] **PE-0030** — Extend `forward_events` beyond `last_price` to best bid, ask, visible quantities, depth levels, volume, session high/low and exchange status when available.  
+- [x] **PE-0030** — Extend `forward_events` beyond `last_price` to best bid, ask, visible quantities, depth levels, volume, session high/low and exchange status when available.
   **Acceptance:** Payload contract rejects absent mandatory fields for a fill-capable quote.
+  **Completion evidence:** `ingest.kite_live.forward_events()` now requests Kite full quotes and delegates clock, raw-payload hash, bid/ask, visible quantity, full depth, volume, session OHLC and exchange-status handling to the canonical Kite normalizer. LTP-only rows remain `TICK`; `executable_quote()` refuses missing/invalid depth, quantities or volume. `tests/test_kite_live_forward_events.py` covers full quote preservation, LTP-only refusal, missing exchange timestamp and hashed rejection rows.
 - [ ] **PE-0031** — Separate LTP-only observations from executable bid/ask observations.  
   **Acceptance:** LTP-only signals may be analyzed but cannot produce promotion-grade fill prices.
 - [ ] **PE-0032** — Store immutable raw source payload hash and normalized event with exchange, receive, available, and ingest clocks.  
