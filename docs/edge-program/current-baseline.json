@@ -1,21 +1,21 @@
 {
   "schema": "fb.financial_brain.current_baseline.v1",
-  "captured_at_utc": "2026-11-15T14:12:46Z",
+  "captured_at_utc": "2026-11-16T07:29:27Z",
   "repository": "https://github.com/crakashp2905-hub/Financial-Brain",
   "git": {
     "observed_main_ref": {
       "sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
-      "evidence": "git rev-parse refs/remotes/origin/main",
-      "limitation": "Local remote-tracking reference; not refreshed from GitHub during this capture."
+      "evidence": "git ls-remote origin refs/heads/main at capture time",
+      "limitation": "Direct advertised ref read; repository PR graph and branch-protection settings remain unavailable."
     },
     "head": {
       "branch": "feature/forward-edge-f00-f01",
-      "sha": "c1aeb19230afdf97b45658a8b8cac724079b57d7",
-      "evidence": "git rev-parse HEAD"
+      "sha": "6181c10a0a4cbeaa3e1da74fdcff8412d05b1a0e",
+      "evidence": "git rev-parse HEAD; direct advertised feature ref matched this SHA"
     },
     "open_pull_requests": {
       "status": "UNVERIFIED",
-      "evidence": "GitHub app repository lookup returned 404; PR search returned 422; gh auth status reports invalid token.",
+      "evidence": "GitHub PR lookup for the previously tracked PR #32 returned 404; PR search returned 422; gh auth status reports invalid token. A 404 does not establish that no PR exists.",
       "items": null
     },
     "branch_protection": {
@@ -27,6 +27,7 @@
       "untracked_paths": [
         ".pytest_tmp_live2/",
         ".pytest_tmp_live4/",
+        ".pytest_tmp_pe13/",
         ".worktrees/",
         "docs/forward-edge/exploratory/",
         "docs/forward-edge/logs/f04-fix-exit.txt",
@@ -104,7 +105,9 @@
     "trading": "RED_LIVE_CASH_DISABLED"
   },
   "evidence_sources": [
-    "git rev-parse HEAD refs/remotes/origin/main",
+    "git rev-parse HEAD",
+    "git ls-remote origin refs/heads/main refs/heads/feature/forward-edge-f00-f01",
+    "GitHub get PR #32 and workflow-run lookup for 6181c10 (both 404)",
     "git status --porcelain=v1",
     "gh auth status",
     "read-only DuckDB query against data/quote_archive.duckdb",
