@@ -136,3 +136,12 @@ against that code and the audit:
 - The tracker test now accepts citations from any `tests/test_*.py`, still requiring each cited test to exist.
 
 Tracker after this wave: DONE 85, PARTIAL 56, BLOCKED 11, NOT_STARTED 0. Forward-edge tests: 378 passed.
+
+## Wave F17 - data-integrity gates in the session pipeline (branch `feature/forward-edge-f17-gates`)
+
+`pipeline.run_session` now applies the instrument gate and the market-data gate before any execution. A failed gate gives
+`NO_TRADE` with sorted reason codes (`GATE:...`), a `reject_codes` field, no execution stage and no ledger posting. Four
+gated fixtures were added (suspended instrument, expired contract, wide spread, stale and frozen). The eight earlier fixture
+signatures are unchanged. The report command now carries coverage by session, name and intent notional.
+
+FE-0039 and FE-0042 are DONE. FE-0044 and FE-0113 stay PARTIAL: the cockpit is not fed from pipeline results.

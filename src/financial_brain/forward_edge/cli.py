@@ -44,6 +44,16 @@ def cmd_close(name: str) -> tuple[dict, int]:
 
 def cmd_report(as_of: str) -> tuple[dict, int]:
     sessions = [pipeline.run_session(fx) for fx in fixture_pack().values()]
+    from financial_brain.forward_edge import market_data as M
+    packs = fixture_pack()
+    uncovered = ("NO_TRADE", "LATE_QUOTE")
+    usable = {n: s["outcome"] not in uncovered for n, s in zip(packs, sessions)}
+    names: dict[str, bool] = {}
+    for n in packs:                                    # a name is covered if any of its sessions had usable quotes
+        names[packs[n]["instrument"]] = names.get(packs[n]["instrument"], False) or usable[n]
+    cov = M.coverage(
+        {packs[n]["session_id"]: (len(packs[n]["quotes"]) if usable[n] else 0) for n in packs}, names,
+        [(float(packs[n]["quantity"]) * 1500.0, usable[n]) for n in packs])
     by_outcome: dict[str, int] = {}
     for s in sessions:
         by_outcome[s["outcome"]] = by_outcome.get(s["outcome"], 0) + 1
@@ -53,7 +63,7 @@ def cmd_report(as_of: str) -> tuple[dict, int]:
         falsification_status="INSUFFICIENT_EVIDENCE")
     report = {"as_of": as_of, "mode": "FIXTURE_REPLAY", "tier": "HISTORICAL_REPLAY",
               "scheduled_sessions": len(sessions), "outcomes": by_outcome,
-              "independent_forward_sessions": 0, "benchmark": "FIXTURE_CASH", "coverage": {"sessions_pct": 100.0},
+              "independent_forward_sessions": 0, "benchmark": "FIXTURE_CASH", "coverage": cov,
               "missing_data": ["INDEPENDENT_TIMESTAMP_RECEIPTS_NOT_CONFIGURED", "REAL_QUOTES_NOT_AVAILABLE"],
               "promotion_verdict": verdict["verdict"], "reasons": verdict["reasons"], "real_money_enabled": False,
               "note": "Fixture data only: this report proves nothing about alpha."}

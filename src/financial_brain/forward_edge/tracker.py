@@ -749,6 +749,27 @@ OVERRIDES.update({
 })
 
 
+
+
+# ---- F17 (gates wired into the pipeline), added in wave F17 ----
+_GATE = "Wired into forward_edge/pipeline.py; fixture sessions only."
+OVERRIDES.update({
+    "FE-0039": Entry("DONE", ("test_instrument_gate_emits_reason_codes", "test_a_failed_gate_rejects_the_trade_with_deterministic_reason_codes",
+                              "test_a_gated_session_never_reaches_execution_or_the_ledger"), (),
+                     _GATE + " Suspended, delisted, expired and unlicensed instruments emit no eligible intent."),
+    "FE-0042": Entry("DONE", ("test_data_gate_reason_codes_are_deterministic_and_complete",
+                              "test_a_failed_gate_rejects_the_trade_with_deterministic_reason_codes",
+                              "test_reason_codes_are_identical_on_every_run",
+                              "test_instrument_and_data_failures_are_reported_together"), (), _GATE),
+    "FE-0044": Entry("PARTIAL", ("test_coverage_is_reported_by_session_name_and_notional",
+                                 "test_the_report_carries_coverage_by_session_name_and_notional"), (),
+                     "The report command carries sessions, names and intent-notional coverage. The cockpit P&L page does not show it yet."),
+    "FE-0113": Entry("PARTIAL", ("test_no_trade_decisions_are_explicit_with_reasons",
+                                 "test_a_failed_gate_rejects_the_trade_with_deterministic_reason_codes"), (),
+                     "NO_TRADE with reason codes now flows through the pipeline result and report. The cockpit is not fed from pipeline results."),
+})
+
+
 def capability_matrix() -> dict:
     """FE-0149: implemented, partial, blocked, not started, and independently evidenced (always empty offline)."""
     table = entries()

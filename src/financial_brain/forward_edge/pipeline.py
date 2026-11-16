@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_HALF_EVEN, Decimal
 
 from financial_brain.forward_edge import decision_custody as DC
 from financial_brain.forward_edge import execution as X
+from financial_brain.forward_edge import market_data as M
 from financial_brain.forward_edge import session_ops as S
 from financial_brain.forward_edge.modes import Mode, SessionMode, resolve_mode
 from financial_brain.kernel.ledger import CREDIT, DEBIT, DoubleEntryLedger, Entry, Transaction
@@ -73,7 +74,25 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
         first = X.earliest_quote(quotes, decision, latency)
         late = first is not None and (first.available_utc - decision) > timedelta(milliseconds=int(fx.get("max_wait_ms", 5000)))
 
-        if fx.get("ack_lost"):
+        gate_codes: list[str] = []
+        if fx.get("instrument_master"):
+            im = fx["instrument_master"]
+            inst = M.Instrument(isin=im["isin"], symbol=im["symbol"], lot=int(im["lot"]), tick=str(im["tick"]),
+                                status=im["status"], rights_ok=bool(im["rights_ok"]),
+                                expiry=date.fromisoformat(im["expiry"]) if im.get("expiry") else None)
+            gate_codes += ["INSTRUMENT_" + c for c in M.instrument_gate(inst, decision.astimezone(S.IST).date())]
+        if fx.get("market"):
+            mk = fx["market"]
+            gate_codes += ["DATA_" + c for c in M.data_gate(
+                age_s=float(mk["age_s"]), spread_bps=None if mk.get("spread_bps") is None else float(mk["spread_bps"]),
+                volume=int(mk["volume"]), circuit_hit=bool(mk["circuit_hit"]), frozen=bool(mk["frozen"]),
+                auction_seen=bool(mk["auction_seen"]))]
+
+        if gate_codes:
+            codes = sorted(gate_codes)
+            outcome, reason = "NO_TRADE", "GATE:" + "+".join(codes)
+            trace.append({"stage": "gate", "decision": "NO_TRADE", "codes": codes})
+        elif fx.get("ack_lost"):
             outcome, reason = "UNKNOWN_ORDER", "ACK_LOST_NO_RESEND"
             trace.append({"stage": "order", "state": "UNKNOWN", "resend_allowed": False})
             segments.add("orders")
@@ -145,6 +164,9 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
               "ledger_balanced": ledger.trial_balance_ok(),
               "cash_equals_net": ledger.balance("cash", CCY) == net if outcome in ("WIN", "LOSS", "FLAT") else True,
               "segments": sorted(segments), "trace": trace}
+    gate_trace = [t for t in trace if t.get("stage") == "gate"]
+    if gate_trace:                       # present only when a gate fired, so earlier fixture signatures are unchanged
+        result["reject_codes"] = gate_trace[0]["codes"]
     result["signature"] = hashlib.sha256(_canon({k: v for k, v in result.items()}).encode("utf-8")).hexdigest()
     return result
 
