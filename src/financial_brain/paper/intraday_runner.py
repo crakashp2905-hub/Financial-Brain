@@ -104,6 +104,8 @@ def daily_up(before: date, *, research_path: Path | None = None) -> bool | None:
         rows = con.execute("""SELECT close_level FROM index_levels_canonical
                               WHERE index_name = 'Nifty 500' AND variant = 'PRICE' AND business_date < ?
                               ORDER BY business_date DESC LIMIT 20""", [before]).fetchall()
+    except duckdb.Error:
+        return None
     finally:
         con.close()
     if len(rows) < 20:
@@ -453,7 +455,8 @@ def path_of_bar(o, h, l, c):
 
 def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=None, path: Path = LEDGER,
                daily_fn=None, research_path: Path | None = None, strategies=I.STRATEGIES,
-               rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
+               rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
+               run_note: str | None = None) -> dict:
     from ..providers import kite_data as kd
     candles_fn = candles_fn or kd.candles
     inst = kd.instruments("NSE") if token_fn is None else None
@@ -526,7 +529,7 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
         BD.resolve_close(con, day.isoformat(), "replay", last)
     record_run(con, day.isoformat(), "replay", started=datetime.now(IST).isoformat(),
                finished=datetime.now(IST).isoformat(), status="complete", symbols=used, polls=len(stream),
-               version=fingerprint)
+               version=fingerprint, note=run_note)
     write_report(con, day.isoformat(), "replay", eng, cohort=cohort)
     con.close()
     return {"day": day.isoformat(), "status": "complete", "symbols": used, "summary": eng.summary()}
@@ -572,6 +575,29 @@ def run_archive_replay(day: date, *, n: int = UNIVERSE_SIZE, quote_archive_path:
             raise ValueError(f"local archive lacks {min_bars} minute bars, 10 opening-range bars, "
                              "or a prior close for every candidate")
 
+        source_sha256 = _archive_replay_sha256(
+            quote_con, research_con, day=day, universe_rows=uni, cohort=cohort)
+        target_ledger, _ = cohort_path(ledger_path, cohort, I.STRATEGIES, None)
+        if target_ledger.is_file():
+            with duckdb.connect(str(target_ledger), read_only=True) as existing:
+                tables = {row[0] for row in existing.execute(
+                    "SELECT table_name FROM information_schema.tables").fetchall()}
+                if "runs" in tables:
+                    recorded = existing.execute(
+                        "SELECT status, symbols, note FROM runs WHERE day=? AND mode='replay'",
+                        [day.isoformat()]).fetchone()
+                else:
+                    recorded = None
+            if recorded:
+                expected_note = f"ARCHIVE_REPLAY_SHA256:{source_sha256}"
+                if recorded[0] == "complete" and recorded[2] == expected_note:
+                    return {"day": day.isoformat(), "status": "verified_existing",
+                            "symbols": int(recorded[1]), "data_source": "LOCAL_KITE_QUOTE_ARCHIVE",
+                            "network_access": False, "broker_orders": False,
+                            "verification_only": True, "source_manifest_sha256": source_sha256}
+                raise ValueError("this cohort/date already has different or unattested replay evidence; "
+                                 "use a new cohort identifier to create a new version")
+
         def local_candles(token, start, end, *, interval):
             symbol = str(token)
             if interval == "day":
@@ -591,12 +617,61 @@ def run_archive_replay(day: date, *, n: int = UNIVERSE_SIZE, quote_archive_path:
 
         result = run_replay(
             day, n=n, candles_fn=local_candles, token_fn=lambda symbol: symbol,
-            path=ledger_path, research_path=research_path, cohort=cohort)
+            path=ledger_path, research_path=research_path, cohort=cohort,
+            run_note=f"ARCHIVE_REPLAY_SHA256:{source_sha256}")
         return {**result, "data_source": "LOCAL_KITE_QUOTE_ARCHIVE", "network_access": False,
-                "broker_orders": False, "eligible_archive_symbols": len(eligible)}
+                "broker_orders": False, "verification_only": False,
+                "source_manifest_sha256": source_sha256,
+                "eligible_archive_symbols": len(eligible)}
     finally:
         quote_con.close()
         research_con.close()
+
+
+def _archive_replay_sha256(quote_con, research_con, *, day: date,
+                           universe_rows: list[dict], cohort: str | None) -> str:
+    """Hash all market inputs that drive archived replay decisions and fills."""
+    symbols = sorted({str(row["tradingsymbol"]) for row in universe_rows})
+    placeholders = ",".join("?" for _ in symbols)
+    quote_rows = quote_con.execute(
+        "SELECT ts, symbol, ltp, vwap, volume, oi, open, high, low, prev_close, bid, ask, "
+        "bid_qty, ask_qty, depth_bid_qty, depth_ask_qty FROM quotes "
+        f"WHERE CAST(ts AS DATE)=? AND symbol IN ({placeholders}) ORDER BY ts, symbol",
+        [day, *symbols]).fetchall()
+    daily_rows = research_con.execute(
+        "SELECT ticker, business_date, close_adj FROM adjusted_prices "
+        f"WHERE ticker IN ({placeholders}) AND business_date>=? AND business_date<=? "
+        "ORDER BY ticker, business_date", [*symbols, day - timedelta(days=10), day]).fetchall()
+    try:
+        index_rows = research_con.execute(
+            "SELECT business_date, close_level FROM index_levels_canonical "
+            "WHERE index_name='Nifty 500' AND variant='PRICE' AND business_date<? "
+            "ORDER BY business_date DESC LIMIT 20", [day]).fetchall()
+    except duckdb.Error:
+        index_rows = []
+
+    def digest_rows(rows) -> str:
+        digest = hashlib.sha256()
+        for row in rows:
+            normalized = [value.isoformat() if hasattr(value, "isoformat") else value for value in row]
+            encoded = json.dumps(normalized, separators=(",", ":"), allow_nan=False).encode("utf-8")
+            digest.update(encoded)
+            digest.update(b"\n")
+        return digest.hexdigest()
+
+    from ..costs.india import CostModel
+
+    engine_source_sha = hashlib.sha256(Path(I.__file__).read_bytes()).hexdigest()
+    runner_source_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    body = {"schema": "fb.local-paper-replay-source.v1", "day": day.isoformat(), "cohort": cohort,
+            "engine": I.VERSION, "strategies": list(I.STRATEGIES),
+            "engine_source_sha256": engine_source_sha, "runner_source_sha256": runner_source_sha,
+            "cost_model": CostModel().as_dict(),
+            "universe": sorted(universe_rows, key=lambda row: str(row["tradingsymbol"])),
+            "quote_rows_sha256": digest_rows(quote_rows), "daily_close_rows_sha256": digest_rows(daily_rows),
+            "index_context_rows_sha256": digest_rows(index_rows)}
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 # --------------------------------------------------------------------------- evidence

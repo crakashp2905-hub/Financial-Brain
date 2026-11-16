@@ -83,7 +83,7 @@ def _real_paper(args: argparse.Namespace, *, replay_archive=None) -> int:
         return 2
     status = str(result.get("status", "unknown"))
     print(json.dumps({**plan, "status": status, "result": result}, indent=2, sort_keys=True))
-    return 0 if status in {"complete", "closed", "not_a_session"} else 2
+    return 0 if status in {"complete", "closed", "not_a_session", "verified_existing"} else 2
 
 
 def _paper_close(args: argparse.Namespace) -> int:

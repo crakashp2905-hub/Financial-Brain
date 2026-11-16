@@ -55,9 +55,29 @@ def test_forward_archive_replay_reads_local_quotes_and_research_without_kite_cal
         assert result["network_access"] is False and result["broker_orders"] is False
         actual_ledger = next(root.glob("paper-local-fixture-*.duckdb"))
         with duckdb.connect(str(actual_ledger), read_only=True) as con:
-            recorded = con.execute("SELECT status, symbols FROM runs WHERE day=? AND mode='replay'",
+            recorded = con.execute("SELECT status, symbols, note FROM runs WHERE day=? AND mode='replay'",
                                     [day.isoformat()]).fetchone()
-        assert recorded == ("complete", 1)
+        assert recorded[0:2] == ("complete", 1)
+        assert recorded[2].startswith("ARCHIVE_REPLAY_SHA256:")
+
+        original_replay = R.run_replay
+        monkeypatch.setattr(R, "run_replay", lambda *_args, **_kwargs: pytest.fail(
+            "identical cohort/date must use verification-only path"))
+        verified = R.run_archive_replay(day, n=1, quote_archive_path=quote_path,
+                                        research_path=research_path, ledger_path=ledger_path,
+                                        cohort="local-fixture")
+        assert verified["status"] == "verified_existing" and verified["verification_only"] is True
+        with QA.connect(quote_path) as con:
+            con.execute("UPDATE quotes SET ltp=ltp + 0.01 WHERE symbol='INFY' AND CAST(ts AS DATE)=?", [day])
+        with pytest.raises(ValueError, match="new cohort identifier"):
+            R.run_archive_replay(day, n=1, quote_archive_path=quote_path,
+                                 research_path=research_path, ledger_path=ledger_path,
+                                 cohort="local-fixture")
+        monkeypatch.setattr(R, "run_replay", original_replay)
+        new_version = R.run_archive_replay(day, n=1, quote_archive_path=quote_path,
+                                           research_path=research_path, ledger_path=ledger_path,
+                                           cohort="local-fixture-v2")
+        assert new_version["status"] == "complete" and new_version["verification_only"] is False
 
 
 def price_at(t):

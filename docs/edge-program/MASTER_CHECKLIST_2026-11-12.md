@@ -176,8 +176,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
 - [x] **PE-0028** — Implement `fb forward session --resume ...` after crash.
   **Acceptance:** Restart produces identical risk/positions/cash and never repeats a fill.
   **Completion evidence:** `fb forward session --resume SESSION_ID` rehydrates the persisted run config, append-only decision/risk/manifest journal, execution receipts and accounting projection. `tests/test_forward_edge_session_runner.py::test_restart_restores_risk_positions_and_cash_without_repeating_paper_fill` creates a paper fill, closes/reopens the runner, verifies identical risk verdicts, positions and cash, replays the same order ID, and confirms one receipt and a closed report. UNKNOWN outbox cases remain fail-closed and require explicit reconciliation; no physical broker is called.
-- [ ] **PE-0029** — Implement start-of-day and end-of-day atomic checkpoints with event-hash and ledger-hash comparisons.  
+- [x] **PE-0029** — Implement start-of-day and end-of-day atomic checkpoints with event-hash and ledger-hash comparisons.
   **Acceptance:** Reprocessing a day is a verification-only operation unless a new version is explicitly created.
+  **Completion evidence:** `ForwardSessionRunner.checkpoint()` freezes START/END event, outbox and ledger hashes atomically; `verify_checkpoint()` is read-only and flags any current-record mismatch. For archived paper replay, `run_archive_replay` pins the selected quote rows, prior daily/index inputs, universe, strategy source, engine source and cost model in a source manifest stored with the run. Repeating the same date/cohort and identical inputs returns `verified_existing` without invoking the replay engine; changed inputs fail closed until a new cohort is supplied. `tests/test_forward_edge_checkpoints.py` covers atomic/idempotent checkpointing and tamper detection; `tests/test_phase5_intraday_runner.py::test_forward_archive_replay_reads_local_quotes_and_research_without_kite_calls` covers verification-only reruns and explicit new-version behavior.
 
 ### Workstream C — Observe real prices, not imagined fills (15 tasks)
 
