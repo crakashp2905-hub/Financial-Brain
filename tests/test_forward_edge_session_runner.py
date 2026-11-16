@@ -7,6 +7,7 @@ import pytest
 
 from financial_brain.forward_edge.market_data import normalize_kite_quote
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
+from financial_brain.forward_edge.instrument_rules import fixture_rule_book
 from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunner,
     ForwardSessionRunnerError,
@@ -23,7 +24,8 @@ NOW = datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc)
 
 
 def make_config(*, max_quote_age_ms=None):
-    constraints = {"max_positions": 1}
+    constraints = {"max_positions": 1, "session_phase": "CONTINUOUS",
+                   "instrument_rules": fixture_rule_book("NSE:INFY")}
     if max_quote_age_ms is not None:
         constraints["max_quote_age_ms"] = max_quote_age_ms
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
@@ -31,6 +33,8 @@ def make_config(*, max_quote_age_ms=None):
 
 
 def make_config_with_constraints(constraints):
+    constraints = {"session_phase": "CONTINUOUS",
+                   "instrument_rules": fixture_rule_book("NSE:INFY"), **constraints}
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
                             ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
 
@@ -317,10 +321,10 @@ def test_incomplete_close_is_explicit_and_idempotent(tmp_path):
     runner.close()
 
 
-def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=None,
+def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=None, config=None,
                 max_quote_age_ms=None, decision_offset_ms=1000, risk_assessment_offset_ms=0):
     runner = make_runner(tmp_path)
-    config = make_config(max_quote_age_ms=max_quote_age_ms)
+    config = config or make_config(max_quote_age_ms=max_quote_age_ms)
     opened(runner, config=config)
     quote = quote or {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
                       "depth": {"buy": [{"price": 99.95, "quantity": 20}],
@@ -399,6 +403,9 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert first["status"] == "FILLED" and first["filled_quantity"] == 2
     assert first["average_price"] == "100.20"
     assert first["physical_order_submitted"] is False
+    assert first["effective_instrument_rule"]["effective_from"] == "1900-01-01"
+    assert first["effective_instrument_rule"]["tick_size"] == "0.05"
+    assert len(first["instrument_rulebook_sha256"]) == 64
     assert runner.records("s")["execution_receipts"] == [first]
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
     accounting = runner.records("s")["accounting"]
@@ -407,6 +414,17 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert accounting["positions"] == {"NSE:INFY": 2}
     assert accounting["ledger_balanced"] and accounting["cash_reconciled"]
     assert accounting["charges_assessed"] is False and accounting["net_pnl_eligible"] is False
+    runner.close()
+
+
+def test_paper_order_refuses_quantity_that_violates_effective_instrument_lot(tmp_path):
+    config = make_config_with_constraints({
+        "instrument_rules": fixture_rule_book("NSE:INFY", lot_size=5),
+    })
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="multiple of lot size 5"):
+        execute(runner, event, decided, qty=2)
+    assert runner.records("s")["intents"] == []
     runner.close()
 
 

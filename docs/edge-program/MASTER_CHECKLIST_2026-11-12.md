@@ -190,8 +190,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
   **Acceptance:** LTP-only signals may be analyzed but cannot produce promotion-grade fill prices.
 - [ ] **PE-0032** — Store immutable raw source payload hash and normalized event with exchange, receive, available, and ingest clocks.  
   **Acceptance:** Raw-to-normalized lineage is reconstructible for any fill.
-- [ ] **PE-0033** — Create per-instrument versioned instrument rules: tick, lot, freeze, expiry, session and status.  
+- [x] **PE-0033** — Create per-instrument versioned instrument rules: tick, lot, freeze, expiry, session and status.
   **Acceptance:** Orders violating effective-date rules are refused without synthetic repair.
+  **Completion evidence:** `forward_edge.instrument_rules.InstrumentRuleBook` validates schema/version identity, ordered effective dates, tick, lot, freeze quantity, expiry, status and eligible session phases. `ForwardSessionRunner.execute_paper_intent()` now requires a configured rule catalogue, rejects invalid orders before intent persistence, and stores the catalogue digest plus resolved effective rule in every intent/receipt. `tests/test_forward_edge_instrument_rules.py` covers effective-date selection and invalid tickets/status/expiry; `tests/test_forward_edge_session_runner.py::test_paper_order_refuses_quantity_that_violates_effective_instrument_lot` proves the runner rejects before creating an intent.
 - [ ] **PE-0034** — Implement WebSocket or authorized read-only polling adapter with explicit provider provenance.  
   **Acceptance:** Mock feed and licensed feed share the same event contract; no credentials appear in logs.
 - [ ] **PE-0035** — Capture reconnects, gaps, duplicates, last successful heartbeat and dropped packet count.  

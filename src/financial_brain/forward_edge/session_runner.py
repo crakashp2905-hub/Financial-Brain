@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 from financial_brain.evidence.decision_manifest import ManifestError, canonical_bytes
 from financial_brain.forward_edge.execution_scenario import evaluate_scenario
+from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_local_time
 from financial_brain.forward_edge.intent_timing import create_timed_intent
 from financial_brain.forward_edge.market_data import executable_quote
@@ -901,6 +902,21 @@ class ForwardSessionRunner:
                          if row["symbol"] == event.instrument_id), None)
         if selected is None or quantity > selected["quantity"]:
             raise ForwardSessionRunnerError("paper intent exceeds the manifest's selected instrument quantity")
+        rule_data = config.constraints.get("instrument_rules")
+        if not isinstance(rule_data, dict):
+            raise ForwardSessionRunnerError("paper execution requires a versioned instrument rule catalogue")
+        phase = event.payload.get("session_phase", config.constraints.get("session_phase"))
+        if not isinstance(phase, str) or not phase.strip():
+            raise ForwardSessionRunnerError("paper execution requires an explicit instrument session phase")
+        try:
+            rulebook = InstrumentRuleBook(rule_data)
+            rule = rulebook.validate_order(
+                instrument=event.instrument_id, day=config.exchange_date, session_phase=phase,
+                quantity=quantity, limit_price=limit, tick_size=tick)
+        except InstrumentRuleError as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
+        if freeze_limit > rule.freeze_quantity:
+            raise ForwardSessionRunnerError("requested freeze limit exceeds the effective instrument rule")
         quote = executable_quote(event)
         if quote is None:
             raise ForwardSessionRunnerError("paper fill requires a two-sided quote with positive visible depth")
@@ -930,9 +946,16 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("paper fill quote predates order eligibility after modeled latency")
         touch = quote["ask"] if side == "BUY" else quote["bid"]
         visible = quote["ask_quantity"] if side == "BUY" else quote["bid_quantity"]
+        effective_rule = {"effective_from": rule.effective_from.isoformat(),
+                          "tick_size": str(rule.tick_size), "lot_size": rule.lot_size,
+                          "freeze_quantity": rule.freeze_quantity, "expiry":
+                          rule.expiry.isoformat() if rule.expiry else None,
+                          "status": rule.status, "session_phases": sorted(rule.session_phases)}
         request = {"session_id": session_id, "order_id": order_id, "decision_id": decision_id,
                    "event_id": event_id, "side": side, "quantity": quantity,
                    "decision_manifest_sha256": manifest_row[0],
+                   "instrument_rulebook_sha256": rulebook.digest,
+                   "effective_instrument_rule": effective_rule,
                    "limit_price": str(limit), "tick_size": str(tick), "freeze_limit": freeze_limit,
                    "slice_size": slice_size, "adverse_slippage_bps": str(slippage),
                    "latency_ms": latency_ms, "earliest_fill_time": timed.earliest_fill_time.isoformat(),
@@ -960,6 +983,8 @@ class ForwardSessionRunner:
                     "average_price": str(scenario.average_price) if scenario.average_price is not None else None,
                     "child_quantities": list(scenario.child_quantities), "reject_reason": scenario.reject_reason,
                     "adverse_slippage_bps": str(scenario.adverse_slippage_bps),
+                    "instrument_rulebook_sha256": rulebook.digest,
+                    "effective_instrument_rule": effective_rule,
                     "quote_event_id": event_id, "source": event.source,
                     "simulated_at": simulated_at.astimezone(timezone.utc).isoformat(),
                     "physical_order_submitted": False}
