@@ -97,8 +97,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
 **Goal:** Create an unambiguous current-state audit; do not hide failing research or claim synthetic profits.
 
 **Repository integration points:** `README.md`, `docs/trials/ledger.jsonl`, `docs/forward-edge/*`, `.github/workflows/ci.yml`, `scripts/`
-- [ ] **PE-0001** — Record exact `main` SHA, PR graph, branch protections, runtime, and source capabilities; write `docs/edge-program/current-baseline.json`.  
+- [x] **PE-0001** — Record exact `main` SHA, PR graph, branch protections, runtime, and source capabilities; write `docs/edge-program/current-baseline.json`.
   **Acceptance:** The baseline lists observed SHA, data freshness, access limitations and link to each evidence source.
+- **Completion evidence:** `docs/edge-program/current-baseline.json` records the current advertised main and pushed feature SHAs, open PRs #32/#33 and observed check states, Windows/Python runtime, quote archive freshness and source capabilities. GitHub's branch-protection endpoint returned HTTP 403 with the private-repository GitHub Pro requirement; current feature CI run `43865138413` failed before starting jobs because recent account payments failed or the spending limit must be increased. Both limitations and direct evidence URLs are recorded; this task is a dated baseline snapshot, not a claim that protection or CI is green.
 - [ ] **PE-0002** — Prohibit edits to protected trial records and sealed historical outcomes.  
   **Acceptance:** Byte-for-byte or pre-existing canonical-hash comparison fails on any unauthorized change.
 - [x] **PE-0003** — Snapshot and hash any actual local paper DuckDB, normalized tick archive, and strategy manifests before migration.

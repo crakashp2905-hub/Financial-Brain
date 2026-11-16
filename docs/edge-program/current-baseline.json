@@ -1,30 +1,37 @@
 {
   "schema": "fb.financial_brain.current_baseline.v1",
-  "captured_at_utc": "2026-11-16T07:29:27Z",
+  "captured_at_utc": "2026-11-16T12:25:46Z",
   "repository": "https://github.com/crakashp2905-hub/Financial-Brain",
   "git": {
     "observed_main_ref": {
       "sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
       "evidence": "git ls-remote origin refs/heads/main at capture time",
-      "limitation": "Direct advertised ref read; repository PR graph and branch-protection settings remain unavailable."
+      "limitation": "Direct advertised ref read; PR graph is recorded below; branch-protection endpoint is unavailable under the current private-repository plan."
     },
     "head": {
       "branch": "feature/forward-edge-f00-f01",
-      "sha": "6181c10a0a4cbeaa3e1da74fdcff8412d05b1a0e",
-      "evidence": "git rev-parse HEAD; direct advertised feature ref matched this SHA"
+      "sha": "9c9e04961c7aa4ccb66b97f020a35b6c64d5e990",
+      "evidence": "git rev-parse HEAD and git ls-remote origin refs/heads/feature/forward-edge-f00-f01 agree; https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43865138413"
     },
     "open_pull_requests": {
-      "status": "UNVERIFIED",
-      "evidence": "GitHub PR lookup for the previously tracked PR #32 returned 404; PR search returned 422; gh auth status reports invalid token. A 404 does not establish that no PR exists.",
-      "items": null
+      "status": "OBSERVED",
+      "evidence": "gh pr list --state all and gh pr view for #32/#33 at 2026-11-16T12:21:46Z",
+      "items": [
+        {"number": 16, "state": "OPEN", "head": "codex/protocol-date-validation-20261103", "base": "main", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/16"},
+        {"number": 17, "state": "OPEN", "head": "codex/ops-reliability-20261104", "base": "main", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/17"},
+        {"number": 18, "state": "OPEN", "head": "codex/source-notes-pattern-books", "base": "main", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/18"},
+        {"number": 32, "state": "OPEN", "head": "codex/branch-protection-evidence-20261113", "head_sha": "b2fa176041e3818a33c1e748e5206fffa57b7eba", "base": "main", "mergeable": true, "checks": "Ubuntu passed; one Windows check failed; one Windows check passed", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/32"},
+        {"number": 33, "state": "OPEN", "head": "integrate/clean-branches-20261114", "head_sha": "380e1171f7899c46c8f99ad0372ff0d179d1eeaa", "base": "main", "mergeable": true, "checks": "Ubuntu, Windows and locked-install checks passed on latest observed runs", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/33"}
+      ]
     },
     "branch_protection": {
-      "status": "UNVERIFIED",
-      "evidence": "No successful GitHub branch-protection API response; local gh token is invalid."
+      "status": "UNAVAILABLE",
+      "evidence": "GET https://api.github.com/repos/crakashp2905-hub/Financial-Brain/branches/main/protection returned HTTP 403: Upgrade to GitHub Pro or make this repository public to enable this feature. Required reviews/checks cannot be verified from this private-repository plan."
     },
     "working_tree": {
       "tracked_changes": 0,
       "untracked_paths": [
+        ".pe18-scratch/",
         ".pytest_tmp_live2/",
         ".pytest_tmp_live4/",
         ".pytest_tmp_pe13/",
@@ -48,11 +55,11 @@
     "quote_archive": {
       "path": "data/quote_archive.duckdb",
       "query": "SELECT count(*), min(ts), max(ts), count(distinct symbol) FROM quotes",
-      "rows": 2432910,
-      "symbols": 228,
+      "rows": 2471710,
+      "symbols": 229,
       "first_quote_local_time": "2026-10-07T09:15:00.000559",
-      "latest_quote_local_time": "2026-11-13T15:29:59.233090",
-      "freshness": "Through the last observed NSE session in the archive; not live on capture date.",
+      "latest_quote_local_time": "2026-11-16T15:29:45.831049",
+      "freshness": "Through the 2026-11-16 NSE session close; paper_live.duckdb was also modified on 2026-11-16, while paper_book.duckdb remains dated 2026-11-13.",
       "source_entitlement_and_retention_rights": "UNVERIFIED"
     },
     "credentials_present": {
@@ -100,16 +107,17 @@
     }
   },
   "release_state": {
-    "infrastructure": "YELLOW_UNVERIFIED_GITHUB_PROTECTION_AND_CI_GRAPH",
+    "infrastructure": "RED_HOSTED_CI_BLOCKED_BY_ACCOUNT_BILLING_AND_BRANCH_PROTECTION_UNAVAILABLE",
     "research": "RED_NO_PROMOTION_GRADE_INDEPENDENT_FORWARD_EVIDENCE",
     "trading": "RED_LIVE_CASH_DISABLED"
   },
   "evidence_sources": [
     "git rev-parse HEAD",
     "git ls-remote origin refs/heads/main refs/heads/feature/forward-edge-f00-f01",
-    "GitHub get PR #32 and workflow-run lookup for 6181c10 (both 404)",
+    "gh pr list --state all; gh pr view 32/33",
+    "gh api repos/crakashp2905-hub/Financial-Brain/branches/main/protection (HTTP 403: plan limitation)",
+    "gh run view 43865138413 and job annotation (hosted jobs blocked before start by account billing/spending limit)",
     "git status --porcelain=v1",
-    "gh auth status",
     "read-only DuckDB query against data/quote_archive.duckdb",
     "src/financial_brain/forward_edge/modes.py",
     "src/financial_brain/forward_edge/session_runner.py",

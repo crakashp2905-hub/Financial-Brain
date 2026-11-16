@@ -5,13 +5,13 @@ This tracker belongs to the 218 unique `PE-####` tasks in
 substitute for this checklist. Task wording is retained from the attachment; the repo copy adds checked boxes and
 completion evidence only after acceptance criteria pass. The original Downloads file is untouched.
 
-Verified checklist count: **25 / 218 complete (11.5%)**. Partial tasks are reported separately and are not included in this count.
+Verified checklist count: **26 / 218 complete (11.9%)**. Partial tasks are reported separately and are not included in this count.
 
 Count basis: this file reports completed PE-#### checkboxes in the 218-task master checklist. Other charts in this repository use different task sets and status rules, so their percentages do not measure completion of this checklist:
 
 | Tracker | Scope | Current count | What the percentage means |
 |---|---|---:|---|
-| PE master checklist | 218 PE-#### requirements | 25 complete / 218 (11.5%) | Fully checked PE requirements only; partial rows do not count. |
+| PE master checklist | 218 PE-#### requirements | 26 complete / 218 (11.9%) | Fully checked PE requirements only; partial rows do not count. |
 | Forward-edge tracker | 152 FE-#### requirements | 20 DONE, 97 PARTIAL, 11 BLOCKED, 24 NOT_STARTED | 117/152 (76.97%) have at least some implementation activity; only 20/152 (13.2%) are DONE under its stated test-linked scope. |
 | Chart-pattern completion matrix | 406 CP-#### engineering requirements | 378 implemented, 9 not-applicable with evidence, 19 incomplete | 387/406 (95.3%) have PASS results in this engineering matrix. This is chart-pattern software completion, not forward-edge or market-edge proof. |
 | Unified platform tracker | 711 FB-#### requirements | 246 implemented, 187 partial, 181 open, 97 external-blocked | 433/711 (60.9%) are implemented or partial; 246/711 (34.6%) are marked implemented. |
@@ -22,7 +22,7 @@ The 218-task source checklist's introductory evidence records an older FE-tracke
 
 | Task | Status | Evidence | Remaining acceptance gap |
 |---|---|---|---|
-| PE-0001 | Partial | `docs/edge-program/current-baseline.json` now records the GitHub-advertised `main` SHA (`91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1`) and confirms the pushed feature ref matches HEAD `6181c10a0a4cbeaa3e1da74fdcff8412d05b1a0e`. It also captures Windows/Python runtime, local quote-archive coverage/freshness, credential-presence booleans and source capabilities. | PR lookup for the previously tracked PR #32 returns 404, PR search returns 422, and no successful branch-protection or hosted workflow-run response is available. A 404 does not prove that no PR exists; `gh` credentials remain invalid. |
+| PE-0001 | Complete (dated baseline) | `docs/edge-program/current-baseline.json` records advertised `main` SHA `91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1`, feature HEAD/ref `9c9e04961c7aa4ccb66b97f020a35b6c64d5e990`, all five open PRs, PR #32/#33 observed checks, Windows/Python runtime, Kite credential-presence booleans, source capabilities, and quote freshness through the 2026-11-16 NSE close (2,471,710 rows/229 symbols). Evidence URLs and command sources are recorded. | Branch-protection API returns HTTP 403 because this private repository needs GitHub Pro; current feature CI run 43865138413 was blocked before runner startup by an account-billing/spending-limit failure. Those are accurately recorded external release blockers and remain open under PE-0006/P0.1; this task's required baseline snapshot is complete. |
 | PE-0002 | Partial | `docs/forward-edge/protected-pins.json` now covers every entry in `docs/audits/protected-baseline.json` as well as the protected trial ledger. `tests/test_forward_edge_f00.py::test_sealed_historical_record_tampering_is_detected_by_the_runtime_guard` verifies that an edit to a sealed record is detected; `audit.run_audit()` goes RED on pin mismatch. | A pin update can still be made in a code change without independently verified branch protection or required human review. |
 | PE-0003 | Complete | `docs/edge-program/pre-migration-backup-2026-11-15.json` summarizes the local backup at `data/edge_program_backups/pre-migration-20261115/`: 14 present paper/portfolio/OMS/quote archive and strategy-manifest artifacts; manifest digest `1e4703a8f72e7c8dbc864dc17ff47f69f9f6fbd0c1e9f29ddb7937c8298b03c7`; all 14 restoration copies matched the source SHA-256 and DuckDB files opened read-only. | The database contents remain local and ignored so personal trading data is not pushed to GitHub. Missing options/depth archive paths are recorded. |
 | PE-0004 | Complete | `tests/test_forward_edge_f00.py::test_all_13_registered_q4_trials_remain_fail_with_original_reason_codes` verifies all 13 registered Q4 trials are still FAIL and retain their non-empty failure-code lists. The ledger remains pinned; `test_retrospective_edit_of_the_trial_ledger_is_detected` verifies edits are detected. | None for the stated classification and integrity acceptance. |
