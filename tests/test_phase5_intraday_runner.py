@@ -1,9 +1,13 @@
 from datetime import date, datetime, timedelta
+import tempfile
+from pathlib import Path
 
+import duckdb
 import pytest
 
 from financial_brain.paper import intraday_runner as R
 from financial_brain.providers import kite_data as KD
+from financial_brain.ingest import quote_archive as QA
 
 
 class Clock:
@@ -15,6 +19,45 @@ class Clock:
 
     def sleep(self, s):
         self.t += timedelta(seconds=s)
+
+
+def test_forward_archive_replay_reads_local_quotes_and_research_without_kite_calls(monkeypatch):
+    day = date(2026, 11, 13)
+    with tempfile.TemporaryDirectory(dir=Path.cwd(), prefix=".pe27-") as directory:
+        root = Path(directory)
+        quote_path, research_path, ledger_path = (root / "quotes.duckdb", root / "research.duckdb",
+                                                  root / "paper.duckdb")
+        quote_con = QA.connect(quote_path)
+        for minute in range(360):
+            ts = datetime(2026, 11, 13, 9, 15) + timedelta(minutes=minute)
+            px = price_at(ts)
+            QA.store(quote_con, ts, {"NSE:INFY": {"last_price": px, "volume": minute + 1,
+                                                    "ohlc": {"open": 100.0, "high": px + .1,
+                                                             "low": px - .1, "close": px}}})
+        quote_con.close()
+        with duckdb.connect(str(research_path)) as con:
+            con.execute("CREATE TABLE adjusted_prices (ticker VARCHAR, business_date DATE, close_adj DOUBLE)")
+            con.execute("INSERT INTO adjusted_prices VALUES ('INFY', '2026-11-12', 99.0)")
+            con.execute("CREATE TABLE index_levels_canonical (index_name VARCHAR, variant VARCHAR, "
+                        "business_date DATE, close_level DOUBLE)")
+        monkeypatch.setattr(R, "universe", lambda n, *, research_path: [{"tradingsymbol": "INFY", "adv": 1e8}])
+        monkeypatch.setattr(R, "REPORTS", root / "reports")
+        monkeypatch.setattr(R, "daily_view", lambda **kwargs: (None, None, None))
+        monkeypatch.setattr(R, "daily_up", lambda day, **kwargs: None)
+        monkeypatch.setattr(KD, "candles", lambda *_args, **_kwargs: pytest.fail("network candle API called"))
+        monkeypatch.setattr(KD, "instruments", lambda *_args, **_kwargs: pytest.fail("network instrument API called"))
+        result = R.run_archive_replay(day, n=1, quote_archive_path=quote_path,
+                                      research_path=research_path, ledger_path=ledger_path,
+                                      cohort="local-fixture")
+        assert result["day"] == day.isoformat()
+        assert result["status"] == "complete" and result["symbols"] == 1
+        assert result["data_source"] == "LOCAL_KITE_QUOTE_ARCHIVE"
+        assert result["network_access"] is False and result["broker_orders"] is False
+        actual_ledger = next(root.glob("paper-local-fixture-*.duckdb"))
+        with duckdb.connect(str(actual_ledger), read_only=True) as con:
+            recorded = con.execute("SELECT status, symbols FROM runs WHERE day=? AND mode='replay'",
+                                    [day.isoformat()]).fetchone()
+        assert recorded == ("complete", 1)
 
 
 def price_at(t):

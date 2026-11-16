@@ -5,7 +5,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import duckdb
-import pytest
 
 from financial_brain.forward_edge import cli
 from financial_brain.forward_edge.session_runner import ForwardSessionRunner
@@ -37,41 +36,55 @@ def test_replay_run_defaults_to_non_mutating_dry_run(capsys):
     assert result["mode"] == "RESEARCH_REPLAY"
 
 
-def test_real_paper_requires_explicit_confirmation_and_never_calls_runner(capsys):
+def test_real_paper_requires_explicit_confirmation_and_never_runs_replay(capsys):
     args = SimpleNamespace(date="2026-11-16", cohort="momentum-v1", confirm_paper_only=False,
-                           names=200, poll=5)
+                           names=200, quote_archive="quotes.duckdb", research_db="research.duckdb",
+                           ledger="paper.duckdb")
     called = []
-    assert cli._real_paper(args, today=date(2026, 11, 16),
-                           run_live=lambda **kwargs: called.append(kwargs)) == 2
+    assert cli._real_paper(args, replay_archive=lambda *a, **kwargs: called.append(kwargs)) == 2
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "CONFIRMATION_REQUIRED"
     assert result["broker_orders"] is False
+    assert result["network_access"] is False
     assert result["verified_forward_evidence"] is False
     assert called == []
 
 
-def test_real_paper_is_same_day_cohort_scoped_and_brokerless(capsys):
-    args = SimpleNamespace(date="2026-11-16", cohort="momentum-v1", confirm_paper_only=True,
-                           names=100, poll=3)
+def test_real_paper_uses_local_archive_and_never_claims_forward_evidence(capsys):
+    args = SimpleNamespace(date="2026-11-13", cohort="momentum-v1", confirm_paper_only=True,
+                           names=100, quote_archive="quotes.duckdb", research_db="research.duckdb",
+                           ledger="paper.duckdb")
     calls = []
 
-    def live(**kwargs):
-        calls.append(kwargs)
-        return {"day": "2026-11-16", "status": "complete", "symbols": 100}
+    def archive(day, **kwargs):
+        calls.append((day, kwargs))
+        return {"day": day.isoformat(), "status": "complete", "symbols": 100,
+                "data_source": "LOCAL_KITE_QUOTE_ARCHIVE", "network_access": False,
+                "broker_orders": False}
 
-    assert cli._real_paper(args, today=date(2026, 11, 16), run_live=live) == 0
+    assert cli._real_paper(args, replay_archive=archive) == 0
     result = json.loads(capsys.readouterr().out)
-    assert calls == [{"n": 100, "poll": 3, "cohort": "momentum-v1"}]
+    assert calls == [(date(2026, 11, 13), {"n": 100, "cohort": "momentum-v1",
+                                           "quote_archive_path": Path("quotes.duckdb"),
+                                           "research_path": Path("research.duckdb"),
+                                           "ledger_path": Path("paper.duckdb")})]
     assert result["broker_orders"] is False
+    assert result["network_access"] is False
     assert result["forward_session_journaled"] is False
 
 
-def test_real_paper_rejects_historical_date_even_when_confirmed(capsys):
+def test_real_paper_fails_closed_when_local_archive_is_missing(capsys):
     args = SimpleNamespace(date="2026-11-13", cohort="momentum-v1", confirm_paper_only=True,
-                           names=100, poll=3)
-    assert cli._real_paper(args, today=date(2026, 11, 16), run_live=lambda **kwargs: pytest.fail()) == 2
+                           names=100, quote_archive="missing-quotes.duckdb", research_db="research.duckdb",
+                           ledger="paper.duckdb")
+
+    def missing(*_args, **_kwargs):
+        raise FileNotFoundError("quote archive not found")
+
+    assert cli._real_paper(args, replay_archive=missing) == 2
     result = json.loads(capsys.readouterr().out)
-    assert result["status"] == "DATE_REJECTED"
+    assert result["status"] == "ARCHIVE_REJECTED"
+    assert result["network_access"] is False
 
 
 def test_preflight_never_calls_readiness_green_a_forward_session(capsys):

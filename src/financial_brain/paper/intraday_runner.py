@@ -94,10 +94,10 @@ def ledger(path: Path = LEDGER):
     return con
 
 
-def daily_up(before: date) -> bool | None:
+def daily_up(before: date, *, research_path: Path | None = None) -> bool | None:
     """Nifty 500 above its 20-session average at the last close before ``before`` - context only."""
     try:
-        con = duckdb.connect("data/financial_brain.duckdb", read_only=True)
+        con = duckdb.connect(str(research_path or Path("data/financial_brain.duckdb")), read_only=True)
     except Exception:                                   # noqa: BLE001 - a locked research DB leaves it unknown
         return None
     try:
@@ -129,14 +129,14 @@ def record_run(con, day: str, mode: str, **kw) -> None:
                  kw.get("symbols", 0), kw.get("polls", 0), kw.get("note")])
 
 
-def daily_view(before: date | None = None):
+def daily_view(before: date | None = None, *, research_path: Path | None = None):
     """Every scanner's opportunities at the latest feature date (strictly before ``before`` when given, so a
     replayed day's board sees only what was known that morning), reduced to each name's best, from the research
     database read briefly. Returns (board frame, as_of, research connection); Nones if it cannot be read - the
     board is then skipped, not faked."""
     from ..opportunity import scanners as S
     try:
-        rcon = duckdb.connect("data/financial_brain.duckdb", read_only=True)
+        rcon = duckdb.connect(str(research_path or Path("data/financial_brain.duckdb")), read_only=True)
     except Exception as e:                              # noqa: BLE001 - a locked research DB skips the board
         log.warning("daily view unavailable: %s", str(e)[:120])
         return None, None, None
@@ -186,10 +186,10 @@ def post_board(con, day: str, mode: str, quotes: dict, daily, asof) -> str | Non
     return text
 
 
-def universe(n: int = UNIVERSE_SIZE) -> list[dict]:
+def universe(n: int = UNIVERSE_SIZE, *, research_path: Path | None = None) -> list[dict]:
     """The n most liquid NSE names by recent turnover, from the research database, read-only and briefly."""
     from ..ingest import kite_minute as KM
-    con = duckdb.connect("data/financial_brain.duckdb", read_only=True)
+    con = duckdb.connect(str(research_path or Path("data/financial_brain.duckdb")), read_only=True)
     try:
         return KM.liquid_universe(con, n)
     finally:
@@ -452,7 +452,7 @@ def path_of_bar(o, h, l, c):
 
 
 def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=None, path: Path = LEDGER,
-               daily_fn=None, strategies=I.STRATEGIES,
+               daily_fn=None, research_path: Path | None = None, strategies=I.STRATEGIES,
                rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
     from ..providers import kite_data as kd
     candles_fn = candles_fn or kd.candles
@@ -460,9 +460,9 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
     token_fn = token_fn or (lambda s: kd.token_for(s, inst))
     path, fingerprint = cohort_path(path, cohort, strategies, rules)
     con = ledger(path)
-    uni = universe(n)
+    uni = universe(n) if research_path is None else universe(n, research_path=research_path)
     eng = I.DayEngine(day.isoformat(), strategies=strategies, rules=rules)
-    eng.daily_up = daily_up(day)
+    eng.daily_up = daily_up(day) if research_path is None else daily_up(day, research_path=research_path)
     stream = []
     vwap_at: dict = {}
     used = 0
@@ -496,7 +496,11 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
             for k, px in enumerate(path_of_bar(b["open"], b["high"], b["low"], b["close"])):
                 stream.append((t0 + timedelta(seconds=15 * k), sym, float(px)))
     stream.sort(key=lambda x: (x[0], x[1]))
-    daily, asof, rcon = daily_view(before=day) if daily_fn is None else daily_fn()
+    if daily_fn is None:
+        daily, asof, rcon = (daily_view(before=day) if research_path is None else
+                             daily_view(before=day, research_path=research_path))
+    else:
+        daily, asof, rcon = daily_fn()
     if rcon is not None:
         rcon.close()
     bq = {sym: {"price": None, "open": s_.open, "high": s_.or_hi, "low": s_.or_lo, "prev_close": s_.prev_close}
@@ -524,7 +528,75 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
                finished=datetime.now(IST).isoformat(), status="complete", symbols=used, polls=len(stream),
                version=fingerprint)
     write_report(con, day.isoformat(), "replay", eng, cohort=cohort)
+    con.close()
     return {"day": day.isoformat(), "status": "complete", "symbols": used, "summary": eng.summary()}
+
+
+def run_archive_replay(day: date, *, n: int = UNIVERSE_SIZE, quote_archive_path: Path,
+                       research_path: Path, ledger_path: Path = LEDGER, cohort: str | None = None,
+                       min_bars: int = 100) -> dict:
+    """Run the existing intraday paper engine from local Kite quote snapshots only.
+
+    No provider or HTTP client is called. Missing archive coverage is rejected before the
+    replay ledger is opened, so an empty archive cannot be recorded as a successful run.
+    """
+    from ..ingest import quote_archive as QA
+
+    if not quote_archive_path.is_file() or not research_path.is_file():
+        raise FileNotFoundError("local quote archive and research database are required")
+    if type(n) is not int or n < 1 or type(min_bars) is not int or min_bars < 1:
+        raise ValueError("universe size and minimum archive bar count must be positive integers")
+    uni = universe(n, research_path=research_path)
+    if not uni:
+        raise ValueError("research database produced no eligible local replay universe")
+    quote_con = QA.connect(quote_archive_path, read_only=True)
+    research_con = duckdb.connect(str(research_path), read_only=True)
+    try:
+        eligible: set[str] = set()
+        for row in uni:
+            symbol = str(row["tradingsymbol"])
+            coverage = quote_con.execute(
+                "SELECT COUNT(DISTINCT time_bucket(INTERVAL '1 minute', ts)), "
+                "COUNT(DISTINCT time_bucket(INTERVAL '1 minute', ts)) "
+                "FILTER (WHERE CAST(ts AS TIME) < TIME '09:30:00') "
+                "FROM quotes WHERE symbol=? AND CAST(ts AS DATE)=? AND ltp IS NOT NULL",
+                [symbol, day]).fetchone()
+            count, opening_count = coverage if coverage else (0, 0)
+            previous_row = research_con.execute(
+                "SELECT COUNT(*) FROM adjusted_prices WHERE ticker=? AND business_date<? "
+                "AND close_adj>0", [symbol, day]).fetchone()
+            previous = previous_row[0] if previous_row else 0
+            if count >= min_bars and opening_count >= 10 and previous:
+                eligible.add(symbol)
+        if not eligible:
+            raise ValueError(f"local archive lacks {min_bars} minute bars, 10 opening-range bars, "
+                             "or a prior close for every candidate")
+
+        def local_candles(token, start, end, *, interval):
+            symbol = str(token)
+            if interval == "day":
+                rows = research_con.execute(
+                    "SELECT business_date, close_adj FROM adjusted_prices WHERE ticker=? "
+                    "AND business_date>=? AND business_date<=? AND close_adj>0 ORDER BY business_date",
+                    [symbol, start, end]).fetchall()
+                return [{"ts": f"{business_day.isoformat()}T00:00:00", "close": float(close)}
+                        for business_day, close in rows]
+            if interval != "minute":
+                raise ValueError(f"unsupported local replay interval: {interval}")
+            bars = QA.bars(quote_con, symbol, day.isoformat(), minutes=1)
+            return [{"ts": pd.Timestamp(timestamp).strftime("%Y-%m-%dT%H:%M:%S"),
+                     "open": float(bar.open), "high": float(bar.high), "low": float(bar.low),
+                     "close": float(bar.close), "volume": float(bar.volume)}
+                    for timestamp, bar in bars.iterrows()]
+
+        result = run_replay(
+            day, n=n, candles_fn=local_candles, token_fn=lambda symbol: symbol,
+            path=ledger_path, research_path=research_path, cohort=cohort)
+        return {**result, "data_source": "LOCAL_KITE_QUOTE_ARCHIVE", "network_access": False,
+                "broker_orders": False, "eligible_archive_symbols": len(eligible)}
+    finally:
+        quote_con.close()
+        research_con.close()
 
 
 # --------------------------------------------------------------------------- evidence
