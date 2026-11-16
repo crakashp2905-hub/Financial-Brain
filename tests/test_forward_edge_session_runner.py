@@ -14,8 +14,11 @@ from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunnerError,
 )
 from financial_brain.forward_edge.paper_book_adapter import (
+    due_exits,
     pending_signals,
+    reconcile_exit_receipt,
     record_signal_decision,
+    record_exit_decision,
     reconcile_entry_receipt,
 )
 from financial_brain.forward_edge.session_state import (
@@ -1015,6 +1018,127 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
     book.close()
     runner.close_session("book-adapter", complete=False, now=decision_at + timedelta(seconds=1),
                          reason="adapter contract test")
+    runner.close()
+
+
+def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(tmp_path):
+    runner = make_runner(tmp_path)
+    entry_config = make_config()
+    opened(runner, "s", entry_config)
+    signal_quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+        "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                  "sell": [{"price": 100.05, "quantity": 20}]},
+    }, received_at=NOW)
+    runner.ingest("s", entry_config, [signal_quote])
+    decision_at = NOW + timedelta(seconds=1)
+    book = duckdb.connect(":memory:")
+    book.execute("""CREATE TABLE positions (
+        version VARCHAR, mode VARCHAR, signal_day DATE, rank INTEGER, ticker VARCHAR, lineage VARCHAR,
+        type VARCHAR, horizon INTEGER, shares INTEGER, stop DOUBLE, ref_price DOUBLE,
+        expected_net DOUBLE, cost DOUBLE, entry_day DATE, entry_px DOUBLE,
+        exit_day DATE, exit_px DOUBLE, exit_reason VARCHAR, last_day DATE, last_px DOUBLE,
+        held INTEGER, bench DOUBLE, why VARCHAR)""")
+    book.execute("INSERT INTO positions (version, mode, signal_day, rank, ticker, lineage, type, horizon, shares, "
+                 "stop, ref_price, expected_net, cost, entry_day, entry_px, exit_day, exit_px) "
+                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 ["swing-v1", "live", date(2026, 11, 12), 1, "INFY", "INFY-LINEAGE", "swing",
+                  20, 2, 95.0, 100.0, 0.02, 0.003, None, None, None, None])
+    signal, = pending_signals(book, mode="live", version="swing-v1", exchange_date=date(2026, 11, 13),
+                              instrument_ids={"INFY": "NSE:INFY"})
+    entry_decision_id = signal.signal_id + ":s"
+    entry_manifest = record_manifest(runner, session_id="s", decision_id=entry_decision_id,
+                                     event=signal_quote, decided_at=decision_at, quantity=signal.shares,
+                                     selection_lineage=signal.lineage, holding_sessions=20, persist=False)
+    record_signal_decision(runner=runner, session_id="s", signal=signal,
+                           quote_event_id=signal_quote.event_id, decided_at=decision_at,
+                           manifest=entry_manifest)
+    runner.record_risk_verdict(session_id="s", decision_id=entry_decision_id, verdict_id="entry-risk",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               assessed_at=decision_at)
+    entry_fill_at = decision_at + timedelta(milliseconds=100)
+    entry_quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:01", "last_price": 100.0, "volume": 1000,
+        "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                  "sell": [{"price": 100.05, "quantity": 20}]},
+    }, received_at=entry_fill_at)
+    runner.ingest("s", entry_config, [entry_quote], ingest_metadata={
+        entry_quote.event_id: (entry_fill_at + timedelta(milliseconds=1), "TEST_FILL_QUOTE_CLOCK")})
+    entry_receipt = runner.execute_paper_intent(
+        session_id="s", order_id="book-entry", decision_id=entry_decision_id,
+        event_id=entry_quote.event_id, side="BUY", quantity=signal.shares,
+        limit_price=Decimal("100.10"), tick_size=Decimal("0.05"), freeze_limit=10,
+        slice_size=10, adverse_slippage_bps=Decimal("0"), latency_ms=100,
+        simulated_at=entry_fill_at + timedelta(milliseconds=50))
+    assert reconcile_entry_receipt(book=book, runner=runner, session_id="s", signal=signal,
+                                   decision_id=entry_decision_id, order_id="book-entry",
+                                   receipt=entry_receipt) == "FILLED"
+    assert due_exits(book, runner=runner, session_id="s", mode="live", version="swing-v1",
+                     exchange_date=date(2026, 11, 13), completed_sessions_held={signal.signal_id: 0},
+                     instrument_ids={"INFY": "NSE:INFY"},
+                     quote_events={"NSE:INFY": entry_quote}) == ()
+    runner.close_session("s", complete=True, now=entry_fill_at + timedelta(seconds=2))
+
+    exit_day = date(2026, 11, 16)
+    exit_config = replace(make_config(), exchange_date=exit_day)
+    exit_start = NOW + timedelta(days=3)
+    runner.begin("s2", exit_config, now=exit_start, preflight={"risk_policy_loaded": True})
+    stop_quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-16 10:15:00", "last_price": 94.9, "volume": 1000,
+        "depth": {"buy": [{"price": 94.95, "quantity": 20}],
+                  "sell": [{"price": 95.05, "quantity": 20}]},
+    }, received_at=exit_start)
+    runner.ingest("s2", exit_config, [stop_quote])
+    exits = due_exits(book, runner=runner, session_id="s2", mode="live", version="swing-v1",
+                      exchange_date=exit_day, completed_sessions_held={signal.signal_id: 1},
+                      instrument_ids={"INFY": "NSE:INFY"}, quote_events={"NSE:INFY": stop_quote})
+    assert len(exits) == 1 and exits[0].reason == "STOP"
+    assert exits[0].completed_sessions_held == 1
+    book.execute("UPDATE positions SET stop=90 WHERE version='swing-v1'")
+    time_exits = due_exits(book, runner=runner, session_id="s2", mode="live", version="swing-v1",
+                           exchange_date=exit_day, completed_sessions_held={signal.signal_id: 20},
+                           instrument_ids={"INFY": "NSE:INFY"},
+                           quote_events={"NSE:INFY": stop_quote})
+    assert len(time_exits) == 1 and time_exits[0].reason == "TIME"
+    book.execute("UPDATE positions SET stop=95 WHERE version='swing-v1'")
+    exit_decision_at = exit_start + timedelta(seconds=1)
+    exit_decision_id = f"paper-book-exit:{signal.signal_id}:s2"
+    exit_manifest = record_manifest(runner, session_id="s2", decision_id=exit_decision_id,
+                                    event=stop_quote, decided_at=exit_decision_at,
+                                    quantity=signal.shares, day=exit_day.isoformat(),
+                                    holding_sessions=signal.horizon_sessions,
+                                    selection_lineage=signal.lineage, persist=False)
+    record_exit_decision(runner=runner, session_id="s2", exit_signal=exits[0],
+                         decided_at=exit_decision_at, manifest=exit_manifest)
+    runner.record_risk_verdict(session_id="s2", decision_id=exit_decision_id, verdict_id="exit-risk",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               assessed_at=exit_decision_at)
+    exit_fill_at = exit_decision_at + timedelta(milliseconds=100)
+    exit_quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-16 10:15:01", "last_price": 94.0, "volume": 1000,
+        "depth": {"buy": [{"price": 94.05, "quantity": 20}],
+                  "sell": [{"price": 94.15, "quantity": 20}]},
+    }, received_at=exit_fill_at)
+    runner.ingest("s2", exit_config, [exit_quote], ingest_metadata={
+        exit_quote.event_id: (exit_fill_at + timedelta(milliseconds=1), "TEST_FILL_QUOTE_CLOCK")})
+    exit_receipt = runner.execute_paper_intent(
+        session_id="s2", order_id="book-exit", decision_id=exit_decision_id,
+        event_id=exit_quote.event_id, side="SELL", quantity=signal.shares,
+        limit_price=Decimal("94.00"), tick_size=Decimal("0.05"), freeze_limit=10,
+        slice_size=10, adverse_slippage_bps=Decimal("0"), latency_ms=100,
+        simulated_at=exit_fill_at + timedelta(milliseconds=50))
+    assert exit_receipt["filled_quantity"] == signal.shares
+    assert reconcile_exit_receipt(book=book, runner=runner, session_id="s2", exit_signal=exits[0],
+                                  decision_id=exit_decision_id, order_id="book-exit",
+                                  receipt=exit_receipt) == "CLOSED"
+    assert reconcile_exit_receipt(book=book, runner=runner, session_id="s2", exit_signal=exits[0],
+                                  decision_id=exit_decision_id, order_id="book-exit",
+                                  receipt=exit_receipt) == "CLOSED"
+    assert book.execute("SELECT exit_day,exit_reason,held FROM positions WHERE version='swing-v1'").fetchone() == (
+        exit_day, "STOP", 1)
+    assert runner.records("s2")["accounting"]["positions"] == {}
+    runner.close_session("s2", complete=True, now=exit_fill_at + timedelta(seconds=2))
+    book.close()
     runner.close()
 
 
