@@ -3,6 +3,7 @@ from dataclasses import replace
 from decimal import Decimal
 import sqlite3
 
+import duckdb
 import pytest
 
 from financial_brain.forward_edge.market_data import normalize_kite_quote
@@ -12,6 +13,7 @@ from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunner,
     ForwardSessionRunnerError,
 )
+from financial_brain.forward_edge.paper_book_adapter import pending_signals, record_signal_decision
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
     ForwardSessionStore,
@@ -367,7 +369,8 @@ def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=Non
 
 
 def record_manifest(runner, *, session_id, decision_id, event, decided_at, quantity,
-                    cost_model_sha256="6" * 64, day="2026-11-13", holding_sessions=1):
+                    cost_model_sha256="6" * 64, day="2026-11-13", holding_sessions=1,
+                    selection_lineage=None, persist=True):
     event_sha = runner._con.execute("SELECT event_sha256 FROM runner_events "
                                     "WHERE session_id=? AND event_id=?",
                                     [session_id, event.event_id]).fetchone()[0]
@@ -385,7 +388,8 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
         "predicted_return_fraction": "0.01", "predicted_cost_fraction": "0.001",
         "forecast": {"p10_fraction": "-0.01", "p50_fraction": "0.01",
                      "p90_fraction": "0.02", "probability_exceeds_cost": "0.6"},
-        "selections": [{"lineage": event.instrument_id, "symbol": event.instrument_id,
+        "selections": [{"lineage": selection_lineage or event.instrument_id,
+                        "symbol": event.instrument_id,
                         "weight_fraction": "0.1", "quantity": quantity}],
         "exclusions": [], "sources": [{"source_id": event.event_id, "sha256": event_sha,
                                          "published_at_utc": event.event_time.isoformat(),
@@ -393,7 +397,9 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
                                          "available_at_utc": event.available_at.isoformat()}],
         "no_trade_reasons": [],
     }
-    return runner.record_decision_manifest(session_id=session_id, decision_id=decision_id, manifest=manifest)
+    if persist:
+        return runner.record_decision_manifest(session_id=session_id, decision_id=decision_id, manifest=manifest)
+    return manifest
 
 
 def execute(runner, event, decided, *, order_id="order-1", qty=2, limit="100.30",
@@ -907,6 +913,90 @@ def test_shared_paper_ledger_carries_inventory_across_sessions_without_expiry(tm
 
     # A later session must not mutate an earlier session's frozen account projection.
     assert runner.records("s")["accounting"] == first_day_accounting
+    runner.close()
+
+
+def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor(
+        tmp_path):
+    exchange_day = date(2026, 11, 16)
+    start = NOW + timedelta(days=3)
+    config = replace(make_config(), exchange_date=exchange_day)
+    runner = make_runner(tmp_path)
+    assert runner.begin("book-adapter", config, now=start,
+                        preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+    quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-16 10:15:00", "last_price": 101.0, "volume": 1000,
+        "depth": {"buy": [{"price": 100.95, "quantity": 20}],
+                  "sell": [{"price": 101.05, "quantity": 20}]},
+    }, received_at=start)
+    runner.ingest("book-adapter", config, [quote])
+    book = duckdb.connect(":memory:")
+    book.execute("""CREATE TABLE positions (
+        version VARCHAR, mode VARCHAR, signal_day DATE, rank INTEGER, ticker VARCHAR, lineage VARCHAR,
+        type VARCHAR, horizon INTEGER, shares INTEGER, stop DOUBLE, ref_price DOUBLE,
+        expected_net DOUBLE, cost DOUBLE, entry_day DATE, entry_px DOUBLE,
+        exit_day DATE, exit_px DOUBLE)""")
+    book.execute("INSERT INTO positions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 ["swing-v1", "live", date(2026, 11, 13), 1, "INFY", "INFY-LINEAGE", "swing",
+                  7, 2, 95.0, 100.0, 0.02, 0.003, None, None, None, None])
+    signal, = pending_signals(book, mode="live", version="swing-v1", exchange_date=exchange_day,
+                              instrument_ids={"INFY": "NSE:INFY"})
+    decision_at = start + timedelta(seconds=1)
+    decision_id = signal.signal_id + ":book-adapter"
+    manifest = record_manifest(runner, session_id="book-adapter", decision_id=decision_id,
+                               event=quote, decided_at=decision_at, quantity=signal.shares,
+                               day=exchange_day.isoformat(), holding_sessions=signal.horizon_sessions,
+                               selection_lineage=signal.lineage, persist=False)
+    assert record_signal_decision(
+        runner=runner, session_id="book-adapter", signal=signal, quote_event_id=quote.event_id,
+        decided_at=decision_at, manifest=manifest) == decision_id
+    trade = runner.records("book-adapter")["decisions"][0]
+    assert trade["outcome"] == "TRADE"
+    assert trade["payload"]["horizon_sessions"] == 7
+    assert runner.records("book-adapter")["intents"] == []
+    with pytest.raises(ForwardSessionRunnerError, match="explicit persisted allow risk verdict"):
+        runner.execute_paper_intent(
+            session_id="book-adapter", order_id="unapproved-book-order", decision_id=decision_id,
+            event_id=quote.event_id, side="BUY", quantity=signal.shares,
+            limit_price=Decimal("101.10"), tick_size=Decimal("0.05"), freeze_limit=10,
+            slice_size=10, adverse_slippage_bps=Decimal("0"), latency_ms=0,
+            simulated_at=decision_at + timedelta(seconds=1))
+    assert runner.records("book-adapter")["intents"] == []
+    runner.record_risk_verdict(session_id="book-adapter", decision_id=decision_id,
+                               verdict_id="book-signal-risk", allowed=True, policy_id="test-risk-v1",
+                               policy_sha256="a" * 64, assessed_at=decision_at)
+    fill_at = decision_at + timedelta(milliseconds=100)
+    fill_quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-16 10:15:01", "last_price": 101.0, "volume": 1000,
+        "depth": {"buy": [{"price": 100.95, "quantity": 20}],
+                  "sell": [{"price": 101.05, "quantity": 20}]},
+    }, received_at=fill_at)
+    runner.ingest("book-adapter", config, [fill_quote], ingest_metadata={
+        fill_quote.event_id: (fill_at + timedelta(milliseconds=1), "TEST_FILL_QUOTE_CLOCK")})
+    receipt = runner.execute_paper_intent(
+        session_id="book-adapter", order_id="book-order", decision_id=decision_id,
+        event_id=fill_quote.event_id, side="BUY", quantity=signal.shares,
+        limit_price=Decimal("101.10"), tick_size=Decimal("0.05"), freeze_limit=10,
+        slice_size=10, adverse_slippage_bps=Decimal("0"), latency_ms=100,
+        simulated_at=fill_at + timedelta(milliseconds=50))
+    assert receipt["filled_quantity"] == signal.shares
+    assert runner.records("book-adapter")["accounting"]["positions"] == {"NSE:INFY": signal.shares}
+
+    book.execute("DELETE FROM positions")
+    book.execute("INSERT INTO positions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 ["momentum-v1", "live", date(2026, 11, 13), 1, "INFY", "INFY-LINEAGE", "momentum",
+                  20, 2, 95.0, 100.0, 0.0, 0.003, None, None, None, None])
+    uncalibrated, = pending_signals(book, mode="live", version="momentum-v1", exchange_date=exchange_day,
+                                    instrument_ids={"INFY": "NSE:INFY"})
+    abstention_id = record_signal_decision(
+        runner=runner, session_id="book-adapter", signal=uncalibrated, quote_event_id=quote.event_id,
+        decided_at=decision_at + timedelta(milliseconds=1))
+    abstention = next(item for item in runner.records("book-adapter")["decisions"]
+                      if item["decision_id"] == abstention_id)
+    assert abstention["outcome"] == "NO_TRADE"
+    book.close()
+    runner.close_session("book-adapter", complete=False, now=decision_at + timedelta(seconds=1),
+                         reason="adapter contract test")
     runner.close()
 
 

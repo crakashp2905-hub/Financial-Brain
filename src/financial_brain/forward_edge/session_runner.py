@@ -623,6 +623,14 @@ class ForwardSessionRunner:
                 "data_rejections": data_rejections,
                 "audit_log": audit_log, "accounting": accounting}
 
+    def source_event(self, session_id: str, event_id: str) -> tuple[MarketEvent, str]:
+        """Return one normalized journal event and its immutable row digest."""
+        row = self._con.execute("SELECT event_json, event_sha256 FROM runner_events "
+                                "WHERE session_id=? AND event_id=?", [session_id, event_id]).fetchone()
+        if row is None:
+            raise ForwardSessionRunnerError("source event is absent from the session journal")
+        return MarketEvent.from_dict(json.loads(row[0])), str(row[1])
+
     def rebuild_materialized_views(self, session_id: str) -> None:
         """Rebuild query tables for a day from the immutable append-only audit log."""
         audit = [(row["kind"], json.dumps(row["record"], sort_keys=True, separators=(",", ":"),
