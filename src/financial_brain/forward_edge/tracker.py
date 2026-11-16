@@ -35,7 +35,10 @@ BASELINE_TESTS = ("test_baseline_records_git_head_sources_and_missing_prerequisi
 TRIAL_TESTS = ("test_q4_2026_protected_budget_is_exhausted_at_13_of_13", "test_protected_records_match_pinned_digests",
                "test_retrospective_edit_of_the_trial_ledger_is_detected",
                "test_new_protected_trial_refused_when_budget_is_spent",
-               "test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval",
+               "test_q4_budget_amendment_requires_recorded_capacity_and_matching_owner_approval",
+               "test_q1_2027_stays_closed_without_an_owner_approved_protocol_and_explicit_budget",
+               "test_q1_2027_requires_protocol_amendment_and_trial_approval",
+               "test_q1_2027_explicit_budget_is_a_hard_capacity_limit",
                "test_agent_cannot_authorize_a_protected_trial")
 MODE_TESTS = ("test_live_cash_is_unavailable_by_default", "test_flipping_the_build_flag_alone_does_not_enable_cash",
               "test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass",
@@ -70,7 +73,8 @@ BLK_DATA = "BLK-DATA: licensed real-time quote/depth entitlement not available (
 BLK_TSA = "BLK-TSA: no independent timestamp provider or pinned trust root configured (docs/forward-edge/trust-roots.json absent)"
 BLK_COMPLIANCE = "BLK-COMPLIANCE: SEBI retail-algo permissions, exchange algo IDs and static IP need broker/owner evidence"
 BLK_MARKET = "BLK-MARKET: needs observed live NSE/BSE sessions (cannot be produced offline)"
-BLK_GOV = "BLK-GOVERNANCE: 2026Q4 protected budget 13/13 spent; new hypotheses need an ADR amendment or 2027Q1"
+BLK_GOV = ("BLK-GOVERNANCE: Q4-2026 budget 13/13 spent; Q1-2027 remains NOT_AUTHORIZED until an owner-approved "
+           "protocol ADR and explicit budget exist, with exact-scope approvals per trial")
 BLK_OWNER = "BLK-OWNER: requires the owner's own decision or signature"
 BLK_GITHUB = "BLK-GITHUB: branch main is not protected (GitHub API 404 'Branch not protected', read-only check 2026-11-10)"
 BLK_LINUX = "BLK-LINUX: no Linux runner here (WSL not installed); CI on Linux needs a push, not run by this session"
@@ -552,7 +556,7 @@ UNBLOCK = {
     "BLK-TSA": "Owner selects an independent timestamp provider and pins its trust root in docs/forward-edge/trust-roots.json.",
     "BLK-COMPLIANCE": "Broker and owner confirm SEBI retail-algo permissions, exchange IDs and static IP in writing.",
     "BLK-MARKET": "Elapsed NSE/BSE sessions with independent timestamps; cannot be shortened or simulated.",
-    "BLK-GOVERNANCE": "New ADR amendment by the owner, or a preregistered hypothesis in 2027Q1.",
+    "BLK-GOVERNANCE": "Owner approves a Q1-2027 protocol ADR and positive budget, then records exact-scope approvals for each trial; no pathway is active now.",
     "BLK-OWNER": "The owner makes and records the decision; agents cannot.",
     "BLK-GITHUB": "Owner enables branch protection on main with required checks and review.",
     "BLK-LINUX": "Run the test matrix on a Linux runner (CI after a push, or a WSL/Linux machine).",

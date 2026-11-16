@@ -31,6 +31,34 @@ def _approval(kind: str = "PROTECTED_TRIAL", *, actor_id: str = "owner:akash", a
                       expires_at_utc=valid_to or NOW + timedelta(days=1), adr_ref=adr)
 
 
+def _override_trial_program(monkeypatch: pytest.MonkeyPatch, program_id: str, **changes: Any) -> dict:
+    path = REPO / trials.PROGRAM_REL
+    document = json.loads(path.read_text(encoding="utf-8"))
+    program = next(row for row in document["programs"] if row["program_id"] == program_id)
+    program.update(changes)
+    original_read_text = Path.read_text
+
+    def read_text(target: Path, *args: Any, **kwargs: Any) -> str:
+        if target == path:
+            return json.dumps(document)
+        if program_id == "Q1-2027" and target == REPO / "docs/adr/0007-q1-2027-trial-protocol.md":
+            return "# Q1 2027 trial protocol\nOwner-approved trial protocol test fixture.\n"
+        return original_read_text(target, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read_text)
+    if program_id == "Q1-2027":
+        original_glob = Path.glob
+        fake_adr = REPO / "docs/adr/0007-q1-2027-trial-protocol.md"
+
+        def glob(target: Path, pattern: str):
+            if target == REPO / "docs/adr" and pattern == "0007-*.md":
+                return [fake_adr]
+            return original_glob(target, pattern)
+
+        monkeypatch.setattr(Path, "glob", glob)
+    return program
+
+
 # ---------- FE-0001 baseline ----------
 
 def test_baseline_records_git_head_sources_and_missing_prerequisites() -> None:
@@ -127,35 +155,84 @@ def test_retrospective_edit_of_the_trial_ledger_is_detected(tmp_path: Path) -> N
 
 
 def test_new_protected_trial_refused_when_budget_is_spent() -> None:
-    with pytest.raises(trials.TrialGovernanceError, match="needs a TRIAL_BUDGET_AMENDMENT approval"):
+    with pytest.raises(trials.TrialGovernanceError, match="approved larger explicit budget"):
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
                                                   approvals=(), now=NOW, scope_sha256=SHA)
 
 
-def test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval() -> None:
-    only_trial = (_approval("PROTECTED_TRIAL", subject="M9"),)
-    with pytest.raises(trials.TrialGovernanceError, match="TRIAL_BUDGET_AMENDMENT"):
+def test_q4_budget_amendment_requires_recorded_capacity_and_matching_owner_approval(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    only_trial = (_approval("PROTECTED_TRIAL", subject="M9", adr="ADR-0004"),)
+    with pytest.raises(trials.TrialGovernanceError, match="approved larger explicit budget"):
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
                                                   approvals=only_trial, now=NOW, scope_sha256=SHA)
-    both = only_trial + (_approval("TRIAL_BUDGET_AMENDMENT", subject="M9"),)
+    _override_trial_program(monkeypatch, "Q4-2026", status="AMENDED", budget=14,
+                            budget_adr_ref="ADR-0006", authorized_owner_id="owner:akash")
+    with pytest.raises(trials.TrialGovernanceError, match="needs a TRIAL_BUDGET_AMENDMENT"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
+                                                  approvals=only_trial, now=NOW, scope_sha256=SHA)
+    approvals = only_trial + (_approval("TRIAL_BUDGET_AMENDMENT", subject="M9", adr="ADR-0006"),)
     status = trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
-                                                       approvals=both, now=NOW, scope_sha256=SHA)
-    assert status.exhausted
+                                                        approvals=approvals, now=NOW, scope_sha256=SHA)
+    assert status.spent == 13 and status.remaining == 1
 
 
-def test_agent_cannot_authorize_a_protected_trial() -> None:
-    agent = (_approval("PROTECTED_TRIAL", subject="M9", actor_id="agent:research-bot", actor_type="agent"),
-             _approval("TRIAL_BUDGET_AMENDMENT", subject="M9", actor_id="agent:research-bot", actor_type="agent"))
+def test_agent_cannot_authorize_a_protected_trial(monkeypatch: pytest.MonkeyPatch) -> None:
+    _override_trial_program(monkeypatch, "Q4-2026", status="AMENDED", budget=14,
+                            budget_adr_ref="ADR-0006", authorized_owner_id="owner:akash")
+    agent = (_approval("PROTECTED_TRIAL", subject="M9", actor_id="agent:research-bot", actor_type="agent",
+                       adr="ADR-0004"),
+             _approval("TRIAL_BUDGET_AMENDMENT", subject="M9", actor_id="agent:research-bot", actor_type="agent",
+                       adr="ADR-0006"))
     with pytest.raises(trials.TrialGovernanceError, match="cannot approve"):
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
                                                   approvals=agent, now=NOW, scope_sha256=SHA)
 
 
-def test_trial_in_2027q1_needs_only_a_protected_trial_approval() -> None:
-    ok = trials.assert_new_protected_trial_allowed(
-        REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
-        approvals=(_approval("PROTECTED_TRIAL", subject="M1-2027"),), now=NOW, scope_sha256=SHA)
-    assert ok.spent == 13  # the 2026Q4 count is not the 2027Q1 budget
+def test_q1_2027_stays_closed_without_an_owner_approved_protocol_and_explicit_budget() -> None:
+    with pytest.raises(trials.TrialGovernanceError, match="no owner-approved protocol and explicit trial budget"):
+        trials.assert_new_protected_trial_allowed(
+            REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+            approvals=(_approval("PROTECTED_TRIAL", subject="M1-2027"),), now=NOW, scope_sha256=SHA)
+
+
+def test_q1_2027_requires_protocol_amendment_and_trial_approval(monkeypatch: pytest.MonkeyPatch) -> None:
+    _override_trial_program(monkeypatch, "Q1-2027", status="ACTIVE", budget=1,
+                            protocol_adr_ref="ADR-0007", authorized_owner_id="owner:akash")
+    expires = datetime(2027, 1, 16, tzinfo=timezone.utc)
+    only_trial = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007", valid_to=expires),)
+    with pytest.raises(trials.TrialGovernanceError, match="needs a Q1_PROTOCOL_AMENDMENT"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                  approvals=only_trial, now=NOW, scope_sha256=SHA)
+    expired = only_trial + (_approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007"),)
+    with pytest.raises(trials.TrialGovernanceError, match="expired"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                  approvals=expired, now=NOW, scope_sha256=SHA)
+    wrong_owner = only_trial + (_approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                                          actor_id="owner:other", valid_to=expires),)
+    with pytest.raises(trials.TrialGovernanceError, match="configured owner owner:akash"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                  approvals=wrong_owner, now=NOW, scope_sha256=SHA)
+    approvals = only_trial + (_approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                                        valid_to=expires),)
+    status = trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                        approvals=approvals, now=NOW, scope_sha256=SHA)
+    assert status.budget == 1 and status.remaining == 1
+
+
+def test_q1_2027_explicit_budget_is_a_hard_capacity_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    _override_trial_program(monkeypatch, "Q1-2027", status="ACTIVE", budget=1,
+                            protocol_adr_ref="ADR-0007", authorized_owner_id="owner:akash")
+    rows = trials.load_rows(REPO / trials.LEDGER_REL)
+    rows.append({"kind": "trial", "date": "2027-01-10", "name": "already-approved"})
+    monkeypatch.setattr(trials, "load_rows", lambda _path: rows)
+    expires = datetime(2027, 1, 16, tzinfo=timezone.utc)
+    approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007", valid_to=expires),
+                 _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007", valid_to=expires))
+    with pytest.raises(trials.TrialGovernanceError, match="budget is exhausted"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                  approvals=approvals, now=NOW, scope_sha256=SHA)
 
 
 # ---------- FE-0004 hashable charter ----------

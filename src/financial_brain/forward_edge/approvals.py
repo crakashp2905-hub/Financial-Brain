@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 
 APPROVAL_KINDS = frozenset({
     "STRATEGY_ENROLLMENT", "ACCOUNT", "VENUE", "LEVERAGE", "CAPITAL", "LIVE_CASH_ENABLE",
-    "PROTECTED_TRIAL", "TRIAL_BUDGET_AMENDMENT", "MICRO_RISK_BUDGET", "DISARM_RESET",
+    "PROTECTED_TRIAL", "TRIAL_BUDGET_AMENDMENT", "Q1_PROTOCOL_AMENDMENT",
+    "MICRO_RISK_BUDGET", "DISARM_RESET",
 })
 #: Actor identifiers that name software, not a person. Matched case-insensitively at the start of the id.
 _AGENT_ID = re.compile(r"^(agent|ai|llm|bot|claude|gpt|assistant|system|automation|cron|ci|script|model)([:/_\- ]|$)",
