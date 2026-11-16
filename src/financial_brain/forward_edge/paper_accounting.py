@@ -43,6 +43,7 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
     realized_gross = Decimal(0)
     order_states: dict[str, str] = {}
     completed_order_ids: list[str] = []
+    charged_orders: list[dict[str, Any]] = []
     unresolved = sorted(set(intent_by_id) - set(receipt_by_id))
     errors: list[str] = []
     orphan_receipts = sorted(set(receipt_by_id) - set(intent_by_id))
@@ -83,6 +84,23 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
             continue
         if status in {"FILLED", "PARTIAL"} and (price is None or not price.is_finite() or price <= 0):
             errors.append(f"{order_id}: filled receipt lacks a positive average price")
+            continue
+        cost_items = receipt.get("cost_items")
+        if filled and cost_items is not None:
+            try:
+                charge_total = Decimal(str(receipt["charges_inr"]))
+                item_total = sum(Decimal(str(item["total"])) for item in cost_items)
+                if not charge_total.is_finite() or charge_total < 0 or item_total != charge_total:
+                    raise ValueError("charge total differs from immutable line items")
+                if any(item.get("order_id") != order_id for item in cost_items):
+                    raise ValueError("cost line item order identity mismatch")
+                charged_orders.append({"order_id": order_id, "charges_inr": format(charge_total, "f"),
+                                       "cost_items": cost_items})
+            except Exception as exc:  # noqa: BLE001 - corrupt persisted cost evidence must be visible
+                errors.append(f"{order_id}: invalid cost evidence: {exc}")
+                continue
+        elif filled and receipt.get("charges_inr") is not None:
+            errors.append(f"{order_id}: charges are present without itemized schedule evidence")
             continue
         if side == "SELL" and filled > inventory.get(instrument, 0):
             errors.append(f"{order_id}: sell fill exceeds paper inventory")
@@ -128,6 +146,14 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
                         entries_list.append(Entry("realized_gross_pnl", DEBIT, Money.of(-gross, "INR")))
                     entries = tuple(entries_list)
                 ledger.post(Transaction(order_id + ":trade", entries))
+            if cost_items is not None and filled:
+                charge_total = Decimal(str(receipt["charges_inr"]))
+                if charge_total:
+                    oms.charge(account_id, charge_total)
+                    ledger.post(Transaction(order_id + ":charges", (
+                        Entry("transaction_costs", DEBIT, Money.of(charge_total, "INR")),
+                        Entry("cash", CREDIT, Money.of(charge_total, "INR")),
+                    )))
             if oms.order(order_id).remaining:
                 oms.move(order_id, State.CANCEL_PENDING)
                 oms.move(order_id, State.CANCELED)
@@ -144,18 +170,32 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
     if not balanced:
         errors.append("double-entry ledger is unbalanced")
     positions = {symbol: quantity for symbol, quantity in sorted(inventory.items())}
+    charges = sum((Decimal(item["charges_inr"]) for item in charged_orders), Decimal(0))
+    charged_fill_orders = {item["order_id"] for item in charged_orders}
+    all_fills_costed = all(
+        not int(receipt.get("filled_quantity", 0)) or str(receipt.get("order_id")) in charged_fill_orders
+        for receipt in receipts
+    )
+    has_filled_orders = any(int(receipt.get("filled_quantity", 0)) > 0 for receipt in receipts)
+    net_eligible = has_filled_orders and not unresolved and not errors and all_fills_costed
     return {"schema": "fb.forward-paper-accounting.v1", "account_id": account_id,
             "capital_inr": format(capital, "f"), "cash_inr": format(cash_oms, "f"),
             "ledger_cash_inr": format(cash_ledger, "f"), "positions": positions,
             "average_cost_inr": {symbol: format(value, "f") for symbol, value in sorted(average_cost.items())},
             "realized_gross_pnl_inr": format(realized_gross, "f"),
+            "charges_inr": format(charges, "f"),
+            "realized_net_pnl_inr": format(realized_gross - charges, "f") if net_eligible else None,
+            "filled_order_count": sum(int(receipt.get("filled_quantity", 0)) > 0 for receipt in receipts),
+            "costed_fill_orders": sorted(charged_fill_orders), "cost_line_items": charged_orders,
             "oms_order_states": dict(sorted(order_states.items())),
             "completed_order_ids": completed_order_ids, "unresolved_order_ids": unresolved,
             "ledger_sha256": ledger.sha256(), "ledger_balanced": balanced,
             "cash_reconciled": cash_oms == cash_ledger, "errors": errors,
-            "status": "INCOMPLETE" if unresolved or errors else "RECONCILED_GROSS",
-            "charges_assessed": False, "net_pnl_eligible": False,
-            "accounting_policy": "AVERAGE_COST_GROSS_OF_FEES_TAXES_AND_FINANCING"}
+            "status": "INCOMPLETE" if unresolved or errors else
+                     "RECONCILED_NET" if net_eligible else "RECONCILED_GROSS",
+            "charges_assessed": net_eligible, "net_pnl_eligible": net_eligible,
+            "accounting_policy": "AVERAGE_COST_NET_OF_VERSIONED_COST_SCHEDULE" if net_eligible else
+                                 "AVERAGE_COST_GROSS_OF_FEES_TAXES_AND_FINANCING"}
 
 
 __all__ = ["PaperAccountingError", "rebuild_paper_accounting"]

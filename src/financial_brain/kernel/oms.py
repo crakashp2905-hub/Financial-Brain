@@ -103,6 +103,20 @@ class Oms:
     def available(self, account: str) -> Decimal:
         return self._cash[account] - self._reserved[account]
 
+    def charge(self, account: str, amount: Decimal) -> None:
+        """Post a settled account charge such as simulated statutory fees.
+
+        Charges cannot consume cash reserved for working buy orders or create a negative
+        settled balance. Validation completes before cash changes.
+        """
+        if account not in self._cash:
+            raise OmsError(f"unknown account {account}")
+        if not isinstance(amount, Decimal) or not amount.is_finite() or amount < 0:
+            raise OmsError("charge must be a finite non-negative decimal")
+        if amount > self.available(account):
+            raise InsufficientCash("charge would consume reserved or unavailable cash")
+        self._cash[account] -= amount
+
     # --- intents ---
     def submit_intent(
         self, *, client_id: str, account: str, side: str, quantity: int,

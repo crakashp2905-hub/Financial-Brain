@@ -749,7 +749,13 @@ class ForwardSessionRunner:
                 self._con.commit()
                 return prior | {"checkpoint_sha256": existing[0]}
             unresolved = any(row["state"] in {"PENDING", "UNKNOWN"} for row in outbox_rows)
-            ledger_bound = records["accounting"]["status"] == "RECONCILED_GROSS" and not unresolved
+            config = self.state_store.config(session_id)
+            accounting = records["accounting"]
+            costs_bound = (config.constraints.get("cost_schedule") is None or
+                           accounting["filled_order_count"] == 0 or
+                           accounting["status"] == "RECONCILED_NET")
+            ledger_bound = accounting["status"] in {"RECONCILED_GROSS", "RECONCILED_NET"} \
+                and not unresolved and costs_bound
             body = {"schema": "fb.forward-session-checkpoint.v1", "session_id": session_id,
                     "checkpoint_id": checkpoint_id, "phase": phase,
                     "captured_at": now.astimezone(timezone.utc).isoformat(),
@@ -852,6 +858,15 @@ class ForwardSessionRunner:
         if manifest_row is None:
             raise ForwardSessionRunnerError("paper intent requires a canonical persisted decision manifest")
         manifest = json.loads(manifest_row[1])
+        config = self.state_store.config(session_id)
+        if config.constraints.get("cost_schedule") is not None:
+            if config.constraints.get("liquidity_bucket") not in {"mega", "large", "mid", "small", "micro"}:
+                raise ForwardSessionRunnerError(
+                    "a configured cost schedule requires an explicit valid liquidity bucket")
+            schedule = self._resolved_cost_schedule(session_id)
+            if manifest.get("cost_model_sha256") != schedule.digest():
+                raise ForwardSessionRunnerError(
+                    "decision manifest cost-model hash differs from the run's versioned cost schedule")
         if event_id not in decision["input_event_ids"]:
             raise ForwardSessionRunnerError("paper quote must be an input to the recorded decision")
         event_row = self._con.execute("SELECT event_json FROM runner_events WHERE session_id=? AND event_id=?",
@@ -880,7 +895,7 @@ class ForwardSessionRunner:
             and accounting["unresolved_order_ids"] == [order_id]
             and self._paper_retry_reconciled_without_effect(session_id, order_id)
         )
-        if accounting["status"] != "RECONCILED_GROSS" and not safely_reconciled_retry:
+        if accounting["status"] not in {"RECONCILED_GROSS", "RECONCILED_NET"} and not safely_reconciled_retry:
             raise ForwardSessionRunnerError("paper execution is blocked while the OMS/accounting projection is incomplete")
         instrument = event.instrument_id
         if side == "SELL" and int(accounting["positions"].get(instrument, 0)) < quantity:
@@ -928,6 +943,9 @@ class ForwardSessionRunner:
                     "quote_event_id": event_id, "source": event.source,
                     "simulated_at": simulated_at.astimezone(timezone.utc).isoformat(),
                     "physical_order_submitted": False}
+            if scenario.filled_quantity:
+                self._attach_cost_evidence(session_id, request, body, price=scenario.average_price,
+                                           filled_quantity=scenario.filled_quantity)
             self._persist_paper_receipt(session_id, order_id, body, commit=False)
 
         outbox = self._outbox_kernel()
@@ -940,6 +958,54 @@ class ForwardSessionRunner:
         if receipt is None:
             raise ForwardSessionRunnerError("outbox acknowledged without a persisted simulation receipt")
         return json.loads(receipt[0])
+
+    def _attach_cost_evidence(self, session_id: str, request: dict[str, Any], receipt: dict[str, Any], *,
+                              price: Decimal | None, filled_quantity: int) -> None:
+        """Attach explicitly configured, dated cost line items to a simulated fill.
+
+        Cost assumptions are opt-in run constraints. An absent schedule or liquidity bucket
+        leaves the session gross-only; it never silently substitutes a default estimate.
+        """
+        from financial_brain.costs.india import Side
+
+        config = self.state_store.config(session_id)
+        bucket = config.constraints.get("liquidity_bucket")
+        if config.constraints.get("cost_schedule") is None:
+            return
+        if price is None or bucket not in {"mega", "large", "mid", "small", "micro"}:
+            raise ForwardSessionRunnerError("costed fills require a valid price and declared liquidity bucket")
+        try:
+            schedule = self._resolved_cost_schedule(session_id)
+            side = Side.BUY if request["side"] == "BUY" else Side.SELL
+            turnover = float(price * filled_quantity)
+            lines = schedule.one_way(day=config.exchange_date, turnover=turnover, side=side, bucket=bucket)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ForwardSessionRunnerError(f"invalid configured cost schedule: {exc}") from exc
+        receipt["cost_items"] = [{"order_id": request["order_id"], **lines}]
+        receipt["charges_inr"] = format(Decimal(str(lines["total"])), "f")
+
+    def _resolved_cost_schedule(self, session_id: str):
+        from datetime import date
+
+        from financial_brain.costs.india import CostModel, Segment
+        from financial_brain.forward_edge.cost_schedule import CostSchedule, CostScheduleBook
+
+        config = self.state_store.config(session_id)
+        data = config.constraints.get("cost_schedule")
+        if not isinstance(data, dict):
+            raise ForwardSessionRunnerError("run does not contain a valid versioned cost schedule")
+        try:
+            schedule = CostSchedule(
+                schedule_id=str(data["schedule_id"]), version=str(data["version"]),
+                effective_from=date.fromisoformat(str(data["effective_from"])),
+                effective_to=date.fromisoformat(str(data["effective_to"])) if data.get("effective_to") else None,
+                segment=Segment(str(data["segment"])), model=CostModel(**data["model"]),
+                source_ref=str(data["source_ref"]), source_sha256=str(data["source_sha256"]),
+            )
+            return CostScheduleBook((schedule,)).resolve(
+                schedule_id=schedule.schedule_id, segment=schedule.segment, day=config.exchange_date)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ForwardSessionRunnerError(f"invalid configured cost schedule: {exc}") from exc
 
     def _persist_paper_receipt(self, session_id: str, order_id: str,
                                body: dict[str, Any], *, commit: bool = True) -> None:
@@ -1006,7 +1072,12 @@ class ForwardSessionRunner:
         if complete:
             self._require_resolved_paper_intents(session_id)
             accounting = self.records(session_id)["accounting"]
-            if accounting["status"] != "RECONCILED_GROSS" or not accounting["cash_reconciled"]:
+            config = self.state_store.config(session_id)
+            configured_costs_missing = (config.constraints.get("cost_schedule") is not None and
+                                        accounting["filled_order_count"] > 0 and
+                                        accounting["status"] != "RECONCILED_NET")
+            if accounting["status"] not in {"RECONCILED_GROSS", "RECONCILED_NET"} or \
+                    not accounting["cash_reconciled"] or configured_costs_missing:
                 raise ForwardSessionRunnerError("cannot close complete with OMS/accounting reconciliation errors")
         if state is SessionState.OPEN:
             self.state_store.transition(session_id, SessionState.DRAINING, now=now)

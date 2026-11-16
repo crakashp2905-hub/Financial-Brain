@@ -30,6 +30,11 @@ def make_config(*, max_quote_age_ms=None):
                             ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
 
 
+def make_config_with_constraints(constraints):
+    return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
+                            ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
+
+
 def make_event(*, event_id="fixture-1", available_at=NOW, event_time=NOW):
     return MarketEvent(event_id, EventKind.QUOTE, "NSE", "NSE:INFY", event_time,
                        available_at, available_at, {"bid": 100.0, "ask": 100.1}, "FIXTURE")
@@ -330,7 +335,8 @@ def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=Non
     return runner, event, decided
 
 
-def record_manifest(runner, *, session_id, decision_id, event, decided_at, quantity):
+def record_manifest(runner, *, session_id, decision_id, event, decided_at, quantity,
+                    cost_model_sha256="6" * 64):
     event_sha = runner._con.execute("SELECT event_sha256 FROM runner_events "
                                     "WHERE session_id=? AND event_id=?",
                                     [session_id, event.event_id]).fetchone()[0]
@@ -338,7 +344,7 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
         "schema": "fb.decision.v1", "day": "2026-11-13", "decision_id": decision_id,
         "author": "test-runner", "strategy_sha256": "1" * 64, "model_sha256": "2" * 64,
         "data_sha256": event_sha, "universe_sha256": "3" * 64, "picks_sha256": "4" * 64,
-        "calendar_sha256": "5" * 64, "cost_model_sha256": "6" * 64,
+        "calendar_sha256": "5" * 64, "cost_model_sha256": cost_model_sha256,
         "risk_limits_sha256": "7" * 64, "decision_at_utc": decided_at.isoformat(),
         "entry_earliest_at_utc": (decided_at + timedelta(milliseconds=100)).isoformat(),
         "exit_scheduled_at_utc": (decided_at + timedelta(hours=8)).isoformat(),
@@ -463,6 +469,103 @@ def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path
     assert after["realized_gross_pnl_inr"] == "-0.70"
     assert after["cash_inr"] == after["ledger_cash_inr"] == "99999.30"
     assert after["ledger_balanced"] and after["cash_reconciled"]
+    runner.close()
+
+
+def test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net(tmp_path):
+    from financial_brain.costs.india import CostModel
+    from financial_brain.costs.india import Segment
+    from financial_brain.forward_edge.cost_schedule import CostSchedule
+
+    constraints = {
+        "liquidity_bucket": "large",
+        "cost_schedule": {
+            "schedule_id": "test-india", "version": "v1", "effective_from": "2026-01-01",
+            "effective_to": None, "segment": "delivery", "model": CostModel().as_dict(),
+            "source_ref": "test tariff fixture", "source_sha256": "c" * 64,
+        },
+    }
+    runner = make_runner(tmp_path)
+    configured = opened(runner, config=make_config_with_constraints(constraints))
+    assert configured is SessionState.OPEN
+    event = MarketEvent("cost-quote", EventKind.QUOTE, "NSE", "NSE:INFY", NOW, NOW, NOW,
+                        {"bid": 100.0, "ask": 100.1, "bid_quantity": 10, "ask_quantity": 10,
+                         "volume": 100, "depth": {"buy": [[100.0, 10]], "sell": [[100.1, 10]]}},
+                        "FIXTURE", evidence_id="d" * 64)
+    runner.ingest("s", make_config_with_constraints(constraints), [event])
+    schedule = CostSchedule("test-india", "v1", date(2026, 1, 1), None, Segment.DELIVERY,
+                            CostModel(), "test tariff fixture", "c" * 64)
+    decided = NOW + timedelta(milliseconds=100)
+    runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
+                  decided_at=decided, input_event_ids=(event.event_id,))
+    record_manifest(runner, session_id="s", decision_id="trade-1", event=event,
+                    decided_at=decided, quantity=11, cost_model_sha256=schedule.digest())
+    runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               assessed_at=decided)
+    buy = runner.execute_paper_intent(
+        session_id="s", order_id="buy", decision_id="trade-1", event_id=event.event_id,
+        side="BUY", quantity=2, limit_price=Decimal("100.30"), tick_size=Decimal("0.05"),
+        freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
+        simulated_at=decided + timedelta(milliseconds=100))
+    assert buy["charges_inr"] > "0"
+    sell = runner.execute_paper_intent(
+        session_id="s", order_id="sell", decision_id="trade-1", event_id=event.event_id,
+        side="SELL", quantity=2, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),
+        freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
+        simulated_at=decided + timedelta(milliseconds=100))
+    accounting = runner.records("s")["accounting"]
+    assert sell["charges_inr"] > "0"
+    assert accounting["realized_gross_pnl_inr"] == "-0.70"
+    assert Decimal(accounting["realized_net_pnl_inr"]) < Decimal(accounting["realized_gross_pnl_inr"])
+    assert Decimal(accounting["realized_net_pnl_inr"]) < 0
+    assert accounting["net_pnl_eligible"] is True
+    assert accounting["status"] == "RECONCILED_NET"
+    assert accounting["cash_inr"] == accounting["ledger_cash_inr"]
+    assert Decimal(accounting["cash_inr"]) < Decimal("100000") - Decimal("0.70")
+    assert all(item["cost_items"][0]["schedule_sha256"] for item in accounting["cost_line_items"])
+    runner.close()
+
+
+def test_forward_mixed_costed_and_uncosted_fills_are_not_net_eligible(tmp_path):
+    from financial_brain.costs.india import CostModel, Segment
+    from financial_brain.forward_edge.cost_schedule import CostSchedule
+
+    constraints = {"max_positions": 1, "liquidity_bucket": "large", "cost_schedule": {
+        "schedule_id": "test-india", "version": "v1", "effective_from": "2026-01-01",
+        "effective_to": None, "segment": "delivery", "model": CostModel().as_dict(),
+        "source_ref": "test tariff fixture", "source_sha256": "c" * 64}}
+    runner = make_runner(tmp_path)
+    config = make_config_with_constraints(constraints)
+    opened(runner, config=config)
+    event = MarketEvent("cost-quote", EventKind.QUOTE, "NSE", "NSE:INFY", NOW, NOW, NOW,
+                        {"bid": 100.0, "ask": 100.1, "bid_quantity": 10, "ask_quantity": 10,
+                         "volume": 100, "depth": {"buy": [[100.0, 10]], "sell": [[100.1, 10]]}},
+                        "FIXTURE", evidence_id="d" * 64)
+    runner.ingest("s", config, [event])
+    schedule = CostSchedule("test-india", "v1", date(2026, 1, 1), None, Segment.DELIVERY,
+                            CostModel(), "test tariff fixture", "c" * 64)
+    decided = NOW + timedelta(milliseconds=100)
+    runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
+                  decided_at=decided, input_event_ids=(event.event_id,))
+    record_manifest(runner, session_id="s", decision_id="trade-1", event=event,
+                    decided_at=decided, quantity=11, cost_model_sha256=schedule.digest())
+    runner.record_risk_verdict(session_id="s", decision_id="trade-1", verdict_id="risk-trade-1",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               assessed_at=decided)
+    execute(runner, event, decided)
+    # A legacy persisted receipt without cost evidence must remain gross-only.
+    row = runner._con.execute("SELECT receipt_json FROM paper_execution_receipts WHERE order_id='order-1'").fetchone()
+    receipt = __import__("json").loads(row[0])
+    receipt.pop("cost_items")
+    receipt.pop("charges_inr")
+    from financial_brain.forward_edge.paper_accounting import rebuild_paper_accounting
+    records = runner.records("s")
+    legacy = rebuild_paper_accounting(account_id="ledger-1", capital=Decimal("100000"),
+                                      events=records["events"], intents=records["intents"], receipts=[receipt])
+    assert legacy["status"] == "RECONCILED_GROSS"
+    assert legacy["net_pnl_eligible"] is False
+    assert legacy["realized_net_pnl_inr"] is None
     runner.close()
 
 
