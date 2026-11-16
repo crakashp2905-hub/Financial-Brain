@@ -1,0 +1,33 @@
+{
+  "schema": "fb.edge_program.reproducibility_contract.v1",
+  "python_version": "3.13.5",
+  "timezone_environment": "UTC",
+  "python_hash_seed": "20261112",
+  "exchange_timezone": "Asia/Kolkata",
+  "dependency_lock": {
+    "path": "requirements-lock.txt",
+    "sha256": "47f613e2e061e88a22a3a2e996c581e7fcf1c42db2f3b468183b915345abf852",
+    "snapshot_note": "Exact dependency snapshot recorded 2026-10-15; clean lock-install verification is run separately from the pyproject-based full CI matrix."
+  },
+  "build_tools": {
+    "pip": "25.2",
+    "setuptools": "80.9.0",
+    "wheel": "0.45.1"
+  },
+  "deterministic_fixture": {
+    "path": "docs/forward-edge/fixtures/session-cases.v1.json",
+    "sha256": "885685e43c36aa6e72762d29a7f749d36da4907e14e6bbca59f56e8b2ce27cab",
+    "test": "tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl",
+    "scope": "Synthetic acceptance cases only; this hash is not market evidence."
+  },
+  "install_and_verify": [
+    "python -m pip install --upgrade pip==25.2 setuptools==80.9.0 wheel==0.45.1",
+    "python -m pip install -r requirements-lock.txt",
+    "python -m pip install -e . --no-deps --no-build-isolation",
+    "python -m pip check",
+    "python scripts/verify_reproducibility.py",
+    "python -m pytest -q tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl"
+  ],
+  "ci_platforms": ["ubuntu-24.04", "windows-2022"],
+  "market_network_access_in_fixture_check": false
+}
