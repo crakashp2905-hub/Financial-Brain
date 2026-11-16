@@ -199,8 +199,11 @@ class ForwardSessionRunner:
             return SessionState.NO_TRADE
         return self.begin(session_id, config, now=now, preflight=preflight)
 
-    def resume(self, session_id: str) -> dict[str, Any]:
+    def resume(self, session_id: str, *, now: datetime | None = None) -> dict[str, Any]:
         """Reopen durable session context after a process restart without replaying side effects."""
+        now = now or capture_local_time(self.clock, label="session resume")
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ForwardSessionRunnerError("session resume clock must be timezone aware")
         config = self.state_store.config(session_id)
         if self.state_store.config_sha256(session_id) != config.sha256():
             raise ForwardSessionRunnerError("stored session configuration hash does not match its contents")
@@ -214,12 +217,21 @@ class ForwardSessionRunner:
             state = self.begin(session_id, config, preflight=preflight)
         elif state is SessionState.DRAINING:
             try:
-                self.close_session(session_id, complete=True)
+                self.close_session(session_id, complete=True, now=now)
             except ForwardSessionRunnerError as exc:
                 # An unresolved or incomplete close becomes durable INCOMPLETE, never an inferred success.
-                self.close_session(session_id, complete=False,
+                self.close_session(session_id, complete=False, now=now,
                                    reason=f"restart recovery could not attest a complete close: {exc}")
             state = self.state_store.state(session_id)
+        elif state is SessionState.OPEN:
+            plan = next((item for item in records["lifecycle"]
+                         if item.get("event") == "CALENDAR_PLAN" and item.get("outcome") == "OPEN"), None)
+            if plan and datetime.fromisoformat(plan["closes_at"]) <= now.astimezone(timezone.utc):
+                self.close_session(
+                    session_id, complete=False, now=now,
+                    reason="process resumed after the sourced venue close without a durable session close",
+                )
+                state = self.state_store.state(session_id)
 
         unknown: list[str] = []
         outbox_path = self.journal_path.with_name(f"{self.journal_path.stem}-outbox.sqlite")

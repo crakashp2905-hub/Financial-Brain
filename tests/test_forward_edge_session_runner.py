@@ -151,6 +151,25 @@ def test_special_session_requires_explicit_support_and_enforces_sourced_bounds(t
     runner.close()
 
 
+def test_planned_session_resumed_after_source_close_becomes_durable_incomplete(tmp_path):
+    calendar = _calendar(date(2026, 11, 13))
+    runner = make_runner(tmp_path)
+    state = runner.plan_calendar_day("planned", make_config(), venue="NSE", calendar=calendar,
+                                    now=NOW, preflight={"risk_policy_loaded": True})
+    assert state is SessionState.OPEN
+    _, closes = calendar.session_bounds_utc("NSE", date(2026, 11, 13))
+    assert runner.resume("planned", now=closes - timedelta(seconds=1))["state"] == "OPEN"
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    result = resumed.resume("planned", now=closes + timedelta(seconds=1))
+    assert result["state"] == "INCOMPLETE"
+    assert result["records"]["session_reports"][0]["status"] == "INCOMPLETE"
+    assert "without a durable session close" in result["records"]["session_reports"][0]["reason"]
+    assert resumed.resume("planned", now=closes + timedelta(seconds=2))["state"] == "INCOMPLETE"
+    resumed.close()
+
+
 def test_events_must_match_frozen_universe_and_exchange_date(tmp_path):
     runner = make_runner(tmp_path)
     opened(runner)
