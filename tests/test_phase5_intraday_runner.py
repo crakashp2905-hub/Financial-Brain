@@ -259,7 +259,7 @@ def test_live_fills_use_the_order_book_from_full_quotes(setup):
             v["depth"] = {"buy": [{"price": v["last_price"] - 0.05, "quantity": 10}],
                           "sell": [{"price": v["last_price"] + 0.05, "quantity": 12}]}
         return out
-    out = R.run_live(quote_fn=q, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
+    out = R.run_live(poll=900, quote_fn=q, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
     assert set(kinds) == {"full"}
     assert out["forward_quote_archive"]["archived"] > 0
     from financial_brain.forward_edge.quote_archive import QuoteArchive

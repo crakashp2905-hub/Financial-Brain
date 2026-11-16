@@ -150,8 +150,9 @@ Each item has a stable `PE-####` ID, a concrete change, and an independently tes
 - **Completion evidence:** `session_runner.py::ingest` and `ingest_kite_archive`; `tests/test_forward_edge_session_runner.py::test_fixture_and_kite_adapters_enter_the_same_normalized_runner` (fixture and persisted Kite events use the same runner; archived non-session-date quotes are excluded).
 - [ ] **PE-0018** — Refactor fixture-only `pipeline.run_session` to delegate to the canonical runner without changing golden outcomes.  
   **Acceptance:** All existing fixture tests pass and a trace diff shows equivalent behavior.
-- [ ] **PE-0019** — Connect existing `paper/intraday_runner.py` as a read-only producer of observed quote events.  
+- [x] **PE-0019** — Connect existing `paper/intraday_runner.py` as a read-only producer of observed quote events.
   **Acceptance:** Actual paper-runner events are normalized with exchange, receive and availability clocks.
+  **Completion evidence:** `paper.intraday_runner.run_live` passes the observed read-only Kite full-quote batch to `archive_kite_quote_batch_to_path`, persisting normalized market events. `tests/test_phase5_intraday_runner.py::test_live_fills_use_the_order_book_from_full_quotes` verifies `KITE_CONNECT_READ_ONLY`, NSE venue, event/exchange timestamp, receipt timestamp, availability timestamp, and `event_time <= received_at`. This completes the event-producer contract; runner strategy/session integration is tracked separately.
 - [ ] **PE-0020** — Connect swing/position/momentum paper books through horizon-aware adapters, not intraday callbacks.  
   **Acceptance:** A 20-session signal survives overnight and never receives same-day forced expiry.
 - [ ] **PE-0021** — Wire `forward_edge/durable.py` to the runner's event journal and decision manifests.  
