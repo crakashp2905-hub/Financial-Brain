@@ -107,6 +107,13 @@
   },
   {
    "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:etf_rank",
+   "lineage": "src/financial_brain/strategies/etf_rank.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
    "id": "MODULE:evaluation_controls",
    "lineage": "src/financial_brain/strategies/evaluation_controls.py",
    "prospective_observation": false,
