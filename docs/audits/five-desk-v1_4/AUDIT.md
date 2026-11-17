@@ -6,12 +6,12 @@ no acceptance test was run per task. Machine-readable copy: `audit.json`.
 
 | status | tasks | meaning |
 |---|---|---|
-| DONE | 94 | code and a test exist for the task as written |
-| PARTIAL | 138 | part of the task is built and tested; the rest is named in the note |
-| FOOTHOLD | 65 | a reusable building block exists, but the task's own subject is not built |
-| NOT_STARTED | 108 | nothing in the repository addresses it |
+| DONE | 121 | code and a test exist for the task as written |
+| PARTIAL | 152 | part of the task is built and tested; the rest is named in the note |
+| FOOTHOLD | 62 | a reusable building block exists, but the task's own subject is not built |
+| NOT_STARTED | 70 | nothing in the repository addresses it |
 
-Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
+Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 
 ## Branches the evidence lives on
 
@@ -22,9 +22,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | codex | `codex/forward-edge-falsification-audit-20261115` | `13e2ab6695` | 163 | 0 | 377 |
 | dyn | `feature/dynamic-evidence-standard` | `7494a5e3f0` | 3 | 0 | 323 |
 | d1 | `feature/five-desk-d1-instruments` | `8b0b12cef3` | 1 | 0 | 323 |
-| d2 | `feature/five-desk-d2-data-parity` | `b679518068` | 22 | 0 | 342 |
+| d2 | `feature/five-desk-d2-data-parity` | `7e7a6fbe9c` | 25 | 0 | 344 |
 
-218 tasks cite evidence that is not on `main`.
+259 tasks cite evidence that is not on `main`.
 
 ## By section
 
@@ -54,19 +54,19 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | 21. Profit attribution, signal effectiveness and business scorecards — P0 | 2 | 5 | 1 | 0 |
 | 22. Prospective strategy discovery and promotion — P0/P1 | 0 | 6 | 2 | 0 |
 | 23. Trader control room, alert ergonomics and fail-safe operations — P0/P1 | 3 | 5 | 0 | 0 |
-| 24A. Index and derivative universe / data — P0 | 0 | 2 | 2 | 1 |
+| 24A. Index and derivative universe / data — P0 | 1 | 2 | 2 | 0 |
 | 24B. Chronological 15-minute labels, features and leakage controls — P0 | 3 | 1 | 0 | 1 |
-| 24C. Probabilistic forecasting models and adaptation — P0/P1 | 0 | 2 | 2 | 1 |
-| 24D. Options conversion, entry/exit, SL/TP — P0 | 1 | 2 | 0 | 2 |
-| 24E. Automatic paper routing and correlated risk — P0 | 0 | 1 | 1 | 3 |
+| 24C. Probabilistic forecasting models and adaptation — P0/P1 | 0 | 3 | 2 | 0 |
+| 24D. Options conversion, entry/exit, SL/TP — P0 | 2 | 2 | 0 | 1 |
+| 24E. Automatic paper routing and correlated risk — P0 | 1 | 1 | 1 | 2 |
 | 24F. Backtest design and legitimate forward validation — P0 | 1 | 1 | 2 | 1 |
-| 24G. Live 15-minute operating system — P0/P1 | 0 | 0 | 0 | 5 |
+| 24G. Live 15-minute operating system — P0/P1 | 2 | 2 | 0 | 1 |
 | 24H. Adversarial tests and acceptance — P0 | 1 | 2 | 0 | 2 |
-| 25A. Source preservation and ambiguities | 0 | 0 | 0 | 8 |
-| 25B. Indicators, fractals and node state machine | 0 | 0 | 2 | 6 |
-| 25C. Entry filters and exit engine | 0 | 0 | 0 | 8 |
-| 25D. Indian-market adaptation and options routing | 0 | 0 | 0 | 8 |
-| 25E. Research integrity, evaluation and release | 0 | 0 | 1 | 11 |
+| 25A. Source preservation and ambiguities | 7 | 1 | 0 | 0 |
+| 25B. Indicators, fractals and node state machine | 6 | 2 | 0 | 0 |
+| 25C. Entry filters and exit engine | 5 | 3 | 0 | 0 |
+| 25D. Indian-market adaptation and options routing | 1 | 3 | 0 | 4 |
+| 25E. Research integrity, evaluation and release | 3 | 2 | 0 | 7 |
 
 ## Every task
 
@@ -394,7 +394,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | FB-2307 | DONE |  | `docs/runbooks/five-desk-operator.md` (d2 fc5016c) | Add a documented operator runbook: — operator runbook |
 | FB-2308 | DONE |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd) | Define a daily acceptance gate where the desk cannot report `SESSION_COMPLETE` until all open orders, fills, paper positions, cash, fund units, fees a — SESSION_COMPLETE gate |
 | FB-2401 | FOOTHOLD |  | `indices/lineage.py` (main bd8821b)<br>`ingest/index_tri.py` (main 6c5f825) | Build `index_master` for *all available Nifty indexes* keyed by canonical index identifier, effective-dated name/symbol, index family, provider token, — daily index series; no effective-dated index master |
-| FB-2402 | NOT_STARTED |  |  | Maintain separate `optionable_index_master` from NSE's current listed derivative underlyings and effective-dated contract files: |
+| FB-2402 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Maintain separate `optionable_index_master` from NSE's current listed derivative underlyings and effective-dated contract files: — dated optionable-index snapshots |
 | FB-2403 | PARTIAL |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Ingest permitted 1-minute historical index prices and live index ticks; — 15m bars from 1m without volume; live tick ingest not built |
 | FB-2404 | FOOTHOLD | EXTERNAL: option tick/OI entitlement; depth-archive task is unregistered (owner) | `ingest/options_quotes.py` (main e94f157)<br>`ingest/depth_archive.py` (main 307c7d3) | Subscribe to current option contract ticks, bid/ask, visible quantities, OI, implied-vol inputs, expiry/strike/lot-size metadata, timestamps and sourc |
 | FB-2405 | PARTIAL | EXTERNAL: provider entitlement and retention limits | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Maintain exchange-date-specific sessions, scheduled bar boundaries, holidays, auctions, expiry cutoffs, provider disconnects and availability calendar — partial bars never presented as full; holiday/auction calendars external |
@@ -404,16 +404,16 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | FB-2409 | NOT_STARTED |  |  | Add cross-index features: |
 | FB-2410 | DONE |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Write leak tests: — mutation leak check on bars after cutoff |
 | FB-2411 | PARTIAL |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Train naive frequency, no-change, price-persistence and volatility/time-of-day baseline classifiers for each index/horizon; — class-frequency baseline; persistence/vol baselines missing |
-| FB-2412 | NOT_STARTED |  |  | Train versioned, low-variance tree/logistic models on completed bars; |
+| FB-2412 | PARTIAL |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Train versioned, low-variance tree/logistic models on completed bars; — versioned logistic model; tree and multi-index comparison not run |
 | FB-2413 | PARTIAL |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Generate `P_UP`, `P_DOWN`, `P_FLAT`, expected return in index points/bps, and prediction interval; — probability validation and Brier; no prediction interval |
 | FB-2414 | FOOTHOLD |  | `forecasting/calibration.py` (main 4d45d3d) | Fit probabilities with held-out chronological calibration (e.g. |
 | FB-2415 | FOOTHOLD |  | `forecasting/ensemble.py` (main 1782c15)<br>`decisions/forecast_ev.py` (main 1dd9edf) | Use `forecasting/ensemble.py`, `forecasting/calibration.py` and `decisions/forecast_ev.py` where appropriate; |
 | FB-2416 | DONE |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Map each index forecast to CE, PE, defined-risk debit-spread or `NO_TRADE` candidates from *presently listed instruments*; — listed, unexpired, fresh, two-sided, deep contracts only |
 | FB-2417 | PARTIAL |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Convert full projected underlying-return/IV/time paths into option-premium outcome distributions with delta, gamma, theta, vega, spreads and realistic — delta-gamma-theta-vega expectation; no full path simulation |
 | FB-2418 | PARTIAL |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Rank option candidates by **expected executable net P&L**, downside tails, risk-adjusted expected value and portfolio marginal impact; — ranked by expected net per lot; no tail/portfolio impact |
-| FB-2419 | NOT_STARTED |  |  | Publish fully linked **BUY CE / BUY PE / BUY SPREAD** and **SELL/EXIT** intentions including exchange token, expiry, strike, lots, limit-entry band, o |
+| FB-2419 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Publish fully linked **BUY CE / BUY PE / BUY SPREAD** and **SELL/EXIT** intentions including exchange token, expiry, strike, lots, limit-entry band, o — linked BUY CE/PE card with exits, TTL and max planned loss |
 | FB-2420 | NOT_STARTED |  |  | Model expiry-specific restrictions, fast gamma/theta changes, sharp IV collapse, spread widening, large gaps, settlement and multi-leg fill risk; |
-| FB-2421 | NOT_STARTED |  |  | At each valid forecast decision, append an immutable event with `forecast_id`, `index_id`, bar cutoff, data/source timestamps, strategy/config hash, m |
+| FB-2421 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | At each valid forecast decision, append an immutable event with `forecast_id`, `index_id`, bar cutoff, data/source timestamps, strategy/config hash, m — append-only hash-chained forecast events |
 | FB-2422 | FOOTHOLD |  | `paper/options_runner.py` (main 869e2e5) | Auto-route eligible signals through the **canonical paper OMS**. |
 | FB-2423 | NOT_STARTED |  |  | Monitor open paper options **between** 15-minute forecast updates using live market/option ticks for SL, TP, time exit, expiry and invalidation; |
 | FB-2424 | NOT_STARTED |  |  | Aggregate exposure across NIFTY, BANKNIFTY, FINNIFTY, stocks and index ETFs; |
@@ -423,57 +423,57 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | FB-2428 | FOOTHOLD |  | `forecasting/null.py` (main aa8eade)<br>`forward_edge/intraday_nulls.py` (f00 b888eef) | Test against no-trade, class-frequency, always-up, momentum, simple volatility and cost-matched CE/PE null strategies; |
 | FB-2429 | FOOTHOLD |  | `forward_edge/cohort_blocks.py` (f00 e4bd8ae) | Evaluate dependent observations with session-level clustering or block bootstrap, index-correlation adjustment, multiple-testing correction, and separ |
 | FB-2430 | PARTIAL | OWNER: 2026Q4 trial budget is spent: governance amendment or 2027Q1 | `docs/trials/ledger.jsonl` (main 2a2b54a) | Register this as a **new** strategy/version in existing trial governance; — failed index and minute-bar verdicts are preserved; no new registration made |
-| FB-2431 | NOT_STARTED |  |  | Schedule one event at completion of every eligible 15m interval (e.g. |
-| FB-2432 | NOT_STARTED |  |  | Implement WebSocket reconnect, backfill-on-gap, clock skew checks, inference timeouts, circuit breakers, stale-data sentinel, and idempotent resume; |
+| FB-2431 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Schedule one event at completion of every eligible 15m interval (e.g. — one decision per completed 15-minute interval |
+| FB-2432 | PARTIAL |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Implement WebSocket reconnect, backfill-on-gap, clock skew checks, inference timeouts, circuit breakers, stale-data sentinel, and idempotent resume; — UNAVAILABLE on stale/missing inputs; reconnect/backfill not built |
 | FB-2433 | NOT_STARTED |  |  | Create an index heatmap/cockpit with per-index UP/DOWN/FLAT, directional probability, expected points, uncertainty, regime, model version, timestamp a |
-| FB-2434 | NOT_STARTED |  |  | Generate actionable option cards displaying current contract, strike/expiry, CE/PE, price band, SL/TP, modeled risk-reward and **net** expected value, |
-| FB-2435 | NOT_STARTED |  |  | Publish end-of-day audit: |
+| FB-2434 | PARTIAL |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Generate actionable option cards displaying current contract, strike/expiry, CE/PE, price band, SL/TP, modeled risk-reward and **net** expected value, — option card data; no UI |
+| FB-2435 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Publish end-of-day audit: — EOD audit by index/state with unresolved list |
 | FB-2436 | PARTIAL |  | `tests/test_index_15m_s24.py` (d2 100fc90) | Unit-test 15-minute bar closing, feature as-of boundaries, label computation, market open/close, partial bars, no-data, exchange holidays and index in — bar close, as-of, labels, partial bars; holidays external |
 | FB-2437 | PARTIAL |  | `tests/test_index_15m_s24.py` (d2 100fc90)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Property-test calibrated probabilities sum to 1, all candidate contracts exist in the effective-dated instrument master, and no paper order can refer  — probabilities sum to 1; unlisted/expired/zero-depth refused |
 | FB-2438 | DONE |  | `tests/test_index_options_s24d.py` (d2 c64d3cc) | Simulate a 15m bullish index forecast with options inflated by IV/theta/spread: — bullish forecast with costly option gives NO_TRADE |
 | FB-2439 | NOT_STARTED |  |  | Exercise two simultaneous index forecasts with shared exposure, partial entry/exit fills, duplicate tick batches, reconnect, feed lag, exchange halt,  |
 | FB-2440 | NOT_STARTED | TIME: real-session paper rehearsal |  | Complete a real-session *paper-only* rehearsal with six derivative indices plus any research-only index subset, timestamped 15m signals, monitored exi |
-| FB-2501 | NOT_STARTED | OWNER: the original 4-Node rules document is not in the repository; the owner must supply it |  | Archive the user-supplied 2025-08-22 09:30 XAUUSD M1 Four-Node rules verbatim in a versioned specification with source hash and no silent edits. |
-| FB-2502 | NOT_STARTED |  |  | Create `FourNode_XAU_Original_v1` as non-executable research reference and `FourNode_India_v1` as separately versioned, initially paper-only implement |
-| FB-2503 | NOT_STARTED | OWNER: owner must choose the BUY-exception interpretation |  | Flag BUY exception text (“below N2”) as contradictory to normal BUY (“above N2”); |
-| FB-2504 | NOT_STARTED | OWNER: owner must confirm N3 midpoint symmetry |  | Flag BUY N3 <= 20C midpoint and SELL N3 <= 20C midpoint symmetry/asymmetry as unresolved; |
-| FB-2505 | NOT_STARTED | OWNER: owner must confirm the N2 comparator |  | Flag N2 sell <= 20C Low, N2 buy <= 20C High, and original “20H High” typo; |
-| FB-2506 | NOT_STARTED | OWNER: owner must define N4 |  | Define N4 precisely (fourth confirmed fractal pivot versus breakout candle), its confirmation time, wick test and exit trigger; |
-| FB-2507 | NOT_STARTED | OWNER: owner must define a significant candle |  | Specify “significant candle” rigorously: |
-| FB-2508 | NOT_STARTED | OWNER: owner must give the Fibonacci anchors |  | Define Fibonacci anchors, timezone/session boundaries, daily reset, whether levels come from previous completed day, and levels outside 0–100%; |
-| FB-2509 | NOT_STARTED |  |  | Implement configurable Wilder-style SMMA(20) separately for Low, Close and High as `20C`; |
-| FB-2510 | NOT_STARTED |  |  | Implement SMMA(8), SMMA(50), SMMA(100), SMMA(200) on Close with explicit warm-up and consistent alignment; |
-| FB-2511 | NOT_STARTED |  |  | Implement the complete original daily Fibonacci ratio set: |
-| FB-2512 | FOOTHOLD |  | `patterns/pivots.py` (main 4fe8db1) | Build configurable fractal detector with left/right confirmation windows, plateau/tie policy, minimum swing size and pivot-high/pivot-low alternation. — confirmed-pivot detector to reuse |
-| FB-2513 | NOT_STARTED |  |  | Store node `pivot_at` separately from `confirmed_at`, `observable_at`, price, side, parent chain and source bar IDs. |
-| FB-2514 | FOOTHOLD |  | `patterns/streaming.py` (main 794db99) | Implement N1→N2→N3→N4 zigzag state machine, reset/invalidation rules, expiry, same-bar conflict handling and idempotent event replay. |
-| FB-2515 | NOT_STARTED |  |  | Enforce exactly three permanently confirmed trending fractal nodes before evaluating breakout through N2 on a completed M1 candle. |
-| FB-2516 | NOT_STARTED |  |  | Define buy/sell direction, N1-to-20C High/Low, N3-to-20C Mid, N2-to-20C limits and exception logic as explicit independent predicates with reason code |
-| FB-2517 | NOT_STARTED |  |  | Implement close-confirmed N2 breakout with strictly later actionable order timestamp; |
-| FB-2518 | NOT_STARTED |  |  | Implement D1=|N2−N3| and D2=|entry−N2| with inclusive/exclusive boundaries configurable; |
-| FB-2519 | NOT_STARTED |  |  | Enforce minimum distance to daily Fibonacci levels and SMMA50/100/200, accounting for direction, support/resistance geometry and original 20-pip basel |
-| FB-2520 | NOT_STARTED |  |  | Implement broker spread-aware initial stop beyond N3 (SELL above, BUY below) and reject trades with excessive initial risk. |
-| FB-2521 | NOT_STARTED |  |  | Implement original 20-pip TP and max 15-pip stop as XAU-specific configurable baseline, with separate ATR/tick/percent alternatives for Indian assets. |
-| FB-2522 | NOT_STARTED |  |  | Implement the original trailing rule: |
-| FB-2523 | NOT_STARTED |  |  | Clarify whether the 10-pip activation and 5-pip SL offset are measured on bid/ask executable prices, and prevent spread-induced false trigger or impos |
-| FB-2524 | NOT_STARTED |  |  | Implement N4 wick <5 pip filter and significant-candle early exit as separate, precisely timestamped controls, pending source ambiguity resolution. |
-| FB-2525 | NOT_STARTED |  |  | Create per-instrument conversion config for tick size, ATR normalization, spread, expected slippage, trading hours, contract multiplier and corporate  |
-| FB-2526 | NOT_STARTED |  |  | Replace forex balance multiplier X with capital-at-risk sizing; |
+| FB-2501 | DONE |  | `docs/strategies/four_node/source/SHA256SUMS` (d2 0442d53)<br>`strategies/four_node/spec.py` (d2 de251d8)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Archive the user-supplied 2025-08-22 09:30 XAUUSD M1 Four-Node rules verbatim in a versioned specification with source hash and no silent edits. — verbatim source and Pine reference archived with SHA-256 |
+| FB-2502 | DONE |  | `strategies/four_node/spec.py` (d2 de251d8)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Create `FourNode_XAU_Original_v1` as non-executable research reference and `FourNode_India_v1` as separately versioned, initially paper-only implement — XAU reference (never executable) and India variant, independent params |
+| FB-2503 | DONE |  | `strategies/four_node/spec.py` (d2 de251d8)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Flag BUY exception text (“below N2”) as contradictory to normal BUY (“above N2”); — flagged; variant BLOCKED until owner choice |
+| FB-2504 | DONE |  | `strategies/four_node/spec.py` (d2 de251d8)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Flag BUY N3 <= 20C midpoint and SELL N3 <= 20C midpoint symmetry/asymmetry as unresolved; — both hypotheses named; never pooled |
+| FB-2505 | PARTIAL |  | `strategies/four_node/spec.py` (d2 de251d8)<br>`strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Flag N2 sell <= 20C Low, N2 buy <= 20C High, and original “20H High” typo; — comparator alternatives; inclusive-boundary fixtures for N2 not added |
+| FB-2506 | DONE |  | `strategies/four_node/spec.py` (d2 de251d8)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Define N4 precisely (fourth confirmed fractal pivot versus breakout candle), its confirmation time, wick test and exit trigger; — N4 alternatives; unresolved blocks |
+| FB-2507 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Specify “significant candle” rigorously: — both candle definitions with fixtures; unresolved returns None |
+| FB-2508 | DONE |  | `strategies/four_node/indicators.py` (d2 914c5c2)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Define Fibonacci anchors, timezone/session boundaries, daily reset, whether levels come from previous completed day, and levels outside 0–100%; — prior-day-only Fib with named anchor |
+| FB-2509 | DONE |  | `strategies/four_node/indicators.py` (d2 914c5c2)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement configurable Wilder-style SMMA(20) separately for Low, Close and High as `20C`; — Wilder SMMA 20 on low/close/high, warm-up and gap reset |
+| FB-2510 | PARTIAL |  | `strategies/four_node/indicators.py` (d2 914c5c2)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement SMMA(8), SMMA(50), SMMA(100), SMMA(200) on Close with explicit warm-up and consistent alignment; — SMMA on close for any period; parity only against hand reference |
+| FB-2511 | DONE |  | `strategies/four_node/indicators.py` (d2 914c5c2)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement the complete original daily Fibonacci ratio set: — full 27-ratio set |
+| FB-2512 | DONE |  | `strategies/four_node/nodes.py` (d2 904c065)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Build configurable fractal detector with left/right confirmation windows, plateau/tie policy, minimum swing size and pivot-high/pivot-low alternation. — left/right windows, strict ties, alternation, no repaint |
+| FB-2513 | DONE |  | `strategies/four_node/nodes.py` (d2 904c065)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Store node `pivot_at` separately from `confirmed_at`, `observable_at`, price, side, parent chain and source bar IDs. — pivot_at separate from confirmed_at |
+| FB-2514 | PARTIAL |  | `strategies/four_node/nodes.py` (d2 904c065)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement N1→N2→N3→N4 zigzag state machine, reset/invalidation rules, expiry, same-bar conflict handling and idempotent event replay. — zigzag with replace events; invalidation/expiry rules not defined |
+| FB-2515 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Enforce exactly three permanently confirmed trending fractal nodes before evaluating breakout through N2 on a completed M1 candle. — three observable nodes required; unobservable rejected |
+| FB-2516 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Define buy/sell direction, N1-to-20C High/Low, N3-to-20C Mid, N2-to-20C limits and exception logic as explicit independent predicates with reason code — named predicates with passed/failed reason codes |
+| FB-2517 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement close-confirmed N2 breakout with strictly later actionable order timestamp; — entry actionable next bar, not at the breakout close |
+| FB-2518 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement D1=|N2−N3| and D2=|entry−N2| with inclusive/exclusive boundaries configurable; — D1 inclusive, D2 exclusive boundary tested |
+| FB-2519 | PARTIAL |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Enforce minimum distance to daily Fibonacci levels and SMMA50/100/200, accounting for direction, support/resistance geometry and original 20-pip basel — barrier clearance; ahead/behind geometry not distinguished |
+| FB-2520 | PARTIAL |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement broker spread-aware initial stop beyond N3 (SELL above, BUY below) and reject trades with excessive initial risk. — spread-aware stop beyond N3 and max risk; tick rounding not applied |
+| FB-2521 | DONE |  | `strategies/four_node/spec.py` (d2 de251d8)<br>`strategies/four_node/rules.py` (d2 7328107) | Implement original 20-pip TP and max 15-pip stop as XAU-specific configurable baseline, with separate ATR/tick/percent alternatives for Indian assets. — XAU pips kept for reference; India uses ATR multiples |
+| FB-2522 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement the original trailing rule: — trail start, step ratchet, never loosens, both sides |
+| FB-2523 | PARTIAL |  | `strategies/four_node/rules.py` (d2 7328107) | Clarify whether the 10-pip activation and 5-pip SL offset are measured on bid/ask executable prices, and prevent spread-induced false trigger or impos — trail takes an executable price; bid/ask choice left to caller |
+| FB-2524 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement N4 wick <5 pip filter and significant-candle early exit as separate, precisely timestamped controls, pending source ambiguity resolution. — unknown candle/N4 definition returns BLOCKED |
+| FB-2525 | PARTIAL |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Create per-instrument conversion config for tick size, ATR normalization, spread, expected slippage, trading hours, contract multiplier and corporate  — instrument config for tick, multiplier, ATR, spread, slippage |
+| FB-2526 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Replace forex balance multiplier X with capital-at-risk sizing; — rupee risk sizing in whole lots; forex X rule not used |
 | FB-2527 | NOT_STARTED |  |  | Prioritize underlying Nifty/Bank Nifty and liquid equities/ETFs for directional tests; |
-| FB-2528 | NOT_STARTED |  |  | Bridge underlying fractal BUY/SELL signal into index options CE/PE candidate generation without assuming an underlying move implies positive option P& |
-| FB-2529 | NOT_STARTED |  |  | Evaluate option expiry, strike, observed bid/ask, IV, Greeks, time decay, liquidity and depth for each CE/PE candidate at signal time. |
+| FB-2528 | PARTIAL |  | `docs/strategies/four_node/README.md` (d2 6c228bc)<br>`signals/index_options.py` (d2 886df31) | Bridge underlying fractal BUY/SELL signal into index options CE/PE candidate generation without assuming an underlying move implies positive option P& — bridge documented through index_options; not wired |
+| FB-2529 | PARTIAL |  | `signals/index_options.py` (d2 886df31) | Evaluate option expiry, strike, observed bid/ask, IV, Greeks, time decay, liquidity and depth for each CE/PE candidate at signal time. — option checks reused; stale quotes give UNPRICED/NO_TRADE |
 | FB-2530 | NOT_STARTED |  |  | Map underlying invalidation and exit conditions to option-premium SL/TP, max premium risk, time stop and tick-driven exit monitoring; |
 | FB-2531 | NOT_STARTED |  |  | Implement separate futures and ETF execution adapters with correct contract sizing, margin/settlement, liquidity and fee models; |
 | FB-2532 | NOT_STARTED |  |  | Integrate as an optional signal source into the 15-minute Nifty forecasting desk while keeping native M1 pattern clock and independent tick-driven ris |
-| FB-2533 | FOOTHOLD |  | `patterns/pivots.py` (main 4fe8db1)<br>`patterns/streaming.py` (main 794db99)<br>`kernel/indicators.py` (main af465fa)<br>`ingest/kite_minute.py` (main 90c7d0e) | Reuse `patterns/pivots.py`, `patterns/streaming.py`, `kernel/indicators.py`, `ingest/kite_minute.py`, `paper/intraday_runner.py` and `paper/options_ru — modules exist; no interface audit written |
+| FB-2533 | DONE |  | `docs/strategies/four_node/README.md` (d2 6c228bc) | Reuse `patterns/pivots.py`, `patterns/streaming.py`, `kernel/indicators.py`, `ingest/kite_minute.py`, `paper/intraday_runner.py` and `paper/options_ru — reuse map |
 | FB-2534 | NOT_STARTED |  |  | Build point-in-time replay with original bar timestamps, historical instrument eligibility, warm-up and confirmed-pivot latency; |
 | FB-2535 | NOT_STARTED | EXTERNAL: licensed XAUUSD M1 data |  | Test the unmodified XAU baseline only on suitable XAU data if legally available; |
 | FB-2536 | NOT_STARTED | OWNER: trial-budget decision as FB-2430 |  | Pre-register India variants, instrument universe, parameter bounds, entry/exit rules, cost model and statistical gates before evaluation; |
-| FB-2537 | NOT_STARTED |  |  | Run walk-forward tests across disjoint time windows and market regimes; |
+| FB-2537 | PARTIAL |  | `docs/strategies/four_node/README.md` (d2 6c228bc)<br>`forecasting/index_15m.py` (d2 9a96b5b) | Run walk-forward tests across disjoint time windows and market regimes; — purged splits available; no run |
 | FB-2538 | NOT_STARTED |  |  | Benchmark against simple N2 breakout, opening-range breakout, random-entry matched-exposure, and no-trade baselines. |
 | FB-2539 | NOT_STARTED |  |  | Use realistic spread, latency, commissions, taxes, price gaps, option premium decay and conservative same-bar SL/TP ordering. |
 | FB-2540 | NOT_STARTED |  |  | Perform parameter stability and multiple-testing corrections across fractal widths, moving-average variants, ATR scaling, Fibonacci filters and asset  |
-| FB-2541 | NOT_STARTED |  |  | Track funnel: |
-| FB-2542 | NOT_STARTED |  |  | Add per-trade evidence: |
-| FB-2543 | NOT_STARTED |  |  | Run adversarial tests for repainting, missed candles, reconnect, holiday rollover, stale bid/ask, bid/ask inversion, ambiguous same-bar fills, crashes |
+| FB-2541 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Track funnel: — funnel stages deduped and reconciled by event id |
+| FB-2542 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Add per-trade evidence: — per-trade trace record |
+| FB-2543 | PARTIAL |  | `tests/test_four_node_s25.py` (d2 ced6185) | Run adversarial tests for repainting, missed candles, reconnect, holiday rollover, stale bid/ask, bid/ask inversion, ambiguous same-bar fills, crashes — repaint and blocked-variant tests; reconnect/crash not simulated |
 | FB-2544 | NOT_STARTED | TIME: prospective paper sessions |  | Promote only after independent prospective paper sessions show stable positive net risk-adjusted results beyond costs and appropriately corrected base |

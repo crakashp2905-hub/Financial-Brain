@@ -45,10 +45,10 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "b679518068",
-   "ahead_of_main": 22,
+   "commit": "7e7a6fbe9c",
+   "ahead_of_main": 25,
    "behind_main": 0,
-   "test_files": 342
+   "test_files": 344
   }
  },
  "status_meaning": {
@@ -58,15 +58,15 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 138,
-  "DONE": 94,
-  "FOOTHOLD": 65,
-  "NOT_STARTED": 108
+  "PARTIAL": 152,
+  "DONE": 121,
+  "FOOTHOLD": 62,
+  "NOT_STARTED": 70
  },
  "by_dependency": {
-  "IN_HOUSE": 375,
+  "IN_HOUSE": 382,
   "EXTERNAL": 11,
-  "OWNER": 13,
+  "OWNER": 6,
   "TIME": 6
  },
  "tasks": [
@@ -7339,13 +7339,27 @@
    "id": "FB-2402",
    "section": "24A. Index and derivative universe / data \u2014 P0",
    "title": "Maintain separate `optionable_index_master` from NSE's current listed derivative underlyings and effective-dated contract files:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "dated optionable-index snapshots",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_ops.py",
+     "ref": "d2",
+     "object": "8d82871d1788"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_ops.py",
+     "ref": "d2",
+     "object": "89fae4f20bbe"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2403",
@@ -7568,13 +7582,27 @@
    "id": "FB-2412",
    "section": "24C. Probabilistic forecasting models and adaptation \u2014 P0/P1",
    "title": "Train versioned, low-variance tree/logistic models on completed bars;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "versioned logistic model; tree and multi-index comparison not run",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_ops.py",
+     "ref": "d2",
+     "object": "8d82871d1788"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_ops.py",
+     "ref": "d2",
+     "object": "89fae4f20bbe"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2413",
@@ -7725,13 +7753,27 @@
    "id": "FB-2419",
    "section": "24D. Options conversion, entry/exit, SL/TP \u2014 P0",
    "title": "Publish fully linked **BUY CE / BUY PE / BUY SPREAD** and **SELL/EXIT** intentions including exchange token, expiry, strike, lots, limit-entry band, o",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "linked BUY CE/PE card with exits, TTL and max planned loss",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_ops.py",
+     "ref": "d2",
+     "object": "8d82871d1788"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_ops.py",
+     "ref": "d2",
+     "object": "89fae4f20bbe"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2420",
@@ -7749,13 +7791,27 @@
    "id": "FB-2421",
    "section": "24E. Automatic paper routing and correlated risk \u2014 P0",
    "title": "At each valid forecast decision, append an immutable event with `forecast_id`, `index_id`, bar cutoff, data/source timestamps, strategy/config hash, m",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "append-only hash-chained forecast events",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_ops.py",
+     "ref": "d2",
+     "object": "8d82871d1788"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_ops.py",
+     "ref": "d2",
+     "object": "89fae4f20bbe"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2422",
@@ -7930,25 +7986,53 @@
    "id": "FB-2431",
    "section": "24G. Live 15-minute operating system \u2014 P0/P1",
    "title": "Schedule one event at completion of every eligible 15m interval (e.g.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "one decision per completed 15-minute interval",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_ops.py",
+     "ref": "d2",
+     "object": "8d82871d1788"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_ops.py",
+     "ref": "d2",
+     "object": "89fae4f20bbe"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2432",
    "section": "24G. Live 15-minute operating system \u2014 P0/P1",
    "title": "Implement WebSocket reconnect, backfill-on-gap, clock skew checks, inference timeouts, circuit breakers, stale-data sentinel, and idempotent resume;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "UNAVAILABLE on stale/missing inputs; reconnect/backfill not built",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_ops.py",
+     "ref": "d2",
+     "object": "8d82871d1788"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_ops.py",
+     "ref": "d2",
+     "object": "89fae4f20bbe"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2433",
@@ -7966,25 +8050,53 @@
    "id": "FB-2434",
    "section": "24G. Live 15-minute operating system \u2014 P0/P1",
    "title": "Generate actionable option cards displaying current contract, strike/expiry, CE/PE, price band, SL/TP, modeled risk-reward and **net** expected value,",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "option card data; no UI",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_ops.py",
+     "ref": "d2",
+     "object": "8d82871d1788"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_ops.py",
+     "ref": "d2",
+     "object": "89fae4f20bbe"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2435",
    "section": "24G. Live 15-minute operating system \u2014 P0/P1",
    "title": "Publish end-of-day audit:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "EOD audit by index/state with unresolved list",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_ops.py",
+     "ref": "d2",
+     "object": "8d82871d1788"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_ops.py",
+     "ref": "d2",
+     "object": "89fae4f20bbe"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2436",
@@ -8079,325 +8191,680 @@
    "id": "FB-2501",
    "section": "25A. Source preservation and ambiguities",
    "title": "Archive the user-supplied 2025-08-22 09:30 XAUUSD M1 Four-Node rules verbatim in a versioned specification with source hash and no silent edits.",
-   "status": "NOT_STARTED",
-   "dependency": "OWNER",
-   "blocker": "the original 4-Node rules document is not in the repository; the owner must supply it",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "status": "DONE",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "verbatim source and Pine reference archived with SHA-256",
+   "source": [
+    {
+     "path": "docs/strategies/four_node/source/SHA256SUMS",
+     "ref": "d2",
+     "object": "0442d53d4eb6"
+    },
+    {
+     "path": "src/financial_brain/strategies/four_node/spec.py",
+     "ref": "d2",
+     "object": "de251d84e058"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2502",
    "section": "25A. Source preservation and ambiguities",
    "title": "Create `FourNode_XAU_Original_v1` as non-executable research reference and `FourNode_India_v1` as separately versioned, initially paper-only implement",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "XAU reference (never executable) and India variant, independent params",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/spec.py",
+     "ref": "d2",
+     "object": "de251d84e058"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2503",
    "section": "25A. Source preservation and ambiguities",
    "title": "Flag BUY exception text (\u201cbelow N2\u201d) as contradictory to normal BUY (\u201cabove N2\u201d);",
-   "status": "NOT_STARTED",
-   "dependency": "OWNER",
-   "blocker": "owner must choose the BUY-exception interpretation",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "status": "DONE",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "flagged; variant BLOCKED until owner choice",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/spec.py",
+     "ref": "d2",
+     "object": "de251d84e058"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2504",
    "section": "25A. Source preservation and ambiguities",
    "title": "Flag BUY N3 <= 20C midpoint and SELL N3 <= 20C midpoint symmetry/asymmetry as unresolved;",
-   "status": "NOT_STARTED",
-   "dependency": "OWNER",
-   "blocker": "owner must confirm N3 midpoint symmetry",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "status": "DONE",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "both hypotheses named; never pooled",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/spec.py",
+     "ref": "d2",
+     "object": "de251d84e058"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2505",
    "section": "25A. Source preservation and ambiguities",
    "title": "Flag N2 sell <= 20C Low, N2 buy <= 20C High, and original \u201c20H High\u201d typo;",
-   "status": "NOT_STARTED",
-   "dependency": "OWNER",
-   "blocker": "owner must confirm the N2 comparator",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "status": "PARTIAL",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "comparator alternatives; inclusive-boundary fixtures for N2 not added",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/spec.py",
+     "ref": "d2",
+     "object": "de251d84e058"
+    },
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2506",
    "section": "25A. Source preservation and ambiguities",
    "title": "Define N4 precisely (fourth confirmed fractal pivot versus breakout candle), its confirmation time, wick test and exit trigger;",
-   "status": "NOT_STARTED",
-   "dependency": "OWNER",
-   "blocker": "owner must define N4",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "status": "DONE",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "N4 alternatives; unresolved blocks",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/spec.py",
+     "ref": "d2",
+     "object": "de251d84e058"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2507",
    "section": "25A. Source preservation and ambiguities",
    "title": "Specify \u201csignificant candle\u201d rigorously:",
-   "status": "NOT_STARTED",
-   "dependency": "OWNER",
-   "blocker": "owner must define a significant candle",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "status": "DONE",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "both candle definitions with fixtures; unresolved returns None",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2508",
    "section": "25A. Source preservation and ambiguities",
    "title": "Define Fibonacci anchors, timezone/session boundaries, daily reset, whether levels come from previous completed day, and levels outside 0\u2013100%;",
-   "status": "NOT_STARTED",
-   "dependency": "OWNER",
-   "blocker": "owner must give the Fibonacci anchors",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "status": "DONE",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "prior-day-only Fib with named anchor",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/indicators.py",
+     "ref": "d2",
+     "object": "914c5c2cc99b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2509",
    "section": "25B. Indicators, fractals and node state machine",
    "title": "Implement configurable Wilder-style SMMA(20) separately for Low, Close and High as `20C`;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "Wilder SMMA 20 on low/close/high, warm-up and gap reset",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/indicators.py",
+     "ref": "d2",
+     "object": "914c5c2cc99b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2510",
    "section": "25B. Indicators, fractals and node state machine",
    "title": "Implement SMMA(8), SMMA(50), SMMA(100), SMMA(200) on Close with explicit warm-up and consistent alignment;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "SMMA on close for any period; parity only against hand reference",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/indicators.py",
+     "ref": "d2",
+     "object": "914c5c2cc99b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2511",
    "section": "25B. Indicators, fractals and node state machine",
    "title": "Implement the complete original daily Fibonacci ratio set:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "full 27-ratio set",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/indicators.py",
+     "ref": "d2",
+     "object": "914c5c2cc99b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2512",
    "section": "25B. Indicators, fractals and node state machine",
    "title": "Build configurable fractal detector with left/right confirmation windows, plateau/tie policy, minimum swing size and pivot-high/pivot-low alternation.",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "confirmed-pivot detector to reuse",
+   "note": "left/right windows, strict ties, alternation, no repaint",
    "source": [
     {
-     "path": "src/financial_brain/patterns/pivots.py",
-     "ref": "main",
-     "object": "4fe8db1bc368"
+     "path": "src/financial_brain/strategies/four_node/nodes.py",
+     "ref": "d2",
+     "object": "904c065ad2db"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2513",
    "section": "25B. Indicators, fractals and node state machine",
    "title": "Store node `pivot_at` separately from `confirmed_at`, `observable_at`, price, side, parent chain and source bar IDs.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "pivot_at separate from confirmed_at",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/nodes.py",
+     "ref": "d2",
+     "object": "904c065ad2db"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2514",
    "section": "25B. Indicators, fractals and node state machine",
    "title": "Implement N1\u2192N2\u2192N3\u2192N4 zigzag state machine, reset/invalidation rules, expiry, same-bar conflict handling and idempotent event replay.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "zigzag with replace events; invalidation/expiry rules not defined",
    "source": [
     {
-     "path": "src/financial_brain/patterns/streaming.py",
-     "ref": "main",
-     "object": "794db992e94a"
+     "path": "src/financial_brain/strategies/four_node/nodes.py",
+     "ref": "d2",
+     "object": "904c065ad2db"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2515",
    "section": "25B. Indicators, fractals and node state machine",
    "title": "Enforce exactly three permanently confirmed trending fractal nodes before evaluating breakout through N2 on a completed M1 candle.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "three observable nodes required; unobservable rejected",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2516",
    "section": "25B. Indicators, fractals and node state machine",
    "title": "Define buy/sell direction, N1-to-20C High/Low, N3-to-20C Mid, N2-to-20C limits and exception logic as explicit independent predicates with reason code",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "named predicates with passed/failed reason codes",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2517",
    "section": "25C. Entry filters and exit engine",
    "title": "Implement close-confirmed N2 breakout with strictly later actionable order timestamp;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "entry actionable next bar, not at the breakout close",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2518",
    "section": "25C. Entry filters and exit engine",
    "title": "Implement D1=|N2\u2212N3| and D2=|entry\u2212N2| with inclusive/exclusive boundaries configurable;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "D1 inclusive, D2 exclusive boundary tested",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2519",
    "section": "25C. Entry filters and exit engine",
    "title": "Enforce minimum distance to daily Fibonacci levels and SMMA50/100/200, accounting for direction, support/resistance geometry and original 20-pip basel",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "barrier clearance; ahead/behind geometry not distinguished",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2520",
    "section": "25C. Entry filters and exit engine",
    "title": "Implement broker spread-aware initial stop beyond N3 (SELL above, BUY below) and reject trades with excessive initial risk.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "spread-aware stop beyond N3 and max risk; tick rounding not applied",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2521",
    "section": "25C. Entry filters and exit engine",
    "title": "Implement original 20-pip TP and max 15-pip stop as XAU-specific configurable baseline, with separate ATR/tick/percent alternatives for Indian assets.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "XAU pips kept for reference; India uses ATR multiples",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/spec.py",
+     "ref": "d2",
+     "object": "de251d84e058"
+    },
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2522",
    "section": "25C. Entry filters and exit engine",
    "title": "Implement the original trailing rule:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "trail start, step ratchet, never loosens, both sides",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2523",
    "section": "25C. Entry filters and exit engine",
    "title": "Clarify whether the 10-pip activation and 5-pip SL offset are measured on bid/ask executable prices, and prevent spread-induced false trigger or impos",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "trail takes an executable price; bid/ask choice left to caller",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2524",
    "section": "25C. Entry filters and exit engine",
    "title": "Implement N4 wick <5 pip filter and significant-candle early exit as separate, precisely timestamped controls, pending source ambiguity resolution.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "unknown candle/N4 definition returns BLOCKED",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2525",
    "section": "25D. Indian-market adaptation and options routing",
    "title": "Create per-instrument conversion config for tick size, ATR normalization, spread, expected slippage, trading hours, contract multiplier and corporate ",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "instrument config for tick, multiplier, ATR, spread, slippage",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2526",
    "section": "25D. Indian-market adaptation and options routing",
    "title": "Replace forex balance multiplier X with capital-at-risk sizing;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "rupee risk sizing in whole lots; forex X rule not used",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2527",
@@ -8415,25 +8882,46 @@
    "id": "FB-2528",
    "section": "25D. Indian-market adaptation and options routing",
    "title": "Bridge underlying fractal BUY/SELL signal into index options CE/PE candidate generation without assuming an underlying move implies positive option P&",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "bridge documented through index_options; not wired",
+   "source": [
+    {
+     "path": "docs/strategies/four_node/README.md",
+     "ref": "d2",
+     "object": "6c228bca06e0"
+    },
+    {
+     "path": "src/financial_brain/signals/index_options.py",
+     "ref": "d2",
+     "object": "886df3167789"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2529",
    "section": "25D. Indian-market adaptation and options routing",
    "title": "Evaluate option expiry, strike, observed bid/ask, IV, Greeks, time decay, liquidity and depth for each CE/PE candidate at signal time.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "option checks reused; stale quotes give UNPRICED/NO_TRADE",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/index_options.py",
+     "ref": "d2",
+     "object": "886df3167789"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2530",
@@ -8475,34 +8963,21 @@
    "id": "FB-2533",
    "section": "25E. Research integrity, evaluation and release",
    "title": "Reuse `patterns/pivots.py`, `patterns/streaming.py`, `kernel/indicators.py`, `ingest/kite_minute.py`, `paper/intraday_runner.py` and `paper/options_ru",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "modules exist; no interface audit written",
+   "note": "reuse map",
    "source": [
     {
-     "path": "src/financial_brain/patterns/pivots.py",
-     "ref": "main",
-     "object": "4fe8db1bc368"
-    },
-    {
-     "path": "src/financial_brain/patterns/streaming.py",
-     "ref": "main",
-     "object": "794db992e94a"
-    },
-    {
-     "path": "src/financial_brain/kernel/indicators.py",
-     "ref": "main",
-     "object": "af465fa00e20"
-    },
-    {
-     "path": "src/financial_brain/ingest/kite_minute.py",
-     "ref": "main",
-     "object": "90c7d0ec3955"
+     "path": "docs/strategies/four_node/README.md",
+     "ref": "d2",
+     "object": "6c228bca06e0"
     }
    ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2534",
@@ -8544,13 +9019,26 @@
    "id": "FB-2537",
    "section": "25E. Research integrity, evaluation and release",
    "title": "Run walk-forward tests across disjoint time windows and market regimes;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "purged splits available; no run",
+   "source": [
+    {
+     "path": "docs/strategies/four_node/README.md",
+     "ref": "d2",
+     "object": "6c228bca06e0"
+    },
+    {
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2538",
@@ -8592,37 +9080,73 @@
    "id": "FB-2541",
    "section": "25E. Research integrity, evaluation and release",
    "title": "Track funnel:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "funnel stages deduped and reconciled by event id",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2542",
    "section": "25E. Research integrity, evaluation and release",
    "title": "Add per-trade evidence:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "per-trade trace record",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/four_node/rules.py",
+     "ref": "d2",
+     "object": "7328107db4ae"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2543",
    "section": "25E. Research integrity, evaluation and release",
    "title": "Run adversarial tests for repainting, missed candles, reconnect, holiday rollover, stale bid/ask, bid/ask inversion, ambiguous same-bar fills, crashes",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "repaint and blocked-variant tests; reconnect/crash not simulated",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_four_node_s25.py",
+     "ref": "d2",
+     "object": "ced618550080"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2544",
