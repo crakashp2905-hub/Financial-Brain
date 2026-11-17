@@ -115,6 +115,20 @@ class ProtectedPosition:
         if hit_tp:
             return self._fill(bar.at, key, "TAKE_PROFIT", self.target)
 
+    def partial_exit(self, at: datetime, quantity: Decimal, price: Decimal, reason: str) -> Decimal:
+        """A scale-out or partial fill: SL/TP stay armed for the remainder; never oversells (FB-0464)."""
+        if quantity <= 0:
+            raise ExitError("quantity must be positive")
+        qty = min(quantity, self.open_quantity)
+        key = f"{self.position_id}:{at.isoformat()}:partial:{reason}"
+        if any(r.key == key + ":fill" for r in self.ledger):
+            return self.open_quantity
+        self._emit(Record(Event.EXIT_FILL, at, key + ":fill", reason, price, qty))
+        self.open_quantity -= qty
+        if self.open_quantity == 0:
+            self._emit(Record(Event.POSITION_CLOSED, at, key + ":closed", reason))
+        return self.open_quantity
+
     def trigger_without_price(self, at: datetime, reason: str) -> None:
         """A trigger seen during a halt or outage: persist intent, fill nothing."""
         self.pending = reason
@@ -123,7 +137,7 @@ class ProtectedPosition:
                           reason))
 
     def _fill(self, at: datetime, key: str, reason: str, price: Decimal) -> None:
-        qty = self.open_quantity
+        qty = self.open_quantity      # the remaining quantity only, after any partial exits
         self._emit(Record(Event.EXIT_TRIGGER, at, key + ":trig", reason))
         self._emit(Record(Event.EXIT_FILL, at, key + ":fill", reason, price, qty))
         self.open_quantity -= qty

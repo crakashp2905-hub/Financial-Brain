@@ -138,5 +138,13 @@ class ExchangePaperOms:
         o.status = OrderStatus.FILLED if o.remaining == 0 else OrderStatus.PARTIAL
         return f
 
+    def timeout(self, order_id: str, now: datetime, ack_deadline: datetime) -> OrderStatus:
+        """No acknowledgement by the deadline: TIMED_OUT; a working order with an unknown venue
+        outcome is UNKNOWN, never assumed filled or cancelled (FB-0804)."""
+        o = self.orders[order_id]
+        if o.status in (OrderStatus.WORKING, OrderStatus.PARTIAL) and now >= ack_deadline:
+            o.status = OrderStatus.UNKNOWN if o.fills else OrderStatus.TIMED_OUT
+        return o.status
+
     def resume(self, desk: str) -> None:
         self.halted.discard(desk)
