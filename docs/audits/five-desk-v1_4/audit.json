@@ -45,10 +45,10 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "06616f55af",
-   "ahead_of_main": 14,
+   "commit": "9e24556951",
+   "ahead_of_main": 18,
    "behind_main": 0,
-   "test_files": 335
+   "test_files": 338
   }
  },
  "status_meaning": {
@@ -58,10 +58,10 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 115,
-  "DONE": 58,
-  "FOOTHOLD": 72,
-  "NOT_STARTED": 160
+  "PARTIAL": 123,
+  "DONE": 67,
+  "FOOTHOLD": 65,
+  "NOT_STARTED": 150
  },
  "by_dependency": {
   "IN_HOUSE": 375,
@@ -2310,13 +2310,27 @@
    "id": "FB-0501",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Cross-sectional momentum/relative-strength ranking **among comparable ETFs** with fixed horizons and exposure controls.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "group-only momentum ranking; no exposure controls or live study",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/etf_rank.py",
+     "ref": "d2",
+     "object": "5bb99d5cbc67"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0502",
@@ -2390,25 +2404,53 @@
    "id": "FB-0507",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Model ETF liquidity tier, concentration, capacity, creation-unit microstructure implications and impact at submitted size.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "liquidity tier at intended size; creation-unit effects not modelled",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/etf_rank.py",
+     "ref": "d2",
+     "object": "5bb99d5cbc67"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0508",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Disallow inverse/leveraged product assumptions if absent from actual Indian listed universe;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "unlisted products cannot be ranked",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/etf_rank.py",
+     "ref": "d2",
+     "object": "5bb99d5cbc67"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0509",
@@ -2426,19 +2468,27 @@
    "id": "FB-0510",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Preserve fixed champion and multiple-testing adjusted challengers for each family;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "ranking needs confidence gate; champion/challenger store not linked",
    "source": [
     {
-     "path": "src/financial_brain/evaluation/champion.py",
-     "ref": "main",
-     "object": "6f2821584ec1"
+     "path": "src/financial_brain/strategies/etf_rank.py",
+     "ref": "d2",
+     "object": "5bb99d5cbc67"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0511",
@@ -2456,49 +2506,105 @@
    "id": "FB-0512",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Emit `ETF_SHADOW_ONLY` when cost or statistical confidence fails\u2014even if a ranking exists.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "ETF_SHADOW_ONLY unless cost and confidence pass",
+   "source": [
+    {
+     "path": "src/financial_brain/strategies/etf_rank.py",
+     "ref": "d2",
+     "object": "5bb99d5cbc67"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0601",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Produce same-category rolling 1/3/5-year returns, volatility, drawdown, downside deviation, consistency and risk-adjusted performance.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "rolling CAGR, vol, drawdown, downside; peer category not loaded",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_metrics.py",
+     "ref": "d2",
+     "object": "a5575b679e76"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0602",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Compare every fund with its declared benchmark TRI, a low-cost passive alternative and relevant peer-group baselines.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "excess vs TRI; benchmark data external",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_metrics.py",
+     "ref": "d2",
+     "object": "a5575b679e76"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0603",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Calculate fee-aware direct-vs-regular plan selection, avoiding fee double-counting in historical NAV returns.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "direct vs regular on own NAVs; no TER double count",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_metrics.py",
+     "ref": "d2",
+     "object": "a5575b679e76"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0604",
@@ -2582,13 +2688,27 @@
    "id": "FB-0610",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Rank fund suggestions with `BUY_MORE | HOLD | REDUCE | SWITCH | REDEEM | NO_ACTION`, including time horizon and after-exit-load/tax rationale.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "MF action vocabulary with category horizon",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_metrics.py",
+     "ref": "d2",
+     "object": "a5575b679e76"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0611",
@@ -2606,13 +2726,27 @@
    "id": "FB-0612",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Require fund-category-specific holding periods and liquidity constraints;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "category minimum holding periods; no short-horizon MF trades",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_metrics.py",
+     "ref": "d2",
+     "object": "a5575b679e76"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0613",
@@ -4001,19 +4135,27 @@
    "id": "FB-1103",
    "section": "11. Trader dashboard and workflows \u2014 P1",
    "title": "Display each signal with timestamp, provenance, intent type, candidate-vs-trade-eligible status, **BUY/SELL closing side, SL, TP, trailing/time exit a",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "alerts carry time, rule version, evidence tier; no UI page",
    "source": [
     {
-     "path": "src/financial_brain/paper/trader_view.py",
-     "ref": "main",
-     "object": "fcb578bf202c"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_control_room_s11_23.py",
+     "ref": "d2",
+     "object": "0b1fabdb6469"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1104",
@@ -4120,19 +4262,27 @@
    "id": "FB-1110",
    "section": "11. Trader dashboard and workflows \u2014 P1",
    "title": "Add alerts for order execution, stale data, MF payout/units pending, ETF dislocation, options expiry and risk budget changes.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "alert kinds include exits and MF pending; delivery channel not built",
    "source": [
     {
-     "path": "src/financial_brain/alerts.py",
-     "ref": "main",
-     "object": "c72f093554ce"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_control_room_s11_23.py",
+     "ref": "d2",
+     "object": "0b1fabdb6469"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1111",
@@ -4171,21 +4321,24 @@
    "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "no per-desk benchmark comparison",
+   "note": "deterministic desk report; benchmark comparison not included",
    "source": [
     {
-     "path": "src/financial_brain/brief/render.py",
-     "ref": "main",
-     "object": "7b5d760cfdd2"
-    },
-    {
-     "path": "src/financial_brain/paper/daily_results.py",
-     "ref": "main",
-     "object": "c515bc1bb405"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_control_room_s11_23.py",
+     "ref": "d2",
+     "object": "0b1fabdb6469"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1201",
@@ -5870,25 +6023,26 @@
    "id": "FB-2003",
    "section": "20. Market-specific advantage: options, ETFs and mutual funds \u2014 P1",
    "title": "Implement option strategy-level scenario P&L under underlying price, implied vol, time decay and spread shock, including defined-risk verticals and un",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "defined-risk premium selling lost on 2016-21 training (2026-11-16)",
+   "note": "vertical scenario grid with spread shock and unfilled-leg contingency",
    "source": [
     {
-     "path": "src/financial_brain/evaluation/options_vertical.py",
-     "ref": "main",
-     "object": "fd3655ada047"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/options_risk.py",
-     "ref": "f00",
-     "object": "9560a3e67f78"
+     "path": "src/financial_brain/research/cross_asset.py",
+     "ref": "d2",
+     "object": "98b4b1033d3a"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_cross_asset_s20.py",
+     "ref": "d2",
+     "object": "342455d9296d"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -5907,13 +6061,27 @@
    "id": "FB-2005",
    "section": "20. Market-specific advantage: options, ETFs and mutual funds \u2014 P1",
    "title": "Build ETF-vs-underlying-vs-competing-ETF routing for the same desired exposure:",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "best implementable net wrapper; tax/account differences not modelled",
+   "source": [
+    {
+     "path": "src/financial_brain/research/cross_asset.py",
+     "ref": "d2",
+     "object": "98b4b1033d3a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_cross_asset_s20.py",
+     "ref": "d2",
+     "object": "342455d9296d"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2006",
@@ -6362,60 +6530,79 @@
    "id": "FB-2301",
    "section": "23. Trader control room, alert ergonomics and fail-safe operations \u2014 P0/P1",
    "title": "Build one searchable five-desk `Today` screen with prioritized BUY, SELL, WATCH, NO_TRADE, APPROVAL_NEEDED and EXIT_TRIGGERED messages, market/data fr",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "searchable prioritised Today list; no screen",
    "source": [
     {
-     "path": "src/financial_brain/paper/board.py",
-     "ref": "main",
-     "object": "2b81acfa4ba1"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/cockpit.py",
-     "ref": "main",
-     "object": "5ae008e1f3ec"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_control_room_s11_23.py",
+     "ref": "d2",
+     "object": "0b1fabdb6469"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2302",
    "section": "23. Trader control room, alert ergonomics and fail-safe operations \u2014 P0/P1",
    "title": "Generate two-level alerts:",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "two alert levels with deadline, version and tier",
    "source": [
     {
-     "path": "src/financial_brain/alerts.py",
-     "ref": "main",
-     "object": "c72f093554ce"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_control_room_s11_23.py",
+     "ref": "d2",
+     "object": "0b1fabdb6469"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2303",
    "section": "23. Trader control room, alert ergonomics and fail-safe operations \u2014 P0/P1",
    "title": "Support human approve/reject/adjust within declared guardrails for the manual paper sleeve;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "approval expires with TTL; adjust within guardrails not built",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/approvals.py",
-     "ref": "main",
-     "object": "13462aba7dff"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_control_room_s11_23.py",
+     "ref": "d2",
+     "object": "0b1fabdb6469"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2304",
@@ -6424,21 +6611,24 @@
    "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "post-market report text from ledger inputs",
    "source": [
     {
-     "path": "src/financial_brain/paper/daily_results.py",
-     "ref": "main",
-     "object": "c515bc1bb405"
-    },
-    {
-     "path": "src/financial_brain/paper/loss_review.py",
-     "ref": "main",
-     "object": "775ba9b0dfae"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_control_room_s11_23.py",
+     "ref": "d2",
+     "object": "0b1fabdb6469"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2305",
@@ -6472,65 +6662,79 @@
    "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "exchange path only",
+   "note": "idempotent alerts, exits and ledger posts",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/durable.py",
-     "ref": "main",
-     "object": "6aa6e135cbca"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_control_room_s11_23.py",
+     "ref": "d2",
+     "object": "0b1fabdb6469"
+    },
+    {
+     "path": "tests/test_exit_triggers_4a.py",
+     "ref": "d2",
+     "object": "2c70843ea05c"
+    },
+    {
+     "path": "tests/test_multi_asset_ledger_s9.py",
+     "ref": "d2",
+     "object": "578ec2b90ca9"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2307",
    "section": "23. Trader control room, alert ergonomics and fail-safe operations \u2014 P0/P1",
    "title": "Add a documented operator runbook:",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "operator runbook",
    "source": [
     {
-     "path": "docs/RUNBOOK-LIVE.md",
-     "ref": "main",
-     "object": "de550c2e36f9"
-    },
-    {
-     "path": "docs/forward-edge/RUNBOOKS.md",
-     "ref": "f00",
-     "object": "94d3c8530b78"
-    },
-    {
-     "path": "docs/forward-edge/OPERATOR.md",
-     "ref": "f00",
-     "object": "d44037023eb8"
+     "path": "docs/runbooks/five-desk-operator.md",
+     "ref": "d2",
+     "object": "fc5016cce040"
     }
    ],
    "test": [],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
    "id": "FB-2308",
    "section": "23. Trader control room, alert ergonomics and fail-safe operations \u2014 P0/P1",
    "title": "Define a daily acceptance gate where the desk cannot report `SESSION_COMPLETE` until all open orders, fills, paper positions, cash, fund units, fees a",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "SESSION_COMPLETE gate",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/session_close.py",
-     "ref": "f00",
-     "object": "075140ac9741"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_control_room_s11_23.py",
+     "ref": "d2",
+     "object": "0b1fabdb6469"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {

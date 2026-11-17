@@ -437,6 +437,34 @@ A.update({
     "FB-2437": (P, [_TIX, _TIO], "probabilities sum to 1; unlisted/expired/zero-depth refused"),
     "FB-2438": (D, [_TIO], "bullish forecast with costly option gives NO_TRADE"),
 })
+_ER, _MM, _TEM = S + "strategies/etf_rank.py", S + "research/mf_metrics.py", "tests/test_etf_mf_s5_s6.py"
+_CR, _TCR = S + "paper/control_room.py", "tests/test_control_room_s11_23.py"
+_XA, _TXA = S + "research/cross_asset.py", "tests/test_cross_asset_s20.py"
+_RB = "docs/runbooks/five-desk-operator.md"
+A.update({
+    "FB-0501": (P, [_ER, _TEM], "group-only momentum ranking; no exposure controls or live study"),
+    "FB-0507": (P, [_ER, _TEM], "liquidity tier at intended size; creation-unit effects not modelled"),
+    "FB-0508": (D, [_ER, _TEM], "unlisted products cannot be ranked"),
+    "FB-0510": (P, [_ER, _TEM], "ranking needs confidence gate; champion/challenger store not linked"),
+    "FB-0512": (D, [_ER, _TEM], "ETF_SHADOW_ONLY unless cost and confidence pass"),
+    "FB-0601": (P, [_MM, _TEM], "rolling CAGR, vol, drawdown, downside; peer category not loaded"),
+    "FB-0602": (P, [_MM, _TEM], "excess vs TRI; benchmark data external"),
+    "FB-0603": (D, [_MM, _TEM], "direct vs regular on own NAVs; no TER double count"),
+    "FB-0610": (D, [_MM, _TEM], "MF action vocabulary with category horizon"),
+    "FB-0612": (D, [_MM, _TEM], "category minimum holding periods; no short-horizon MF trades"),
+    "FB-1103": (P, [_CR, _TCR], "alerts carry time, rule version, evidence tier; no UI page"),
+    "FB-1110": (P, [_CR, _TCR], "alert kinds include exits and MF pending; delivery channel not built"),
+    "FB-1112": (P, [_CR, _TCR], "deterministic desk report; benchmark comparison not included"),
+    "FB-2003": (D, [_XA, _TXA], "vertical scenario grid with spread shock and unfilled-leg contingency"),
+    "FB-2005": (P, [_XA, _TXA], "best implementable net wrapper; tax/account differences not modelled"),
+    "FB-2301": (P, [_CR, _TCR], "searchable prioritised Today list; no screen"),
+    "FB-2302": (D, [_CR, _TCR], "two alert levels with deadline, version and tier"),
+    "FB-2303": (P, [_CR, _TCR], "approval expires with TTL; adjust within guardrails not built"),
+    "FB-2304": (P, [_CR, _TCR], "post-market report text from ledger inputs"),
+    "FB-2306": (P, [_CR, _TCR, _TEX, _TLG], "idempotent alerts, exits and ledger posts"),
+    "FB-2307": (D, [_RB], "operator runbook"),
+    "FB-2308": (D, [_CR, _TCR], "SESSION_COMPLETE gate"),
+})
 
 
 def git(*args: str) -> str:
