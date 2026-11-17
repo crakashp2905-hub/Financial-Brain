@@ -45,10 +45,10 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "7cdedecdac",
-   "ahead_of_main": 31,
+   "commit": "7f45a158f3",
+   "ahead_of_main": 38,
    "behind_main": 0,
-   "test_files": 349
+   "test_files": 355
   }
  },
  "status_meaning": {
@@ -58,10 +58,10 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 172,
-  "DONE": 157,
-  "FOOTHOLD": 62,
-  "NOT_STARTED": 14
+  "PARTIAL": 192,
+  "DONE": 198,
+  "NOT_STARTED": 13,
+  "FOOTHOLD": 2
  },
  "by_dependency": {
   "IN_HOUSE": 382,
@@ -174,19 +174,21 @@
    "id": "FB-0005",
    "section": "0. Baseline and integrity freeze \u2014 P0",
    "title": "Add five-desk product charter and explicit execution scope:",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "a forward-edge charter exists; no five-desk charter",
+   "note": "five-desk charter and execution scope",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/charter.py",
-     "ref": "main",
-     "object": "48451d40cd07"
+     "path": "docs/five-desk/CHARTER.md",
+     "ref": "d2",
+     "object": "e168d11f393d"
     }
    ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0006",
@@ -216,24 +218,21 @@
    "id": "FB-0007",
    "section": "0. Baseline and integrity freeze \u2014 P0",
    "title": "Resolve divergent broker paths (`forward_edge/modes.py`, `execution/oms/kite_broker.py`) with hostile integration tests showing a denied order cannot ",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "both paths exist and each has its own tests; no hostile test spans both",
-   "source": [
+   "note": "hostile isolation: paper modules import no broker; locks closed",
+   "source": [],
+   "test": [
     {
-     "path": "src/financial_brain/forward_edge/modes.py",
-     "ref": "main",
-     "object": "f4bbc31c6ce8"
-    },
-    {
-     "path": "src/financial_brain/execution/oms/kite_broker.py",
-     "ref": "main",
-     "object": "a2138acf292c"
+     "path": "tests/test_broker_isolation_five_desk.py",
+     "ref": "d2",
+     "object": "d9150f9d98e3"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0008",
@@ -688,19 +687,27 @@
    "id": "FB-0204",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Import historic ETF EOD OHLCV, adjusted close and trading days through existing ingestion with source hashes and corrections.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "exchange bhavcopy carries ETF rows; they are not classified or kept as an ETF universe",
+   "note": "EOD rows with hashes and kept corrections; import run external",
    "source": [
     {
-     "path": "src/financial_brain/providers/bhavcopy.py",
-     "ref": "main",
-     "object": "1a16c217f2ed"
+     "path": "src/financial_brain/instruments/market_quality.py",
+     "ref": "d2",
+     "object": "7cc2cc4bbcea"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_market_quality.py",
+     "ref": "d2",
+     "object": "d1cddd1a6a24"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0205",
@@ -729,24 +736,27 @@
    "id": "FB-0206",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Implement market-session safe tick/bar aggregation for ETFs, using the same low-latency code as equities but ETF-specific gates.",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "session-gated tick-to-bar aggregation",
    "source": [
     {
-     "path": "src/financial_brain/kernel/ticks.py",
-     "ref": "main",
-     "object": "8eee19ea0d76"
-    },
-    {
-     "path": "src/financial_brain/features/bars.py",
-     "ref": "main",
-     "object": "58370c23f70d"
+     "path": "src/financial_brain/instruments/market_quality.py",
+     "ref": "d2",
+     "object": "7cc2cc4bbcea"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_market_quality.py",
+     "ref": "d2",
+     "object": "d1cddd1a6a24"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0207",
@@ -778,24 +788,27 @@
    "id": "FB-0208",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Compute effective spread, depth, median traded value, stale-quote rate, illiquidity, volatility, trading gaps, halted periods and costs at intended si",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "spread, depth, traded value, stale rate, gaps",
    "source": [
     {
-     "path": "src/financial_brain/costs/measured.py",
-     "ref": "main",
-     "object": "1033e760b577"
-    },
-    {
-     "path": "src/financial_brain/execution/exec_study.py",
-     "ref": "main",
-     "object": "7c2129f9ce00"
+     "path": "src/financial_brain/instruments/market_quality.py",
+     "ref": "d2",
+     "object": "7cc2cc4bbcea"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_market_quality.py",
+     "ref": "d2",
+     "object": "d1cddd1a6a24"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0209",
@@ -879,19 +892,33 @@
    "id": "FB-0212",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Handle splits, distributions, fund closure and lot/tick revisions in historical and forward paper ledgers.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "split/distribution via D1; lot/tick revisions via D1 terms",
    "source": [
     {
-     "path": "src/financial_brain/corpactions/actions.py",
-     "ref": "main",
-     "object": "18e7e5d7677a"
+     "path": "src/financial_brain/instruments/market_quality.py",
+     "ref": "d2",
+     "object": "7cc2cc4bbcea"
+    },
+    {
+     "path": "src/financial_brain/instruments/corporate_actions.py",
+     "ref": "d1",
+     "object": "e08f0dcc2e39"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_lifecycle_tables_4a.py",
+     "ref": "d2",
+     "object": "15e420185c89"
+    }
+   ],
+   "unmerged": [
+    "d1",
+    "d2"
+   ]
   },
   {
    "id": "FB-0213",
@@ -1027,19 +1054,27 @@
    "id": "FB-0304",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Extend `mfnav.py` to retain NAV revision history and source publication/ingestion timestamps;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "current NAV file only; no revision history",
+   "note": "NAV revision history; corrections not backdated",
    "source": [
     {
-     "path": "src/financial_brain/ingest/mfnav.py",
-     "ref": "main",
-     "object": "b1e7d0f22227"
+     "path": "src/financial_brain/instruments/market_quality.py",
+     "ref": "d2",
+     "object": "7cc2cc4bbcea"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_market_quality.py",
+     "ref": "d2",
+     "object": "d1cddd1a6a24"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0305",
@@ -1512,19 +1547,27 @@
    "id": "FB-0406",
    "section": "4. Unified signal and research contract \u2014 P0",
    "title": "Deduplicate repeated alerts without erasing new rule versions or materially changed prices;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "alert dedupe keeps new versions and material moves",
    "source": [
     {
-     "path": "src/financial_brain/signals/watch.py",
-     "ref": "main",
-     "object": "e8f95c923c6d"
+     "path": "src/financial_brain/instruments/market_quality.py",
+     "ref": "d2",
+     "object": "7cc2cc4bbcea"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_market_quality.py",
+     "ref": "d2",
+     "object": "d1cddd1a6a24"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0407",
@@ -2154,25 +2197,26 @@
    "id": "FB-0469",
    "section": "Detailed acceptance checklist",
    "title": "On tick feeds, check source/receipt timestamps, quote age, spread, depth and circuit/halts before triggering/filling.",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "timestamps, age, spread, depth, circuit, halt; LTP-only refused",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/feed_health.py",
-     "ref": "f00",
-     "object": "8a7dcd09fa7b"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/market_data.py",
-     "ref": "main",
-     "object": "c82b5ed73e20"
+     "path": "src/financial_brain/instruments/market_quality.py",
+     "ref": "d2",
+     "object": "7cc2cc4bbcea"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_market_quality.py",
+     "ref": "d2",
+     "object": "d1cddd1a6a24"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -2205,25 +2249,26 @@
    "id": "FB-0471",
    "section": "Detailed acceptance checklist",
    "title": "Add a per-position ledger of `ENTRY_SIGNAL`, `ENTRY_INTENT`, `ENTRY_FILL`, `STOP/TP_ARMED`, `EXIT_TRIGGER`, `EXIT_INTENT`, `EXIT_FILL`, `POSITION_CLOS",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "order journal, not the eight-event position ledger",
+   "note": "per-position ordered events with idempotency keys and snapshots",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/order_journal.py",
-     "ref": "f00",
-     "object": "6ac7527c0874"
-    },
-    {
-     "path": "src/financial_brain/paper/ledger.py",
-     "ref": "main",
-     "object": "9903b7e4c334"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -2255,24 +2300,27 @@
    "id": "FB-0473",
    "section": "Detailed acceptance checklist",
    "title": "For equity swing, generate daily BUY candidates with SL/TP from versioned risk/strategy logic;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "candidates without SL/TP",
+   "note": "up to five positive-EV swing candidates with ATR SL/TP; not wired",
    "source": [
     {
-     "path": "src/financial_brain/paper/daily.py",
-     "ref": "main",
-     "object": "6824d6242d8b"
-    },
-    {
-     "path": "src/financial_brain/evaluation/swing.py",
-     "ref": "main",
-     "object": "8382ffe2ffdf"
+     "path": "src/financial_brain/signals/desk_logic.py",
+     "ref": "d2",
+     "object": "e3367a160bc9"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_logic.py",
+     "ref": "d2",
+     "object": "1a6afb572694"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0474",
@@ -2327,86 +2375,109 @@
    "id": "FB-0476",
    "section": "Detailed acceptance checklist",
    "title": "For options, emit the precise `CE/PE`, strike, expiry, token, side, lots, premium entry band, SL/TP premium or risk terms, and underlying/context inva",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "exact token, CE/PE, strike, expiry, lots; premium band via option card",
    "source": [
     {
-     "path": "src/financial_brain/paper/options_runner.py",
-     "ref": "main",
-     "object": "869e2e578201"
+     "path": "src/financial_brain/execution/option_book.py",
+     "ref": "d2",
+     "object": "1f79ffe4d4b1"
+    },
+    {
+     "path": "src/financial_brain/forecasting/index_ops.py",
+     "ref": "d2",
+     "object": "8d82871d1788"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0477",
    "section": "Detailed acceptance checklist",
    "title": "For options, monitor bid/ask/depth, premium decay, days-to-expiry, price gaps, volatility and Greeks;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "spread, depth, decay, expiry monitoring flags",
    "source": [
     {
-     "path": "src/financial_brain/paper/options_forward.py",
-     "ref": "main",
-     "object": "14d682b6421c"
-    },
-    {
-     "path": "src/financial_brain/ingest/options_quotes.py",
-     "ref": "main",
-     "object": "e94f15771806"
+     "path": "src/financial_brain/execution/option_book.py",
+     "ref": "d2",
+     "object": "1f79ffe4d4b1"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0478",
    "section": "Detailed acceptance checklist",
    "title": "For option spreads, express entry, SL and TP on the **combined spread value/P&L** and separately track leg risk and partial fills;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "combined spread value triggers; leg risk tracked",
    "source": [
     {
-     "path": "src/financial_brain/paper/options_spread.py",
-     "ref": "main",
-     "object": "cebb11ad0b14"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/options_spread.py",
-     "ref": "f00",
-     "object": "3b3e50605f97"
+     "path": "src/financial_brain/execution/option_book.py",
+     "ref": "d2",
+     "object": "1f79ffe4d4b1"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
    "id": "FB-0479",
    "section": "Detailed acceptance checklist",
    "title": "Block uncovered option-writing/physical-settlement exit plans until margin, assignment/exercise, expiry and settlement modules have passed coverage an",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "uncovered writing blocked",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/options_risk.py",
-     "ref": "f00",
-     "object": "9560a3e67f78"
+     "path": "src/financial_brain/execution/option_book.py",
+     "ref": "d2",
+     "object": "1f79ffe4d4b1"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -2547,64 +2618,78 @@
    "id": "FB-0485",
    "section": "Detailed acceptance checklist",
    "title": "Allow manual `APPROVE/REJECT/WATCH` and explicit manual exits, but preserve the immutable original algorithmic entry/SL/TP and human edits as separate",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "human decisions separate; original plan immutable",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/operator_decisions.py",
-     "ref": "f00",
-     "object": "b183cf6bf435"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
    "id": "FB-0486",
    "section": "Detailed acceptance checklist",
    "title": "Stream UI alerts for `BUY_READY`, `SELL_READY`, `STOP_HIT`, `TP_HIT`, `TRAIL_MOVED`, `ENTRY_EXPIRED`, `NO_FILL`, `EXIT_UNPRICED`, `MF_NAV_PENDING` and",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "alert kinds defined; no streaming UI",
    "source": [
     {
-     "path": "src/financial_brain/alerts.py",
-     "ref": "main",
-     "object": "c72f093554ce"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     },
     {
-     "path": "src/financial_brain/forward_edge/alerts.py",
-     "ref": "f00",
-     "object": "94d6cb77cf28"
+     "path": "src/financial_brain/paper/control_room.py",
+     "ref": "d2",
+     "object": "9a33061164fa"
     }
    ],
    "test": [],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
    "id": "FB-0487",
    "section": "Detailed acceptance checklist",
    "title": "Show live per-position mark-to-market, realized P&L, remaining quantity, stop/target distance, expected cost-to-exit and last quote freshness;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "MTM row withholds P&L on stale quotes",
    "source": [
     {
-     "path": "src/financial_brain/paper/live_view.py",
-     "ref": "main",
-     "object": "4dbbda94da7a"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0488",
@@ -2742,19 +2827,27 @@
    "id": "FB-0494",
    "section": "Detailed acceptance checklist",
    "title": "Evaluate actual net performance by exit reason (SL, TP, trail, time, discretionary) and ablate target/stop rules against simpler exits without rewriti",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "historical exit-rule study; not by live exit reason",
+   "note": "net by exit reason and ablation vs plain SL/TP",
    "source": [
     {
-     "path": "src/financial_brain/evaluation/exit_rules.py",
-     "ref": "main",
-     "object": "75396462f29f"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0495",
@@ -2824,20 +2917,26 @@
    "id": "FB-0503",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Cross-asset rotation across equity, debt, gold/silver ETF sleeves using equal-vol, buy-and-hold, same-risk and cash controls.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "index-TRI rotation candidates were tested on 2026-11-17 and failed; not ETF prices",
+   "note": "equal-vol rotation with cash; study not run",
    "source": [
     {
-     "path": "scripts/research/hundred.py",
-     "ref": "dyn",
-     "object": "0370b8f58663"
+     "path": "src/financial_brain/signals/desk_logic.py",
+     "ref": "d2",
+     "object": "e3367a160bc9"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_desk_logic.py",
+     "ref": "d2",
+     "object": "1a6afb572694"
+    }
+   ],
    "unmerged": [
-    "dyn"
+    "d2"
    ]
   },
   {
@@ -3260,19 +3359,27 @@
    "id": "FB-0608",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Implement disciplined lump-sum, scheduled SIP, STP, SWP and rule-driven rebalance simulation with actual date/cutoff/fund availability mechanics.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "dca_simulate only",
+   "note": "SIP simulation with lag; rebalance rules minimal",
    "source": [
     {
-     "path": "src/financial_brain/kernel/investor_tools.py",
-     "ref": "main",
-     "object": "6cd1a25f7455"
+     "path": "src/financial_brain/signals/desk_logic.py",
+     "ref": "d2",
+     "object": "e3367a160bc9"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_logic.py",
+     "ref": "d2",
+     "object": "1a6afb572694"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0609",
@@ -4046,24 +4153,27 @@
    "id": "FB-0807",
    "section": "8. Shared exchange paper OMS: equities, ETFs, options \u2014 P0",
    "title": "Implement option-chain contract routing, expiry/strike/lot versioning, bid/ask and premium sizing before eligibility.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "contract identity with version date and chain routing; live chain external",
    "source": [
     {
-     "path": "src/financial_brain/ingest/kite_fno.py",
-     "ref": "main",
-     "object": "00a7dce881f6"
-    },
-    {
-     "path": "src/financial_brain/ingest/options_quotes.py",
-     "ref": "main",
-     "object": "e94f15771806"
+     "path": "src/financial_brain/execution/option_book.py",
+     "ref": "d2",
+     "object": "1f79ffe4d4b1"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0808",
@@ -4095,20 +4205,26 @@
    "id": "FB-0809",
    "section": "8. Shared exchange paper OMS: equities, ETFs, options \u2014 P0",
    "title": "Implement full option leg state, partial leg fills, hedge risk, fee/margin reserve, expiry and exercise/settlement;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "codex branch only",
+   "note": "leg state, partial fills, hedge risk; exercise/settlement not modelled",
    "source": [
     {
-     "path": "src/financial_brain/kernel/options_paper.py",
-     "ref": "codex",
-     "object": "03be0a1a341f"
+     "path": "src/financial_brain/execution/option_book.py",
+     "ref": "d2",
+     "object": "1f79ffe4d4b1"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    }
+   ],
    "unmerged": [
-    "codex"
+    "d2"
    ]
   },
   {
@@ -4262,19 +4378,21 @@
    "id": "FB-0902",
    "section": "9. Shared multi-asset accounting, P&L, taxes and capital \u2014 P0",
    "title": "Track real economic position IDs by instrument and funding account;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "position id with funding account/sleeve",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/books.py",
-     "ref": "main",
-     "object": "9ccd9ab0a985"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     }
    ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0903",
@@ -4324,20 +4442,26 @@
    "id": "FB-0905",
    "section": "9. Shared multi-asset accounting, P&L, taxes and capital \u2014 P0",
    "title": "Compute option P&L from exact contract-level premium, fills, exit value and settlement/margin/fees;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "codex branch only",
+   "note": "contract-level realized and unrealized premium P&L with fees",
    "source": [
     {
-     "path": "src/financial_brain/kernel/options_paper.py",
-     "ref": "codex",
-     "object": "03be0a1a341f"
+     "path": "src/financial_brain/execution/option_book.py",
+     "ref": "d2",
+     "object": "1f79ffe4d4b1"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    }
+   ],
    "unmerged": [
-    "codex"
+    "d2"
    ]
   },
   {
@@ -4370,55 +4494,79 @@
    "id": "FB-0907",
    "section": "9. Shared multi-asset accounting, P&L, taxes and capital \u2014 P0",
    "title": "Track cash flows, contributions and withdrawals separately from returns;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "no money-weighted return",
+   "note": "external flows kept apart from returns",
    "source": [
     {
-     "path": "src/financial_brain/evaluation/performance.py",
-     "ref": "main",
-     "object": "6092aac221bc"
+     "path": "src/financial_brain/portfolio/tax_lots.py",
+     "ref": "d2",
+     "object": "4aad1a112759"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0908",
    "section": "9. Shared multi-asset accounting, P&L, taxes and capital \u2014 P0",
    "title": "Build effective-dated India tax classification engine (equity-oriented, debt/specified funds, gold/international, scheme history) rather than applying",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "equity classes only",
+   "note": "effective-dated tax classes and rules as data; missing raises",
    "source": [
     {
-     "path": "src/financial_brain/costs/tax.py",
-     "ref": "main",
-     "object": "e58a69cd721a"
+     "path": "src/financial_brain/portfolio/tax_lots.py",
+     "ref": "d2",
+     "object": "4aad1a112759"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0909",
    "section": "9. Shared multi-asset accounting, P&L, taxes and capital \u2014 P0",
    "title": "Track realized capital-gain lots, acquisition dates, tax basis, FIFO rules, holding period, estimated tax and report year;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "FIFO gain lots, term, estimate, financial year",
    "source": [
     {
-     "path": "src/financial_brain/costs/tax.py",
-     "ref": "main",
-     "object": "e58a69cd721a"
+     "path": "src/financial_brain/portfolio/tax_lots.py",
+     "ref": "d2",
+     "object": "4aad1a112759"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0910",
@@ -4714,24 +4862,27 @@
    "id": "FB-1003",
    "section": "10. Daily, real-time and periodic signal scheduling \u2014 P0",
    "title": "During open:",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "depth-archive task is not registered (owner)",
+   "note": "options signals only with fresh chain",
    "source": [
     {
-     "path": "src/financial_brain/ingest/options_quotes.py",
-     "ref": "main",
-     "object": "e94f15771806"
-    },
-    {
-     "path": "src/financial_brain/ingest/depth_archive.py",
-     "ref": "main",
-     "object": "307c7d3c992a"
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1004",
@@ -4778,31 +4929,53 @@
    "id": "FB-1006",
    "section": "10. Daily, real-time and periodic signal scheduling \u2014 P0",
    "title": "After AMFI NAV publication:",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "after-NAV steps only after publication",
    "source": [
     {
-     "path": "src/financial_brain/ingest/mfnav.py",
-     "ref": "main",
-     "object": "b1e7d0f22227"
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1007",
    "section": "10. Daily, real-time and periodic signal scheduling \u2014 P0",
    "title": "Before MF cutoffs:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "MF requests only before cut-off",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1008",
@@ -4912,25 +5085,26 @@
    "id": "FB-1012",
    "section": "10. Daily, real-time and periodic signal scheduling \u2014 P0",
    "title": "Measure signal latency, quote-to-fill delay, drop rates, outages and trading downtime separately for each desk.",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "per-desk latency, quote-to-fill, drops, downtime",
    "source": [
     {
-     "path": "src/financial_brain/execution/oms/shortfall.py",
-     "ref": "main",
-     "object": "2760bd81c92e"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/session_timeline.py",
-     "ref": "f00",
-     "object": "601a24ca7964"
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -4967,19 +5141,27 @@
    "id": "FB-1102",
    "section": "11. Trader dashboard and workflows \u2014 P1",
    "title": "Five desk pages:",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "no desk pages",
+   "note": "five desk page records with clocks; no UI",
    "source": [
     {
-     "path": "src/financial_brain/paper/workstation.py",
-     "ref": "main",
-     "object": "3646757af475"
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1103",
@@ -5036,20 +5218,26 @@
    "id": "FB-1105",
    "section": "11. Trader dashboard and workflows \u2014 P1",
    "title": "Independent automatic paper and human-approved paper performance, with same quote feed, risk parameters and market conditions.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "sleeve comparison; same-feed enforcement via one OMS",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/shadow.py",
-     "ref": "f00",
-     "object": "ed243b86091d"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -5134,20 +5322,26 @@
    "id": "FB-1109",
    "section": "11. Trader dashboard and workflows \u2014 P1",
    "title": "Create trade attribution:",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "recorded attribution chain",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/signal_trace.py",
-     "ref": "f00",
-     "object": "fdafa5858546"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -5426,20 +5620,25 @@
    "id": "FB-1208",
    "section": "12. Evaluation, performance benchmarks, research discipline \u2014 P0/P1",
    "title": "Compute portfolio-level money-weighted/flow-adjusted and time-weighted performance, and incremental alpha contribution of each desk.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "desk contribution; TWR/XIRR in scorecards",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/portfolio_alpha.py",
-     "ref": "f00",
-     "object": "8de86adfb9ee"
+     "path": "src/financial_brain/portfolio/tax_lots.py",
+     "ref": "d2",
+     "object": "4aad1a112759"
+    },
+    {
+     "path": "src/financial_brain/evaluation/scorecards.py",
+     "ref": "d2",
+     "object": "cdca8a07dcad"
     }
    ],
    "test": [],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -5527,20 +5726,26 @@
    "id": "FB-1212",
    "section": "12. Evaluation, performance benchmarks, research discipline \u2014 P0/P1",
    "title": "Compare autonomous paper versus trader-approved paper with paired eligible signal sets and explicit attribution for human intervention.",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "paired eligible signals; selection vs execution effect",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/operator_decisions.py",
-     "ref": "f00",
-     "object": "b183cf6bf435"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -5703,19 +5908,26 @@
    "id": "FB-1304",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test options zero/bad bids, nonfillable visible depth, expired tokens, wrong strike/lot, partial multi-leg fills and delayed exit.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [
+   "note": "zero bids, depth, expired, partial legs; wrong lot via contract validation",
+   "source": [],
+   "test": [
     {
-     "path": "src/financial_brain/paper/options_runner.py",
-     "ref": "main",
-     "object": "869e2e578201"
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    },
+    {
+     "path": "tests/test_lifecycle_tables_4a.py",
+     "ref": "d2",
+     "object": "15e420185c89"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1305",
@@ -5981,25 +6193,21 @@
    "id": "FB-1318",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test disabled real broker endpoints through every old and new OMS path, including malicious/accidental mode switches.",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "each path tested alone",
-   "source": [
-    {
-     "path": "src/financial_brain/execution/oms/kite_broker.py",
-     "ref": "main",
-     "object": "a2138acf292c"
-    }
-   ],
+   "note": "env flip alone cannot open broker; unlisted endpoints refused",
+   "source": [],
    "test": [
     {
-     "path": "tests/test_forward_edge_f00.py",
-     "ref": "main",
-     "object": "31827c34eac1"
+     "path": "tests/test_broker_isolation_five_desk.py",
+     "ref": "d2",
+     "object": "d9150f9d98e3"
     }
    ],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1319",
@@ -6191,48 +6399,40 @@
    "id": "FB-1409",
    "section": "14. Deployment, staged release and external requirements \u2014 P0/P1",
    "title": "Document source quotas, rights, licensing, retention and failover;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "sources, limits, retention, failover; legal review is owner's",
    "source": [
     {
-     "path": "docs/sources",
-     "ref": "main",
-     "object": "0827f61b0767"
-    },
-    {
-     "path": "src/financial_brain/providers/robots.py",
-     "ref": "main",
-     "object": "02f1e96f2727"
+     "path": "docs/five-desk/DATA_SOURCES.md",
+     "ref": "d2",
+     "object": "e1daf8f0d820"
     }
    ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1410",
    "section": "14. Deployment, staged release and external requirements \u2014 P0/P1",
    "title": "Publish capability matrix:",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "not per desk",
+   "note": "capability matrix",
    "source": [
     {
-     "path": "docs/audits/capability-matrix.v2.json",
-     "ref": "f00",
-     "object": "58cd67faf20f"
-    },
-    {
-     "path": "src/financial_brain/paper/capabilities.py",
-     "ref": "main",
-     "object": "2031f48d5c44"
+     "path": "docs/five-desk/CAPABILITY_MATRIX.md",
+     "ref": "d2",
+     "object": "c7ce376423e7"
     }
    ],
    "test": [],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -6265,19 +6465,27 @@
    "id": "FB-1602",
    "section": "16. Executable expected value and signal admissibility \u2014 P0",
    "title": "Compute SL/TP hit probabilities, time-exit probabilities, gap risk and partial-exit effects using pre-decision information only;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "SL/TP/time probabilities with gap term from pre-decision vol",
    "source": [
     {
-     "path": "src/financial_brain/decisions/forecast_ev.py",
-     "ref": "main",
-     "object": "1dd9edf54949"
+     "path": "src/financial_brain/signals/desk_logic.py",
+     "ref": "d2",
+     "object": "e3367a160bc9"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_logic.py",
+     "ref": "d2",
+     "object": "1a6afb572694"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1603",
@@ -6335,25 +6543,26 @@
    "id": "FB-1605",
    "section": "16. Executable expected value and signal admissibility \u2014 P0",
    "title": "Add executable signal price constraints:",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "entry zone, spread, slippage, TTL constraints",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/intent_timing.py",
-     "ref": "f00",
-     "object": "6ceab13c5498"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/marketable_limit.py",
-     "ref": "f00",
-     "object": "6ed372bb8ca9"
+     "path": "src/financial_brain/signals/desk_logic.py",
+     "ref": "d2",
+     "object": "e3367a160bc9"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_desk_logic.py",
+     "ref": "d2",
+     "object": "1a6afb572694"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -6450,57 +6659,53 @@
    "id": "FB-1702",
    "section": "17. Quant capital allocation and cross-desk exposure \u2014 P0",
    "title": "Integrate existing `risk/allocator.py`, `portfolio/next_capital.py`, `portfolio/optimizer.py`, `portfolio/gate.py` under a single enforceable interfac",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "four modules, no single interface",
+   "note": "gateway: one spending authority over proposing allocators",
    "source": [
     {
-     "path": "src/financial_brain/risk/allocator.py",
-     "ref": "main",
-     "object": "cf6c7f300a61"
-    },
-    {
-     "path": "src/financial_brain/portfolio/next_capital.py",
-     "ref": "main",
-     "object": "413a79e8c3d0"
-    },
-    {
-     "path": "src/financial_brain/portfolio/optimizer.py",
-     "ref": "main",
-     "object": "5546bd8b977c"
-    },
-    {
-     "path": "src/financial_brain/portfolio/gate.py",
-     "ref": "main",
-     "object": "6175b5bdca8f"
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1703",
    "section": "17. Quant capital allocation and cross-desk exposure \u2014 P0",
    "title": "Compute overlapping exposure by underlying/sector/index/factor:",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "exposure by sector/index/factor tags",
    "source": [
     {
-     "path": "src/financial_brain/graph/exposure.py",
-     "ref": "main",
-     "object": "668e552b31a1"
-    },
-    {
-     "path": "src/financial_brain/risk/exposure.py",
-     "ref": "main",
-     "object": "b1a67b6dc592"
+     "path": "src/financial_brain/signals/desk_logic.py",
+     "ref": "d2",
+     "object": "e3367a160bc9"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_logic.py",
+     "ref": "d2",
+     "object": "1a6afb572694"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1704",
@@ -6635,49 +6840,53 @@
    "id": "FB-1801",
    "section": "18. Signal-to-fill latency, market microstructure and fidelity \u2014 P0",
    "title": "Publish per-signal timing telemetry:",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "per-signal ordered stage timestamps",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/session_timeline.py",
-     "ref": "f00",
-     "object": "601a24ca7964"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/intent_timing.py",
-     "ref": "f00",
-     "object": "6ceab13c5498"
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
    "id": "FB-1802",
    "section": "18. Signal-to-fill latency, market microstructure and fidelity \u2014 P0",
    "title": "Replace latency-unsafe default polling on the instant-signal path with an asynchronous streamed adapter where permitted, while preserving a clearly la",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "runner polls every 20 s",
+   "note": "feed mode labels; async adapter is external integration",
    "source": [
     {
-     "path": "src/financial_brain/ingest/kite_live.py",
-     "ref": "main",
-     "object": "14ab5f2ae9a5"
-    },
-    {
-     "path": "src/financial_brain/paper/intraday_runner.py",
-     "ref": "main",
-     "object": "9ef562555847"
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1803",
@@ -6686,22 +6895,23 @@
    "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "sequence gaps detected; downgrade wiring not built",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/feed_health.py",
-     "ref": "f00",
-     "object": "8a7dcd09fa7b"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/outage_gate.py",
-     "ref": "f00",
-     "object": "dd322a2502d7"
+     "path": "src/financial_brain/instruments/market_quality.py",
+     "ref": "d2",
+     "object": "7cc2cc4bbcea"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_market_quality.py",
+     "ref": "d2",
+     "object": "d1cddd1a6a24"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -6818,49 +7028,53 @@
    "id": "FB-1808",
    "section": "18. Signal-to-fill latency, market microstructure and fidelity \u2014 P0",
    "title": "Implement executable event replay from immutable source data through exact same decision contract;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "capture_replay is on the codex branch",
+   "note": "replay through the same decision function",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/capture_replay.py",
-     "ref": "codex",
-     "object": "19ce66306763"
-    },
-    {
-     "path": "src/financial_brain/opportunity/replay.py",
-     "ref": "main",
-     "object": "880e81453b9f"
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
    "unmerged": [
-    "codex"
+    "d2"
    ]
   },
   {
    "id": "FB-1901",
    "section": "19. Adaptive but auditable exits and risk containment \u2014 P0/P1",
    "title": "Implement one frozen `ExitPolicy` API for fixed SL/TP, ATR/volatility stop, trailing stop, staged profit-taking, time exits and strategy invalidation;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "frozen versioned exit policy API",
    "source": [
     {
-     "path": "src/financial_brain/evaluation/exit_rules.py",
-     "ref": "main",
-     "object": "75396462f29f"
-    },
-    {
-     "path": "src/financial_brain/strategies/execution_rules.py",
-     "ref": "main",
-     "object": "47db777b62c5"
+     "path": "src/financial_brain/signals/desk_logic.py",
+     "ref": "d2",
+     "object": "e3367a160bc9"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_logic.py",
+     "ref": "d2",
+     "object": "1a6afb572694"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1902",
@@ -6892,19 +7106,27 @@
    "id": "FB-1903",
    "section": "19. Adaptive but auditable exits and risk containment \u2014 P0/P1",
    "title": "Build `portfolio_exit_guard` to reduce exposure when aggregate desk risk, correlated losses or option Greeks breach limits, while respecting instrumen",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "exit guard reduces largest risks to limit",
    "source": [
     {
-     "path": "src/financial_brain/risk/killswitch.py",
-     "ref": "main",
-     "object": "019441e0b8ab"
+     "path": "src/financial_brain/signals/desk_logic.py",
+     "ref": "d2",
+     "object": "e3367a160bc9"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_logic.py",
+     "ref": "d2",
+     "object": "1a6afb572694"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1904",
@@ -6936,25 +7158,26 @@
    "id": "FB-1905",
    "section": "19. Adaptive but auditable exits and risk containment \u2014 P0/P1",
    "title": "Model overnight opening gaps and circuit limits for equities/ETFs, spread widening for options, and NAV-date/cash settlement delays for MF redemption ",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "gap and circuit-locked stop fills; option spread widening in cross_asset",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/disaster_stress.py",
-     "ref": "f00",
-     "object": "bb64f874e8d9"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/market_events.py",
-     "ref": "f00",
-     "object": "811069019086"
+     "path": "src/financial_brain/instruments/market_quality.py",
+     "ref": "d2",
+     "object": "7cc2cc4bbcea"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_market_quality.py",
+     "ref": "d2",
+     "object": "d1cddd1a6a24"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -7025,42 +7248,53 @@
    "id": "FB-2001",
    "section": "20. Market-specific advantage: options, ETFs and mutual funds \u2014 P1",
    "title": "Add options chain selection scoring on executable bid/ask, depth, open interest *with availability caveats*, IV, Greeks, theta decay, contract expiry,",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "chain selection on bid/ask, depth, theta with OI caveat",
    "source": [
     {
-     "path": "src/financial_brain/kernel/options.py",
-     "ref": "main",
-     "object": "96651e25ebc6"
-    },
-    {
-     "path": "src/financial_brain/evaluation/options_real.py",
-     "ref": "main",
-     "object": "b5660776d30a"
+     "path": "src/financial_brain/execution/option_book.py",
+     "ref": "d2",
+     "object": "1f79ffe4d4b1"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2002",
    "section": "20. Market-specific advantage: options, ETFs and mutual funds \u2014 P1",
    "title": "Build a constrained implied-volatility surface with quote quality checks, no-arbitrage diagnostics and time-consistent snapshots;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "implied vol per contract; no surface",
+   "note": "monotonicity, convexity, calendar checks; no fitted surface",
    "source": [
     {
-     "path": "src/financial_brain/kernel/options.py",
-     "ref": "main",
-     "object": "96651e25ebc6"
+     "path": "src/financial_brain/execution/option_book.py",
+     "ref": "d2",
+     "object": "1f79ffe4d4b1"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_option_book.py",
+     "ref": "d2",
+     "object": "e60ddc8c9d2c"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2003",
@@ -7350,20 +7584,26 @@
    "id": "FB-2106",
    "section": "21. Profit attribution, signal effectiveness and business scorecards \u2014 P0",
    "title": "Compare autonomous vs trader-approved paper sleeves under the *same* decision-time quotes and fill rules;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "same decision-time set; human effects separated",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/shadow.py",
-     "ref": "f00",
-     "object": "ed243b86091d"
+     "path": "src/financial_brain/portfolio/position_ledger.py",
+     "ref": "d2",
+     "object": "b937e29a4304"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_position_tax.py",
+     "ref": "d2",
+     "object": "b74ac05bce98"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -7528,43 +7768,52 @@
    "id": "FB-2205",
    "section": "22. Prospective strategy discovery and promotion \u2014 P0/P1",
    "title": "Calibrate forecast probabilities and expected return by market regime, asset, liquidity and confidence strata *only on prior data*, with sample-covera",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "strata calibration on prior data; thin strata UNCALIBRATED",
    "source": [
     {
-     "path": "src/financial_brain/forecasting/calibration.py",
-     "ref": "main",
-     "object": "4d45d3dacc4c"
-    },
-    {
-     "path": "src/financial_brain/regime/brain.py",
-     "ref": "main",
-     "object": "7ff7457605a4"
+     "path": "src/financial_brain/forecasting/calibration_tools.py",
+     "ref": "d2",
+     "object": "274183e5bec0"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2206",
    "section": "22. Prospective strategy discovery and promotion \u2014 P0/P1",
    "title": "Audit change of data vendor, latency class, order size, transaction cost or signal TTL as a material experiment version change;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "material change detector",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/parameter_freeze.py",
-     "ref": "f00",
-     "object": "d4367d6a8ae7"
+     "path": "src/financial_brain/forecasting/calibration_tools.py",
+     "ref": "d2",
+     "object": "274183e5bec0"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -7833,24 +8082,27 @@
    "id": "FB-2401",
    "section": "24A. Index and derivative universe / data \u2014 P0",
    "title": "Build `index_master` for *all available Nifty indexes* keyed by canonical index identifier, effective-dated name/symbol, index family, provider token,",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "daily index series; no effective-dated index master",
+   "note": "dated index master incl. renamed and discontinued",
    "source": [
     {
-     "path": "src/financial_brain/indices/lineage.py",
-     "ref": "main",
-     "object": "bd8821bab94f"
-    },
-    {
-     "path": "src/financial_brain/ingest/index_tri.py",
-     "ref": "main",
-     "object": "6c5f825405f5"
+     "path": "src/financial_brain/forecasting/calibration_tools.py",
+     "ref": "d2",
+     "object": "274183e5bec0"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2402",
@@ -8165,42 +8417,53 @@
    "id": "FB-2414",
    "section": "24C. Probabilistic forecasting models and adaptation \u2014 P0/P1",
    "title": "Fit probabilities with held-out chronological calibration (e.g.",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "isotonic calibration on earlier window",
    "source": [
     {
-     "path": "src/financial_brain/forecasting/calibration.py",
-     "ref": "main",
-     "object": "4d45d3dacc4c"
+     "path": "src/financial_brain/forecasting/calibration_tools.py",
+     "ref": "d2",
+     "object": "274183e5bec0"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2415",
    "section": "24C. Probabilistic forecasting models and adaptation \u2014 P0/P1",
    "title": "Use `forecasting/ensemble.py`, `forecasting/calibration.py` and `decisions/forecast_ev.py` where appropriate;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "baseline comparison helper; existing ensemble not wired",
    "source": [
     {
-     "path": "src/financial_brain/forecasting/ensemble.py",
-     "ref": "main",
-     "object": "1782c15c2efd"
-    },
-    {
-     "path": "src/financial_brain/decisions/forecast_ev.py",
-     "ref": "main",
-     "object": "1dd9edf54949"
+     "path": "src/financial_brain/forecasting/calibration_tools.py",
+     "ref": "d2",
+     "object": "274183e5bec0"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2416",
@@ -8362,19 +8625,27 @@
    "id": "FB-2422",
    "section": "24E. Automatic paper routing and correlated risk \u2014 P0",
    "title": "Auto-route eligible signals through the **canonical paper OMS**.",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "eligible forecast to canonical OMS order",
    "source": [
     {
-     "path": "src/financial_brain/paper/options_runner.py",
-     "ref": "main",
-     "object": "869e2e578201"
+     "path": "src/financial_brain/paper/ops.py",
+     "ref": "d2",
+     "object": "31be5c4e9a9f"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2423",
@@ -8509,45 +8780,51 @@
    "id": "FB-2428",
    "section": "24F. Backtest design and legitimate forward validation \u2014 P0",
    "title": "Test against no-trade, class-frequency, always-up, momentum, simple volatility and cost-matched CE/PE null strategies;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "always-up, frequency, momentum, no-trade nulls",
    "source": [
     {
-     "path": "src/financial_brain/forecasting/null.py",
-     "ref": "main",
-     "object": "aa8eade8a9f2"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/intraday_nulls.py",
-     "ref": "f00",
-     "object": "b888eef472ff"
+     "path": "src/financial_brain/forecasting/calibration_tools.py",
+     "ref": "d2",
+     "object": "274183e5bec0"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_calibration_ops.py",
+     "ref": "d2",
+     "object": "5a0394585a0a"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
    "id": "FB-2429",
    "section": "24F. Backtest design and legitimate forward validation \u2014 P0",
    "title": "Evaluate dependent observations with session-level clustering or block bootstrap, index-correlation adjustment, multiple-testing correction, and separ",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "stratified metrics and session bootstrap",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/cohort_blocks.py",
-     "ref": "f00",
-     "object": "e4bd8aefafa9"
+     "path": "src/financial_brain/forecasting/calibration_tools.py",
+     "ref": "d2",
+     "object": "274183e5bec0"
+    },
+    {
+     "path": "src/financial_brain/evaluation/scorecards.py",
+     "ref": "d2",
+     "object": "cdca8a07dcad"
     }
    ],
    "test": [],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
