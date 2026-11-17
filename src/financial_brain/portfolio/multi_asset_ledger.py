@@ -142,6 +142,24 @@ class Journal:
                                                         Line("CASH:MF_PENDING", credit=amount)]):
             self.units[(desk, scheme)] += units
 
+    def distribution(self, key: str, at: datetime, desk: str, instrument: str, cash: Decimal,
+                     reinvest_units: Decimal | None = None) -> None:
+        """IDCW/dividend as income: paid out to cash, or reinvested into new units (FB-0715)."""
+        if cash <= 0:
+            raise LedgerError("distribution must be positive")
+        if reinvest_units is None:
+            self.post(key, at, desk, f"distribution {instrument}",
+                      [Line("CASH:UNSETTLED", debit=cash), Line("INCOME:DISTRIBUTION", credit=cash)])
+            return
+        if self.post(key, at, desk, f"reinvest {instrument}",
+                     [Line(f"POS:{instrument}", debit=cash), Line("INCOME:DISTRIBUTION", credit=cash)]):
+            self.units[(desk, instrument)] += reinvest_units
+
+    def charge(self, key: str, at: datetime, desk: str, what: str, amount: Decimal) -> None:
+        """Stamp duty, exit load or other charge paid from available cash (FB-0708)."""
+        self.post(key, at, desk, what, [Line(f"EXPENSE:{what.upper()}", debit=amount),
+                                       Line("CASH:AVAILABLE", credit=amount)])
+
     # ---------------------------------------------------------------- valuation
 
     def nav(self, marks: dict[str, Mark], now: datetime, max_age, desk: str | None = None) -> dict:

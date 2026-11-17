@@ -103,6 +103,32 @@ def check_redemption(rules: SchemeRules, units: Decimal, value: Decimal,
         raise PlanError("below minimum redemption")
 
 
+@dataclass
+class Folio:
+    """Synthetic paper folio (FB-0701/FB-0713). Frozen or KYC-pending folios cannot transact."""
+
+    folio_id: str
+    holder: str
+    frozen: bool = False
+    kyc_ok: bool = True
+    schemes: set[str] = field(default_factory=set)
+
+    def check(self, scheme_code: str, redeem: bool) -> None:
+        if self.frozen:
+            raise PlanError("folio frozen")
+        if not self.kyc_ok:
+            raise PlanError("folio KYC pending")
+        if redeem and scheme_code not in self.schemes:
+            raise PlanError("scheme not held in this folio")
+
+
+def stamp_duty(amount: Decimal, rate: Decimal) -> Decimal:
+    """Stamp duty on purchases at an effective-dated rate supplied by the caller (FB-0708)."""
+    if rate < 0:
+        raise PlanError("negative rate")
+    return (amount * rate).quantize(Decimal("0.01"))
+
+
 # ------------------------------------------------------------------ SIP / SWP / STP / switch (0710-0712)
 
 @dataclass(frozen=True)
