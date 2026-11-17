@@ -400,6 +400,43 @@ A.update({
     "FB-2204": (P, [_SC, _TSC], "session-block bootstrap; multiple-testing adjustment elsewhere"),
     "FB-2207": (P, [_SC, _TSC], "frozen-rule FAILING on drawdown or non-positive lower bound"),
 })
+_DC, _TDC = S + "paper/day_cycle.py", "tests/test_day_cycle_s10.py"
+_ADV = "tests/test_adversarial_s13.py"
+_IX, _TIX = S + "forecasting/index_15m.py", "tests/test_index_15m_s24.py"
+_IO, _TIO = S + "signals/index_options.py", "tests/test_index_options_s24d.py"
+A.update({
+    "FB-1008": (P, [_DC, _TDC], "daily reconcile phase slot; handler not wired"),
+    "FB-1010": (D, [_DC, _TDC], "fail-closed halts trading phases for the day"),
+    "FB-1011": (D, [_DC, _TDC], "run statuses, once per (day, phase), retry after failure"),
+    "FB-1301": (P, [_ADV], "1200 randomised ledger events; timezones/calendars covered elsewhere"),
+    "FB-1302": (D, [_ADV], "no TRADE when net does not cover costs"),
+    "FB-1303": (P, [_ADV], "delayed quote never fills; polling-vs-stream comparison not built"),
+    "FB-1305": (D, [_ADV], "stale iNAV gives no premium; wide spread blocks fill"),
+    "FB-1306": (P, [_ADV], "same-underlying ETF and fund summed; currency/commodity not covered"),
+    "FB-1309": (P, [_ADV], "cut-off, late funds, weekend, holiday; liquid/overnight rules not loaded"),
+    "FB-1310": (D, [_ADV], "NAV published after decision cannot allot"),
+    "FB-1311": (D, [_ADV], "insufficient or pending cash rejected"),
+    "FB-1312": (P, [_ADV], "partial redemption, lot loads, fractional units; minimums/lock-in missing"),
+    "FB-1316": (P, [_ADV], "exit replay after restart idempotent; other crash points not covered"),
+    "FB-1317": (D, [_ADV], "duplicate keys post once"),
+    "FB-1319": (P, [_ADV], "25% gap stress; option and MF gating stresses not covered"),
+    "FB-2403": (P, [_IX, _TIX], "15m bars from 1m without volume; live tick ingest not built"),
+    "FB-2405": (P, [_IX, _TIX], "partial bars never presented as full; holiday/auction calendars external"),
+    "FB-2406": (D, [_IX, _TIX], "forward return from completed bar, None across gaps"),
+    "FB-2407": (D, [_IX, _TIX], "UP/DOWN/FLAT from training-only noise threshold"),
+    "FB-2408": (P, [_IX, _TIX], "return, range, volatility, time and opening-range features"),
+    "FB-2410": (D, [_IX, _TIX], "mutation leak check on bars after cutoff"),
+    "FB-2411": (P, [_IX, _TIX], "class-frequency baseline; persistence/vol baselines missing"),
+    "FB-2413": (P, [_IX, _TIX], "probability validation and Brier; no prediction interval"),
+    "FB-2416": (D, [_IO, _TIO], "listed, unexpired, fresh, two-sided, deep contracts only"),
+    "FB-2417": (P, [_IO, _TIO], "delta-gamma-theta-vega expectation; no full path simulation"),
+    "FB-2418": (P, [_IO, _TIO], "ranked by expected net per lot; no tail/portfolio impact"),
+    "FB-2425": (P, [_IO, _TIO], "state enum; RESEARCH_ONLY/NO_TRADE/UNPRICED/PAPER_ELIGIBLE produced"),
+    "FB-2426": (D, [_IX, _TIX], "chronological purged and embargoed folds"),
+    "FB-2436": (P, [_TIX], "bar close, as-of, labels, partial bars; holidays external"),
+    "FB-2437": (P, [_TIX, _TIO], "probabilities sum to 1; unlisted/expired/zero-depth refused"),
+    "FB-2438": (D, [_TIO], "bullish forecast with costly option gives NO_TRADE"),
+})
 
 
 def git(*args: str) -> str:

@@ -45,10 +45,10 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "3c67caccd8",
-   "ahead_of_main": 9,
+   "commit": "06616f55af",
+   "ahead_of_main": 14,
    "behind_main": 0,
-   "test_files": 331
+   "test_files": 335
   }
  },
  "status_meaning": {
@@ -58,10 +58,10 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 101,
-  "DONE": 45,
-  "FOOTHOLD": 81,
-  "NOT_STARTED": 178
+  "PARTIAL": 115,
+  "DONE": 58,
+  "FOOTHOLD": 72,
+  "NOT_STARTED": 160
  },
  "by_dependency": {
   "IN_HOUSE": 375,
@@ -3841,27 +3841,23 @@
    "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "daily reconcile phase slot; handler not wired",
    "source": [
     {
-     "path": "src/financial_brain/paper/daily_results.py",
-     "ref": "main",
-     "object": "c515bc1bb405"
-    },
-    {
-     "path": "src/financial_brain/paper/reconcile.py",
-     "ref": "main",
-     "object": "6d05483f5b13"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/session_close.py",
-     "ref": "f00",
-     "object": "075140ac9741"
+     "path": "src/financial_brain/paper/day_cycle.py",
+     "ref": "d2",
+     "object": "c6445545c131"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_day_cycle_s10.py",
+     "ref": "d2",
+     "object": "d9a885ba4df9"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -3880,54 +3876,53 @@
    "id": "FB-1010",
    "section": "10. Daily, real-time and periodic signal scheduling \u2014 P0",
    "title": "On feed failure, data-quality error, unexpected portfolio state or high drawdown:",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "fail-closed halts trading phases for the day",
    "source": [
     {
-     "path": "src/financial_brain/risk/killswitch.py",
-     "ref": "main",
-     "object": "019441e0b8ab"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/outage_gate.py",
-     "ref": "f00",
-     "object": "dd322a2502d7"
-    },
-    {
-     "path": "src/financial_brain/forward_edge/data_gate.py",
-     "ref": "f00",
-     "object": "14912ab1ed43"
+     "path": "src/financial_brain/paper/day_cycle.py",
+     "ref": "d2",
+     "object": "c6445545c131"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_day_cycle_s10.py",
+     "ref": "d2",
+     "object": "d9a885ba4df9"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
    "id": "FB-1011",
    "section": "10. Daily, real-time and periodic signal scheduling \u2014 P0",
    "title": "Provide unambiguous run statuses and retry behavior;",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "run statuses, once per (day, phase), retry after failure",
    "source": [
     {
-     "path": "src/financial_brain/ingest/job.py",
-     "ref": "main",
-     "object": "427af3817ba9"
-    },
-    {
-     "path": "src/financial_brain/paper/run_manifest.py",
-     "ref": "main",
-     "object": "acf71ab81218"
+     "path": "src/financial_brain/paper/day_cycle.py",
+     "ref": "d2",
+     "object": "c6445545c131"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_day_cycle_s10.py",
+     "ref": "d2",
+     "object": "d9a885ba4df9"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1012",
@@ -4562,49 +4557,61 @@
    "id": "FB-1301",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test all schema types, asset routing, instrument identity, timezones, calendars and decimal precision across 1000+ randomized event sequences.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "1200 randomised ledger events; timezones/calendars covered elsewhere",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1302",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test daily equity swing 0\u20135 candidates;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [
+   "note": "no TRADE when net does not cover costs",
+   "source": [],
+   "test": [
     {
-     "path": "src/financial_brain/paper/daily.py",
-     "ref": "main",
-     "object": "6824d6242d8b"
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1303",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test 20-second intraday polling mode vs event streaming;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [
+   "note": "delayed quote never fills; polling-vs-stream comparison not built",
+   "source": [],
+   "test": [
     {
-     "path": "src/financial_brain/paper/intraday_runner.py",
-     "ref": "main",
-     "object": "9ef562555847"
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1304",
@@ -4628,25 +4635,41 @@
    "id": "FB-1305",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test ETF wide-spread and stale iNAV;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "stale iNAV gives no premium; wide spread blocks fill",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1306",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test ETF NIFTY/currency/commodity exposure lookthrough and double-counting with underlying stocks and derivative hedges.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "same-underlying ETF and fund summed; currency/commodity not covered",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1307",
@@ -4676,49 +4699,81 @@
    "id": "FB-1309",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test MF after-cutoff application, before-cutoff application with late funds, on-time funds, weekends, bank holidays, scheme suspension and special liq",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "cut-off, late funds, weekend, holiday; liquid/overnight rules not loaded",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1310",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test MF published NAV arriving after decision;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "NAV published after decision cannot allot",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1311",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test MF 100%-cash rejection on insufficient available funding, missing fund receipt confirmation and premature redemption cash use.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "insufficient or pending cash rejected",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1312",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test MF partial redemption, lot-specific exit loads, fractional unit precision, minimum transaction amounts and lock-in failures.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "partial redemption, lot loads, fractional units; minimums/lock-in missing",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1313",
@@ -4760,42 +4815,41 @@
    "id": "FB-1316",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test power loss at signal, approval, cash reserve, funds-receipt, NAV notice, allotment, redemption and payout;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "exchange path only",
-   "source": [
+   "note": "exit replay after restart idempotent; other crash points not covered",
+   "source": [],
+   "test": [
     {
-     "path": "src/financial_brain/forward_edge/durable.py",
-     "ref": "main",
-     "object": "6aa6e135cbca"
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1317",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test duplicate network events and corrections;",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [
+   "note": "duplicate keys post once",
+   "source": [],
+   "test": [
     {
-     "path": "src/financial_brain/forward_edge/durable.py",
-     "ref": "main",
-     "object": "6aa6e135cbca"
-    },
-    {
-     "path": "src/financial_brain/execution/oms/journal.py",
-     "ref": "main",
-     "object": "c9b4fdbc2e1a"
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1318",
@@ -4825,20 +4879,20 @@
    "id": "FB-1319",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test stress cases:",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [
+   "note": "25% gap stress; option and MF gating stresses not covered",
+   "source": [],
+   "test": [
     {
-     "path": "src/financial_brain/forward_edge/disaster_stress.py",
-     "ref": "f00",
-     "object": "bb64f874e8d9"
+     "path": "tests/test_adversarial_s13.py",
+     "ref": "d2",
+     "object": "3cc7612756ce"
     }
    ],
-   "test": [],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
@@ -6518,24 +6572,27 @@
    "id": "FB-2403",
    "section": "24A. Index and derivative universe / data \u2014 P0",
    "title": "Ingest permitted 1-minute historical index prices and live index ticks;",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "minute index data is used by the failed VWAP family; no 15-minute bar builder",
+   "note": "15m bars from 1m without volume; live tick ingest not built",
    "source": [
     {
-     "path": "src/financial_brain/ingest/kite_minute.py",
-     "ref": "main",
-     "object": "90c7d0ec3955"
-    },
-    {
-     "path": "src/financial_brain/evaluation/index_rules.py",
-     "ref": "main",
-     "object": "9a94fe36769e"
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2404",
@@ -6564,63 +6621,105 @@
    "id": "FB-2405",
    "section": "24A. Index and derivative universe / data \u2014 P0",
    "title": "Maintain exchange-date-specific sessions, scheduled bar boundaries, holidays, auctions, expiry cutoffs, provider disconnects and availability calendar",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "EXTERNAL",
    "blocker": "provider entitlement and retention limits",
-   "note": "",
+   "note": "partial bars never presented as full; holiday/auction calendars external",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/venue_calendar.py",
-     "ref": "f00",
-     "object": "6a27d7f7ac3e"
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
     }
    ],
-   "test": [],
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
    "unmerged": [
-    "f00"
+    "d2"
    ]
   },
   {
    "id": "FB-2406",
    "section": "24B. Chronological 15-minute labels, features and leakage controls \u2014 P0",
    "title": "For index i and a *completed* bar ending at time t, define `r(i,t,15m)=S(i,t+15m)/S(i,t)-1` (and explicit forward 30m/60m/EOD targets).",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "forward return from completed bar, None across gaps",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2407",
    "section": "24B. Chronological 15-minute labels, features and leakage controls \u2014 P0",
    "title": "Define 3-class labels UP/DOWN/FLAT using training-period, index-specific price-noise thresholds;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "UP/DOWN/FLAT from training-only noise threshold",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2408",
    "section": "24B. Chronological 15-minute labels, features and leakage controls \u2014 P0",
    "title": "Build point-in-time features from prior 1m/5m/15m/60m returns, volatility, VWAP where meaningful, opening range, realized range, trend slope, overnigh",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "equity session features",
+   "note": "return, range, volatility, time and opening-range features",
    "source": [
     {
-     "path": "src/financial_brain/features/intraday.py",
-     "ref": "main",
-     "object": "79ae34d7edca"
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2409",
@@ -6638,25 +6737,53 @@
    "id": "FB-2410",
    "section": "24B. Chronological 15-minute labels, features and leakage controls \u2014 P0",
    "title": "Write leak tests:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "mutation leak check on bars after cutoff",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2411",
    "section": "24C. Probabilistic forecasting models and adaptation \u2014 P0/P1",
    "title": "Train naive frequency, no-change, price-persistence and volatility/time-of-day baseline classifiers for each index/horizon;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "class-frequency baseline; persistence/vol baselines missing",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2412",
@@ -6674,13 +6801,27 @@
    "id": "FB-2413",
    "section": "24C. Probabilistic forecasting models and adaptation \u2014 P0/P1",
    "title": "Generate `P_UP`, `P_DOWN`, `P_FLAT`, expected return in index points/bps, and prediction interval;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "probability validation and Brier; no prediction interval",
+   "source": [
+    {
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2414",
@@ -6727,48 +6868,79 @@
    "id": "FB-2416",
    "section": "24D. Options conversion, entry/exit, SL/TP \u2014 P0",
    "title": "Map each index forecast to CE, PE, defined-risk debit-spread or `NO_TRADE` candidates from *presently listed instruments*;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "listed, unexpired, fresh, two-sided, deep contracts only",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/index_options.py",
+     "ref": "d2",
+     "object": "886df3167789"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_options_s24d.py",
+     "ref": "d2",
+     "object": "c64d3cc9e724"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2417",
    "section": "24D. Options conversion, entry/exit, SL/TP \u2014 P0",
    "title": "Convert full projected underlying-return/IV/time paths into option-premium outcome distributions with delta, gamma, theta, vega, spreads and realistic",
-   "status": "FOOTHOLD",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "delta-gamma-theta-vega expectation; no full path simulation",
    "source": [
     {
-     "path": "src/financial_brain/kernel/options.py",
-     "ref": "main",
-     "object": "96651e25ebc6"
-    },
-    {
-     "path": "src/financial_brain/decisions/forecast_ev.py",
-     "ref": "main",
-     "object": "1dd9edf54949"
+     "path": "src/financial_brain/signals/index_options.py",
+     "ref": "d2",
+     "object": "886df3167789"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_index_options_s24d.py",
+     "ref": "d2",
+     "object": "c64d3cc9e724"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2418",
    "section": "24D. Options conversion, entry/exit, SL/TP \u2014 P0",
    "title": "Rank option candidates by **expected executable net P&L**, downside tails, risk-adjusted expected value and portfolio marginal impact;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "ranked by expected net per lot; no tail/portfolio impact",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/index_options.py",
+     "ref": "d2",
+     "object": "886df3167789"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_options_s24d.py",
+     "ref": "d2",
+     "object": "c64d3cc9e724"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2419",
@@ -6852,31 +7024,53 @@
    "id": "FB-2425",
    "section": "24E. Automatic paper routing and correlated risk \u2014 P0",
    "title": "Reconcile each index signal to `RESEARCH_ONLY`, `NO_TRADE`, `WATCH`, `PAPER_ELIGIBLE`, `UNFILLED`, `OPEN`, `PARTIALLY_EXITED`, `CLOSED` or `UNPRICED`;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "state enum; RESEARCH_ONLY/NO_TRADE/UNPRICED/PAPER_ELIGIBLE produced",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/index_options.py",
+     "ref": "d2",
+     "object": "886df3167789"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_index_options_s24d.py",
+     "ref": "d2",
+     "object": "c64d3cc9e724"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2426",
    "section": "24F. Backtest design and legitimate forward validation \u2014 P0",
    "title": "Construct global date-wise and session-wise time splits with purging/embargo over overlapping 15m, 30m, 60m labels and cross-index features;",
-   "status": "FOOTHOLD",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "chronological purged and embargoed folds",
    "source": [
     {
-     "path": "src/financial_brain/forecasting/walkforward.py",
-     "ref": "main",
-     "object": "322ad6f9d3ba"
+     "path": "src/financial_brain/forecasting/index_15m.py",
+     "ref": "d2",
+     "object": "9a96b5b9f870"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2427",
@@ -7017,37 +7211,66 @@
    "id": "FB-2436",
    "section": "24H. Adversarial tests and acceptance \u2014 P0",
    "title": "Unit-test 15-minute bar closing, feature as-of boundaries, label computation, market open/close, partial bars, no-data, exchange holidays and index in",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "bar close, as-of, labels, partial bars; holidays external",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2437",
    "section": "24H. Adversarial tests and acceptance \u2014 P0",
    "title": "Property-test calibrated probabilities sum to 1, all candidate contracts exist in the effective-dated instrument master, and no paper order can refer ",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "probabilities sum to 1; unlisted/expired/zero-depth refused",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_index_15m_s24.py",
+     "ref": "d2",
+     "object": "100fc90306f0"
+    },
+    {
+     "path": "tests/test_index_options_s24d.py",
+     "ref": "d2",
+     "object": "c64d3cc9e724"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2438",
    "section": "24H. Adversarial tests and acceptance \u2014 P0",
    "title": "Simulate a 15m bullish index forecast with options inflated by IV/theta/spread:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "bullish forecast with costly option gives NO_TRADE",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_index_options_s24d.py",
+     "ref": "d2",
+     "object": "c64d3cc9e724"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2439",

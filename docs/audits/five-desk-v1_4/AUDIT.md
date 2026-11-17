@@ -6,10 +6,10 @@ no acceptance test was run per task. Machine-readable copy: `audit.json`.
 
 | status | tasks | meaning |
 |---|---|---|
-| DONE | 45 | code and a test exist for the task as written |
-| PARTIAL | 101 | part of the task is built and tested; the rest is named in the note |
-| FOOTHOLD | 81 | a reusable building block exists, but the task's own subject is not built |
-| NOT_STARTED | 178 | nothing in the repository addresses it |
+| DONE | 58 | code and a test exist for the task as written |
+| PARTIAL | 115 | part of the task is built and tested; the rest is named in the note |
+| FOOTHOLD | 72 | a reusable building block exists, but the task's own subject is not built |
+| NOT_STARTED | 160 | nothing in the repository addresses it |
 
 Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 
@@ -22,9 +22,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | codex | `codex/forward-edge-falsification-audit-20261115` | `13e2ab6695` | 163 | 0 | 377 |
 | dyn | `feature/dynamic-evidence-standard` | `7494a5e3f0` | 3 | 0 | 323 |
 | d1 | `feature/five-desk-d1-instruments` | `8b0b12cef3` | 1 | 0 | 323 |
-| d2 | `feature/five-desk-d2-data-parity` | `3c67caccd8` | 9 | 0 | 331 |
+| d2 | `feature/five-desk-d2-data-parity` | `06616f55af` | 14 | 0 | 335 |
 
-130 tasks cite evidence that is not on `main`.
+157 tasks cite evidence that is not on `main`.
 
 ## By section
 
@@ -41,10 +41,10 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | 7. Mutual fund transaction lifecycle and NAV execution — P0 | 3 | 3 | 0 | 12 |
 | 8. Shared exchange paper OMS: equities, ETFs, options — P0 | 6 | 6 | 2 | 0 |
 | 9. Shared multi-asset accounting, P&L, taxes and capital — P0 | 4 | 7 | 5 | 2 |
-| 10. Daily, real-time and periodic signal scheduling — P0 | 0 | 7 | 3 | 2 |
+| 10. Daily, real-time and periodic signal scheduling — P0 | 2 | 5 | 3 | 2 |
 | 11. Trader dashboard and workflows — P1 | 0 | 4 | 5 | 3 |
 | 12. Evaluation, performance benchmarks, research discipline — P0/P1 | 0 | 11 | 2 | 3 |
-| 13. Adversarial, property-based and acceptance tests — P0 | 0 | 3 | 5 | 12 |
+| 13. Adversarial, property-based and acceptance tests — P0 | 5 | 9 | 1 | 5 |
 | 14. Deployment, staged release and external requirements — P0/P1 | 0 | 5 | 2 | 3 |
 | 16. Executable expected value and signal admissibility — P0 | 3 | 3 | 2 | 0 |
 | 17. Quant capital allocation and cross-desk exposure — P0 | 2 | 3 | 2 | 1 |
@@ -54,14 +54,14 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | 21. Profit attribution, signal effectiveness and business scorecards — P0 | 2 | 5 | 1 | 0 |
 | 22. Prospective strategy discovery and promotion — P0/P1 | 0 | 6 | 2 | 0 |
 | 23. Trader control room, alert ergonomics and fail-safe operations — P0/P1 | 0 | 5 | 3 | 0 |
-| 24A. Index and derivative universe / data — P0 | 0 | 0 | 4 | 1 |
-| 24B. Chronological 15-minute labels, features and leakage controls — P0 | 0 | 0 | 1 | 4 |
-| 24C. Probabilistic forecasting models and adaptation — P0/P1 | 0 | 0 | 2 | 3 |
-| 24D. Options conversion, entry/exit, SL/TP — P0 | 0 | 0 | 1 | 4 |
-| 24E. Automatic paper routing and correlated risk — P0 | 0 | 0 | 1 | 4 |
-| 24F. Backtest design and legitimate forward validation — P0 | 0 | 1 | 3 | 1 |
+| 24A. Index and derivative universe / data — P0 | 0 | 2 | 2 | 1 |
+| 24B. Chronological 15-minute labels, features and leakage controls — P0 | 3 | 1 | 0 | 1 |
+| 24C. Probabilistic forecasting models and adaptation — P0/P1 | 0 | 2 | 2 | 1 |
+| 24D. Options conversion, entry/exit, SL/TP — P0 | 1 | 2 | 0 | 2 |
+| 24E. Automatic paper routing and correlated risk — P0 | 0 | 1 | 1 | 3 |
+| 24F. Backtest design and legitimate forward validation — P0 | 1 | 1 | 2 | 1 |
 | 24G. Live 15-minute operating system — P0/P1 | 0 | 0 | 0 | 5 |
-| 24H. Adversarial tests and acceptance — P0 | 0 | 0 | 0 | 5 |
+| 24H. Adversarial tests and acceptance — P0 | 1 | 2 | 0 | 2 |
 | 25A. Source preservation and ambiguities | 0 | 0 | 0 | 8 |
 | 25B. Indicators, fractals and node state machine | 0 | 0 | 2 | 6 |
 | 25C. Entry filters and exit engine | 0 | 0 | 0 | 8 |
@@ -266,10 +266,10 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | FB-1005 | PARTIAL |  | `paper/daily.py` (main 6824d62)<br>`paper/zoo.py` (main 4ad5c29) | After market: — no ETF ranks |
 | FB-1006 | FOOTHOLD |  | `ingest/mfnav.py` (main b1e7d0f) | After AMFI NAV publication: |
 | FB-1007 | NOT_STARTED |  |  | Before MF cutoffs: |
-| FB-1008 | PARTIAL |  | `paper/daily_results.py` (main c515bc1)<br>`paper/reconcile.py` (main 6d05483)<br>`forward_edge/session_close.py` (f00 075140a) | Daily: |
+| FB-1008 | PARTIAL |  | `paper/day_cycle.py` (d2 c644554)<br>`tests/test_day_cycle_s10.py` (d2 d9a885b) | Daily: — daily reconcile phase slot; handler not wired |
 | FB-1009 | NOT_STARTED |  |  | Periodic: |
-| FB-1010 | PARTIAL |  | `risk/killswitch.py` (main 019441e)<br>`forward_edge/outage_gate.py` (f00 dd322a2)<br>`forward_edge/data_gate.py` (f00 14912ab) | On feed failure, data-quality error, unexpected portfolio state or high drawdown: |
-| FB-1011 | PARTIAL |  | `ingest/job.py` (main 427af38)<br>`paper/run_manifest.py` (main acf71ab) | Provide unambiguous run statuses and retry behavior; |
+| FB-1010 | DONE |  | `paper/day_cycle.py` (d2 c644554)<br>`tests/test_day_cycle_s10.py` (d2 d9a885b) | On feed failure, data-quality error, unexpected portfolio state or high drawdown: — fail-closed halts trading phases for the day |
+| FB-1011 | DONE |  | `paper/day_cycle.py` (d2 c644554)<br>`tests/test_day_cycle_s10.py` (d2 d9a885b) | Provide unambiguous run statuses and retry behavior; — run statuses, once per (day, phase), retry after failure |
 | FB-1012 | FOOTHOLD |  | `execution/oms/shortfall.py` (main 2760bd8)<br>`forward_edge/session_timeline.py` (f00 601a24c) | Measure signal latency, quote-to-fill delay, drop rates, outages and trading downtime separately for each desk. |
 | FB-1101 | PARTIAL |  | `api/app.py` (main 889f202)<br>`paper/terminal.py` (main e19fe9a)<br>`forward_edge/pnl_dashboard.py` (f00 6dd4c1e) | Single dashboard shows consolidated account NAV, available/blocked capital, daily and cumulative realized/unrealized P&L and drawdown. |
 | FB-1102 | FOOTHOLD |  | `paper/workstation.py` (main 3646757) | Five desk pages: — no desk pages |
@@ -299,25 +299,25 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | FB-1214 | PARTIAL |  | `docs/trials/ledger.jsonl` (main 2a2b54a)<br>`docs/trials/dynamic/hundred/RESULTS.md` (dyn 4ff95c2) | Publish negative outcomes with the same prominence as positive outcomes; — failures are published; no desk-level loss view |
 | FB-1215 | PARTIAL |  | `commands/trials.py` (main 481c085)<br>`forward_edge/trials.py` (main 0975def) | Prevent research spend/trial budget overruns and mandatory rule-version rotation; |
 | FB-1216 | PARTIAL |  | `risk/allocator.py` (main cf6c7f3)<br>`forward_edge/capital_allocation.py` (f00 5a771fa) | Build capital-allocation committee: — sleeve allocator can set zero; not desk-level |
-| FB-1301 | NOT_STARTED |  |  | Test all schema types, asset routing, instrument identity, timezones, calendars and decimal precision across 1000+ randomized event sequences. |
-| FB-1302 | FOOTHOLD |  | `paper/daily.py` (main 6824d62) | Test daily equity swing 0–5 candidates; |
-| FB-1303 | FOOTHOLD |  | `paper/intraday_runner.py` (main 9ef5625) | Test 20-second intraday polling mode vs event streaming; |
+| FB-1301 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test all schema types, asset routing, instrument identity, timezones, calendars and decimal precision across 1000+ randomized event sequences. — 1200 randomised ledger events; timezones/calendars covered elsewhere |
+| FB-1302 | DONE |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test daily equity swing 0–5 candidates; — no TRADE when net does not cover costs |
+| FB-1303 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test 20-second intraday polling mode vs event streaming; — delayed quote never fills; polling-vs-stream comparison not built |
 | FB-1304 | FOOTHOLD |  | `paper/options_runner.py` (main 869e2e5) | Test options zero/bad bids, nonfillable visible depth, expired tokens, wrong strike/lot, partial multi-leg fills and delayed exit. |
-| FB-1305 | NOT_STARTED |  |  | Test ETF wide-spread and stale iNAV; |
-| FB-1306 | NOT_STARTED |  |  | Test ETF NIFTY/currency/commodity exposure lookthrough and double-counting with underlying stocks and derivative hedges. |
+| FB-1305 | DONE |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test ETF wide-spread and stale iNAV; — stale iNAV gives no premium; wide spread blocks fill |
+| FB-1306 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test ETF NIFTY/currency/commodity exposure lookthrough and double-counting with underlying stocks and derivative hedges. — same-underlying ETF and fund summed; currency/commodity not covered |
 | FB-1307 | NOT_STARTED |  |  | Test ETF split/distribution/delisting/halt and stop handling; |
 | FB-1308 | NOT_STARTED |  |  | Test MF direct vs regular same scheme as different share classes; |
-| FB-1309 | NOT_STARTED |  |  | Test MF after-cutoff application, before-cutoff application with late funds, on-time funds, weekends, bank holidays, scheme suspension and special liq |
-| FB-1310 | NOT_STARTED |  |  | Test MF published NAV arriving after decision; |
-| FB-1311 | NOT_STARTED |  |  | Test MF 100%-cash rejection on insufficient available funding, missing fund receipt confirmation and premature redemption cash use. |
-| FB-1312 | NOT_STARTED |  |  | Test MF partial redemption, lot-specific exit loads, fractional unit precision, minimum transaction amounts and lock-in failures. |
+| FB-1309 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test MF after-cutoff application, before-cutoff application with late funds, on-time funds, weekends, bank holidays, scheme suspension and special liq — cut-off, late funds, weekend, holiday; liquid/overnight rules not loaded |
+| FB-1310 | DONE |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test MF published NAV arriving after decision; — NAV published after decision cannot allot |
+| FB-1311 | DONE |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test MF 100%-cash rejection on insufficient available funding, missing fund receipt confirmation and premature redemption cash use. — insufficient or pending cash rejected |
+| FB-1312 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test MF partial redemption, lot-specific exit loads, fractional unit precision, minimum transaction amounts and lock-in failures. — partial redemption, lot loads, fractional units; minimums/lock-in missing |
 | FB-1313 | NOT_STARTED |  |  | Test IDCW payout/reinvestment, fund merger, scheme winding-up and delayed redemption price publication. |
 | FB-1314 | NOT_STARTED |  |  | Test MF expense accounting to ensure NAV-based returns are not reduced by TER a second time. |
 | FB-1315 | NOT_STARTED |  |  | Test `pay cash for ETF` and `subscribe into equivalent index MF` with identical factor exposure but different execution/timing: |
-| FB-1316 | FOOTHOLD |  | `forward_edge/durable.py` (main 6aa6e13) | Test power loss at signal, approval, cash reserve, funds-receipt, NAV notice, allotment, redemption and payout; — exchange path only |
-| FB-1317 | PARTIAL |  | `forward_edge/durable.py` (main 6aa6e13)<br>`execution/oms/journal.py` (main c9b4fdb) | Test duplicate network events and corrections; |
+| FB-1316 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test power loss at signal, approval, cash reserve, funds-receipt, NAV notice, allotment, redemption and payout; — exit replay after restart idempotent; other crash points not covered |
+| FB-1317 | DONE |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test duplicate network events and corrections; — duplicate keys post once |
 | FB-1318 | PARTIAL |  | `execution/oms/kite_broker.py` (main a2138ac)<br>`tests/test_forward_edge_f00.py` (main 31827c3) | Test disabled real broker endpoints through every old and new OMS path, including malicious/accidental mode switches. — each path tested alone |
-| FB-1319 | FOOTHOLD |  | `forward_edge/disaster_stress.py` (f00 bb64f87) | Test stress cases: |
+| FB-1319 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test stress cases: — 25% gap stress; option and MF gating stresses not covered |
 | FB-1320 | PARTIAL | OWNER: hosted CI blocked by billing; market-hours rehearsal is the owner's | `.github/workflows` (main a5a09de)<br>`docs/audits/mutation-report.json` (main 8bb0c1a) | Run Linux + Windows full CI, minimum critical-module coverage, API contract tests, mutation/property tests and a timed market-hours failure rehearsal. — mutation report covers the patterns module only |
 | FB-1401 | PARTIAL |  | `forward_edge/durable.py` (main 6aa6e13) | Build local single-process first, event bus and durable state second; — single process with durable state |
 | FB-1402 | PARTIAL |  | `forward_edge/fixtures.py` (main 3abfa33) | Provide deterministic offline fixtures for all five desks; — equity fixtures only |
@@ -395,30 +395,30 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | FB-2308 | PARTIAL |  | `forward_edge/session_close.py` (f00 075140a) | Define a daily acceptance gate where the desk cannot report `SESSION_COMPLETE` until all open orders, fills, paper positions, cash, fund units, fees a |
 | FB-2401 | FOOTHOLD |  | `indices/lineage.py` (main bd8821b)<br>`ingest/index_tri.py` (main 6c5f825) | Build `index_master` for *all available Nifty indexes* keyed by canonical index identifier, effective-dated name/symbol, index family, provider token, — daily index series; no effective-dated index master |
 | FB-2402 | NOT_STARTED |  |  | Maintain separate `optionable_index_master` from NSE's current listed derivative underlyings and effective-dated contract files: |
-| FB-2403 | FOOTHOLD |  | `ingest/kite_minute.py` (main 90c7d0e)<br>`evaluation/index_rules.py` (main 9a94fe3) | Ingest permitted 1-minute historical index prices and live index ticks; — minute index data is used by the failed VWAP family; no 15-minute bar builder |
+| FB-2403 | PARTIAL |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Ingest permitted 1-minute historical index prices and live index ticks; — 15m bars from 1m without volume; live tick ingest not built |
 | FB-2404 | FOOTHOLD | EXTERNAL: option tick/OI entitlement; depth-archive task is unregistered (owner) | `ingest/options_quotes.py` (main e94f157)<br>`ingest/depth_archive.py` (main 307c7d3) | Subscribe to current option contract ticks, bid/ask, visible quantities, OI, implied-vol inputs, expiry/strike/lot-size metadata, timestamps and sourc |
-| FB-2405 | FOOTHOLD | EXTERNAL: provider entitlement and retention limits | `forward_edge/venue_calendar.py` (f00 6a27d7f) | Maintain exchange-date-specific sessions, scheduled bar boundaries, holidays, auctions, expiry cutoffs, provider disconnects and availability calendar |
-| FB-2406 | NOT_STARTED |  |  | For index i and a *completed* bar ending at time t, define `r(i,t,15m)=S(i,t+15m)/S(i,t)-1` (and explicit forward 30m/60m/EOD targets). |
-| FB-2407 | NOT_STARTED |  |  | Define 3-class labels UP/DOWN/FLAT using training-period, index-specific price-noise thresholds; |
-| FB-2408 | FOOTHOLD |  | `features/intraday.py` (main 79ae34d) | Build point-in-time features from prior 1m/5m/15m/60m returns, volatility, VWAP where meaningful, opening range, realized range, trend slope, overnigh — equity session features |
+| FB-2405 | PARTIAL | EXTERNAL: provider entitlement and retention limits | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Maintain exchange-date-specific sessions, scheduled bar boundaries, holidays, auctions, expiry cutoffs, provider disconnects and availability calendar — partial bars never presented as full; holiday/auction calendars external |
+| FB-2406 | DONE |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | For index i and a *completed* bar ending at time t, define `r(i,t,15m)=S(i,t+15m)/S(i,t)-1` (and explicit forward 30m/60m/EOD targets). — forward return from completed bar, None across gaps |
+| FB-2407 | DONE |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Define 3-class labels UP/DOWN/FLAT using training-period, index-specific price-noise thresholds; — UP/DOWN/FLAT from training-only noise threshold |
+| FB-2408 | PARTIAL |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Build point-in-time features from prior 1m/5m/15m/60m returns, volatility, VWAP where meaningful, opening range, realized range, trend slope, overnigh — return, range, volatility, time and opening-range features |
 | FB-2409 | NOT_STARTED |  |  | Add cross-index features: |
-| FB-2410 | NOT_STARTED |  |  | Write leak tests: |
-| FB-2411 | NOT_STARTED |  |  | Train naive frequency, no-change, price-persistence and volatility/time-of-day baseline classifiers for each index/horizon; |
+| FB-2410 | DONE |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Write leak tests: — mutation leak check on bars after cutoff |
+| FB-2411 | PARTIAL |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Train naive frequency, no-change, price-persistence and volatility/time-of-day baseline classifiers for each index/horizon; — class-frequency baseline; persistence/vol baselines missing |
 | FB-2412 | NOT_STARTED |  |  | Train versioned, low-variance tree/logistic models on completed bars; |
-| FB-2413 | NOT_STARTED |  |  | Generate `P_UP`, `P_DOWN`, `P_FLAT`, expected return in index points/bps, and prediction interval; |
+| FB-2413 | PARTIAL |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Generate `P_UP`, `P_DOWN`, `P_FLAT`, expected return in index points/bps, and prediction interval; — probability validation and Brier; no prediction interval |
 | FB-2414 | FOOTHOLD |  | `forecasting/calibration.py` (main 4d45d3d) | Fit probabilities with held-out chronological calibration (e.g. |
 | FB-2415 | FOOTHOLD |  | `forecasting/ensemble.py` (main 1782c15)<br>`decisions/forecast_ev.py` (main 1dd9edf) | Use `forecasting/ensemble.py`, `forecasting/calibration.py` and `decisions/forecast_ev.py` where appropriate; |
-| FB-2416 | NOT_STARTED |  |  | Map each index forecast to CE, PE, defined-risk debit-spread or `NO_TRADE` candidates from *presently listed instruments*; |
-| FB-2417 | FOOTHOLD |  | `kernel/options.py` (main 96651e2)<br>`decisions/forecast_ev.py` (main 1dd9edf) | Convert full projected underlying-return/IV/time paths into option-premium outcome distributions with delta, gamma, theta, vega, spreads and realistic |
-| FB-2418 | NOT_STARTED |  |  | Rank option candidates by **expected executable net P&L**, downside tails, risk-adjusted expected value and portfolio marginal impact; |
+| FB-2416 | DONE |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Map each index forecast to CE, PE, defined-risk debit-spread or `NO_TRADE` candidates from *presently listed instruments*; — listed, unexpired, fresh, two-sided, deep contracts only |
+| FB-2417 | PARTIAL |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Convert full projected underlying-return/IV/time paths into option-premium outcome distributions with delta, gamma, theta, vega, spreads and realistic — delta-gamma-theta-vega expectation; no full path simulation |
+| FB-2418 | PARTIAL |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Rank option candidates by **expected executable net P&L**, downside tails, risk-adjusted expected value and portfolio marginal impact; — ranked by expected net per lot; no tail/portfolio impact |
 | FB-2419 | NOT_STARTED |  |  | Publish fully linked **BUY CE / BUY PE / BUY SPREAD** and **SELL/EXIT** intentions including exchange token, expiry, strike, lots, limit-entry band, o |
 | FB-2420 | NOT_STARTED |  |  | Model expiry-specific restrictions, fast gamma/theta changes, sharp IV collapse, spread widening, large gaps, settlement and multi-leg fill risk; |
 | FB-2421 | NOT_STARTED |  |  | At each valid forecast decision, append an immutable event with `forecast_id`, `index_id`, bar cutoff, data/source timestamps, strategy/config hash, m |
 | FB-2422 | FOOTHOLD |  | `paper/options_runner.py` (main 869e2e5) | Auto-route eligible signals through the **canonical paper OMS**. |
 | FB-2423 | NOT_STARTED |  |  | Monitor open paper options **between** 15-minute forecast updates using live market/option ticks for SL, TP, time exit, expiry and invalidation; |
 | FB-2424 | NOT_STARTED |  |  | Aggregate exposure across NIFTY, BANKNIFTY, FINNIFTY, stocks and index ETFs; |
-| FB-2425 | NOT_STARTED |  |  | Reconcile each index signal to `RESEARCH_ONLY`, `NO_TRADE`, `WATCH`, `PAPER_ELIGIBLE`, `UNFILLED`, `OPEN`, `PARTIALLY_EXITED`, `CLOSED` or `UNPRICED`; |
-| FB-2426 | FOOTHOLD |  | `forecasting/walkforward.py` (main 322ad6f) | Construct global date-wise and session-wise time splits with purging/embargo over overlapping 15m, 30m, 60m labels and cross-index features; |
+| FB-2425 | PARTIAL |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Reconcile each index signal to `RESEARCH_ONLY`, `NO_TRADE`, `WATCH`, `PAPER_ELIGIBLE`, `UNFILLED`, `OPEN`, `PARTIALLY_EXITED`, `CLOSED` or `UNPRICED`; — state enum; RESEARCH_ONLY/NO_TRADE/UNPRICED/PAPER_ELIGIBLE produced |
+| FB-2426 | DONE |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Construct global date-wise and session-wise time splits with purging/embargo over overlapping 15m, 30m, 60m labels and cross-index features; — chronological purged and embargoed folds |
 | FB-2427 | NOT_STARTED |  |  | Backtest index direction and option profitability separately. |
 | FB-2428 | FOOTHOLD |  | `forecasting/null.py` (main aa8eade)<br>`forward_edge/intraday_nulls.py` (f00 b888eef) | Test against no-trade, class-frequency, always-up, momentum, simple volatility and cost-matched CE/PE null strategies; |
 | FB-2429 | FOOTHOLD |  | `forward_edge/cohort_blocks.py` (f00 e4bd8ae) | Evaluate dependent observations with session-level clustering or block bootstrap, index-correlation adjustment, multiple-testing correction, and separ |
@@ -428,9 +428,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 13, TIME 6.
 | FB-2433 | NOT_STARTED |  |  | Create an index heatmap/cockpit with per-index UP/DOWN/FLAT, directional probability, expected points, uncertainty, regime, model version, timestamp a |
 | FB-2434 | NOT_STARTED |  |  | Generate actionable option cards displaying current contract, strike/expiry, CE/PE, price band, SL/TP, modeled risk-reward and **net** expected value, |
 | FB-2435 | NOT_STARTED |  |  | Publish end-of-day audit: |
-| FB-2436 | NOT_STARTED |  |  | Unit-test 15-minute bar closing, feature as-of boundaries, label computation, market open/close, partial bars, no-data, exchange holidays and index in |
-| FB-2437 | NOT_STARTED |  |  | Property-test calibrated probabilities sum to 1, all candidate contracts exist in the effective-dated instrument master, and no paper order can refer  |
-| FB-2438 | NOT_STARTED |  |  | Simulate a 15m bullish index forecast with options inflated by IV/theta/spread: |
+| FB-2436 | PARTIAL |  | `tests/test_index_15m_s24.py` (d2 100fc90) | Unit-test 15-minute bar closing, feature as-of boundaries, label computation, market open/close, partial bars, no-data, exchange holidays and index in — bar close, as-of, labels, partial bars; holidays external |
+| FB-2437 | PARTIAL |  | `tests/test_index_15m_s24.py` (d2 100fc90)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Property-test calibrated probabilities sum to 1, all candidate contracts exist in the effective-dated instrument master, and no paper order can refer  — probabilities sum to 1; unlisted/expired/zero-depth refused |
+| FB-2438 | DONE |  | `tests/test_index_options_s24d.py` (d2 c64d3cc) | Simulate a 15m bullish index forecast with options inflated by IV/theta/spread: — bullish forecast with costly option gives NO_TRADE |
 | FB-2439 | NOT_STARTED |  |  | Exercise two simultaneous index forecasts with shared exposure, partial entry/exit fills, duplicate tick batches, reconnect, feed lag, exchange halt,  |
 | FB-2440 | NOT_STARTED | TIME: real-session paper rehearsal |  | Complete a real-session *paper-only* rehearsal with six derivative indices plus any research-only index subset, timestamped 15m signals, monitored exi |
 | FB-2501 | NOT_STARTED | OWNER: the original 4-Node rules document is not in the repository; the owner must supply it |  | Archive the user-supplied 2025-08-22 09:30 XAUUSD M1 Four-Node rules verbatim in a versioned specification with source hash and no silent edits. |
