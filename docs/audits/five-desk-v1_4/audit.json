@@ -45,10 +45,10 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "cbdae52c26",
-   "ahead_of_main": 47,
+   "commit": "13bf4da86f",
+   "ahead_of_main": 49,
    "behind_main": 0,
-   "test_files": 362
+   "test_files": 363
   }
  },
  "status_meaning": {
@@ -58,8 +58,8 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 126,
-  "DONE": 264,
+  "PARTIAL": 123,
+  "DONE": 267,
   "NOT_STARTED": 13,
   "FOOTHOLD": 2
  },
@@ -1593,24 +1593,27 @@
    "id": "FB-0407",
    "section": "4. Unified signal and research contract \u2014 P0",
    "title": "Publish up to five DAILY swing candidates and independent ETF candidate ranks;",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "daily equity candidates; no ETF ranks",
+   "note": "up to five swing candidates plus independent ETF ranks; no quota",
    "source": [
     {
-     "path": "src/financial_brain/paper/daily.py",
-     "ref": "main",
-     "object": "6824d6242d8b"
-    },
-    {
-     "path": "src/financial_brain/paper/board.py",
-     "ref": "main",
-     "object": "2b81acfa4ba1"
+     "path": "src/financial_brain/paper/desk_runs.py",
+     "ref": "d2",
+     "object": "f059555a3109"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_runs.py",
+     "ref": "d2",
+     "object": "3d5fd19b7b6c"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0408",
@@ -2374,24 +2377,27 @@
    "id": "FB-0474",
    "section": "Detailed acceptance checklist",
    "title": "For equity intraday, publish new BUY and permitted short SELL signals from event-driven bars/ticks;",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "live-v1: long-only ORB with stop and EOD flatten; no shorts, no linked exit events",
+   "note": "intraday BUY and SELL_SHORT with SL/TP and mandatory flatten; missed exit escalates",
    "source": [
     {
-     "path": "src/financial_brain/paper/intraday_runner.py",
-     "ref": "main",
-     "object": "9ef562555847"
-    },
-    {
-     "path": "src/financial_brain/paper/intraday.py",
-     "ref": "main",
-     "object": "aa234ccab85b"
+     "path": "src/financial_brain/paper/desk_runs.py",
+     "ref": "d2",
+     "object": "f059555a3109"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_runs.py",
+     "ref": "d2",
+     "object": "3d5fd19b7b6c"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0475",
@@ -4967,39 +4973,55 @@
    "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "ORB stop and EOD flatten only",
+   "note": "intraday exits and flatten built; live loop external",
    "source": [
     {
-     "path": "src/financial_brain/paper/intraday_runner.py",
-     "ref": "main",
-     "object": "9ef562555847"
+     "path": "src/financial_brain/paper/desk_runs.py",
+     "ref": "d2",
+     "object": "f059555a3109"
+    },
+    {
+     "path": "src/financial_brain/paper/five_desk_engine.py",
+     "ref": "d2",
+     "object": "c1490b96de9d"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_runs.py",
+     "ref": "d2",
+     "object": "3d5fd19b7b6c"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1005",
    "section": "10. Daily, real-time and periodic signal scheduling \u2014 P0",
    "title": "After market:",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "no ETF ranks",
+   "note": "locked next-session publication",
    "source": [
     {
-     "path": "src/financial_brain/paper/daily.py",
-     "ref": "main",
-     "object": "6824d6242d8b"
-    },
-    {
-     "path": "src/financial_brain/paper/zoo.py",
-     "ref": "main",
-     "object": "4ad5c29c3379"
+     "path": "src/financial_brain/paper/desk_runs.py",
+     "ref": "d2",
+     "object": "f059555a3109"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_desk_runs.py",
+     "ref": "d2",
+     "object": "3d5fd19b7b6c"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1006",

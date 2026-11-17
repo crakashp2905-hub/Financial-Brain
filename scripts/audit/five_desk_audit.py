@@ -772,6 +772,13 @@ A.update({
     "FB-1307": (D, [_LT], "split cost preserved, halt keeps risk open, delisting state via D1"),
     "FB-2439": (D, [_LT, _TPT2], "shared capital, duplicate batches, partial exits, overspend refused"),
 })
+_DR, _TDR = S + "paper/desk_runs.py", "tests/test_desk_runs.py"
+A.update({
+    "FB-0474": (D, [_DR, _TDR], "intraday BUY and SELL_SHORT with SL/TP and mandatory flatten; missed exit escalates"),
+    "FB-1004": (P, [_DR, _EN, _TDR], "intraday exits and flatten built; live loop external"),
+    "FB-0407": (D, [_DR, _TDR], "up to five swing candidates plus independent ETF ranks; no quota"),
+    "FB-1005": (D, [_DR, _TDR], "locked next-session publication"),
+})
 
 
 def git(*args: str) -> str:

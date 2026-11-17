@@ -6,8 +6,8 @@ no acceptance test was run per task. Machine-readable copy: `audit.json`.
 
 | status | tasks | meaning |
 |---|---|---|
-| DONE | 264 | code and a test exist for the task as written |
-| PARTIAL | 126 | part of the task is built and tested; the rest is named in the note |
+| DONE | 267 | code and a test exist for the task as written |
+| PARTIAL | 123 | part of the task is built and tested; the rest is named in the note |
 | FOOTHOLD | 2 | a reusable building block exists, but the task's own subject is not built |
 | NOT_STARTED | 13 | nothing in the repository addresses it |
 
@@ -22,9 +22,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | codex | `codex/forward-edge-falsification-audit-20261115` | `13e2ab6695` | 163 | 0 | 377 |
 | dyn | `feature/dynamic-evidence-standard` | `7494a5e3f0` | 3 | 0 | 323 |
 | d1 | `feature/five-desk-d1-instruments` | `8b0b12cef3` | 1 | 0 | 323 |
-| d2 | `feature/five-desk-d2-data-parity` | `cbdae52c26` | 47 | 0 | 362 |
+| d2 | `feature/five-desk-d2-data-parity` | `13bf4da86f` | 49 | 0 | 363 |
 
-368 tasks cite evidence that is not on `main`.
+372 tasks cite evidence that is not on `main`.
 
 ## By section
 
@@ -34,14 +34,14 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | 1. Instrument master and asset-specific clocks — P0 | 5 | 5 | 0 | 0 |
 | 2. ETF universe, metadata and market data — P0 | 7 | 6 | 1 | 0 |
 | 3. Conventional MF data and scheme master — P0/P1 | 9 | 7 | 0 | 2 |
-| 4. Unified signal and research contract — P0 | 11 | 1 | 0 | 0 |
-| Detailed acceptance checklist | 38 | 6 | 0 | 1 |
+| 4. Unified signal and research contract — P0 | 12 | 0 | 0 | 0 |
+| Detailed acceptance checklist | 39 | 5 | 0 | 1 |
 | 5. ETF alpha and strategy engine — P1 | 6 | 6 | 0 | 0 |
 | 6. MF research, allocation and investment engine — P1 | 7 | 7 | 0 | 0 |
 | 7. Mutual fund transaction lifecycle and NAV execution — P0 | 17 | 1 | 0 | 0 |
 | 8. Shared exchange paper OMS: equities, ETFs, options — P0 | 9 | 5 | 0 | 0 |
 | 9. Shared multi-asset accounting, P&L, taxes and capital — P0 | 13 | 5 | 0 | 0 |
-| 10. Daily, real-time and periodic signal scheduling — P0 | 7 | 5 | 0 | 0 |
+| 10. Daily, real-time and periodic signal scheduling — P0 | 8 | 4 | 0 | 0 |
 | 11. Trader dashboard and workflows — P1 | 5 | 7 | 0 | 0 |
 | 12. Evaluation, performance benchmarks, research discipline — P0/P1 | 8 | 8 | 0 | 0 |
 | 13. Adversarial, property-based and acceptance tests — P0 | 19 | 1 | 0 | 0 |
@@ -132,7 +132,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-0404 | DONE |  | `signals/evidence.py` (d2 14ba92c)<br>`signals/contracts.py` (d2 a64c78a)<br>`tests/test_evidence_reports.py` (d2 07832e4) | Carry entry conditions, stop/exit/invalidation, intended holding window, tick/lot/unit precision and paper execution eligibility. — holding window on the decision record; entry/stop/target/tick on Signal |
 | FB-0405 | DONE |  | `signals/contracts.py` (d2 a64c78a)<br>`tests/test_signals_d3.py` (d2 b8a8a0e) | Enforce signal lifecycle `DETECTED -> ELIGIBLE/REJECTED -> APPROVED/SHADOW -> SUBMITTED -> FILLED/PARTIAL/MISSED -> EXITED/EXPIRED`. — lifecycle state machine refuses illegal steps |
 | FB-0406 | DONE |  | `instruments/market_quality.py` (d2 7cc2cc4)<br>`tests/test_market_quality.py` (d2 d1cddd1) | Deduplicate repeated alerts without erasing new rule versions or materially changed prices; — alert dedupe keeps new versions and material moves |
-| FB-0407 | PARTIAL |  | `paper/daily.py` (main 6824d62)<br>`paper/board.py` (main 2b81acf) | Publish up to five DAILY swing candidates and independent ETF candidate ranks; — daily equity candidates; no ETF ranks |
+| FB-0407 | DONE |  | `paper/desk_runs.py` (d2 f059555)<br>`tests/test_desk_runs.py` (d2 3d5fd19) | Publish up to five DAILY swing candidates and independent ETF candidate ranks; — up to five swing candidates plus independent ETF ranks; no quota |
 | FB-0408 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Publish daily/weekly MF **allocation recommendations**, not misleading `instant executions`; — allocation recommendation record with NAV_PENDING |
 | FB-0409 | DONE |  | `signals/evidence.py` (d2 14ba92c)<br>`tests/test_evidence_reports.py` (d2 07832e4) | Connect researcher/scanner, event ingestion, news and signals to read-only signal generation; — LLM output never orders |
 | FB-0410 | DONE |  | `signals/evidence.py` (d2 14ba92c)<br>`portfolio/position_ledger.py` (d2 b937e29)<br>`tests/test_position_tax.py` (d2 b74ac05) | Human decisions may create a separate manual-approved paper sleeve, while an autonomous paper sleeve preserves objective original outcomes. — separate manual-approved sleeve; autonomous outcomes preserved |
@@ -161,7 +161,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-0471 | DONE |  | `portfolio/position_ledger.py` (d2 b937e29)<br>`tests/test_position_tax.py` (d2 b74ac05) | Add a per-position ledger of `ENTRY_SIGNAL`, `ENTRY_INTENT`, `ENTRY_FILL`, `STOP/TP_ARMED`, `EXIT_TRIGGER`, `EXIT_INTENT`, `EXIT_FILL`, `POSITION_CLOS — per-position ordered events with idempotency keys and snapshots |
 | FB-0472 | DONE |  | `paper/five_desk_engine.py` (d2 c1490b9)<br>`signals/contracts.py` (d2 a64c78a)<br>`tests/test_five_desk_engine.py` (d2 e302a2a) | Ensure a paper position cannot be opened without a valid exit policy, and is never treated as closed until recorded fill or correctly modeled settleme — no entry without policy; closed only on recorded exit fill |
 | FB-0473 | PARTIAL |  | `signals/desk_logic.py` (d2 e3367a1)<br>`tests/test_desk_logic.py` (d2 1a6afb5) | For equity swing, generate daily BUY candidates with SL/TP from versioned risk/strategy logic; — up to five positive-EV swing candidates with ATR SL/TP; not wired |
-| FB-0474 | PARTIAL |  | `paper/intraday_runner.py` (main 9ef5625)<br>`paper/intraday.py` (main aa234cc) | For equity intraday, publish new BUY and permitted short SELL signals from event-driven bars/ticks; — live-v1: long-only ORB with stop and EOD flatten; no shorts, no linked exit events |
+| FB-0474 | DONE |  | `paper/desk_runs.py` (d2 f059555)<br>`tests/test_desk_runs.py` (d2 3d5fd19) | For equity intraday, publish new BUY and permitted short SELL signals from event-driven bars/ticks; — intraday BUY and SELL_SHORT with SL/TP and mandatory flatten; missed exit escalates |
 | FB-0475 | DONE |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | For ETFs, support long and any separately validated supported trade styles; — ETF long only unless style validated |
 | FB-0476 | DONE |  | `execution/option_book.py` (d2 1f79ffe)<br>`forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_option_book.py` (d2 e60ddc8) | For options, emit the precise `CE/PE`, strike, expiry, token, side, lots, premium entry band, SL/TP premium or risk terms, and underlying/context inva — exact token, CE/PE, strike, expiry, lots; premium band via option card |
 | FB-0477 | DONE |  | `execution/option_book.py` (d2 1f79ffe)<br>`tests/test_option_book.py` (d2 e60ddc8) | For options, monitor bid/ask/depth, premium decay, days-to-expiry, price gaps, volatility and Greeks; — spread, depth, decay, expiry monitoring flags |
@@ -262,8 +262,8 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-1001 | PARTIAL |  | `kernel/preflight.py` (main 457f771)<br>`forward_edge/session_ops.py` (main cd875a2) | Pre-open: — preflight task is not registered (owner) |
 | FB-1002 | PARTIAL |  | `paper/intraday_runner.py` (main 9ef5625) | During open: — equities, 20-second polling; no ETFs |
 | FB-1003 | DONE |  | `paper/ops.py` (d2 31be5c4)<br>`tests/test_calibration_ops.py` (d2 5a03945) | During open: — options signals only with fresh chain |
-| FB-1004 | PARTIAL |  | `paper/intraday_runner.py` (main 9ef5625) | Intraday: — ORB stop and EOD flatten only |
-| FB-1005 | PARTIAL |  | `paper/daily.py` (main 6824d62)<br>`paper/zoo.py` (main 4ad5c29) | After market: — no ETF ranks |
+| FB-1004 | PARTIAL |  | `paper/desk_runs.py` (d2 f059555)<br>`paper/five_desk_engine.py` (d2 c1490b9)<br>`tests/test_desk_runs.py` (d2 3d5fd19) | Intraday: — intraday exits and flatten built; live loop external |
+| FB-1005 | DONE |  | `paper/desk_runs.py` (d2 f059555)<br>`tests/test_desk_runs.py` (d2 3d5fd19) | After market: — locked next-session publication |
 | FB-1006 | DONE |  | `paper/ops.py` (d2 31be5c4)<br>`tests/test_calibration_ops.py` (d2 5a03945) | After AMFI NAV publication: — after-NAV steps only after publication |
 | FB-1007 | DONE |  | `paper/ops.py` (d2 31be5c4)<br>`tests/test_calibration_ops.py` (d2 5a03945) | Before MF cutoffs: — MF requests only before cut-off |
 | FB-1008 | DONE |  | `paper/policy.py` (d2 42fcdf9)<br>`paper/day_cycle.py` (d2 c644554)<br>`tests/test_policy_and_more_adversarial.py` (d2 cc6a5ff) | Daily: — daily reconcile handler wired into the phase |
