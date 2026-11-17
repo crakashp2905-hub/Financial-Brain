@@ -104,6 +104,32 @@ class Trail:
         return self.stop
 
 
+def round_stop(stop: float, tick: float, side: str) -> float:
+    """Round a stop to tick *away* from entry so rounding never tightens risk (FB-2520)."""
+    import math
+    n = stop / tick
+    return (math.ceil(n - 1e-9) if side == "SELL" else math.floor(n + 1e-9)) * tick
+
+
+def trail_price(side: str, bid: float, ask: float) -> float:
+    """Trail on the executable exit side: a long exits at the bid, a short at the ask (FB-2523)."""
+    if ask < bid:
+        raise ValueError("crossed quote")
+    return bid if side == "BUY" else ask
+
+
+def barriers_split(entry: float, side: str, barriers: list[float]) -> tuple[list[float], list[float]]:
+    """Barriers ahead of the trade (in the profit direction) vs behind it (FB-2519)."""
+    ahead = [b for b in barriers if (b > entry if side == "BUY" else b < entry)]
+    behind = [b for b in barriers if b not in ahead]
+    return ahead, behind
+
+
+def nodes_expired(nodes: tuple[Node, Node, Node], bar: int, max_age_bars: int) -> bool:
+    """A setup is invalid once N1 is older than ``max_age_bars`` (versioned parameter, FB-2514)."""
+    return bar - nodes[0].pivot_at > max_age_bars
+
+
 def significant_candle(o: float, h: float, low: float, c: float, rule: str | None) -> bool | None:
     """None when the definition is unresolved: callers must treat None as BLOCKED (FB-2524)."""
     body = abs(c - o)
