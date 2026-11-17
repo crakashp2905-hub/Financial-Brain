@@ -31,6 +31,7 @@ REFS = {
     "codex": "codex/forward-edge-falsification-audit-20261115",
     "dyn": "feature/dynamic-evidence-standard",
     "d1": "feature/five-desk-d1-instruments",
+    "d2": "feature/five-desk-d2-data-parity",
 }
 S = "src/financial_brain/"
 I = S + "instruments/"
@@ -321,6 +322,84 @@ A: dict[str, tuple[str, list[str], str]] = {
     "FB-2514": (F, [S + "patterns/streaming.py"], ""),
     "FB-2533": (F, [S + "patterns/pivots.py", S + "patterns/streaming.py", S + "kernel/indicators.py", S + "ingest/kite_minute.py"], "modules exist; no interface audit written"),
 }
+
+
+# Updates from the D2+ branch (feature/five-desk-d2-data-parity). Modules are tested in isolation;
+# none is wired into the existing runners yet.
+_PIT, _TPIT = I + "pit.py", "tests/test_pit_d2.py"
+_SIG, _TSIG = S + "signals/contracts.py", "tests/test_signals_d3.py"
+_EX, _TEX = S + "signals/exit_triggers.py", "tests/test_exit_triggers_4a.py"
+_MF, _TMF = S + "execution/mf_orders.py", "tests/test_mf_orders_s7.py"
+_LG, _TLG = S + "portfolio/multi_asset_ledger.py", "tests/test_multi_asset_ledger_s9.py"
+_OMS, _TOMS = S + "execution/exchange_paper.py", "tests/test_exchange_paper_s8.py"
+_EV, _AL = S + "signals/admissibility.py", S + "risk/capital_allocator.py"
+_TEV = "tests/test_admissibility_allocator_s16_17.py"
+_SC, _TSC = S + "evaluation/scorecards.py", "tests/test_scorecards_s21_22.py"
+A.update({
+    "FB-0207": (D, [_PIT, _TPIT], "iNAV premium refused when stale or asynchronous"),
+    "FB-0210": (P, [_PIT, _TPIT], "stale NAV and large-move flags; international closure calendar not loaded"),
+    "FB-0214": (D, [_PIT, _TPIT], "missing quote is UNPRICED; close/NAV never substituted"),
+    "FB-0308": (D, [_PIT, _TPIT], "NAV usable only after its publication instant"),
+    "FB-0318": (P, [_PIT, _TPIT, S + "providers/amfi.py"], "row-date flags; not yet run inside mfnav ingest"),
+    "FB-0401": (D, [_SIG, _TSIG], "immutable cross-desk Signal; runners not yet emitting it"),
+    "FB-0403": (D, [_SIG, _TSIG], "Intent enum with desk/intent compatibility"),
+    "FB-0404": (P, [_SIG, _TSIG], "entry, stop, target, tick; holding window not a field"),
+    "FB-0405": (D, [_SIG, _TSIG], "lifecycle state machine refuses illegal steps"),
+    "FB-0412": (P, [_SIG, _PIT], "missing data explicit (UNPRICED, NO_TRADE reason)"),
+    "FB-0451": (P, [_SIG, _EX], "Signal plus position-linked exit records; no separate ExitSignal type"),
+    "FB-0452": (D, [_SIG, _TSIG], "exchange trades refused without side, entry, size, SL, TP, policy"),
+    "FB-0454": (D, [_SIG, _TSIG], "ordered ExitTrigger set in ExitPolicy"),
+    "FB-0457": (D, [_SIG, _TSIG], "planned loss, gross and net reward:risk"),
+    "FB-0458": (D, [_SIG, _TSIG], "per-strategy net reward:risk gate"),
+    "FB-0459": (D, [_SIG, _TSIG], "long/short ordering and tick checks; versioned exception for no stop"),
+    "FB-0461": (P, [_SIG, _TSIG], "tick check and no overnight shorts; no automatic re-rounding"),
+    "FB-0462": (D, [_SIG, _EV, _TSIG], "NO_TRADE with reason; WATCH/CASH decisions"),
+    "FB-0463": (D, [_EX, _TEX], "planned exit separate from emitted trigger and fill events"),
+    "FB-0464": (P, [_EX, _TEX], "no duplicate exits, idempotent replay; partial-fill quantity adjust not built"),
+    "FB-0465": (D, [_EX, _TEX], "first of stop/target closes and cancels the sibling"),
+    "FB-0467": (D, [_EX, _TEX], "gap fills at open, extra loss kept"),
+    "FB-0468": (D, [_EX, _TEX], "both touched in one bar: stop first"),
+    "FB-0470": (D, [_EX, _TEX], "unresolved exit intent during halt; no fictional fill"),
+    "FB-0472": (P, [_SIG, _EX], "entry refused without policy; closed only on recorded fill"),
+    "FB-0481": (P, [_SIG, _MF], "MF signals cannot carry exchange stops; NAV threshold trigger not built"),
+    "FB-0491": (P, [_TEX], "SL-only, TP-only, both-in-bar, gaps; trailing and partial paths missing"),
+    "FB-0701": (P, [_MF, _TMF], "Subscription order with immutable request time; folio not modelled"),
+    "FB-0705": (D, [_MF, _TMF], "eligible NAV date from acceptance, funds and cut-off; other days refused"),
+    "FB-0706": (D, [_MF, _TMF], "NAV_PENDING until published; truncated fractional allotment"),
+    "FB-0707": (P, [_MF, _TMF], "FIFO redemption; deferred settlement via cash states"),
+    "FB-0708": (P, [_MF, _TMF], "per-lot exit load by holding age; stamp duty not modelled"),
+    "FB-0709": (D, [_MF, _TMF], "redemption cash states gate redeployment"),
+    "FB-0802": (D, [_OMS, _TOMS], "whole units and whole lots enforced"),
+    "FB-0803": (D, [_OMS, _TOMS], "fills at observed bid/ask with participation cap"),
+    "FB-0804": (P, [_OMS, _TOMS], "order statuses; TIMED_OUT/UNKNOWN paths untested"),
+    "FB-0806": (D, [_OMS, _TOMS], "fidelity tag on every fill"),
+    "FB-0808": (D, [_OMS, _TOMS], "option structure allow-list blocks naked writing"),
+    "FB-0811": (D, [_OMS, _TOMS], "expired signal never fills; stale feed halts the desk"),
+    "FB-0812": (D, [_OMS, _TOMS], "one API, separate autonomous and approved accounts"),
+    "FB-0901": (P, [_LG, _TLG], "double-entry multi-desk journal; kernel/paper_account not migrated"),
+    "FB-0903": (D, [_LG, _TLG], "AVAILABLE/RESERVED/UNSETTLED/MF_PENDING cash"),
+    "FB-0911": (P, [_LG, _TLG], "unsettled proceeds not spendable; settlement calendar rules not loaded"),
+    "FB-0914": (D, [_LG, _TLG], "exposure summed by underlying across wrappers"),
+    "FB-0916": (D, [_LG, _TLG], "stale/missing marks reported UNPRICED, NAV withheld"),
+    "FB-0917": (P, [_LG, _TLG], "journal balance check; daily scheduled reconciliation not wired"),
+    "FB-0918": (D, [_LG, _TLG], "desk NAVs sum to consolidated NAV"),
+    "FB-1601": (P, [_EV, _TEV], "net_ev with validation; no confidence interval"),
+    "FB-1603": (D, [_EV, _TEV], "hurdle, budget and session gates"),
+    "FB-1604": (D, [_EV, _TEV], "reason-coded TRADE/WATCH/REJECT/CASH"),
+    "FB-1606": (P, [_EV, _TEV], "receipt with EV, risk at stop, break-even, cost version"),
+    "FB-1608": (D, [_TEV], "gross edge eaten by costs skipped; missing costs/quotes never trade"),
+    "FB-1701": (P, [_AL, _TEV], "central reservations; desks not yet calling it"),
+    "FB-1705": (P, [_AL, _TEV], "desk, underlying, capital and daily-loss limits"),
+    "FB-1707": (D, [_AL, _TEV], "daily-loss kill switch with human reset; quarantine"),
+    "FB-1708": (D, [_AL, _TEV], "atomic idempotent reservations; concurrent burst test"),
+    "FB-1806": (D, [_EX, _TEX], "adverse-first intrabar ordering"),
+    "FB-1902": (D, [_EX, _TEX], "OCO paper semantics, no double exit"),
+    "FB-2103": (D, [_SC, _TSC], "TWR excludes flows; XIRR separate"),
+    "FB-2104": (P, [_SC, _TSC], "trade stats; drawdown and benchmark excess not computed here"),
+    "FB-2108": (D, [_SC, _TSC], "desk P&L must equal consolidated"),
+    "FB-2204": (P, [_SC, _TSC], "session-block bootstrap; multiple-testing adjustment elsewhere"),
+    "FB-2207": (P, [_SC, _TSC], "frozen-rule FAILING on drawdown or non-positive lower bound"),
+})
 
 
 def git(*args: str) -> str:
