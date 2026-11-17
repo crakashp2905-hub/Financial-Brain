@@ -45,10 +45,10 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "9e24556951",
-   "ahead_of_main": 18,
+   "commit": "b679518068",
+   "ahead_of_main": 22,
    "behind_main": 0,
-   "test_files": 338
+   "test_files": 342
   }
  },
  "status_meaning": {
@@ -58,10 +58,10 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 123,
-  "DONE": 67,
+  "PARTIAL": 138,
+  "DONE": 94,
   "FOOTHOLD": 65,
-  "NOT_STARTED": 150
+  "NOT_STARTED": 108
  },
  "by_dependency": {
   "IN_HOUSE": 375,
@@ -610,37 +610,79 @@
    "id": "FB-0201",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Build `providers/etf_reference.py` using permitted NSE/BSE/AMC reference disclosures, exchange codes, identifiers and effective-dated listing status.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "reference loader from owner-provided disclosures; no fetcher",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/etf_reference.py",
+     "ref": "d2",
+     "object": "c4b849a97aef"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_reference.py",
+     "ref": "d2",
+     "object": "89ed483bdf06"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0202",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Cover equity broad-market/sector/factor, bond/debt, gold, silver, international and other listed ETFs;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "exposure classes incl. debt, gold, silver, international, factor",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/etf_reference.py",
+     "ref": "d2",
+     "object": "c4b849a97aef"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_reference.py",
+     "ref": "d2",
+     "object": "89ed483bdf06"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0203",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Map ETF \u2192 underlying benchmark (prefer total-return index), fund house, inception/listing dates, NAV and indicative NAV if available.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "benchmark (TRI flag), fund house, listing; iNAV feed external",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/etf_reference.py",
+     "ref": "d2",
+     "object": "c4b849a97aef"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_reference.py",
+     "ref": "d2",
+     "object": "89ed483bdf06"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0204",
@@ -759,13 +801,27 @@
    "id": "FB-0209",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Ingest AMC/exchange ETF disclosed tracking difference, tracking error and total expense ratio when permissioned;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "dated TER, tracking difference and error fields; ingest external",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/etf_reference.py",
+     "ref": "d2",
+     "object": "c4b849a97aef"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_reference.py",
+     "ref": "d2",
+     "object": "89ed483bdf06"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0210",
@@ -797,13 +853,27 @@
    "id": "FB-0211",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Track ETF creations/redemptions only as issuer/market-maker reference context, not as retail trader's instant redemption pathway.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "creation/redemption is context only; no retail redemption path",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/etf_reference.py",
+     "ref": "d2",
+     "object": "c4b849a97aef"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_reference.py",
+     "ref": "d2",
+     "object": "89ed483bdf06"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0212",
@@ -827,13 +897,27 @@
    "id": "FB-0213",
    "section": "2. ETF universe, metadata and market data \u2014 P0",
    "title": "Keep ETF price-return series, NAV-return series and underlying total-return benchmarks separate and clearly labelled.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "price, NAV and benchmark TR series are distinct types",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/etf_reference.py",
+     "ref": "d2",
+     "object": "c4b849a97aef"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_reference.py",
+     "ref": "d2",
+     "object": "89ed483bdf06"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0214",
@@ -865,37 +949,79 @@
    "id": "FB-0301",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Add `mf_scheme_master` keyed by scheme code + plan + option + ISIN, effective-dated from AMFI, AMC and SID metadata.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "scheme master keyed by code, plan, option, ISIN with dated versions",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/mf_scheme.py",
+     "ref": "d2",
+     "object": "b911cee3678a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_scheme.py",
+     "ref": "d2",
+     "object": "4d05f48e630f"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0302",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Distinguish direct/regular, growth/IDCW payout/reinvestment, open-ended/closed/interval, active/passive, equity/debt/hybrid/commodity/FOF and other cu",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "plan, option, structure, asset type, passive flags",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/mf_scheme.py",
+     "ref": "d2",
+     "object": "b911cee3678a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_scheme.py",
+     "ref": "d2",
+     "object": "4d05f48e630f"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0303",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Map fund house, riskometer, benchmark index TRI, manager and objective;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "fund house, riskometer, benchmark TRI; manager/objective not stored",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/mf_scheme.py",
+     "ref": "d2",
+     "object": "b911cee3678a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_scheme.py",
+     "ref": "d2",
+     "object": "4d05f48e630f"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0304",
@@ -943,13 +1069,27 @@
    "id": "FB-0307",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Create survivorship-aware historical scheme universe:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "merged/wound-up schemes stay in historical universe",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/mf_scheme.py",
+     "ref": "d2",
+     "object": "b911cee3678a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_scheme.py",
+     "ref": "d2",
+     "object": "4d05f48e630f"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0308",
@@ -981,13 +1121,27 @@
    "id": "FB-0309",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Ingest effective-dated direct/regular total expense ratios, AUM, exit-load schedules, minimum initial/additional investment and exit restrictions.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "dated TER, AUM and exit-load schedules; minimums in mf_plans",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/mf_scheme.py",
+     "ref": "d2",
+     "object": "b911cee3678a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_scheme.py",
+     "ref": "d2",
+     "object": "4d05f48e630f"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0310",
@@ -1041,49 +1195,105 @@
    "id": "FB-0314",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Record exit-load schedules as time-dependent **per purchase lot**;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "exit load per purchase lot from schedule in force at purchase",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/mf_scheme.py",
+     "ref": "d2",
+     "object": "b911cee3678a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_scheme.py",
+     "ref": "d2",
+     "object": "4d05f48e630f"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0315",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Add schemes with ELSS lock-in, segregated portfolios, gating, special redemption restrictions, and closed-end windows;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "ELSS lock-in and gating; segregated portfolios not modelled",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0316",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Treat dividends/IDCW payouts, reinvestments, splits and scheme mergers as economic flows for total return rather than apparent NAV crashes.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "IDCW payout/reinvest preserve value; merger handled in D1 successions",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0317",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Do not double-deduct expense ratio from returns derived from published MF NAV (TER is reflected in NAV);",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "NAV return without TER deduction",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_metrics.py",
+     "ref": "d2",
+     "object": "a5575b679e76"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0318",
@@ -1457,13 +1667,27 @@
    "id": "FB-0453",
    "section": "Detailed acceptance checklist",
    "title": "Use closing-side semantics:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "derived closing sides; spread closes every leg",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/exit_plans.py",
+     "ref": "d2",
+     "object": "094c136c8b03"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_exit_plans.py",
+     "ref": "d2",
+     "object": "637556500133"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0454",
@@ -1495,25 +1719,53 @@
    "id": "FB-0455",
    "section": "Detailed acceptance checklist",
    "title": "Store stop/target basis and reference (`underlying`, `ETF market quote`, `option executable premium`, `combined option spread value`, `published NAV p",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "price basis on every level; cross-basis comparison refused",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/exit_plans.py",
+     "ref": "d2",
+     "object": "094c136c8b03"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_exit_plans.py",
+     "ref": "d2",
+     "object": "637556500133"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0456",
    "section": "Detailed acceptance checklist",
    "title": "Define `stop_price`, `target_price`, `stop_type`, `target_type`, `time_to_live`, `expected_fill_price`, `assumed_slippage`, quote timestamp and order/",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "typed levels; TTL and slippage fields live on Signal/OMS",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/exit_plans.py",
+     "ref": "d2",
+     "object": "094c136c8b03"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_exit_plans.py",
+     "ref": "d2",
+     "object": "637556500133"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0457",
@@ -1755,13 +2007,27 @@
    "id": "FB-0466",
    "section": "Detailed acceptance checklist",
    "title": "Support configurable full exits, profit scale-outs, breakeven stop moves, trailing stops, partial TP ladders and time stops;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "versioned ladder, breakeven move, trailing stop",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/exit_plans.py",
+     "ref": "d2",
+     "object": "094c136c8b03"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_exit_plans.py",
+     "ref": "d2",
+     "object": "637556500133"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0467",
@@ -2064,13 +2330,27 @@
    "id": "FB-0480",
    "section": "Detailed acceptance checklist",
    "title": "For conventional MFs, emit `SUBSCRIBE/ADD` and corresponding `REDUCE/REDEEM/SWITCH` action plans with target allocation, target return band, downside/",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "NAV policy target/drawdown actions",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0481",
@@ -2101,25 +2381,58 @@
    "id": "FB-0482",
    "section": "Detailed acceptance checklist",
    "title": "For MFs, when an NAV threshold is hit, generate a dated redemption/switch **request signal**;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "NAV threshold produces dated NAV_PENDING request signal",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0483",
    "section": "Detailed acceptance checklist",
    "title": "Support multiple fund investment lots, load aging, SIPs, STPs, SWPs, fractional units, lock-ins, minimums and tax-aware action recommendations without",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "lots, loads, SIP/STP/SWP, lock-ins, fractional units; tax-aware not built",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    },
+    {
+     "path": "src/financial_brain/execution/mf_orders.py",
+     "ref": "d2",
+     "object": "532ceab9052e"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0484",
@@ -2200,13 +2513,27 @@
    "id": "FB-0488",
    "section": "Detailed acceptance checklist",
    "title": "Emit a machine-readable and trader-friendly paired lifecycle report:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "paired lifecycle report with revisions and R-multiple",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/exit_plans.py",
+     "ref": "d2",
+     "object": "094c136c8b03"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_exit_plans.py",
+     "ref": "d2",
+     "object": "637556500133"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0489",
@@ -2380,13 +2707,27 @@
    "id": "FB-0505",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Premium/discount-to-iNAV anomaly detector with stale-iNAV and time-of-day guards;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "premium anomaly needs fresh synchronous iNAV inside window; observation only",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/etf_reference.py",
+     "ref": "d2",
+     "object": "c4b849a97aef"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_reference.py",
+     "ref": "d2",
+     "object": "89ed483bdf06"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0506",
@@ -2802,25 +3143,53 @@
    "id": "FB-0702",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Model request acknowledgement/accepted/rejected, time-stamping at official acceptance point, and platform business-day validity.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "submitted/acknowledged/accepted/rejected states",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0703",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Model purchase payment initiation time, credited-to-scheme time and funds-available-for-utilization time separately;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "payment initiated/credited/available kept separate",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0704",
@@ -2968,73 +3337,157 @@
    "id": "FB-0710",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Simulate switches as paired switch-out and switch-in with asynchronous settlement and no phantom same-minute capital redeployment.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "switch-in waits for switch-out settlement",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0711",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Model SIP installments as repeated subscriptions with independent payment outcomes and allotment NAV;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "SIP installments independent; missed stays missed",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0712",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Model SWP as redemptions with applicable loads and payouts;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "SWP and STP legs",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0713",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Handle minimum subscription/redemption amounts, partial redemption, fractional units, folio restrictions, scheme lock-ins and unavailable NAV days.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "minimums, lock-in, gating; folio restrictions not modelled",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0714",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Model NAV-related mark-to-market only after publication;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "mark at last published NAV with stale flag",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0715",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Model dividend/IDCW cash payouts and reinvestments as posted ledger events with correct units and basis.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "IDCW payout/reinvest amounts; not yet posted to journal",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0716",
@@ -3052,25 +3505,53 @@
    "id": "FB-0717",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Distinguish assumed simulated payment realization from independently observed payment realization;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "ASSUMED vs OBSERVED payment evidence",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0718",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Build an explicit **MF PAPER REALISM** score measuring eligible-NAV certainty, payment-time evidence, load completeness and redemption settlement conf",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "MF paper realism score",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0801",
@@ -3536,13 +4017,27 @@
    "id": "FB-0906",
    "section": "9. Shared multi-asset accounting, P&L, taxes and capital \u2014 P0",
    "title": "Compute MF units \u00d7 last published NAV + distribution income - load/transaction costs with pending-NAV and pending-cash states.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "units x last published NAV; distribution income not in journal",
+   "source": [
+    {
+     "path": "src/financial_brain/execution/mf_plans.py",
+     "ref": "d2",
+     "object": "e7845f7c805b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0907",
@@ -4840,13 +5335,21 @@
    "id": "FB-1308",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test MF direct vs regular same scheme as different share classes;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "direct and regular are distinct keys with own versions",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_mf_scheme.py",
+     "ref": "d2",
+     "object": "4d05f48e630f"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1309",
@@ -4932,25 +5435,41 @@
    "id": "FB-1313",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test IDCW payout/reinvestment, fund merger, scheme winding-up and delayed redemption price publication.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "IDCW payout/reinvest; winding-up via universe; delayed redemption NAV via mf_orders",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1314",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test MF expense accounting to ensure NAV-based returns are not reduced by TER a second time.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "NAV return not reduced by TER",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1315",
@@ -5909,13 +6428,27 @@
    "id": "FB-1904",
    "section": "19. Adaptive but auditable exits and risk containment \u2014 P0/P1",
    "title": "Require all option exits to refer to exact active instrument tokens/contracts/legs;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "option exits only on exact active tokens",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/exit_plans.py",
+     "ref": "d2",
+     "object": "094c136c8b03"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_exit_plans.py",
+     "ref": "d2",
+     "object": "637556500133"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1905",
@@ -5946,13 +6479,27 @@
    "id": "FB-1906",
    "section": "19. Adaptive but auditable exits and risk containment \u2014 P0/P1",
    "title": "Evaluate partial fills, scale-outs, stop recalculation, option multi-leg close uncertainty and cancellation races without breaking cash/position invar",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "partial exits never oversell; cancellation races not simulated",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/exit_plans.py",
+     "ref": "d2",
+     "object": "094c136c8b03"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_exit_plans.py",
+     "ref": "d2",
+     "object": "637556500133"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1907",
@@ -5970,13 +6517,27 @@
    "id": "FB-1908",
    "section": "19. Adaptive but auditable exits and risk containment \u2014 P0/P1",
    "title": "Save an independent linked closing `ExitSignal` for every executed exit, preserving actual trigger reason, trigger price, order intent, simulated fill",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "independent linked ExitSignal with trigger, fill, fees, P&L",
+   "source": [
+    {
+     "path": "src/financial_brain/signals/exit_plans.py",
+     "ref": "d2",
+     "object": "094c136c8b03"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_exit_plans.py",
+     "ref": "d2",
+     "object": "637556500133"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2001",
@@ -6049,13 +6610,27 @@
    "id": "FB-2004",
    "section": "20. Market-specific advantage: options, ETFs and mutual funds \u2014 P1",
    "title": "Add ETF executable fair-value comparison with iNAV/NAV freshness, exchange spread, trading size and tracking difference;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "executable side price vs fresh iNAV",
+   "source": [
+    {
+     "path": "src/financial_brain/instruments/etf_reference.py",
+     "ref": "d2",
+     "object": "c4b849a97aef"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_reference.py",
+     "ref": "d2",
+     "object": "89ed483bdf06"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2005",

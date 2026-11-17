@@ -465,6 +465,54 @@ A.update({
     "FB-2307": (D, [_RB], "operator runbook"),
     "FB-2308": (D, [_CR, _TCR], "SESSION_COMPLETE gate"),
 })
+_MP, _TMP = S + "execution/mf_plans.py", "tests/test_mf_plans.py"
+_MS, _TMS = I + "mf_scheme.py", "tests/test_mf_scheme.py"
+_XP, _TXP = S + "signals/exit_plans.py", "tests/test_exit_plans.py"
+_ET, _TET = I + "etf_reference.py", "tests/test_etf_reference.py"
+A.update({
+    "FB-0201": (P, [_ET, _TET], "reference loader from owner-provided disclosures; no fetcher"),
+    "FB-0202": (D, [_ET, _TET], "exposure classes incl. debt, gold, silver, international, factor"),
+    "FB-0203": (P, [_ET, _TET], "benchmark (TRI flag), fund house, listing; iNAV feed external"),
+    "FB-0209": (P, [_ET, _TET], "dated TER, tracking difference and error fields; ingest external"),
+    "FB-0211": (D, [_ET, _TET], "creation/redemption is context only; no retail redemption path"),
+    "FB-0213": (D, [_ET, _TET], "price, NAV and benchmark TR series are distinct types"),
+    "FB-0505": (D, [_ET, _TET], "premium anomaly needs fresh synchronous iNAV inside window; observation only"),
+    "FB-2004": (D, [_ET, _TET], "executable side price vs fresh iNAV"),
+    "FB-0301": (D, [_MS, _TMS], "scheme master keyed by code, plan, option, ISIN with dated versions"),
+    "FB-0302": (D, [_MS, _TMS], "plan, option, structure, asset type, passive flags"),
+    "FB-0303": (P, [_MS, _TMS], "fund house, riskometer, benchmark TRI; manager/objective not stored"),
+    "FB-0307": (D, [_MS, _TMS], "merged/wound-up schemes stay in historical universe"),
+    "FB-0309": (P, [_MS, _TMS], "dated TER, AUM and exit-load schedules; minimums in mf_plans"),
+    "FB-0314": (D, [_MS, _TMS], "exit load per purchase lot from schedule in force at purchase"),
+    "FB-0315": (P, [_MP, _TMP], "ELSS lock-in and gating; segregated portfolios not modelled"),
+    "FB-0316": (P, [_MP, _TMP], "IDCW payout/reinvest preserve value; merger handled in D1 successions"),
+    "FB-0317": (D, [_MM, _TEM], "NAV return without TER deduction"),
+    "FB-0480": (P, [_MP, _TMP], "NAV policy target/drawdown actions"),
+    "FB-0482": (D, [_MP, _TMP], "NAV threshold produces dated NAV_PENDING request signal"),
+    "FB-0483": (P, [_MP, _MF, _TMP], "lots, loads, SIP/STP/SWP, lock-ins, fractional units; tax-aware not built"),
+    "FB-0702": (D, [_MP, _TMP], "submitted/acknowledged/accepted/rejected states"),
+    "FB-0703": (D, [_MP, _TMP], "payment initiated/credited/available kept separate"),
+    "FB-0710": (D, [_MP, _TMP], "switch-in waits for switch-out settlement"),
+    "FB-0711": (D, [_MP, _TMP], "SIP installments independent; missed stays missed"),
+    "FB-0712": (D, [_MP, _TMP], "SWP and STP legs"),
+    "FB-0713": (P, [_MP, _TMP], "minimums, lock-in, gating; folio restrictions not modelled"),
+    "FB-0714": (D, [_MP, _TMP], "mark at last published NAV with stale flag"),
+    "FB-0715": (P, [_MP, _TMP], "IDCW payout/reinvest amounts; not yet posted to journal"),
+    "FB-0717": (D, [_MP, _TMP], "ASSUMED vs OBSERVED payment evidence"),
+    "FB-0718": (D, [_MP, _TMP], "MF paper realism score"),
+    "FB-0906": (P, [_MP, _TMP], "units x last published NAV; distribution income not in journal"),
+    "FB-0453": (D, [_XP, _TXP], "derived closing sides; spread closes every leg"),
+    "FB-0455": (D, [_XP, _TXP], "price basis on every level; cross-basis comparison refused"),
+    "FB-0456": (P, [_XP, _TXP], "typed levels; TTL and slippage fields live on Signal/OMS"),
+    "FB-0466": (D, [_XP, _TXP], "versioned ladder, breakeven move, trailing stop"),
+    "FB-0488": (D, [_XP, _TXP], "paired lifecycle report with revisions and R-multiple"),
+    "FB-1904": (D, [_XP, _TXP], "option exits only on exact active tokens"),
+    "FB-1906": (P, [_XP, _TXP], "partial exits never oversell; cancellation races not simulated"),
+    "FB-1908": (D, [_XP, _TXP], "independent linked ExitSignal with trigger, fill, fees, P&L"),
+    "FB-1308": (D, [_TMS], "direct and regular are distinct keys with own versions"),
+    "FB-1313": (P, [_TMP], "IDCW payout/reinvest; winding-up via universe; delayed redemption NAV via mf_orders"),
+    "FB-1314": (D, [_TEM], "NAV return not reduced by TER"),
+})
 
 
 def git(*args: str) -> str:
