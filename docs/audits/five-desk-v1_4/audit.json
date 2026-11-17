@@ -45,10 +45,10 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "7e7a6fbe9c",
-   "ahead_of_main": 25,
+   "commit": "7cdedecdac",
+   "ahead_of_main": 31,
    "behind_main": 0,
-   "test_files": 344
+   "test_files": 349
   }
  },
  "status_meaning": {
@@ -58,10 +58,10 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 152,
-  "DONE": 121,
+  "PARTIAL": 172,
+  "DONE": 157,
   "FOOTHOLD": 62,
-  "NOT_STARTED": 70
+  "NOT_STARTED": 14
  },
  "by_dependency": {
   "IN_HOUSE": 382,
@@ -1147,49 +1147,104 @@
    "id": "FB-0310",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Track fund benchmark TRI changes and category peers, with equal-risk and same-category comparisons;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "peer percentile and dated benchmark field",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    },
+    {
+     "path": "src/financial_brain/instruments/mf_scheme.py",
+     "ref": "d2",
+     "object": "b911cee3678a"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0311",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Ingest monthly/quarterly portfolio disclosures as availability permits, plus top holdings, sectors, concentration, style, duration and credit quality ",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "disclosure CSV parser; fetching is external",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/five_desk_cli.py",
+     "ref": "d2",
+     "object": "1577cd27141a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_five_desk_cli.py",
+     "ref": "d2",
+     "object": "c452cd3f52d8"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0312",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Add debt-fund metrics:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "debt metrics with ABSENT labels",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0313",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Add fund-of-funds lookthrough / asset-overlap estimates with double-count prevention and coverage scores.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "fund-of-funds lookthrough with coverage and cycle guard",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0314",
@@ -1498,13 +1553,27 @@
    "id": "FB-0408",
    "section": "4. Unified signal and research contract \u2014 P0",
    "title": "Publish daily/weekly MF **allocation recommendations**, not misleading `instant executions`;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "allocation recommendation record with NAV_PENDING",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0409",
@@ -2232,13 +2301,27 @@
    "id": "FB-0475",
    "section": "Detailed acceptance checklist",
    "title": "For ETFs, support long and any separately validated supported trade styles;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "ETF long only unless style validated",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_router.py",
+     "ref": "d2",
+     "object": "025278784bee"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0476",
@@ -2438,13 +2521,27 @@
    "id": "FB-0484",
    "section": "Detailed acceptance checklist",
    "title": "For all five desks, route strategy-generated entry and triggered exits into autonomous paper, and mirror trader-approved choices in a separate compara",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "autonomous always, approved twin separately",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_router.py",
+     "ref": "d2",
+     "object": "025278784bee"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0485",
@@ -2539,25 +2636,47 @@
    "id": "FB-0489",
    "section": "Detailed acceptance checklist",
    "title": "Provide CLI/API targets:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "read-only CLI views",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/five_desk_cli.py",
+     "ref": "d2",
+     "object": "1577cd27141a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_five_desk_cli.py",
+     "ref": "d2",
+     "object": "c452cd3f52d8"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0490",
    "section": "Detailed acceptance checklist",
    "title": "Create table-driven unit tests for long/short stop and target inequalities, tick rounding, R-multiple, fees, expired entries, option contract identity",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "table-driven inequalities, ticks, R-multiple, fees, expiry",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_lifecycle_tables_4a.py",
+     "ref": "d2",
+     "object": "15e420185c89"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0491",
@@ -2583,25 +2702,41 @@
    "id": "FB-0492",
    "section": "Detailed acceptance checklist",
    "title": "Create failure tests for stale quotes, feed disconnection, halts, high slippage, no liquidity, repeated ticks, out-of-order events, ledger recovery an",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "stale, disconnect, slippage, no liquidity, repeats, out-of-order, recovery, duplicate exits",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_lifecycle_tables_4a.py",
+     "ref": "d2",
+     "object": "15e420185c89"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0493",
    "section": "Detailed acceptance checklist",
    "title": "Create property tests:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "no unprotected position, no double sell, quantities reconcile, no early fills",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_lifecycle_tables_4a.py",
+     "ref": "d2",
+     "object": "15e420185c89"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0494",
@@ -2663,13 +2798,27 @@
    "id": "FB-0502",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Trend continuation, moving-average rules, medium-horizon mean-reversion and volatility-adjusted position sizing, each pre-registered before decisive t",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "MA trend, mean reversion, vol sizing; not preregistered or run",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0503",
@@ -2695,13 +2844,27 @@
    "id": "FB-0504",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "ETF short-horizon signal studies only for instruments whose spread/depth make cost-adjusted intraday trading plausible.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "cost-plausibility gate for short-horizon ETF studies",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0505",
@@ -2733,13 +2896,27 @@
    "id": "FB-0506",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Compare market-price ETF returns net of execution friction against NAV/underlying TRI:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "friction vs tracking decomposition",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0507",
@@ -2797,13 +2974,27 @@
    "id": "FB-0509",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Use stress tests for global-hours mismatch, commodity gaps, stale iNAV, liquidity collapse and widened spreads.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "stress scenarios",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0510",
@@ -2835,13 +3026,27 @@
    "id": "FB-0511",
    "section": "5. ETF alpha and strategy engine \u2014 P1",
    "title": "Quantify incremental performance over holding the underlying benchmark with a matching risk budget and execution regime.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "excess over risk-matched benchmark; not run on data",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0512",
@@ -2951,49 +3156,105 @@
    "id": "FB-0604",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Model exposure overlap, style drift, size/sector concentration, manager effects, fund size and capacity when historical disclosures allow.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "overlap and concentration; style drift and manager effects need disclosures",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0605",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Evaluate active-vs-passive fund selection with persistence controls, survivorship-aware scheme history and multiple-hypothesis penalties.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "persistence measure; survivorship via scheme master",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0606",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Add investor cash-management allocation:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "cash-management options net of payout lag and load",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0607",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Optimize multi-fund portfolio for return, covariance, liquidity lockup, exit loads, tax, turnover, drawdown and marginal risk contribution.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "risk-budgeted allocation with cash; no covariance optimiser",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0608",
@@ -3017,13 +3278,27 @@
    "id": "FB-0609",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Implement timing/rebalance hypotheses as independent prospective studies, never as guaranteed `buy today's NAV` outcomes.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "studies need ledger registration to be decisive",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0610",
@@ -3055,13 +3330,21 @@
    "id": "FB-0611",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Demonstrate value beyond same-category passive funds, direct-plan benchmark and static allocations after tax and turnover;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "peer percentile tool; no measured result",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0612",
@@ -3093,25 +3376,41 @@
    "id": "FB-0613",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Include owner-controlled SIP and allocation parameters without assuming access to a live folio or external fund transaction API.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "owner-set SIP parameters record",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0614",
    "section": "6. MF research, allocation and investment engine \u2014 P1",
    "title": "Maintain versioned strategy charters and scorecard with a cash/no-action control and actual prospective NAV allotment.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "versioned charter with cash/no-action control",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0701",
@@ -3195,13 +3494,27 @@
    "id": "FB-0704",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Implement effective-dated cutoff engine for normal, liquid, overnight and special schemes;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "effective-dated cut-offs by class with scheme override and suspension",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0705",
@@ -3493,13 +3806,27 @@
    "id": "FB-0716",
    "section": "7. Mutual fund transaction lifecycle and NAV execution \u2014 P0",
    "title": "Reconcile pending application, allotment confirmation, units, external flows, cash reserve and bank payout to one canonical ledger.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "MF money reconciliation",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0717",
@@ -4097,13 +4424,27 @@
    "id": "FB-0910",
    "section": "9. Shared multi-asset accounting, P&L, taxes and capital \u2014 P0",
    "title": "Prevent TER double count:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "NAV-based returns not reduced by TER",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_metrics.py",
+     "ref": "d2",
+     "object": "a5575b679e76"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_etf_mf_s5_s6.py",
+     "ref": "d2",
+     "object": "de4c73b375ec"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0911",
@@ -4493,13 +4834,27 @@
    "id": "FB-1009",
    "section": "10. Daily, real-time and periodic signal scheduling \u2014 P0",
    "title": "Periodic:",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "weekly MF review schedule",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/five_desk_cli.py",
+     "ref": "d2",
+     "object": "1577cd27141a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_five_desk_cli.py",
+     "ref": "d2",
+     "object": "c452cd3f52d8"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1010",
@@ -4701,37 +5056,79 @@
    "id": "FB-1106",
    "section": "11. Trader dashboard and workflows \u2014 P1",
    "title": "ETFs display underlying benchmark, bid/ask, quoted premium/discount to fresh iNAV, estimated tracking difference, cost and liquidity.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "ETF card fields with UNAVAILABLE premium",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1107",
    "section": "11. Trader dashboard and workflows \u2014 P1",
    "title": "MFs display scheme/plan/option, current/published NAV, available NAV date, cutoff, pending allotment, units, cost basis, exit load, settlement and tax",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "MF card fields incl. pending allotment, cut-off, load, tax",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1108",
    "section": "11. Trader dashboard and workflows \u2014 P1",
    "title": "Show MF `SUBSCRIBE`, `REDEEM`, `SWITCH`, `SIP`, `HOLD` as decisions, not misleading buy-at-current-price buttons.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "MF decisions, no buy-at-price action",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1109",
@@ -4922,37 +5319,78 @@
    "id": "FB-1204",
    "section": "12. Evaluation, performance benchmarks, research discipline \u2014 P0/P1",
    "title": "Evaluate ETFs on net executable exchange prices, not only NAV momentum or benchmark returns.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "price return vs NAV vs benchmark decomposition",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1205",
    "section": "12. Evaluation, performance benchmarks, research discipline \u2014 P0/P1",
    "title": "Evaluate mutual funds against matching TRI, peers, direct-plan passive alternative and scheduled no-change allocation.",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "TRI and peer comparison tools",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    },
+    {
+     "path": "src/financial_brain/research/mf_metrics.py",
+     "ref": "d2",
+     "object": "a5575b679e76"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1206",
    "section": "12. Evaluation, performance benchmarks, research discipline \u2014 P0/P1",
    "title": "Account for pending redemption, uninvested cash, actual NAV-allotment date and withdrawal delays in MF return measurement.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "return with flows, pending redemption and idle cash",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1207",
@@ -5323,13 +5761,21 @@
    "id": "FB-1307",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test ETF split/distribution/delisting/halt and stop handling;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "split preserves cost; halt keeps risk open; delisting via D1 states",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_lifecycle_tables_4a.py",
+     "ref": "d2",
+     "object": "15e420185c89"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1308",
@@ -5475,13 +5921,21 @@
    "id": "FB-1315",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test `pay cash for ETF` and `subscribe into equivalent index MF` with identical factor exposure but different execution/timing:",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "ETF fill and MF allotment never share time or price",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_lifecycle_tables_4a.py",
+     "ref": "d2",
+     "object": "15e420185c89"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1316",
@@ -6052,13 +6506,27 @@
    "id": "FB-1704",
    "section": "17. Quant capital allocation and cross-desk exposure \u2014 P0",
    "title": "Combine delta-equivalent exposure and nonlinear option scenarios with ETF and MF available holding lookthrough;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "delta-equivalent with uncovered lookthrough listed; option scenarios in cross_asset",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_router.py",
+     "ref": "d2",
+     "object": "025278784bee"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1705",
@@ -6324,13 +6792,27 @@
    "id": "FB-1807",
    "section": "18. Signal-to-fill latency, market microstructure and fidelity \u2014 P0",
    "title": "Track tail latency, signal expiration rates, missed-trade frequency, false signal duplication and market-data coverage in dashboard and CI/golden scen",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "p99 latency, expiry, missed, duplicate and coverage rates",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-1808",
@@ -6662,37 +7144,72 @@
    "id": "FB-2006",
    "section": "20. Market-specific advantage: options, ETFs and mutual funds \u2014 P1",
    "title": "Build MF-vs-ETF-vs-direct equity exposure comparisons for long-term allocation using comparable TRI/category risk, available fund holdings, direct/reg",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "wrapper routing and peer tools",
+   "source": [
+    {
+     "path": "src/financial_brain/research/cross_asset.py",
+     "ref": "d2",
+     "object": "98b4b1033d3a"
+    },
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2007",
    "section": "20. Market-specific advantage: options, ETFs and mutual funds \u2014 P1",
    "title": "Add MF tax-lot-aware switch/hold/redeem decisions, SIP/STP/SWP schedule evaluation, expected settlement cash-flow calendars and a downside policy that",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "tax-lot/load-aware HOLD; SIP schedule in mf_plans",
+   "source": [
+    {
+     "path": "src/financial_brain/research/mf_portfolio.py",
+     "ref": "d2",
+     "object": "7ebc5a3d3eb5"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_mf_portfolio.py",
+     "ref": "d2",
+     "object": "0ae5f1dbc943"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2008",
    "section": "20. Market-specific advantage: options, ETFs and mutual funds \u2014 P1",
    "title": "Test option expiry, spread widening, stale ETF iNAV, ETF illiquidity, MF portfolio overlap, late funds realization and lot-level exit loads with deter",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "expiry, wide spread, stale iNAV, MF overlap adversarial fixtures",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_lifecycle_tables_4a.py",
+     "ref": "d2",
+     "object": "15e420185c89"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2101",
@@ -7518,13 +8035,27 @@
    "id": "FB-2409",
    "section": "24B. Chronological 15-minute labels, features and leakage controls \u2014 P0",
    "title": "Add cross-index features:",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "divergence and relative strength; OI/IV features need data",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2410",
@@ -7779,13 +8310,27 @@
    "id": "FB-2420",
    "section": "24D. Options conversion, entry/exit, SL/TP \u2014 P0",
    "title": "Model expiry-specific restrictions, fast gamma/theta changes, sharp IV collapse, spread widening, large gaps, settlement and multi-leg fill risk;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "expiry and leg-sync guards; IV collapse in cross_asset scenarios",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_router.py",
+     "ref": "d2",
+     "object": "025278784bee"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2421",
@@ -7835,25 +8380,52 @@
    "id": "FB-2423",
    "section": "24E. Automatic paper routing and correlated risk \u2014 P0",
    "title": "Monitor open paper options **between** 15-minute forecast updates using live market/option ticks for SL, TP, time exit, expiry and invalidation;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "risk checks every tick, signals on their own clock",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_router.py",
+     "ref": "d2",
+     "object": "025278784bee"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2424",
    "section": "24E. Automatic paper routing and correlated risk \u2014 P0",
    "title": "Aggregate exposure across NIFTY, BANKNIFTY, FINNIFTY, stocks and index ETFs;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
+   "note": "delta exposure by underlying plus allocator limits",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    },
+    {
+     "path": "src/financial_brain/risk/capital_allocator.py",
+     "ref": "d2",
+     "object": "783ce02dbb21"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2425",
@@ -7911,13 +8483,27 @@
    "id": "FB-2427",
    "section": "24F. Backtest design and legitimate forward validation \u2014 P0",
    "title": "Backtest index direction and option profitability separately.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "direction and P&L scored separately",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2428",
@@ -8038,13 +8624,27 @@
    "id": "FB-2433",
    "section": "24G. Live 15-minute operating system \u2014 P0/P1",
    "title": "Create an index heatmap/cockpit with per-index UP/DOWN/FLAT, directional probability, expected points, uncertainty, regime, model version, timestamp a",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "index heatmap view with tradability",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/five_desk_cli.py",
+     "ref": "d2",
+     "object": "1577cd27141a"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_five_desk_cli.py",
+     "ref": "d2",
+     "object": "c452cd3f52d8"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2434",
@@ -8167,13 +8767,21 @@
    "id": "FB-2439",
    "section": "24H. Adversarial tests and acceptance \u2014 P0",
    "title": "Exercise two simultaneous index forecasts with shared exposure, partial entry/exit fills, duplicate tick batches, reconnect, feed lag, exchange halt, ",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
+   "note": "shared capital, duplicate batches, overspend; reconnect/halt via other tests",
    "source": [],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_lifecycle_tables_4a.py",
+     "ref": "d2",
+     "object": "15e420185c89"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2440",
@@ -8870,13 +9478,27 @@
    "id": "FB-2527",
    "section": "25D. Indian-market adaptation and options routing",
    "title": "Prioritize underlying Nifty/Bank Nifty and liquid equities/ETFs for directional tests;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "unsupported instruments research-only",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_router.py",
+     "ref": "d2",
+     "object": "025278784bee"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2528",
@@ -8927,37 +9549,79 @@
    "id": "FB-2530",
    "section": "25D. Indian-market adaptation and options routing",
    "title": "Map underlying invalidation and exit conditions to option-premium SL/TP, max premium risk, time stop and tick-driven exit monitoring;",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "underlying levels to premium SL/TP via delta",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_router.py",
+     "ref": "d2",
+     "object": "025278784bee"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2531",
    "section": "25D. Indian-market adaptation and options routing",
    "title": "Implement separate futures and ETF execution adapters with correct contract sizing, margin/settlement, liquidity and fee models;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "futures and ETF sizing with margin/cash; fee model elsewhere",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_router.py",
+     "ref": "d2",
+     "object": "025278784bee"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2532",
    "section": "25D. Indian-market adaptation and options routing",
    "title": "Integrate as an optional signal source into the 15-minute Nifty forecasting desk while keeping native M1 pattern clock and independent tick-driven ris",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "independent risk clock from signal clock",
+   "source": [
+    {
+     "path": "src/financial_brain/paper/router.py",
+     "ref": "d2",
+     "object": "828fb5c0bb7b"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_router.py",
+     "ref": "d2",
+     "object": "025278784bee"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2533",
@@ -8983,13 +9647,27 @@
    "id": "FB-2534",
    "section": "25E. Research integrity, evaluation and release",
    "title": "Build point-in-time replay with original bar timestamps, historical instrument eligibility, warm-up and confirmed-pivot latency;",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "stream/batch parity check on pivots",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2535",
@@ -9044,37 +9722,79 @@
    "id": "FB-2538",
    "section": "25E. Research integrity, evaluation and release",
    "title": "Benchmark against simple N2 breakout, opening-range breakout, random-entry matched-exposure, and no-trade baselines.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "no-trade, random matched, opening-range baselines",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2539",
    "section": "25E. Research integrity, evaluation and release",
    "title": "Use realistic spread, latency, commissions, taxes, price gaps, option premium decay and conservative same-bar SL/TP ordering.",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "cost model with spread, commission, tax, latency",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2540",
    "section": "25E. Research integrity, evaluation and release",
    "title": "Perform parameter stability and multiple-testing corrections across fractal widths, moving-average variants, ATR scaling, Fibonacci filters and asset ",
-   "status": "NOT_STARTED",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "Holm, BH and neighbourhood stability",
+   "source": [
+    {
+     "path": "src/financial_brain/evaluation/study_tools.py",
+     "ref": "d2",
+     "object": "dbc4cc03dedd"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_study_tools.py",
+     "ref": "d2",
+     "object": "b262b1734e62"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-2541",

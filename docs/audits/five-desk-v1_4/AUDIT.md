@@ -6,10 +6,10 @@ no acceptance test was run per task. Machine-readable copy: `audit.json`.
 
 | status | tasks | meaning |
 |---|---|---|
-| DONE | 121 | code and a test exist for the task as written |
-| PARTIAL | 152 | part of the task is built and tested; the rest is named in the note |
+| DONE | 157 | code and a test exist for the task as written |
+| PARTIAL | 172 | part of the task is built and tested; the rest is named in the note |
 | FOOTHOLD | 62 | a reusable building block exists, but the task's own subject is not built |
-| NOT_STARTED | 70 | nothing in the repository addresses it |
+| NOT_STARTED | 14 | nothing in the repository addresses it |
 
 Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 
@@ -22,9 +22,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | codex | `codex/forward-edge-falsification-audit-20261115` | `13e2ab6695` | 163 | 0 | 377 |
 | dyn | `feature/dynamic-evidence-standard` | `7494a5e3f0` | 3 | 0 | 323 |
 | d1 | `feature/five-desk-d1-instruments` | `8b0b12cef3` | 1 | 0 | 323 |
-| d2 | `feature/five-desk-d2-data-parity` | `7e7a6fbe9c` | 25 | 0 | 344 |
+| d2 | `feature/five-desk-d2-data-parity` | `7cdedecdac` | 31 | 0 | 349 |
 
-259 tasks cite evidence that is not on `main`.
+315 tasks cite evidence that is not on `main`.
 
 ## By section
 
@@ -33,40 +33,40 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | 0. Baseline and integrity freeze — P0 | 1 | 7 | 2 | 2 |
 | 1. Instrument master and asset-specific clocks — P0 | 5 | 5 | 0 | 0 |
 | 2. ETF universe, metadata and market data — P0 | 5 | 4 | 5 | 0 |
-| 3. Conventional MF data and scheme master — P0/P1 | 6 | 5 | 1 | 6 |
-| 4. Unified signal and research contract — P0 | 3 | 7 | 1 | 1 |
-| Detailed acceptance checklist | 16 | 11 | 11 | 7 |
-| 5. ETF alpha and strategy engine — P1 | 3 | 3 | 1 | 5 |
-| 6. MF research, allocation and investment engine — P1 | 3 | 2 | 1 | 8 |
-| 7. Mutual fund transaction lifecycle and NAV execution — P0 | 11 | 5 | 0 | 2 |
+| 3. Conventional MF data and scheme master — P0/P1 | 8 | 7 | 1 | 2 |
+| 4. Unified signal and research contract — P0 | 4 | 7 | 1 | 0 |
+| Detailed acceptance checklist | 22 | 11 | 11 | 1 |
+| 5. ETF alpha and strategy engine — P1 | 6 | 5 | 1 | 0 |
+| 6. MF research, allocation and investment engine — P1 | 7 | 6 | 1 | 0 |
+| 7. Mutual fund transaction lifecycle and NAV execution — P0 | 13 | 5 | 0 | 0 |
 | 8. Shared exchange paper OMS: equities, ETFs, options — P0 | 6 | 6 | 2 | 0 |
-| 9. Shared multi-asset accounting, P&L, taxes and capital — P0 | 4 | 8 | 5 | 1 |
-| 10. Daily, real-time and periodic signal scheduling — P0 | 2 | 5 | 3 | 2 |
-| 11. Trader dashboard and workflows — P1 | 0 | 6 | 3 | 3 |
-| 12. Evaluation, performance benchmarks, research discipline — P0/P1 | 0 | 11 | 2 | 3 |
-| 13. Adversarial, property-based and acceptance tests — P0 | 7 | 10 | 1 | 2 |
+| 9. Shared multi-asset accounting, P&L, taxes and capital — P0 | 5 | 8 | 5 | 0 |
+| 10. Daily, real-time and periodic signal scheduling — P0 | 2 | 6 | 3 | 1 |
+| 11. Trader dashboard and workflows — P1 | 3 | 6 | 3 | 0 |
+| 12. Evaluation, performance benchmarks, research discipline — P0/P1 | 2 | 12 | 2 | 0 |
+| 13. Adversarial, property-based and acceptance tests — P0 | 8 | 11 | 1 | 0 |
 | 14. Deployment, staged release and external requirements — P0/P1 | 0 | 5 | 2 | 3 |
 | 16. Executable expected value and signal admissibility — P0 | 3 | 3 | 2 | 0 |
-| 17. Quant capital allocation and cross-desk exposure — P0 | 2 | 3 | 2 | 1 |
-| 18. Signal-to-fill latency, market microstructure and fidelity — P0 | 1 | 3 | 3 | 1 |
+| 17. Quant capital allocation and cross-desk exposure — P0 | 2 | 4 | 2 | 0 |
+| 18. Signal-to-fill latency, market microstructure and fidelity — P0 | 2 | 3 | 3 | 0 |
 | 19. Adaptive but auditable exits and risk containment — P0/P1 | 3 | 1 | 3 | 1 |
-| 20. Market-specific advantage: options, ETFs and mutual funds — P1 | 2 | 1 | 2 | 3 |
+| 20. Market-specific advantage: options, ETFs and mutual funds — P1 | 3 | 3 | 2 | 0 |
 | 21. Profit attribution, signal effectiveness and business scorecards — P0 | 2 | 5 | 1 | 0 |
 | 22. Prospective strategy discovery and promotion — P0/P1 | 0 | 6 | 2 | 0 |
 | 23. Trader control room, alert ergonomics and fail-safe operations — P0/P1 | 3 | 5 | 0 | 0 |
 | 24A. Index and derivative universe / data — P0 | 1 | 2 | 2 | 0 |
-| 24B. Chronological 15-minute labels, features and leakage controls — P0 | 3 | 1 | 0 | 1 |
+| 24B. Chronological 15-minute labels, features and leakage controls — P0 | 3 | 2 | 0 | 0 |
 | 24C. Probabilistic forecasting models and adaptation — P0/P1 | 0 | 3 | 2 | 0 |
-| 24D. Options conversion, entry/exit, SL/TP — P0 | 2 | 2 | 0 | 1 |
-| 24E. Automatic paper routing and correlated risk — P0 | 1 | 1 | 1 | 2 |
-| 24F. Backtest design and legitimate forward validation — P0 | 1 | 1 | 2 | 1 |
-| 24G. Live 15-minute operating system — P0/P1 | 2 | 2 | 0 | 1 |
-| 24H. Adversarial tests and acceptance — P0 | 1 | 2 | 0 | 2 |
+| 24D. Options conversion, entry/exit, SL/TP — P0 | 2 | 3 | 0 | 0 |
+| 24E. Automatic paper routing and correlated risk — P0 | 2 | 2 | 1 | 0 |
+| 24F. Backtest design and legitimate forward validation — P0 | 2 | 1 | 2 | 0 |
+| 24G. Live 15-minute operating system — P0/P1 | 3 | 2 | 0 | 0 |
+| 24H. Adversarial tests and acceptance — P0 | 1 | 3 | 0 | 1 |
 | 25A. Source preservation and ambiguities | 7 | 1 | 0 | 0 |
 | 25B. Indicators, fractals and node state machine | 6 | 2 | 0 | 0 |
 | 25C. Entry filters and exit engine | 5 | 3 | 0 | 0 |
-| 25D. Indian-market adaptation and options routing | 1 | 3 | 0 | 4 |
-| 25E. Research integrity, evaluation and release | 3 | 2 | 0 | 7 |
+| 25D. Indian-market adaptation and options routing | 4 | 4 | 0 | 0 |
+| 25E. Research integrity, evaluation and release | 6 | 3 | 0 | 3 |
 
 ## Every task
 
@@ -117,10 +117,10 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-0307 | DONE |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Create survivorship-aware historical scheme universe: — merged/wound-up schemes stay in historical universe |
 | FB-0308 | DONE |  | `instruments/pit.py` (d2 2f09f69)<br>`tests/test_pit_d2.py` (d2 59c7849) | Add `as_known_on()` and NAV `published_at` availability semantics; — NAV usable only after its publication instant |
 | FB-0309 | PARTIAL |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Ingest effective-dated direct/regular total expense ratios, AUM, exit-load schedules, minimum initial/additional investment and exit restrictions. — dated TER, AUM and exit-load schedules; minimums in mf_plans |
-| FB-0310 | NOT_STARTED |  |  | Track fund benchmark TRI changes and category peers, with equal-risk and same-category comparisons; |
-| FB-0311 | NOT_STARTED |  |  | Ingest monthly/quarterly portfolio disclosures as availability permits, plus top holdings, sectors, concentration, style, duration and credit quality  |
-| FB-0312 | NOT_STARTED |  |  | Add debt-fund metrics: |
-| FB-0313 | NOT_STARTED |  |  | Add fund-of-funds lookthrough / asset-overlap estimates with double-count prevention and coverage scores. |
+| FB-0310 | PARTIAL |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`instruments/mf_scheme.py` (d2 b911cee) | Track fund benchmark TRI changes and category peers, with equal-risk and same-category comparisons; — peer percentile and dated benchmark field |
+| FB-0311 | PARTIAL |  | `paper/five_desk_cli.py` (d2 1577cd2)<br>`tests/test_five_desk_cli.py` (d2 c452cd3) | Ingest monthly/quarterly portfolio disclosures as availability permits, plus top holdings, sectors, concentration, style, duration and credit quality  — disclosure CSV parser; fetching is external |
+| FB-0312 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Add debt-fund metrics: — debt metrics with ABSENT labels |
+| FB-0313 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Add fund-of-funds lookthrough / asset-overlap estimates with double-count prevention and coverage scores. — fund-of-funds lookthrough with coverage and cycle guard |
 | FB-0314 | DONE |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Record exit-load schedules as time-dependent **per purchase lot**; — exit load per purchase lot from schedule in force at purchase |
 | FB-0315 | PARTIAL |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | Add schemes with ELSS lock-in, segregated portfolios, gating, special redemption restrictions, and closed-end windows; — ELSS lock-in and gating; segregated portfolios not modelled |
 | FB-0316 | PARTIAL |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | Treat dividends/IDCW payouts, reinvestments, splits and scheme mergers as economic flows for total return rather than apparent NAV crashes. — IDCW payout/reinvest preserve value; merger handled in D1 successions |
@@ -133,7 +133,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-0405 | DONE |  | `signals/contracts.py` (d2 a64c78a)<br>`tests/test_signals_d3.py` (d2 b8a8a0e) | Enforce signal lifecycle `DETECTED -> ELIGIBLE/REJECTED -> APPROVED/SHADOW -> SUBMITTED -> FILLED/PARTIAL/MISSED -> EXITED/EXPIRED`. — lifecycle state machine refuses illegal steps |
 | FB-0406 | FOOTHOLD |  | `signals/watch.py` (main e8f95c9) | Deduplicate repeated alerts without erasing new rule versions or materially changed prices; |
 | FB-0407 | PARTIAL |  | `paper/daily.py` (main 6824d62)<br>`paper/board.py` (main 2b81acf) | Publish up to five DAILY swing candidates and independent ETF candidate ranks; — daily equity candidates; no ETF ranks |
-| FB-0408 | NOT_STARTED |  |  | Publish daily/weekly MF **allocation recommendations**, not misleading `instant executions`; |
+| FB-0408 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Publish daily/weekly MF **allocation recommendations**, not misleading `instant executions`; — allocation recommendation record with NAV_PENDING |
 | FB-0409 | PARTIAL |  | `llm/gate.py` (main 778d09d)<br>`security/untrusted.py` (main 8a214f6)<br>`interfaces/mcp_server.py` (main d143f10) | Connect researcher/scanner, event ingestion, news and signals to read-only signal generation; — LLM path is read-only |
 | FB-0410 | PARTIAL |  | `forward_edge/approvals.py` (main 13462ab)<br>`forward_edge/operator_decisions.py` (f00 b183cf6)<br>`forward_edge/shadow.py` (f00 ed243b8) | Human decisions may create a separate manual-approved paper sleeve, while an autonomous paper sleeve preserves objective original outcomes. |
 | FB-0411 | PARTIAL |  | `research/counterfactual_store.py` (main 18cd39d)<br>`evaluation/regret.py` (main 2d5023e) | Store rejected signals and their counterfactual follow-up observations without reclassifying them as actual portfolio P&L. |
@@ -162,7 +162,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-0472 | PARTIAL |  | `signals/contracts.py` (d2 a64c78a)<br>`signals/exit_triggers.py` (d2 2ce7000) | Ensure a paper position cannot be opened without a valid exit policy, and is never treated as closed until recorded fill or correctly modeled settleme — entry refused without policy; closed only on recorded fill |
 | FB-0473 | FOOTHOLD |  | `paper/daily.py` (main 6824d62)<br>`evaluation/swing.py` (main 8382ffe) | For equity swing, generate daily BUY candidates with SL/TP from versioned risk/strategy logic; — candidates without SL/TP |
 | FB-0474 | PARTIAL |  | `paper/intraday_runner.py` (main 9ef5625)<br>`paper/intraday.py` (main aa234cc) | For equity intraday, publish new BUY and permitted short SELL signals from event-driven bars/ticks; — live-v1: long-only ORB with stop and EOD flatten; no shorts, no linked exit events |
-| FB-0475 | NOT_STARTED |  |  | For ETFs, support long and any separately validated supported trade styles; |
+| FB-0475 | DONE |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | For ETFs, support long and any separately validated supported trade styles; — ETF long only unless style validated |
 | FB-0476 | FOOTHOLD |  | `paper/options_runner.py` (main 869e2e5) | For options, emit the precise `CE/PE`, strike, expiry, token, side, lots, premium entry band, SL/TP premium or risk terms, and underlying/context inva |
 | FB-0477 | FOOTHOLD |  | `paper/options_forward.py` (main 14d682b)<br>`ingest/options_quotes.py` (main e94f157) | For options, monitor bid/ask/depth, premium decay, days-to-expiry, price gaps, volatility and Greeks; |
 | FB-0478 | FOOTHOLD |  | `paper/options_spread.py` (main cebb11a)<br>`forward_edge/options_spread.py` (f00 3b3e506) | For option spreads, express entry, SL and TP on the **combined spread value/P&L** and separately track leg risk and partial fills; |
@@ -171,48 +171,48 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-0481 | PARTIAL |  | `signals/contracts.py` (d2 a64c78a)<br>`execution/mf_orders.py` (d2 532ceab) | Treat MF SL/TP as **NAV-based decision thresholds**, never exchange conditional stop orders: — MF signals cannot carry exchange stops; NAV threshold trigger not built |
 | FB-0482 | DONE |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | For MFs, when an NAV threshold is hit, generate a dated redemption/switch **request signal**; — NAV threshold produces dated NAV_PENDING request signal |
 | FB-0483 | PARTIAL |  | `execution/mf_plans.py` (d2 e7845f7)<br>`execution/mf_orders.py` (d2 532ceab)<br>`tests/test_mf_plans.py` (d2 9973c20) | Support multiple fund investment lots, load aging, SIPs, STPs, SWPs, fractional units, lock-ins, minimums and tax-aware action recommendations without — lots, loads, SIP/STP/SWP, lock-ins, fractional units; tax-aware not built |
-| FB-0484 | NOT_STARTED |  |  | For all five desks, route strategy-generated entry and triggered exits into autonomous paper, and mirror trader-approved choices in a separate compara |
+| FB-0484 | DONE |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | For all five desks, route strategy-generated entry and triggered exits into autonomous paper, and mirror trader-approved choices in a separate compara — autonomous always, approved twin separately |
 | FB-0485 | FOOTHOLD |  | `forward_edge/operator_decisions.py` (f00 b183cf6) | Allow manual `APPROVE/REJECT/WATCH` and explicit manual exits, but preserve the immutable original algorithmic entry/SL/TP and human edits as separate |
 | FB-0486 | FOOTHOLD |  | `alerts.py` (main c72f093)<br>`forward_edge/alerts.py` (f00 94d6cb7) | Stream UI alerts for `BUY_READY`, `SELL_READY`, `STOP_HIT`, `TP_HIT`, `TRAIL_MOVED`, `ENTRY_EXPIRED`, `NO_FILL`, `EXIT_UNPRICED`, `MF_NAV_PENDING` and |
 | FB-0487 | FOOTHOLD |  | `paper/live_view.py` (main 4dbbda9) | Show live per-position mark-to-market, realized P&L, remaining quantity, stop/target distance, expected cost-to-exit and last quote freshness; |
 | FB-0488 | DONE |  | `signals/exit_plans.py` (d2 094c136)<br>`tests/test_exit_plans.py` (d2 6375565) | Emit a machine-readable and trader-friendly paired lifecycle report: — paired lifecycle report with revisions and R-multiple |
-| FB-0489 | NOT_STARTED |  |  | Provide CLI/API targets: |
-| FB-0490 | NOT_STARTED |  |  | Create table-driven unit tests for long/short stop and target inequalities, tick rounding, R-multiple, fees, expired entries, option contract identity |
+| FB-0489 | DONE |  | `paper/five_desk_cli.py` (d2 1577cd2)<br>`tests/test_five_desk_cli.py` (d2 c452cd3) | Provide CLI/API targets: — read-only CLI views |
+| FB-0490 | DONE |  | `tests/test_lifecycle_tables_4a.py` (d2 15e4201) | Create table-driven unit tests for long/short stop and target inequalities, tick rounding, R-multiple, fees, expired entries, option contract identity — table-driven inequalities, ticks, R-multiple, fees, expiry |
 | FB-0491 | PARTIAL |  | `tests/test_exit_triggers_4a.py` (d2 2c70843) | Create deterministic price-path integration tests for SL-only, TP-only, both touched in one bar, gap-through-SL, gap-through-TP, trailing stop, partia — SL-only, TP-only, both-in-bar, gaps; trailing and partial paths missing |
-| FB-0492 | NOT_STARTED |  |  | Create failure tests for stale quotes, feed disconnection, halts, high slippage, no liquidity, repeated ticks, out-of-order events, ledger recovery an |
-| FB-0493 | NOT_STARTED |  |  | Create property tests: |
+| FB-0492 | DONE |  | `tests/test_lifecycle_tables_4a.py` (d2 15e4201) | Create failure tests for stale quotes, feed disconnection, halts, high slippage, no liquidity, repeated ticks, out-of-order events, ledger recovery an — stale, disconnect, slippage, no liquidity, repeats, out-of-order, recovery, duplicate exits |
+| FB-0493 | DONE |  | `tests/test_lifecycle_tables_4a.py` (d2 15e4201) | Create property tests: — no unprotected position, no double sell, quantities reconcile, no early fills |
 | FB-0494 | FOOTHOLD |  | `evaluation/exit_rules.py` (main 7539646) | Evaluate actual net performance by exit reason (SL, TP, trail, time, discretionary) and ablate target/stop rules against simpler exits without rewriti — historical exit-rule study; not by live exit reason |
 | FB-0495 | NOT_STARTED | TIME: needs future paper sessions |  | Prospective acceptance: |
 | FB-0501 | PARTIAL |  | `strategies/etf_rank.py` (d2 5bb99d5)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Cross-sectional momentum/relative-strength ranking **among comparable ETFs** with fixed horizons and exposure controls. — group-only momentum ranking; no exposure controls or live study |
-| FB-0502 | NOT_STARTED |  |  | Trend continuation, moving-average rules, medium-horizon mean-reversion and volatility-adjusted position sizing, each pre-registered before decisive t |
+| FB-0502 | PARTIAL |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Trend continuation, moving-average rules, medium-horizon mean-reversion and volatility-adjusted position sizing, each pre-registered before decisive t — MA trend, mean reversion, vol sizing; not preregistered or run |
 | FB-0503 | FOOTHOLD |  | `scripts/research/hundred.py` (dyn 0370b8f) | Cross-asset rotation across equity, debt, gold/silver ETF sleeves using equal-vol, buy-and-hold, same-risk and cash controls. — index-TRI rotation candidates were tested on 2026-11-17 and failed; not ETF prices |
-| FB-0504 | NOT_STARTED |  |  | ETF short-horizon signal studies only for instruments whose spread/depth make cost-adjusted intraday trading plausible. |
+| FB-0504 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | ETF short-horizon signal studies only for instruments whose spread/depth make cost-adjusted intraday trading plausible. — cost-plausibility gate for short-horizon ETF studies |
 | FB-0505 | DONE |  | `instruments/etf_reference.py` (d2 c4b849a)<br>`tests/test_etf_reference.py` (d2 89ed483) | Premium/discount-to-iNAV anomaly detector with stale-iNAV and time-of-day guards; — premium anomaly needs fresh synchronous iNAV inside window; observation only |
-| FB-0506 | NOT_STARTED |  |  | Compare market-price ETF returns net of execution friction against NAV/underlying TRI: |
+| FB-0506 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Compare market-price ETF returns net of execution friction against NAV/underlying TRI: — friction vs tracking decomposition |
 | FB-0507 | PARTIAL |  | `strategies/etf_rank.py` (d2 5bb99d5)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Model ETF liquidity tier, concentration, capacity, creation-unit microstructure implications and impact at submitted size. — liquidity tier at intended size; creation-unit effects not modelled |
 | FB-0508 | DONE |  | `strategies/etf_rank.py` (d2 5bb99d5)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Disallow inverse/leveraged product assumptions if absent from actual Indian listed universe; — unlisted products cannot be ranked |
-| FB-0509 | NOT_STARTED |  |  | Use stress tests for global-hours mismatch, commodity gaps, stale iNAV, liquidity collapse and widened spreads. |
+| FB-0509 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Use stress tests for global-hours mismatch, commodity gaps, stale iNAV, liquidity collapse and widened spreads. — stress scenarios |
 | FB-0510 | PARTIAL |  | `strategies/etf_rank.py` (d2 5bb99d5)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Preserve fixed champion and multiple-testing adjusted challengers for each family; — ranking needs confidence gate; champion/challenger store not linked |
-| FB-0511 | NOT_STARTED |  |  | Quantify incremental performance over holding the underlying benchmark with a matching risk budget and execution regime. |
+| FB-0511 | PARTIAL |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Quantify incremental performance over holding the underlying benchmark with a matching risk budget and execution regime. — excess over risk-matched benchmark; not run on data |
 | FB-0512 | DONE |  | `strategies/etf_rank.py` (d2 5bb99d5)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Emit `ETF_SHADOW_ONLY` when cost or statistical confidence fails—even if a ranking exists. — ETF_SHADOW_ONLY unless cost and confidence pass |
 | FB-0601 | PARTIAL |  | `research/mf_metrics.py` (d2 a5575b6)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Produce same-category rolling 1/3/5-year returns, volatility, drawdown, downside deviation, consistency and risk-adjusted performance. — rolling CAGR, vol, drawdown, downside; peer category not loaded |
 | FB-0602 | PARTIAL |  | `research/mf_metrics.py` (d2 a5575b6)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Compare every fund with its declared benchmark TRI, a low-cost passive alternative and relevant peer-group baselines. — excess vs TRI; benchmark data external |
 | FB-0603 | DONE |  | `research/mf_metrics.py` (d2 a5575b6)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Calculate fee-aware direct-vs-regular plan selection, avoiding fee double-counting in historical NAV returns. — direct vs regular on own NAVs; no TER double count |
-| FB-0604 | NOT_STARTED |  |  | Model exposure overlap, style drift, size/sector concentration, manager effects, fund size and capacity when historical disclosures allow. |
-| FB-0605 | NOT_STARTED |  |  | Evaluate active-vs-passive fund selection with persistence controls, survivorship-aware scheme history and multiple-hypothesis penalties. |
-| FB-0606 | NOT_STARTED |  |  | Add investor cash-management allocation: |
-| FB-0607 | NOT_STARTED |  |  | Optimize multi-fund portfolio for return, covariance, liquidity lockup, exit loads, tax, turnover, drawdown and marginal risk contribution. |
+| FB-0604 | PARTIAL |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Model exposure overlap, style drift, size/sector concentration, manager effects, fund size and capacity when historical disclosures allow. — overlap and concentration; style drift and manager effects need disclosures |
+| FB-0605 | PARTIAL |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Evaluate active-vs-passive fund selection with persistence controls, survivorship-aware scheme history and multiple-hypothesis penalties. — persistence measure; survivorship via scheme master |
+| FB-0606 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Add investor cash-management allocation: — cash-management options net of payout lag and load |
+| FB-0607 | PARTIAL |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Optimize multi-fund portfolio for return, covariance, liquidity lockup, exit loads, tax, turnover, drawdown and marginal risk contribution. — risk-budgeted allocation with cash; no covariance optimiser |
 | FB-0608 | FOOTHOLD |  | `kernel/investor_tools.py` (main 6cd1a25) | Implement disciplined lump-sum, scheduled SIP, STP, SWP and rule-driven rebalance simulation with actual date/cutoff/fund availability mechanics. — dca_simulate only |
-| FB-0609 | NOT_STARTED |  |  | Implement timing/rebalance hypotheses as independent prospective studies, never as guaranteed `buy today's NAV` outcomes. |
+| FB-0609 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Implement timing/rebalance hypotheses as independent prospective studies, never as guaranteed `buy today's NAV` outcomes. — studies need ledger registration to be decisive |
 | FB-0610 | DONE |  | `research/mf_metrics.py` (d2 a5575b6)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Rank fund suggestions with `BUY_MORE | HOLD | REDUCE | SWITCH | REDEEM | NO_ACTION`, including time horizon and after-exit-load/tax rationale. — MF action vocabulary with category horizon |
-| FB-0611 | NOT_STARTED |  |  | Demonstrate value beyond same-category passive funds, direct-plan benchmark and static allocations after tax and turnover; |
+| FB-0611 | PARTIAL |  | `evaluation/study_tools.py` (d2 dbc4cc0) | Demonstrate value beyond same-category passive funds, direct-plan benchmark and static allocations after tax and turnover; — peer percentile tool; no measured result |
 | FB-0612 | DONE |  | `research/mf_metrics.py` (d2 a5575b6)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Require fund-category-specific holding periods and liquidity constraints; — category minimum holding periods; no short-horizon MF trades |
-| FB-0613 | NOT_STARTED |  |  | Include owner-controlled SIP and allocation parameters without assuming access to a live folio or external fund transaction API. |
-| FB-0614 | NOT_STARTED |  |  | Maintain versioned strategy charters and scorecard with a cash/no-action control and actual prospective NAV allotment. |
+| FB-0613 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3) | Include owner-controlled SIP and allocation parameters without assuming access to a live folio or external fund transaction API. — owner-set SIP parameters record |
+| FB-0614 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3) | Maintain versioned strategy charters and scorecard with a cash/no-action control and actual prospective NAV allotment. — versioned charter with cash/no-action control |
 | FB-0701 | PARTIAL |  | `execution/mf_orders.py` (d2 532ceab)<br>`tests/test_mf_orders_s7.py` (d2 165d4a2) | Create `MFOrder` with investor account/folio (synthetic in paper), scheme/plan/option, cash amount or units, transaction type and immutable request ti — Subscription order with immutable request time; folio not modelled |
 | FB-0702 | DONE |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | Model request acknowledgement/accepted/rejected, time-stamping at official acceptance point, and platform business-day validity. — submitted/acknowledged/accepted/rejected states |
 | FB-0703 | DONE |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | Model purchase payment initiation time, credited-to-scheme time and funds-available-for-utilization time separately; — payment initiated/credited/available kept separate |
-| FB-0704 | NOT_STARTED |  |  | Implement effective-dated cutoff engine for normal, liquid, overnight and special schemes; |
+| FB-0704 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Implement effective-dated cutoff engine for normal, liquid, overnight and special schemes; — effective-dated cut-offs by class with scheme override and suspension |
 | FB-0705 | DONE |  | `execution/mf_orders.py` (d2 532ceab)<br>`tests/test_mf_orders_s7.py` (d2 165d4a2) | Determine **eligible NAV date** from accepted request + fund realization + effective cutoff; — eligible NAV date from acceptance, funds and cut-off; other days refused |
 | FB-0706 | DONE |  | `execution/mf_orders.py` (d2 532ceab)<br>`tests/test_mf_orders_s7.py` (d2 165d4a2) | Use `NAV_PENDING` until eligible day's NAV is actually published/observed, then allot fractional MF units with proper precision. — NAV_PENDING until published; truncated fractional allotment |
 | FB-0707 | PARTIAL |  | `execution/mf_orders.py` (d2 532ceab)<br>`tests/test_mf_orders_s7.py` (d2 165d4a2) | Implement redemption with cutoff, lot selection (FIFO default unless an actual platform rule specifies otherwise), units to redeem and deferred procee — FIFO redemption; deferred settlement via cash states |
@@ -224,7 +224,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-0713 | PARTIAL |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | Handle minimum subscription/redemption amounts, partial redemption, fractional units, folio restrictions, scheme lock-ins and unavailable NAV days. — minimums, lock-in, gating; folio restrictions not modelled |
 | FB-0714 | DONE |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | Model NAV-related mark-to-market only after publication; — mark at last published NAV with stale flag |
 | FB-0715 | PARTIAL |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | Model dividend/IDCW cash payouts and reinvestments as posted ledger events with correct units and basis. — IDCW payout/reinvest amounts; not yet posted to journal |
-| FB-0716 | NOT_STARTED |  |  | Reconcile pending application, allotment confirmation, units, external flows, cash reserve and bank payout to one canonical ledger. |
+| FB-0716 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Reconcile pending application, allotment confirmation, units, external flows, cash reserve and bank payout to one canonical ledger. — MF money reconciliation |
 | FB-0717 | DONE |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | Distinguish assumed simulated payment realization from independently observed payment realization; — ASSUMED vs OBSERVED payment evidence |
 | FB-0718 | DONE |  | `execution/mf_plans.py` (d2 e7845f7)<br>`tests/test_mf_plans.py` (d2 9973c20) | Build an explicit **MF PAPER REALISM** score measuring eligible-NAV certainty, payment-time evidence, load completeness and redemption settlement conf — MF paper realism score |
 | FB-0801 | PARTIAL |  | `forward_edge/pipeline.py` (main 13d12cb)<br>`forward_edge/session_runner.py` (main 794cd30)<br>`forward_edge/paper_book_adapter.py` (f00 c98d77e) | Wire all existing exchange strategies through one versioned signal→risk→paper-intent→OMS→fill→account ledger. — one path exists for forward-edge equities; zoo, intraday and options runners keep separate ledgers |
@@ -250,7 +250,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-0907 | FOOTHOLD |  | `evaluation/performance.py` (main 6092aac) | Track cash flows, contributions and withdrawals separately from returns; — no money-weighted return |
 | FB-0908 | FOOTHOLD |  | `costs/tax.py` (main e58a69c) | Build effective-dated India tax classification engine (equity-oriented, debt/specified funds, gold/international, scheme history) rather than applying — equity classes only |
 | FB-0909 | FOOTHOLD |  | `costs/tax.py` (main e58a69c) | Track realized capital-gain lots, acquisition dates, tax basis, FIFO rules, holding period, estimated tax and report year; |
-| FB-0910 | NOT_STARTED |  |  | Prevent TER double count: |
+| FB-0910 | DONE |  | `research/mf_metrics.py` (d2 a5575b6)<br>`tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Prevent TER double count: — NAV-based returns not reduced by TER |
 | FB-0911 | PARTIAL |  | `portfolio/multi_asset_ledger.py` (d2 cf58db6)<br>`tests/test_multi_asset_ledger_s9.py` (d2 578ec2b) | Handle stock and ETF settlement regimes; — unsettled proceeds not spendable; settlement calendar rules not loaded |
 | FB-0912 | PARTIAL |  | `attribution/pnl.py` (main e2a34b7)<br>`forward_edge/strategy_attribution.py` (f00 22db97e)<br>`forward_edge/cluster_attribution.py` (f00 98e1429) | Attribute P&L by desk, strategy, signal version, sector, underlying economic exposure, asset class and account, without double counting shared positio |
 | FB-0913 | PARTIAL |  | `risk/covariance.py` (main 1c08802)<br>`risk/decompose.py` (main b33ada7)<br>`risk/stress.py` (main 2dec6fa)<br>`portfolio/stress.py` (main 86eb2c6) | Calculate portfolio exposure, correlation, market beta, liquidity-adjusted VaR/ES diagnostics, overnight/gap risk and cross-desk worst-case loss. |
@@ -267,7 +267,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-1006 | FOOTHOLD |  | `ingest/mfnav.py` (main b1e7d0f) | After AMFI NAV publication: |
 | FB-1007 | NOT_STARTED |  |  | Before MF cutoffs: |
 | FB-1008 | PARTIAL |  | `paper/day_cycle.py` (d2 c644554)<br>`tests/test_day_cycle_s10.py` (d2 d9a885b) | Daily: — daily reconcile phase slot; handler not wired |
-| FB-1009 | NOT_STARTED |  |  | Periodic: |
+| FB-1009 | PARTIAL |  | `paper/five_desk_cli.py` (d2 1577cd2)<br>`tests/test_five_desk_cli.py` (d2 c452cd3) | Periodic: — weekly MF review schedule |
 | FB-1010 | DONE |  | `paper/day_cycle.py` (d2 c644554)<br>`tests/test_day_cycle_s10.py` (d2 d9a885b) | On feed failure, data-quality error, unexpected portfolio state or high drawdown: — fail-closed halts trading phases for the day |
 | FB-1011 | DONE |  | `paper/day_cycle.py` (d2 c644554)<br>`tests/test_day_cycle_s10.py` (d2 d9a885b) | Provide unambiguous run statuses and retry behavior; — run statuses, once per (day, phase), retry after failure |
 | FB-1012 | FOOTHOLD |  | `execution/oms/shortfall.py` (main 2760bd8)<br>`forward_edge/session_timeline.py` (f00 601a24c) | Measure signal latency, quote-to-fill delay, drop rates, outages and trading downtime separately for each desk. |
@@ -276,9 +276,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-1103 | PARTIAL |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd) | Display each signal with timestamp, provenance, intent type, candidate-vs-trade-eligible status, **BUY/SELL closing side, SL, TP, trailing/time exit a — alerts carry time, rule version, evidence tier; no UI page |
 | FB-1104 | PARTIAL |  | `forward_edge/ui_actions.py` (f00 a4615d7)<br>`forward_edge/approvals.py` (main 13462ab) | Provide `APPROVE`, `REJECT`, `WATCH`, `NO_TRADE` for manual-approval paper sleeves; |
 | FB-1105 | FOOTHOLD |  | `forward_edge/shadow.py` (f00 ed243b8) | Independent automatic paper and human-approved paper performance, with same quote feed, risk parameters and market conditions. |
-| FB-1106 | NOT_STARTED |  |  | ETFs display underlying benchmark, bid/ask, quoted premium/discount to fresh iNAV, estimated tracking difference, cost and liquidity. |
-| FB-1107 | NOT_STARTED |  |  | MFs display scheme/plan/option, current/published NAV, available NAV date, cutoff, pending allotment, units, cost basis, exit load, settlement and tax |
-| FB-1108 | NOT_STARTED |  |  | Show MF `SUBSCRIBE`, `REDEEM`, `SWITCH`, `SIP`, `HOLD` as decisions, not misleading buy-at-current-price buttons. |
+| FB-1106 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | ETFs display underlying benchmark, bid/ask, quoted premium/discount to fresh iNAV, estimated tracking difference, cost and liquidity. — ETF card fields with UNAVAILABLE premium |
+| FB-1107 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | MFs display scheme/plan/option, current/published NAV, available NAV date, cutoff, pending allotment, units, cost basis, exit load, settlement and tax — MF card fields incl. pending allotment, cut-off, load, tax |
+| FB-1108 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Show MF `SUBSCRIBE`, `REDEEM`, `SWITCH`, `SIP`, `HOLD` as decisions, not misleading buy-at-current-price buttons. — MF decisions, no buy-at-price action |
 | FB-1109 | FOOTHOLD |  | `forward_edge/signal_trace.py` (f00 fdafa58) | Create trade attribution: |
 | FB-1110 | PARTIAL |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd) | Add alerts for order execution, stale data, MF payout/units pending, ETF dislocation, options expiry and risk budget changes. — alert kinds include exits and MF pending; delivery channel not built |
 | FB-1111 | PARTIAL |  | `evidence/ledger.py` (main 6b7c16e)<br>`evidence/anchor.py` (main 2cc291f)<br>`forward_edge/evidence_bundle.py` (f00 cc4b5a9) | Export reproducible CSV/Parquet/JSON + signed/hash-stamped audit reports with exact code/data revisions. |
@@ -286,9 +286,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-1201 | PARTIAL |  | `research/preregistry.py` (main 14972b7)<br>`evaluation/standard.py` (main 12d86e1)<br>`evaluation/dynamic_standard.py` (dyn 92ba344) | Freeze each algorithm with experiment ID, preregistered start, horizon, universe, costs, null, split, expected cash and acceptance gate. — equity research only; dynamic standard is on PR 34 |
 | FB-1202 | PARTIAL |  | `evaluation/firewall.py` (main 096b6f8)<br>`forward_edge/parameter_freeze.py` (f00 d4367d6)<br>`forward_edge/horizon_freeze.py` (f00 3bdbd12) | Train/select/validate/forward boundaries enforced; |
 | FB-1203 | PARTIAL |  | `evaluation/benchmark.py` (main cdf028f)<br>`ingest/index_tri.py` (main 6c5f825) | Evaluate stocks and ETFs against appropriate broad-market/sector/underlying TRI and same-risk cash/naive momentum baselines. — stocks only |
-| FB-1204 | NOT_STARTED |  |  | Evaluate ETFs on net executable exchange prices, not only NAV momentum or benchmark returns. |
-| FB-1205 | NOT_STARTED |  |  | Evaluate mutual funds against matching TRI, peers, direct-plan passive alternative and scheduled no-change allocation. |
-| FB-1206 | NOT_STARTED |  |  | Account for pending redemption, uninvested cash, actual NAV-allotment date and withdrawal delays in MF return measurement. |
+| FB-1204 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Evaluate ETFs on net executable exchange prices, not only NAV momentum or benchmark returns. — price return vs NAV vs benchmark decomposition |
+| FB-1205 | PARTIAL |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`research/mf_metrics.py` (d2 a5575b6) | Evaluate mutual funds against matching TRI, peers, direct-plan passive alternative and scheduled no-change allocation. — TRI and peer comparison tools |
+| FB-1206 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Account for pending redemption, uninvested cash, actual NAV-allotment date and withdrawal delays in MF return measurement. — return with flows, pending redemption and idle cash |
 | FB-1207 | PARTIAL |  | `evaluation/performance.py` (main 6092aac)<br>`evaluation/scorecard.py` (main edbce0d)<br>`forward_edge/risk_metrics.py` (f00 9bf5770) | Calculate per-desk expectancy, hit rate, payoff ratio, profit factor, turnover, implementation shortfall, drawdown, VaR/ES diagnostic, Sharpe and alph |
 | FB-1208 | FOOTHOLD |  | `forward_edge/portfolio_alpha.py` (f00 8de86ad) | Compute portfolio-level money-weighted/flow-adjusted and time-weighted performance, and incremental alpha contribution of each desk. |
 | FB-1209 | PARTIAL |  | `forward_edge/cost_sensitivity.py` (f00 cfeec4e)<br>`evaluation/implementability.py` (main 9cb581e) | Robustness to costs 1×/1.5×/2×, volatility and liquidity regimes, latency, opening/closing gaps, strike changes and mutual fund payment delays. |
@@ -305,7 +305,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-1304 | FOOTHOLD |  | `paper/options_runner.py` (main 869e2e5) | Test options zero/bad bids, nonfillable visible depth, expired tokens, wrong strike/lot, partial multi-leg fills and delayed exit. |
 | FB-1305 | DONE |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test ETF wide-spread and stale iNAV; — stale iNAV gives no premium; wide spread blocks fill |
 | FB-1306 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test ETF NIFTY/currency/commodity exposure lookthrough and double-counting with underlying stocks and derivative hedges. — same-underlying ETF and fund summed; currency/commodity not covered |
-| FB-1307 | NOT_STARTED |  |  | Test ETF split/distribution/delisting/halt and stop handling; |
+| FB-1307 | PARTIAL |  | `tests/test_lifecycle_tables_4a.py` (d2 15e4201) | Test ETF split/distribution/delisting/halt and stop handling; — split preserves cost; halt keeps risk open; delisting via D1 states |
 | FB-1308 | DONE |  | `tests/test_mf_scheme.py` (d2 4d05f48) | Test MF direct vs regular same scheme as different share classes; — direct and regular are distinct keys with own versions |
 | FB-1309 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test MF after-cutoff application, before-cutoff application with late funds, on-time funds, weekends, bank holidays, scheme suspension and special liq — cut-off, late funds, weekend, holiday; liquid/overnight rules not loaded |
 | FB-1310 | DONE |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test MF published NAV arriving after decision; — NAV published after decision cannot allot |
@@ -313,7 +313,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-1312 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test MF partial redemption, lot-specific exit loads, fractional unit precision, minimum transaction amounts and lock-in failures. — partial redemption, lot loads, fractional units; minimums/lock-in missing |
 | FB-1313 | PARTIAL |  | `tests/test_mf_plans.py` (d2 9973c20) | Test IDCW payout/reinvestment, fund merger, scheme winding-up and delayed redemption price publication. — IDCW payout/reinvest; winding-up via universe; delayed redemption NAV via mf_orders |
 | FB-1314 | DONE |  | `tests/test_etf_mf_s5_s6.py` (d2 de4c73b) | Test MF expense accounting to ensure NAV-based returns are not reduced by TER a second time. — NAV return not reduced by TER |
-| FB-1315 | NOT_STARTED |  |  | Test `pay cash for ETF` and `subscribe into equivalent index MF` with identical factor exposure but different execution/timing: |
+| FB-1315 | DONE |  | `tests/test_lifecycle_tables_4a.py` (d2 15e4201) | Test `pay cash for ETF` and `subscribe into equivalent index MF` with identical factor exposure but different execution/timing: — ETF fill and MF allotment never share time or price |
 | FB-1316 | PARTIAL |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test power loss at signal, approval, cash reserve, funds-receipt, NAV notice, allotment, redemption and payout; — exit replay after restart idempotent; other crash points not covered |
 | FB-1317 | DONE |  | `tests/test_adversarial_s13.py` (d2 3cc7612) | Test duplicate network events and corrections; — duplicate keys post once |
 | FB-1318 | PARTIAL |  | `execution/oms/kite_broker.py` (main a2138ac)<br>`tests/test_forward_edge_f00.py` (main 31827c3) | Test disabled real broker endpoints through every old and new OMS path, including malicious/accidental mode switches. — each path tested alone |
@@ -340,7 +340,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-1701 | PARTIAL |  | `risk/capital_allocator.py` (d2 783ce02)<br>`tests/test_admissibility_allocator_s16_17.py` (d2 acadfbe) | Introduce a central `CapitalAllocator` that grants/denies reserved risk budgets *before* each desk places a paper order; — central reservations; desks not yet calling it |
 | FB-1702 | FOOTHOLD |  | `risk/allocator.py` (main cf6c7f3)<br>`portfolio/next_capital.py` (main 413a79e)<br>`portfolio/optimizer.py` (main 5546bd8)<br>`portfolio/gate.py` (main 6175b5b) | Integrate existing `risk/allocator.py`, `portfolio/next_capital.py`, `portfolio/optimizer.py`, `portfolio/gate.py` under a single enforceable interfac — four modules, no single interface |
 | FB-1703 | FOOTHOLD |  | `graph/exposure.py` (main 668e552)<br>`risk/exposure.py` (main b1a67b6) | Compute overlapping exposure by underlying/sector/index/factor: |
-| FB-1704 | NOT_STARTED |  |  | Combine delta-equivalent exposure and nonlinear option scenarios with ETF and MF available holding lookthrough; |
+| FB-1704 | PARTIAL |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | Combine delta-equivalent exposure and nonlinear option scenarios with ETF and MF available holding lookthrough; — delta-equivalent with uncovered lookthrough listed; option scenarios in cross_asset |
 | FB-1705 | PARTIAL |  | `risk/capital_allocator.py` (d2 783ce02)<br>`tests/test_admissibility_allocator_s16_17.py` (d2 acadfbe) | Support limits by desk, strategy, underlying, market beta, sector, premium-at-risk, margin-at-risk, daily drawdown, overnight gap loss and scenario st — desk, underlying, capital and daily-loss limits |
 | FB-1706 | PARTIAL |  | `risk/allocator.py` (main cf6c7f3)<br>`forward_edge/capacity.py` (f00 efd4b38) | Use capacity- and uncertainty-aware capital assignment with cash as a valid optimal weight; |
 | FB-1707 | DONE |  | `risk/capital_allocator.py` (d2 783ce02)<br>`tests/test_admissibility_allocator_s16_17.py` (d2 acadfbe) | Implement configurable daily loss/portfolio drawdown throttling, desk-level quarantine and a human-reset kill switch; — daily-loss kill switch with human reset; quarantine |
@@ -351,7 +351,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-1804 | PARTIAL |  | `execution/simulator.py` (main 35c09d4)<br>`forward_edge/passive_queue.py` (f00 da36870)<br>`execution/oms/slicer.py` (main 570f179) | Create a volume/depth-constrained fill simulator with spread crossing, partial fills, limit-order nonfills, marketable price walks, order TTL and canc |
 | FB-1805 | PARTIAL |  | `execution/oms/shortfall.py` (main 2760bd8)<br>`execution/exec_study.py` (main 7c2129f)<br>`costs/measured.py` (main 1033e76) | Estimate implementation shortfall by desk, liquidity bucket, order size, time of day and volatility; |
 | FB-1806 | DONE |  | `signals/exit_triggers.py` (d2 2ce7000)<br>`tests/test_exit_triggers_4a.py` (d2 2c70843) | Enforce no-lookahead stop/TP trigger ordering inside OHLC bars: — adverse-first intrabar ordering |
-| FB-1807 | NOT_STARTED |  |  | Track tail latency, signal expiration rates, missed-trade frequency, false signal duplication and market-data coverage in dashboard and CI/golden scen |
+| FB-1807 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Track tail latency, signal expiration rates, missed-trade frequency, false signal duplication and market-data coverage in dashboard and CI/golden scen — p99 latency, expiry, missed, duplicate and coverage rates |
 | FB-1808 | FOOTHOLD |  | `forward_edge/capture_replay.py` (codex 19ce663)<br>`opportunity/replay.py` (main 880e814) | Implement executable event replay from immutable source data through exact same decision contract; — capture_replay is on the codex branch |
 | FB-1901 | FOOTHOLD |  | `evaluation/exit_rules.py` (main 7539646)<br>`strategies/execution_rules.py` (main 47db777) | Implement one frozen `ExitPolicy` API for fixed SL/TP, ATR/volatility stop, trailing stop, staged profit-taking, time exits and strategy invalidation; |
 | FB-1902 | DONE |  | `signals/exit_triggers.py` (d2 2ce7000)<br>`tests/test_exit_triggers_4a.py` (d2 2c70843) | Simulate paired stop-and-target exit intents with OCO semantics, ensuring one trigger cannot accidentally create two full exits or a reversed position — OCO paper semantics, no double exit |
@@ -366,9 +366,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-2003 | DONE |  | `research/cross_asset.py` (d2 98b4b10)<br>`tests/test_cross_asset_s20.py` (d2 342455d) | Implement option strategy-level scenario P&L under underlying price, implied vol, time decay and spread shock, including defined-risk verticals and un — vertical scenario grid with spread shock and unfilled-leg contingency |
 | FB-2004 | DONE |  | `instruments/etf_reference.py` (d2 c4b849a)<br>`tests/test_etf_reference.py` (d2 89ed483) | Add ETF executable fair-value comparison with iNAV/NAV freshness, exchange spread, trading size and tracking difference; — executable side price vs fresh iNAV |
 | FB-2005 | PARTIAL |  | `research/cross_asset.py` (d2 98b4b10)<br>`tests/test_cross_asset_s20.py` (d2 342455d) | Build ETF-vs-underlying-vs-competing-ETF routing for the same desired exposure: — best implementable net wrapper; tax/account differences not modelled |
-| FB-2006 | NOT_STARTED |  |  | Build MF-vs-ETF-vs-direct equity exposure comparisons for long-term allocation using comparable TRI/category risk, available fund holdings, direct/reg |
-| FB-2007 | NOT_STARTED |  |  | Add MF tax-lot-aware switch/hold/redeem decisions, SIP/STP/SWP schedule evaluation, expected settlement cash-flow calendars and a downside policy that |
-| FB-2008 | NOT_STARTED |  |  | Test option expiry, spread widening, stale ETF iNAV, ETF illiquidity, MF portfolio overlap, late funds realization and lot-level exit loads with deter |
+| FB-2006 | PARTIAL |  | `research/cross_asset.py` (d2 98b4b10)<br>`evaluation/study_tools.py` (d2 dbc4cc0) | Build MF-vs-ETF-vs-direct equity exposure comparisons for long-term allocation using comparable TRI/category risk, available fund holdings, direct/reg — wrapper routing and peer tools |
+| FB-2007 | PARTIAL |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | Add MF tax-lot-aware switch/hold/redeem decisions, SIP/STP/SWP schedule evaluation, expected settlement cash-flow calendars and a downside policy that — tax-lot/load-aware HOLD; SIP schedule in mf_plans |
+| FB-2008 | DONE |  | `tests/test_lifecycle_tables_4a.py` (d2 15e4201) | Test option expiry, spread widening, stale ETF iNAV, ETF illiquidity, MF portfolio overlap, late funds realization and lot-level exit loads with deter — expiry, wide spread, stale iNAV, MF overlap adversarial fixtures |
 | FB-2101 | PARTIAL |  | `paper/daily_results.py` (main c515bc1)<br>`forward_edge/pnl_dashboard.py` (f00 6dd4c1e)<br>`forward_edge/strategy_scorecard.py` (f00 6929e20) | Emit a daily consolidated report for each desk and strategy: |
 | FB-2102 | PARTIAL |  | `attribution/pnl.py` (main e2a34b7)<br>`attribution/move.py` (main 912a58e)<br>`forward_edge/strategy_attribution.py` (f00 22db97e) | Build a complete economic attribution: |
 | FB-2103 | DONE |  | `evaluation/scorecards.py` (d2 cdca8a0)<br>`tests/test_scorecards_s21_22.py` (d2 df52bdd) | Distinguish cash-inflow-adjusted time-weighted returns, money-weighted/XIRR reporting, invested-capital returns and nominal rupee P&L; — TWR excludes flows; XIRR separate |
@@ -401,7 +401,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-2406 | DONE |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | For index i and a *completed* bar ending at time t, define `r(i,t,15m)=S(i,t+15m)/S(i,t)-1` (and explicit forward 30m/60m/EOD targets). — forward return from completed bar, None across gaps |
 | FB-2407 | DONE |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Define 3-class labels UP/DOWN/FLAT using training-period, index-specific price-noise thresholds; — UP/DOWN/FLAT from training-only noise threshold |
 | FB-2408 | PARTIAL |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Build point-in-time features from prior 1m/5m/15m/60m returns, volatility, VWAP where meaningful, opening range, realized range, trend slope, overnigh — return, range, volatility, time and opening-range features |
-| FB-2409 | NOT_STARTED |  |  | Add cross-index features: |
+| FB-2409 | PARTIAL |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Add cross-index features: — divergence and relative strength; OI/IV features need data |
 | FB-2410 | DONE |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Write leak tests: — mutation leak check on bars after cutoff |
 | FB-2411 | PARTIAL |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Train naive frequency, no-change, price-persistence and volatility/time-of-day baseline classifiers for each index/horizon; — class-frequency baseline; persistence/vol baselines missing |
 | FB-2412 | PARTIAL |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Train versioned, low-variance tree/logistic models on completed bars; — versioned logistic model; tree and multi-index comparison not run |
@@ -412,26 +412,26 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-2417 | PARTIAL |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Convert full projected underlying-return/IV/time paths into option-premium outcome distributions with delta, gamma, theta, vega, spreads and realistic — delta-gamma-theta-vega expectation; no full path simulation |
 | FB-2418 | PARTIAL |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Rank option candidates by **expected executable net P&L**, downside tails, risk-adjusted expected value and portfolio marginal impact; — ranked by expected net per lot; no tail/portfolio impact |
 | FB-2419 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Publish fully linked **BUY CE / BUY PE / BUY SPREAD** and **SELL/EXIT** intentions including exchange token, expiry, strike, lots, limit-entry band, o — linked BUY CE/PE card with exits, TTL and max planned loss |
-| FB-2420 | NOT_STARTED |  |  | Model expiry-specific restrictions, fast gamma/theta changes, sharp IV collapse, spread widening, large gaps, settlement and multi-leg fill risk; |
+| FB-2420 | PARTIAL |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | Model expiry-specific restrictions, fast gamma/theta changes, sharp IV collapse, spread widening, large gaps, settlement and multi-leg fill risk; — expiry and leg-sync guards; IV collapse in cross_asset scenarios |
 | FB-2421 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | At each valid forecast decision, append an immutable event with `forecast_id`, `index_id`, bar cutoff, data/source timestamps, strategy/config hash, m — append-only hash-chained forecast events |
 | FB-2422 | FOOTHOLD |  | `paper/options_runner.py` (main 869e2e5) | Auto-route eligible signals through the **canonical paper OMS**. |
-| FB-2423 | NOT_STARTED |  |  | Monitor open paper options **between** 15-minute forecast updates using live market/option ticks for SL, TP, time exit, expiry and invalidation; |
-| FB-2424 | NOT_STARTED |  |  | Aggregate exposure across NIFTY, BANKNIFTY, FINNIFTY, stocks and index ETFs; |
+| FB-2423 | DONE |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | Monitor open paper options **between** 15-minute forecast updates using live market/option ticks for SL, TP, time exit, expiry and invalidation; — risk checks every tick, signals on their own clock |
+| FB-2424 | PARTIAL |  | `paper/router.py` (d2 828fb5c)<br>`risk/capital_allocator.py` (d2 783ce02) | Aggregate exposure across NIFTY, BANKNIFTY, FINNIFTY, stocks and index ETFs; — delta exposure by underlying plus allocator limits |
 | FB-2425 | PARTIAL |  | `signals/index_options.py` (d2 886df31)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Reconcile each index signal to `RESEARCH_ONLY`, `NO_TRADE`, `WATCH`, `PAPER_ELIGIBLE`, `UNFILLED`, `OPEN`, `PARTIALLY_EXITED`, `CLOSED` or `UNPRICED`; — state enum; RESEARCH_ONLY/NO_TRADE/UNPRICED/PAPER_ELIGIBLE produced |
 | FB-2426 | DONE |  | `forecasting/index_15m.py` (d2 9a96b5b)<br>`tests/test_index_15m_s24.py` (d2 100fc90) | Construct global date-wise and session-wise time splits with purging/embargo over overlapping 15m, 30m, 60m labels and cross-index features; — chronological purged and embargoed folds |
-| FB-2427 | NOT_STARTED |  |  | Backtest index direction and option profitability separately. |
+| FB-2427 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Backtest index direction and option profitability separately. — direction and P&L scored separately |
 | FB-2428 | FOOTHOLD |  | `forecasting/null.py` (main aa8eade)<br>`forward_edge/intraday_nulls.py` (f00 b888eef) | Test against no-trade, class-frequency, always-up, momentum, simple volatility and cost-matched CE/PE null strategies; |
 | FB-2429 | FOOTHOLD |  | `forward_edge/cohort_blocks.py` (f00 e4bd8ae) | Evaluate dependent observations with session-level clustering or block bootstrap, index-correlation adjustment, multiple-testing correction, and separ |
 | FB-2430 | PARTIAL | OWNER: 2026Q4 trial budget is spent: governance amendment or 2027Q1 | `docs/trials/ledger.jsonl` (main 2a2b54a) | Register this as a **new** strategy/version in existing trial governance; — failed index and minute-bar verdicts are preserved; no new registration made |
 | FB-2431 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Schedule one event at completion of every eligible 15m interval (e.g. — one decision per completed 15-minute interval |
 | FB-2432 | PARTIAL |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Implement WebSocket reconnect, backfill-on-gap, clock skew checks, inference timeouts, circuit breakers, stale-data sentinel, and idempotent resume; — UNAVAILABLE on stale/missing inputs; reconnect/backfill not built |
-| FB-2433 | NOT_STARTED |  |  | Create an index heatmap/cockpit with per-index UP/DOWN/FLAT, directional probability, expected points, uncertainty, regime, model version, timestamp a |
+| FB-2433 | DONE |  | `paper/five_desk_cli.py` (d2 1577cd2)<br>`tests/test_five_desk_cli.py` (d2 c452cd3) | Create an index heatmap/cockpit with per-index UP/DOWN/FLAT, directional probability, expected points, uncertainty, regime, model version, timestamp a — index heatmap view with tradability |
 | FB-2434 | PARTIAL |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Generate actionable option cards displaying current contract, strike/expiry, CE/PE, price band, SL/TP, modeled risk-reward and **net** expected value, — option card data; no UI |
 | FB-2435 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Publish end-of-day audit: — EOD audit by index/state with unresolved list |
 | FB-2436 | PARTIAL |  | `tests/test_index_15m_s24.py` (d2 100fc90) | Unit-test 15-minute bar closing, feature as-of boundaries, label computation, market open/close, partial bars, no-data, exchange holidays and index in — bar close, as-of, labels, partial bars; holidays external |
 | FB-2437 | PARTIAL |  | `tests/test_index_15m_s24.py` (d2 100fc90)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Property-test calibrated probabilities sum to 1, all candidate contracts exist in the effective-dated instrument master, and no paper order can refer  — probabilities sum to 1; unlisted/expired/zero-depth refused |
 | FB-2438 | DONE |  | `tests/test_index_options_s24d.py` (d2 c64d3cc) | Simulate a 15m bullish index forecast with options inflated by IV/theta/spread: — bullish forecast with costly option gives NO_TRADE |
-| FB-2439 | NOT_STARTED |  |  | Exercise two simultaneous index forecasts with shared exposure, partial entry/exit fills, duplicate tick batches, reconnect, feed lag, exchange halt,  |
+| FB-2439 | PARTIAL |  | `tests/test_lifecycle_tables_4a.py` (d2 15e4201) | Exercise two simultaneous index forecasts with shared exposure, partial entry/exit fills, duplicate tick batches, reconnect, feed lag, exchange halt,  — shared capital, duplicate batches, overspend; reconnect/halt via other tests |
 | FB-2440 | NOT_STARTED | TIME: real-session paper rehearsal |  | Complete a real-session *paper-only* rehearsal with six derivative indices plus any research-only index subset, timestamped 15m signals, monitored exi |
 | FB-2501 | DONE |  | `docs/strategies/four_node/source/SHA256SUMS` (d2 0442d53)<br>`strategies/four_node/spec.py` (d2 de251d8)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Archive the user-supplied 2025-08-22 09:30 XAUUSD M1 Four-Node rules verbatim in a versioned specification with source hash and no silent edits. — verbatim source and Pine reference archived with SHA-256 |
 | FB-2502 | DONE |  | `strategies/four_node/spec.py` (d2 de251d8)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Create `FourNode_XAU_Original_v1` as non-executable research reference and `FourNode_India_v1` as separately versioned, initially paper-only implement — XAU reference (never executable) and India variant, independent params |
@@ -459,20 +459,20 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-2524 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Implement N4 wick <5 pip filter and significant-candle early exit as separate, precisely timestamped controls, pending source ambiguity resolution. — unknown candle/N4 definition returns BLOCKED |
 | FB-2525 | PARTIAL |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Create per-instrument conversion config for tick size, ATR normalization, spread, expected slippage, trading hours, contract multiplier and corporate  — instrument config for tick, multiplier, ATR, spread, slippage |
 | FB-2526 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Replace forex balance multiplier X with capital-at-risk sizing; — rupee risk sizing in whole lots; forex X rule not used |
-| FB-2527 | NOT_STARTED |  |  | Prioritize underlying Nifty/Bank Nifty and liquid equities/ETFs for directional tests; |
+| FB-2527 | DONE |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | Prioritize underlying Nifty/Bank Nifty and liquid equities/ETFs for directional tests; — unsupported instruments research-only |
 | FB-2528 | PARTIAL |  | `docs/strategies/four_node/README.md` (d2 6c228bc)<br>`signals/index_options.py` (d2 886df31) | Bridge underlying fractal BUY/SELL signal into index options CE/PE candidate generation without assuming an underlying move implies positive option P& — bridge documented through index_options; not wired |
 | FB-2529 | PARTIAL |  | `signals/index_options.py` (d2 886df31) | Evaluate option expiry, strike, observed bid/ask, IV, Greeks, time decay, liquidity and depth for each CE/PE candidate at signal time. — option checks reused; stale quotes give UNPRICED/NO_TRADE |
-| FB-2530 | NOT_STARTED |  |  | Map underlying invalidation and exit conditions to option-premium SL/TP, max premium risk, time stop and tick-driven exit monitoring; |
-| FB-2531 | NOT_STARTED |  |  | Implement separate futures and ETF execution adapters with correct contract sizing, margin/settlement, liquidity and fee models; |
-| FB-2532 | NOT_STARTED |  |  | Integrate as an optional signal source into the 15-minute Nifty forecasting desk while keeping native M1 pattern clock and independent tick-driven ris |
+| FB-2530 | DONE |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | Map underlying invalidation and exit conditions to option-premium SL/TP, max premium risk, time stop and tick-driven exit monitoring; — underlying levels to premium SL/TP via delta |
+| FB-2531 | PARTIAL |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | Implement separate futures and ETF execution adapters with correct contract sizing, margin/settlement, liquidity and fee models; — futures and ETF sizing with margin/cash; fee model elsewhere |
+| FB-2532 | DONE |  | `paper/router.py` (d2 828fb5c)<br>`tests/test_router.py` (d2 0252787) | Integrate as an optional signal source into the 15-minute Nifty forecasting desk while keeping native M1 pattern clock and independent tick-driven ris — independent risk clock from signal clock |
 | FB-2533 | DONE |  | `docs/strategies/four_node/README.md` (d2 6c228bc) | Reuse `patterns/pivots.py`, `patterns/streaming.py`, `kernel/indicators.py`, `ingest/kite_minute.py`, `paper/intraday_runner.py` and `paper/options_ru — reuse map |
-| FB-2534 | NOT_STARTED |  |  | Build point-in-time replay with original bar timestamps, historical instrument eligibility, warm-up and confirmed-pivot latency; |
+| FB-2534 | PARTIAL |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Build point-in-time replay with original bar timestamps, historical instrument eligibility, warm-up and confirmed-pivot latency; — stream/batch parity check on pivots |
 | FB-2535 | NOT_STARTED | EXTERNAL: licensed XAUUSD M1 data |  | Test the unmodified XAU baseline only on suitable XAU data if legally available; |
 | FB-2536 | NOT_STARTED | OWNER: trial-budget decision as FB-2430 |  | Pre-register India variants, instrument universe, parameter bounds, entry/exit rules, cost model and statistical gates before evaluation; |
 | FB-2537 | PARTIAL |  | `docs/strategies/four_node/README.md` (d2 6c228bc)<br>`forecasting/index_15m.py` (d2 9a96b5b) | Run walk-forward tests across disjoint time windows and market regimes; — purged splits available; no run |
-| FB-2538 | NOT_STARTED |  |  | Benchmark against simple N2 breakout, opening-range breakout, random-entry matched-exposure, and no-trade baselines. |
-| FB-2539 | NOT_STARTED |  |  | Use realistic spread, latency, commissions, taxes, price gaps, option premium decay and conservative same-bar SL/TP ordering. |
-| FB-2540 | NOT_STARTED |  |  | Perform parameter stability and multiple-testing corrections across fractal widths, moving-average variants, ATR scaling, Fibonacci filters and asset  |
+| FB-2538 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Benchmark against simple N2 breakout, opening-range breakout, random-entry matched-exposure, and no-trade baselines. — no-trade, random matched, opening-range baselines |
+| FB-2539 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Use realistic spread, latency, commissions, taxes, price gaps, option premium decay and conservative same-bar SL/TP ordering. — cost model with spread, commission, tax, latency |
+| FB-2540 | DONE |  | `evaluation/study_tools.py` (d2 dbc4cc0)<br>`tests/test_study_tools.py` (d2 b262b17) | Perform parameter stability and multiple-testing corrections across fractal widths, moving-average variants, ATR scaling, Fibonacci filters and asset  — Holm, BH and neighbourhood stability |
 | FB-2541 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Track funnel: — funnel stages deduped and reconciled by event id |
 | FB-2542 | DONE |  | `strategies/four_node/rules.py` (d2 7328107)<br>`tests/test_four_node_s25.py` (d2 ced6185) | Add per-trade evidence: — per-trade trace record |
 | FB-2543 | PARTIAL |  | `tests/test_four_node_s25.py` (d2 ced6185) | Run adversarial tests for repainting, missed candles, reconnect, holiday rollover, stale bid/ask, bid/ask inversion, ambiguous same-bar fills, crashes — repaint and blocked-variant tests; reconnect/crash not simulated |
