@@ -1,0 +1,383 @@
+//@version=6
+// =====================================================================
+//   XAUUSD 1-Minute  –  4-Node Fractal Strategy
+//   Pine Script v6  |  Non-repainting  |  Backtest-ready
+//
+//   Logic (concise):
+//     • Nodes N1, N2, N3 = the latest 3 ALTERNATING Williams fractals
+//       (zigzag — same-direction fractals collapse to the more extreme).
+//     • SELL setup needs a H-L-H zigzag; BUY needs L-H-L.
+//     • Entry = candle close beyond N2 (below for sells, above for buys),
+//       provided node alignment, distance & structure filters all pass.
+//     • SL = N3 ± broker spread.  Initial TP = 20 pips.
+//     • Once profit ≥ 10 pips → TP removed and SL trails in 5-pip steps.
+//     • Force exit on a "significant" doji-style candle or on a fresh
+//       opposite fractal whose wick exceeds 5 pips.
+//
+//   Notes / assumptions made because the spec was ambiguous:
+//     1. "N2 ≤ 20H High for Buy" is treated as N2 ≥ MA20-High
+//        (symmetry with Sell: N2 ≤ MA20-Low). Keeps the geometry valid.
+//     2. "N3 ≤ 20C Mid" for Buy is treated as N3 ≥ MA20-Close
+//        (symmetric mirror of the Sell rule).
+//     3. "Without a return candle" = no opposite-direction candle has
+//        printed between N3 forming and the breakout candle.
+//     4. Lot sizing uses strategy.equity at each entry; qty is in oz
+//        (1 oz = 0.01 lot for standard XAUUSD).
+// =====================================================================
+strategy("XAUUSD 1M – 4-Node Fractal Strategy",
+     shorttitle    = "4N-XAU",
+     overlay       = true,
+     initial_capital = 100,
+     default_qty_type  = strategy.fixed,
+     default_qty_value = 1,
+     pyramiding        = 0,
+     calc_on_every_tick    = false,
+     process_orders_on_close = true,
+     commission_type  = strategy.commission.percent,
+     commission_value = 0.07)   // ~0.07% per side; adjust to your broker
+
+// ============================================================
+//                    INPUTS
+// ============================================================
+gS = "▶ Position Sizing"
+xMul     = input.float(1.0, "Lot Multiplier (X)", minval = 0.01, step = 0.1, group = gS,
+            tooltip = "Lot = (Balance × X) / 10000.  Example: $100 with X=1 → 0.01 lot.")
+pipSize  = input.float(0.10, "1 Pip in price units", step = 0.01, group = gS,
+            tooltip = "XAUUSD: typically 0.10 (i.e. $1 = 10 pips). Adjust to broker.")
+spreadP  = input.float(2.0, "Broker spread (pips)", minval = 0, step = 0.1, group = gS)
+
+gE = "▶ Entry Filters"
+maxSL_p     = input.float(15.0, "Max SL (pips)",                 minval = 1, group = gE)
+tp_p        = input.float(20.0, "Initial TP (pips)",             minval = 1, group = gE)
+maxD1_p     = input.float(15.0, "Max D1 |N2-N3| (pips)",         minval = 1, group = gE)
+maxD2_p     = input.float(10.0, "Max D2 |Entry-N2| (pips)",      minval = 1, group = gE)
+minStruct_p = input.float(20.0, "Min dist MA50/100/200 & Fib (pips)", minval = 0, group = gE)
+maxN4Wick_p = input.float(5.0,  "Max N4 wick (pips)",            minval = 0, group = gE)
+
+gT = "▶ Trailing"
+trailTrig_p  = input.float(10.0, "Trail trigger (pips)",       minval = 1, group = gT)
+trailStep_p  = input.float(5.0,  "Trail step (pips)",          minval = 1, group = gT)
+trailFirst_p = input.float(5.0,  "First trail offset (pips from entry)", minval = 0, group = gT)
+
+gF = "▶ Fractals & Visuals"
+fractalN  = input.int(2, "Fractal lookback (each side)", minval = 1, group = gF,
+             tooltip = "Williams Fractal: 2 = classic 5-bar pattern.")
+showMA    = input.bool(true,  "Show MAs",                 group = gF)
+showFract = input.bool(true,  "Show fractal markers",     group = gF)
+showZZ    = input.bool(true,  "Show last zigzag",         group = gF)
+showFib   = input.bool(true,  "Show daily Fib (key)",     group = gF)
+showLbl   = input.bool(true,  "Show entry labels",        group = gF)
+
+// ============================================================
+//                    HELPERS
+// ============================================================
+toPrice(p) => p * pipSize
+toPips(p)  => p / pipSize
+
+// ============================================================
+//        SMOOTHED MOVING AVERAGES  (= TradingView RMA)
+// ============================================================
+ma20H = ta.rma(high,  20)
+ma20C = ta.rma(close, 20)
+ma20L = ta.rma(low,   20)
+ma8   = ta.rma(close, 8)
+ma50  = ta.rma(close, 50)
+ma100 = ta.rma(close, 100)
+ma200 = ta.rma(close, 200)
+
+// "20 Cluster"
+cHigh = ma20H
+cMid  = ma20C
+cLow  = ma20L
+
+plot(showMA ? ma20H : na, "MA20 H",  color.new(color.aqua,   30))
+plot(showMA ? ma20C : na, "MA20 C",  color.new(color.blue,   20))
+plot(showMA ? ma20L : na, "MA20 L",  color.new(color.aqua,   30))
+plot(showMA ? ma8   : na, "MA8",     color.new(color.yellow, 20))
+plot(showMA ? ma50  : na, "MA50",    color.new(color.orange,  0), 2)
+plot(showMA ? ma100 : na, "MA100",   color.new(color.red,     0), 2)
+plot(showMA ? ma200 : na, "MA200",   color.new(color.purple,  0), 2)
+
+// ============================================================
+//        WILLIAMS FRACTALS (confirmed, non-repainting)
+// ============================================================
+upF = ta.pivothigh(high, fractalN, fractalN)
+dnF = ta.pivotlow (low,  fractalN, fractalN)
+newUp = not na(upF)
+newDn = not na(dnF)
+
+plotshape(showFract and newUp, "UpF",   shape.triangledown, location.abovebar,
+     color.new(color.red, 0),   size = size.tiny, offset = -fractalN)
+plotshape(showFract and newDn, "DownF", shape.triangleup,   location.belowbar,
+     color.new(color.green, 0), size = size.tiny, offset = -fractalN)
+
+// ============================================================
+//        ZIGZAG : last alternating fractal sequence
+// ============================================================
+var array<float> zP = array.new_float()
+var array<int>   zT = array.new_int()        // +1 high, -1 low
+var array<int>   zB = array.new_int()
+
+addZZ(p, t, b) =>
+    n = array.size(zP)
+    if n == 0
+        array.push(zP, p)
+        array.push(zT, t)
+        array.push(zB, b)
+    else
+        lt = array.get(zT, n - 1)
+        if lt == t                                      // same direction → keep extreme
+            lp = array.get(zP, n - 1)
+            replace = (t == 1 and p > lp) or (t == -1 and p < lp)
+            if replace
+                array.set(zP, n - 1, p)
+                array.set(zB, n - 1, b)
+        else                                            // direction flip → push
+            array.push(zP, p)
+            array.push(zT, t)
+            array.push(zB, b)
+    while array.size(zP) > 6
+        array.shift(zP)
+        array.shift(zT)
+        array.shift(zB)
+
+if newUp
+    addZZ(high[fractalN], 1, bar_index - fractalN)
+if newDn
+    addZZ(low[fractalN], -1, bar_index - fractalN)
+
+sz  = array.size(zP)
+n1  = sz >= 3 ? array.get(zP, sz - 3) : na
+n2  = sz >= 3 ? array.get(zP, sz - 2) : na
+n3  = sz >= 3 ? array.get(zP, sz - 1) : na
+n1t = sz >= 3 ? array.get(zT, sz - 3) : 0
+n2t = sz >= 3 ? array.get(zT, sz - 2) : 0
+n3t = sz >= 3 ? array.get(zT, sz - 1) : 0
+n3b = sz >= 3 ? array.get(zB, sz - 1) : 0
+
+// Render last zigzag
+var line zL1 = na
+var line zL2 = na
+if showZZ and sz >= 3
+    line.delete(zL1)
+    line.delete(zL2)
+    bn1 = array.get(zB, sz - 3)
+    bn2 = array.get(zB, sz - 2)
+    bn3 = array.get(zB, sz - 1)
+    zL1 := line.new(bn1, n1, bn2, n2, color = color.new(color.gray, 30), width = 1)
+    zL2 := line.new(bn2, n2, bn3, n3, color = color.new(color.gray, 30), width = 1)
+
+// ============================================================
+//        DAILY FIBONACCI LEVELS
+// ============================================================
+prevDH = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_off)
+prevDL = request.security(syminfo.tickerid, "D", low[1],  lookahead = barmerge.lookahead_off)
+fibR   = prevDH - prevDL
+
+fibLevels = array.from(-3.234, -2.0, -1.618, -1.414, -1.0, -0.764, -0.618, -0.414, -0.27, -0.128,
+                        0.0, 0.114, 0.236, 0.382, 0.5, 0.618, 0.764, 0.886, 1.0, 1.128, 1.27, 1.414,
+                        1.618, 1.764, 2.0, 2.618, 4.236)
+
+fibTooClose(price) =>
+    out = false
+    for i = 0 to array.size(fibLevels) - 1
+        lvl = prevDL + fibR * array.get(fibLevels, i)
+        if math.abs(price - lvl) < toPrice(minStruct_p)
+            out := true
+            break
+    out
+
+maTooClose(price) =>
+    math.abs(price - ma50)  < toPrice(minStruct_p) or
+     math.abs(price - ma100) < toPrice(minStruct_p) or
+     math.abs(price - ma200) < toPrice(minStruct_p)
+
+structureTooClose(price) => fibTooClose(price) or maTooClose(price)
+
+// Plot key fib lines (clutter-free subset)
+plot(showFib ? prevDL + fibR * 0.0   : na, "Fib 0.0",   color.new(color.gray, 60))
+plot(showFib ? prevDL + fibR * 0.382 : na, "Fib 0.382", color.new(color.gray, 60))
+plot(showFib ? prevDL + fibR * 0.5   : na, "Fib 0.5",   color.new(color.gray, 50))
+plot(showFib ? prevDL + fibR * 0.618 : na, "Fib 0.618", color.new(color.gray, 60))
+plot(showFib ? prevDL + fibR * 1.0   : na, "Fib 1.0",   color.new(color.gray, 60))
+
+// ============================================================
+//        "RETURN-CANDLE" TRACKING since current N3
+// ============================================================
+var bool sellRetSinceN3 = false
+var bool buyRetSinceN3  = false
+var int  lastN3bar      = -1
+
+if sz >= 3 and n3b != lastN3bar
+    sellRetSinceN3 := false
+    buyRetSinceN3  := false
+    lastN3bar      := n3b
+
+if sz >= 3 and bar_index > n3b
+    if close > open
+        sellRetSinceN3 := true
+    if close < open
+        buyRetSinceN3 := true
+
+// ============================================================
+//        ENTRY LOGIC
+// ============================================================
+sellSetup = sz >= 3 and n1t == 1  and n2t == -1 and n3t == 1   // H-L-H
+buySetup  = sz >= 3 and n1t == -1 and n2t == 1  and n3t == -1  // L-H-L
+
+// Sell node alignment vs. 20-Cluster
+sN1 = sellSetup and n1 >= cHigh
+sN2 = sellSetup and n2 <= cLow
+sN3 = sellSetup and n3 <= cMid
+sD1 = sellSetup and math.abs(n2 - n3) <= toPrice(maxD1_p)
+sTrend = sellSetup and n3 < n1
+sExc   = sellSetup and n3 >= n1
+
+// Buy node alignment (symmetric mirror)
+bN1 = buySetup and n1 <= cLow
+bN2 = buySetup and n2 >= cHigh
+bN3 = buySetup and n3 >= cMid
+bD1 = buySetup and math.abs(n2 - n3) <= toPrice(maxD1_p)
+bTrend = buySetup and n3 > n1
+bExc   = buySetup and n3 <= n1
+
+// Trigger candle (close pierces N2)
+sellTriggerTrend = sTrend and close < n2
+sellTriggerExc   = sExc   and close < n2 and not sellRetSinceN3
+buyTriggerTrend  = bTrend and close > n2
+buyTriggerExc    = bExc   and close > n2 and not buyRetSinceN3
+
+baseSellSig = sN1 and sN2 and sN3 and sD1 and (sellTriggerTrend or sellTriggerExc)
+baseBuySig  = bN1 and bN2 and bN3 and bD1 and (buyTriggerTrend  or buyTriggerExc)
+
+// D2 distance
+sellD2 = baseSellSig and math.abs(close - n2) <= toPrice(maxD2_p)
+buyD2  = baseBuySig  and math.abs(close - n2) <= toPrice(maxD2_p)
+
+// Stop-loss (raw)
+spreadPx = toPrice(spreadP)
+sellSLraw = n3 + spreadPx
+buySLraw  = n3 - spreadPx
+
+// SL distance check
+sellSLpips = baseSellSig ? toPips(sellSLraw - close) : na
+buySLpips  = baseBuySig  ? toPips(close - buySLraw)  : na
+sellSLok = baseSellSig and not na(sellSLpips) and sellSLpips > 0 and sellSLpips <= maxSL_p
+buySLok  = baseBuySig  and not na(buySLpips)  and buySLpips  > 0 and buySLpips  <= maxSL_p
+
+// Structure (Fib & MA) distance
+sellStrOk = baseSellSig and not structureTooClose(close)
+buyStrOk  = baseBuySig  and not structureTooClose(close)
+
+flat    = strategy.position_size == 0
+canSell = baseSellSig and sellD2 and sellSLok and sellStrOk and flat
+canBuy  = baseBuySig  and buyD2  and buySLok  and buyStrOk  and flat
+
+// ============================================================
+//        POSITION SIZE  (oz; 1 lot = 100 oz on XAUUSD)
+// ============================================================
+calcQty() =>
+    bal = strategy.equity
+    raw = bal * xMul / 100.0          // lot = bal*X/10000 → qty(oz) = lot*100
+    math.max(0.01, math.round(raw * 100) / 100)
+
+// ============================================================
+//        TRADE STATE
+// ============================================================
+var float entryPx = na
+var float iniSL   = na
+var float iniTP   = na
+var int   entryB  = na
+var int   eDir    = 0          // +1 long, -1 short, 0 flat
+var float trailSL = na
+
+// Reset on flat
+if strategy.position_size == 0 and eDir != 0
+    entryPx := na
+    iniSL   := na
+    iniTP   := na
+    entryB  := na
+    eDir    := 0
+    trailSL := na
+
+// ============================================================
+//        ENTRIES
+// ============================================================
+if canSell
+    q  = calcQty()
+    sl = sellSLraw
+    tp = close - toPrice(tp_p)
+    strategy.entry("Sell", strategy.short, qty = q)
+    entryPx := close
+    iniSL   := sl
+    iniTP   := tp
+    entryB  := bar_index
+    eDir    := -1
+    trailSL := na
+
+if canBuy
+    q  = calcQty()
+    sl = buySLraw
+    tp = close + toPrice(tp_p)
+    strategy.entry("Buy", strategy.long, qty = q)
+    entryPx := close
+    iniSL   := sl
+    iniTP   := tp
+    entryB  := bar_index
+    eDir    := 1
+    trailSL := na
+
+// ============================================================
+//        TRAILING & EXIT MANAGEMENT
+// ============================================================
+if strategy.position_size != 0
+    profitPips = eDir == 1 ? toPips(close - entryPx) : toPips(entryPx - close)
+    trailActive = profitPips >= trailTrig_p
+    if trailActive
+        steps = int(math.floor((profitPips - trailTrig_p) / trailStep_p))
+        offsP = trailFirst_p + steps * trailStep_p
+        newSL = eDir == 1 ? entryPx + toPrice(offsP) : entryPx - toPrice(offsP)
+        if eDir == 1
+            trailSL := na(trailSL) ? newSL : math.max(trailSL, newSL)
+            strategy.exit("ExitL", from_entry = "Buy", stop = trailSL)
+        else
+            trailSL := na(trailSL) ? newSL : math.min(trailSL, newSL)
+            strategy.exit("ExitS", from_entry = "Sell", stop = trailSL)
+    else
+        if eDir == 1
+            strategy.exit("ExitL", from_entry = "Buy",  stop = iniSL, limit = iniTP)
+        else
+            strategy.exit("ExitS", from_entry = "Sell", stop = iniSL, limit = iniTP)
+
+// ============================================================
+//        EARLY EXIT (significant candle / N4 wick)
+// ============================================================
+upWick   = high - math.max(open, close)
+dnWick   = math.min(open, close) - low
+bodyAbs  = math.abs(close - open)
+sigCandle = upWick > bodyAbs and dnWick > bodyAbs and upWick > toPrice(2) and dnWick > toPrice(2)
+
+n4Sell = strategy.position_size < 0 and newDn and (bar_index - fractalN) > entryB
+n4Buy  = strategy.position_size > 0 and newUp and (bar_index - fractalN) > entryB
+
+n4SellWick = n4Sell ? math.min(open[fractalN], close[fractalN]) - low[fractalN] : na
+n4BuyWick  = n4Buy  ? high[fractalN] - math.max(open[fractalN], close[fractalN]) : na
+
+n4SellBad = n4Sell and n4SellWick > toPrice(maxN4Wick_p)
+n4BuyBad  = n4Buy  and n4BuyWick  > toPrice(maxN4Wick_p)
+
+if strategy.position_size != 0 and (sigCandle or n4SellBad or n4BuyBad)
+    strategy.close_all(comment = "Early exit")
+
+// ============================================================
+//        ENTRY LABELS  &  ALERTS
+// ============================================================
+plotshape(showLbl and canSell, "Sell", shape.labeldown, location.abovebar,
+     color.new(color.red, 0),   text = "S", textcolor = color.white, size = size.small)
+plotshape(showLbl and canBuy,  "Buy",  shape.labelup,   location.belowbar,
+     color.new(color.green, 0), text = "B", textcolor = color.white, size = size.small)
+
+if canSell
+    alert("4-Node SELL signal on XAUUSD", alert.freq_once_per_bar_close)
+if canBuy
+    alert("4-Node BUY signal on XAUUSD",  alert.freq_once_per_bar_close)

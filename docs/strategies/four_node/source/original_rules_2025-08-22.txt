@@ -1,0 +1,64 @@
+2025 0822 0930 One Minute - 4 Node Strategy
+
+Indicators Required:
+1. Smoothed MA 20 Low (component of 20C)
+2. Smoothed MA 20 Closed (component of 20C)
+3. Smoothed MA 20 High (component of 20C)
+4. Smoothed MA 8 Closed
+5. Smoothed MA 50 Closed
+6. Smoothed MA 100 Closed
+7. Smoothed MA 200 Closed
+8. Fractal Indicator 
+
+Objects Required:
+1. Fibonacci: Daily (Levels: -323.4, -200.0, -161.8, -141.4, -100, -76.4, -61.8, -41.4, -27.0, -12.8, 0.0, 11.4, 23.6, 38.2, 50.0, 61.8, 76.4, 88.6, 100.0, 112.8, 127.0, 141.4, 161.8, 176.4, 200.0, 261.8, 423.6).
+
+Script: XAUUSD
+Timeframe: 1 Minute
+ 
+"20 Cluster" or "20C" is the combination of Points 1, 2 and 3 in the Indicator list.
+
+Wait for 3 trending fractal nodes in zigzag fashion (N1, N2, N3) to appear permanently.
+Enter Sell or Buy, when price (M1 Candle) close below or above N2 (below for Sell and above for Buy).
+
+Lot size:"X" times the balance (Value should be entered during initiation). When X=1, then lot size should be 0.01 for balance of $100 and when X=3, then lot size should be 0.03 for $100.
+
+Sell condn:
+-----------
+N1 should be equal or above 20C High.
+N3 should equal or less than 20C Mid.
+Exception: If N3 is above or equal to N1, enter when price closes below N2 without a return candle (return candle is a candle in opposite direction).
+
+Buy condn:
+----------
+N1 should be equal or below 20C Low.
+N3 should equal or less than 20C Mid.
+Exception: If N3 is above or equal to N1, enter when price closes below N2 without a return candle.
+
+Stop Loss: 
+---------
+Set SL above or below N3 with value +/- Spread of the broker for the chosen script (Above for Sell and Below for Buy).
+
+Take Profit :
+-----------
+Set TP 20 Pips upon entry.
+Don't enter (Buy or Sell) if SL is more than 15 Pips.
+ 
+Progressive movement of Price and SL:
+-------------------------------------
+Once the price moves in the positive direction and when the profit touches 10 Pips, remove the TP and move SL to 5 Pips from the entry point. As the price keeps moving every 5 Pips in the positive direction, Keep progressively moving the SL to 5 Pips as 10 Pips, 15 Pips and so on.
+
+D1 is the distance between N2 and N3. D1 should never be more than 15 Pips to qualify for entry.
+D2 is distance between node N2 and the entry point. D2 should always be less than ten pips.
+
+N2 should always equal or less than 20C low for Sell.
+N2 should always equal or less than 20H High for Buy.
+
+Condition: N4 shouldn't have long vick. Should be less than 5 pips. If significant candle is formed at N4 or till reaching TP, exit.
+
+Significant candle is a candle that has wick height (equal height both sides) more than the size of the body.
+
+Condition: Distance between the entry point and a Fibo line or MA50 or MA100 or MA200 should be minimum 20 pips.
+
+
+
