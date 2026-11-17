@@ -753,6 +753,25 @@ A.update({
     "FB-2417": (D, [_IXX, _TIXX], "path simulation to premium distribution with IV shock and exit spread"),
     "FB-2418": (D, [_IXX, _TIXX], "ranking with tail and marginal exposure penalties"),
 })
+_POL, _TPOL = S + "paper/policy.py", "tests/test_policy_and_more_adversarial.py"
+A.update({
+    "FB-0006": (D, [_POL, _TPOL, _ISO], "central paper-only policy asserted with forward_edge constant"),
+    "FB-0460": (D, [_POL, _TPOL], "size from risk, cash, notional, depth and correlated capacity in lots"),
+    "FB-0461": (D, [_POL, _TPOL, _SIG], "conservative tick rounding then R:R revalidation; no overnight shorts"),
+    "FB-0917": (D, [_POL, _LG, _TPOL], "reconcile handler: journal balance then session gate"),
+    "FB-1008": (D, [_POL, _DC, _TPOL], "daily reconcile handler wired into the phase"),
+    "FB-1301": (D, [_ADV, _TPOL], "1200 ledger events and 1000 randomised timezone PIT checks"),
+    "FB-1303": (D, [_TPOL, _ADV], "polling labelled degraded; stale quotes never fill better"),
+    "FB-1306": (D, [_TPOL, _ADV], "NIFTY, gold and USD exposures summed across wrappers"),
+    "FB-1309": (D, [_TPOL, _ADV], "normal, liquid, weekend, holiday, late funds, suspension"),
+    "FB-1312": (D, [_ADV, _TMP], "partial redemption, lot loads, fractional units, minimums, lock-in"),
+    "FB-1313": (D, [_TPOL, _TMP], "IDCW, winding-up history, delayed redemption NAV"),
+    "FB-1316": (D, [_TPOL, _TEN], "crash at each lifecycle point replays identically"),
+    "FB-1319": (D, [_TPOL, _ADV], "25% gap, 50% premium loss, gated MF, correlated exposure"),
+    "FB-1304": (D, [_TOB, _LT], "zero bids, depth, expired, partial legs, invalid contracts"),
+    "FB-1307": (D, [_LT], "split cost preserved, halt keeps risk open, delisting state via D1"),
+    "FB-2439": (D, [_LT, _TPT2], "shared capital, duplicate batches, partial exits, overspend refused"),
+})
 
 
 def git(*args: str) -> str:

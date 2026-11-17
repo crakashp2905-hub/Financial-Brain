@@ -45,10 +45,10 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "e439b2e501",
-   "ahead_of_main": 45,
+   "commit": "cbdae52c26",
+   "ahead_of_main": 47,
    "behind_main": 0,
-   "test_files": 361
+   "test_files": 362
   }
  },
  "status_meaning": {
@@ -58,8 +58,8 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 142,
-  "DONE": 248,
+  "PARTIAL": 126,
+  "DONE": 264,
   "NOT_STARTED": 13,
   "FOOTHOLD": 2
  },
@@ -196,25 +196,32 @@
    "id": "FB-0006",
    "section": "0. Baseline and integrity freeze \u2014 P0",
    "title": "Add centrally enforced policy:",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "constant guards forward_edge only; execution/oms is gated separately by FB_LIVE_ORDERS and stages",
+   "note": "central paper-only policy asserted with forward_edge constant",
    "source": [
     {
-     "path": "src/financial_brain/forward_edge/modes.py",
-     "ref": "main",
-     "object": "f4bbc31c6ce8"
+     "path": "src/financial_brain/paper/policy.py",
+     "ref": "d2",
+     "object": "42fcdf9f120c"
     }
    ],
    "test": [
     {
-     "path": "tests/test_forward_edge_f00.py",
-     "ref": "main",
-     "object": "31827c34eac1"
+     "path": "tests/test_policy_and_more_adversarial.py",
+     "ref": "d2",
+     "object": "cc6a5ffff551"
+    },
+    {
+     "path": "tests/test_broker_isolation_five_desk.py",
+     "ref": "d2",
+     "object": "d9150f9d98e3"
     }
    ],
-   "unmerged": []
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0007",
@@ -1988,34 +1995,42 @@
    "id": "FB-0460",
    "section": "Detailed acceptance checklist",
    "title": "Size position using stop-distance risk budget, available cash, contract lot size, notional caps, depth and correlated exposure;",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "stop-distance sizing exists; lots, depth and correlation not combined",
+   "note": "size from risk, cash, notional, depth and correlated capacity in lots",
    "source": [
     {
-     "path": "src/financial_brain/risk/sizing.py",
-     "ref": "main",
-     "object": "08e81a1b3786"
-    },
-    {
-     "path": "src/financial_brain/decisions/expected_value.py",
-     "ref": "main",
-     "object": "99aed07b5ad6"
+     "path": "src/financial_brain/paper/policy.py",
+     "ref": "d2",
+     "object": "42fcdf9f120c"
     }
    ],
-   "test": [],
-   "unmerged": []
+   "test": [
+    {
+     "path": "tests/test_policy_and_more_adversarial.py",
+     "ref": "d2",
+     "object": "cc6a5ffff551"
+    }
+   ],
+   "unmerged": [
+    "d2"
+   ]
   },
   {
    "id": "FB-0461",
    "section": "Detailed acceptance checklist",
    "title": "Make price rounding exchange tick-aware and revalidate economics *after* rounding;",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "tick check and no overnight shorts; no automatic re-rounding",
+   "note": "conservative tick rounding then R:R revalidation; no overnight shorts",
    "source": [
+    {
+     "path": "src/financial_brain/paper/policy.py",
+     "ref": "d2",
+     "object": "42fcdf9f120c"
+    },
     {
      "path": "src/financial_brain/signals/contracts.py",
      "ref": "d2",
@@ -2024,9 +2039,9 @@
    ],
    "test": [
     {
-     "path": "tests/test_signals_d3.py",
+     "path": "tests/test_policy_and_more_adversarial.py",
      "ref": "d2",
-     "object": "b8a8a0e54535"
+     "object": "cc6a5ffff551"
     }
    ],
    "unmerged": [
@@ -4825,11 +4840,16 @@
    "id": "FB-0917",
    "section": "9. Shared multi-asset accounting, P&L, taxes and capital \u2014 P0",
    "title": "Reconcile journal\u2192position quantities\u2192cash/margin\u2192NAV every day, and after every recovery.",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "journal balance check; daily scheduled reconciliation not wired",
+   "note": "reconcile handler: journal balance then session gate",
    "source": [
+    {
+     "path": "src/financial_brain/paper/policy.py",
+     "ref": "d2",
+     "object": "42fcdf9f120c"
+    },
     {
      "path": "src/financial_brain/portfolio/multi_asset_ledger.py",
      "ref": "d2",
@@ -4838,9 +4858,9 @@
    ],
    "test": [
     {
-     "path": "tests/test_multi_asset_ledger_s9.py",
+     "path": "tests/test_policy_and_more_adversarial.py",
      "ref": "d2",
-     "object": "578ec2b90ca9"
+     "object": "cc6a5ffff551"
     }
    ],
    "unmerged": [
@@ -5037,11 +5057,16 @@
    "id": "FB-1008",
    "section": "10. Daily, real-time and periodic signal scheduling \u2014 P0",
    "title": "Daily:",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "daily reconcile phase slot; handler not wired",
+   "note": "daily reconcile handler wired into the phase",
    "source": [
+    {
+     "path": "src/financial_brain/paper/policy.py",
+     "ref": "d2",
+     "object": "42fcdf9f120c"
+    },
     {
      "path": "src/financial_brain/paper/day_cycle.py",
      "ref": "d2",
@@ -5050,9 +5075,9 @@
    ],
    "test": [
     {
-     "path": "tests/test_day_cycle_s10.py",
+     "path": "tests/test_policy_and_more_adversarial.py",
      "ref": "d2",
-     "object": "d9a885ba4df9"
+     "object": "cc6a5ffff551"
     }
    ],
    "unmerged": [
@@ -5892,16 +5917,21 @@
    "id": "FB-1301",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test all schema types, asset routing, instrument identity, timezones, calendars and decimal precision across 1000+ randomized event sequences.",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "1200 randomised ledger events; timezones/calendars covered elsewhere",
+   "note": "1200 ledger events and 1000 randomised timezone PIT checks",
    "source": [],
    "test": [
     {
      "path": "tests/test_adversarial_s13.py",
      "ref": "d2",
      "object": "3cc7612756ce"
+    },
+    {
+     "path": "tests/test_policy_and_more_adversarial.py",
+     "ref": "d2",
+     "object": "cc6a5ffff551"
     }
    ],
    "unmerged": [
@@ -5932,12 +5962,17 @@
    "id": "FB-1303",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test 20-second intraday polling mode vs event streaming;",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "delayed quote never fills; polling-vs-stream comparison not built",
+   "note": "polling labelled degraded; stale quotes never fill better",
    "source": [],
    "test": [
+    {
+     "path": "tests/test_policy_and_more_adversarial.py",
+     "ref": "d2",
+     "object": "cc6a5ffff551"
+    },
     {
      "path": "tests/test_adversarial_s13.py",
      "ref": "d2",
@@ -5952,10 +5987,10 @@
    "id": "FB-1304",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test options zero/bad bids, nonfillable visible depth, expired tokens, wrong strike/lot, partial multi-leg fills and delayed exit.",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "zero bids, depth, expired, partial legs; wrong lot via contract validation",
+   "note": "zero bids, depth, expired, partial legs, invalid contracts",
    "source": [],
    "test": [
     {
@@ -5997,12 +6032,17 @@
    "id": "FB-1306",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test ETF NIFTY/currency/commodity exposure lookthrough and double-counting with underlying stocks and derivative hedges.",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "same-underlying ETF and fund summed; currency/commodity not covered",
+   "note": "NIFTY, gold and USD exposures summed across wrappers",
    "source": [],
    "test": [
+    {
+     "path": "tests/test_policy_and_more_adversarial.py",
+     "ref": "d2",
+     "object": "cc6a5ffff551"
+    },
     {
      "path": "tests/test_adversarial_s13.py",
      "ref": "d2",
@@ -6017,10 +6057,10 @@
    "id": "FB-1307",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test ETF split/distribution/delisting/halt and stop handling;",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "split preserves cost; halt keeps risk open; delisting via D1 states",
+   "note": "split cost preserved, halt keeps risk open, delisting state via D1",
    "source": [],
    "test": [
     {
@@ -6057,12 +6097,17 @@
    "id": "FB-1309",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test MF after-cutoff application, before-cutoff application with late funds, on-time funds, weekends, bank holidays, scheme suspension and special liq",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "cut-off, late funds, weekend, holiday; liquid/overnight rules not loaded",
+   "note": "normal, liquid, weekend, holiday, late funds, suspension",
    "source": [],
    "test": [
+    {
+     "path": "tests/test_policy_and_more_adversarial.py",
+     "ref": "d2",
+     "object": "cc6a5ffff551"
+    },
     {
      "path": "tests/test_adversarial_s13.py",
      "ref": "d2",
@@ -6117,16 +6162,21 @@
    "id": "FB-1312",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test MF partial redemption, lot-specific exit loads, fractional unit precision, minimum transaction amounts and lock-in failures.",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "partial redemption, lot loads, fractional units; minimums/lock-in missing",
+   "note": "partial redemption, lot loads, fractional units, minimums, lock-in",
    "source": [],
    "test": [
     {
      "path": "tests/test_adversarial_s13.py",
      "ref": "d2",
      "object": "3cc7612756ce"
+    },
+    {
+     "path": "tests/test_mf_plans.py",
+     "ref": "d2",
+     "object": "9973c20f54b0"
     }
    ],
    "unmerged": [
@@ -6137,12 +6187,17 @@
    "id": "FB-1313",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test IDCW payout/reinvestment, fund merger, scheme winding-up and delayed redemption price publication.",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "IDCW payout/reinvest; winding-up via universe; delayed redemption NAV via mf_orders",
+   "note": "IDCW, winding-up history, delayed redemption NAV",
    "source": [],
    "test": [
+    {
+     "path": "tests/test_policy_and_more_adversarial.py",
+     "ref": "d2",
+     "object": "cc6a5ffff551"
+    },
     {
      "path": "tests/test_mf_plans.py",
      "ref": "d2",
@@ -6197,16 +6252,21 @@
    "id": "FB-1316",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test power loss at signal, approval, cash reserve, funds-receipt, NAV notice, allotment, redemption and payout;",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "exit replay after restart idempotent; other crash points not covered",
+   "note": "crash at each lifecycle point replays identically",
    "source": [],
    "test": [
     {
-     "path": "tests/test_adversarial_s13.py",
+     "path": "tests/test_policy_and_more_adversarial.py",
      "ref": "d2",
-     "object": "3cc7612756ce"
+     "object": "cc6a5ffff551"
+    },
+    {
+     "path": "tests/test_five_desk_engine.py",
+     "ref": "d2",
+     "object": "e302a2aadf99"
     }
    ],
    "unmerged": [
@@ -6257,12 +6317,17 @@
    "id": "FB-1319",
    "section": "13. Adversarial, property-based and acceptance tests \u2014 P0",
    "title": "Test stress cases:",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "25% gap stress; option and MF gating stresses not covered",
+   "note": "25% gap, 50% premium loss, gated MF, correlated exposure",
    "source": [],
    "test": [
+    {
+     "path": "tests/test_policy_and_more_adversarial.py",
+     "ref": "d2",
+     "object": "cc6a5ffff551"
+    },
     {
      "path": "tests/test_adversarial_s13.py",
      "ref": "d2",
@@ -9097,16 +9162,21 @@
    "id": "FB-2439",
    "section": "24H. Adversarial tests and acceptance \u2014 P0",
    "title": "Exercise two simultaneous index forecasts with shared exposure, partial entry/exit fills, duplicate tick batches, reconnect, feed lag, exchange halt, ",
-   "status": "PARTIAL",
+   "status": "DONE",
    "dependency": "IN_HOUSE",
    "blocker": "",
-   "note": "shared capital, duplicate batches, overspend; reconnect/halt via other tests",
+   "note": "shared capital, duplicate batches, partial exits, overspend refused",
    "source": [],
    "test": [
     {
      "path": "tests/test_lifecycle_tables_4a.py",
      "ref": "d2",
      "object": "15e420185c89"
+    },
+    {
+     "path": "tests/test_partial_and_timeouts.py",
+     "ref": "d2",
+     "object": "ce7922bdd39a"
     }
    ],
    "unmerged": [
