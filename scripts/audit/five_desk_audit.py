@@ -779,6 +779,15 @@ A.update({
     "FB-0407": (D, [_DR, _TDR], "up to five swing candidates plus independent ETF ranks; no quota"),
     "FB-1005": (D, [_DR, _TDR], "locked next-session publication"),
 })
+_DH, _TDH = S + "paper/dashboard_html.py", "tests/test_dashboard_html.py"
+A.update({
+    "FB-1101": (D, [_DH, _RPT, _TDH], "consolidated NAV, capital and P&L page"),
+    "FB-1102": (D, [_DH, _OPS, _TDH], "five desk pages with their own clocks"),
+    "FB-1103": (D, [_DH, _CR, _TDH], "signals with side, closing action, SL/TP, trigger, costs, evidence"),
+    "FB-2301": (D, [_DH, _CR, _TDH], "prioritised Today screen"),
+    "FB-2305": (D, [_DH, _RPT, _TDH], "health screen"),
+    "FB-2434": (D, [_DH, _IOP, _TDH], "option cards page"),
+})
 
 
 def git(*args: str) -> str:

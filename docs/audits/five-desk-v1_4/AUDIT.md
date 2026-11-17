@@ -6,8 +6,8 @@ no acceptance test was run per task. Machine-readable copy: `audit.json`.
 
 | status | tasks | meaning |
 |---|---|---|
-| DONE | 267 | code and a test exist for the task as written |
-| PARTIAL | 123 | part of the task is built and tested; the rest is named in the note |
+| DONE | 273 | code and a test exist for the task as written |
+| PARTIAL | 117 | part of the task is built and tested; the rest is named in the note |
 | FOOTHOLD | 2 | a reusable building block exists, but the task's own subject is not built |
 | NOT_STARTED | 13 | nothing in the repository addresses it |
 
@@ -22,7 +22,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | codex | `codex/forward-edge-falsification-audit-20261115` | `13e2ab6695` | 163 | 0 | 377 |
 | dyn | `feature/dynamic-evidence-standard` | `7494a5e3f0` | 3 | 0 | 323 |
 | d1 | `feature/five-desk-d1-instruments` | `8b0b12cef3` | 1 | 0 | 323 |
-| d2 | `feature/five-desk-d2-data-parity` | `13bf4da86f` | 49 | 0 | 363 |
+| d2 | `feature/five-desk-d2-data-parity` | `60280c53a4` | 52 | 0 | 364 |
 
 372 tasks cite evidence that is not on `main`.
 
@@ -42,7 +42,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | 8. Shared exchange paper OMS: equities, ETFs, options — P0 | 9 | 5 | 0 | 0 |
 | 9. Shared multi-asset accounting, P&L, taxes and capital — P0 | 13 | 5 | 0 | 0 |
 | 10. Daily, real-time and periodic signal scheduling — P0 | 8 | 4 | 0 | 0 |
-| 11. Trader dashboard and workflows — P1 | 5 | 7 | 0 | 0 |
+| 11. Trader dashboard and workflows — P1 | 8 | 4 | 0 | 0 |
 | 12. Evaluation, performance benchmarks, research discipline — P0/P1 | 8 | 8 | 0 | 0 |
 | 13. Adversarial, property-based and acceptance tests — P0 | 19 | 1 | 0 | 0 |
 | 14. Deployment, staged release and external requirements — P0/P1 | 1 | 6 | 0 | 3 |
@@ -53,14 +53,14 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | 20. Market-specific advantage: options, ETFs and mutual funds — P1 | 4 | 4 | 0 | 0 |
 | 21. Profit attribution, signal effectiveness and business scorecards — P0 | 7 | 1 | 0 | 0 |
 | 22. Prospective strategy discovery and promotion — P0/P1 | 6 | 2 | 0 | 0 |
-| 23. Trader control room, alert ergonomics and fail-safe operations — P0/P1 | 3 | 5 | 0 | 0 |
+| 23. Trader control room, alert ergonomics and fail-safe operations — P0/P1 | 5 | 3 | 0 | 0 |
 | 24A. Index and derivative universe / data — P0 | 2 | 2 | 1 | 0 |
 | 24B. Chronological 15-minute labels, features and leakage controls — P0 | 3 | 2 | 0 | 0 |
 | 24C. Probabilistic forecasting models and adaptation — P0/P1 | 3 | 2 | 0 | 0 |
 | 24D. Options conversion, entry/exit, SL/TP — P0 | 4 | 1 | 0 | 0 |
 | 24E. Automatic paper routing and correlated risk — P0 | 2 | 3 | 0 | 0 |
 | 24F. Backtest design and legitimate forward validation — P0 | 3 | 2 | 0 | 0 |
-| 24G. Live 15-minute operating system — P0/P1 | 3 | 2 | 0 | 0 |
+| 24G. Live 15-minute operating system — P0/P1 | 4 | 1 | 0 | 0 |
 | 24H. Adversarial tests and acceptance — P0 | 2 | 2 | 0 | 1 |
 | 25A. Source preservation and ambiguities | 8 | 0 | 0 | 0 |
 | 25B. Indicators, fractals and node state machine | 7 | 1 | 0 | 0 |
@@ -271,9 +271,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-1010 | DONE |  | `paper/day_cycle.py` (d2 c644554)<br>`tests/test_day_cycle_s10.py` (d2 d9a885b) | On feed failure, data-quality error, unexpected portfolio state or high drawdown: — fail-closed halts trading phases for the day |
 | FB-1011 | DONE |  | `paper/day_cycle.py` (d2 c644554)<br>`tests/test_day_cycle_s10.py` (d2 d9a885b) | Provide unambiguous run statuses and retry behavior; — run statuses, once per (day, phase), retry after failure |
 | FB-1012 | DONE |  | `paper/ops.py` (d2 31be5c4)<br>`tests/test_calibration_ops.py` (d2 5a03945) | Measure signal latency, quote-to-fill delay, drop rates, outages and trading downtime separately for each desk. — per-desk latency, quote-to-fill, drops, downtime |
-| FB-1101 | PARTIAL |  | `evaluation/reports.py` (d2 9aeb747)<br>`tests/test_evidence_reports.py` (d2 07832e4) | Single dashboard shows consolidated account NAV, available/blocked capital, daily and cumulative realized/unrealized P&L and drawdown. — consolidated report data; no dashboard UI |
-| FB-1102 | PARTIAL |  | `paper/ops.py` (d2 31be5c4)<br>`tests/test_calibration_ops.py` (d2 5a03945) | Five desk pages: — five desk page records with clocks; no UI |
-| FB-1103 | PARTIAL |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd) | Display each signal with timestamp, provenance, intent type, candidate-vs-trade-eligible status, **BUY/SELL closing side, SL, TP, trailing/time exit a — alerts carry time, rule version, evidence tier; no UI page |
+| FB-1101 | DONE |  | `paper/dashboard_html.py` (d2 313cb35)<br>`evaluation/reports.py` (d2 9aeb747)<br>`tests/test_dashboard_html.py` (d2 8ad84e5) | Single dashboard shows consolidated account NAV, available/blocked capital, daily and cumulative realized/unrealized P&L and drawdown. — consolidated NAV, capital and P&L page |
+| FB-1102 | DONE |  | `paper/dashboard_html.py` (d2 313cb35)<br>`paper/ops.py` (d2 31be5c4)<br>`tests/test_dashboard_html.py` (d2 8ad84e5) | Five desk pages: — five desk pages with their own clocks |
+| FB-1103 | DONE |  | `paper/dashboard_html.py` (d2 313cb35)<br>`paper/control_room.py` (d2 9a33061)<br>`tests/test_dashboard_html.py` (d2 8ad84e5) | Display each signal with timestamp, provenance, intent type, candidate-vs-trade-eligible status, **BUY/SELL closing side, SL, TP, trailing/time exit a — signals with side, closing action, SL/TP, trigger, costs, evidence |
 | FB-1104 | DONE |  | `evaluation/reports.py` (d2 9aeb747)<br>`tests/test_evidence_reports.py` (d2 07832e4) | Provide `APPROVE`, `REJECT`, `WATCH`, `NO_TRADE` for manual-approval paper sleeves; — manual actions are paper-only |
 | FB-1105 | PARTIAL |  | `portfolio/position_ledger.py` (d2 b937e29)<br>`tests/test_position_tax.py` (d2 b74ac05) | Independent automatic paper and human-approved paper performance, with same quote feed, risk parameters and market conditions. — sleeve comparison; same-feed enforcement via one OMS |
 | FB-1106 | DONE |  | `research/mf_portfolio.py` (d2 7ebc5a3)<br>`tests/test_mf_portfolio.py` (d2 0ae5f1d) | ETFs display underlying benchmark, bid/ask, quoted premium/discount to fresh iNAV, estimated tracking difference, cost and liquidity. — ETF card fields with UNAVAILABLE premium |
@@ -385,11 +385,11 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-2206 | DONE |  | `forecasting/calibration_tools.py` (d2 274183e)<br>`tests/test_calibration_ops.py` (d2 5a03945) | Audit change of data vendor, latency class, order size, transaction cost or signal TTL as a material experiment version change; — material change detector |
 | FB-2207 | PARTIAL |  | `evaluation/scorecards.py` (d2 cdca8a0)<br>`tests/test_scorecards_s21_22.py` (d2 df52bdd) | Enforce strategy retirement/degradation gates on forward drawdown, negative lower confidence bound, excessive shortfall, stale data and sample integri — frozen-rule FAILING on drawdown or non-positive lower bound |
 | FB-2208 | DONE |  | `evaluation/reports.py` (d2 9aeb747)<br>`tests/test_evidence_reports.py` (d2 07832e4) | Produce evidence bundles with immutable signals, observed source timestamps, simulated execution receipts, strategy versions, portfolio NAV, trial reg — hash-stamped evidence bundle; attestation never inferred |
-| FB-2301 | PARTIAL |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd) | Build one searchable five-desk `Today` screen with prioritized BUY, SELL, WATCH, NO_TRADE, APPROVAL_NEEDED and EXIT_TRIGGERED messages, market/data fr — searchable prioritised Today list; no screen |
+| FB-2301 | DONE |  | `paper/dashboard_html.py` (d2 313cb35)<br>`paper/control_room.py` (d2 9a33061)<br>`tests/test_dashboard_html.py` (d2 8ad84e5) | Build one searchable five-desk `Today` screen with prioritized BUY, SELL, WATCH, NO_TRADE, APPROVAL_NEEDED and EXIT_TRIGGERED messages, market/data fr — prioritised Today screen |
 | FB-2302 | DONE |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd) | Generate two-level alerts: — two alert levels with deadline, version and tier |
 | FB-2303 | PARTIAL |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd) | Support human approve/reject/adjust within declared guardrails for the manual paper sleeve; — approval expires with TTL; adjust within guardrails not built |
 | FB-2304 | PARTIAL |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd) | Build an explainable post-market desk report: — post-market report text from ledger inputs |
-| FB-2305 | PARTIAL |  | `evaluation/reports.py` (d2 9aeb747)<br>`tests/test_evidence_reports.py` (d2 07832e4) | Provide a live health screen with market feed uptime, lag, quote gaps, queue backlog, ledger consistency, pending MF allotment/redemption, option expi — health data with status; no screen |
+| FB-2305 | DONE |  | `paper/dashboard_html.py` (d2 313cb35)<br>`evaluation/reports.py` (d2 9aeb747)<br>`tests/test_dashboard_html.py` (d2 8ad84e5) | Provide a live health screen with market feed uptime, lag, quote gaps, queue backlog, ledger consistency, pending MF allotment/redemption, option expi — health screen |
 | FB-2306 | PARTIAL |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd)<br>`tests/test_exit_triggers_4a.py` (d2 2c70843)<br>`tests/test_multi_asset_ledger_s9.py` (d2 578ec2b) | Enforce idempotent alerts, signals, orders, fills and exit triggers after crash/reconnect; — idempotent alerts, exits and ledger posts |
 | FB-2307 | DONE |  | `docs/runbooks/five-desk-operator.md` (d2 fc5016c) | Add a documented operator runbook: — operator runbook |
 | FB-2308 | DONE |  | `paper/control_room.py` (d2 9a33061)<br>`tests/test_control_room_s11_23.py` (d2 0b1fabd) | Define a daily acceptance gate where the desk cannot report `SESSION_COMPLETE` until all open orders, fills, paper positions, cash, fund units, fees a — SESSION_COMPLETE gate |
@@ -426,7 +426,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-2431 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Schedule one event at completion of every eligible 15m interval (e.g. — one decision per completed 15-minute interval |
 | FB-2432 | PARTIAL |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Implement WebSocket reconnect, backfill-on-gap, clock skew checks, inference timeouts, circuit breakers, stale-data sentinel, and idempotent resume; — UNAVAILABLE on stale/missing inputs; reconnect/backfill not built |
 | FB-2433 | DONE |  | `paper/five_desk_cli.py` (d2 1577cd2)<br>`tests/test_five_desk_cli.py` (d2 c452cd3) | Create an index heatmap/cockpit with per-index UP/DOWN/FLAT, directional probability, expected points, uncertainty, regime, model version, timestamp a — index heatmap view with tradability |
-| FB-2434 | PARTIAL |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Generate actionable option cards displaying current contract, strike/expiry, CE/PE, price band, SL/TP, modeled risk-reward and **net** expected value, — option card data; no UI |
+| FB-2434 | DONE |  | `paper/dashboard_html.py` (d2 313cb35)<br>`forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_dashboard_html.py` (d2 8ad84e5) | Generate actionable option cards displaying current contract, strike/expiry, CE/PE, price band, SL/TP, modeled risk-reward and **net** expected value, — option cards page |
 | FB-2435 | DONE |  | `forecasting/index_ops.py` (d2 8d82871)<br>`tests/test_index_ops.py` (d2 89fae4f) | Publish end-of-day audit: — EOD audit by index/state with unresolved list |
 | FB-2436 | PARTIAL |  | `tests/test_index_15m_s24.py` (d2 100fc90) | Unit-test 15-minute bar closing, feature as-of boundaries, label computation, market open/close, partial bars, no-data, exchange holidays and index in — bar close, as-of, labels, partial bars; holidays external |
 | FB-2437 | PARTIAL |  | `tests/test_index_15m_s24.py` (d2 100fc90)<br>`tests/test_index_options_s24d.py` (d2 c64d3cc) | Property-test calibrated probabilities sum to 1, all candidate contracts exist in the effective-dated instrument master, and no paper order can refer  — probabilities sum to 1; unlisted/expired/zero-depth refused |
