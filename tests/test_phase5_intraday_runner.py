@@ -283,3 +283,36 @@ def test_live_fills_use_the_order_book_from_full_quotes(setup):
     row = R.ledger(setup / "l.duckdb").execute(
         "SELECT entry_px, entry_decision_px, spread_bp, shortfall_bp FROM trades").fetchone()
     assert row[0] == pytest.approx(row[1] + 0.05) and row[2] > 0 and row[3] > 0
+
+
+def _feed_breaks_after_entry(c, recover_at=None):
+    good = fake_quotes(c)
+
+    def q(symbols, kind):
+        m = c.t.hour * 60 + c.t.minute
+        if m >= 592 and (recover_at is None or m < recover_at):      # 09:52: after the ORB entry
+            raise OSError("getaddrinfo failed")
+        if m < 592:
+            return good(symbols, kind)
+        return {s: {"last_price": 106.9, "last_trade_time": "2026-10-06 11:00:00",
+                    "ohlc": {"open": 100.0, "high": 106.9, "low": 99.0, "close": 100.0}} for s in symbols}
+    return q
+
+
+def test_feed_failure_with_open_positions_closes_them_at_the_flatten_not_abandons_them(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    out = R.run_live(quote_fn=_feed_breaks_after_entry(c), now_fn=c.now, sleep_fn=c.sleep,
+                     path=setup / "l.duckdb", max_failures=5)
+    assert out["status"] == "aborted"
+    rows = R.ledger(setup / "l.duckdb").execute("SELECT exit_reason, exit_px, exit_ts FROM trades").fetchall()
+    assert rows and all(r[0] == "time_stale_quote" and abs(r[1] - 101.6) < 0.1 for r in rows)
+    assert all(r[2] >= "2026-10-06T15:15" for r in rows)
+
+
+def test_feed_failure_that_recovers_keeps_the_rules_running(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    out = R.run_live(quote_fn=_feed_breaks_after_entry(c, recover_at=660), now_fn=c.now, sleep_fn=c.sleep,
+                     path=setup / "l.duckdb", max_failures=5)
+    assert out["status"] == "complete"
+    rows = R.ledger(setup / "l.duckdb").execute("SELECT exit_reason FROM trades").fetchall()
+    assert ("target",) in rows

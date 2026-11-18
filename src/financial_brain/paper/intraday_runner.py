@@ -318,8 +318,25 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         except Exception as e:                          # noqa: BLE001 - a bad poll is not the end of the day
             failures += 1
             log.warning("quote failed (%s/%s): %s", failures, max_failures, str(e)[:120])
-            publish(path, eng, now=now, status="Quote polling aborted" if failures >= max_failures else "Quote unavailable — retrying",
+            publish(path, eng, now=now, status=("Quote feed down — holding open positions, retrying"
+                                       if failures >= max_failures and any(t.is_open for t in eng.trades)
+                                       else "Quote polling aborted" if failures >= max_failures
+                                       else "Quote unavailable — retrying"),
                     polls=polls, prices=last, quote_at=quote_at)
+            if failures >= max_failures and any(t.is_open for t in eng.trades) and not eng.closed_for_day:
+                # Open positions must not be abandoned (2026-11-03: 51 trades left without an exit).
+                # Keep retrying slowly so stop/target/15:15 still apply if the feed returns; at the
+                # flatten time with no feed, close at the last good quote, labelled as stale.
+                if clock < I.TIME_EXIT:
+                    record_run(con, day, "live", started=started, status="degraded", symbols=len(syms),
+                               polls=polls, note=f"quotes failing, holding open positions: {str(e)[:100]}",
+                               version=fingerprint)
+                    sleep_fn(max(poll, 60))
+                    continue
+                for t in eng.end_of_day(now.replace(tzinfo=None), last):
+                    t.exit_reason = "time_stale_quote"
+                    save(con, t, "live")
+                log.warning("feed down at the flatten time: open positions closed at the last good quote")
             if failures >= max_failures:
                 record_run(con, day, "live", started=started, finished=now.isoformat(), status="aborted",
                            symbols=len(syms), polls=polls, note=f"quotes failing: {str(e)[:120]}", version=fingerprint)
