@@ -37,3 +37,29 @@ def test_desk_pages():
     assert intr["trigger"] == "SESSION_FLATTEN" and intr["status"] == "CLOSED"
     sw = lb.desk_page(recs, "SWING", "daily close")["signals"][0]
     assert sw["status"] == "OPEN" and sw["trigger"] == "ARMED" and sw["tp"] == "HORIZON"
+
+
+def _bar(hh, mm, o, h, lo, c):
+    return (datetime(2026, 11, 18, hh, mm, tzinfo=lb.IST), o, h, lo, c)
+
+
+def test_unexited_tags_run_status():
+    t = {**TR, "exit_ts": None, "exit_px": None, "day": "2026-11-03"}
+    u = lb.unexited([TR | {"day": "2026-11-18"}, t], [{"day": "2026-11-03", "status": "aborted", "note": "dns"}])
+    assert len(u) == 1 and u[0]["run_status"] == "aborted"
+
+
+def test_reconstruct_adverse_first_gap_and_flatten():
+    t = {**TR, "entry_ts": "2026-11-18T09:32:00"}          # short, stop 103, target 94
+    assert lb.reconstruct_exit(t, [_bar(10, 0, 100, 104, 93, 99)])["reason"] == "stop"
+    assert lb.reconstruct_exit(t, [_bar(10, 0, 105, 106, 104, 105)])["px"] == 105
+    r = lb.reconstruct_exit(t, [_bar(10, 0, 100, 101, 99, 100), _bar(15, 15, 98, 99, 97, 97.5)])
+    assert r == {"reason": "time", "px": 97.5, "at": _bar(15, 15, 0, 0, 0, 0)[0], "basis": "RECONSTRUCTED"}
+    assert lb.reconstruct_exit(t, [])["reason"] == "UNPRICED"
+    assert lb.gross(t, 98.0) == 20.0
+
+
+def test_reconstruct_last_bar_when_session_data_ends_early():
+    t = {**TR, "entry_ts": "2026-11-18T09:32:00"}
+    r = lb.reconstruct_exit(t, [_bar(10, 0, 100, 101, 99, 100), _bar(15, 14, 99, 99.5, 98.5, 99)])
+    assert r["reason"] == "time" and r["px"] == 99 and r["basis"] == "RECONSTRUCTED_LAST_BAR"

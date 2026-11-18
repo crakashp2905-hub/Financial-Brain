@@ -137,3 +137,53 @@ def load(live_path: str, book_path: str, now: datetime) -> tuple[list[dict], lis
 
     return (rows(live_path, "select * from trades where mode = 'live'"),
             rows(book_path, "select * from positions where mode = 'live'"))
+
+
+# --- missing exits (the 2026-11-03 abort left 51 positions without an exit) -------------------
+
+def unexited(trades: Iterable[dict], runs: Iterable[dict]) -> list[dict]:
+    """Live trades with no exit, tagged with the day's run status (e.g. aborted)."""
+    status = {str(r["day"]): (r.get("status"), r.get("note")) for r in runs}
+    out = []
+    for t in trades:
+        if t.get("exit_ts") is None or t.get("exit_px") is None:
+            st, note = status.get(str(t["day"]), (None, None))
+            out.append({**t, "run_status": st, "run_note": note})
+    return out
+
+
+def reconstruct_exit(t: dict, bars: list[tuple[datetime, float, float, float, float]],
+                     flatten_at: time = time(15, 15)) -> dict:
+    """What the frozen stop/target/flatten rules would have done on recorded minute bars.
+
+    Adverse-first inside a bar; a gap through a level fills at the open. The result is an
+    *estimate* labelled RECONSTRUCTED: it is reported beside the ledger and never written into it.
+    """
+    long = t["side"] == "long"
+    stop, target, entry = float(t["stop"]), float(t["target"]), _ts(t["entry_ts"])
+    for at, o, h, lo, c in bars:
+        if at <= entry:
+            continue
+        local = at.astimezone(IST).time()
+        if (long and o <= stop) or (not long and o >= stop):
+            return {"reason": "stop", "px": o, "at": at, "basis": "RECONSTRUCTED"}
+        if (long and o >= target) or (not long and o <= target):
+            return {"reason": "target", "px": o, "at": at, "basis": "RECONSTRUCTED"}
+        if (long and lo <= stop) or (not long and h >= stop):
+            return {"reason": "stop", "px": stop, "at": at, "basis": "RECONSTRUCTED"}
+        if (long and h >= target) or (not long and lo <= target):
+            return {"reason": "target", "px": target, "at": at, "basis": "RECONSTRUCTED"}
+        if local >= flatten_at:
+            return {"reason": "time", "px": c, "at": at, "basis": "RECONSTRUCTED"}
+    last = bars[-1] if bars else None
+    if last is not None and last[0] > entry and last[0].astimezone(IST).time() >= time(15, 0):
+        # the session's data ends just before the flatten bar: flatten at the last recorded close
+        return {"reason": "time", "px": last[4], "at": last[0], "basis": "RECONSTRUCTED_LAST_BAR"}
+    return {"reason": "UNPRICED", "px": None, "at": None, "basis": "NO_BARS"}
+
+
+def gross(t: dict, px: float | None) -> float | None:
+    if px is None:
+        return None
+    sign = 1 if t["side"] == "long" else -1
+    return (px - float(t["entry_px"])) * sign * float(t["qty"])
