@@ -72,7 +72,7 @@ def build(root: Path) -> dict:
         if target in set.union(*closures.values())
     ]
     source_hashes = {
-        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes().replace(bytes([13, 10]), bytes([10]))).hexdigest()
         for path in sorted(package_root.rglob("*.py"))
     }
     shared = sorted(closures["legacy_intraday_paper"] & closures["forward_session_runner"])
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     output = args.output if args.output.is_absolute() else repository / args.output
     rendered = rendered_bytes(build(repository))
     if args.check:
-        if not output.is_file() or output.read_bytes() != rendered:
+        if not output.is_file() or output.read_bytes().replace(bytes([13, 10]), bytes([10])) != rendered:
             raise SystemExit(f"forward-engine dependency graph is stale: {output}")
     else:
         output.parent.mkdir(parents=True, exist_ok=True)

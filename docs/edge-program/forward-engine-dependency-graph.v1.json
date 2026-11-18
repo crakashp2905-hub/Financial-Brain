@@ -1,9 +1,13 @@
 {
   "closures": {
     "forward_session_runner": [
+      "financial_brain.costs.india",
       "financial_brain.evidence.decision_manifest",
       "financial_brain.forward_edge.clock",
+      "financial_brain.forward_edge.cost_schedule",
+      "financial_brain.forward_edge.durable",
       "financial_brain.forward_edge.execution_scenario",
+      "financial_brain.forward_edge.instrument_rules",
       "financial_brain.forward_edge.intent_timing",
       "financial_brain.forward_edge.market_data",
       "financial_brain.forward_edge.market_events",
@@ -27,6 +31,7 @@
       "financial_brain.decisions.net_alpha",
       "financial_brain.decisions.plan",
       "financial_brain.forward_edge.clock",
+      "financial_brain.forward_edge.feed_health",
       "financial_brain.forward_edge.market_data",
       "financial_brain.forward_edge.market_events",
       "financial_brain.forward_edge.quote_archive",
@@ -68,6 +73,10 @@
       "target": "financial_brain.costs.india"
     },
     {
+      "source": "financial_brain.forward_edge.cost_schedule",
+      "target": "financial_brain.costs.india"
+    },
+    {
       "source": "financial_brain.forward_edge.intent_timing",
       "target": "financial_brain.forward_edge.market_events"
     },
@@ -105,6 +114,10 @@
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.costs.india"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.evidence.decision_manifest"
     },
     {
@@ -113,7 +126,19 @@
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.cost_schedule"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.durable"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.forward_edge.execution_scenario"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.instrument_rules"
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
@@ -225,7 +250,15 @@
     },
     {
       "source": "financial_brain.paper.intraday_runner",
+      "target": "financial_brain.costs.india"
+    },
+    {
+      "source": "financial_brain.paper.intraday_runner",
       "target": "financial_brain.forward_edge.clock"
+    },
+    {
+      "source": "financial_brain.paper.intraday_runner",
+      "target": "financial_brain.forward_edge.feed_health"
     },
     {
       "source": "financial_brain.paper.intraday_runner",
@@ -303,11 +336,12 @@
   "schema": "fb.forward-engine-dependency-graph.v1",
   "scope": "Static Python import closure only; it does not prove runtime call order or data ownership.",
   "shared_modules": [
+    "financial_brain.costs.india",
     "financial_brain.forward_edge.clock",
     "financial_brain.forward_edge.market_data",
     "financial_brain.forward_edge.market_events",
     "financial_brain.forward_edge.quote_archive"
   ],
-  "source_count": 594,
-  "source_tree_sha256": "aed2bb7215557e7832ae8d3528db110624dbe6c9e2e4a807ec4526b2a26cdccf"
+  "source_count": 618,
+  "source_tree_sha256": "f5d45dd4d2501c73f634c9bc753fbb93285b6fdeb2ec8186addf8078618c40e7"
 }

@@ -32,15 +32,17 @@ def test_curated_source_has_exact_existing_tests_and_stable_serialization():
     assert "tests/test_decision_manifest.py" in manifest["test_paths"]
     assert all((ROOT / test).is_file() for row in one["sources"] for test in row["test_paths"])
     assert all(row["source_sha256"] == hashlib.sha256(
-        (ROOT / row["source"]).read_bytes()).hexdigest() for row in one["sources"])
+        (ROOT / row["source"]).read_bytes().replace(bytes([13, 10]), bytes([10]))).hexdigest()
+        for row in one["sources"])
 
 
 def test_committed_source_and_runner_graph_snapshots_are_current():
     inventory_path = ROOT / "docs/edge-program/source-inventory.v2.json"
     graph_path = ROOT / "docs/edge-program/forward-engine-dependency-graph.v1.json"
-    assert inventory_path.read_bytes() == rendered_bytes(build(ROOT))
+    lf = lambda b: b.replace(bytes([13, 10]), bytes([10]))  # noqa: E731 - checkouts may convert to CRLF
+    assert lf(inventory_path.read_bytes()) == rendered_bytes(build(ROOT))
     graph = build_graph(ROOT)
-    assert graph_path.read_bytes() == graph_bytes(graph)
+    assert lf(graph_path.read_bytes()) == graph_bytes(graph)
     assert graph["source_count"] == build(ROOT)["source_count"]
     assert graph["entrypoints"]["legacy_intraday_paper"] in graph["closures"]["legacy_intraday_paper"]
     assert graph["entrypoints"]["forward_session_runner"] in graph["closures"]["forward_session_runner"]

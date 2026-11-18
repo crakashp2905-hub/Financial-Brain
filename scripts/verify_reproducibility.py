@@ -18,7 +18,8 @@ CONTRACT = Path("docs/edge-program/reproducibility-contract.v1.json")
 
 
 def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    """SHA-256 of the file with CRLF mapped to LF, so Windows (autocrlf) and Linux checkouts agree."""
+    return hashlib.sha256(path.read_bytes().replace(bytes([13, 10]), bytes([10]))).hexdigest()
 
 
 def verify(*, integrity_only: bool = False) -> list[str]:

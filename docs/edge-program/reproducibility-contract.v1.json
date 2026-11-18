@@ -6,7 +6,7 @@
   "exchange_timezone": "Asia/Kolkata",
   "dependency_lock": {
     "path": "requirements-lock.txt",
-    "sha256": "47f613e2e061e88a22a3a2e996c581e7fcf1c42db2f3b468183b915345abf852",
+    "sha256": "975c74c23711a48b02a11bf6868ac4a70982e54391cfd9a1da4ac1d0f2682681",
     "snapshot_note": "Exact dependency snapshot recorded 2026-10-15; clean lock-install verification is run separately from the pyproject-based full CI matrix."
   },
   "build_tools": {
@@ -28,6 +28,9 @@
     "python scripts/verify_reproducibility.py",
     "python -m pytest -q tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl"
   ],
-  "ci_platforms": ["ubuntu-24.04", "windows-2022"],
+  "ci_platforms": [
+    "ubuntu-24.04",
+    "windows-2022"
+  ],
   "market_network_access_in_fixture_check": false
 }
