@@ -6,12 +6,12 @@ no acceptance test was run per task. Machine-readable copy: `audit.json`.
 
 | status | tasks | meaning |
 |---|---|---|
-| DONE | 273 | code and a test exist for the task as written |
-| PARTIAL | 117 | part of the task is built and tested; the rest is named in the note |
+| DONE | 274 | code and a test exist for the task as written |
+| PARTIAL | 118 | part of the task is built and tested; the rest is named in the note |
 | FOOTHOLD | 2 | a reusable building block exists, but the task's own subject is not built |
-| NOT_STARTED | 13 | nothing in the repository addresses it |
+| NOT_STARTED | 11 | nothing in the repository addresses it |
 
-Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
+Not finishable in-house: EXTERNAL 10, OWNER 6, TIME 6.
 
 ## Branches the evidence lives on
 
@@ -22,9 +22,9 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | codex | `codex/forward-edge-falsification-audit-20261115` | `13e2ab6695` | 163 | 0 | 377 |
 | dyn | `feature/dynamic-evidence-standard` | `7494a5e3f0` | 3 | 0 | 323 |
 | d1 | `feature/five-desk-d1-instruments` | `8b0b12cef3` | 1 | 0 | 323 |
-| d2 | `feature/five-desk-d2-data-parity` | `60280c53a4` | 52 | 0 | 364 |
+| d2 | `feature/five-desk-d2-data-parity` | `c1f4e1d449` | 53 | 0 | 364 |
 
-372 tasks cite evidence that is not on `main`.
+374 tasks cite evidence that is not on `main`.
 
 ## By section
 
@@ -33,7 +33,7 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | 0. Baseline and integrity freeze — P0 | 6 | 4 | 0 | 2 |
 | 1. Instrument master and asset-specific clocks — P0 | 5 | 5 | 0 | 0 |
 | 2. ETF universe, metadata and market data — P0 | 7 | 6 | 1 | 0 |
-| 3. Conventional MF data and scheme master — P0/P1 | 9 | 7 | 0 | 2 |
+| 3. Conventional MF data and scheme master — P0/P1 | 10 | 8 | 0 | 0 |
 | 4. Unified signal and research contract — P0 | 12 | 0 | 0 | 0 |
 | Detailed acceptance checklist | 39 | 5 | 0 | 1 |
 | 5. ETF alpha and strategy engine — P1 | 6 | 6 | 0 | 0 |
@@ -112,8 +112,8 @@ Not finishable in-house: EXTERNAL 11, OWNER 6, TIME 6.
 | FB-0302 | DONE |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Distinguish direct/regular, growth/IDCW payout/reinvestment, open-ended/closed/interval, active/passive, equity/debt/hybrid/commodity/FOF and other cu — plan, option, structure, asset type, passive flags |
 | FB-0303 | PARTIAL |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Map fund house, riskometer, benchmark index TRI, manager and objective; — fund house, riskometer, benchmark TRI; manager/objective not stored |
 | FB-0304 | DONE |  | `instruments/market_quality.py` (d2 7cc2cc4)<br>`tests/test_market_quality.py` (d2 d1cddd1) | Extend `mfnav.py` to retain NAV revision history and source publication/ingestion timestamps; — NAV revision history; corrections not backdated |
-| FB-0305 | NOT_STARTED | EXTERNAL: AMFI history acquisition within its terms |  | Build compliant MF NAV history ingestion from official AMFI history exports/authorized endpoints with bounded incremental windows, retries and rate li |
-| FB-0306 | NOT_STARTED | EXTERNAL: AMFI history acquisition within its terms |  | Respect AMFI's historical report limit of up to 90 days per download; |
+| FB-0305 | PARTIAL | EXTERNAL: AMFI history acquisition within its terms | `providers/amfi_history.py` (worktree 34732ff)<br>`tests/test_amfi_history.py` (worktree 9d728a3) | Build compliant MF NAV history ingestion from official AMFI history exports/authorized endpoints with bounded incremental windows, retries and rate li — bounded windows, resume, retries, rate limit; real AMFI fetch is external |
+| FB-0306 | DONE |  | `providers/amfi_history.py` (worktree 34732ff)<br>`tests/test_amfi_history.py` (worktree 9d728a3) | Respect AMFI's historical report limit of up to 90 days per download; — windows capped at 90 days; wider requests refused |
 | FB-0307 | DONE |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Create survivorship-aware historical scheme universe: — merged/wound-up schemes stay in historical universe |
 | FB-0308 | DONE |  | `instruments/pit.py` (d2 2f09f69)<br>`tests/test_pit_d2.py` (d2 59c7849) | Add `as_known_on()` and NAV `published_at` availability semantics; — NAV usable only after its publication instant |
 | FB-0309 | PARTIAL |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Ingest effective-dated direct/regular total expense ratios, AUM, exit-load schedules, minimum initial/additional investment and exit restrictions. — dated TER, AUM and exit-load schedules; minimums in mf_plans |

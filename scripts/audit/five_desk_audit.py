@@ -52,7 +52,6 @@ EXTERNAL = {
     "FB-0010": ("OWNER", "branch protection is a repository-owner setting"),
     "FB-0205": ("EXTERNAL", "Kite WebSocket entitlement and a running archive task"),
     "FB-0305": ("EXTERNAL", "AMFI history acquisition within its terms"),
-    "FB-0306": ("EXTERNAL", "AMFI history acquisition within its terms"),
     "FB-0495": ("TIME", "needs future paper sessions"),
     "FB-0814": ("OWNER", "market-hours rehearsals are run by the owner (fb live rehearse)"),
     "FB-1213": ("TIME", "needs future independent sessions"),
@@ -780,6 +779,13 @@ A.update({
     "FB-1005": (D, [_DR, _TDR], "locked next-session publication"),
 })
 _DH, _TDH = S + "paper/dashboard_html.py", "tests/test_dashboard_html.py"
+A.update({
+    "FB-0305": ("PARTIAL", ["src/financial_brain/providers/amfi_history.py", "tests/test_amfi_history.py"],
+                "bounded windows, resume, retries, rate limit; real AMFI fetch is external"),
+    "FB-0306": (D, ["src/financial_brain/providers/amfi_history.py", "tests/test_amfi_history.py"],
+                "windows capped at 90 days; wider requests refused"),
+})
+
 A.update({
     "FB-1101": (D, [_DH, _RPT, _TDH], "consolidated NAV, capital and P&L page"),
     "FB-1102": (D, [_DH, _OPS, _TDH], "five desk pages with their own clocks"),

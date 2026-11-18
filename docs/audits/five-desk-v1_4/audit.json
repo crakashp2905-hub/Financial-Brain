@@ -45,8 +45,8 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "60280c53a4",
-   "ahead_of_main": 52,
+   "commit": "c1f4e1d449",
+   "ahead_of_main": 53,
    "behind_main": 0,
    "test_files": 364
   }
@@ -58,14 +58,14 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 117,
-  "DONE": 273,
-  "NOT_STARTED": 13,
+  "PARTIAL": 118,
+  "DONE": 274,
+  "NOT_STARTED": 11,
   "FOOTHOLD": 2
  },
  "by_dependency": {
-  "IN_HOUSE": 382,
-  "EXTERNAL": 11,
+  "IN_HOUSE": 383,
+  "EXTERNAL": 10,
   "OWNER": 6,
   "TIME": 6
  },
@@ -1092,25 +1092,53 @@
    "id": "FB-0305",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Build compliant MF NAV history ingestion from official AMFI history exports/authorized endpoints with bounded incremental windows, retries and rate li",
-   "status": "NOT_STARTED",
+   "status": "PARTIAL",
    "dependency": "EXTERNAL",
    "blocker": "AMFI history acquisition within its terms",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "note": "bounded windows, resume, retries, rate limit; real AMFI fetch is external",
+   "source": [
+    {
+     "path": "src/financial_brain/providers/amfi_history.py",
+     "ref": "worktree",
+     "object": "34732ffe53bf"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_amfi_history.py",
+     "ref": "worktree",
+     "object": "9d728a36f3c4"
+    }
+   ],
+   "unmerged": [
+    "worktree"
+   ]
   },
   {
    "id": "FB-0306",
    "section": "3. Conventional MF data and scheme master \u2014 P0/P1",
    "title": "Respect AMFI's historical report limit of up to 90 days per download;",
-   "status": "NOT_STARTED",
-   "dependency": "EXTERNAL",
-   "blocker": "AMFI history acquisition within its terms",
-   "note": "",
-   "source": [],
-   "test": [],
-   "unmerged": []
+   "status": "DONE",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "windows capped at 90 days; wider requests refused",
+   "source": [
+    {
+     "path": "src/financial_brain/providers/amfi_history.py",
+     "ref": "worktree",
+     "object": "34732ffe53bf"
+    }
+   ],
+   "test": [
+    {
+     "path": "tests/test_amfi_history.py",
+     "ref": "worktree",
+     "object": "9d728a36f3c4"
+    }
+   ],
+   "unmerged": [
+    "worktree"
+   ]
   },
   {
    "id": "FB-0307",
