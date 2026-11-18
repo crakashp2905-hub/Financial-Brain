@@ -7,11 +7,13 @@ from __future__ import annotations
 import hashlib
 import json
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
 from financial_brain.forward_edge import execution as X
+from financial_brain.forward_edge import market_data as M
+from financial_brain.forward_edge import session_ops as S
 from financial_brain.forward_edge.market_data import NormalizedEvent
 from financial_brain.forward_edge.modes import Mode, ModeError, resolve_mode
 from financial_brain.forward_edge.session_runner import (
@@ -131,6 +133,24 @@ def _receipt(decision: dict, intent_id: str, events: list[NormalizedEvent], fx: 
     return receipt
 
 
+def gate_codes(fx: dict, decision_at: datetime) -> list[str]:
+    """Instrument and market-data gate codes for one fixture (F17). Empty when the fixture passes every gate."""
+    codes: list[str] = []
+    if fx.get("instrument_master"):
+        im = fx["instrument_master"]
+        inst = M.Instrument(isin=im["isin"], symbol=im["symbol"], lot=int(im["lot"]), tick=str(im["tick"]),
+                            status=im["status"], rights_ok=bool(im["rights_ok"]),
+                            expiry=date.fromisoformat(im["expiry"]) if im.get("expiry") else None)
+        codes += ["INSTRUMENT_" + c for c in M.instrument_gate(inst, decision_at.astimezone(S.IST).date())]
+    if fx.get("market"):
+        mk = fx["market"]
+        codes += ["DATA_" + c for c in M.data_gate(
+            age_s=float(mk["age_s"]), spread_bps=None if mk.get("spread_bps") is None else float(mk["spread_bps"]),
+            volume=int(mk["volume"]), circuit_hit=bool(mk["circuit_hit"]), frozen=bool(mk["frozen"]),
+            auction_seen=bool(mk["auction_seen"]))]
+    return sorted(codes)
+
+
 def run_fixture_on_forward_runner(fx: dict, journal_path: Path | None = None,
                                   *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE") -> dict:
     """Replay one synthetic session through ``ForwardSessionRunner`` and return normalized outcome facts."""
@@ -161,6 +181,7 @@ def run_fixture_on_forward_runner(fx: dict, journal_path: Path | None = None,
     runner.record_preflight(config, {"approved": approved,
                                      "reason": "PREFLIGHT_BLOCKED" if not approved else "PASS",
                                      "checks": checks})
+    gates = gate_codes(fx, decision_at)
     signal = {"side": str(fx["side"]), "instrument": str(fx["instrument"]),
               "quantity": int(fx["quantity"]), "limit": fx.get("limit")}
     try:
@@ -173,6 +194,8 @@ def run_fixture_on_forward_runner(fx: dict, journal_path: Path | None = None,
         receipt = result.get("execution")
         if not approved:
             outcome, reason = "NO_TRADE", "PREFLIGHT_BLOCKED"
+        elif gates:
+            outcome, reason = "NO_TRADE", "GATE:" + "+".join(gates)
         elif result["status"] == "REJECTED":
             outcome, reason = "REJECTED", str(result.get("reason", "PREFLIGHT_REJECTED"))
         elif result["status"] == "NO_TRADE":
