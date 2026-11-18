@@ -127,3 +127,15 @@ def divergence(con, *, tolerance: float = 0.03) -> list[dict]:
         WHERE l.last_price IS NOT NULL ORDER BY ABS(l.last_price / a.close_adj - 1) DESC""").fetchall()
     return [{"symbol": r[0], "live": r[1], "archive_close": r[2], "archive_date": r[3], "gap": r[4],
              "flag": abs(r[4]) > tolerance} for r in rows]
+
+
+# ---- merged from main (2026-11-18): definitions main's modules depend on; the branch's own
+# ---- definitions above are unchanged.
+
+
+def _valid_level(level: dict) -> bool:
+    try:
+        return float(level["price"]) > 0 and int(level["quantity"]) > 0
+    except (KeyError, TypeError, ValueError):
+        return False
+

@@ -1,0 +1,180 @@
+{
+ "entries": [
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3",
+   "id": "TRIAL:M1 cost-aware momentum book",
+   "lineage": "docs/trials/ledger.jsonl#sha256:97711f21fbee1a6a6cf238a0fc3612701d5a22ba01e08460929440367fdd988c",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3,G4",
+   "id": "TRIAL:F3 short build-up avoid filter",
+   "lineage": "docs/trials/ledger.jsonl#sha256:e530fec66757c206e563eadd3a2699531307b91819f4f3a71d14bd1187e7e65d",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3",
+   "id": "TRIAL:C1 rich-basis carry",
+   "lineage": "docs/trials/ledger.jsonl#sha256:11b180a51a07d01be6647583b4a93ad036a2e986331f65232234fe5ae67d2ffe",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3,G4",
+   "id": "TRIAL:N2F rejected results as hedged futures short",
+   "lineage": "docs/trials/ledger.jsonl#sha256:facc275e43e9a4c07e710522ccc440b815ba46592fefb408e38f99af6a608149",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3,G4",
+   "id": "TRIAL:EAP earnings-announcement premium in futures",
+   "lineage": "docs/trials/ledger.jsonl#sha256:19eadae4745a1ecdf86a499fb6326269f2645f0590015fef2592062f60b6b4f3",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3,G4",
+   "id": "TRIAL:BAB betting against beta in futures",
+   "lineage": "docs/trials/ledger.jsonl#sha256:a9d7fc587af8e838cec5e8b07a83c6d6fea4d2460a775e77988a8a159939634a",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3",
+   "id": "TRIAL:K7 chart and candle setups in futures (17-setup family)",
+   "lineage": "docs/trials/ledger.jsonl#sha256:9e78b16c473fdb0cea825fcef679dac59f975f0a736f85860c5975c2472debc6",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3,G4",
+   "id": "TRIAL:D1 delivery share long-short in futures",
+   "lineage": "docs/trials/ledger.jsonl#sha256:d0e2b8b0b1ba81fd8aceea9b9d8b4e6aaa906d73c8fdb41dd1f59e88977ab079",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3",
+   "id": "TRIAL:B4 index mean reversion and VWAP (9-rule family)",
+   "lineage": "docs/trials/ledger.jsonl#sha256:9d1fa680868e67924945620dd91e54a52b8c92d24dece71c4f24da016de511ec",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3",
+   "id": "TRIAL:A10 published price anomalies (16-anomaly family)",
+   "lineage": "docs/trials/ledger.jsonl#sha256:04ee64856575bb75d19b6ba55022c02496f3654d701481d2f4d37661a8b66fa5",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing OOS mean > 0,OOS t >= 2",
+   "id": "TRIAL:X3 earnings surprise drift out of sample",
+   "lineage": "docs/trials/ledger.jsonl#sha256:06efee4e0e80f6c2cb9c86ec675226f1f64ad41169ddb49183b3abbf5769d6f4",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3,G4",
+   "id": "TRIAL:MF multi-factor quality value low-risk book",
+   "lineage": "docs/trials/ledger.jsonl#sha256:1e73cb6f01c1cf6e83d35b1d0392033e907daefe6cbb6103d1437c1df85fe1c1",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "recorded verdict FAIL failing G3",
+   "id": "TRIAL:I/S intraday and swing family on minute bars (9 rules)",
+   "lineage": "docs/trials/ledger.jsonl#sha256:6d1d2eaaa0590a2ead5fe368304a3342c609a65eacb65888a7727b333bd6e482",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:breakouts",
+   "lineage": "src/financial_brain/strategies/breakouts.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:challengers",
+   "lineage": "src/financial_brain/strategies/challengers.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:evaluation_controls",
+   "lineage": "src/financial_brain/strategies/evaluation_controls.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:execution_rules",
+   "lineage": "src/financial_brain/strategies/execution_rules.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:families",
+   "lineage": "src/financial_brain/strategies/families.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:lifecycle",
+   "lineage": "src/financial_brain/strategies/lifecycle.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:mean_reversion",
+   "lineage": "src/financial_brain/strategies/mean_reversion.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:reports",
+   "lineage": "src/financial_brain/strategies/reports.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:session_breakout",
+   "lineage": "src/financial_brain/strategies/session_breakout.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:specs",
+   "lineage": "src/financial_brain/strategies/specs.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:structure",
+   "lineage": "src/financial_brain/strategies/structure.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "id": "MODULE:ui",
+   "lineage": "src/financial_brain/strategies/ui.py",
+   "prospective_observation": false,
+   "status": "SHADOW_ONLY"
+  }
+ ],
+ "schema": "fb.forward_edge.eligibility.v1"
+}
