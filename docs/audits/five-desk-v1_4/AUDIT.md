@@ -6,12 +6,12 @@ no acceptance test was run per task. Machine-readable copy: `audit.json`.
 
 | status | tasks | meaning |
 |---|---|---|
-| DONE | 274 | code and a test exist for the task as written |
-| PARTIAL | 118 | part of the task is built and tested; the rest is named in the note |
+| DONE | 275 | code and a test exist for the task as written |
+| PARTIAL | 119 | part of the task is built and tested; the rest is named in the note |
 | FOOTHOLD | 2 | a reusable building block exists, but the task's own subject is not built |
-| NOT_STARTED | 11 | nothing in the repository addresses it |
+| NOT_STARTED | 9 | nothing in the repository addresses it |
 
-Not finishable in-house: EXTERNAL 10, OWNER 6, TIME 6.
+Not finishable in-house: EXTERNAL 8, OWNER 6, TIME 6.
 
 ## Branches the evidence lives on
 
@@ -22,15 +22,15 @@ Not finishable in-house: EXTERNAL 10, OWNER 6, TIME 6.
 | codex | `codex/forward-edge-falsification-audit-20261115` | `13e2ab6695` | 163 | 0 | 377 |
 | dyn | `feature/dynamic-evidence-standard` | `7494a5e3f0` | 3 | 0 | 323 |
 | d1 | `feature/five-desk-d1-instruments` | `8b0b12cef3` | 1 | 0 | 323 |
-| d2 | `feature/five-desk-d2-data-parity` | `c1f4e1d449` | 53 | 0 | 364 |
+| d2 | `feature/five-desk-d2-data-parity` | `3b858d1ce5` | 54 | 0 | 365 |
 
-374 tasks cite evidence that is not on `main`.
+376 tasks cite evidence that is not on `main`.
 
 ## By section
 
 | section | done | partial | foothold | not started |
 |---|---|---|---|---|
-| 0. Baseline and integrity freeze — P0 | 6 | 4 | 0 | 2 |
+| 0. Baseline and integrity freeze — P0 | 6 | 5 | 0 | 1 |
 | 1. Instrument master and asset-specific clocks — P0 | 5 | 5 | 0 | 0 |
 | 2. ETF universe, metadata and market data — P0 | 7 | 6 | 1 | 0 |
 | 3. Conventional MF data and scheme master — P0/P1 | 10 | 8 | 0 | 0 |
@@ -45,7 +45,7 @@ Not finishable in-house: EXTERNAL 10, OWNER 6, TIME 6.
 | 11. Trader dashboard and workflows — P1 | 8 | 4 | 0 | 0 |
 | 12. Evaluation, performance benchmarks, research discipline — P0/P1 | 8 | 8 | 0 | 0 |
 | 13. Adversarial, property-based and acceptance tests — P0 | 19 | 1 | 0 | 0 |
-| 14. Deployment, staged release and external requirements — P0/P1 | 1 | 6 | 0 | 3 |
+| 14. Deployment, staged release and external requirements — P0/P1 | 2 | 6 | 0 | 2 |
 | 16. Executable expected value and signal admissibility — P0 | 6 | 2 | 0 | 0 |
 | 17. Quant capital allocation and cross-desk exposure — P0 | 6 | 2 | 0 | 0 |
 | 18. Signal-to-fill latency, market microstructure and fidelity — P0 | 4 | 4 | 0 | 0 |
@@ -79,7 +79,7 @@ Not finishable in-house: EXTERNAL 10, OWNER 6, TIME 6.
 | FB-0005 | DONE |  | `docs/five-desk/CHARTER.md` (d2 e168d11) | Add five-desk product charter and explicit execution scope: — five-desk charter and execution scope |
 | FB-0006 | DONE |  | `paper/policy.py` (d2 42fcdf9)<br>`tests/test_policy_and_more_adversarial.py` (d2 cc6a5ff)<br>`tests/test_broker_isolation_five_desk.py` (d2 d9150f9) | Add centrally enforced policy: — central paper-only policy asserted with forward_edge constant |
 | FB-0007 | DONE |  | `tests/test_broker_isolation_five_desk.py` (d2 d9150f9) | Resolve divergent broker paths (`forward_edge/modes.py`, `execution/oms/kite_broker.py`) with hostile integration tests showing a denied order cannot  — hostile isolation: paper modules import no broker; locks closed |
-| FB-0008 | NOT_STARTED | EXTERNAL: licence/retention review of NSE, BSE, AMFI and Kite terms | `docs/sources` (main 0827f61) | Audit exchange and AMFI data retention/licensing, permitted redistribution, quote archival, contract metadata and platform terms (**EXTERNAL review**) |
+| FB-0008 | PARTIAL |  | `docs/five-desk/DATA_LICENSING_REVIEW.md` (worktree 4e64f4d) | Audit exchange and AMFI data retention/licensing, permitted redistribution, quote archival, contract metadata and platform terms (**EXTERNAL review**) — desk review of Kite, NSE, AMFI terms; written provider answers still needed |
 | FB-0009 | PARTIAL | OWNER: hosted CI cannot start: GitHub billing/spending limit | `.github/workflows` (main a5a09de) | Establish clean CI on Windows/Linux with pinned dependencies, lint, type checks, per-module coverage and test artifacts. — workflows for Windows and Linux exist; no job has started since the billing block |
 | FB-0010 | NOT_STARTED | OWNER: branch protection is a repository-owner setting |  | Activate GitHub branch governance and required checks (**owner action**), verify actual protection via API. — evidence branch codex/branch-protection-evidence-20261113 is unmerged |
 | FB-0011 | DONE |  | `signals/evidence.py` (d2 14ba92c)<br>`tests/test_evidence_reports.py` (d2 07832e4) | Define five-desk launch gates and independent evidence labels: — five named tiers with required evidence per tier |
@@ -112,8 +112,8 @@ Not finishable in-house: EXTERNAL 10, OWNER 6, TIME 6.
 | FB-0302 | DONE |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Distinguish direct/regular, growth/IDCW payout/reinvestment, open-ended/closed/interval, active/passive, equity/debt/hybrid/commodity/FOF and other cu — plan, option, structure, asset type, passive flags |
 | FB-0303 | PARTIAL |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Map fund house, riskometer, benchmark index TRI, manager and objective; — fund house, riskometer, benchmark TRI; manager/objective not stored |
 | FB-0304 | DONE |  | `instruments/market_quality.py` (d2 7cc2cc4)<br>`tests/test_market_quality.py` (d2 d1cddd1) | Extend `mfnav.py` to retain NAV revision history and source publication/ingestion timestamps; — NAV revision history; corrections not backdated |
-| FB-0305 | PARTIAL | EXTERNAL: AMFI history acquisition within its terms | `providers/amfi_history.py` (worktree 34732ff)<br>`tests/test_amfi_history.py` (worktree 9d728a3) | Build compliant MF NAV history ingestion from official AMFI history exports/authorized endpoints with bounded incremental windows, retries and rate li — bounded windows, resume, retries, rate limit; real AMFI fetch is external |
-| FB-0306 | DONE |  | `providers/amfi_history.py` (worktree 34732ff)<br>`tests/test_amfi_history.py` (worktree 9d728a3) | Respect AMFI's historical report limit of up to 90 days per download; — windows capped at 90 days; wider requests refused |
+| FB-0305 | PARTIAL | EXTERNAL: AMFI history acquisition within its terms | `providers/amfi_history.py` (d2 2e37d76)<br>`tests/test_amfi_history.py` (d2 a77f895) | Build compliant MF NAV history ingestion from official AMFI history exports/authorized endpoints with bounded incremental windows, retries and rate li — bounded windows, resume, retries, rate limit; real AMFI fetch is external |
+| FB-0306 | DONE |  | `providers/amfi_history.py` (d2 2e37d76)<br>`tests/test_amfi_history.py` (d2 a77f895) | Respect AMFI's historical report limit of up to 90 days per download; — windows capped at 90 days; wider requests refused |
 | FB-0307 | DONE |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Create survivorship-aware historical scheme universe: — merged/wound-up schemes stay in historical universe |
 | FB-0308 | DONE |  | `instruments/pit.py` (d2 2f09f69)<br>`tests/test_pit_d2.py` (d2 59c7849) | Add `as_known_on()` and NAV `published_at` availability semantics; — NAV usable only after its publication instant |
 | FB-0309 | PARTIAL |  | `instruments/mf_scheme.py` (d2 b911cee)<br>`tests/test_mf_scheme.py` (d2 4d05f48) | Ingest effective-dated direct/regular total expense ratios, AUM, exit-load schedules, minimum initial/additional investment and exit restrictions. — dated TER, AUM and exit-load schedules; minimums in mf_plans |
@@ -322,7 +322,7 @@ Not finishable in-house: EXTERNAL 10, OWNER 6, TIME 6.
 | FB-1401 | PARTIAL |  | `forward_edge/durable.py` (main 6aa6e13) | Build local single-process first, event bus and durable state second; — single process with durable state |
 | FB-1402 | PARTIAL |  | `forward_edge/fixtures.py` (main 3abfa33) | Provide deterministic offline fixtures for all five desks; — equity fixtures only |
 | FB-1403 | NOT_STARTED | EXTERNAL: genuine ETF/option/AMFI sources |  | Validate permitted ETF market data, contract quotes and AMFI history from genuine sources (**EXTERNAL**). |
-| FB-1404 | NOT_STARTED | EXTERNAL: live Kite session and entitlement check (owner logs in daily) |  | Check live Kite access, quote throughput/limits and options-chain quote entitlement; |
+| FB-1404 | DONE |  | `docs/five-desk/KITE_ENTITLEMENT_CHECK.md` (worktree 6de492f) | Check live Kite access, quote throughput/limits and options-chain quote entitlement; — measured option-quote entitlement and throughput |
 | FB-1405 | NOT_STARTED | EXTERNAL: only if live MF subscriptions are ever enabled |  | Obtain actual MF order platform integration or reliable fund confirmation feed only if later enabling live mutual fund subscriptions (**EXTERNAL**). |
 | FB-1406 | PARTIAL | EXTERNAL: broker, compliance and owner approval | `execution/oms/engine.py` (main 89ce1a2)<br>`execution/oms/killswitch.py` (main 078cbb5)<br>`execution/oms/rollout.py` (main 3646a7e) | Implement real broker and exchange controls only after separate account, approval, compliance, kill-switch and operational rehearsals (**EXTERNAL**). — OMS built and locked; arming is the owner's |
 | FB-1407 | PARTIAL | TIME: elapsed observed sessions | `paper/intraday_runner.py` (main 9ef5625)<br>`paper/zoo.py` (main 4ad5c29) | Run independently observed paper sessions across representative regimes; — paper record accrues daily since 2026-10 |

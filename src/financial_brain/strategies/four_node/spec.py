@@ -84,3 +84,15 @@ def india_v1() -> Variant:
 def source_intact(root: Path) -> bool:
     import hashlib
     return hashlib.sha256((root / SOURCE_PATH).read_bytes()).hexdigest() == SOURCE_SHA256
+
+
+def india_variant(choices: dict[str, str], *, owner: str) -> Variant:
+    """An India variant with every choice recorded, e.g. one of the 128 grid variants.
+
+    Executable in research and paper only; the 2026-11-18 grid found none with positive net
+    expectancy (``docs/strategies/four_node/results``), so none is eligible for promotion.
+    """
+    v = india_v1()
+    for k, alt in choices.items():
+        v.choose(k, alt, owner=owner)
+    return v
