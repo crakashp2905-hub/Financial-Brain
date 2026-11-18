@@ -119,3 +119,29 @@ Tracker after this wave: DONE 84, PARTIAL 56, BLOCKED 12, NOT_STARTED 0. Forward
 | F13 | 3202 passed, 1 skipped | `logs/full-suite-f13-tip.txt` |
 | F14 | 3250 passed, 1 skipped | `logs/full-suite-f14-tip.txt` |
 | F15 | 3264 passed, 1 skipped | `logs/full-suite-f15-tip.txt` |
+
+## Wave F16 - reconciliation with later work on main (branch `feature/forward-edge-f16-reconcile`)
+
+After F15, other sessions merged a durable forward session runner, a reconciled paper account ledger, a read-only Kite
+full-quote adapter and an executable champion cohort resolver (49 commits, main `9170700`). The tracker was re-checked
+against that code and the audit:
+
+- The audit's `promotion_metric` check is now GREEN (`executable_next_session_v1` resolver present). `independent_custody`
+  stays RED: no independent timestamp provider is configured.
+- FE-0015 is DONE: `kernel/paper_account.py` is one cash, inventory and fee ledger with reservations, tested through restarts.
+- FE-0035 moves from BLOCKED to PARTIAL: the read-only Kite quote adapter exists and passes fixture tests. No live capture
+  has been done, so live evidence remains blocked on credentials and data rights.
+- FE-0049 and FE-0091 gain citations to the runner and cohort resolver tests; FE-0049 stays PARTIAL because its session
+  denominator still comes from the in-memory custody journal.
+- The tracker test now accepts citations from any `tests/test_*.py`, still requiring each cited test to exist.
+
+Tracker after this wave: DONE 85, PARTIAL 56, BLOCKED 11, NOT_STARTED 0. Forward-edge tests: 378 passed.
+
+## Wave F17 - data-integrity gates in the session pipeline (branch `feature/forward-edge-f17-gates`)
+
+`pipeline.run_session` now applies the instrument gate and the market-data gate before any execution. A failed gate gives
+`NO_TRADE` with sorted reason codes (`GATE:...`), a `reject_codes` field, no execution stage and no ledger posting. Four
+gated fixtures were added (suspended instrument, expired contract, wide spread, stale and frozen). The eight earlier fixture
+signatures are unchanged. The report command now carries coverage by session, name and intent notional.
+
+FE-0039 and FE-0042 are DONE. FE-0044 and FE-0113 stay PARTIAL: the cockpit is not fed from pipeline results.

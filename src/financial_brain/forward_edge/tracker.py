@@ -721,6 +721,55 @@ OVERRIDES.update({
 })
 
 
+
+
+# ---- F16 (reconciled against later work on main), added in wave F16 ----
+# Other sessions merged a durable forward runner, a reconciled paper account, a read-only Kite quote adapter and an
+# executable champion resolver after F15. These entries cite their tests; nothing is upgraded without an executable test.
+OVERRIDES.update({
+    "FE-0015": Entry("DONE", ("test_full_buy_reduces_buying_power", "test_buy_sell_fees_and_restart_reconcile",
+                              "test_replayed_intent_fill_and_fee_have_one_economic_effect",
+                              "test_sell_reservations_prevent_overselling_and_release_on_cancel",
+                              "test_randomized_partial_fill_cancel_sequences_preserve_buying_power"), (),
+                     "kernel/paper_account.py is one cash, inventory and fee ledger with reservations; tested through restarts. Legacy engines outside it keep their own books."),
+    "FE-0035": Entry("PARTIAL", ("test_fixture_feed_replays_in_deterministic_order", "test_full_quote_becomes_timestamped_forward_event",
+                                 "test_missing_or_invalid_exchange_evidence_fails_closed", "test_ltp_only_is_analyzable_but_not_fill_capable",
+                                 "test_crossed_or_empty_depth_is_not_executable"), (BLK_DATA, BLK_BROKER),
+                     "A read-only Kite full-quote adapter exists (ingest/kite_live.py) and is tested on fixtures. No live capture has been performed: that needs valid credentials and data rights."),
+    "FE-0049": Entry("PARTIAL", ("test_zero_signal_and_unsuccessful_sessions_stay_in_the_denominator",
+                                 "test_decision_records_persist_and_replay_to_the_same_head_hash",
+                                 "test_no_trade_signal_never_reaches_execution_adapter",
+                                 "test_incomplete_session_is_preserved_and_cannot_be_reused"), (),
+                     "The durable forward runner persists decisions, no-trades and incomplete sessions. The session denominator is still computed from the in-memory custody journal."),
+    "FE-0091": Entry("DONE", ("test_daily_returns_use_previous_close_and_remove_external_flows",
+                              "test_executable_cohort_uses_actual_partial_fill_fees_marks_and_cash_days",
+                              "test_explicit_no_order_cash_cohort_resolves_to_zero_instead_of_disappearing",
+                              "test_missing_mark_or_unresolved_order_withholds_cohort_return"), (),
+                     "Daily return maths plus the executable champion cohort resolver, which reconciles to the paper account and keeps cash days."),
+})
+
+
+
+
+# ---- F17 (gates wired into the pipeline), added in wave F17 ----
+_GATE = "Wired into forward_edge/pipeline.py; fixture sessions only."
+OVERRIDES.update({
+    "FE-0039": Entry("DONE", ("test_instrument_gate_emits_reason_codes", "test_a_failed_gate_rejects_the_trade_with_deterministic_reason_codes",
+                              "test_a_gated_session_never_reaches_execution_or_the_ledger"), (),
+                     _GATE + " Suspended, delisted, expired and unlicensed instruments emit no eligible intent."),
+    "FE-0042": Entry("DONE", ("test_data_gate_reason_codes_are_deterministic_and_complete",
+                              "test_a_failed_gate_rejects_the_trade_with_deterministic_reason_codes",
+                              "test_reason_codes_are_identical_on_every_run",
+                              "test_instrument_and_data_failures_are_reported_together"), (), _GATE),
+    "FE-0044": Entry("PARTIAL", ("test_coverage_is_reported_by_session_name_and_notional",
+                                 "test_the_report_carries_coverage_by_session_name_and_notional"), (),
+                     "The report command carries sessions, names and intent-notional coverage. The cockpit P&L page does not show it yet."),
+    "FE-0113": Entry("PARTIAL", ("test_no_trade_decisions_are_explicit_with_reasons",
+                                 "test_a_failed_gate_rejects_the_trade_with_deterministic_reason_codes"), (),
+                     "NO_TRADE with reason codes now flows through the pipeline result and report. The cockpit is not fed from pipeline results."),
+})
+
+
 def capability_matrix() -> dict:
     """FE-0149: implemented, partial, blocked, not started, and independently evidenced (always empty offline)."""
     table = entries()
