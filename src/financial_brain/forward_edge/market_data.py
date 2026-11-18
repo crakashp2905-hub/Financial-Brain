@@ -1,13 +1,13 @@
-"""Market-session capture and data integrity (FE-0033 .. FE-0044). Offline: fixtures only, no live feed.
+"""Market-session capture and data integrity (FE-0033 .. FE-0044).
 
-* Normalized events keep UTC event, received, available and decision clocks, and reject impossible ordering (FE-0033).
+* Normalized events keep UTC event, received, available, and optional ingest clocks; decisions use availability time.
 * Venue calendar from an explicit, versioned file; no weekday guessing (FE-0034). The real NSE holiday list is not
   bundled here: that is a named input, see tracker BLK-DATA / calendar note.
-* Fixture feed replays normalized events; the live Kite adapter is not implemented (FE-0035, blocked).
+* Fixture feed replays normalized events; Kite read-only snapshots are normalized by the live adapter (FE-0035).
 * Append-only, hash-chained quote archive with capture-loss counters (FE-0036).
 * Data age, gaps and disconnects trigger abstention; nothing is forward-filled (FE-0037).
 * Decision snapshots hash every input they used (FE-0038). Instrument master gate (FE-0039).
-* Option intents require two-sided executable quotes (FE-0040). Minute and close divergences are recorded, never
+* Intents require two-sided quality-gated quotes; missing auction state fails only where sourced (FE-0040). Minute and close divergences are recorded, never
   silently corrected (FE-0041). Data gate reason codes are deterministic (FE-0042).
 * Features use only data at or before their timestamp (FE-0043). Coverage is reported with every claim (FE-0044).
 """
@@ -17,6 +17,8 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
+from math import isfinite
 from pathlib import Path
 
 
@@ -24,7 +26,8 @@ class DataError(ValueError):
     pass
 
 
-KINDS = frozenset({"TICK", "QUOTE", "DEPTH", "BAR", "HALT", "AUCTION", "CORP_ACTION", "BROKER_UPDATE"})
+KINDS = frozenset({"TICK", "QUOTE", "DEPTH", "BAR", "HALT", "AUCTION", "CORP_ACTION",
+                   "BROKER_UPDATE", "BOOK_POSITION"})
 
 
 def _aware(value: datetime, label: str) -> datetime:
@@ -41,6 +44,7 @@ class NormalizedEvent:
     received_utc: datetime
     available_utc: datetime
     payload: tuple[tuple[str, str], ...] = ()
+    ingested_utc: datetime | None = None
 
     def __post_init__(self) -> None:
         if self.kind not in KINDS:
@@ -50,13 +54,18 @@ class NormalizedEvent:
         a = _aware(self.available_utc, "available")
         if not (e <= r <= a):
             raise DataError("clocks must satisfy event <= received <= available")
+        if self.ingested_utc is not None and _aware(self.ingested_utc, "ingested") < a:
+            raise DataError("ingest clock cannot precede source availability")
 
     def content_sha256(self) -> str:
-        body = json.dumps({"kind": self.kind, "instrument": self.instrument,
+        body_obj = {"kind": self.kind, "instrument": self.instrument,
                            "event": _aware(self.event_utc, "e").isoformat(),
                            "received": _aware(self.received_utc, "r").isoformat(),
                            "available": _aware(self.available_utc, "a").isoformat(),
-                           "payload": [list(p) for p in self.payload]}, sort_keys=True, separators=(",", ":"))
+                           "payload": [list(p) for p in self.payload]}
+        if self.ingested_utc is not None:
+            body_obj["ingested"] = _aware(self.ingested_utc, "ingested").isoformat()
+        body = json.dumps(body_obj, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
@@ -67,17 +76,99 @@ def decision_visible(event: NormalizedEvent, decision_utc: datetime) -> bool:
 
 def executable_quote(event: NormalizedEvent) -> tuple[bool, str]:
     """Return whether normalized quote evidence contains a valid two-sided displayed market."""
-    payload = dict(event.payload)
     if event.kind != "QUOTE":
         return False, "NOT_A_QUOTE"
+    payload = dict(event.payload)
     try:
-        bid, ask = float(payload["bid_price"]), float(payload["ask_price"])
+        bid, ask = Decimal(payload["bid_price"]), Decimal(payload["ask_price"])
         bid_qty, ask_qty = int(payload["bid_qty"]), int(payload["ask_qty"])
-    except (KeyError, TypeError, ValueError):
+    except (KeyError, TypeError, ValueError, InvalidOperation):
         return False, "LTP_ONLY_OR_MISSING_DEPTH"
-    if bid <= 0 or ask < bid or ask_qty <= 0 or bid_qty <= 0:
+    if not bid.is_finite() or not ask.is_finite() or bid <= 0 or ask <= 0:
         return False, "INVALID_OR_EMPTY_BOOK"
+    if ask < bid:
+        return False, "CROSSED_BOOK"
+    if ask == bid:
+        return False, "LOCKED_BOOK"
+    if ask_qty <= 0 or bid_qty <= 0:
+        return False, "ZERO_DEPTH"
     return True, "EXECUTABLE_TOP_OF_BOOK"
+
+
+def quote_quality_reasons(event: NormalizedEvent, *, intended_qty: int | None = None,
+                          freeze_limit: int | None = None,
+                          max_age_s: float = 5.0, max_spread_bps: float = 50.0) -> list[str]:
+    """Fail-closed quote checks for spread, source age, depth, circuit, auction and freeze limits."""
+    if event.kind != "QUOTE":
+        return ["NOT_A_QUOTE"]
+    if type(max_age_s) not in {int, float} or not isfinite(max_age_s) or max_age_s < 0:
+        raise DataError("max_age_s must be non-negative")
+    if type(max_spread_bps) not in {int, float} or not isfinite(max_spread_bps) or max_spread_bps < 0:
+        raise DataError("max_spread_bps must be non-negative")
+    payload = dict(event.payload)
+    reasons: set[str] = set()
+    try:
+        bid, ask = Decimal(payload["bid_price"]), Decimal(payload["ask_price"])
+        bid_qty, ask_qty = int(payload["bid_qty"]), int(payload["ask_qty"])
+    except (KeyError, TypeError, ValueError, InvalidOperation):
+        return ["MISSING_OR_INVALID_BOOK"]
+    if not bid.is_finite() or not ask.is_finite() or bid <= 0 or ask <= 0:
+        reasons.add("INVALID_BOOK_PRICE")
+    elif ask < bid:
+        reasons.add("CROSSED_BOOK")
+    elif ask == bid:
+        reasons.add("LOCKED_BOOK")
+    if bid_qty <= 0 or ask_qty <= 0:
+        reasons.add("ZERO_DEPTH")
+    source_age = (event.received_utc - event.event_utc).total_seconds()
+    if source_age < 0:
+        reasons.add("FUTURE_SOURCE_TIMESTAMP")
+    elif source_age > max_age_s:
+        reasons.add("STALE_QUOTE")
+    if bid.is_finite() and ask.is_finite() and bid > 0 and ask >= bid:
+        midpoint = (bid + ask) / Decimal(2)
+        spread_bps = (ask - bid) / midpoint * Decimal(10_000)
+        if spread_bps > Decimal(str(max_spread_bps)):
+            reasons.add("WIDE_SPREAD")
+    volume = payload.get("volume")
+    if volume is not None:
+        try:
+            if int(volume) <= 0:
+                reasons.add("ZERO_VOLUME")
+        except (TypeError, ValueError):
+            reasons.add("INVALID_VOLUME")
+    phase = payload.get("market_phase", payload.get("auction_state", "")).upper()
+    if _truthy(payload.get("auction_active")) or phase in {"AUCTION", "PREOPEN", "CLOSING_AUCTION"}:
+        reasons.add("AUCTION_ACTIVE")
+    status = payload.get("exchange_status", "").upper()
+    if _truthy(payload.get("circuit_hit")) or status in {"CIRCUIT", "HALT", "HALTED", "SUSPENDED"}:
+        reasons.add("CIRCUIT_OR_HALT")
+    try:
+        lower = Decimal(payload["circuit_lower"]) if payload.get("circuit_lower") is not None else None
+        upper = Decimal(payload["circuit_upper"]) if payload.get("circuit_upper") is not None else None
+        if ((lower is not None and lower > 0 and bid <= lower)
+                or (upper is not None and upper > 0 and ask >= upper)):
+            reasons.add("CIRCUIT_BAND")
+    except InvalidOperation:
+        reasons.add("INVALID_CIRCUIT_BAND")
+    freeze = freeze_limit if freeze_limit is not None else payload.get("freeze_qty")
+    if freeze is not None:
+        try:
+            if int(freeze) <= 0:
+                reasons.add("INVALID_FREEZE_LIMIT")
+            elif intended_qty is None:
+                reasons.add("MISSING_INTENT_QUANTITY")
+            elif type(intended_qty) is not int or intended_qty <= 0:
+                reasons.add("INVALID_INTENT_QUANTITY")
+            elif intended_qty > int(freeze):
+                reasons.add("FREEZE_LIMIT")
+        except (TypeError, ValueError):
+            reasons.add("INVALID_FREEZE_LIMIT")
+    return sorted(reasons)
+
+
+def _truthy(value: str | None) -> bool:
+    return isinstance(value, str) and value.strip().lower() in {"1", "true", "yes", "active"}
 
 
 # ---- calendar (FE-0034) ----
@@ -175,14 +266,36 @@ class FeedHealth:
     gaps: int
     disconnects: int
     dropped_updates: int
+    duplicates: int = 0
+    reconnects: int = 0
+    last_heartbeat_utc: datetime | None = None
+
+    def __post_init__(self) -> None:
+        if any(type(value) is not int or value < 0 for value in (
+                self.gaps, self.disconnects, self.dropped_updates, self.duplicates, self.reconnects)):
+            raise DataError("feed-health counters must be non-negative integers")
+        for label, value in (("last available", self.last_available_utc),
+                             ("last heartbeat", self.last_heartbeat_utc)):
+            if value is not None:
+                _aware(value, label)
 
 
 def entry_allowed(health: FeedHealth, now: datetime, *, max_age: timedelta = timedelta(seconds=5)) -> tuple[bool, list[str]]:
     reasons = []
     if health.last_available_utc is None:
         reasons.append("NO_QUOTES")
-    elif _aware(now, "now") - _aware(health.last_available_utc, "last") > max_age:
-        reasons.append("STALE_QUOTE")
+    else:
+        quote_age = _aware(now, "now") - _aware(health.last_available_utc, "last")
+        if quote_age < timedelta(0):
+            reasons.append("FUTURE_QUOTE")
+        elif quote_age > max_age:
+            reasons.append("STALE_QUOTE")
+    if health.last_heartbeat_utc is not None:
+        heartbeat_age = _aware(now, "now") - _aware(health.last_heartbeat_utc, "heartbeat")
+        if heartbeat_age < timedelta(0):
+            reasons.append("FUTURE_HEARTBEAT")
+        elif heartbeat_age > max_age:
+            reasons.append("STALE_HEARTBEAT")
     if health.gaps:
         reasons.append("QUOTE_GAP")
     if health.disconnects:

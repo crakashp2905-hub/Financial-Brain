@@ -17,6 +17,11 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, time, timedelta, timezone
+from decimal import Decimal, InvalidOperation
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..forward_edge.raw_quote_archive import RawQuoteArchive
 
 IST = timezone(timedelta(hours=5, minutes=30))
 OPEN, CLOSE = time(9, 15), time(15, 30)
@@ -57,7 +62,10 @@ def snapshot(con, symbols: list[str], *, quote_fn=None, now: datetime | None = N
 
 
 def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime | None = None,
-                   rejections_out: list[dict] | None = None):
+                   ingested_at: datetime | None = None,
+                   rejections_out: list[dict] | None = None, clock_provider=None,
+                   raw_archive: RawQuoteArchive | None = None,
+                   source_timestamp_tolerance: timedelta | None = None):
     """Capture read-only Kite full quotes as forward-edge events.
 
     An exchange timestamp is mandatory: receipt time is never substituted for it.
@@ -66,16 +74,29 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
     returning only valid normalized events; invalid rows are never repaired or forward-filled.
     """
     from ..forward_edge.market_data import DataError, NormalizedEvent
+    from ..forward_edge.session_clock import ClockError, SessionClockProvider
     from ..providers import kite_data as kd
 
     if not symbols or len(set(symbols)) != len(symbols):
         raise DataError("symbols must be nonempty and unique")
+    if source_timestamp_tolerance is not None and (
+            not isinstance(source_timestamp_tolerance, timedelta) or source_timestamp_tolerance < timedelta(0)):
+        raise DataError("source timestamp tolerance must be a non-negative timedelta")
     keys = [f"NSE:{symbol}" for symbol in symbols]
+    if clock_provider is not None and (received_at is not None or ingested_at is not None):
+        raise DataError("use the injected clock provider or explicit timestamps, not both")
+    clock = clock_provider or SessionClockProvider()
+    if received_at is not None:
+        if received_at.tzinfo is None or received_at.utcoffset() is None:
+            raise DataError("received_at must be timezone-aware")
+        received_at = received_at.astimezone(timezone.utc)
+    if ingested_at is not None:
+        if ingested_at.tzinfo is None or ingested_at.utcoffset() is None:
+            raise DataError("ingested_at must be timezone-aware")
+        ingested_at = ingested_at.astimezone(timezone.utc)
+    if received_at is not None and ingested_at is not None and ingested_at < received_at:
+        raise DataError("ingest clock cannot precede source availability")
     raw = (quote_fn or kd.quote)(keys, "full")
-    receipt = received_at or datetime.now(timezone.utc)
-    if receipt.tzinfo is None or receipt.utcoffset() is None:
-        raise DataError("received_at must be timezone-aware")
-    receipt = receipt.astimezone(timezone.utc)
     events = []
 
     def reject(key: str, raw_quote: object, reason: str) -> None:
@@ -103,10 +124,30 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
         # Kite's exchange timestamps are India-local when the API omits a zone.
         if stamp.tzinfo is None:
             stamp = stamp.replace(tzinfo=IST)
+        exchange_at = stamp.astimezone(timezone.utc)
+        if received_at is None:
+            try:
+                receipt = clock.receive_time(exchange_at)
+            except ClockError as exc:
+                raise DataError(str(exc)) from exc
+        else:
+            receipt = available = received_at
+        source_age = receipt - exchange_at
+        if source_age < timedelta(0):
+            reject(key, quote, "FUTURE_EXCHANGE_TIMESTAMP")
+            continue
+        if source_timestamp_tolerance is not None and source_age > source_timestamp_tolerance:
+            reject(key, quote, "STALE_EXCHANGE_TIMESTAMP")
+            continue
         payload = [("exchange", "NSE"), ("source", "kite_connect")]
         raw_hash = hashlib.sha256(json.dumps(quote, sort_keys=True, separators=(",", ":"),
-                                          default=str).encode("utf-8")).hexdigest()
+                                          ensure_ascii=False, default=str, allow_nan=False)
+                             .encode("utf-8")).hexdigest()
         payload.append(("raw_sha256", raw_hash))
+        payload.append(("exchange_timestamp_age_ms", str(int(source_age.total_seconds() * 1000))))
+        if source_timestamp_tolerance is not None:
+            payload.append(("exchange_timestamp_tolerance_ms",
+                            str(int(source_timestamp_tolerance.total_seconds() * 1000))))
         if quote.get("last_price") is not None:
             payload.append(("last_price", str(quote["last_price"])))
         depth = quote.get("depth")
@@ -114,8 +155,13 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
         sells = depth.get("sell", []) if isinstance(depth, dict) else []
         best_bid = buys[0] if buys and isinstance(buys[0], dict) else {}
         best_ask = sells[0] if sells and isinstance(sells[0], dict) else {}
-        payload.append(("quote_fidelity", "EXECUTABLE" if _valid_level(best_bid) and _valid_level(best_ask)
-                        else "LTP_ONLY"))
+        if not _valid_level(best_bid) or not _valid_level(best_ask):
+            quote_fidelity = "LTP_ONLY"
+        else:
+            bid_price, ask_price = Decimal(str(best_bid["price"])), Decimal(str(best_ask["price"]))
+            quote_fidelity = ("CROSSED_BOOK" if bid_price > ask_price else
+                              "LOCKED_BOOK" if bid_price == ask_price else "EXECUTABLE")
+        payload.append(("quote_fidelity", quote_fidelity))
         for side, level in (("bid", best_bid), ("ask", best_ask)):
             if _valid_level(level):
                 payload.extend(((f"{side}_price", str(level["price"])),
@@ -127,20 +173,108 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
                 ohlc.get(source.split(".")[1]) if isinstance(ohlc, dict) else None)
             if value is not None:
                 payload.append((key_name, str(value)))
+        for key_name, source in (("circuit_lower", "lower_circuit_limit"),
+                                 ("circuit_upper", "upper_circuit_limit"),
+                                 ("auction_active", "auction_active"),
+                                 ("market_phase", "market_phase")):
+            value = quote.get(source)
+            if value is not None:
+                payload.append((key_name, str(value)))
         try:
+            if received_at is None:
+                available = clock.availability_time(exchange_at, receipt)
+            try:
+                ingested = ingested_at or clock.now_utc("ingest")
+            except ClockError as exc:
+                raise DataError(str(exc)) from exc
+            if ingested < available:
+                raise DataError("ingest clock cannot precede source availability")
+            if raw_archive is not None:
+                archive_ref = raw_archive.append_quote(key, quote, received_at=receipt,
+                                                      available_at=available)
+                if archive_ref.get("payload_sha256") != raw_hash:
+                    raise DataError("raw quote archive digest does not match normalized source digest")
+                payload.extend((("raw_archive_seq", str(archive_ref["archive_seq"])),
+                                ("raw_archive_sha256", str(archive_ref["archive_chain_sha256"]))))
             events.append(NormalizedEvent(
-                kind="QUOTE", instrument=key, event_utc=stamp.astimezone(timezone.utc),
-                received_utc=receipt, available_utc=receipt, payload=tuple(sorted(payload)),
+                kind="QUOTE", instrument=key, event_utc=exchange_at,
+                received_utc=receipt, available_utc=available, payload=tuple(sorted(payload)),
+                ingested_utc=ingested,
             ))
         except DataError:
             reject(key, quote, "INVALID_EVENT_CLOCK_ORDER")
     return events
 
 
+def historical_bar_events(symbol: str, instrument_token: int, start, as_of, *, fetched_at: datetime,
+                          interval: str = "minute", continuous: bool = False, oi: bool = False,
+                          candles_fn=None, raw_archive: RawQuoteArchive | None = None):
+    """Fetch and optionally archive Kite historical candles as availability-safe BAR events.
+
+    Kite candle timestamps identify the source bar, but a historical download is not
+    evidence that the bar was known at that past time. ``fetched_at`` is therefore
+    both receipt and availability time. Such events are usable for reproducible
+    historical audits, not retroactive prospective-decision claims.
+    """
+    from decimal import Decimal, InvalidOperation
+
+    from ..forward_edge.market_data import DataError, NormalizedEvent
+    from ..providers import kite_data as kd
+
+    if not isinstance(symbol, str) or not symbol.strip():
+        raise DataError("symbol is required for historical candle capture")
+    if type(instrument_token) is not int or instrument_token <= 0:
+        raise DataError("a positive Kite instrument token is required")
+    if fetched_at.tzinfo is None or fetched_at.utcoffset() is None:
+        raise DataError("candle retrieval time must be timezone-aware")
+    available = fetched_at.astimezone(timezone.utc)
+    fetch = candles_fn or kd.candles
+    rows = fetch(instrument_token, start, as_of, interval=interval,
+                 continuous=continuous, oi=oi)
+    events = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise DataError("Kite candle rows must be objects")
+        stamp = row.get("ts")
+        if isinstance(stamp, str):
+            try:
+                stamp = datetime.fromisoformat(stamp)
+            except ValueError as exc:
+                raise DataError("Kite candle timestamp is invalid") from exc
+        if not isinstance(stamp, datetime):
+            raise DataError("Kite candle timestamp is missing")
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=IST)
+        event_at = stamp.astimezone(timezone.utc)
+        try:
+            prices = {key: Decimal(str(row[key])) for key in ("open", "high", "low", "close")}
+            volume = int(row["volume"])
+        except (KeyError, TypeError, ValueError, InvalidOperation) as exc:
+            raise DataError("Kite candle OHLCV is incomplete or invalid") from exc
+        if (any(not value.is_finite() or value <= 0 for value in prices.values())
+                or prices["high"] < max(prices["open"], prices["close"], prices["low"])
+                or prices["low"] > min(prices["open"], prices["close"]) or volume < 0):
+            raise DataError("Kite candle OHLCV values violate price or volume bounds")
+        payload = {"source": "kite_historical", "interval": interval,
+                   **{key: str(value) for key, value in prices.items()}, "volume": str(volume)}
+        if row.get("oi") is not None:
+            payload["oi"] = str(row["oi"])
+        event = NormalizedEvent(kind="BAR", instrument=symbol, event_utc=event_at,
+                                received_utc=available, available_utc=available,
+                                payload=tuple(sorted(payload.items())))
+        events.append(event)
+    events.sort(key=lambda event: (event.event_utc, event.content_sha256()))
+    if raw_archive is not None:
+        for event in events:
+            raw_archive.append_market_event(event, source="kite_historical")
+    return events
+
+
 def _valid_level(level: dict) -> bool:
     try:
-        return float(level["price"]) > 0 and int(level["quantity"]) > 0
-    except (KeyError, TypeError, ValueError):
+        price, quantity = Decimal(str(level["price"])), int(level["quantity"])
+        return price.is_finite() and price > 0 and quantity > 0
+    except (KeyError, TypeError, ValueError, InvalidOperation):
         return False
 
 

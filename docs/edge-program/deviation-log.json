@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "protocol": "Financial_Brain_Real_Paper_Profitability_In_House_Master_Checklist_2026-11-12.md",
+  "version": "main 91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1; review captured 2026-11-13",
+  "deviations": [
+    {
+      "id": "DEV-001",
+      "author": "Codex repository implementation session",
+      "clock_utc": "2026-11-13T04:23:17Z",
+      "deviation": "No current independently attested live-market session or quote is available as evidence.",
+      "evidence_effect": "Real-feed freshness and prospective trading status remain incomplete; no profitability claim is allowed.",
+      "rollback": "No evidence state is promoted. Capture a fresh authorized session with verified pre-entry custody, then append its immutable evidence package."
+    },
+    {
+      "id": "DEV-002",
+      "author": "Codex repository implementation session",
+      "clock_utc": "2026-11-13T04:23:17Z",
+      "deviation": "Provider access, retention rights, and request/publication latency remain unverified for the configured external sources.",
+      "evidence_effect": "Affected source rows remain UNVERIFIED; data cannot be treated as rights-cleared or freshness-qualified.",
+      "rollback": "Keep affected source inputs out of promotion-grade cohorts until provider-specific terms and measured latency are recorded."
+    },
+    {
+      "id": "DEV-003",
+      "author": "Codex repository implementation session",
+      "clock_utc": "2026-11-13T03:49:08Z",
+      "deviation": "The active data/paper_live.duckdb writer had a changing WAL during backup capture; the database was not copied or checkpointed.",
+      "evidence_effect": "Backup evidence covers 11 stable artifacts, but the active paper book remains unbacked-up in that snapshot.",
+      "rollback": "After the writer closes cleanly, rerun the safe backup and restore-check process; do not copy or delete the live WAL."
+    },
+    {
+      "id": "DEV-004",
+      "author": "Codex repository implementation session",
+      "clock_utc": "2026-11-13T04:23:17Z",
+      "deviation": "Legacy intraday/options paper stores and the newer durable forward runner are not yet integrated behind one shared accounting and order-state authority.",
+      "evidence_effect": "Paper results remain scoped to their separate books; cross-engine reconciliation and single-book capability are not established.",
+      "rollback": "No stores are merged or rewritten. Finish a versioned migration and reconcile source balances before any cutover; retain read-only backups."
+    },
+    {
+      "id": "DEV-005",
+      "author": "Codex repository implementation session",
+      "clock_utc": "2026-11-13T04:23:17Z",
+      "deviation": "The protected Q4 2026 trial budget is exhausted and every existing trial remains failed; no validated prospective net-alpha result exists.",
+      "evidence_effect": "Research remains YELLOW and no strategy promotion or profitability claim is supported.",
+      "rollback": "Do not edit closed results or silently add trials. A future confirmatory protocol requires the protected Q1 2027 pathway and valid owner approval."
+    },
+    {
+      "id": "DEV-006",
+      "author": "Codex repository implementation session",
+      "clock_utc": "2026-11-13T04:23:17Z",
+      "deviation": "The lockfile is exact-version pinned, but CI does not install from it and clean offline installations have not been verified on both platforms.",
+      "evidence_effect": "Runtime reproducibility is PARTIAL despite the Python version, seed, timezone, and fixture signatures being pinned or tested.",
+      "rollback": "Do not declare reproducibility complete; retain the existing install path until a platform-aware lock and offline wheelhouse check pass on both operating systems."
+    }
+  ]
+}

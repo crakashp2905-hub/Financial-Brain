@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0042",
+  "status": "PARTIAL",
+  "scope": "Deterministic per-session reporting over the frozen configured instrument set and strategy-emitted candidates.",
+  "implemented": [
+    "Each finalized session report includes its exchange date denominator, planned/quoted/missing instrument counts, and quote-event count.",
+    "Strategy candidate count and quote coverage are reported; actionable BUY/SELL decisions count as one candidate when no candidate list is emitted.",
+    "Execution receipts contribute accepted/rejected quote counts, filled quote count, missed candidate count, and a lost-opportunity denominator.",
+    "Candidate notional is reported only when explicitly supplied; unavailable notional and quote-receipt denominators are identified rather than imputed.",
+    "Reports explicitly label the denominator universe as strategy output, not market-wide opportunity discovery."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_session_runner.py -q",
+    "result": "27 passed (exit code 0); Ruff and mypy passed for session_runner.py.",
+    "cases": [
+      "test_session_report_preserves_coverage_and_lost_opportunity_denominators",
+      "test_session_report_exposes_unavailable_candidate_notional_denominator"
+    ]
+  },
+  "limitations": [
+    "Coverage is limited to configured instruments and strategy-emitted candidates; it is not a market-wide scanner denominator.",
+    "Candidate notional must be emitted by the strategy; no notional is inferred from absent price/quantity fields.",
+    "Fixtures establish report behavior only; no prospective Kite quote coverage or real missed-opportunity rates are claimed."
+  ]
+}

@@ -63,6 +63,122 @@ def test_runner_persists_visible_events_decision_risk_and_paper_execution(tmp_pa
     assert states == ["PLANNED", "PREFLIGHT", "OPEN", "DRAINING", "CLOSED"]
 
 
+def test_session_report_preserves_coverage_and_lost_opportunity_denominators(tmp_path):
+    event = _event()
+    digest = event.content_sha256()
+    config = _config(instruments=("NSE:INFY", "NSE:TCS"))
+    runner = ForwardSessionRunner(tmp_path / "coverage.jsonl")
+    runner.record_preflight(config, {"approved": True, "status": "PASS"})
+    result = runner.run(
+        config, [event], decision_at=NOW,
+        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 10,
+                               "candidate_notional_inr": "10000"},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {
+            "status": "MISSED", "receipt_id": "missed-coverage",
+            "fidelity": "SIMULATED_QUOTE", "simulated_execution_at_utc": NOW.isoformat(),
+            "quote_inputs": [{"event_sha256": digest, "quote_id": f"event:{digest}"}],
+            "fills": [],
+        },
+    )
+    coverage = result["opportunity_coverage"]
+    assert coverage["exchange_date"] == "2026-11-12"
+    assert coverage["session_date_denominator"] == 1
+    assert coverage["planned_instrument_count"] == 2
+    assert coverage["quoted_instrument_count"] == 1
+    assert coverage["missing_quote_instruments"] == ["NSE:TCS"]
+    assert coverage["candidate_signal_count"] == 1
+    assert coverage["candidate_signal_quote_covered_count"] == 1
+    assert coverage["candidate_notional_denominator_inr"] == "10000"
+    assert coverage["filled_notional_inr"] == "0"
+    assert coverage["missed_candidate_signal_count"] == 1
+    assert coverage["lost_opportunity_denominator_count"] == 1
+    assert coverage["candidate_universe_scope"] == "STRATEGY_OUTPUT_NOT_MARKET_WIDE"
+    assert coverage["missing_denominators"] == []
+
+
+def test_session_report_exposes_unavailable_candidate_notional_denominator(tmp_path):
+    runner = ForwardSessionRunner(tmp_path / "missing-denominator.jsonl")
+    config = _config()
+    runner.record_preflight(config, {"approved": True, "status": "PASS"})
+    result = runner.run(
+        config, [_event()], decision_at=NOW,
+        decision_fn=lambda _: {"side": "BUY", "instrument": "NSE:INFY", "quantity": 2},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {
+            "status": "MISSED", "receipt_id": "missing-notional",
+            "fidelity": "SIMULATED_QUOTE", "simulated_execution_at_utc": NOW.isoformat(),
+            "fills": [],
+        },
+    )
+    coverage = result["opportunity_coverage"]
+    assert coverage["candidate_signal_count"] == 1
+    assert coverage["candidate_notional_denominator_inr"] is None
+    assert coverage["missing_denominators"] == ["CANDIDATE_NOTIONAL_INR", "EXECUTION_QUOTE_RECEIPTS"]
+
+
+def test_runner_uses_injected_decision_and_simulated_execution_clocks(tmp_path):
+    from financial_brain.forward_edge.session_clock import SessionClockProvider
+
+    ticks = iter((NOW, NOW + timedelta(milliseconds=5)))
+    runner = ForwardSessionRunner(tmp_path / "injected-clock.jsonl",
+                                  clock_provider=SessionClockProvider(lambda: next(ticks)))
+    _approve_preflight(runner)
+    result = runner.run(
+        _config(), [_event()],
+        decision_fn=lambda visible: {"side": "BUY", "visible_count": len(visible)},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "clocked-sim",
+                                 "fidelity": "SIMULATED_QUOTE"},
+    )
+    assert result["decision"]["visible_count"] == 1
+    assert result["execution"]["simulated_execution_at_utc"] == (
+        NOW + timedelta(milliseconds=5)).isoformat()
+
+
+def test_injected_decision_clock_excludes_later_available_market_event(tmp_path):
+    from financial_brain.forward_edge.session_clock import SessionClockProvider
+
+    runner = ForwardSessionRunner(tmp_path / "future-event.jsonl",
+                                  clock_provider=SessionClockProvider(lambda: NOW))
+    calls = []
+    result = runner.run(
+        _config(), [_event(NOW + timedelta(seconds=2))],
+        decision_fn=lambda visible: calls.append(visible) or {"side": "NONE"},
+        risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {},
+    )
+    assert result["decision_event_count"] == 0
+    assert calls == [[]]
+
+
+def test_one_clock_provider_spans_kite_capture_decision_and_paper_execution(tmp_path):
+    from financial_brain.ingest.kite_live import forward_events
+    from financial_brain.forward_edge.session_clock import SessionClockProvider
+
+    ticks = iter(NOW + timedelta(milliseconds=step) for step in (1, 2, 3, 4, 5))
+    clock = SessionClockProvider(lambda: next(ticks))
+    events = forward_events(
+        ["INFY"],
+        quote_fn=lambda *_: {"NSE:INFY": {
+            "timestamp": "2026-11-12T09:30:00+05:30", "last_price": 1500,
+        }},
+        clock_provider=clock,
+    )
+    runner = ForwardSessionRunner(tmp_path / "same-provider.jsonl", clock)
+    _approve_preflight(runner)
+    result = runner.run(
+        _config(), events, decision_fn=lambda visible: {"side": "BUY", "count": len(visible)},
+        risk_fn=lambda _: {"approved": True},
+        execution_fn=lambda *_: {"status": "MISSED", "receipt_id": "shared-clock",
+                                 "fidelity": "SIMULATED_QUOTE"},
+    )
+    assert events[0].received_utc == NOW + timedelta(milliseconds=1)
+    assert events[0].available_utc == NOW + timedelta(milliseconds=2)
+    assert result["decision"]["count"] == 1
+    assert result["execution"]["simulated_execution_at_utc"] == (
+        NOW + timedelta(milliseconds=5)).isoformat()
+
+
 def test_market_polls_can_be_durably_appended_before_session_finalization(tmp_path):
     path = tmp_path / "stream.jsonl"
     config = _config()
@@ -76,6 +192,27 @@ def test_market_polls_can_be_durably_appended_before_session_finalization(tmp_pa
                            risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
     assert result["event_count"] == 1
     assert decision_counts == [1]
+
+
+def test_ingest_clock_and_raw_source_hash_survive_durable_event_round_trip(tmp_path):
+    path = tmp_path / "ingest-lineage.jsonl"
+    runner = ForwardSessionRunner(path)
+    event = NormalizedEvent(
+        "QUOTE", "NSE:INFY", NOW - timedelta(seconds=3), NOW - timedelta(seconds=2),
+        NOW - timedelta(seconds=2), (("raw_sha256", "d" * 64), ("source", "kite_connect")),
+        ingested_utc=NOW - timedelta(seconds=1),
+    )
+    assert runner.append_events(_config(), [event]) == 1
+    record, = [r for r in DurableJournal(path).records() if r["t"] == "MARKET_EVENT"]
+    assert record["event"]["ingested_utc"] == (NOW - timedelta(seconds=1)).isoformat()
+    assert dict(tuple(item) for item in record["event"]["payload"])["raw_sha256"] == "d" * 64
+    restarted = ForwardSessionRunner(path)
+    result = restarted.run(_config(), [], decision_at=NOW,
+                           decision_fn=lambda visible: {"side": "NONE", "visible": len(visible)},
+                           risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
+    assert result["decision"]["visible"] == 1
+    replayed, = [r for r in DurableJournal(path).records() if r["t"] == "MARKET_EVENT"]
+    assert replayed["event"]["ingested_utc"] == record["event"]["ingested_utc"]
 
 
 def test_closed_session_is_replayed_without_reexecuting(tmp_path):
@@ -105,12 +242,35 @@ def test_no_trade_signal_never_reaches_execution_adapter(tmp_path):
 
 
 def test_run_config_hash_normalizes_capital_and_rejects_duplicate_instruments():
-    assert _config().sha256 == "99aae10b3c9a27e3c34bddaa20134655d50f2611a17bfcf8ecaebd59eb185677"
+    assert _config().sha256 == "657cb827a9e223c0ba7cb49cbb0b5ff114891979aaa53ff41649da7c1a9de363"
     assert _config(capital_inr="1000000.00").sha256 == _config(capital_inr="1000000").sha256
     assert _config(ledger_id="LEDGER-2").sha256 != _config().sha256
     assert _config(risk_policy_sha256="d" * 64).sha256 != _config().sha256
     with pytest.raises(RunnerError, match="unique"):
         _config(instruments=("NSE:INFY", "NSE:INFY")).canonical()
+
+
+def test_attempts_append_under_one_session_key_without_overwriting_prior_result(tmp_path):
+    path = tmp_path / "attempts.jsonl"
+    first = _config(session_id="S-ATTEMPT-1", attempt_id="attempt-1")
+    second = _config(session_id="S-ATTEMPT-2", attempt_id="attempt-2")
+    assert first.session_key == second.session_key
+    assert first.sha256 != second.sha256
+    runner = ForwardSessionRunner(path)
+    first_result = runner.run(first, [_event()], decision_at=NOW,
+                              decision_fn=lambda _: {"side": "NONE", "reason": "FIRST_ATTEMPT"},
+                              risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
+    before = [row for row in DurableJournal(path).records() if row.get("session_id") == first.session_id]
+    second_result = runner.run(second, [_event()], decision_at=NOW,
+                               decision_fn=lambda _: {"side": "NONE", "reason": "SECOND_ATTEMPT"},
+                               risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
+    after = [row for row in DurableJournal(path).records() if row.get("session_id") == first.session_id]
+    assert before == after
+    assert first_result["reason"] == "FIRST_ATTEMPT"
+    assert second_result["reason"] == "SECOND_ATTEMPT"
+    assert len([row for row in DurableJournal(path).records() if row.get("t") == "SESSION_PLAN"]) == 2
+    with pytest.raises(RunnerError, match="attempt_id already exists"):
+        runner.begin(_config(session_id="S-ATTEMPT-3", attempt_id="attempt-1"))
 
 
 def test_pending_outbox_requires_reconciliation_after_unknown_side_effect(tmp_path):
@@ -125,6 +285,7 @@ def test_pending_outbox_requires_reconciliation_after_unknown_side_effect(tmp_pa
         if intent_id not in executions:
             executions[intent_id] = {
                 "status": "FILLED", "receipt_id": "sim-fill-F-1", "fidelity": "SIMULATED_QUOTE",
+                    "simulated_execution_at_utc": (NOW + timedelta(seconds=1)).isoformat(),
                 "fills": [{"fill_id": "F-1", "quantity": 10, "price": "100.00"}],
             }
             if len(attempts) == 1:
@@ -218,6 +379,7 @@ def test_restart_after_execution_receipt_before_ack_does_not_repeat_execution(tm
     _approve_preflight(runner)
     calls = []
     receipt = {"status": "FILLED", "receipt_id": "sim-fill-crash", "fidelity": "SIMULATED_QUOTE",
+               "simulated_execution_at_utc": (NOW + timedelta(seconds=1)).isoformat(),
                "fills": [{"fill_id": "F-3", "quantity": 1, "price": "123.45"}]}
     original_append = session_module.DurableJournal.append
     crashed = False

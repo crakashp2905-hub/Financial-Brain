@@ -1,0 +1,160 @@
+{
+  "schema_version": "1.0",
+  "observed_at": "2026-11-13T04:12:02Z",
+  "scope": "Repository-configured external sources used by market, company, macro, or event research; no secret values are recorded.",
+  "status_definitions": {
+    "MISSING": "No configured provider for the required data domain.",
+    "LICENSED": "Applicable access and retention terms have been reviewed and evidence is recorded.",
+    "UNVERIFIED": "A source adapter exists, but access, freshness, or retention rights are not fully verified.",
+    "READY": "Authorization, retention, credentials, freshness, latency, and coverage are verified for the stated use."
+  },
+  "credential_policy": "Record only presence flags and configuration source names; never store or print API keys, tokens, cookies, or account identifiers.",
+  "sources": [
+    {
+      "id": "kite-connect",
+      "status": "UNVERIFIED",
+      "provider": "Zerodha Kite Connect",
+      "domains": ["NSE cash quotes and depth", "historical candles", "F&O instruments and quotes"],
+      "endpoints": ["https://api.kite.trade/quote", "https://api.kite.trade/instruments/historical/"],
+      "source_code": ["src/financial_brain/providers/kite_data.py", "src/financial_brain/ingest/kite_live.py", "src/financial_brain/ingest/kite_history.py", "src/financial_brain/ingest/kite_fno.py", "src/financial_brain/ingest/options_quotes.py", "src/financial_brain/ingest/quote_archive.py", "src/financial_brain/ingest/ticks.py"],
+      "access": {
+        "owner_attestation": "Owner reports an active paid Kite Connect subscription.",
+        "api_key_environment_flag_present": false,
+        "access_token_environment_flag_present": false,
+        "token_file_present": true,
+        "credential_validity": "NOT_AUTHENTICATED_IN_THIS_AUDIT"
+      },
+      "latency": {
+        "service_cadence": "On-demand REST quotes; owner reports minute-scale polling.",
+        "observed_request_latency_ms": null,
+        "last_observed_market_capture": null,
+        "status": "NOT_MEASURED"
+      },
+      "retention_rights": "UNVERIFIED: subscription is owner-attested; exchange data storage, derived-data, and redistribution terms have not been reviewed in this audit.",
+      "use_limitations": ["Read-only adapter; no broker order endpoint.", "LTP-only events are not executable."]
+    },
+    {
+      "id": "nse-official",
+      "status": "UNVERIFIED",
+      "provider": "NSE India and NSE archives",
+      "domains": ["daily bhavcopy", "reference instruments", "delivery", "index closes", "corporate filings and disclosures", "bulk deals", "FII/DII flows", "shareholding filing listing"],
+      "endpoints": ["https://www.nseindia.com/api/corporate-share-holdings-master"],
+      "source_code": ["src/financial_brain/providers/bhavcopy.py", "src/financial_brain/providers/nse_delivery.py", "src/financial_brain/providers/reference.py", "src/financial_brain/providers/nse_results.py", "src/financial_brain/ingest/nse_archives.py", "src/financial_brain/ingest/nse_disclosures.py", "src/financial_brain/ingest/bulk_deals.py", "src/financial_brain/ingest/flows.py", "src/financial_brain/ingest/index_tri.py", "src/financial_brain/ingest/shareholding.py"],
+      "access": {"credential_requirement": "Public endpoints or archive access in code; no dedicated credential configured.", "credential_flag_present": false},
+      "latency": {"service_cadence": "Daily or event publication; per-request and publication latency not measured.", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_MEASURED"},
+      "retention_rights": "UNVERIFIED: source is the exchange, but local retention and reuse rights for each dataset have not been confirmed.",
+      "use_limitations": ["Coverage and source completeness are not established by adapter tests."]
+    },
+    {
+      "id": "nifty-indices",
+      "status": "UNVERIFIED",
+      "provider": "Nifty Indices",
+      "domains": ["index TRI and index reference data"],
+      "endpoints": ["https://www.niftyindices.com/BackPage/getTotalReturnIndexString", "https://www.niftyindices.com/IndexConstituent/"],
+      "source_code": ["src/financial_brain/ingest/index_tri.py"],
+      "access": {"credential_requirement": "Public endpoint in code; no dedicated credential configured.", "credential_flag_present": false},
+      "latency": {"service_cadence": "Publication-specific; fetch latency and history completeness not measured.", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_MEASURED"},
+      "retention_rights": "UNVERIFIED: index data retention and derived-use terms not recorded.",
+      "use_limitations": ["Index TRI does not substitute for constituent quotes or order-book depth."]
+    },
+    {
+      "id": "bse-official",
+      "status": "UNVERIFIED",
+      "provider": "BSE India",
+      "domains": ["daily bhavcopy", "announcements and attachments", "corporate actions", "filings and results", "shareholding XBRL instance format"],
+      "source_code": ["src/financial_brain/providers/bhavcopy.py", "src/financial_brain/providers/bse_announcements.py", "src/financial_brain/providers/bse_corpact.py", "src/financial_brain/providers/bse_filing.py", "src/financial_brain/ingest/shareholding.py"],
+      "access": {"credential_requirement": "Public endpoints in code; no dedicated credential configured.", "credential_flag_present": false},
+      "latency": {"service_cadence": "Daily or event publication; per-request and publication latency not measured.", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_MEASURED"},
+      "retention_rights": "UNVERIFIED: storage and reuse terms for exchange files and attachments have not been reviewed.",
+      "use_limitations": ["Completeness and historical continuity are not independently verified."]
+    },
+    {
+      "id": "amfi-nav",
+      "status": "UNVERIFIED",
+      "provider": "AMFI",
+      "domains": ["mutual-fund scheme NAV"],
+      "source_code": ["src/financial_brain/providers/amfi.py", "src/financial_brain/ingest/mfnav.py"],
+      "access": {"credential_requirement": "Public file endpoint in code; no dedicated credential configured.", "credential_flag_present": false},
+      "latency": {"service_cadence": "Daily publication; actual fetch latency and freshness not measured.", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_MEASURED"},
+      "retention_rights": "UNVERIFIED: downstream storage and redistribution terms not reviewed.",
+      "use_limitations": []
+    },
+    {
+      "id": "fred-macro",
+      "status": "UNVERIFIED",
+      "provider": "Federal Reserve Bank of St. Louis FRED CSV endpoint",
+      "domains": ["US macroeconomic series"],
+      "source_code": ["src/financial_brain/ingest/macro.py"],
+      "access": {"credential_requirement": "Configured CSV endpoint; no key is declared in this adapter.", "credential_flag_present": false},
+      "latency": {"service_cadence": "Series-specific releases; request latency and as-of delay not measured here.", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_MEASURED"},
+      "retention_rights": "UNVERIFIED: applicable series terms and redistribution requirements not recorded.",
+      "use_limitations": ["This is macro data, not a US equity quote feed."]
+    },
+    {
+      "id": "mospi-statistics",
+      "status": "UNVERIFIED",
+      "provider": "Ministry of Statistics and Programme Implementation",
+      "domains": ["India macroeconomic and official statistics"],
+      "source_code": ["src/financial_brain/ingest/mospi.py"],
+      "access": {"credential_requirement": "Endpoint in code; credential needs not verified.", "credential_flag_present": false},
+      "latency": {"service_cadence": "Release-specific; observed latency and freshness not measured.", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_MEASURED"},
+      "retention_rights": "UNVERIFIED: reuse terms not recorded.",
+      "use_limitations": []
+    },
+    {
+      "id": "sebi-publications",
+      "status": "UNVERIFIED",
+      "provider": "Securities and Exchange Board of India RSS",
+      "domains": ["regulatory notices and circulars"],
+      "source_code": ["src/financial_brain/ingest/sebi.py"],
+      "access": {"credential_requirement": "Public RSS endpoint in code; no dedicated credential configured.", "credential_flag_present": false},
+      "latency": {"service_cadence": "Event publication; request latency not measured.", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_MEASURED"},
+      "retention_rights": "UNVERIFIED: reuse and redistribution terms not recorded.",
+      "use_limitations": ["Regulatory text is not a market price feed."]
+    },
+    {
+      "id": "screener-company-data",
+      "status": "UNVERIFIED",
+      "provider": "Screener.in",
+      "domains": ["company financial and valuation pages"],
+      "source_code": ["src/financial_brain/providers/screener.py"],
+      "access": {"credential_requirement": "Web pages in code; account, permission, and rate-limit status not verified.", "credential_flag_present": false},
+      "latency": {"service_cadence": "On demand; request latency and publication delay not measured.", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_MEASURED"},
+      "retention_rights": "UNVERIFIED: scraping, storage, and derived-use permissions not reviewed.",
+      "use_limitations": ["Not an exchange-authoritative data feed."]
+    },
+    {
+      "id": "publisher-news-articles",
+      "status": "UNVERIFIED",
+      "provider": "Source publisher varies by article URL",
+      "domains": ["news article text and event context"],
+      "source_code": ["src/financial_brain/providers/news_article.py", "src/financial_brain/ingest/newsfetch.py"],
+      "access": {"credential_requirement": "Per-host; no universal credential status.", "credential_flag_present": false},
+      "latency": {"service_cadence": "On demand; article publication and fetch delay not measured.", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_MEASURED"},
+      "retention_rights": "UNVERIFIED per publisher; respect robots and publisher terms.",
+      "use_limitations": ["Source-dependent access controls and copyright; no redistribution assumed."]
+    },
+    {
+      "id": "us-equity-quotes",
+      "status": "MISSING",
+      "provider": null,
+      "domains": ["US equity quotes and tradeable depth"],
+      "source_code": [],
+      "access": {"credential_requirement": "No configured provider or credential flag.", "credential_flag_present": false},
+      "latency": {"service_cadence": "NOT_CONFIGURED", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_AVAILABLE"},
+      "retention_rights": "NOT_APPLICABLE until a provider and rights path are selected.",
+      "use_limitations": ["FRED macro data does not substitute for US equity prices or depth."]
+    },
+    {
+      "id": "expired-options-history",
+      "status": "MISSING",
+      "provider": null,
+      "domains": ["complete historical expired Indian option contracts and quotes"],
+      "source_code": [],
+      "access": {"credential_requirement": "No verified complete expired-contract archive source.", "credential_flag_present": false},
+      "latency": {"service_cadence": "NOT_CONFIGURED", "observed_request_latency_ms": null, "last_successful_fetch": null, "status": "NOT_AVAILABLE"},
+      "retention_rights": "NOT_APPLICABLE until a provider and rights path are selected.",
+      "use_limitations": ["Current-chain quotes or index candles do not reconstruct expired option chains."]
+    }
+  ]
+}

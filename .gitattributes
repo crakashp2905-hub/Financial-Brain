@@ -4,3 +4,4 @@ brain/07-Research/*.md text eol=crlf
 "brain/07-Research/Chart patterns and candles - what is testable and how.md" text eol=lf
 docs/sources/pattern-catalogue.v1.json text eol=crlf
 docs/trials/manifests/*.json text eol=crlf
+docs/trials/ledger.jsonl text eol=crlf

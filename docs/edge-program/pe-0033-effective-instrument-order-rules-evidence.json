@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0033",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_kernel_instruments.py tests/test_kernel_options_paper.py tests/test_kernel_futures_paper.py",
+    "result": "23 passed (exit code 0); Ruff and mypy on the effective instrument-rule module passed."
+  },
+  "implemented": [
+    "Instrument rules are effective-dated and carry tick, lot, multiplier, settlement lag, order/freeze limits, exchange, margin/session rule identities, session window and source lineage.",
+    "Order validation selects the historical rule effective on the order date and rejects missing source facts, wrong exchange, non-lot quantity, freeze-limit excess, off-tick price, and outside-session time.",
+    "Order validation now also rejects suspended, delisted or expired instruments using date-effective status/expiry gates before permitting a paper order.",
+    "Regression tests confirm suspended and expired contracts are refused without mutating or repairing order inputs."
+  ],
+  "blockers": [],
+  "scope_note": "Satisfies PE-0033 rule lookup and order-rejection behavior. Rule tables are owner/provider supplied; this task does not configure or independently authenticate a live NSE/BSE instrument-master feed."
+}

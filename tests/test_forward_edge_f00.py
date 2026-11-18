@@ -76,16 +76,16 @@ def test_baseline_write_is_deterministic_for_fixed_clock(tmp_path: Path) -> None
 
 # ---------- FE-0002 trial exhaustion and append-only ledger ----------
 
-def test_q4_2026_protected_budget_is_exhausted_at_13_of_13() -> None:
+def test_q4_2026_protected_budget_is_exhausted_at_14_of_14() -> None:
     status = trials.budget_status(REPO / trials.LEDGER_REL)
-    assert (status.spent, status.budget, status.exhausted) == (13, 13, True)
+    assert (status.spent, status.budget, status.exhausted) == (14, 14, True)
 
 
-def test_all_13_q4_trials_remain_failed_with_original_reasons() -> None:
+def test_all_2026q4_trials_remain_failed_with_original_reasons() -> None:
     rows = trials.load_rows(REPO / trials.LEDGER_REL)
     q4 = [row for row in rows if row.get("kind") == "trial"
           and date(2026, 10, 1) <= date.fromisoformat(row["date"][:10]) <= date(2026, 12, 31)]
-    assert len(q4) == 13
+    assert len(q4) == 14  # trial 14 (V2 intraday family) is the 14th 2026Q4 row
     assert all(row.get("verdict") == "FAIL" for row in q4)
     assert all(isinstance(row.get("failed"), list) and row["failed"] for row in q4)
 
@@ -152,7 +152,7 @@ def test_trial_in_2027q1_needs_only_a_protected_trial_approval(tmp_path) -> None
         approvals=(_approval("PROTECTED_TRIAL", subject="M1-2027", scope=spec.sha256()),), now=NOW,
         scope_sha256=spec.sha256(), charter=spec, cohort_schedule=cohort_schedule,
         charter_registry=charter.CharterRegistry(tmp_path / "m1.jsonl"))
-    assert ok.spent == 13  # the 2026Q4 count is not the 2027Q1 budget
+    assert ok.spent == 14  # the 2026Q4 count is not the 2027Q1 budget
 
 
 def test_prospective_cohort_cannot_register_without_human_trial_approval(tmp_path) -> None:

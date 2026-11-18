@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0046",
+  "status": "PARTIAL",
+  "scope": "Duplicate-parameter rejection for failed registry entries with an explicit canonical parameter digest.",
+  "implemented": [
+    "Strategy specs can retain a validated SHA-256 parameter identity.",
+    "Registry rejects the same parameter digest when a failed trial is re-registered under a renamed strategy ID or family.",
+    "The canonical parameter digest is independent of mapping key order and rejects non-finite/non-JSON input.",
+    "Existing failed-trial ledger and FAILED status history remain immutable."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f02.py -q",
+    "result": "26 passed (exit code 0); Ruff and mypy passed for registry.py.",
+    "cases": [
+      "test_registry_rejects_renamed_retry_of_failed_parameter_hash",
+      "test_every_recorded_trial_maps_to_a_failed_registry_entry",
+      "test_transition_creates_a_new_version_and_keeps_the_old_one"
+    ]
+  },
+  "limitations": [
+    "The existing 13 historical failure rows do not contain canonical parameter hashes, so exact duplicate detection cannot yet be backfilled for those trials without their original parameter artifacts.",
+    "Registration only enforces duplicate protection when parameter_sha256 is supplied."
+  ]
+}

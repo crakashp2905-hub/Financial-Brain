@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0030",
+  "status": "PARTIAL",
+  "source_sha256": {
+    "src/financial_brain/ingest/kite_live.py": "37f40028f188ac29a5b0d951681fef095e61f4621cd0c7ed1792d818f6419ca2",
+    "src/financial_brain/forward_edge/market_data.py": "f9b4ee1847b48373ea4305dd09247d679ceff97414b6e5ea2455d66bc64df43c",
+    "src/financial_brain/forward_edge/raw_quote_archive.py": "5ebba04be09994903f71bb6db19c065b154af037c73a24ed33f286fa7fc240df",
+    "src/financial_brain/forward_edge/paper_execution_adapter.py": "74095ac98b161f3b46f68a15c66e1ec9e04d2deb783c03c2c4857ad6bec2a705",
+    "src/financial_brain/paper/intraday_runner.py": "d689bb41e4e00c67466858c699efe6bc61372eecfbe7ba45f62d73fba31a0087",
+    "tests/test_kite_forward_events.py": "fb1a4426e9b534a3297848ab3c4df87810112500c706367023f19c10c9a7f342",
+    "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
+    "tests/test_raw_quote_archive.py": "c1d3462193fbed60590bca1108b5c8c68c273924fc6c5bb352e5904bf6437bd2",
+    "tests/test_phase5_intraday_runner.py": "aaa3c664a6ba77a05392488a44cfe33c51df47f187a7e6f1648a3b9568ddb13e"
+  },
+  "tests": {
+    "command": "python -m pytest -q tests/test_raw_quote_archive.py tests/test_kite_forward_events.py tests/test_phase5_intraday_runner.py tests/test_forward_session_runner.py",
+    "result": "54 passed (exit code 0); Ruff and mypy passed."
+  },
+  "verified": [
+    "Normalized events preserve exchange, receipt, availability and ingest clocks.",
+    "Depth fidelity is explicit; LTP-only or crossed/empty depth is not treated as executable.",
+    "Optional raw object archive and paper fill receipt have a verifiable hash-linked lineage.",
+    "Existing Kite read-only poll loop can opt into forwarding and archive capture using synthetic tests."
+  ],
+  "not_verified": [
+    "No live Kite session data was captured.",
+    "Observed request latency, market-feed freshness, quote/depth coverage and real missed-fill rates are not measured."
+  ],
+  "secrets_or_market_payloads_included": false
+}

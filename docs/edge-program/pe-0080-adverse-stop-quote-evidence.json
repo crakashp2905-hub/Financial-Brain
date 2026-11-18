@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0080",
+  "status": "DONE",
+  "test": {
+    "command": "python -m pytest -q tests/test_kernel_fills.py",
+    "result": "13 passed (exit code 0); Ruff, mypy for kernel/fills.py, and diff checks passed."
+  },
+  "verified": [
+    "When a single OHLC bar touches both stop and target, the resolver selects the adverse stop outcome.",
+    "A long exit crosses the bid side and a short exit crosses the ask side using half of the supplied full spread.",
+    "Long and short ambiguous-collision scenarios are tested together, with worse executable prices than the stop reference."
+  ],
+  "limitations": [
+    "Spread values in tests are synthetic and do not calibrate adverse selection from market observations.",
+    "The resolver models the spread crossing, not additional queue, gap, or market-impact slippage beyond the OHLC gap rule and supplied spread."
+  ],
+  "source_sha256": {
+    "src/financial_brain/kernel/fills.py": "159f83dad8d597867e01a0532c4783a1f6b1f529b8719a1b397ca7e18be4359e",
+    "tests/test_kernel_fills.py": "cf668064b427413672489d06b352c668fd9c91d9e8fc6bdc60c13c9fcdcf407d"
+  }
+}

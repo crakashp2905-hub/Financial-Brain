@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0056",
+  "status": "PARTIAL",
+  "implemented": [
+    "Forward-edge StrategySpec construction fails closed without a structured mechanism hypothesis.",
+    "Hypothesis requires why the effect exists, why it may persist, who may pay, relevant regimes, and a falsifier.",
+    "Hypothesis strings and regimes are normalized and immutable; canonical SHA-256 identity is exposed by StrategySpec.",
+    "Current ORB/gap/chart, exploratory slow-factor, and futures-carry candidates provide family-specific conjectures while remaining non-promotable."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_forward_edge_f02.py tests/test_monitoring_candidates.py tests/test_futures_carry_governance.py -q",
+    "result": "46 passed (exit code 0); Ruff and mypy passed. Strategy-variant inventory --check passes (253 candidates); source inventory --check passes (562 Python files).",
+    "cases": [
+      "test_structured_mechanism_hypothesis_is_required_and_content_addressable",
+      "test_mechanism_hypothesis_rejects_missing_economic_claim_or_falsifier",
+      "test_orb_gap_directional_and_chart_specs_are_shadow_monitoring_only",
+      "test_futures_candidates_are_explicitly_shadow_and_cannot_pass_registry_intent_gate"
+    ]
+  },
+  "limitations": [
+    "The wider 253-entry strategy inventory and legacy algorithms are not all registered with mechanism hypotheses.",
+    "No prospective observations have tested these economic conjectures; no profitability is claimed."
+  ]
+}

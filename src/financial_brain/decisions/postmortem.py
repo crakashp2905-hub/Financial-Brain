@@ -11,7 +11,10 @@ this system exists to prevent. What works at this sample size is duller and chec
    name was, how confident the committee's own stances were.
 3. **Count.** A feature is a candidate lesson only when enough trades share it and the
    difference is material. Below that it is a story about two trades.
-4. **Gate.** A confirmed lesson becomes a pre-trade check with its support attached, so a
+4. **Control the number of looks.** Five features and a handful of values each means a dozen groups examined;
+   one or two will look bad by chance. A lesson must also survive Benjamini-Hochberg false-discovery control
+   across every group examined (one-sided Welch test of the group against the rest, q = ``FDR_Q``).
+5. **Gate.** A confirmed lesson becomes a pre-trade check with its support attached, so a
    blocked decision says "4 of 5 BUYs in RISK_OFF lost, mean -6%" rather than "blocked".
 
 Every lesson carries the trades it came from, so it can be argued with, and is re-derived
@@ -25,6 +28,7 @@ from datetime import datetime, timezone
 
 MIN_SUPPORT = 5            # trades sharing a feature before it may be called a lesson
 MATERIAL = 0.02            # 2% mean excess difference; below this it is noise
+FDR_Q = 0.10               # false-discovery rate across every group examined
 
 
 @dataclass
@@ -35,18 +39,54 @@ class Lesson:
     mean_excess: float
     rest_mean: float       # mean excess of trades without this feature
     decisions: list[str] = field(default_factory=list)
+    p: float = 1.0         # one-sided Welch p that the group did worse than the rest
+    q: float | None = None  # the same after Benjamini-Hochberg across every group examined (None: not computed)
 
     @property
     def gap(self) -> float:
         return self.mean_excess - self.rest_mean
 
     def confirmed(self) -> bool:
-        """Enough cases, and a difference worth acting on."""
-        return self.n >= MIN_SUPPORT and self.gap <= -MATERIAL
+        """Enough cases, a difference worth acting on, and one that survives the number of groups looked at."""
+        return (self.n >= MIN_SUPPORT and self.gap <= -MATERIAL
+                and (self.q is None or self.q <= FDR_Q))
 
     def describe(self) -> str:
+        tail = f" (q {self.q:.2f})" if self.q is not None else ""
         return (f"{self.feature}: {self.losses} of {self.n} lost, mean excess "
-                f"{self.mean_excess:+.1%} against {self.rest_mean:+.1%} elsewhere")
+                f"{self.mean_excess:+.1%} against {self.rest_mean:+.1%} elsewhere{tail}")
+
+
+def welch_p_worse(have: list[float], rest: list[float]) -> float:
+    """One-sided Welch p that ``have`` has a lower mean than ``rest``. 1.0 when either side has fewer than two
+    observations; when both sides have no spread, 0.0 if ``have`` is lower and 1.0 otherwise."""
+    import math
+
+    from scipy import stats
+    n1, n2 = len(have), len(rest)
+    if n1 < 2 or n2 < 2:
+        return 1.0
+    m1, m2 = sum(have) / n1, sum(rest) / n2
+    v1 = sum((x - m1) ** 2 for x in have) / (n1 - 1)
+    v2 = sum((x - m2) ** 2 for x in rest) / (n2 - 1)
+    se2 = v1 / n1 + v2 / n2
+    if se2 <= 0:
+        return 0.0 if m1 < m2 else 1.0
+    df = se2 ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1))
+    return float(stats.t.cdf((m1 - m2) / math.sqrt(se2), df))
+
+
+def bh_adjust(p: list[float]) -> list[float]:
+    """Benjamini-Hochberg adjusted p-values (q-values), in the input order."""
+    m = len(p)
+    order = sorted(range(m), key=lambda i: p[i])
+    q = [1.0] * m
+    prev = 1.0
+    for rank in range(m, 0, -1):
+        i = order[rank - 1]
+        prev = min(prev, p[i] * m / rank)
+        q[i] = prev
+    return q
 
 
 def features_at_entry(con, decision_id: str) -> dict:
@@ -124,7 +164,10 @@ def lessons(con) -> list[Lesson]:
             out.append(Lesson(feature=f"{name}={value}", n=len(have),
                               losses=sum(1 for r in have if r[1] <= 0), mean_excess=mean,
                               rest_mean=rest_mean,
-                              decisions=[r[0] for r in have]))
+                              decisions=[r[0] for r in have],
+                              p=welch_p_worse([r[1] for r in have], rest)))
+    for lesson, q in zip(out, bh_adjust([x.p for x in out]), strict=True):
+        lesson.q = q                                     # across every group examined, not one at a time
     return sorted(out, key=lambda x: x.gap)
 
 

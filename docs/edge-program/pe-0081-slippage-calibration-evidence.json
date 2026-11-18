@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0081",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_execution_slippage_calibration.py tests/test_phase4_execution.py",
+    "result": "21 passed (exit code 0); Ruff, mypy for quality.py, and diff checks passed."
+  },
+  "implemented": [
+    "Stable calibration buckets cover observed spread, ADV, exchange time of day, participation, and volatility; missing context is classified as unknown.",
+    "Only provenance-bearing OBSERVED_BROKER rows with aware timestamps and source hashes can contribute to a calibration parameter.",
+    "Below the minimum observed sample count, simulated-only, and unverified rows remain explicitly UNCALIBRATED and emit no recommended parameter.",
+    "With adequate eligible observations, a conservative 75th-percentile adverse slippage value is reported per bucket."
+  ],
+  "blockers": [
+    "No authorized observed broker-fill sample is available in this repo snapshot; tests use synthetic records only.",
+    "Calibration output is not yet connected to the execution-model parameter registry or any promotion gate, so this does not yet govern production model changes."
+  ],
+  "source_sha256": {
+    "src/financial_brain/execution/oms/quality.py": "066b450db7fcf772c0905559d594e467d2851a386795df113e7223311acd8810",
+    "tests/test_execution_slippage_calibration.py": "47206fa95eebde8614673f945bfc09c386c96327f2baff0fb2fa5865c88c70fb"
+  }
+}

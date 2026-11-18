@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0023",
+  "status": "PARTIAL",
+  "captured_at_utc": "2026-11-13T07:06:17Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/paper_account_bridge.py": "e2b1ece6f8ee8f18e0be3434b8e335003f7f8f610493e682264a21d886e7049c",
+    "src/financial_brain/forward_edge/session_runner.py": "dc338055fb120325f93c5ecaf8a7b9c8f81d9a80e652de41ccba3e62f71ed0f3",
+    "src/financial_brain/forward_edge/durable.py": "0f32847d2bf0d192780c69a20d7e928a8efcd1830c26814d9cccdc7fd8d70d04",
+    "src/financial_brain/kernel/paper_account.py": "322a46de5edbe27b82a84432d28454cef42a4279d77ec9327069a17afe47b42d",
+    "src/financial_brain/kernel/oms.py": "0db08c9120a3456be366cee9c87a6a4e56ab78ba77e56676ec87ea0a787ff0f2",
+    "src/financial_brain/kernel/ledger.py": "1bb121a27c4720d8a48e30ac56e565d7ac1060da269bcecd9fa99ffcf3097689",
+    "tests/test_forward_paper_account_bridge.py": "cbd9ef6db71e47fba56b7342151f97182f34c05340fe025761a878500f2daa97",
+    "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
+    "docs/edge-program/forward-paper-account-bridge-contract.md": "54983d104c91b4e41474988cb0d03de85710d8026aad8b6a0eed8e2f32e7cf24"
+  },
+  "acceptance_tests": [
+    "test_service_reconciles_runner_fill_costs_position_and_close_mark_idempotently",
+    "test_partial_receipt_releases_unfilled_reservation_after_cancel",
+    "test_buy_sync_requires_explicit_risk_cash_reserve",
+    "test_preflight_exception_is_durable_and_never_executes",
+    "test_data_rejections_are_immutable_idempotent_and_persisted",
+    "test_preflight_is_immutable_and_blocks_actionable_decisions",
+    "test_actionable_decision_without_preflight_is_rejected_and_not_executed",
+    "test_live_runner_can_send_existing_kite_polls_to_forward_event_sink",
+    "test_opt_in_rejection_capture_keeps_valid_quotes_and_hashes_bad_rows"
+  ],
+  "result": "Added ForwardPaperSessionService requiring a durable explicit preflight, then running the forward coordinator and idempotently reconciling receipts into the existing PaperAccount OMS and double-entry ledger. Stable fill IDs, effective-dated fee accounting, order state, cash, position, realized P&L, and available conservative unrealized marks are captured. Local mock integration demonstrates restart-safe reconciliation.",
+  "focused_tests": "50 passed across account bridge, PaperAccount, forward runner and intraday integrations; Ruff, mypy, inventory freshness and diff checks passed",
+  "ruff": "passed",
+  "mypy": "passed",
+  "diff_check": "passed",
+  "blockers": [
+    "No authorized Kite live-market session has yet been captured. The current daily access token is unavailable in this environment; real session evidence requires the owner login and an eligible market session."
+  ],
+  "limitations": [
+    "This bridge covers long-only INR cash-equity paper accounts. Derivatives margin, short inventory, settlement cycles and options exercise remain out of scope.",
+    "Local tests use synthetic quotes and do not establish live capture, profitability or slippage fidelity."
+  ]
+}

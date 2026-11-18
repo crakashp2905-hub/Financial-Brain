@@ -404,14 +404,18 @@ def summary(book, mode: str, spec: Spec = POSITION, *, capital: float = CAPITAL)
     per_day = closed.groupby("entry_day")["excess"].mean()
     se = per_day.std(ddof=1) / np.sqrt(len(per_day)) if len(per_day) > 1 else float("nan")
     t = float(per_day.mean() / se) if se and se == se and se > 0 else float("nan")
+    costs_rs = float((closed["notional"] * closed["cost"]).sum())
+    traded_notional_rs = float(closed["notional"].sum())
     out.update(entry_days=int(len(per_day)), win_rate=float((closed["net"] > 0).mean()),
                beat_universe=float((closed["excess"] > 0).mean()), mean_net=float(closed["net"].mean()),
                mean_excess=float(closed["excess"].mean()), t_excess=t, net_rs=float(closed["net_rs"].sum()),
                gross_rs=float((closed["notional"] * closed["gross"]).sum()),
-               costs_rs=float((closed["notional"] * closed["cost"]).sum()),
-               traded_entry_notional_rs=float(closed["notional"].sum()),
-               approximate_round_trip_turnover_x=float(2 * closed["notional"].sum() / capital),
-               cost_drag_on_starting_capital=float((closed["notional"] * closed["cost"]).sum() / capital),
+               costs_rs=costs_rs, traded_entry_notional_rs=traded_notional_rs,
+               costs_bp_on_traded_entry_notional=(costs_rs / traded_notional_rs * 1e4
+                                                  if traded_notional_rs > 0 else None),
+               approximate_round_trip_turnover_x=float(2 * traded_notional_rs / capital),
+               cost_drag_on_starting_capital=costs_rs / capital,
+               cost_drag_on_starting_capital_bp=costs_rs / capital * 1e4,
                positive_gross_below_costs=int(((closed["gross"] > 0) &
                                                (closed["gross"] <= closed["cost"])).sum()),
                bench_rs=float((closed["notional"] * closed["bench"]).sum()),

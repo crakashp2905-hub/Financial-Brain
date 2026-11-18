@@ -135,6 +135,33 @@ def stress_robust(net_by_multiplier: dict[float, float], required: tuple[float, 
     return all(net_by_multiplier.get(m, float("-inf")) > 0 for m in required)
 
 
+EXECUTION_STRESS_COSTS = (1.0, 1.5, 2.0)
+EXECUTION_STRESS_FILL_RATES = (1.0, 0.75, 0.5)
+
+
+def execution_stress_gate(net_by_cost_and_fill: dict[tuple[float, float], float] | None) -> dict:
+    """Require all 1x/1.5x/2x cost and 100/75/50% fill-rate scenarios before promotion.
+
+    Scenario economics must be computed from the frozen intention-to-trade population by the caller. Missing
+    cells are evidence gaps; non-finite or non-positive net outcomes fail the gate. This function never invents
+    fill outcomes or extrapolates them from the filled-only sample.
+    """
+    required = [(cost, fill) for cost in EXECUTION_STRESS_COSTS for fill in EXECUTION_STRESS_FILL_RATES]
+    if net_by_cost_and_fill is None:
+        return {"status": "MISSING", "missing": [f"{c:g}x@{f:.0%}" for c, f in required], "failed": []}
+    missing, failed = [], []
+    for cost, fill in required:
+        key = (cost, fill)
+        value = net_by_cost_and_fill.get(key)
+        label = f"{cost:g}x@{fill:.0%}"
+        if value is None or not np.isfinite(value):
+            missing.append(label)
+        elif value <= 0:
+            failed.append(label)
+    status = "FAIL" if failed else ("MISSING" if missing else "PASS")
+    return {"status": status, "missing": missing, "failed": failed}
+
+
 def best_block_share(returns: list[float], blocks: int) -> float:
     """Share of total positive P&L produced by the single best chronological block (regime concentration)."""
     if blocks < 2 or len(returns) < blocks:
@@ -227,7 +254,9 @@ def falsification_report(results: dict[str, bool | None]) -> dict:
 
 def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sessions: int, tier: ClaimTier,
                       net_by_cost_multiplier: dict[float, float], best_block: float, sample_design_predeclared: bool,
-                      falsification_status: str, min_sessions: int = 60, lags: int = 5, z: float = 1.96,
+                      falsification_status: str,
+                      net_by_cost_and_fill: dict[tuple[float, float], float] | None = None,
+                      min_sessions: int = 60, lags: int = 5, z: float = 1.96,
                       max_block_share: float = 0.6) -> dict:
     reasons: list[str] = []
     n = len(daily_net_alpha)
@@ -247,10 +276,17 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         reasons.append("REGIME_CONCENTRATION")
     if not stress_robust(net_by_cost_multiplier):
         reasons.append("FAILS_COST_STRESS")
+    execution_stress = execution_stress_gate(net_by_cost_and_fill)
+    if execution_stress["status"] == "MISSING":
+        reasons.append("EXECUTION_STRESS_MISSING")
+    elif execution_stress["status"] == "FAIL":
+        reasons.append("FAILS_EXECUTION_STRESS")
     if lcb is None or lcb <= 0:
         reasons.append("LOWER_BOUND_NOT_POSITIVE")
     if not reasons:
-        return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": []}
-    hard_fail = mean <= 0 and n >= 3 or "FAILS_COST_STRESS" in reasons or "FALSIFICATION_FAIL" in reasons
+        return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": [],
+                "execution_stress": execution_stress}
+    hard_fail = (mean <= 0 and n >= 3 or "FAILS_COST_STRESS" in reasons
+                 or "FAILS_EXECUTION_STRESS" in reasons or "FALSIFICATION_FAIL" in reasons)
     return {"verdict": "FAIL" if hard_fail else "INSUFFICIENT_EVIDENCE", "mean": mean, "lower_bound": lcb,
-            "reasons": reasons}
+            "reasons": reasons, "execution_stress": execution_stress}

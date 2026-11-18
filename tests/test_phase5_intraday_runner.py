@@ -115,6 +115,46 @@ def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, m
     assert finished["event_count"] == len(stored)
 
 
+def test_live_runner_can_opt_in_to_authorized_raw_quote_archive(setup, monkeypatch):
+    from datetime import timezone
+    from financial_brain.forward_edge.raw_quote_archive import RawQuoteArchive
+
+    c = Clock(datetime(2026, 10, 6, 9, 15, tzinfo=R.IST))
+    monkeypatch.setattr(R, "universe", lambda n=200: [{"tradingsymbol": "X", "adv": 5e9}])
+    archive = RawQuoteArchive(setup / "raw-quotes.jsonl", retention_attestation={
+        "approved": True, "authorization_id": "test-local-retention", "controller": "test-owner",
+        "purpose": "LOCAL_PERSONAL_PAPER_RESEARCH", "evidence_sha256": "e" * 64,
+        "approved_at_utc": datetime(2026, 10, 6, 9, 0, tzinfo=timezone.utc).isoformat(),
+        "permitted_actions": ["persist", "local_read"],
+        "permitted_event_kinds": ["QUOTE"], "permitted_sources": ["kite_connect"],
+    })
+    captured = []
+
+    def quotes(symbols, kind):
+        assert kind == "full"
+        return {symbol: {"timestamp": c.now().isoformat(), "last_price": 100.0,
+                         "depth": {"buy": [{"price": 99.95, "quantity": 10}],
+                                   "sell": [{"price": 100.05, "quantity": 10}]}}
+                for symbol in symbols}
+
+    def close_after_one_poll(_seconds):
+        c.t = c.t.replace(hour=15, minute=31)
+
+    out = R.run_live(
+        quote_fn=quotes, now_fn=c.now, sleep_fn=close_after_one_poll, path=setup / "raw-run.duckdb",
+        event_sink=captured.extend, preflight_fn=lambda: {"approved": True},
+        preflight_sink=lambda _result: None, rejection_sink=lambda _rows: None,
+        raw_archive=archive,
+    )
+
+    assert out["status"] == "complete"
+    assert len(captured) == 1 and archive.verify()
+    event_payload = dict(captured[0].payload)
+    raw = archive.records()[0]
+    assert event_payload["raw_archive_sha256"] == archive.journal.head
+    assert event_payload["raw_sha256"] == raw["payload_sha256"]
+
+
 def test_live_view_tracks_open_then_closed_trades_without_a_database_reader(setup):
     from financial_brain.paper.live_view import view_path
     c = Clock(datetime(2026, 10, 6, 9, 29, tzinfo=R.IST))

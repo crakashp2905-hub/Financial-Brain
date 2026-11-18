@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0082",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_forward_edge_f08.py tests/test_forward_edge_f13.py",
+    "result": "63 passed (exit code 0); Ruff, mypy for evidence_stats.py, and diff checks passed."
+  },
+  "implemented": [
+    "Promotion requires a complete 3 by 3 net-outcome grid across 1x/1.5x/2x costs and 100%/75%/50% fill rates.",
+    "Missing cells or a missing grid report EXECUTION_STRESS_MISSING and prevent promotion.",
+    "Any non-positive scenario reports FAILS_EXECUTION_STRESS and fails the candidate; returned verdicts include the stress status and failed/missing cells.",
+    "The fixture CLI omits the grid and consequently remains explicitly insufficient-evidence."
+  ],
+  "blockers": [
+    "No shared report builder currently computes the nine cells from the complete intention-to-trade outcomes, including no-fills and partial fills.",
+    "Current verdict callers must provide a precomputed grid; there are no observed forward observations from which to claim calibrated stress values."
+  ],
+  "source_sha256": {
+    "src/financial_brain/forward_edge/evidence_stats.py": "d66e5fc822b97d4e022f4821e0362aa64396aa7b0703ac47900ee52aac1e445a",
+    "tests/test_forward_edge_f08.py": "c43c757d47094f8108f1981ebfe6f37a199bfcc8370fd9f165ca0f91d9af2b66",
+    "tests/test_forward_edge_f13.py": "205d0ccd2649fa9ca36c3911886d4dc94dd65f1629817026579c3017f6aafd5d"
+  }
+}

@@ -92,84 +92,91 @@
    "status": "FAILED"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "recorded verdict FAIL failing G3",
+   "id": "TRIAL:V2 intraday chart candle and indicator family (40 candidates)",
+   "lineage": "docs/trials/ledger.jsonl#sha256:bd300bc1b18e04316da7a3fa1e3b7a044a00c5932ee662306e2f68d63ec541bd",
+   "prospective_observation": false,
+   "status": "FAILED"
+  },
+  {
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:breakouts",
    "lineage": "src/financial_brain/strategies/breakouts.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:challengers",
    "lineage": "src/financial_brain/strategies/challengers.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:evaluation_controls",
    "lineage": "src/financial_brain/strategies/evaluation_controls.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:execution_rules",
    "lineage": "src/financial_brain/strategies/execution_rules.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:families",
    "lineage": "src/financial_brain/strategies/families.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:lifecycle",
    "lineage": "src/financial_brain/strategies/lifecycle.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:mean_reversion",
    "lineage": "src/financial_brain/strategies/mean_reversion.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:reports",
    "lineage": "src/financial_brain/strategies/reports.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:session_breakout",
    "lineage": "src/financial_brain/strategies/session_breakout.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:specs",
    "lineage": "src/financial_brain/strategies/specs.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:structure",
    "lineage": "src/financial_brain/strategies/structure.py",
    "prospective_observation": false,
    "status": "SHADOW_ONLY"
   },
   {
-   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 13/13 spent",
+   "exclusion_reason": "no preregistered forward trial; 2026Q4 protected budget 14/14 spent",
    "id": "MODULE:ui",
    "lineage": "src/financial_brain/strategies/ui.py",
    "prospective_observation": false,

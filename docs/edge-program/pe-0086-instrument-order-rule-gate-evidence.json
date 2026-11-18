@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0086",
+  "status": "PARTIAL",
+  "test": {
+    "command": "python -m pytest -q tests/test_kernel_instruments.py tests/test_oms.py",
+    "result": "38 passed (exit code 0); Ruff, mypy for instrument and OMS modules, and diff checks passed."
+  },
+  "implemented": [
+    "Effective-dated instrument rules can carry exchange, tick, lot, order/freeze limits, margin-rule ID, session-rule ID/window, source ID, and source SHA-256.",
+    "The executable order validator refuses incomplete source-specific rules, exchange mismatch, off-lot/off-tick size, freeze-limit violations, and orders outside the effective session.",
+    "OMS submit now requires an InstrumentMaster and records a risk rejection when source-specific rules are unavailable; the risk gate uses the effective tick size.",
+    "Order-state tests prove that a missing instrument master does not reach the paper broker."
+  ],
+  "blockers": [
+    "The owner or a configured read-only provider must supply source-verified effective rules. No current freeze-quantity or margin schedule is bundled or inferred.",
+    "The interactive trading service does not yet load and refresh the complete rule master, so it correctly blocks OMS submissions until this integration is provided.",
+    "The margin schedule is identified and versioned, but portfolio-dependent margin calculation and exchange validation remain separate work."
+  ],
+  "source_sha256": {
+    "src/financial_brain/kernel/instruments.py": "031a0eec44ff363dfb381a69cdda9677034dc1360ecb90fd917bc1aba3a4fb8a",
+    "src/financial_brain/execution/oms/engine.py": "b3da1fa7cbde9094c70395192efcdb8f3521da66d8979ba8c4ede7b68b0980a8",
+    "tests/test_kernel_instruments.py": "06f077207fcf0518ff44014970242559cf06c4bb8d9d71797253232f0c7edbd5",
+    "tests/test_oms.py": "e0dfcfe5872fb53e16c2eaf9f21e9c66319fb2f46cb31fed5afee642800c9cb1"
+  }
+}

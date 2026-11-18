@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0078",
+  "status": "DONE",
+  "scope": "Synthetic paper-engine accounting invariant; this does not establish live-market cost fidelity.",
+  "test": {
+    "command": "python -m pytest -q tests/test_phase5_intraday_paper.py",
+    "result": "17 passed (exit code 0). Ruff passed for the changed test module; git diff --check passed."
+  },
+  "verified": [
+    "Entry ask and exit bid crossing are included in fill-based gross P&L and are reported separately from decision-price signal P&L.",
+    "Net P&L equals decision-price signal P&L plus execution P&L minus the round-trip statutory charge total.",
+    "The charge schedule is calculated with impact disabled when observed spread is already represented in the fills, preventing spread/impact double counting.",
+    "Existing integration coverage verifies no-quote bucket assumptions and checks that the impact allowance is not charged on top of quoted spread."
+  ],
+  "limitations": [
+    "All quotes and trades in this acceptance test are synthetic; it does not measure real Kite quote coverage, slippage, queue position, or realized fees.",
+    "The base CostModel rates are assumptions. Current broker/exchange rates still need source verification and effective-date configuration."
+  ],
+  "source_sha256": {
+    "src/financial_brain/paper/intraday.py": "300489aa48b07425312412a0c9e54ecf2581d59b3fbf052d4bcf002b1f7c2506",
+    "src/financial_brain/paper/execution.py": "3dbf9b25bd028972fa89406679257eb0a5e179933a739c00b15354ec009b4a93",
+    "tests/test_phase5_intraday_paper.py": "e041dab2f94af83b39b8d6f77a0e84092ca9528f1d77cb2bff2617ae2c1ad765"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0102",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T09:47:17Z",
+  "source_sha256": {
+    "src/financial_brain/kernel/paper_account_audit.py": "f3ea84ccedb8069a3fddc4162fef7dfae345b601a3ba70a5cb09fad718ce9898",
+    "src/financial_brain/kernel/paper_account.py": "322a46de5edbe27b82a84432d28454cef42a4279d77ec9327069a17afe47b42d",
+    "src/financial_brain/kernel/ledger.py": "1bb121a27c4720d8a48e30ac56e565d7ac1060da269bcecd9fa99ffcf3097689",
+    "src/financial_brain/forward_edge/durable.py": "0f32847d2bf0d192780c69a20d7e928a8efcd1830c26814d9cccdc7fd8d70d04",
+    "tests/test_paper_account_audit.py": "69883fb947db71e1d8d2b13e6f65d20e8f2119764725f7b7e5fa7a649acd7ead",
+    "tests/test_paper_account.py": "7538014e15b746bbe62addb058173ac72939f4d33e37286dd5bada8e061c212b",
+    "docs/edge-program/paper-account-audit-contract.md": "942b8546c982272a366e2994155711e72be488e39153678dc5a233d0d8978d9f"
+  },
+  "tests": {
+    "command": "python -m pytest -q tests/test_paper_account_audit.py tests/test_paper_account.py",
+    "result": "11 passed (exit code 0); Ruff, mypy and diff checks passed."
+  },
+  "verified": [
+    "Independent journal-only fold recomputes cash, positions and cost basis, gross/net realized P&L, fees and current marked NAV.",
+    "Every persisted daily NAV snapshot and external-flow total is independently recomputed and reconciled.",
+    "A valid journal hash chain containing an inconsistent stored NAV is rejected.",
+    "The auditor does not instantiate PaperAccount or rely on its in-memory OMS/ledger projections.",
+    "Future-dated cash flows are rejected from an earlier NAV snapshot.",
+    "A snapshot whose mark predates the latest open-position fill is rejected."
+  ],
+  "limitations": [
+    "Local consistency does not verify broker balances, source rights, or independent correctness of marks/corporate actions.",
+    "Intraday balance reconstruction between recorded events is not emitted as a historical time series."
+  ],
+  "secrets_or_market_payloads_included": false
+}

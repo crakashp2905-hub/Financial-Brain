@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0054",
+  "status": "PARTIAL",
+  "implemented": [
+    "Registry normalizes and blocks ORB/opening-range, gap, candlestick, directional chart-pattern, and chart-pattern families from PAPER_ELIGIBLE construction and transition.",
+    "Added separate SHADOW_ONLY specs for ORB, gap continuation, gap reversal, directional patterns, and chart patterns.",
+    "Monitoring signal requires exact current registered SHADOW_ONLY spec and emits no quantity, with explicit monitoring-only state/reason."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_monitoring_candidates.py -q",
+    "result": "9 passed (exit code 0); Ruff and mypy passed.",
+    "cases": [
+      "test_orb_gap_directional_and_chart_specs_are_shadow_monitoring_only",
+      "test_registry_policy_normalizes_monitoring_family_names",
+      "test_monitoring_signal_rejects_non_monitor_family_and_unregistered_spec",
+      "test_monitoring_family_cannot_be_constructed_as_paper_eligible"
+    ]
+  },
+  "limitations": [
+    "The 72 catalogued chart-pattern variants and every legacy ORB/GAP execution surface are not yet mapped through these registry specs.",
+    "Family-name policy is application-level; old code paths that bypass the registry remain to be wired or removed.",
+    "No prospective monitoring session or strategy evidence is claimed."
+  ]
+}

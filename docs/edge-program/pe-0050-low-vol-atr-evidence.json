@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "task_id": "PE-0050",
+  "status": "PARTIAL",
+  "implemented": [
+    "Added finite-value matched-universe Spearman rank correlation and low-tail Jaccard overlap for two candidate risk families.",
+    "Excludes missing/non-finite observations without imputation and reports matched denominators.",
+    "Labels high overlap as redundancy only, without implying predictive value."
+  ],
+  "tests": {
+    "command": "python -m pytest tests/test_family_overlap.py -q",
+    "result": "3 passed (exit code 0); Ruff, mypy and diff checks passed.",
+    "cases": [
+      "test_identical_low_risk_ranks_are_flagged_as_overlapping",
+      "test_overlap_uses_only_matched_finite_values_without_imputation",
+      "test_overlap_rejects_weak_or_invalid_inputs"
+    ]
+  },
+  "limitations": [
+    "No authorized point-in-time Indian equity panel has been evaluated with this diagnostic.",
+    "No return, cost, liquidity, or portfolio evidence is provided by an overlap metric.",
+    "The calling study must align observation date, instrument eligibility, source quality and missingness policy."
+  ]
+}

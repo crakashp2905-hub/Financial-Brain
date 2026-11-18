@@ -166,7 +166,7 @@ def candles(instrument_token: int, start: date | datetime, as_of: date | datetim
     if interval not in INTERVALS:
         raise KiteDataError(f"interval must be one of {INTERVALS}")
     fmt = "%Y-%m-%d %H:%M:%S" if isinstance(start, datetime) else "%Y-%m-%d"
-    params = {"from": start.strftime(fmt), "to": as_of.strftime(fmt)}
+    params: dict[str, str | int] = {"from": start.strftime(fmt), "to": as_of.strftime(fmt)}
     if continuous:
         params["continuous"] = 1            # futures: expired contracts stitched into one series (day interval)
     if oi:

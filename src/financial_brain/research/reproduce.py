@@ -37,6 +37,7 @@ TRIALS = {
     "X3 earnings surprise drift out of sample": ("x3_mf_fundamentals.py", ["financial_results", "xbrl_facts", "adjusted_prices", "features", "eod_prices"]),
     "MF multi-factor quality value low-risk book": ("x3_mf_fundamentals.py", ["financial_results", "xbrl_facts", "adjusted_prices", "features", "eod_prices"]),
     "I/S intraday and swing family on minute bars (9 rules)": ("is_minute_family.py", ["adjusted_prices"]),
+    "V2 intraday chart candle and indicator family (40 candidates)": ("v2_intraday_family.py", ["market_regime"]),
 }
 DATE_COLS = ("business_date", "filed_at", "period_end", "d")
 TRIAL_FILES = {
@@ -48,6 +49,8 @@ TRIAL_FILES = {
     "b4_index_rules.py": ("data/edges/nifty50_minute.parquet",),
     "a10_price_anomalies.py": ("data/edges/nifty50_minute.parquet",),
     "is_minute_family.py": ("data/basis_contracts.parquet", "data/minute_history.duckdb"),
+    "v2_intraday_family.py": ("data/basis_contracts.parquet", "data/minute_history.duckdb",
+                              "data/edges/nifty50_minute.parquet"),
 }
 
 

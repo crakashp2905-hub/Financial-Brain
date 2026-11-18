@@ -12,16 +12,100 @@ import hashlib
 import json
 import shutil
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
-from financial_brain.forward_edge.market_data import Calendar
+from financial_brain.forward_edge.durable import DurableJournal
+from financial_brain.forward_edge.market_data import Calendar, DataError, FeedHealth, _aware
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
 
 class SessionError(ValueError):
     pass
+
+
+class SessionDateLedger:
+    """Append-only outcome ledger so planned exchange dates cannot vanish silently."""
+
+    def __init__(self, path: Path) -> None:
+        self.journal = DurableJournal(Path(path))
+
+    def _records(self) -> list[dict]:
+        return self.journal.records()
+
+    def is_planned(self, session_id: str) -> bool:
+        return any(row.get("t") == "SESSION_DATE_PLAN" and row.get("session_id") == session_id
+                   for row in self._records())
+
+    def outcome(self, session_id: str) -> dict | None:
+        return next((row for row in reversed(self._records())
+                     if row.get("t") == "SESSION_DATE_RESULT" and row.get("session_id") == session_id), None)
+
+    def plan_date(self, session_id: str, exchange_date: str, calendar: Calendar,
+                  settlement_deadline_utc: datetime) -> dict:
+        if not session_id:
+            raise SessionError("session id is required")
+        try:
+            if date.fromisoformat(exchange_date).isoformat() != exchange_date:
+                raise ValueError
+        except ValueError as exc:
+            raise SessionError("exchange date must be canonical ISO date") from exc
+        if settlement_deadline_utc.tzinfo is None or settlement_deadline_utc.utcoffset() is None:
+            raise SessionError("settlement deadline must be timezone-aware")
+        deadline = settlement_deadline_utc.astimezone(timezone.utc)
+        plan = {"t": "SESSION_DATE_PLAN", "session_id": session_id,
+                "exchange_date": exchange_date, "calendar_version": calendar.version,
+                "tradable": calendar.is_tradable(date.fromisoformat(exchange_date)),
+                "settlement_deadline_utc": deadline.isoformat()}
+        records = self._records()
+        existing = next((row for row in records if row.get("t") == "SESSION_DATE_PLAN"
+                         and row.get("session_id") == session_id), None)
+        if existing is not None:
+            if existing != plan:
+                raise SessionError("planned exchange date is immutable")
+        else:
+            self.journal.append(plan)
+        outcome = self.outcome(session_id)
+        if outcome is None and not plan["tradable"]:
+            return self.record_result(session_id, "NO_TRADE", "NON_TRADING_DATE")
+        return outcome or {"session_id": session_id, "status": "PLANNED"}
+
+    def record_result(self, session_id: str, status: str, reason: str) -> dict:
+        if (status not in {"CLOSED", "NO_TRADE", "INCOMPLETE"}
+                or not isinstance(reason, str) or not reason.strip()):
+            raise SessionError("session date result needs CLOSED, NO_TRADE or INCOMPLETE and a reason")
+        plan = next((row for row in self._records() if row.get("t") == "SESSION_DATE_PLAN"
+                     and row.get("session_id") == session_id), None)
+        if plan is None:
+            raise SessionError("session date must be planned before it can be finalized")
+        if not plan["tradable"] and (status != "NO_TRADE" or reason != "NON_TRADING_DATE"):
+            raise SessionError("a non-trading date is immutable NO_TRADE")
+        result = {"t": "SESSION_DATE_RESULT", "session_id": session_id,
+                  "exchange_date": plan["exchange_date"], "status": status,
+                  "reason": reason.strip()}
+        prior = self.outcome(session_id)
+        if prior is not None:
+            if prior != result:
+                raise SessionError("session date result is immutable")
+            return prior
+        self.journal.append(result)
+        return result
+
+    def expire_missing(self, now_utc: datetime) -> list[dict]:
+        if now_utc.tzinfo is None or now_utc.utcoffset() is None:
+            raise SessionError("sweep clock must be timezone-aware")
+        now = now_utc.astimezone(timezone.utc)
+        records = self._records()
+        plans = [row for row in records if row.get("t") == "SESSION_DATE_PLAN" and row.get("tradable")]
+        expired = []
+        for plan in plans:
+            if self.outcome(plan["session_id"]) is not None:
+                continue
+            deadline = datetime.fromisoformat(plan["settlement_deadline_utc"])
+            if deadline <= now:
+                expired.append(self.record_result(plan["session_id"], "INCOMPLETE", "SESSION_RESULT_MISSING"))
+        return expired
 
 
 # ---- FE-0069 preflight ----
@@ -123,17 +207,53 @@ class PacketDeduper:
         self.buffer: list[tuple[int, str, dict]] = []
         self.duplicates = 0
         self.reconnects = 0
+        self.disconnects = 0
+        self.dropped_updates = 0
+        self.last_heartbeat_utc: datetime | None = None
+        self.last_available_utc: datetime | None = None
+        self._last_sequence: int | None = None
+        self.gaps = 0
 
     def reconnect(self) -> None:
         self.reconnects += 1
+        self._last_sequence = None
 
-    def offer(self, packet_id: str, seq: int, payload: dict) -> bool:
+    def disconnect(self) -> None:
+        self.disconnects += 1
+
+    def heartbeat(self, at: datetime) -> None:
+        stamp = _aware(at, "heartbeat")
+        if self.last_heartbeat_utc is not None and stamp < self.last_heartbeat_utc:
+            raise DataError("heartbeat timestamps must be monotonic")
+        self.last_heartbeat_utc = stamp
+
+    def record_drop(self, count: int = 1) -> None:
+        if type(count) is not int or count <= 0:
+            raise DataError("drop count must be a positive integer")
+        self.dropped_updates += count
+
+    def offer(self, packet_id: str, seq: int, payload: dict,
+              available_utc: datetime | None = None) -> bool:
+        if not packet_id or type(seq) is not int or seq < 0:
+            raise DataError("packet id and non-negative integer sequence are required")
         if packet_id in self.seen:
             self.duplicates += 1
             return False
+        if self._last_sequence is not None and seq > self._last_sequence + 1:
+            self.gaps += seq - self._last_sequence - 1
+        if self._last_sequence is None or seq > self._last_sequence:
+            self._last_sequence = seq
+        if available_utc is not None:
+            stamp = _aware(available_utc, "packet availability")
+            if self.last_available_utc is None or stamp > self.last_available_utc:
+                self.last_available_utc = stamp
         self.seen.add(packet_id)
         self.buffer.append((seq, packet_id, payload))
         return True
+
+    def feed_health(self) -> FeedHealth:
+        return FeedHealth(self.last_available_utc, self.gaps, self.disconnects, self.dropped_updates,
+                          self.duplicates, self.reconnects, self.last_heartbeat_utc)
 
     def ordered(self) -> list[dict]:
         return [p for _, _, p in sorted(self.buffer, key=lambda x: (x[0], x[1]))]

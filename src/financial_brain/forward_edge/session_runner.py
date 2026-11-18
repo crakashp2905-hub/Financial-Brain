@@ -15,8 +15,10 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from financial_brain.forward_edge.durable import DurableJournal
-from financial_brain.forward_edge.market_data import NormalizedEvent
+from financial_brain.forward_edge.market_data import FeedHealth, NormalizedEvent, entry_allowed
 from financial_brain.forward_edge.modes import Mode
+from financial_brain.forward_edge.session_clock import ClockError, SessionClockProvider, as_utc
+from financial_brain.forward_edge.session_ops import SessionDateLedger, SessionError
 
 
 class RunnerError(ValueError):
@@ -50,11 +52,17 @@ class ForwardRunConfig:
     instruments: tuple[str, ...]
     capital_inr: str
     mode: Mode = Mode.LIVE_PAPER
+    attempt_id: str = "attempt-1"
 
     def canonical(self) -> dict:
         if not all((self.session_id, self.exchange_date, self.cohort_id, self.benchmark_id,
                     self.capital_inr, self.instruments, self.ledger_id)):
             raise RunnerError("run identity, instruments, benchmark and capital are required")
+        if (not isinstance(self.attempt_id, str) or not self.attempt_id
+                or not self.attempt_id.strip()
+                or any(ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+                       for ch in self.attempt_id)):
+            raise RunnerError("attempt_id must be a nonempty stable token")
         if len(set(self.instruments)) != len(self.instruments) or any(not i for i in self.instruments):
             raise RunnerError("instruments must be nonempty and unique")
         if self.mode not in (Mode.LIVE_PAPER, Mode.SHADOW, Mode.RESEARCH_REPLAY):
@@ -80,7 +88,16 @@ class ForwardRunConfig:
                 "risk_policy_sha256": self.risk_policy_sha256,
                 "constraints_sha256": self.constraints_sha256, "ledger_id": self.ledger_id,
                 "benchmark_id": self.benchmark_id, "instruments": sorted(set(self.instruments)),
-                "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value}
+                "capital_inr": format(capital.normalize(), "f"), "mode": self.mode.value,
+                "session_key": self.session_key, "attempt_id": self.attempt_id}
+
+    @property
+    def session_key(self) -> str:
+        """Stable identity for one strategy/cohort/date/mode, shared by its immutable attempts."""
+        body = json.dumps({"exchange_date": self.exchange_date, "cohort_id": self.cohort_id,
+                           "strategy_sha256": self.strategy_sha256, "mode": self.mode.value},
+                          sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(body.encode()).hexdigest()
 
     @property
     def sha256(self) -> str:
@@ -96,8 +113,12 @@ class ForwardSessionRunner:
     post-decision observations and be idempotent by that id. Results are journaled before return.
     """
 
-    def __init__(self, journal_path: Path) -> None:
+    def __init__(self, journal_path: Path,
+                 clock_provider: SessionClockProvider | None = None,
+                 session_date_ledger: SessionDateLedger | None = None) -> None:
         self.journal_path = Path(journal_path)
+        self.clock_provider = clock_provider or SessionClockProvider()
+        self.session_date_ledger = session_date_ledger
 
     def mark_incomplete(self, session_id: str, reason: str) -> None:
         """Close a nonterminal session as incomplete without fabricating an outcome."""
@@ -109,8 +130,28 @@ class ForwardSessionRunner:
             raise RunnerError("cannot mark an unplanned session incomplete")
         if any(r.get("t") == "SESSION_CLOSED" for r in records):
             raise RunnerError("closed session cannot become incomplete")
+        prior = next((r for r in records if r.get("t") == "SESSION_INCOMPLETE"), None)
+        if prior is not None:
+            if prior.get("reason") != reason.strip():
+                raise RunnerError("incomplete session reason is immutable")
+            self._record_date_outcome("INCOMPLETE", reason.strip(), session_id)
+            return
         self._ensure_state(journal, session_id, "INCOMPLETE")
-        journal.append({"t": "SESSION_INCOMPLETE", "session_id": session_id, "reason": reason.strip()})
+        result = {"session_id": session_id, "status": "INCOMPLETE", "reason": reason.strip(),
+                  "physical_orders": False}
+        journal.append({"t": "SESSION_INCOMPLETE", "session_id": session_id,
+                        "reason": reason.strip(), "result": result})
+        self._record_date_outcome("INCOMPLETE", reason.strip(), session_id)
+
+    def _record_date_outcome(self, status: str, reason: str, session_id: str) -> None:
+        if self.session_date_ledger is None:
+            return
+        outcome = "NO_TRADE" if status in {"NO_TRADE", "REJECTED"} else (
+            "CLOSED" if status == "PAPER_COMPLETE" else status)
+        try:
+            self.session_date_ledger.record_result(session_id, outcome, reason)
+        except SessionError as exc:
+            raise RunnerError(str(exc)) from exc
 
     @staticmethod
     def _ensure_state(journal: DurableJournal, session_id: str, target: str) -> None:
@@ -138,9 +179,22 @@ class ForwardSessionRunner:
     def begin(self, config: ForwardRunConfig) -> None:
         """Create or resume the durable session before market polling starts."""
         plan = config.canonical()
+        if self.session_date_ledger is not None:
+            outcome = self.session_date_ledger.outcome(config.session_id)
+            if not self.session_date_ledger.is_planned(config.session_id):
+                raise RunnerError("exchange date must be recorded in the session date ledger first")
+            if outcome is not None and outcome.get("reason") == "NON_TRADING_DATE":
+                raise RunnerError("cannot open a session on a non-trading date")
         journal = DurableJournal(self.journal_path)
         records = journal.records()
         existing = [r for r in records if r.get("session_id") == config.session_id]
+        for row in records:
+            if row.get("t") != "SESSION_PLAN" or row.get("session_id") == config.session_id:
+                continue
+            prior_config = row.get("config")
+            if (isinstance(prior_config, dict) and prior_config.get("session_key") == config.session_key
+                    and prior_config.get("attempt_id") == config.attempt_id):
+                raise RunnerError("attempt_id already exists for this strategy session key")
         if existing:
             planned = next((r for r in existing if r.get("t") == "SESSION_PLAN"), None)
             if planned is None or planned.get("config_sha256") != config.sha256:
@@ -243,23 +297,60 @@ class ForwardSessionRunner:
         journal.append_many(additions)
         return len(additions)
 
+    def record_feed_health(self, config: ForwardRunConfig, health: FeedHealth, *, observed_at: datetime) -> None:
+        """Persist one monotonic feed-health snapshot before the session decision."""
+        observed = self._utc(observed_at)
+        payload = {
+            "observed_at_utc": observed.isoformat(),
+            "last_available_utc": self._utc(health.last_available_utc).isoformat()
+            if health.last_available_utc else None,
+            "last_heartbeat_utc": self._utc(health.last_heartbeat_utc).isoformat()
+            if health.last_heartbeat_utc else None,
+            "gaps": health.gaps, "disconnects": health.disconnects,
+            "dropped_updates": health.dropped_updates, "duplicates": health.duplicates,
+            "reconnects": health.reconnects,
+        }
+        digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                                             allow_nan=False).encode("utf-8")).hexdigest()
+        self.begin(config)
+        journal = DurableJournal(self.journal_path)
+        rows = [r for r in journal.records() if r.get("session_id") == config.session_id]
+        if any(r.get("t") in {"DECISION", "SESSION_CLOSED"} for r in rows):
+            raise RunnerError("feed health must be recorded before the session decision")
+        samples = [r for r in rows if r.get("t") == "FEED_HEALTH"]
+        if samples and observed < datetime.fromisoformat(samples[-1]["health"]["observed_at_utc"]):
+            raise RunnerError("feed-health sample timestamps must be monotonic")
+        if samples and samples[-1].get("snapshot_sha256") == digest:
+            return
+        journal.append({"t": "FEED_HEALTH", "session_id": config.session_id,
+                        "snapshot_sha256": digest, "health": payload})
+
     def run(self, config: ForwardRunConfig, events: Iterable[NormalizedEvent], *,
-            decision_at: datetime,
+            decision_at: datetime | None = None,
             decision_fn: Callable[[list[NormalizedEvent]], dict],
             risk_fn: Callable[[dict], dict],
             execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
             reconcile_execution_fn: Callable[[str], dict] | None = None) -> dict:
         from financial_brain.forward_edge.market_data import decision_visible
 
-        visible_at = self._utc(decision_at)
-        self.begin(config)
-        records = DurableJournal(self.journal_path).records()
+        journal = DurableJournal(self.journal_path)
+        records = journal.records()
         existing = [r for r in records if r.get("session_id") == config.session_id]
         prior_decision = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
-        if prior_decision is not None and prior_decision.get("decision_at_utc") != visible_at.isoformat():
-            raise RunnerError("session id already has a different decision timestamp")
+        try:
+            if prior_decision is not None:
+                visible_at = self._utc(datetime.fromisoformat(prior_decision["decision_at_utc"]))
+                if decision_at is not None and self._utc(decision_at) != visible_at:
+                    raise RunnerError("session id already has a different decision timestamp")
+            else:
+                visible_at = self.clock_provider.decision_time(decision_at)
+        except ClockError as exc:
+            raise RunnerError(str(exc)) from exc
+        self.begin(config)
         closed = next((r for r in reversed(existing) if r.get("t") == "SESSION_CLOSED"), None)
         if closed is not None:
+            self._record_date_outcome(closed["result"]["status"], closed["result"].get("reason", "SESSION_CLOSED"),
+                                      config.session_id)
             return closed["result"]
         self.append_events(config, events)
         journal = DurableJournal(self.journal_path)
@@ -277,7 +368,9 @@ class ForwardSessionRunner:
             event_utc=datetime.fromisoformat(row["event_utc"]),
             received_utc=datetime.fromisoformat(row["received_utc"]),
             available_utc=datetime.fromisoformat(row["available_utc"]),
-            payload=tuple(tuple(item) for item in row["payload"])) for row in old_events]
+            payload=tuple(tuple(item) for item in row["payload"]),
+            ingested_utc=datetime.fromisoformat(row["ingested_utc"]) if row.get("ingested_utc") else None)
+            for row in old_events]
         last_available = max((self._utc(e.available_utc) for e in observed), default=None)
         self._ensure_state(journal, config.session_id, "OPEN")
         observed.sort(key=lambda e: (self._utc(e.available_utc), e.content_sha256()))
@@ -292,12 +385,36 @@ class ForwardSessionRunner:
         if not isinstance(preflight, dict) or type(preflight.get("approved")) is not bool:
             raise RunnerError("persisted preflight must contain a boolean approved field")
 
+        feed_health_record = next((r for r in reversed(existing) if r.get("t") == "FEED_HEALTH"), None)
+        feed_health_facts = None
+        feed_health_reasons: list[str] = []
+        if feed_health_record is not None:
+            feed_health_facts = feed_health_record["health"]
+            health = FeedHealth(
+                datetime.fromisoformat(feed_health_facts["last_available_utc"])
+                if feed_health_facts.get("last_available_utc") else None,
+                int(feed_health_facts["gaps"]), int(feed_health_facts["disconnects"]),
+                int(feed_health_facts["dropped_updates"]), int(feed_health_facts["duplicates"]),
+                int(feed_health_facts["reconnects"]),
+                datetime.fromisoformat(feed_health_facts["last_heartbeat_utc"])
+                if feed_health_facts.get("last_heartbeat_utc") else None,
+            )
+            allowed, feed_health_reasons = entry_allowed(health, visible_at)
+        else:
+            allowed = True
         decision_record = next((r for r in reversed(existing) if r.get("t") == "DECISION"), None)
         decision = decision_record["decision"] if decision_record is not None else None
         if decision_record is not None and decision_record.get("decision_at_utc") != visible_at.isoformat():
             raise RunnerError("session id already has a different decision timestamp")
         if decision is None:
-            decision = decision_fn(decision_events)
+            if not allowed:
+                reason = "STALE_FEED" if any(r in feed_health_reasons for r in (
+                    "STALE_QUOTE", "STALE_HEARTBEAT", "FUTURE_QUOTE", "FUTURE_HEARTBEAT", "NO_QUOTES")) \
+                    else "FEED_HEALTH_UNSAFE"
+                decision = {"side": "NONE", "reason": reason,
+                            "feed_health_reasons": feed_health_reasons}
+            else:
+                decision = decision_fn(decision_events)
             if not isinstance(decision, dict) or decision.get("side") not in ("BUY", "SELL", "NONE", "NO_TRADE"):
                 raise RunnerError("decision adapter must return a dictionary with BUY, SELL, or NONE side")
             journal.append({"t": "DECISION", "session_id": config.session_id,
@@ -317,6 +434,9 @@ class ForwardSessionRunner:
                   if last_available else None, "decision": decision, "risk": risk,
                   "preflight": preflight,
                   "mode": config.mode.value, "physical_orders": False}
+        if feed_health_facts is not None:
+            result["feed_health"] = {**feed_health_facts, "entry_allowed": allowed,
+                                     "blocking_reasons": feed_health_reasons}
         if not risk["approved"]:
             self._ensure_state(journal, config.session_id, "REJECTED")
             result.update({"status": "REJECTED", "reason": str(risk.get("reason", "RISK_REJECTED"))})
@@ -339,14 +459,28 @@ class ForwardSessionRunner:
                 raise RunnerError("stable intent id was reused with different decision or risk content")
             prior_execution = next((r["execution"] for r in reversed(existing)
                                     if r.get("t") == "PAPER_EXECUTION" and r.get("intent_id") == intent_id), None)
-            has_prior_attempt = any(r.get("t") in {"OUTBOX_PENDING", "OUTBOX_UNKNOWN", "OUTBOX_RECONCILED"}
-                                    and r.get("intent_id") == intent_id for r in existing)
+            outbox_history = [r for r in existing
+                              if r.get("t") in {"OUTBOX_PENDING", "OUTBOX_UNKNOWN", "OUTBOX_RECONCILED"}
+                              and r.get("intent_id") == intent_id]
             if prior_execution is None:
-                if not has_prior_attempt:
+                last_outbox = outbox_history[-1] if outbox_history else None
+                if last_outbox is None:
                     journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
                                     "intent_id": intent_id})
-                    execution = self._execute_with_receipt(journal, config.session_id, decision,
-                                                           intent_id, observed, execution_fn)
+                    execution = self._execute_with_receipt(journal, config.session_id,
+                                                           self._execution_decision(decision, visible_at),
+                                                           intent_id, observed, execution_fn,
+                                                           self.clock_provider, visible_at)
+                elif last_outbox.get("t") == "OUTBOX_RECONCILED" \
+                        and last_outbox.get("status") == "NOT_APPLIED":
+                    # The prior attempt was proven absent. A new durable PENDING marker
+                    # lets recovery distinguish this retry from the prior reconciliation.
+                    journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
+                                    "intent_id": intent_id})
+                    execution = self._execute_with_receipt(journal, config.session_id,
+                                                           self._execution_decision(decision, visible_at),
+                                                           intent_id, observed, execution_fn,
+                                                           self.clock_provider, visible_at)
                 else:
                     if reconcile_execution_fn is None:
                         journal.append({"t": "OUTBOX_UNKNOWN", "session_id": config.session_id,
@@ -359,9 +493,15 @@ class ForwardSessionRunner:
                     } or not reconciliation.get("reconciliation_id"):
                         raise RunnerError("execution reconciliation must identify APPLIED/NOT_APPLIED and a receipt")
                     state = reconciliation["status"]
-                    journal.append({"t": "OUTBOX_RECONCILED", "session_id": config.session_id,
-                                    "intent_id": intent_id, "status": state,
-                                    "reconciliation_id": str(reconciliation["reconciliation_id"])})
+                    reconciliation_id = str(reconciliation["reconciliation_id"])
+                    if last_outbox.get("t") == "OUTBOX_RECONCILED":
+                        if (state != last_outbox.get("status")
+                                or reconciliation_id != last_outbox.get("reconciliation_id")):
+                            raise RunnerError("recovered reconciliation contradicts its durable receipt")
+                    else:
+                        journal.append({"t": "OUTBOX_RECONCILED", "session_id": config.session_id,
+                                        "intent_id": intent_id, "status": state,
+                                        "reconciliation_id": reconciliation_id})
                     if state == "APPLIED":
                         reconciled_execution = reconciliation.get("execution")
                         if not isinstance(reconciled_execution, dict):
@@ -370,33 +510,58 @@ class ForwardSessionRunner:
                         self._validate_execution_receipt(execution)
                         self._persist_execution_and_ack(journal, config.session_id, intent_id, execution)
                     else:
-                        execution = self._execute_with_receipt(journal, config.session_id, decision,
-                                                               intent_id, observed, execution_fn)
+                        journal.append({"t": "OUTBOX_PENDING", "session_id": config.session_id,
+                                        "intent_id": intent_id})
+                        execution = self._execute_with_receipt(journal, config.session_id,
+                                                               self._execution_decision(decision, visible_at),
+                                                               intent_id, observed, execution_fn,
+                                                               self.clock_provider, visible_at)
             else:
                 execution = prior_execution
                 self._validate_execution_receipt(execution)
                 if not any(r.get("t") == "OUTBOX_ACK" and r.get("intent_id") == intent_id for r in existing):
                     self._persist_ack(journal, config.session_id, intent_id, execution)
             result.update({"status": "PAPER_COMPLETE", "intent_id": intent_id, "execution": execution})
+        result["opportunity_coverage"] = _opportunity_coverage(
+            exchange_date=config.exchange_date, planned_instruments=config.instruments,
+            events=observed, decision=decision, execution=result.get("execution"),
+        )
         result["closed_at_utc"] = datetime.now(timezone.utc).isoformat()
         if risk["approved"]:
             self._ensure_state(journal, config.session_id, "CLOSED")
         journal.append({"t": "SESSION_CLOSED", "session_id": config.session_id, "result": result})
+        self._record_date_outcome(str(result["status"]), str(result.get("reason", "SESSION_CLOSED")),
+                                  config.session_id)
         return result
 
     @classmethod
     def _execute_with_receipt(cls, journal: DurableJournal, session_id: str, decision: dict,
                               intent_id: str, events: list[NormalizedEvent],
-                              execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict]) -> dict:
+                              execution_fn: Callable[[dict, str, list[NormalizedEvent]], dict],
+                              clock_provider: SessionClockProvider, decision_utc: datetime) -> dict:
         try:
             execution = execution_fn(decision, intent_id, events)
+            if isinstance(execution, dict):
+                execution = dict(execution)
+                execution_at = clock_provider.simulated_execution_time(
+                    decision_utc, execution.get("simulated_execution_at_utc"))
+                execution["simulated_execution_at_utc"] = execution_at.isoformat()
             cls._validate_execution_receipt(execution)
+        except ClockError as exc:
+            journal.append({"t": "OUTBOX_UNKNOWN", "session_id": session_id,
+                            "intent_id": intent_id, "reason": "INVALID_SIMULATION_CLOCK"})
+            raise RunnerError(str(exc)) from exc
         except Exception as exc:
             journal.append({"t": "OUTBOX_UNKNOWN", "session_id": session_id,
                             "intent_id": intent_id, "reason": type(exc).__name__})
             raise
         cls._persist_execution_and_ack(journal, session_id, intent_id, execution)
         return execution
+
+    @staticmethod
+    def _execution_decision(decision: dict, decision_at: datetime) -> dict:
+        """Pass the immutable runner decision time to execution without changing the signal."""
+        return {**decision, "decision_at_utc": decision_at.isoformat()}
 
     @staticmethod
     def _validate_execution_receipt(execution: object) -> None:
@@ -406,6 +571,11 @@ class ForwardSessionRunner:
             raise RunnerError("paper execution result needs a non-empty simulated receipt_id")
         if execution.get("fidelity") not in {"SIMULATED_QUOTE", "SIMULATED_BAR"}:
             raise RunnerError("paper execution receipt must declare simulated quote or bar fidelity")
+        try:
+            as_utc(datetime.fromisoformat(execution["simulated_execution_at_utc"]),
+                   "simulated execution clock")
+        except (KeyError, TypeError, ValueError) as exc:
+            raise RunnerError("paper execution receipt needs an aware simulated execution timestamp") from exc
         status = execution.get("status", execution.get("state"))
         if status not in {"FILLED", "PARTIAL", "MISSED", "REJECTED", "NO_TRADE"}:
             raise RunnerError("paper execution receipt needs a recognized outcome status")
@@ -461,8 +631,94 @@ class ForwardSessionRunner:
 
     @classmethod
     def _event_dict(cls, event: NormalizedEvent) -> dict:
-        return {"kind": event.kind, "instrument": event.instrument,
+        result = {"kind": event.kind, "instrument": event.instrument,
                 "event_utc": cls._utc(event.event_utc).isoformat(),
                 "received_utc": cls._utc(event.received_utc).isoformat(),
                 "available_utc": cls._utc(event.available_utc).isoformat(),
                 "payload": [list(item) for item in event.payload]}
+        if event.ingested_utc is not None:
+            result["ingested_utc"] = cls._utc(event.ingested_utc).isoformat()
+        return result
+
+
+def _opportunity_coverage(*, exchange_date: str, planned_instruments: Iterable[str],
+                          events: list[NormalizedEvent], decision: dict,
+                          execution: object) -> dict:
+    """Report session denominators without imputing unknown candidates or notionals."""
+    planned = sorted(set(planned_instruments))
+    quotes = [event for event in events if event.kind == "QUOTE"]
+    observed_instruments = {event.instrument for event in quotes}
+    execution = execution if isinstance(execution, dict) else {}
+    quote_inputs = execution.get("quote_inputs", [])
+    quote_inputs = quote_inputs if isinstance(quote_inputs, list) else []
+    accepted_hashes = {row.get("event_sha256") for row in quote_inputs if isinstance(row, dict)}
+    quality_rejections = execution.get("quote_quality_rejections", [])
+    quality_rejections = quality_rejections if isinstance(quality_rejections, list) else []
+    rejected_hashes = {row.get("event_sha256") for row in quality_rejections if isinstance(row, dict)}
+    quote_by_hash = {event.content_sha256(): event for event in quotes}
+    accepted_events = [quote_by_hash[digest] for digest in accepted_hashes if digest in quote_by_hash]
+    candidate_rows = decision.get("candidate_signals")
+    if isinstance(candidate_rows, list):
+        candidates = [row for row in candidate_rows if isinstance(row, dict)]
+    elif decision.get("side") in {"BUY", "SELL"}:
+        candidates = [decision]
+    else:
+        candidates = []
+    candidate_instruments = [str(row.get("instrument")) for row in candidates if row.get("instrument")]
+    accepted_instruments = {event.instrument for event in accepted_events}
+    covered_candidates = sum(1 for instrument in candidate_instruments if instrument in accepted_instruments)
+
+    notional_values: list[Decimal] = []
+    missing_candidate_notional = 0
+    for candidate in candidates:
+        value = candidate.get("candidate_notional_inr", candidate.get("notional_inr"))
+        try:
+            notional = Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            missing_candidate_notional += 1
+            continue
+        if not notional.is_finite() or notional < 0:
+            missing_candidate_notional += 1
+            continue
+        notional_values.append(notional)
+    total_notional = sum(notional_values, Decimal(0))
+    fills = execution.get("fills", [])
+    fills = fills if isinstance(fills, list) else []
+    filled_notional = Decimal(0)
+    for fill in fills:
+        if not isinstance(fill, dict):
+            continue
+        try:
+            amount = Decimal(str(fill["price"])) * int(fill["quantity"])
+        except (KeyError, TypeError, ValueError, InvalidOperation):
+            continue
+        if amount.is_finite() and amount >= 0:
+            filled_notional += amount
+    execution_status = execution.get("status", execution.get("state"))
+    has_fill = bool(fills)
+    missed_candidates = len(candidates) if execution_status in {"MISSED", "NO_TRADE"} and not has_fill else 0
+    return {
+        "exchange_date": exchange_date,
+        "session_date_denominator": 1,
+        "planned_instrument_count": len(planned),
+        "quoted_instrument_count": len(observed_instruments.intersection(planned)),
+        "missing_quote_instruments": sorted(set(planned) - observed_instruments),
+        "quote_event_count": len(quotes),
+        "candidate_signal_count": len(candidates),
+        "candidate_signal_quote_covered_count": covered_candidates,
+        "candidate_signal_quote_coverage_pct": round(100 * covered_candidates / len(candidates), 4)
+        if candidates else None,
+        "candidate_notional_denominator_inr": str(total_notional)
+        if candidates and not missing_candidate_notional else None,
+        "candidate_notional_missing_count": missing_candidate_notional,
+        "filled_notional_inr": str(filled_notional) if has_fill else "0",
+        "quote_inputs_accepted_count": len(accepted_hashes),
+        "quote_inputs_quality_rejected_count": len(rejected_hashes),
+        "filled_quote_count": 1 if has_fill and execution.get("used_quote_input_id") else 0,
+        "missed_candidate_signal_count": missed_candidates,
+        "lost_opportunity_denominator_count": len(candidates),
+        "candidate_universe_scope": "STRATEGY_OUTPUT_NOT_MARKET_WIDE",
+        "execution_status": execution_status,
+        "missing_denominators": (["CANDIDATE_NOTIONAL_INR"] if missing_candidate_notional else [])
+        + (["EXECUTION_QUOTE_RECEIPTS"] if candidates and not quote_inputs and not quality_rejections else []),
+    }

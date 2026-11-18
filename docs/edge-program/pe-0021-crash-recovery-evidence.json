@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PE-0021",
+  "status": "DONE",
+  "captured_at_utc": "2026-11-13T06:36:14Z",
+  "source_sha256": {
+    "src/financial_brain/forward_edge/session_runner.py": "dc338055fb120325f93c5ecaf8a7b9c8f81d9a80e652de41ccba3e62f71ed0f3",
+    "src/financial_brain/forward_edge/durable.py": "0f32847d2bf0d192780c69a20d7e928a8efcd1830c26814d9cccdc7fd8d70d04",
+    "tests/test_forward_session_crash_matrix.py": "4535261aaf1b81bb5f8f86817512a01d1635b3225e87d1a02018aa4d4da25e37",
+    "tests/test_forward_session_runner.py": "c24512ab2c28cfcd75f0ec1dade86d5ca9078539696986118f50e57697a3ad18",
+    "docs/edge-program/forward-session-crash-recovery-contract.md": "de3a96d94f0f91d90535bbf8ac232cc8bb595b3a081bfd7bc1d71f5f3a2867b3"
+  },
+  "acceptance_tests": [
+    "test_lifecycle_crash_at_each_durable_boundary_recovers_one_economic_event",
+    "test_crash_after_not_applied_reconciliation_does_not_repeat_reconciliation_or_fill",
+    "test_pending_outbox_requires_reconciliation_after_unknown_side_effect",
+    "test_outbox_retries_only_after_reconciliation_proves_no_effect",
+    "test_restart_after_execution_receipt_before_ack_does_not_repeat_execution",
+    "test_incomplete_session_is_preserved_and_cannot_be_reused",
+    "test_data_rejections_are_immutable_idempotent_and_persisted"
+  ],
+  "result": "Injected crashes after session plan/state, preflight, market events, decision, risk verdict, paper intent, outbox pending, execution receipt, acknowledgement and close recover to one plan/decision/intent/receipt/ack/close and one fill. Outbox unknown requires reconciliation. A durable NOT_APPLIED reconciliation is reused after a crash without duplicate reconciliation or execution receipt.",
+  "focused_tests": "86 passed (forward-session crash, runner, clock, Kite, intraday, session-date, and book integration)",
+  "ruff": "passed",
+  "mypy": "passed",
+  "diff_check": "passed",
+  "limitations": [
+    "Venue/broker reconciliation is not connected; all receipts in this task are local paper-simulation receipts."
+  ]
+}
