@@ -1645,32 +1645,58 @@
     {
       "id": "FB-0466",
       "text": "Support configurable full exits, profit scale-outs, breakeven stop moves, trailing stops, partial TP ladders and time stops; make each a versioned rule, not an after-the-fact manual adjustment.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/exit_policy.py defines typed versioned full-exit, scale-out, breakeven-move, trailing-stop and session time-exit rules.",
+        "ExitPolicy binds rules to strategy ID/version and policy version, requires hard-stop protection, validates unique rule identities and scale-out quantities, and exposes a deterministic SHA-256 policy hash.",
+        "Rule contracts validate action-specific inputs, including trailing distance, TP/stop trigger price, scale-out fractions and time-stop horizon."
+      ],
+      "blocker": "Exit policies are not yet attached to every TradePlan/strategy adapter or executed by the persistent protection ledger/ForwardSessionRunner; live quote-trigger evaluation and rule migration/approval workflow remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T18:23:59+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0466 tests/test_exit_policy.py tests/test_exit_protection_ledger.py tests/test_position_signals.py -q: 23 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "Versioned exit policies represent full exits, scale-outs, breakeven moves, trailing stops and time exits; invalid quantities, missing protection and inconsistent rule parameters are rejected."
     },
     {
       "id": "FB-0467",
       "text": "On price gaps through SL/TP, use feasible first available executable bid/ask rather than the trigger price; record gap/slippage and preserve losses beyond planned stop.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/gap_exit.py resolves long exits to executable bid and short exits to executable ask, and records trigger price, executable price, source hash, signed and adverse slippage.",
+        "Stale/future quote timestamps, insufficient quote size, unavailable quotes, crossed markets and invalid clocks fail closed to an unresolved exit rather than a fictional trigger-price fill.",
+        "The legacy strategy execution rule also models a gap-through stop at the adverse open when using bar data."
+      ],
+      "blocker": "The quote-backed resolver is not yet called by all trigger evaluators/ForwardSessionRunner, and its slippage evidence is not yet connected to final trade cost attribution or every historical event source.",
+      "last_audited_at_utc": "2026-11-21T18:25:57+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0467-68 tests/test_gap_exit.py tests/test_algo_structure_exec.py -q: 25 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "A gap exit uses side-correct executable quote evidence or remains unresolved; adverse slippage reflects any price worse than the stop level."
     },
     {
       "id": "FB-0468",
       "text": "On bar-only historical simulation where SL and TP are both touched in one bar and event order is unknown, use conservative adverse-first assumptions or report unresolved; never choose the profitable sequence by hindsight.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/strategies/execution_rules.py::resolve_intrabar detects when both stop and target are within a bar and deterministically selects STOP as the adverse branch for both long and short positions.",
+        "The function selects only the observed stop or target when exactly one threshold is touched, and returns NONE when neither is touched; it does not choose a profitable intrabar ordering by hindsight."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T18:25:57+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0467-68 tests/test_gap_exit.py tests/test_algo_structure_exec.py -q: 25 passed",
+        "Ruff: passed"
+      ],
+      "test_result": "Ambiguous bars touching both protective and profit thresholds deterministically take the adverse stop outcome; direction-specific single-touch cases are covered."
     },
     {
       "id": "FB-0469",

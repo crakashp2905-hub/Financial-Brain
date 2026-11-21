@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 658,
+  "source_count": 660,
   "sources": [
     {
       "capability_ids": [],
@@ -7239,6 +7239,25 @@
         "__future__",
         "dataclasses",
         "decimal",
+        "enum",
+        "hashlib",
+        "json",
+        "trader_signal"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/exit_policy.py",
+      "source_sha256": "d0bbed527e022f2adf2ac3cf745f33aabea132ac0a1a8edf83aa4f9d564cfe01",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "decimal",
         "financial_brain.forward_edge.durable",
         "position_signals",
         "uuid"
@@ -7330,6 +7349,23 @@
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/futures_fx.py",
       "source_sha256": "1cdc964afd9bca3259b72691b5998d4532ba1dd24e3a7818f22104119fad938a",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/gap_exit.py",
+      "source_sha256": "cfa46083b01729ace6c1247e0517340e21d2f669700a33b9b5487694bba5fb29",
       "test_paths": []
     },
     {
@@ -11488,6 +11524,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 643,
-  "unassigned_role_count": 385
+  "unassessed_count": 645,
+  "unassigned_role_count": 387
 }
