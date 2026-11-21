@@ -57,6 +57,9 @@ class MarketEvent:
     sequence: int | None = None
     decision_time: datetime | None = None
     evidence_id: str | None = None
+    source_at: datetime | None = None
+    exchange_at: datetime | None = None
+    published_at: datetime | None = None
 
     def __post_init__(self) -> None:
         if not all(isinstance(x, str) and x.strip() for x in
@@ -69,8 +72,12 @@ class MarketEvent:
         object.__setattr__(self, "kind", kind)
         for name in ("event_time", "received_at", "available_at"):
             object.__setattr__(self, name, _utc(getattr(self, name), name))
-        if self.decision_time is not None:
-            object.__setattr__(self, "decision_time", _utc(self.decision_time, "decision_time"))
+        for name in ("decision_time", "source_at", "exchange_at", "published_at"):
+            value = getattr(self, name)
+            if value is not None:
+                object.__setattr__(self, name, _utc(value, name))
+        if self.published_at is not None and self.published_at > self.available_at:
+            raise MarketEventError("event cannot be available to strategy before publication")
         if self.sequence is not None and (type(self.sequence) is not int or self.sequence < 0):
             raise MarketEventError("sequence must be a non-negative integer")
         if not isinstance(self.payload, dict):
@@ -119,12 +126,18 @@ class MarketEvent:
                 raise MarketEventError(f"{self.kind.value} payload cannot be empty")
 
     def as_dict(self) -> dict[str, Any]:
-        return {"event_id": self.event_id, "kind": self.kind.value, "venue": self.venue,
+        result = {"event_id": self.event_id, "kind": self.kind.value, "venue": self.venue,
                 "instrument_id": self.instrument_id, "event_time": self.event_time.isoformat(),
                 "received_at": self.received_at.isoformat(), "available_at": self.available_at.isoformat(),
                 "decision_time": self.decision_time.isoformat() if self.decision_time else None,
                 "sequence": self.sequence, "source": self.source, "evidence_id": self.evidence_id,
                 "payload": self.payload}
+        # Preserve legacy event hashes unless a source explicitly supplies these separate clocks.
+        for name in ("source_at", "exchange_at", "published_at"):
+            value = getattr(self, name)
+            if value is not None:
+                result[name] = value.isoformat()
+        return result
 
     def sha256(self) -> str:
         raw = json.dumps(self.as_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -133,7 +146,8 @@ class MarketEvent:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "MarketEvent":
         fields = dict(data)
-        for key in ("event_time", "received_at", "available_at", "decision_time"):
+        for key in ("event_time", "received_at", "available_at", "decision_time",
+                    "source_at", "exchange_at", "published_at"):
             if fields.get(key) is not None:
                 fields[key] = datetime.fromisoformat(fields[key])
         return cls(**fields)

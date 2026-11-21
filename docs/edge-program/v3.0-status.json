@@ -330,22 +330,46 @@
     {
       "id": "FB-0104",
       "text": "Canonical `TradingClock`: exchange session vs scheme business day vs bank settlement day vs NAV publication time; timezone Asia/Kolkata with holiday calendars.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/kernel/trading_clock.py::TradingClock composes distinct NSE/BSE session, per-scheme business, bank settlement and observed NAV publication clocks in Asia/Kolkata.",
+        "BusinessCalendar requires explicit source hash, bounded coverage and sourced open dates; no weekends, holidays, generic NAV cutoff or publication time are inferred.",
+        "NavPublication stores the actual timezone-aware timestamp and source identity; duplicate, pre-business-date and unsourced NAV publications fail closed.",
+        "tests/test_kernel_trading_clock.py and tests/test_forward_edge_venue_calendar.py cover timezone conversion, distinct clocks, holiday/weekend representation, source-horizon refusal and missing NAV timestamps."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T13:22:00+00:00",
+      "commit": "2987069d",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_trading_clock.py tests/test_forward_edge_venue_calendar.py -q: 8 passed",
+        "ruff check src/financial_brain/kernel/trading_clock.py tests/test_kernel_trading_clock.py: passed",
+        "python -m mypy src/financial_brain/kernel/trading_clock.py --follow-imports=silent: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "The canonical clock treats exchange sessions, scheme business dates, bank settlement dates, and actual NAV publication timestamps as separate source-bounded facts. Missing or stale calendars and missing publication records fail closed."
     },
     {
       "id": "FB-0105",
       "text": "Store source timestamp, exchange timestamp when present, receipt timestamp, available-to-strategy timestamp, published-at and ingested-at.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/market_events.py::MarketEvent stores event_time, received_at and available_at; optional source_at, exchange_at and published_at are timezone-normalized, serialized and included in content hashes only when explicitly supplied.",
+        "src/financial_brain/forward_edge/market_data.py::normalize_kite_quote records the observed Kite source and exchange timestamps independently from local receipt/availability.",
+        "src/financial_brain/forward_edge/session_runner.py persists ingested_at and ingest_clock_source in runner_events and the append-only audit; records() exports the stored ingest timestamp.",
+        "tests/test_forward_edge_market_events.py and tests/test_forward_edge_kite_market_data.py cover clock-field round trip, publication ordering and explicit Kite source/exchange clocks.",
+        "tests/test_forward_edge_session_runner.py verifies session ingestion/recovery behavior; three focused suites passed."
+      ],
+      "blocker": "Partial: event, Kite quote and paper-runner timestamps are represented and persisted, but there is no repository-wide data-contract audit proving source/exchange/published/ingested clocks survive every provider, filing, NAV, replay and export path. Older records with no such timestamps cannot be backfilled.",
+      "last_audited_at_utc": "2026-11-21T13:27:00+00:00",
+      "commit": "cfdd5ad1",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_market_events.py tests/test_forward_edge_kite_market_data.py tests/test_forward_edge_session_runner.py -q: 86 passed",
+        "ruff check on changed market-event and Kite-normalization modules/tests: passed",
+        "targeted mypy for market_events.py and market_data.py: passed"
+      ],
+      "test_result": "The live quote and forward paper event path preserves source/exchange, receipt, availability and ingestion times, and event envelopes can preserve publication time when supplied. System-wide coverage remains incomplete."
     },
     {
       "id": "FB-0106",
