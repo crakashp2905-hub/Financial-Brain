@@ -685,12 +685,21 @@
     {
       "id": "FB-0211",
       "text": "Track ETF creations/redemptions only as issuer/market-maker reference context, not as retail trader's instant redemption pathway.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_reference.py::ETFPrimaryMarketContext models creation/redemption quantity with source, identity, publication time and content hash",
+        "Catalog requires separate research/retention permissions and point-in-time ISIN match; records are explicitly labeled ISSUER_MARKET_MAKER_REFERENCE_CONTEXT_ONLY and expose retail_order_actionable=false",
+        "tests/test_etf_reference.py: context is hidden before publication, visible afterward, and retail redemption semantics are rejected"
+      ],
+      "blocker": "Partial: context-only data contract exists, but there are no permitted issuer/AP creation-redemption disclosures loaded or consumer-side UI labels using the context.",
+      "last_audited_at_utc": "2026-11-21T14:40:00+00:00",
+      "commit": "0d549efd",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_reference.py -q: 21 passed",
+        "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
+      ],
+      "test_result": "Creation/redemption facts are permission-gated, as-of resolved and cannot be interpreted by the type as an immediate retail redemption action."
     },
     {
       "id": "FB-0212",
