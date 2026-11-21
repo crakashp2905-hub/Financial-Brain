@@ -222,10 +222,11 @@
       "status": "DONE",
       "tests": [
         "test_live_cash_is_unavailable_by_default",
-        "test_flipping_the_build_flag_alone_does_not_enable_cash",
-        "test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass",
+        "test_credentials_approvals_or_runtime_flags_cannot_enable_cash",
+        "test_live_cash_stays_disabled_with_human_approval_and_compliance",
         "test_broker_dryrun_needs_verified_compliance",
         "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+        "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open",
         "test_session_mode_is_immutable"
       ],
       "blockers": [],
@@ -237,14 +238,15 @@
       "status": "DONE",
       "tests": [
         "test_live_cash_is_unavailable_by_default",
-        "test_flipping_the_build_flag_alone_does_not_enable_cash",
-        "test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass",
+        "test_credentials_approvals_or_runtime_flags_cannot_enable_cash",
+        "test_live_cash_stays_disabled_with_human_approval_and_compliance",
         "test_broker_dryrun_needs_verified_compliance",
         "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+        "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open",
         "test_session_mode_is_immutable"
       ],
       "blockers": [],
-      "note": "LIVE_CASH refused by build policy; needs compliance and human approval."
+      "note": "LIVE_CASH is permanently refused in this pipeline, including with approval and compliance inputs."
     },
     {
       "id": "FE-0007",
@@ -1665,7 +1667,6 @@
       "tests": [
         "test_software_actor_identifiers_cannot_approve",
         "test_non_human_actor_type_is_rejected_even_with_a_human_looking_name",
-        "test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass",
         "test_human_paper_champion_change_needs_scoped_approval_and_verified_receipt",
         "test_champion_change_fails_without_external_custody_or_exact_human_approval"
       ],
@@ -1701,12 +1702,13 @@
       "wave": "F12",
       "status": "PARTIAL",
       "tests": [
-        "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders"
+        "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+        "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open"
       ],
       "blockers": [
         "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)"
       ],
-      "note": "No broker adapter exists; physical-order gate is False everywhere."
+      "note": "Legacy Kite account adapter is read-only: the shared order policy denies every non-GET request; external broker review remains a separate gate."
     },
     {
       "id": "FE-0133",

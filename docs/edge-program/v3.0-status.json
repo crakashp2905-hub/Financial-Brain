@@ -22,17 +22,18 @@
         "scripts/trial_preservation_audit.py --check (9 protected files verify unchanged)",
         "GitHub Actions run 44896239124: both reproducibility jobs passed; source-rights, capability-ownership and dependency-graph checks passed on Ubuntu and Windows; test jobs then failed at the fixture-equivalence report",
         "scripts/validate_market_data_sources.py and tests/test_market_data_source_validator.py (runtime-source alias fix)",
-        "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py (fixture-only provenance removes synthetic checkout-specific report drift; tests/test_forward_edge_pipeline_compat.py plus tests/test_forward_edge_session_runner.py: 66 passed)"
+        "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py (fixture-only provenance removes synthetic checkout-specific report drift; tests/test_forward_edge_pipeline_compat.py plus tests/test_forward_edge_session_runner.py: 66 passed)",
+        "Hosted CI run 44898633158: reproducibility jobs and all pre-test freshness gates passed on Ubuntu and Windows; 3,735 tests passed but four fixture-permission tests failed on both platforms.",
+        "Commit d6008d1d gives those synthetic fixture tests explicit frozen fixture opt-in or a test-only PAPER_SIMULATION permission; tests/test_forward_edge_checkpoints.py plus tests/test_forward_edge_integrity_gates.py: 7 passed locally."
       ],
-      "blocker": "The latest hosted run passes market-data source rights and repository inventory gates but fails at a generated fixture report because the fixture audit hashes include checkout-specific provenance. The fixture adapter now uses a synthetic-only provenance marker; full Ubuntu/Windows CI must pass on the next head.",
-      "last_audited_at_utc": "2026-11-21T11:07:12+00:00",
-      "commit": "35478c70",
+      "blocker": "Partial: run 44898633158 still failed at four test fixtures that omitted explicit synthetic/test-only data rights. The fixtures are now corrected in d6008d1d and pass locally; a fresh full Ubuntu/Windows hosted run is required before CI is called green.",
+      "last_audited_at_utc": "2026-11-21T11:39:04+00:00",
+      "commit": "d6008d1d",
       "test_evidence": [
-        "tests/test_checklist_baseline.py",
-        "tests/test_market_data_source_validator.py",
-        "scripts/trial_preservation_audit.py --check"
+        "GitHub Actions run 44898633158: both reproducibility jobs pass, both platform test jobs have 3,735 passed and 4 fixture permission failures",
+        "tests/test_forward_edge_checkpoints.py and tests/test_forward_edge_integrity_gates.py: 7 passed after explicit synthetic permission fixtures"
       ],
-      "test_result": "Starting checkout baseline recorded and self-validated; protected trial preservation audit passes. The runtime-source alias and fixture provenance fixes pass locally; 66 compatibility/session-runner tests, source/graph freshness checks and the synthetic report check pass. Hosted run 44896239124 passed rights and inventory gates on both OSes but failed at fixture report freshness; a new full CI run is required."
+      "test_result": "Hosted inventory and reproducibility gates passed on Ubuntu and Windows. The full suite exposed four fixture tests missing explicit synthetic/test-only paper-simulation rights. Commit d6008d1d fixes them; the 7 affected tests pass locally. Full hosted CI must be rerun."
     },
     {
       "id": "FB-0002",
@@ -40,16 +41,17 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/capability-ownership.v1.json (21 capability contracts, 429 trader-core modules, 31 strategy candidates with source refs and hashes)",
+        "docs/edge-program/capability-ownership.v1.json (21 capability contracts, 430 trader-core modules, 31 strategy candidates with source refs and hashes)",
         "scripts/capability_ownership.py (deterministic inventory generator and freshness check)",
         "tests/test_capability_ownership.py (canonical-owner uniqueness, module coverage and path integrity)",
         ".github/workflows/ci.yml (capability inventory freshness gate)",
         "GitHub Actions run 44896239124: trader capability owners gate passed on Ubuntu and Windows before a later fixture-equivalence report failure",
         "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py (fixture provenance no longer depends on Git checkout identity; 66 compatibility/session-runner tests passed)",
-        "Focused verification: 3 tests passed; Ruff, mypy, inventory freshness and git diff --check passed"
+        "Focused verification: 3 tests passed; Ruff, mypy, inventory freshness and git diff --check passed",
+        "docs/edge-program/capability-ownership.v1.json regenerated after shared order-policy integration: 21 contracts, 430 trader-core modules; generator check passes."
       ],
       "blocker": "Partial: AlgorithmSpec and StrategySpec identity/promotion remain split; the inventory intentionally covers trader-core rather than all 623 Python modules, and the broker, kernel, forward-paper and legacy-paper persistence domains remain separate. Its freshness gate passed on both OSes; a separate checkout-specific synthetic fixture provenance issue caused the latest run to fail later and now has an in-house regression fix. Fresh hosted CI remains pending.",
-      "last_audited_at_utc": "2026-11-21T11:07:12+00:00",
+      "last_audited_at_utc": "2026-11-21T11:39:04+00:00",
       "commit": "35478c70"
     },
     {
@@ -14103,7 +14105,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T11:33:08+00:00",
+    "as_of_utc": "2026-11-21T11:39:04+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14180,13 +14182,15 @@
       "src/financial_brain/portfolio/legacy_migration.py",
       "tests/test_canonical_portfolio_ledger.py",
       "tests/test_capability_ownership.py",
+      "tests/test_forward_edge_checkpoints.py",
       "tests/test_forward_edge_f00.py",
+      "tests/test_forward_edge_integrity_gates.py",
       "tests/test_forward_edge_pipeline_compat.py",
       "tests/test_learning_audit.py",
       "tests/test_legacy_portfolio_migration.py",
       "tests/test_oms.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0007: forward-edge and legacy Kite execution now use one unconditional physical-order denial; hostile tests verify no broker write escapes, even with all legacy readiness locks open."
+    "evidence_update": "FB-0001: previous full hosted run exposed four synthetic-fixture rights omissions; test inputs now carry explicit test-only permission and the affected seven tests pass locally; next full CI remains pending."
   }
 }
