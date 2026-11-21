@@ -1033,12 +1033,22 @@
     {
       "id": "FB-0317",
       "text": "Do not double-deduct expense ratio from returns derived from published MF NAV (TER is reflected in NAV); disclose TER for comparison and future projections separately.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/research/mf_return_accounting.py computes observed NAV-ratio returns without any TER input and labels the result TER_ALREADY_REFLECTED.",
+        "The separate forward_net_projection() accepts TER only for a forward gross-return assumption and marks the output FORWARD_ONLY; TER_APPLIED_SEPARATELY.",
+        "The API prevents accidentally deducting TER a second time from the observed NAV calculation; IDCW cash/reinvestment flows are accounted separately under FB-0316."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T17:00:31+00:00",
+      "commit": "e3e9c6f3",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mf-return tests/test_mf_return_accounting.py -q: 3 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/research/mf_return_accounting.py: passed"
+      ],
+      "test_result": "Published NAV changes are reported without a second TER deduction; future net projections apply TER separately and are explicitly labeled as projections."
     },
     {
       "id": "FB-0318",
@@ -14548,7 +14558,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T16:55:36+00:00",
+    "as_of_utc": "2026-11-21T17:00:31+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14597,6 +14607,7 @@
       "FB-0310",
       "FB-0314",
       "FB-0316",
+      "FB-0317",
       "FB-0318",
       "SL-00-01",
       "SL-00-02",
@@ -14618,15 +14629,15 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 67,
+    "audited_count": 68,
     "status_counts": {
-      "COMPLETE": 23,
+      "COMPLETE": 24,
       "PARTIAL": 43,
       "NOT_STARTED": 0,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1311
+      "UNASSESSED": 1310
     },
-    "verified_complete_count": 23,
+    "verified_complete_count": 24,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",

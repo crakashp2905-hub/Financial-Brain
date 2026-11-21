@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 644,
+  "source_count": 645,
   "sources": [
     {
       "capability_ids": [],
@@ -10369,6 +10369,22 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/mf_return_accounting.py",
+      "source_sha256": "93ed087e1df01fc31069543c8bd3c73c0d4b8b432dcdf2e20ddb89edb5e7e0e4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "hashlib",
         "pathlib",
         "re",
@@ -11238,6 +11254,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 629,
+  "unassessed_count": 630,
   "unassigned_role_count": 376
 }
