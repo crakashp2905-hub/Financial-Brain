@@ -43,6 +43,23 @@ def test_naive_clock_or_event_not_available_at_decision_is_rejected() -> None:
         _event(EventKind.TICK, {"price": 10}, decision_time=T0)
 
 
+def test_explicit_source_exchange_and_publication_timestamps_roundtrip() -> None:
+    published = T0 - timedelta(seconds=1)
+    event = _event(EventKind.TICK, {"price": 10}, source_at=T0 - timedelta(seconds=2),
+                   exchange_at=T0 - timedelta(milliseconds=1), published_at=published)
+    restored = MarketEvent.from_dict(event.as_dict())
+    assert restored.source_at == event.source_at
+    assert restored.exchange_at == event.exchange_at
+    assert restored.published_at == published
+    assert event.as_dict()["received_at"] == event.received_at.isoformat()
+    assert event.as_dict()["available_at"] == event.available_at.isoformat()
+
+
+def test_publication_cannot_follow_strategy_availability() -> None:
+    with pytest.raises(MarketEventError, match="before publication"):
+        _event(EventKind.TICK, {"price": 10}, published_at=T0 + timedelta(seconds=4))
+
+
 @pytest.mark.parametrize("kind,payload", [
     (EventKind.TICK, {"price": float("nan")}),
     (EventKind.QUOTE, {"bid": 102, "ask": 101}),
