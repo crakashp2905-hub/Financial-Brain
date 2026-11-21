@@ -7413,17 +7413,22 @@
       "evidence": [
       "src/financial_brain/portfolio/canonical_ledger.py (append-only cross-asset event store and deterministic as-of projection for explicit cash flows, fills, fees and marks)",
       "UNRESOLVED_POSITION events preserve source-reported positions without creating fills and force projection_complete=false",
-      "docs/edge-program/canonical-portfolio-ledger.v1.md (schema, semantics, verification and explicit migration limits)",
-      "tests/test_canonical_portfolio_ledger.py (5 synthetic tests cover equities, ETFs, options, fractional MF units, idempotency, atomic imports, as-of marks and unresolved rows)",
+      "src/financial_brain/portfolio/legacy_migration.py plus scripts/migrate_legacy_paper_books.py (read-only intraday/swing source adapters and separate idempotent SQLite destination)",
+      "scripts/audit_canonical_portfolio_migration.py verifies exact event payloads against DuckDB sources and writes only aggregate counts, file hashes and unresolved totals; it reports zero missing, mismatched or unscanned ledger events",
+      "docs/edge-program/canonical-migration-audit.v1.json: 1,631 intraday and 6,334 swing rows; 23,479/23,479 source events match exact stored payloads; 0 rejected rows",
+      "Local ignored data/canonical_portfolio.sqlite: 18 virtual book/run accounts; 51 intraday rows without exits and five swing rows with missing entry facts remain unresolved; no fills were invented",
+      "All 18 accounts lack recorded opening cash; 406 open positions are across run books and include replay/challenger overlap, not unique live holdings",
+      "tests/test_canonical_portfolio_ledger.py and tests/test_legacy_portfolio_migration.py (11 synthetic ledger, adapter, idempotency and source verification tests)",
       "docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json regenerated and verified against current source"
       ],
     "blocker": "No source-specific adapters or runtime book databases have been migrated. Existing local formats include strategy outcomes and snapshots without consistent fill IDs, contract identity, costs or mark lineage; missing facts must remain unresolved. Cash/position accounting for settlement, tax, corporate actions, FX, margin, option lifecycle and fund allotment remains unimplemented.",
-    "last_audited_at_utc": "2026-11-21T08:37:56+00:00",
-    "commit": "15c3057d",
+    "last_audited_at_utc": "2026-11-21T08:59:18+00:00",
+    "commit": "d9a2fde7",
     "test_evidence": [
-      "tests/test_canonical_portfolio_ledger.py"
+      "tests/test_canonical_portfolio_ledger.py",
+      "tests/test_legacy_portfolio_migration.py"
     ],
-    "test_result": "5 synthetic canonical-ledger tests passed; Ruff and mypy passed; source inventory and forward-engine dependency graph freshness checks passed. No production or local runtime books were migrated in this increment."
+    "test_result": "11 migration/ledger tests and 69 combined checklist regression tests passed; Ruff, mypy, source inventory and dependency graph freshness passed. Local migration audit verifies 23,479/23,479 source event payloads with zero rejected, missing, mismatched or unscanned rows. The audit shows 56 unresolved source records, 18 books without opening cash, and missing options/ETF-specific/MF source books; no broker reconciliation or profitability claim is made."
     },
     {
       "id": "SL-00-07",
@@ -7476,7 +7481,7 @@
       "src/financial_brain/evaluation/evidence_tiers.py (fixtures remain historical/research claims and cannot be upgraded by observed or custody fields)",
       "tests/test_evidence_labels.py (mode separation, complete prospective session, custody gate, replay/fixture non-promotion, and export consistency)",
       "tests/test_evidence_claims.py (source-aware claim promotion only for complete observed sessions; fixtures stay replicated)",
-      "docs/edge-program/source-inventory.v2.json refreshed and verified with scripts/source_inventory.py --check (620 Python files)",
+      "docs/edge-program/source-inventory.v2.json refreshed and verified with scripts/source_inventory.py --check (621 Python files)",
       "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy and git diff --check passed"
       ],
     "blocker": null,
