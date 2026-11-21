@@ -153,3 +153,46 @@ def test_oco_partial_fill_cancels_sibling_and_recovers_remaining_protection(tmp_
             "8", "exit:target-after-fill", protection_id=target.protection_id,
             trigger=ExitTrigger.TAKE_PROFIT, oco_group_id=group,
         ))
+
+
+def test_trigger_during_quote_outage_is_persisted_unresolved_until_exit_is_emitted(tmp_path):
+    path = tmp_path / "unresolved.journal"
+    ledger = _armed(path)
+    kwargs = {
+        "intent_id": "550e8400-e29b-41d4-a716-446655440012",
+        "protection_id": PROTECTION_ID, "trigger": ExitTrigger.HARD_STOP,
+        "quantity": Decimal("10"), "observed_at": datetime(2026, 11, 21, 11, tzinfo=timezone.utc),
+        "reason": "quote_outage_after_stop_trigger", "idempotency_key": "unresolved:stop:1",
+        "evidence_hash": "d" * 64,
+    }
+    assert ledger.record_unresolved_exit(**kwargs)
+    assert not ledger.record_unresolved_exit(**kwargs)
+    recovered = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    assert recovered.state.open_quantity == Decimal("10")
+    assert recovered.state.unresolved_exit_intent_ids == {kwargs["intent_id"]}
+    assert recovered.state.exit_filled_quantity == 0
+
+    assert recovered.emit(_entry(), _protection(), _event(),
+                          resolves_unresolved_intent_id=kwargs["intent_id"])
+    final = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    assert final.state.unresolved_exit_intent_ids == frozenset()
+    assert final.state.open_quantity == Decimal("10")
+
+
+def test_unresolved_exit_requires_armed_protection_and_aware_timestamp(tmp_path):
+    ledger = ExitProtectionLedger(DurableJournal(tmp_path / "unresolved.journal"), position_id=POSITION_ID)
+    with pytest.raises(ExitLedgerError, match="durably armed"):
+        ledger.record_unresolved_exit(
+            intent_id="550e8400-e29b-41d4-a716-446655440012", protection_id=PROTECTION_ID,
+            trigger=ExitTrigger.HARD_STOP, quantity=Decimal("1"), observed_at=NOW,
+            reason="halt", idempotency_key="unresolved:1",
+        )
+    ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
+                             side=EntrySide.BUY, idempotency_key="entry:fill:1")
+    ledger.arm(_protection(), idempotency_key="protection:arm:1")
+    with pytest.raises(ExitLedgerError, match="timezone-aware"):
+        ledger.record_unresolved_exit(
+            intent_id="550e8400-e29b-41d4-a716-446655440012", protection_id=PROTECTION_ID,
+            trigger=ExitTrigger.HARD_STOP, quantity=Decimal("1"),
+            observed_at=datetime(2026, 11, 21, 11), reason="halt", idempotency_key="unresolved:1",
+        )

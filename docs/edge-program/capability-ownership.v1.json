@@ -2223,6 +2223,12 @@
       "module_owner": "src/financial_brain/kernel/execution_tools.py"
     },
     {
+      "capability_id": "module:src/financial_brain/kernel/exit_protection_ledger.py",
+      "path": "src/financial_brain/kernel/exit_protection_ledger.py",
+      "module_role": "ledger_or_journal",
+      "module_owner": "src/financial_brain/kernel/exit_protection_ledger.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/kernel/fills.py",
       "path": "src/financial_brain/kernel/fills.py",
       "module_role": "canonical_contract_or_signal_output",

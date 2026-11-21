@@ -1719,22 +1719,39 @@
     {
       "id": "FB-0470",
       "text": "When stop triggers during quote outage or trading halt, persist an unresolved exit intent and alert; do not mark a fictional stop-price fill or silently delete open risk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ExitProtectionLedger.record_unresolved_exit persists a triggered-but-unexecutable exit, protection ID, trigger, requested quantity, observation time, reason, idempotency key and optional evidence hash in the hash-chained journal.",
+        "Replay exposes unresolved intent IDs while leaving the position open and unfilled; a later linked executable exit event can resolve the unresolved intent.",
+        "Tests verify restart recovery, idempotent unresolved-intent writes, and no fabricated closure/fill during the quote-outage interval."
+      ],
+      "blocker": "The forward paper runner does not yet call this unresolved-intent path or dispatch operator alerts; market halt and provider-outage detection must be wired to the durable lifecycle.",
+      "last_audited_at_utc": "2026-11-21T18:30:38+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0470 tests/test_exit_protection_ledger.py -q: 8 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "An exit trigger during quote failure is durably retained and survives restart without declaring a fill or closing the open position; resolution requires a later explicit exit event."
     },
     {
       "id": "FB-0471",
       "text": "Add a per-position ledger of `ENTRY_SIGNAL`, `ENTRY_INTENT`, `ENTRY_FILL`, `STOP/TP_ARMED`, `EXIT_TRIGGER`, `EXIT_INTENT`, `EXIT_FILL`, `POSITION_CLOSED`, each with idempotency key and original snapshot.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ExitProtectionLedger records per-position ENTRY_FILL, PROTECTION_ARMED, EXIT_TRIGGERED, EXIT_FILL and unresolved-exit records in the hash-chained DurableJournal, with idempotency keys and replayed quantity state.",
+        "Events retain entry/protection/trigger identities, source evidence hashes, timestamps and quantities; conflicting duplicate identities fail closed."
+      ],
+      "blocker": "ENTRY_SIGNAL, ENTRY_INTENT and an explicit POSITION_CLOSED/settlement event with full original decision snapshots are not yet modeled as a unified event sequence; runner/OMS integration is also absent.",
+      "last_audited_at_utc": "2026-11-21T18:31:18+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0470 tests/test_exit_protection_ledger.py -q: 8 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "Implemented ledger events replay without double-counting and preserve fill/protection evidence; the complete required event vocabulary and position-close event remain outstanding."
     },
     {
       "id": "FB-0472",

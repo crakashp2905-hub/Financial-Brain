@@ -7258,16 +7258,18 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
         "decimal",
         "financial_brain.forward_edge.durable",
         "position_signals",
+        "trader_signal",
         "uuid"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/exit_protection_ledger.py",
-      "source_sha256": "044b3802f3fdab2890a75298319f694f24cbc7d42e1e33e062fe81dc8c783c0c",
+      "source_sha256": "b6253521387157c8225d1722c923944ca66524d186dbbab308cd8fb4efd0a6a0",
       "test_paths": []
     },
     {

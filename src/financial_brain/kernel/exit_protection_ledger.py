@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from .position_signals import (
     PositionSignalError,
     validate_protection_emission,
 )
+from .trader_signal import ExitTrigger
 
 
 class ExitLedgerError(ValueError):
@@ -39,6 +41,7 @@ class ExitLedgerState:
     open_quantity: Decimal
     armed_protection_ids: frozenset[str]
     emitted_idempotency_keys: frozenset[str]
+    unresolved_exit_intent_ids: frozenset[str]
 
 
 class ExitProtectionLedger:
@@ -101,6 +104,10 @@ class ExitProtectionLedger:
             else:
                 grouped_pending[group] = max(grouped_pending.get(group, Decimal(0)), quantity)
         pending += sum(grouped_pending.values(), Decimal(0))
+        unresolved = {r["intent_id"] for r in records if r["type"] == "EXIT_UNRESOLVED"}
+        resolved = {r["resolves_unresolved_intent_id"] for r in records
+                    if r["type"] == "EXIT_TRIGGERED" and r.get("resolves_unresolved_intent_id")}
+        unresolved.difference_update(resolved)
         if any(fills.get(key, Decimal(0)) + cancelled.get(key, Decimal(0)) > qty
                for key, qty in intents.items()):
             raise ExitLedgerError("journal contains exit fills/cancellations above emitted intent")
@@ -111,6 +118,7 @@ class ExitProtectionLedger:
             exit_pending_quantity=pending, open_quantity=entry_qty - exit_qty,
             armed_protection_ids=frozenset(protections),
             emitted_idempotency_keys=frozenset(intents),
+            unresolved_exit_intent_ids=frozenset(unresolved),
         )
 
     def record_entry_fill(self, *, entry_signal_id: str, fill_id: str, quantity: Decimal,
@@ -160,13 +168,24 @@ class ExitProtectionLedger:
                   "idempotency_key": idempotency_key}
         return self._append_idempotent(self.journal, records, record, idempotency_key)
 
-    def emit(self, entry: EntrySignal, protection: ExitProtectionIntent, event: EmittedExitEvent) -> bool:
+    def emit(
+        self,
+        entry: EntrySignal,
+        protection: ExitProtectionIntent,
+        event: EmittedExitEvent,
+        *,
+        resolves_unresolved_intent_id: str | None = None,
+    ) -> bool:
         if entry.opens_position_id != self.position_id:
             raise ExitLedgerError("entry belongs to a different position")
         records = self._position_records()
         state = self.state
         if protection.protection_id not in state.armed_protection_ids:
             raise ExitLedgerError("protection must be durably armed before trigger emission")
+        if resolves_unresolved_intent_id is not None and (
+            resolves_unresolved_intent_id not in state.unresolved_exit_intent_ids
+        ):
+            raise ExitLedgerError("cannot resolve an unknown or already resolved exit intent")
         if protection.oco_group_id is not None:
             group_exit_keys = {r["idempotency_key"] for r in records
                                if r.get("type") == "EXIT_TRIGGERED" and r.get("oco_group_id") == protection.oco_group_id}
@@ -181,6 +200,7 @@ class ExitProtectionLedger:
                   "quantity": str(event.quantity), "occurred_at": event.exit_signal.occurred_at.isoformat(),
                   "observed_trigger_at": event.observed_trigger_at.isoformat(),
                   "source_hash": event.exit_signal.source_hash, "oco_group_id": event.oco_group_id,
+                  "resolves_unresolved_intent_id": resolves_unresolved_intent_id,
                   "idempotency_key": key}
         prior = next((r for r in records if r.get("idempotency_key") == key), None)
         if prior is not None:
@@ -200,6 +220,50 @@ class ExitProtectionLedger:
             raise ExitLedgerError(str(exc)) from exc
         created = self._append_idempotent(self.journal, records, record, key)
         _ = self.state
+        return created
+
+    def record_unresolved_exit(
+        self,
+        *,
+        intent_id: str,
+        protection_id: str,
+        trigger: ExitTrigger,
+        quantity: Decimal,
+        observed_at: datetime,
+        reason: str,
+        idempotency_key: str,
+        evidence_hash: str | None = None,
+    ) -> bool:
+        """Durably retain a fired-but-unexecutable exit and expose it for operator alerting."""
+        from uuid import UUID
+
+        try:
+            UUID(intent_id)
+            UUID(protection_id)
+        except (ValueError, AttributeError) as exc:
+            raise ExitLedgerError("unresolved intent and protection IDs must be UUIDs") from exc
+        qty = _decimal(quantity, "unresolved exit quantity")
+        if qty <= 0 or not isinstance(trigger, ExitTrigger) or not reason.strip() or not idempotency_key.strip():
+            raise ExitLedgerError("unresolved exit requires positive quantity, trigger, reason, and idempotency key")
+        if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+            raise ExitLedgerError("unresolved exit observed_at must be timezone-aware")
+        if evidence_hash is not None and (len(evidence_hash) != 64 or any(c not in "0123456789abcdef" for c in evidence_hash)):
+            raise ExitLedgerError("unresolved evidence_hash must be lowercase SHA-256")
+        records = self._position_records()
+        if protection_id not in {r["protection_id"] for r in records if r["type"] == "PROTECTION_ARMED"}:
+            raise ExitLedgerError("unresolved exit protection must be durably armed")
+        if qty > self.state.open_quantity:
+            raise ExitLedgerError("unresolved exit quantity exceeds open position quantity")
+        record = {"type": "EXIT_UNRESOLVED", "position_id": self.position_id,
+                  "intent_id": intent_id, "protection_id": protection_id, "trigger": trigger,
+                  "quantity": str(qty), "observed_at": observed_at.isoformat(), "reason": reason,
+                  "evidence_hash": evidence_hash, "idempotency_key": idempotency_key}
+        prior = [r for r in records if r.get("intent_id") == intent_id]
+        if prior:
+            if prior[0] != record:
+                raise ExitLedgerError("unresolved intent ID conflicts with prior evidence")
+            return False
+        created = self._append_idempotent(self.journal, records, record, idempotency_key)
         return created
 
     def record_exit_fill(self, *, exit_key: str, fill_id: str, quantity: Decimal,
