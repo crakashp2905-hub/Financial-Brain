@@ -7444,8 +7444,8 @@
         "docs/edge-program/canonical-migration-audit.v1.json (SHA-256 b41590765d3c8d3ef8b285744e0e123be45c9fb3da67559a71d28fa4bee9ee78)"
       ],
       "blocker": "The required UNRESOLVED labels and P&L promotion block are implemented, but the 51 source rows contain no recorded exit and no actual Kite/broker execution receipts were available to reconcile them. Keep them unresolved; resolve only after receipt-backed execution facts are added and re-audited.",
-      "last_audited_at_utc": "2026-11-21T09:22:37+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-21T09:24:00+00:00",
+      "commit": "aef99efa",
       "test_evidence": [
         "tests/test_canonical_portfolio_ledger.py",
         "tests/test_legacy_portfolio_migration.py"
@@ -13976,7 +13976,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T09:22:37+00:00",
+    "as_of_utc": "2026-11-21T09:24:00+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
