@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 628,
+  "source_count": 629,
   "sources": [
     {
       "capability_ids": [],
@@ -7073,6 +7073,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "financial_brain.kernel.trading_clock",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/fund_transactions.py",
+      "source_sha256": "b407603d5b24e4d6ea4949babcb638de244f1eefef5dc90c42d157d98ca9abc6",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "decimal"
       ],
       "maturity": "unassessed",
@@ -10940,6 +10958,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 613,
-  "unassigned_role_count": 377
+  "unassessed_count": 614,
+  "unassigned_role_count": 378
 }
