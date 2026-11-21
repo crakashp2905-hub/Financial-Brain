@@ -1,0 +1,71 @@
+{
+  "schema": "fb.product_charter.v1",
+  "version": 1,
+  "product": "Financial-Brain",
+  "purpose": "Support trader research and decision-making through evidence-labelled signals, risk controls, paper execution and honest net-economic evaluation.",
+  "success_criteria": [
+    "Risk-aware net economic results are evaluated on future observations after realistic costs.",
+    "NO_TRADE and CASH are valid outcomes; the system does not force a recommendation.",
+    "Historical replay, deterministic fixture, local paper, prospective observation and independent attestation remain distinct evidence classes."
+  ],
+  "execution_policy": {
+    "paper_simulation": true,
+    "physical_orders_enabled": false,
+    "broker_order_submission": "OUT_OF_SCOPE",
+    "live_cash": "DISABLED_UNTIL_SEPARATE_OWNER_BROKER_COMPLIANCE_AND_RISK_GATES"
+  },
+  "desks": [
+    {
+      "desk": "SWING",
+      "products": ["EQUITY"],
+      "clock": "EXCHANGE_SESSION_AND_MULTI_SESSION_HOLDING",
+      "permitted_paper_actions": ["BUY", "SELL_EXISTING_POSITION", "NO_TRADE", "CASH"],
+      "execution_mechanics": "Exchange-traded share quantities and executable quote assumptions.",
+      "implementation_claim": "SCOPE_ONLY"
+    },
+    {
+      "desk": "INTRADAY",
+      "products": ["EQUITY"],
+      "clock": "EXCHANGE_SESSION_INTRADAY",
+      "permitted_paper_actions": ["BUY", "SELL_EXISTING_POSITION", "NO_TRADE", "CASH"],
+      "execution_mechanics": "Exchange-traded share quantities, session-aware quotes, fees and simulated fills.",
+      "implementation_claim": "SCOPE_ONLY"
+    },
+    {
+      "desk": "OPTIONS",
+      "products": ["OPTION"],
+      "clock": "CONTRACT_EXPIRY_AND_EXCHANGE_SESSION",
+      "permitted_paper_actions": ["BUY_CALL", "BUY_PUT", "DEFINED_RISK_DEBIT_SPREAD", "CLOSE", "NO_TRADE", "CASH"],
+      "execution_mechanics": "Contract- and lot-aware multi-leg simulation with executable leg prices and explicit expiry/settlement risk.",
+      "prohibited_until_separately_modelled": ["NAKED_OPTION_WRITING", "UNMODELLED_PHYSICAL_SETTLEMENT", "UNBOUNDED_RISK"],
+      "implementation_claim": "SCOPE_ONLY"
+    },
+    {
+      "desk": "ETF",
+      "products": ["ETF"],
+      "clock": "EXCHANGE_SESSION_WITH_OPTIONAL_MULTI_SESSION_HOLDING",
+      "permitted_paper_actions": ["BUY", "SELL_EXISTING_POSITION", "NO_TRADE", "CASH"],
+      "execution_mechanics": "Exchange-traded whole units; executable market prices are distinct from NAV and underlying index values.",
+      "implementation_claim": "SCOPE_ONLY"
+    },
+    {
+      "desk": "MUTUAL_FUND",
+      "products": ["CONVENTIONAL_OPEN_ENDED_MUTUAL_FUND"],
+      "clock": "SCHEME_BUSINESS_DAY_CUTOFF_NAV_PUBLICATION_AND_SETTLEMENT",
+      "permitted_paper_actions": ["SUBSCRIBE", "REDEEM", "SWITCH", "HOLD", "NO_TRADE", "CASH"],
+      "execution_mechanics": "NAV- and cutoff-based order lifecycle; never exchange ticks, intraday matching or assumed same-day fills.",
+      "implementation_claim": "SCOPE_ONLY"
+    }
+  ],
+  "shared_invariants": [
+    "Signals identify their strategy version, decision clock, evidence class, risk decision, cost assumptions and invalidation/exit policy.",
+    "Paper books are auditable and reconcile cash, holdings, costs and realized/unrealized P&L.",
+    "Unresolved fills, positions, costs, data rights or source provenance block profitability claims.",
+    "A charter or software test does not establish a profitable trading edge."
+  ],
+  "explicit_non_goals": [
+    "Automatic physical broker orders",
+    "Guaranteed returns or forced daily recommendations",
+    "Treating exchange prices and mutual-fund NAV as interchangeable execution prices"
+  ]
+}

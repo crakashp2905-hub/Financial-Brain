@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from financial_brain.forward_edge import pipeline
+from financial_brain.forward_edge import session_runner
 from financial_brain.forward_edge.fixtures import EXPECTED, fixture_pack
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,3 +42,17 @@ def test_fixture_result_and_runner_evidence_are_deterministic() -> None:
     first = pipeline.run_session(fixture)
     second = pipeline.run_session(fixture)
     assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
+
+
+def test_fixture_report_hash_is_independent_of_repository_checkout_provenance(monkeypatch: pytest.MonkeyPatch) -> None:
+    fixture = fixture_pack()["win"]
+    fake_provenance = {
+        "source_commit": "a" * 40, "source_branch": "other-branch", "source_tree_state": "CLEAN",
+        "branch_ancestry_sha256": "b" * 64, "executable_entry_point": "alternate-runner",
+    }
+    monkeypatch.setattr(session_runner, "repository_provenance", lambda **_kwargs: fake_provenance)
+    first = pipeline.run_session(fixture)["forward_runner"]["records_sha256"]
+    fake_provenance["source_commit"] = "c" * 40
+    fake_provenance["source_branch"] = "github-merge-ref"
+    second = pipeline.run_session(fixture)["forward_runner"]["records_sha256"]
+    assert first == second

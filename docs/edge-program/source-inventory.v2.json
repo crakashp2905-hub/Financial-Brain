@@ -4129,7 +4129,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/fixture_adapter.py",
-      "source_sha256": "c532beb331abc5a054b1fb674d4a009782978a9760e690d442fde46c7618b3c6",
+      "source_sha256": "4f9005c3684e18c6becbde0a315989d398f699a8ac47bb821758f09b5875c5a3",
       "test_paths": []
     },
     {
