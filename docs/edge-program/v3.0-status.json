@@ -566,12 +566,22 @@
     {
       "id": "FB-0205",
       "text": "Subscribe eligible ETFs to Kite/WebSocket or permitted quote source for observed bid, ask, depth, last trade, volume and exchange timestamps (**EXTERNAL feed**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/ingest/kite_live.py::forward_events accepts normalized NSE/BSE-qualified keys while preserving the legacy NSE default",
+        "src/financial_brain/forward_edge/market_data.py validates exchange, receipt and available clocks, bid/ask, depth and volume; LTP-only events remain non-executable",
+        "Existing forward session applies PAPER_SIMULATION permission and source freshness gates before accepting observed quotes",
+        "tests/test_kite_live_exchange_symbols.py and tests/test_forward_edge_kite_market_data.py: 20 passed"
+      ],
+      "blocker": "Partial: the existing read-only full-quote path now supports BSE as well as NSE and carries executable quote evidence, but no ETF subscription/universe is wired, no WebSocket coverage is measured, and Kite paper-data rights are still UNKNOWN_RIGHTS.",
+      "last_audited_at_utc": "2026-11-21T14:09:00+00:00",
+      "commit": "181e38f7",
+      "test_evidence": [
+        "python -m pytest tests/test_kite_live_exchange_symbols.py tests/test_forward_edge_kite_market_data.py -q: 20 passed",
+        "Ruff and targeted mypy passed"
+      ],
+      "test_result": "Exchange-qualified full quotes normalize into the same source-stamped event contract for NSE and BSE; live ETF coverage and source rights remain unverified."
     },
     {
       "id": "FB-0206",
