@@ -40,8 +40,8 @@ TRIAL_TESTS = ("test_q4_2026_protected_budget_is_exhausted_at_13_of_13", "test_p
                "test_q1_2027_requires_protocol_amendment_and_trial_approval",
                "test_q1_2027_explicit_budget_is_a_hard_capacity_limit",
                "test_agent_cannot_authorize_a_protected_trial")
-MODE_TESTS = ("test_live_cash_is_unavailable_by_default", "test_flipping_the_build_flag_alone_does_not_enable_cash",
-              "test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass",
+MODE_TESTS = ("test_live_cash_is_unavailable_by_default", "test_credentials_approvals_or_runtime_flags_cannot_enable_cash",
+              "test_live_cash_stays_disabled_with_human_approval_and_compliance",
               "test_broker_dryrun_needs_verified_compliance",
               "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
               "test_session_mode_is_immutable")
@@ -92,7 +92,7 @@ OVERRIDES: dict[str, Entry] = {
                               "test_revision_is_a_new_version_with_a_new_clock",
                               "test_malformed_charters_are_rejected"), (), "Hash over canonical JSON; no signing key."),
     "FE-0005": Entry("DONE", MODE_TESTS, (), "Five modes; grant only via resolve_mode; flag alone insufficient."),
-    "FE-0006": Entry("DONE", MODE_TESTS, (), "LIVE_CASH refused by build policy; needs compliance and human approval."),
+    "FE-0006": Entry("DONE", MODE_TESTS, (), "LIVE_CASH is permanently refused in this pipeline, including with approval and compliance inputs."),
     "FE-0007": Entry("BLOCKED", (), (BLK_GITHUB,), "Owner must enable branch protection and required checks."),
     "FE-0008": Entry("DONE", APPROVAL_TESTS, (), "Human-only, scoped, expiring approvals. Real owner approvals not yet recorded."),
     "FE-0009": Entry("DONE", ("test_disposable_ledger_isolated_append_only_and_removed_on_close",
@@ -467,7 +467,7 @@ OVERRIDES: dict[str, Entry] = {
     "FE-0128": Entry("PARTIAL", ("test_independent_receipt_from_a_pinned_root_verifies",
                                  "test_audit_is_red_on_this_repository_and_never_green_without_custody"), (BLK_TSA,),
                      "Only VERIFIED is claim-eligible. The champion promotion path is not gated by it yet."),
-    "FE-0129": Entry("PARTIAL", APPROVAL_TESTS[:2] + ("test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass",
+    "FE-0129": Entry("PARTIAL", APPROVAL_TESTS[:2] + (
                      "test_human_paper_champion_change_needs_scoped_approval_and_verified_receipt",
                      "test_champion_change_fails_without_external_custody_or_exact_human_approval"),
                      (BLK_OWNER, BLK_TSA),
