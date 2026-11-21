@@ -17,21 +17,55 @@ means the local event projection has no unresolved positions and has marks for a
 positions. It is not broker reconciliation or a claim that cash/charges match an external
 account. A row with no explicit execution is never silently turned into a fill.
 
+## Legacy paper-book migration
+
+`financial_brain.portfolio.legacy_migration` maps persisted rows from the existing intraday
+and swing paper books. The `scripts/migrate_legacy_paper_books.py` command opens those
+DuckDB sources read-only and writes a separate SQLite ledger. Intraday rows require the
+recorded trade ID, side, quantity and entry; closed rows retain their stored exit and modeled
+charges. Swing rows retain their stored entry/exit/last-close marks and label modeled cost
+rates as estimates. Legacy signal snapshots without a fill remain unresolved.
+
+The migration was run against the local `paper_live.duckdb` and `paper_book.duckdb`. The
+sanitized snapshot in `canonical-migration-audit.v1.json` fingerprints both source databases
+and verifies every expected event payload against the local output ledger. It records 1,631
+intraday rows and 6,334 swing rows, all 23,479 derived events verified, and zero rejected
+source rows. The local output is `data/canonical_portfolio.sqlite` and is git-ignored; source
+databases were not modified. The audit report contains no ticker, trade price or P&L values.
+
+Re-run the import and audit from the repository root after updating the source books:
+
+```powershell
+python scripts/migrate_legacy_paper_books.py --data-dir data --ledger data/canonical_portfolio.sqlite
+python scripts/audit_canonical_portfolio_migration.py --data-dir data --ledger data/canonical_portfolio.sqlite `
+  --output docs/edge-program/canonical-migration-audit.v1.json
+```
+
+The data includes 51 intraday records without an exit and five legacy swing rows that cannot
+be fully reconstructed. Those rows remain unresolved. The audit reports 406 open positions
+across 18 strategy/run books; replay and challenger books overlap, so that count is not a
+unique live holdings count. All 18 books lack a recorded opening cash balance, so the cash
+view is net event flows only. Four books have incomplete position projections.
+
+Only intraday and swing source books were present in the scanned local DBs. This does not
+establish whether an options, ETF-specific or mutual-fund book exists elsewhere. No entries
+were inferred for those desks, and no live holdings snapshot was treated as a fill.
+
 ## Verification
 
-`tests/test_canonical_portfolio_ledger.py` covers equity, ETF, option and MF units; source
-idempotency; conflicting and atomic imports; timezone-aware as-of marks; missing provenance;
-and unresolved positions. This is schema/reducer evidence on synthetic fixtures only.
+`tests/test_canonical_portfolio_ledger.py` and `tests/test_legacy_portfolio_migration.py`
+cover equity, ETF, option and MF units; source idempotency; conflicting and atomic imports;
+timezone-aware as-of marks; source-specific mapping; exact payload verification; missing
+provenance; and unresolved positions. Eleven tests pass. The migration audit is a local
+paper-book reconciliation only, not a broker reconciliation or performance evaluation.
 
 ## Migration status and limits
 
-This increment creates the shared event format and reducer; it does **not** yet migrate the
-local legacy ledgers. The repository has no checked-in runtime book databases, and several
-legacy sources store strategy outcomes or position snapshots rather than execution receipts.
-Source-specific adapters still need to map verified trade IDs, quantities, prices, charges,
-contract identity, book/sleeve and evidence mode into events. Any source row without those
-facts must be retained as unresolved and reconciled against its original mark basis before a
-book can be called migrated.
+The in-repository code now includes adapters for the two local equity paper books. Broader
+multi-asset migration remains partial: there are no verified source adapters or source-book
+rows for options, ETF-specific trading or mutual-fund orders in the scanned databases.
+Opening cash, source-specific charge verification and external account reconciliation are
+also missing. Any new source row without fill and mark provenance must remain unresolved.
 
 The current projection also does not model settlement calendars, taxes, corporate actions,
 FX conversion, margin, exercise/assignment, option expiry, fund allotment/redemption pending

@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator
 
 
 class CanonicalLedgerError(ValueError):
@@ -157,6 +157,12 @@ class _Position:
     sleeves: set[str]
 
 
+def _is_opening_balance(event: dict[str, object]) -> bool:
+    metadata = event.get("metadata")
+    return (event.get("event_kind") == EventKind.CASH_FLOW.value and isinstance(metadata, dict)
+            and metadata.get("cash_flow_type") == "OPENING_BALANCE")
+
+
 class CanonicalPortfolioLedger:
     """SQLite event store with idempotent imports and as-of cash/position snapshots."""
 
@@ -245,15 +251,44 @@ class CanonicalPortfolioLedger:
                 occurred_at=as_of, cash_delta="0").normalized()["occurred_at"]
             sql += " AND json_extract(event_json, '$.occurred_at') <= ?"
             args.append(normalized)
-        sql += " ORDER BY sequence"
+        sql += " ORDER BY json_extract(event_json, '$.occurred_at'), sequence"
         with self._connection() as con:
             return [json.loads(row[0]) for row in con.execute(sql, args).fetchall()]
 
-    def snapshot(self, account_id: str, *, as_of: str | None = None) -> dict[str, object]:
+    def account_ids(self) -> list[str]:
+        """Return known accounts in stable order for migration and audit reports."""
+        with self._connection() as con:
+            return [row[0] for row in con.execute(
+                "SELECT DISTINCT account_id FROM portfolio_events ORDER BY account_id").fetchall()]
+
+    def verify_import(self, events: list[PortfolioEvent]) -> dict[str, int]:
+        """Verify each normalized source event is present byte-for-byte by its canonical payload hash."""
+        missing = mismatched = 0
+        with self._connection() as con:
+            for event in events:
+                row = event.normalized()
+                body = json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                expected_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
+                stored = con.execute("""SELECT payload_sha256 FROM portfolio_events
+                    WHERE account_id=? AND source_system=? AND source_event_id=?""",
+                                     (row["account_id"], row["source_system"], row["source_event_id"])).fetchone()
+                if stored is None:
+                    missing += 1
+                elif stored[0] != expected_hash:
+                    mismatched += 1
+        return {"verified": len(events) - missing - mismatched, "missing": missing, "mismatched": mismatched}
+
+    def event_count(self) -> int:
+        """Return the total append-only journal event count."""
+        with self._connection() as con:
+            return int(con.execute("SELECT COUNT(*) FROM portfolio_events").fetchone()[0])
+
+    def snapshot(self, account_id: str, *, as_of: str | None = None) -> dict[str, Any]:
         """Project cash, positions and unresolved legacy rows; no values are backfilled or inferred."""
         events = self.events(account_id, as_of=as_of)
         cash: dict[str, Decimal] = {}
-        positions: dict[tuple[str, str], _Position] = {}
+        positions: dict[tuple[str, str, str], _Position] = {}
+        marks: dict[tuple[str, str], tuple[Decimal, str, str]] = {}
         unresolved: list[dict[str, object]] = []
         for event in events:
             currency = str(event["currency"])
@@ -266,19 +301,24 @@ class CanonicalPortfolioLedger:
                 continue
             instrument = str(event["instrument_id"])
             asset_class = str(event["asset_class"])
-            key = (asset_class, instrument)
+            if kind is EventKind.MARK:
+                mark_key = (asset_class, instrument)
+                mark_value = (Decimal(str(event["price"])), str(event["occurred_at"]), currency)
+                previous_mark = marks.get(mark_key)
+                if previous_mark is not None and previous_mark[2] != currency:
+                    raise CanonicalLedgerError("one instrument mark cannot mix currencies")
+                marks[mark_key] = mark_value
+                continue
+            sleeve = str(event["sleeve_id"])
+            key = (asset_class, instrument, sleeve)
             multiplier_value = Decimal(str(event["multiplier"]))
             pos = positions.setdefault(key, _Position(asset_class, instrument, Decimal(0), Decimal(0),
-                                                       Decimal(0), None, None, currency, multiplier_value, set()))
+                                                       Decimal(0), None, None, currency, multiplier_value, {sleeve}))
             if pos.currency != currency:
                 raise CanonicalLedgerError("one instrument position cannot mix currencies")
             if kind is EventKind.FILL and pos.multiplier != multiplier_value:
                 raise CanonicalLedgerError("one instrument position cannot mix contract multipliers")
-            pos.sleeves.add(str(event["sleeve_id"]))
-            if kind is EventKind.MARK:
-                pos.mark = Decimal(str(event["price"]))
-                pos.mark_at = str(event["occurred_at"])
-                continue
+            pos.sleeves.add(sleeve)
             quantity = Decimal(str(event["quantity"]))
             price = Decimal(str(event["price"]))
             signed = quantity if event["side"] == "BUY" else -quantity
@@ -300,8 +340,13 @@ class CanonicalPortfolioLedger:
             pos.quantity = new_qty
         rendered_positions = []
         for pos in positions.values():
+            mark = marks.get((pos.asset_class, pos.instrument_id))
+            pos.mark, pos.mark_at = (mark[0], mark[1]) if mark is not None else (None, None)
+            if mark is not None and mark[2] != pos.currency:
+                raise CanonicalLedgerError("instrument mark currency differs from position currency")
             rendered_positions.append({
                 "asset_class": pos.asset_class, "instrument_id": pos.instrument_id,
+                "sleeve_id": next(iter(pos.sleeves)),
                 "quantity": pos.quantity, "average_cost": pos.average_cost,
                 "realized_pnl": pos.realized_pnl, "mark": pos.mark, "mark_at": pos.mark_at,
                 "currency": pos.currency, "multiplier": pos.multiplier,
@@ -309,8 +354,38 @@ class CanonicalPortfolioLedger:
                                    if pos.mark is not None else None),
                 "sleeves": sorted(pos.sleeves),
             })
+        consolidated: dict[tuple[str, str], list[dict[str, object]]] = {}
+        for position in rendered_positions:
+            consolidated.setdefault((str(position["asset_class"]), str(position["instrument_id"])), []).append(position)
+        consolidated_positions = []
+        for (asset_class, instrument), rows in sorted(consolidated.items()):
+            quantities = [Decimal(str(row["quantity"])) for row in rows]
+            open_rows = [row for row in rows if Decimal(str(row["quantity"])) != 0]
+            same_direction = not open_rows or all(q > 0 for q in quantities if q) or all(q < 0 for q in quantities if q)
+            gross_quantity = sum((abs(q) for q in quantities), Decimal(0))
+            net_quantity = sum(quantities, Decimal(0))
+            basis = (sum((abs(Decimal(str(row["quantity"]))) * Decimal(str(row["average_cost"]))
+                          for row in open_rows), Decimal(0)) / gross_quantity
+                     if open_rows and same_direction and gross_quantity else None)
+            marks_for_rows = {row["mark"] for row in open_rows}
+            consolidated_positions.append({
+                "asset_class": asset_class, "instrument_id": instrument, "quantity": net_quantity,
+                "gross_abs_quantity": gross_quantity, "average_cost": basis,
+                "realized_pnl": sum((Decimal(str(row["realized_pnl"])) for row in rows), Decimal(0)),
+                "unrealized_pnl": (sum((Decimal(str(row["unrealized_pnl"])) for row in open_rows), Decimal(0))
+                                    if open_rows and all(row["unrealized_pnl"] is not None for row in open_rows)
+                                    else (Decimal(0) if not open_rows else None)),
+                "mark": next(iter(marks_for_rows)) if len(marks_for_rows) == 1 else None,
+                "sleeves": sorted({str(row["sleeve_id"]) for row in rows}),
+                "currency": rows[0]["currency"],
+            })
+        has_opening_balance = any(_is_opening_balance(event) for event in events)
         return {"account_id": account_id, "as_of": as_of, "cash": cash,
+                "opening_balance_supplied": has_opening_balance,
+                "cash_scope": "COMPLETE_WITH_OPENING_BALANCE" if has_opening_balance
+                else "NET_EVENT_FLOWS_ONLY_NO_OPENING_BALANCE",
                 "positions": sorted(rendered_positions, key=lambda p: (str(p["asset_class"]), str(p["instrument_id"]))),
+                "consolidated_positions": consolidated_positions,
                 "unresolved_positions": unresolved,
                 "projection_complete": not unresolved and all(p["mark"] is not None or p["quantity"] == 0
                                                                for p in rendered_positions)}

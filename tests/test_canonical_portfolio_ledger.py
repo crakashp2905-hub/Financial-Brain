@@ -16,8 +16,10 @@ HASH = hashlib.sha256(b"source-row").hexdigest()
 
 
 def event(event_id, kind, **kwargs):
+    account_id = kwargs.pop("account_id", "paper-main")
+    sleeve_id = kwargs.pop("sleeve_id", "intraday")
     return PortfolioEvent(
-        account_id="paper-main", sleeve_id="intraday", source_system="fixture-source",
+        account_id=account_id, sleeve_id=sleeve_id, source_system="fixture-source",
             source_event_id=event_id, source_sha256=kwargs.pop("source_sha256", HASH), event_kind=kind,
             occurred_at=kwargs.pop("occurred_at", "2026-11-20T10:00:00+05:30"), **kwargs,
     )
@@ -50,6 +52,8 @@ def test_cross_asset_fills_cash_marks_and_realized_unrealized_pnl_replay(tmp_pat
     by_instrument = {row["instrument_id"]: row for row in snapshot["positions"]}
     assert snapshot["cash"]["INR"] == Decimal("100000") - Decimal("560") - Decimal("125000") \
         - Decimal("1000") - Decimal("1250") - Decimal("25")
+    assert snapshot["opening_balance_supplied"] is False
+    assert snapshot["cash_scope"] == "NET_EVENT_FLOWS_ONLY_NO_OPENING_BALANCE"
     assert by_instrument["NSE:INFY"]["quantity"] == Decimal("6")
     assert by_instrument["NSE:INFY"]["realized_pnl"] == Decimal("40")
     assert by_instrument["NSE:INFY"]["unrealized_pnl"] == Decimal("72")
@@ -68,6 +72,32 @@ def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
     assert snapshot["cash"] == {}
     assert snapshot["unresolved_positions"][0]["metadata"]["reason"] == "legacy row has no execution receipt"
     assert snapshot["projection_complete"] is False
+
+
+def test_sleeves_keep_separate_basis_and_pnl_before_consolidated_netting(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    events = [
+        event("desk-a-buy", EventKind.FILL, sleeve_id="swing", asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", side="BUY", quantity="5", price="100",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("desk-b-sell", EventKind.FILL, sleeve_id="intraday", asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", side="SELL", quantity="3", price="105",
+              occurred_at="2026-11-20T09:30:00+05:30"),
+        event("shared-mark", EventKind.MARK, sleeve_id="market-data", asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", price="110", occurred_at="2026-11-20T15:30:00+05:30"),
+    ]
+    ledger.import_events(events)
+    snapshot = ledger.snapshot("paper-main")
+    per_sleeve = {row["sleeve_id"]: row for row in snapshot["positions"]}
+    assert per_sleeve["swing"]["average_cost"] == Decimal("100")
+    assert per_sleeve["swing"]["unrealized_pnl"] == Decimal("50")
+    assert per_sleeve["intraday"]["quantity"] == Decimal("-3")
+    assert per_sleeve["intraday"]["unrealized_pnl"] == Decimal("-15")
+    consolidated = snapshot["consolidated_positions"][0]
+    assert consolidated["quantity"] == Decimal("2")
+    assert consolidated["gross_abs_quantity"] == Decimal("8")
+    assert consolidated["average_cost"] is None  # long/short basis must not be collapsed
+    assert consolidated["unrealized_pnl"] == Decimal("35")
 
 
 def test_as_of_cutoff_is_timezone_normalized_and_does_not_rewrite_marks(tmp_path):

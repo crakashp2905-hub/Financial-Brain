@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 620,
+  "source_count": 621,
   "sources": [
     {
       "capability_ids": [],
@@ -9124,7 +9124,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/canonical_ledger.py",
-      "source_sha256": "19602ec335b8110102e925dd41abb1241f37d21134f28656de4d9a205f26be9a",
+      "source_sha256": "26cf2399ac36a02a87d86f62ada48512b6aaf07d0644d69452d9fe4879fb1c84",
       "test_paths": []
     },
     {
@@ -9159,6 +9159,28 @@
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/journal.py",
       "source_sha256": "0f3fd5dd25dd1e60cde0da0c16e8216bf153fbb8a4fb392e7a0932b794fddbf3",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
+        "duckdb",
+        "financial_brain.portfolio.canonical_ledger",
+        "hashlib",
+        "json",
+        "pathlib",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/legacy_migration.py",
+      "source_sha256": "18075efc0cad6b2e8e0d7d33de077f34061fa4923b4fadaee4b913e4a9523328",
       "test_paths": []
     },
     {
@@ -10781,6 +10803,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 605,
-  "unassigned_role_count": 370
+  "unassessed_count": 606,
+  "unassigned_role_count": 371
 }
