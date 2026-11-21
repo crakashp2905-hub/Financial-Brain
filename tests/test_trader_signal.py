@@ -6,7 +6,8 @@ import pytest
 
 from financial_brain.kernel.trader_signal import (
     DecisionAssessment, DecisionFeature, DeskId, EvidenceTier,
-    ExpectedReturnDistribution, SignalContractError, SignalSide, TraderSignal,
+    ExecutionIntent, ExecutionIntentType, ExpectedReturnDistribution,
+    SignalContractError, SignalSide, TraderSignal,
 )
 
 
@@ -84,4 +85,55 @@ def test_assessment_rejects_lookahead_and_invalid_distribution():
     with pytest.raises(SignalContractError, match="quantiles"):
         ExpectedReturnDistribution(
             Decimal("2"), Decimal("-1"), Decimal("1"), Decimal("0.9"), "1d",
+        )
+
+
+def test_execution_intents_cover_exchange_mf_and_no_trade_without_mixing_units():
+    ids = {"intent_id": "550e8400-e29b-41d4-a716-446655440001",
+           "signal_id": "550e8400-e29b-41d4-a716-446655440000"}
+    exchange = ExecutionIntent(
+        **ids, intent_type=ExecutionIntentType.EXCHANGE_LIMIT, instrument_id="NSE:INFY",
+        quantity=Decimal("2"), limit_price=Decimal("1500"),
+    )
+    marketable = ExecutionIntent(
+        intent_id="550e8400-e29b-41d4-a716-446655440002",
+        signal_id=ids["signal_id"], intent_type=ExecutionIntentType.EXCHANGE_MARKETABLE_SIMULATION,
+        instrument_id="NSE:INFY", quantity=Decimal("2"), quote_hash="e" * 64,
+    )
+    mf = ExecutionIntent(
+        intent_id="550e8400-e29b-41d4-a716-446655440003",
+        signal_id=ids["signal_id"], intent_type=ExecutionIntentType.MF_SUBSCRIBE,
+        instrument_id="MF:123456", amount_inr=Decimal("5000"),
+    )
+    no_trade = ExecutionIntent(
+        intent_id="550e8400-e29b-41d4-a716-446655440004",
+        signal_id=ids["signal_id"], intent_type=ExecutionIntentType.NO_TRADE,
+        reason="costs exceed expected edge",
+    )
+    assert [exchange.intent_type, marketable.intent_type, mf.intent_type, no_trade.intent_type] == [
+        ExecutionIntentType.EXCHANGE_LIMIT,
+        ExecutionIntentType.EXCHANGE_MARKETABLE_SIMULATION,
+        ExecutionIntentType.MF_SUBSCRIBE,
+        ExecutionIntentType.NO_TRADE,
+    ]
+
+
+def test_execution_intents_reject_mixed_exchange_and_mf_fields():
+    common = {"intent_id": "550e8400-e29b-41d4-a716-446655440001",
+              "signal_id": "550e8400-e29b-41d4-a716-446655440000",
+              "instrument_id": "NSE:INFY"}
+    with pytest.raises(SignalContractError, match="quantity only"):
+        ExecutionIntent(
+            **common, intent_type=ExecutionIntentType.EXCHANGE_LIMIT,
+            quantity=Decimal("1"), amount_inr=Decimal("1500"), limit_price=Decimal("1500"),
+        )
+    with pytest.raises(SignalContractError, match="quote SHA-256"):
+        ExecutionIntent(
+            **common, intent_type=ExecutionIntentType.EXCHANGE_MARKETABLE_SIMULATION,
+            quantity=Decimal("1"),
+        )
+    with pytest.raises(SignalContractError, match="NO_TRADE.*requires"):
+        ExecutionIntent(
+            intent_id=common["intent_id"], signal_id=common["signal_id"],
+            intent_type=ExecutionIntentType.NO_TRADE,
         )

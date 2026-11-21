@@ -38,6 +38,16 @@ class EvidenceTier(StrEnum):
     BROKER_APPROVED = "BROKER_APPROVED"
 
 
+class ExecutionIntentType(StrEnum):
+    EXCHANGE_LIMIT = "EXCHANGE_LIMIT"
+    EXCHANGE_MARKETABLE_SIMULATION = "EXCHANGE_MARKETABLE_SIMULATION"
+    MF_SUBSCRIBE = "MF_SUBSCRIBE"
+    MF_REDEEM = "MF_REDEEM"
+    MF_SWITCH = "MF_SWITCH"
+    MF_SIP = "MF_SIP"
+    NO_TRADE = "NO_TRADE"
+
+
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -164,7 +174,68 @@ class DecisionAssessment:
             raise SignalContractError("contraindications must include reasons or explicit NONE")
 
 
+@dataclass(frozen=True, slots=True)
+class ExecutionIntent:
+    """Typed research or paper intent; it cannot express a physical broker order."""
+
+    intent_id: str
+    signal_id: str
+    intent_type: ExecutionIntentType
+    instrument_id: str | None = None
+    quantity: Decimal | None = None
+    amount_inr: Decimal | None = None
+    limit_price: Decimal | None = None
+    quote_hash: str | None = None
+    reason: str | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("intent_id", "signal_id"):
+            try:
+                UUID(getattr(self, name))
+            except (ValueError, AttributeError) as exc:
+                raise SignalContractError(f"{name} must be a UUID") from exc
+        if self.intent_type is ExecutionIntentType.NO_TRADE:
+            if not self.reason or not self.reason.strip():
+                raise SignalContractError("NO_TRADE intent requires a reason")
+            if any(value is not None for value in
+                   (self.instrument_id, self.quantity, self.amount_inr,
+                    self.limit_price, self.quote_hash)):
+                raise SignalContractError("NO_TRADE cannot carry execution fields")
+            return
+        if not self.instrument_id or not self.instrument_id.strip():
+            raise SignalContractError("instrument_id is required")
+        if self.intent_type in {ExecutionIntentType.EXCHANGE_LIMIT,
+                                ExecutionIntentType.EXCHANGE_MARKETABLE_SIMULATION}:
+            if self.quantity is None or self.amount_inr is not None:
+                raise SignalContractError("exchange intent requires quantity only")
+            self._positive("quantity", self.quantity)
+            if self.intent_type is ExecutionIntentType.EXCHANGE_LIMIT:
+                if self.limit_price is None or self.quote_hash is not None:
+                    raise SignalContractError("exchange limit requires limit_price, not quote_hash")
+                self._positive("limit_price", self.limit_price)
+            elif self.quote_hash is None or not _SHA256.fullmatch(self.quote_hash):
+                raise SignalContractError("marketable simulation requires a quote SHA-256")
+            if self.reason is not None:
+                raise SignalContractError("exchange intent cannot carry an MF reason")
+        else:
+            if self.amount_inr is None or self.quantity is not None or self.limit_price is not None:
+                raise SignalContractError("MF intent requires amount_inr, not exchange pricing fields")
+            self._positive("amount_inr", self.amount_inr)
+            if self.quote_hash is not None:
+                raise SignalContractError("MF intent cannot carry an executable quote hash")
+
+    @staticmethod
+    def _positive(name: str, value: Decimal) -> None:
+        try:
+            number = Decimal(value)
+        except (InvalidOperation, TypeError) as exc:
+            raise SignalContractError(f"{name} must be decimal") from exc
+        if not number.is_finite() or number <= 0:
+            raise SignalContractError(f"{name} must be finite and positive")
+
+
 __all__ = [
     "DecisionAssessment", "DecisionFeature", "DeskId", "EvidenceTier",
-    "ExpectedReturnDistribution", "SignalContractError", "SignalSide", "TraderSignal",
+    "ExecutionIntent", "ExecutionIntentType", "ExpectedReturnDistribution",
+    "SignalContractError", "SignalSide", "TraderSignal",
 ]
