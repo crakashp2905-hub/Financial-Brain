@@ -46,6 +46,10 @@ jobs:
         run: python scripts/capability_ownership.py --check
       - name: Validate five-desk product charter
         run: python scripts/validate_product_charter.py --check
+      - name: Validate five-desk launch gates and evidence labels
+        run: python scripts/validate_launch_gates.py --check
+      - name: Verify complete per-item checklist audit export
+        run: python scripts/export_checklist_audit.py --check
       - name: Verify old/new forward-engine dependency graph
         run: python scripts/forward_engine_graph.py --check
       - name: Verify fixed-fixture legacy/integrated paper equivalence report
