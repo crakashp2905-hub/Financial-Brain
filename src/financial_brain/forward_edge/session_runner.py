@@ -32,6 +32,7 @@ from financial_brain.forward_edge.session_state import (
     ForwardSessionStore,
     SessionState,
 )
+from financial_brain.forward_edge.session_ops import REQUIRED_PREFLIGHT
 from financial_brain.forward_edge.venue_calendar import VenueCalendar
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -171,16 +172,20 @@ class ForwardSessionRunner:
         if state in {SessionState.OPEN, SessionState.REJECTED, SessionState.CLOSED,
                      SessionState.NO_TRADE, SessionState.INCOMPLETE}:
             return state
-        if not preflight:
+        if not isinstance(preflight, dict) or not preflight:
             raise ForwardSessionRunnerError("preflight must contain explicit checks")
-        if any(not name.strip() or type(passed) is not bool for name, passed in preflight.items()):
+        if any(not isinstance(name, str) or not name.strip() or type(passed) is not bool
+               for name, passed in preflight.items()):
             raise ForwardSessionRunnerError("preflight checks need non-empty names and boolean results")
+        # A caller may not omit a required gate and thereby turn absence into readiness.
+        # Persist the complete fixed set, representing missing checks explicitly as false.
+        checks = {**preflight, **{name: preflight.get(name) is True for name in REQUIRED_PREFLIGHT}}
         if state is SessionState.PLANNED:
             self.state_store.transition(session_id, SessionState.PREFLIGHT, now=now)
         elif state is not SessionState.PREFLIGHT:
             raise ForwardSessionRunnerError(f"cannot resume preflight from {state.value}")
         record = {"session_id": session_id, "event": "PREFLIGHT", "occurred_at": now.astimezone(timezone.utc).isoformat(),
-                  "checks": dict(sorted(preflight.items())),
+                  "checks": dict(sorted(checks.items())),
                   "config_sha256": config.sha256()}
         event_id = f"{session_id}:preflight"
         previous = self._con.execute("SELECT event_json FROM runner_events WHERE session_id=? AND event_id=?",
@@ -191,7 +196,7 @@ class ForwardSessionRunner:
                 raise ForwardSessionRunnerError("preflight evidence conflicts with the prior attempt")
         else:
             self._append_record("preflight", session_id, record)
-        failed = sorted(name for name, passed in preflight.items() if passed is not True)
+        failed = sorted(name for name, passed in checks.items() if passed is not True)
         if failed:
             self.state_store.transition(session_id, SessionState.REJECTED, now=now,
                                         reason="failed preflight: " + ",".join(failed))

@@ -12,6 +12,10 @@ from financial_brain.forward_edge.session_state import ForwardRunConfig, Forward
 
 
 ROOT = Path(__file__).resolve().parents[1]
+READY_PREFLIGHT = {name: True for name in (
+    "calendar", "credentials", "disk", "feeds", "data_contracts", "risk", "system_health",
+    "broker_disabled",
+)}
 
 
 def test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl():
@@ -118,7 +122,7 @@ def test_session_resume_cli_rehydrates_an_existing_session(tmp_path, capsys):
         Decimal("100000"), {"max_positions": 1}, "ledger-1")
     runner = ForwardSessionRunner(ForwardSessionStore(state_path), journal_path)
     runner.begin("cli-resume", config, now=datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc),
-                 preflight={"risk_policy_loaded": True})
+                 preflight={**READY_PREFLIGHT, "risk_policy_loaded": True})
     runner.close()
 
     args = SimpleNamespace(resume="cli-resume", state_db=str(state_path), journal=str(journal_path))
@@ -137,7 +141,7 @@ def test_supervise_cli_fails_closed_and_is_brokerless(tmp_path, capsys):
         Decimal("100000"), {"max_positions": 1}, "ledger-1")
     runner = ForwardSessionRunner(ForwardSessionStore(state_path), journal_path)
     runner.begin("cli-supervise", config, now=datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc),
-                 preflight={"risk_policy_loaded": True})
+                 preflight={**READY_PREFLIGHT, "risk_policy_loaded": True})
     runner.close()
 
     args = SimpleNamespace(state_db=str(state_path), journal=str(journal_path), max_feed_silence_seconds=90.0)

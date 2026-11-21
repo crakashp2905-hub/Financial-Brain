@@ -15,6 +15,7 @@
       "financial_brain.forward_edge.paper_accounting",
       "financial_brain.forward_edge.provenance",
       "financial_brain.forward_edge.quote_archive",
+      "financial_brain.forward_edge.session_ops",
       "financial_brain.forward_edge.session_runner",
       "financial_brain.forward_edge.session_state",
       "financial_brain.forward_edge.venue_calendar",
@@ -170,6 +171,10 @@
     {
       "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.forward_edge.quote_archive"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.session_ops"
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
@@ -358,6 +363,6 @@
     "financial_brain.forward_edge.market_events",
     "financial_brain.forward_edge.quote_archive"
   ],
-  "source_count": 635,
-  "source_tree_sha256": "e68227fdb61cd26759cd05ec4c003d6165bd97cb0e4dd31469462690246ac85c"
+  "source_count": 665,
+  "source_tree_sha256": "d4b84fbacae97bb2747664ab72029b68405da84493aceede744a222063950f5e"
 }
