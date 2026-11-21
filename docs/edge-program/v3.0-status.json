@@ -1473,12 +1473,22 @@
     {
       "id": "FB-0457",
       "text": "Calculate R-multiple, rupee maximum *planned* loss, gross reward:risk and estimated **net** reward:risk including spread, fees, impact and taxes where modeled. Label any forecast as uncertain.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/trade_economics.py computes planned rupee loss, gross target reward, gross reward:risk, estimated net reward/risk, and a net R multiple using exact Decimal arithmetic.",
+        "TradingCosts itemizes spread, fees, impact, taxes and financing; the report explicitly labels forecast uncertainty and states that stop-loss is not guaranteed.",
+        "Cost values are currently caller-supplied estimates; broker/exchange fee schedules, executable quotes, calibrated impact, and live paper-plan integration are not connected."
+      ],
+      "blocker": "Partial: exact planned and after-cost trade economics are implemented, but source-grounded cost computation and integration with strategy/OMS output remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T17:59:12+00:00",
+      "commit": "89e509da",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-trade-economics tests/test_trade_economics.py -q: 4 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/trade_economics.py: passed"
+      ],
+      "test_result": "Long/short planned loss and gross reward:risk reconcile; spread, fees, impact, taxes and financing reduce estimated net return, including showing negative net edge when costs exceed target reward."
     },
     {
       "id": "FB-0458",

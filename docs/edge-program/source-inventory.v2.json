@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 653,
+  "source_count": 654,
   "sources": [
     {
       "capability_ids": [],
@@ -7965,6 +7965,22 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "decimal",
+        "trader_signal"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/trade_economics.py",
+      "source_sha256": "e3dddbc6ed06640c434bbe2b9c46e9b03ea62049c7d65f77380538f75d81934e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "datetime",
         "decimal",
         "enum",
@@ -11402,6 +11418,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 638,
-  "unassigned_role_count": 380
+  "unassessed_count": 639,
+  "unassigned_role_count": 381
 }
