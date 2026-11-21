@@ -1043,12 +1043,22 @@
     {
       "id": "FB-0318",
       "text": "Validate raw AMFI file `NAVAll.txt` mixed-dated rows and repeated scheme codes: keep each row at its own NAV date and identify stale/unavailable schemes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "providers/amfi.py preserves each NAVAll row with its own stated NAV date and repeated scheme-code rows; N.A. rows are never promoted to prices.",
+        "parse_quality_report() flags repeated codes, caller-threshold stale rows, explicit N.A. rows, and codes missing from a caller-supplied known scheme universe. No universe membership or staleness threshold is inferred.",
+        "Automatic quality-report integration into scheduled AMFI ingestion and permissioned full-universe validation remain outstanding."
+      ],
+      "blocker": "Partial: mixed-date parsing and explicit row-quality diagnostics are implemented, but ingestion/report integration and source-authorized universe coverage are not complete.",
+      "last_audited_at_utc": "2026-11-21T16:55:36+00:00",
+      "commit": "042cc5cc",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-amfi-quality tests/test_amfi_quality_report.py tests/test_phase2_sources.py -q: 19 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/providers/amfi.py: passed"
+      ],
+      "test_result": "Repeated scheme codes remain separate across their own NAV dates; an explicit stale threshold flags old rows; N.A. and missing-from-known-universe cases are identified without creating NAV values."
     },
     {
       "id": "FB-0401",
@@ -14538,7 +14548,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T16:50:48+00:00",
+    "as_of_utc": "2026-11-21T16:55:36+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14587,6 +14597,7 @@
       "FB-0310",
       "FB-0314",
       "FB-0316",
+      "FB-0318",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14607,13 +14618,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 66,
+    "audited_count": 67,
     "status_counts": {
       "COMPLETE": 23,
-      "PARTIAL": 42,
+      "PARTIAL": 43,
       "NOT_STARTED": 0,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1312
+      "UNASSESSED": 1311
     },
     "verified_complete_count": 23,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",

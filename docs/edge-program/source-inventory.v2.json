@@ -9634,13 +9634,14 @@
       "imports": [
         "__future__",
         "base",
+        "collections",
         "datetime"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/amfi.py",
-      "source_sha256": "1690838c2a2e1beae751adf17909f31193a5ab4c075f1f3d5e90f6089c5dd169",
+      "source_sha256": "e9be582f72c32cfaee1db18aba8efd9758bee169848ca22e87523d19e3d94295",
       "test_paths": []
     },
     {
