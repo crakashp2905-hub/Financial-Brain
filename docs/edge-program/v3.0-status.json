@@ -452,7 +452,7 @@
       ],
       "blocker": "Partial: the contract is implemented, but SID/KIM/AMC notices have not yet been ingested into a source-reviewed rule catalogue, and NAV assignment is not yet wired into the mutual-fund paper subscription/redemption accounting path.",
       "last_audited_at_utc": "2026-11-21T14:00:00+00:00",
-      "commit": "PENDING",
+      "commit": "3bce9e94",
       "test_evidence": [
         "python -m pytest tests/test_kernel_fund_transactions.py tests/test_kernel_trading_clock.py tests/test_kernel_instrument_history.py tests/test_kernel_architecture.py tests/test_kernel_instruments.py tests/test_forward_edge_registry.py tests/test_checklist_audit_export.py tests/test_launch_gates.py -q: 53 passed",
         "Ruff: passed",
