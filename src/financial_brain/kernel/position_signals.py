@@ -3,8 +3,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from uuid import UUID
+
+from .trader_signal import ExitTrigger
 
 
 class PositionSignalError(ValueError):
@@ -91,6 +94,95 @@ class ExitSignal:
         _aware("occurred_at", self.occurred_at)
 
 
+@dataclass(frozen=True, slots=True)
+class ExitProtectionIntent:
+    """Proposed position protection stored at entry; it is not an exit event."""
+
+    protection_id: str
+    position_id: str
+    parent_entry_signal_id: str
+    trigger: ExitTrigger
+    trigger_price: Decimal
+    quantity: Decimal
+    created_at: datetime
+    source_hash: str
+
+    def __post_init__(self) -> None:
+        for name in ("protection_id", "position_id", "parent_entry_signal_id"):
+            _uuid(name, getattr(self, name))
+        if not isinstance(self.trigger, ExitTrigger):
+            raise PositionSignalError("protection trigger must be an ExitTrigger")
+        for name in ("trigger_price", "quantity"):
+            try:
+                value = Decimal(getattr(self, name))
+            except (InvalidOperation, TypeError) as exc:
+                raise PositionSignalError(f"{name} must be decimal") from exc
+            if not value.is_finite() or value <= 0:
+                raise PositionSignalError(f"{name} must be finite and positive")
+            object.__setattr__(self, name, value)
+        _aware("created_at", self.created_at)
+        if len(self.source_hash) != 64 or any(c not in "0123456789abcdef" for c in self.source_hash):
+            raise PositionSignalError("source_hash must be lowercase SHA-256")
+
+
+@dataclass(frozen=True, slots=True)
+class EmittedExitEvent:
+    """Timestamped exit event emitted only after a trigger has been observed."""
+
+    exit_signal: ExitSignal
+    protection_id: str
+    trigger: ExitTrigger
+    idempotency_key: str
+    quantity: Decimal
+    observed_trigger_at: datetime
+
+    def __post_init__(self) -> None:
+        _uuid("protection_id", self.protection_id)
+        if not isinstance(self.trigger, ExitTrigger):
+            raise PositionSignalError("emitted exit trigger must be an ExitTrigger")
+        if not self.idempotency_key.strip():
+            raise PositionSignalError("exit idempotency_key is required")
+        try:
+            quantity = Decimal(self.quantity)
+        except (InvalidOperation, TypeError) as exc:
+            raise PositionSignalError("exit quantity must be decimal") from exc
+        if not quantity.is_finite() or quantity <= 0:
+            raise PositionSignalError("exit quantity must be finite and positive")
+        object.__setattr__(self, "quantity", quantity)
+        _aware("observed_trigger_at", self.observed_trigger_at)
+        if self.exit_signal.occurred_at < self.observed_trigger_at:
+            raise PositionSignalError("emitted exit cannot precede its observed trigger")
+
+
+def validate_protection_emission(
+    entry: EntrySignal,
+    protection: ExitProtectionIntent,
+    event: EmittedExitEvent,
+    *,
+    open_quantity: Decimal,
+) -> None:
+    """Bind the observed trigger event to its entry/protection without over-closing."""
+    if protection.position_id != entry.opens_position_id:
+        raise PositionSignalError("protection belongs to a different position")
+    if protection.parent_entry_signal_id != entry.signal_id:
+        raise PositionSignalError("protection does not identify its entry signal")
+    if protection.trigger is not event.trigger or protection.protection_id != event.protection_id:
+        raise PositionSignalError("emitted exit differs from its protection intent")
+    if event.exit_signal.parent_signal_id != entry.signal_id:
+        raise PositionSignalError("emitted exit does not identify its entry signal")
+    validate_entry_exit_link(entry, event.exit_signal)
+    try:
+        remaining = Decimal(open_quantity)
+    except (InvalidOperation, TypeError) as exc:
+        raise PositionSignalError("open_quantity must be decimal") from exc
+    if not remaining.is_finite() or remaining <= 0 or event.quantity > remaining:
+        raise PositionSignalError("emitted exit quantity exceeds open position quantity")
+    if event.quantity > protection.quantity:
+        raise PositionSignalError("emitted exit quantity exceeds protected quantity")
+    if event.observed_trigger_at < protection.created_at:
+        raise PositionSignalError("trigger observation precedes protection intent")
+
+
 def validate_entry_exit_link(entry: EntrySignal, exit_signal: ExitSignal) -> None:
     """Reject exits linked to a different position, strategy, or direction."""
     if exit_signal.closes_position_id != entry.opens_position_id:
@@ -115,5 +207,5 @@ def validate_entry_exit_link(entry: EntrySignal, exit_signal: ExitSignal) -> Non
         raise PositionSignalError("exit cannot precede entry")
 
 
-__all__ = ["ClosingAction", "EntrySide", "EntrySignal", "ExitSignal",
-           "PositionSignalError", "validate_entry_exit_link"]
+__all__ = ["ClosingAction", "EmittedExitEvent", "EntrySide", "EntrySignal", "ExitProtectionIntent",
+           "ExitSignal", "PositionSignalError", "validate_entry_exit_link", "validate_protection_emission"]

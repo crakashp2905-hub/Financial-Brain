@@ -1560,7 +1560,7 @@
         "Tick alignment is validated at plan construction before the plan can be consumed by downstream code."
       ],
       "blocker": "Exchange-specific rounding direction, post-rounding economics recalculation, effective venue/product restrictions, and overnight-short eligibility are not universally integrated with instrument rules or OMS admission.",
-      "last_audited_at_utc": "2026-11-21T18:08:58+00:00",
+      "last_audited_at_utc": "2026-11-21T18:12:50+00:00",
       "commit": null,
       "test_evidence": [
         "python -m pytest --basetemp .pytest-fb-0461 tests/test_trader_signal.py tests/test_trade_economics.py tests/test_strategy_economics_gate.py tests/test_risk_sizing.py -q: 37 passed",
@@ -1578,7 +1578,7 @@
         "Unknown execution evidence routes to WATCH; explicit hard constraints route to NO_TRADE, with sorted reason codes suitable for decision evidence."
       ],
       "blocker": "This decision gate is not yet wired into every strategy adapter, signal publication path, option contract resolver, MF lifecycle source, or paper OMS admission; feed-specific quote provenance and policy calibration remain external requirements.",
-      "last_audited_at_utc": "2026-11-21T18:08:58+00:00",
+      "last_audited_at_utc": "2026-11-21T18:12:50+00:00",
       "commit": null,
       "test_evidence": [
         "python -m pytest --basetemp .pytest-fb-0462 tests/test_execution_feasibility.py -q: 12 passed",
@@ -1589,12 +1589,20 @@
     {
       "id": "FB-0463",
       "text": "Separate a proposed exit plan from an **emitted exit event**. On entry, persist both the entry and protection intent; when a trigger becomes true, publish a new timestamped SELL/BUY-TO-COVER event.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/position_signals.py separates immutable ExitProtectionIntent from EmittedExitEvent; the latter carries trigger identity, observed-trigger time, exit signal and idempotency key.",
+        "validate_protection_emission binds the exit to the original entry/protection, verifies correct closing-side semantics and refuses quantities above the open or protected position."
+      ],
+      "blocker": "These typed records are not yet persisted atomically with entry/fill events or emitted by the durable paper runner's live trigger evaluator; restart-safe trigger and OMS integration remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T18:12:50+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0463 tests/test_position_signals.py -q: 11 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "Proposed protection and emitted exits have distinct types; emitted events must be timestamped after trigger observation, linked to the originating entry, and fit within open quantity."
     },
     {
       "id": "FB-0464",

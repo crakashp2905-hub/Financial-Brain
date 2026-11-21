@@ -7725,14 +7725,16 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "decimal",
         "enum",
+        "trader_signal",
         "uuid"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/position_signals.py",
-      "source_sha256": "638611ab07672bcd7c5b19c4ef14462553a8edc912116f3c88b865bd03bf246f",
+      "source_sha256": "3c39bd9bf45ebde63899e8c30068d399362faf7ff14e70f7d1b7bdd56ef9d71f",
       "test_paths": []
     },
     {
