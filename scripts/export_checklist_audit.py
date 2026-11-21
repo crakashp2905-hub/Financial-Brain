@@ -13,18 +13,21 @@ ROOT = Path(__file__).resolve().parents[1]
 STATUS = ROOT / "docs/edge-program/v3.0-status.json"
 SOURCE = ROOT / "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md"
 AUDIT = ROOT / "docs/edge-program/v3.0-audit.jsonl"
-ID_PATTERN = re.compile(r"\*\*((?:FB-\d{4})|(?:PA-\d{2}-\d{2})|(?:SL-\d{2}-\d{2}))\*\*")
+TASK_LINE_PATTERN = re.compile(
+    r"^\s*-\s+\[[ xX]\]\s+\*\*((?:FB-\d{4})|(?:PA-\d{2}-\d{2})|(?:SL-\d{2}-\d{2}))\*\*\s+(.*)$"
+)
 STATUSES = {"UNASSESSED", "NOT_STARTED", "PARTIAL", "COMPLETE", "EXTERNAL_BLOCKED"}
 
 
 def render_rows(status: Mapping[str, Any], source_text: str) -> list[dict[str, Any]]:
-    lines_by_id: dict[str, int] = {}
+    lines_by_id: dict[str, tuple[int, str]] = {}
     for number, line in enumerate(source_text.splitlines(), start=1):
-        for match in ID_PATTERN.finditer(line):
-            item_id = match.group(1)
+        match = TASK_LINE_PATTERN.match(line)
+        if match:
+            item_id, task_text = match.groups()
             if item_id in lines_by_id:
                 raise ValueError(f"duplicate source checklist ID: {item_id}")
-            lines_by_id[item_id] = number
+            lines_by_id[item_id] = (number, task_text)
 
     items = status.get("items")
     if not isinstance(items, list) or not items:
@@ -42,6 +45,9 @@ def render_rows(status: Mapping[str, Any], source_text: str) -> list[dict[str, A
         status_value = item.get("status")
         if status_value not in STATUSES:
             raise ValueError(f"invalid status for {item.get('id')}: {status_value!r}")
+        source_line, source_text_for_item = lines_by_id[item["id"]]
+        if item.get("text") != source_text_for_item:
+            raise ValueError(f"status-ledger source text differs from checklist for {item['id']}")
         evidence = item.get("evidence", [])
         tests = item.get("test_evidence", [])
         rows.append({
@@ -49,8 +55,8 @@ def render_rows(status: Mapping[str, Any], source_text: str) -> list[dict[str, A
             "status": status_value,
             "source": {
                 "path": SOURCE.relative_to(ROOT).as_posix(),
-                "line": lines_by_id[item["id"]],
-                "text": item.get("text", ""),
+                "line": source_line,
+                "text": source_text_for_item,
             },
             "test": tests if tests else ([item["test_result"]] if item.get("test_result") else []),
             "artifact_hash": item.get("artifact_hash") or item.get("artifact_sha256"),

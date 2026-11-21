@@ -27,3 +27,10 @@ def test_check_rejects_stale_or_tampered_export(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setattr(audit, "AUDIT", stale)
     with pytest.raises(ValueError, match="stale"):
         audit.validate()
+
+
+def test_export_rejects_status_text_that_differs_from_source_checklist() -> None:
+    status = json.loads(audit.STATUS.read_text(encoding="utf-8"))
+    status["items"][0]["text"] += " changed"
+    with pytest.raises(ValueError, match="source text differs"):
+        audit.render_rows(status, audit.SOURCE.read_text(encoding="utf-8"))
