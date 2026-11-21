@@ -576,7 +576,8 @@ CREATE TABLE IF NOT EXISTS mf_nav_observations (
     row_number          INTEGER NOT NULL,
     row_sha256          VARCHAR NOT NULL,
     source_published_at TIMESTAMPTZ,
-    observed_at         TIMESTAMPTZ NOT NULL
+    observed_at         TIMESTAMPTZ NOT NULL,
+    ingested_at         TIMESTAMPTZ
 );
 
 -- Effective-dated mutual-fund reference metadata. Each immutable row carries its source
