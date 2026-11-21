@@ -2205,6 +2205,12 @@
       "module_owner": "src/financial_brain/kernel/batch20e_strategies.py"
     },
     {
+      "capability_id": "module:src/financial_brain/kernel/candidate_publication.py",
+      "path": "src/financial_brain/kernel/candidate_publication.py",
+      "module_role": "signal_report_or_trader_renderer",
+      "module_owner": "src/financial_brain/kernel/candidate_publication.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/kernel/execution_model.py",
       "path": "src/financial_brain/kernel/execution_model.py",
       "module_role": "canonical_contract_or_signal_output",
