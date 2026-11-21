@@ -7569,15 +7569,23 @@
     {
       "id": "SL-00-17",
       "text": "Pin initial reference strategies H005, H003 and P3 as historical candidates; never label them confirmed prospective edges.",
-      "source_checked": false,
-      "status": "PARTIAL",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md (historical-candidate framing)",
-        "docs/edge-program/current-baseline.json"
+        "docs/forward-edge/reference-candidates.v1.json (separate H005, H003 and P3 reference versions, formulas, implementation symbols, source SHA-256 fingerprints, evidence tier and explicit NOT_CONFIRMED prospective status)",
+        "scripts/validate_reference_candidates.py (checks all source fingerprints and prohibits prospective-edge promotion)",
+        "tests/test_reference_candidates.py (candidate set, P3 historical failure retention, and negative promotion check)",
+        "CI step: .github/workflows/ci.yml (historical strategy pin verification)",
+        "P3 retains the source historical failed verdict; H003/H005 retain the source CANDIDATE_SMALL labels, with neither represented as confirmed prospective edge"
       ],
-      "blocker": "The source checklist names H005/H003/P3 as historical candidates, but exact registered strategy versions and immutable reference pins were not verified.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T07:49:35+00:00",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_reference_candidates.py"
+      ],
+      "artifact_sha256": "9838a8fdce7e1ebbbe26c5272677315b4c8ce4a4bcbac81f54a26f07961a8a68",
+      "test_result": "Reference-candidate pin validator passed; focused tests 2 passed; Ruff, mypy and git diff --check passed."
     },
     {
       "id": "SL-00-18",
@@ -13895,7 +13903,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T07:45:01+00:00",
+    "as_of_utc": "2026-11-21T07:49:35+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13919,12 +13927,12 @@
     "audited_count": 18,
     "status_counts": {
       "UNASSESSED": 1360,
-      "PARTIAL": 13,
+      "PARTIAL": 12,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 1,
-      "COMPLETE": 3
+      "COMPLETE": 4
     },
-    "verified_complete_count": 3,
+    "verified_complete_count": 4,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/forward-edge-equivalence-report.v1.json",
@@ -13932,8 +13940,9 @@
       "docs/edge-program/ownership-map.v1.json",
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
-      "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
+      "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+      "docs/forward-edge/reference-candidates.v1.json"
     ],
-    "evidence_update": "SL-00-15 COMPLETE: CODEOWNERS routes all eight requested source, simulation, RL/forecasting, governance, risk, portfolio, trader UX and accounting domains to the known repository maintainer account. A machine-readable registry, validator, test and CI check keep path coverage synchronized. No separate teams or functional owners are asserted."
+    "evidence_update": "SL-00-17 COMPLETE: H005, H003 and P3 now have separate versioned reference entries with formula descriptions and SHA-256 source pins. Validator and CI reject source drift without an explicit manifest update and prohibit labeling any as confirmed prospective edge. P3 historical failure remains explicit; H003/H005 source candidate labels are retained as historical research status."
   }
 }
