@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 648,
+  "source_count": 650,
   "sources": [
     {
       "capability_ids": [],
@@ -7913,6 +7913,25 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "decimal",
+        "enum",
+        "re",
+        "uuid"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/trader_signal.py",
+      "source_sha256": "b042a4894825fa69e5a9f4a28e03908e9e2dd4f4c34a396b36382e39f4499c76",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "enum",
         "financial_brain.forward_edge.venue_calendar",
         "hashlib",
@@ -8593,6 +8612,23 @@
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_exit_loads.py",
       "source_sha256": "7ec575dcd862859ed48dd1aaf3d0d697c2aba2101ed42db49482d02302e7ef0e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "providers.mf_scheme_terms"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_redemption_constraints.py",
+      "source_sha256": "d48c8a8d306f1c1a3755049f9070f6b57da1382984943e7d4d3990e2502e126a",
       "test_paths": []
     },
     {
@@ -11310,6 +11346,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 633,
-  "unassigned_role_count": 376
+  "unassessed_count": 635,
+  "unassigned_role_count": 377
 }

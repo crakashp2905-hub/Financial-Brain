@@ -1153,12 +1153,22 @@
     {
       "id": "FB-0403",
       "text": "Add execution intent types: `EXCHANGE_LIMIT`, `EXCHANGE_MARKETABLE_SIMULATION`, `MF_SUBSCRIBE`, `MF_REDEEM`, `MF_SWITCH`, `MF_SIP`, `NO_TRADE`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/trader_signal.py defines typed variants for exchange limit, exchange marketable paper simulation, MF subscribe/redeem/switch/SIP, and NO_TRADE intents.",
+        "Intent validation separates exchange quantities/prices from MF rupee amounts, requires a quote hash for marketable simulations, and requires an explicit NO_TRADE reason; the contract contains no broker transport operation.",
+        "Intent construction is not yet connected to the live/read-only signal generation path or durable paper OMS lifecycle."
+      ],
+      "blocker": "Partial: typed intent variants and field invariants are implemented, but strategy integration and durable paper OMS routing remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T17:42:00+00:00",
+      "commit": "586e48b2",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-trader-signal-intent tests/test_trader_signal.py -q: 12 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/trader_signal.py: passed"
+      ],
+      "test_result": "Exchange, MF and NO_TRADE intent variants validate their distinct required fields and reject mixed or incomplete order semantics."
     },
     {
       "id": "FB-0404",
