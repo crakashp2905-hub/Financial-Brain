@@ -7313,32 +7313,37 @@
     {
       "id": "SL-00-01",
       "text": "Capture `main` SHA, dependencies, data versions, active scheduled checkout, CI jobs and current owner approvals into an immutable baseline manifest.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/current-baseline.json (captured 2026-11-16)",
-        "git rev-parse HEAD at audit: 93acc1b3590c5c557deb9c206634d9ece31bcf13",
-        "pyproject.toml",
-        " .github/workflows/ci.yml",
-        "docs/edge-program/v3.0-baseline-2026-11-21.json (captures local HEAD/tree, dependencies, data inventory, CI and explicit unknowns)"
+        "docs/edge-program/v3.0-baseline-2026-11-21-r2.json (fresh main/work-branch SHAs, dependency fingerprints, current workflow/job matrix, PR review counts, data snapshot freshness, and explicit unknowns)",
+        "docs/edge-program/v3.0-baseline-2026-11-21-r2.json.sha256 (detached local integrity checksum)",
+        "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json (current PR metadata and changed-file graph)",
+        "GitHub API: main SHA 5c7ae82a314b1e547d345e7b988e90f77d57224b; integration head c0059bbc10bf0d9df6eae1658c94b0b1e7a5af39; PR #34/#36-#40 review counts all zero; PR #40 CI run 44883135745 in progress",
+        "git ls-remote: feature/forward-edge-f00-f01 at d97dacc78d36e36e1130f94547a5dab691ce12dc"
       ],
-      "blocker": "Existing baseline is stale; scheduled checkout, current dependency/data versions and current owner approvals were not captured in one immutable manifest.",
-      "last_audited_at_utc": "2026-11-21T06:02:13.655717+00:00",
-      "commit": null
+      "blocker": "Actual scheduled paper runner checkout and external owner approvals/branch protection cannot be verified from repository configuration or available GitHub API; the PR description claim and absence of review submissions are recorded without treating them as proof.",
+      "last_audited_at_utc": "2026-11-21T08:10:36+00:00",
+      "commit": null,
+      "artifact_sha256": "b94345baf3c680171f419dd15c542690bce2a4a0ec00347b1a5ff0612b8c5341",
+      "test_result": "Baseline JSON schema parsed; detached checksum created. Snapshot records CI as in progress, not green, and records absent local market data rather than reusing a stale data claim."
     },
     {
       "id": "SL-00-02",
       "text": "Generate machine-readable dependency graph of PR #34 and PR #36–#40; reconcile stacked branches without replaying overwritten files as if newly validated.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/forward-engine-dependency-graph.v1.json",
-        "docs/edge-program/current-baseline.json",
-        "docs/edge-program/v3.0-pr-graph-2026-11-21.json (GitHub API PR ancestry, open states, CI runs and declared omissions)"
+        "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json (six live PR records, full changed-file lists, six overlap groups, stack and declaration edges)",
+        "PR #37 -> #36 is confirmed by #36 base branch matching #37 head; #36 -> #38 is confirmed by #38 base branch matching #36 head.",
+        "PR #34 and #39 are independent base-main PRs; #39 overlaps #40 in all six of its changed paths.",
+        "PR #40 description declares #39 fixes included, but commit ancestry was not established; overlap and PR text are explicitly labeled as declarations, not ancestry."
       ],
-      "blocker": "A dependency graph exists, but the required current PR #34/#36–#40 ancestry and overwritten-file reconciliation is not proven for this checkout.",
-      "last_audited_at_utc": "2026-11-21T06:02:13.655717+00:00",
-      "commit": null
+      "blocker": "The stacked base-ref graph is captured and file overlaps are enumerated, but #39-to-#40 commit ancestry and content-level resolution for all overwritten files have not been independently reconciled.",
+      "last_audited_at_utc": "2026-11-21T08:10:36+00:00",
+      "commit": null,
+      "artifact_sha256": "f2711506358f95200f3f2aee4fd3aaea917305db6be7278a9c9f337312d2e4be",
+      "test_result": "Live GitHub PR metadata and changed-filename pages fetched for #34 and #36-#40; graph structure and path overlaps serialized. No code/test result was transferred from one PR head to another."
     },
     {
       "id": "SL-00-03",
@@ -13917,7 +13922,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T08:02:12+00:00",
+    "as_of_utc": "2026-11-21T08:10:36+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13956,10 +13961,13 @@
       "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip",
       "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip.sha256",
       "docs/edge-program/source-inventory.v2.json",
+      "docs/edge-program/v3.0-baseline-2026-11-21-r2.json",
+      "docs/edge-program/v3.0-baseline-2026-11-21-r2.json.sha256",
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
+      "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
       "docs/forward-edge/reference-candidates.v1.json"
     ],
-    "evidence_update": "SL-00-05 COMPLETE: PR #40 omissions have tested replacements for F17 data/instrument gates, F13 capability-matrix rendering, and protected-trial charter/cohort admission. Local regression evidence is recorded; hosted CI is still queued and is not claimed green."
+    "evidence_update": "Fresh SL-00-01/02 snapshots added. Main and feature refs, dependencies, market-data freshness, review submissions, CI and PR changed-file overlaps are now recorded. Scheduled runner identity and branch protection remain unknown; PR #40 CI is in progress; PR #39/#40 ancestry and overwritten-file resolution remain to be reconciled."
   }
 }
