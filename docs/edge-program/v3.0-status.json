@@ -1109,17 +1109,17 @@
       "evidence": [
         "providers/amfi.py preserves each NAVAll row with its own stated NAV date and repeated scheme-code rows; N.A. rows are never promoted to prices.",
         "parse_quality_report() flags repeated codes, caller-threshold stale rows, explicit N.A. rows, and codes missing from a caller-supplied known scheme universe. No universe membership or staleness threshold is inferred.",
-        "Automatic quality-report integration into scheduled AMFI ingestion and permissioned full-universe validation remain outstanding."
+        "AMFI ingestion now returns and attests quality diagnostics (duplicate, stale, N.A., and caller-supplied-universe missing codes) in the daily evidence record; its default staleness threshold is an explicit overridable seven calendar days."
       ],
-      "blocker": "Partial: mixed-date parsing and explicit row-quality diagnostics are implemented, but ingestion/report integration and source-authorized universe coverage are not complete.",
-      "last_audited_at_utc": "2026-11-21T16:55:36+00:00",
+      "blocker": "Partial: automatic ingestion reporting is implemented. Full-universe missing-scheme validation still requires an authorized, point-in-time scheme universe; this system does not infer one.",
+      "last_audited_at_utc": "2026-11-22T02:30:00+00:00",
       "commit": "042cc5cc",
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-amfi-quality tests/test_amfi_quality_report.py tests/test_phase2_sources.py -q: 19 passed",
-        "Ruff: passed",
-        "python -m mypy src/financial_brain/providers/amfi.py: passed"
+        "python -m pytest --basetemp .pytest-mf-amfi-complete2 [15 AMFI/MF/NAV test modules] -q: 70 passed",
+        "Ruff: passed for AMFI ingest/provider and NAV revision tests",
+        "mypy src/financial_brain/ingest/mfnav.py src/financial_brain/providers/amfi.py: passed"
       ],
-      "test_result": "Repeated scheme codes remain separate across their own NAV dates; an explicit stale threshold flags old rows; N.A. and missing-from-known-universe cases are identified without creating NAV values."
+      "test_result": "Daily AMFI ingestion exposes and evidence-attests repeated codes, stale codes, N.A. rows, and missing codes from an explicitly supplied universe; NAV rows retain their own dates, and invalid thresholds fail before fetching. No master universe is inferred."
     },
     {
       "id": "FB-0401",
