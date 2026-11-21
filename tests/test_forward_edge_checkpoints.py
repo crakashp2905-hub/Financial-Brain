@@ -13,13 +13,14 @@ NOW = datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc)
 
 def _config() -> ForwardRunConfig:
     return ForwardRunConfig(date(2026, 11, 13), "cohort", "a" * 64, "NIFTY50_TRI",
-                            ("NSE:INFY",), Decimal("100000"), {}, "ledger-1")
+                            ("NSE:INFY",), Decimal("100000"),
+                            {"allow_synthetic_fixture_events": True}, "ledger-1")
 
 
 def _event() -> MarketEvent:
     return MarketEvent("quote-1", EventKind.QUOTE, "NSE", "NSE:INFY", NOW, NOW, NOW,
                        {"bid": 100.0, "ask": 100.1, "bid_quantity": 10, "ask_quantity": 10},
-                       "fixture", evidence_id="b" * 64)
+                       "SYNTHETIC_FIXTURE", evidence_id="b" * 64)
 
 
 def _runner(tmp_path) -> ForwardSessionRunner:

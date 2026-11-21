@@ -39,6 +39,12 @@ def _market_observation(**overrides: object) -> dict:
         "session_phase": "CONTINUOUS",
         "auction_required": False,
         "auction_data_present": True,
+        # The data-rights gate (3b68ca06) needs a scoped permission; this one covers synthetic test data only.
+        "source_id": "SYNTHETIC_FIXTURE",
+        "entitlement": {"source_id": "SYNTHETIC_FIXTURE", "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
+                        "effective_from": "2026-01-01", "effective_through": "2027-12-31",
+                        "evidence_ref": "synthetic regression fixture; not a provider licence",
+                        "reviewer": "test-fixture"},
     }
     observation.update(overrides)
     return observation
