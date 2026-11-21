@@ -486,12 +486,22 @@
     {
       "id": "FB-0201",
       "text": "Build `providers/etf_reference.py` using permitted NSE/BSE/AMC reference disclosures, exchange codes, identifiers and effective-dated listing status.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_reference.py (normalizes source-hashed NSE/BSE/AMC ETF rows, canonical identifiers, listing intervals, fund house/index metadata and publication/observation clocks)",
+        "ETFReferenceCatalog requires separately effective RETENTION and RESEARCH DataPermission grants; missing/denied rights fail closed",
+        "No exchange/AMC data was downloaded or retained; real permitted reference disclosures and exchange-code coverage are not yet loaded"
+      ],
+      "blocker": "Partial: validated provider contract and point-in-time catalog are implemented, but no actual permitted exchange/AMC reference snapshots have been loaded and audited; therefore source coverage and rights evidence are not established.",
+      "last_audited_at_utc": "2026-11-21T14:05:00+00:00",
+      "commit": "06e01bca",
+      "test_evidence": [
+        "tests/test_etf_reference.py: 5 passed (identity/hash validation, separate purpose permissions, effective-date overlap/successor handling, and publication-time as-of visibility)",
+        "Ruff and targeted mypy passed",
+        "Source inventory and forward-engine graph regenerated and both freshness checks passed"
+      ],
+      "test_result": "ETF reference rows are permission-gated, source-hashed and point-in-time resolvable; real provider data and source-rights coverage remain unverified."
     },
     {
       "id": "FB-0202",
@@ -14291,7 +14301,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T15:12:28+00:00",
+    "as_of_utc": "2026-11-21T15:35:42+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14315,6 +14325,7 @@
       "FB-0108",
       "FB-0109",
       "FB-0110",
+      "FB-0201",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14335,13 +14346,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 41,
+    "audited_count": 42,
     "status_counts": {
       "COMPLETE": 23,
-      "PARTIAL": 17,
+      "PARTIAL": 18,
       "NOT_STARTED": 0,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1337
+      "UNASSESSED": 1336
     },
     "verified_complete_count": 23,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
