@@ -1843,32 +1843,51 @@
     {
       "id": "FB-0477",
       "text": "For options, monitor bid/ask/depth, premium decay, days-to-expiry, price gaps, volatility and Greeks; simulate exit on executable bid for long options and leg-wise feasible quotes for spreads.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "options_runner.run_intent replays registered long-premium intents against archived matching-token quotes, buys at ask and exits at bid, checks visible size and leaves missing fills unresolved.",
+        "ingest/options_quotes.py and paper/options_forward.py persist quote and prospective outcome evidence; options_risk.py enforces quote age, identity, side and depth for spread legs.",
+        "Focused options quote, risk, spread, replay and plan tests passed: 40 passed.",
+        "Remaining: no continuous open-position monitor for decay, days-to-expiry, volatility/Greeks or quote-gap exits; source/receipt clocks and authenticated coverage are not end-to-end attested."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused options quote, risk, spread, replay and plan suite: 40 passed"
     },
     {
       "id": "FB-0478",
       "text": "For option spreads, express entry, SL and TP on the **combined spread value/P&L** and separately track leg risk and partial fills; prohibit a synthetic guaranteed multi-leg exit.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "forward_edge/options_spread.py::evaluate_executable_spread computes combined entry/exit cash flow, net P&L and expiry assignment scenarios from matching executable leg quotes, with quote-age, contract identity and visible-quantity checks.",
+        "forward_edge/options_risk.py::evaluate_defined_risk_legs reports economic max loss and worst intermediate legging loss; paper/options_spread.py supports defined-risk debit vertical entry envelopes.",
+        "Combined option-spread/risk/replay tests passed in the focused 40-test suite.",
+        "Remaining: no strategy-level combined-value SL/TP watcher, durable per-leg partial-fill/reconciliation state or universal paper-book integration; synthetic all-leg fills remain a model risk."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused options quote, risk, spread, replay and plan suite: 40 passed"
     },
     {
       "id": "FB-0479",
       "text": "Block uncovered option-writing/physical-settlement exit plans until margin, assignment/exercise, expiry and settlement modules have passed coverage and operational checks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "paper/options.py and paper/options_plan.py restrict the supported single-leg recommendation path to long-premium BUY plans and explicitly report that settlement is not modelled.",
+        "paper/options_spread.py only constructs defined-risk debit vertical entry envelopes and returns broker_margin_verified=false and expiry_settlement_modelled=false.",
+        "forward_edge/options_spread.py reports assignment/cash/share obligations only as explicitly labelled scenarios; forward_edge/options_risk.py labels margin NOT_VERIFIED unless supplied by a verified external source.",
+        "Focused options risk/spread/replay suite passed: 40 passed.",
+        "Remaining: a universal strategy/OMS gate blocking every uncovered writer and physical-settlement plan until operational margin, assignment, expiry and settlement checks pass has not been verified."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused options quote, risk, spread, replay and plan suite: 40 passed"
     },
     {
       "id": "FB-0480",
