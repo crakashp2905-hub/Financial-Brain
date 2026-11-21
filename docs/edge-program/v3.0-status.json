@@ -495,7 +495,7 @@
       ],
       "blocker": "Partial: validated provider contract and point-in-time catalog are implemented, but no actual permitted exchange/AMC reference snapshots have been loaded and audited; therefore source coverage and rights evidence are not established.",
       "last_audited_at_utc": "2026-11-21T14:05:00+00:00",
-      "commit": "06e01bca",
+      "commit": "b9acea15",
       "test_evidence": [
         "tests/test_etf_reference.py: 5 passed (identity/hash validation, separate purpose permissions, effective-date overlap/successor handling, and publication-time as-of visibility)",
         "Ruff and targeted mypy passed",
@@ -515,7 +515,7 @@
       ],
       "blocker": "Partial: category taxonomy and no-guess classification are implemented, but complete point-in-time ETF listings and source-backed category assignments require permitted exchange/AMC reference data.",
       "last_audited_at_utc": "2026-11-21T14:06:00+00:00",
-      "commit": "991e6cd8",
+      "commit": "f3a8f5cd",
       "test_evidence": [
         "tests/test_etf_reference.py: 14 passed, including each exposure class and proof that a GOLDTRACKER symbol remains UNKNOWN without source-declared classification",
         "Ruff and targeted mypy passed"
@@ -535,7 +535,7 @@
       ],
       "blocker": "Partial: the point-in-time metadata and valuation contracts exist, but no permitted source data has populated or validated the actual ETF-to-benchmark/NAV mapping.",
       "last_audited_at_utc": "2026-11-21T14:07:00+00:00",
-      "commit": "9801de02",
+      "commit": "123ebb43",
       "test_evidence": [
         "tests/test_etf_reference.py: 17 passed, including valuation publication-time visibility, point-in-time ISIN match, decimal valuation and inception/listing date validation",
         "Ruff and targeted mypy passed"
@@ -555,7 +555,7 @@
       ],
       "blocker": "Partial: the in-repo ETF daily mart is implemented and reuses existing EOD ingestion, but no permission-cleared historical ETF archive is loaded, and the curated partition exposes only the current revision rather than a queryable correction history.",
       "last_audited_at_utc": "2026-11-21T14:08:00+00:00",
-      "commit": "f5249d0b",
+      "commit": "786f6d2a",
       "test_evidence": [
         "python -m pytest tests/test_etf_prices.py tests/test_etf_reference.py -q: 19 passed",
         "Ruff and targeted mypy passed",
@@ -576,7 +576,7 @@
       ],
       "blocker": "Partial: the existing read-only full-quote path now supports BSE as well as NSE and carries executable quote evidence, but no ETF subscription/universe is wired, no WebSocket coverage is measured, and Kite paper-data rights are still UNKNOWN_RIGHTS.",
       "last_audited_at_utc": "2026-11-21T14:09:00+00:00",
-      "commit": "181e38f7",
+      "commit": "509edeec",
       "test_evidence": [
         "python -m pytest tests/test_kite_live_exchange_symbols.py tests/test_forward_edge_kite_market_data.py -q: 20 passed",
         "Ruff and targeted mypy passed"
@@ -595,7 +595,7 @@
       ],
       "blocker": "Partial: session-safe event aggregation is implemented, but it is not yet wired into ForwardSessionRunner or the existing equities bar service, and ETF-specific production gates/coverage are not validated.",
       "last_audited_at_utc": "2026-11-21T14:24:43+00:00",
-      "commit": "26bd526e",
+      "commit": "2ceeeedf",
       "test_evidence": [
         "python -m pytest tests/test_etf_bars.py tests/test_etf_prices.py tests/test_etf_reference.py tests/test_etf_valuation.py -q: 28 passed",
         "Ruff, targeted mypy, source inventory and dependency graph checks passed"
@@ -615,7 +615,7 @@
       ],
       "blocker": "Partial: fail-closed freshness and comparison logic is implemented, but age/skew budgets are not calibrated against a permissioned live ETF feed and the result is not yet exposed in trader UI or integrated into the paper decision pipeline.",
       "last_audited_at_utc": "2026-11-21T14:24:43+00:00",
-      "commit": "26bd526e",
+      "commit": "2ceeeedf",
       "test_evidence": [
         "python -m pytest tests/test_etf_valuation.py -q: 6 passed",
         "Ruff and targeted mypy passed"
@@ -634,7 +634,7 @@
       ],
       "blocker": "Partial: observed-data diagnostics exist, but halted-period sources, live ETF data coverage, calibrated market-impact execution models and prospective capacity validation are absent. The Amihud term is an uncalibrated size proxy, not a fill guarantee.",
       "last_audited_at_utc": "2026-11-21T14:30:00+00:00",
-      "commit": "a12f53f1",
+      "commit": "96a89b2c",
       "test_evidence": [
         "python -m pytest tests/test_etf_liquidity.py tests/test_etf_valuation.py tests/test_etf_bars.py -q: 12 passed",
         "Ruff and targeted mypy passed",
@@ -655,7 +655,7 @@
       ],
       "blocker": "Partial: the permission-gated disclosure contract is implemented, but no permissioned AMC/exchange tracking or TER observations have been ingested or reconciled against actual source documents.",
       "last_audited_at_utc": "2026-11-21T14:31:00+00:00",
-      "commit": "79eb8ed2",
+      "commit": "e92dfe20",
       "test_evidence": [
         "python -m pytest tests/test_etf_reference.py tests/test_etf_liquidity.py tests/test_etf_valuation.py -q: 28 passed",
         "Ruff and targeted mypy passed",
@@ -675,7 +675,7 @@
       ],
       "blocker": "Partial: anomaly detection primitives are implemented, but there are no real ETF valuation histories/underlying-market calendars, and outputs are not integrated into session health or trader alerts.",
       "last_audited_at_utc": "2026-11-21T14:33:00+00:00",
-      "commit": "54f29565",
+      "commit": "5e6ef240",
       "test_evidence": [
         "python -m pytest tests/test_etf_valuation.py tests/test_etf_reference.py -q: 27 passed",
         "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
@@ -694,7 +694,7 @@
       ],
       "blocker": "Partial: context-only data contract exists, but there are no permitted issuer/AP creation-redemption disclosures loaded or consumer-side UI labels using the context.",
       "last_audited_at_utc": "2026-11-21T14:40:00+00:00",
-      "commit": "0d549efd",
+      "commit": "640fa76a",
       "test_evidence": [
         "python -m pytest tests/test_etf_reference.py -q: 21 passed",
         "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
@@ -713,7 +713,7 @@
       ],
       "blocker": "Partial: historical price adjustment and point-in-time instrument rules exist, but splits, cash distributions, closure handling and revised lot/tick rules are not reconciled end to end in ETF paper positions and accounting.",
       "last_audited_at_utc": "2026-11-21T14:41:00+00:00",
-      "commit": "f5249d0b",
+      "commit": "24043e1b",
       "test_evidence": [
         "python -m pytest tests/test_etf_prices.py tests/test_kernel_instrument_history.py tests/test_kernel_instruments.py -q: 30 passed",
         "Ruff passed"
@@ -733,7 +733,7 @@
       ],
       "blocker": "Partial: separate return calculations and labels exist, but no permissioned historical ETF price/NAV/TRI panel has been populated or reconciled to source adjustment conventions.",
       "last_audited_at_utc": "2026-11-21T14:36:00+00:00",
-      "commit": "09bb2cad",
+      "commit": "f25edf10",
       "test_evidence": [
         "python -m pytest tests/test_etf_return_series.py tests/test_etf_prices.py -q: 4 passed",
         "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
@@ -752,7 +752,7 @@
       ],
       "blocker": "Partial: explicit fail-closed pricing state exists, but it is not wired into all ETF paper order/report surfaces; those may still represent missing ETF quotes as generic no-trade/missing-data outcomes rather than `UNPRICED`.",
       "last_audited_at_utc": "2026-11-21T14:38:00+00:00",
-      "commit": "ee7d5e2d",
+      "commit": "534e3393",
       "test_evidence": [
         "python -m pytest tests/test_etf_pricing.py tests/test_etf_return_series.py tests/test_etf_prices.py -q: 9 passed",
         "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
@@ -14427,7 +14427,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T15:35:42+00:00",
+    "as_of_utc": "2026-11-21T15:37:18+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14452,6 +14452,19 @@
       "FB-0109",
       "FB-0110",
       "FB-0201",
+      "FB-0202",
+      "FB-0203",
+      "FB-0204",
+      "FB-0205",
+      "FB-0206",
+      "FB-0207",
+      "FB-0208",
+      "FB-0209",
+      "FB-0210",
+      "FB-0211",
+      "FB-0212",
+      "FB-0213",
+      "FB-0214",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14472,13 +14485,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 42,
+    "audited_count": 55,
     "status_counts": {
       "COMPLETE": 23,
-      "PARTIAL": 18,
+      "PARTIAL": 31,
       "NOT_STARTED": 0,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1336
+      "UNASSESSED": 1323
     },
     "verified_complete_count": 23,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
