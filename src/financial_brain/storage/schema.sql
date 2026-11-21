@@ -696,6 +696,48 @@ CREATE TABLE IF NOT EXISTS mf_portfolio_disclosures (
     observed_at      TIMESTAMPTZ NOT NULL
 );
 
+-- Durable paper mutual-fund accounting. Exit-load terms are frozen per purchase lot
+-- so a later schedule revision cannot rewrite an existing lot's redemption economics.
+CREATE TABLE IF NOT EXISTS mf_paper_accounts (
+    account_id VARCHAR PRIMARY KEY,
+    cash_inr DECIMAL(38, 18) NOT NULL CHECK (cash_inr >= 0),
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_lots (
+    account_id VARCHAR NOT NULL,
+    lot_id VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    isin VARCHAR NOT NULL,
+    allotted_on DATE NOT NULL,
+    units_original DECIMAL(38, 18) NOT NULL CHECK (units_original > 0),
+    units_remaining DECIMAL(38, 18) NOT NULL CHECK (units_remaining >= 0),
+    purchase_nav DECIMAL(38, 18) NOT NULL CHECK (purchase_nav > 0),
+    exit_loads_json VARCHAR,
+    exit_loads_sha256 VARCHAR,
+    subscription_event_id VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, lot_id),
+    UNIQUE (account_id, subscription_event_id)
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_events (
+    account_id VARCHAR NOT NULL,
+    event_id VARCHAR NOT NULL,
+    kind VARCHAR NOT NULL CHECK (kind IN ('SUBSCRIBE', 'REDEEM')),
+    scheme_code VARCHAR,
+    isin VARCHAR,
+    event_date DATE,
+    nav_per_unit DECIMAL(38, 18),
+    units DECIMAL(38, 18),
+    gross_inr DECIMAL(38, 18),
+    exit_load_inr DECIMAL(38, 18),
+    net_inr DECIMAL(38, 18),
+    event_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, event_id)
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (

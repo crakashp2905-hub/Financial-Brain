@@ -37,6 +37,17 @@
       "boundary": "Compares automatic and human-reviewed paper outcomes over one frozen eligible signal set; requires cash outcomes for abstentions and never authenticates actors or promotes a strategy."
     },
     {
+      "id": "mf_paper_lot_accounting",
+      "category": "ledger",
+      "owner": "src/financial_brain/paper/mf_lot_book.py",
+      "owner_symbol": "subscribe/redeem/account_snapshot",
+      "implementations": [
+        "src/financial_brain/paper/mf_exit_loads.py",
+        "src/financial_brain/storage/schema.sql"
+      ],
+      "boundary": "Durable paper MF cash and FIFO purchase-lot accounting with event idempotency and source-hashed exit-load schedules; does not establish source rights, NAV assignment, taxes, or production-order execution."
+    },
+    {
       "id": "algorithm_behavior_spec",
       "category": "strategy",
       "owner": "src/financial_brain/strategies/specs.py",
@@ -2435,6 +2446,12 @@
       "path": "src/financial_brain/paper/mf_exit_loads.py",
       "module_role": "paper_engine_or_output",
       "module_owner": "src/financial_brain/paper/mf_exit_loads.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/mf_lot_book.py",
+      "path": "src/financial_brain/paper/mf_lot_book.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_lot_book.py"
     },
     {
       "capability_id": "module:src/financial_brain/paper/mf_redemption_constraints.py",
