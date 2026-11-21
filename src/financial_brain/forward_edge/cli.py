@@ -22,7 +22,7 @@ def _preflight(args: argparse.Namespace) -> int:
     report["status_code"] = 0 if report["overall"] == "GREEN" else 2
     report["paper_session_ready"] = False
     report["paper_session_blockers"] = [
-        "No integrated ForwardSessionRunner is registered.",
+        "No complete command path starts a prospective session from a live observed quote source.",
         "Independent pre-entry timestamp custody is not configured." if report["overall"] == "RED" else
         "Preflight GREEN alone does not attest a market session.",
     ]
