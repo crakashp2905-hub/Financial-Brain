@@ -1746,10 +1746,10 @@
         "Replay validates intent-to-fill quantities, recovers partial fills and unresolved exits, and position closure is appended only after fills remove all open and pending risk."
       ],
       "blocker": "This per-position event ledger is not yet called by the forward runner/all paper books, and full immutable market/quote snapshots are not yet attached to every protection and exit-fill event.",
-      "last_audited_at_utc": "2026-11-21T18:42:38+00:00",
+      "last_audited_at_utc": "2026-11-21T18:48:48+00:00",
       "commit": null,
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-fb-0471-r3 tests/test_exit_protection_ledger.py tests/test_exit_policy.py tests/test_gap_exit.py -q: 22 passed",
+        "python -m pytest --basetemp .pytest-fb-0471-73 tests/test_exit_protection_ledger.py tests/test_exit_policy.py tests/test_gap_exit.py -q: 23 passed",
         "Ruff and targeted mypy: passed"
       ],
       "test_result": "The required entry/exit/close event sequence and decision snapshots persist and replay with idempotency; full runner integration and every market quote snapshot remain outstanding."
@@ -1777,12 +1777,20 @@
     {
       "id": "FB-0473",
       "text": "For equity swing, generate daily BUY candidates with SL/TP from versioned risk/strategy logic; after entry re-evaluate exits throughout the holding period and on gaps across sessions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/book.py::swing_ranking builds daily, versioned swing-v1 candidates with a risk-plan stop, size, expected return and after-cost estimate.",
+        "src/financial_brain/forward_edge/paper_book_adapter.py::pending_signals and due_exits bridge swing candidates to the runner; open positions are reevaluated by completed exchange sessions using a runner-journaled executable quote, with stop and horizon exits recorded separately.",
+        "Stop exits price against the observed executable bid, so cross-session gaps do not assume the stop trigger itself filled."
+      ],
+      "blocker": "The current integrated swing bridge has stop and time exits but no configured take-profit/scale-out policy, and due_exits is not invoked by a production daily scheduler across all swing books.",
+      "last_audited_at_utc": "2026-11-21T18:48:48+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0473 tests/test_forward_edge_session_runner.py::test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor tests/test_forward_edge_session_runner.py::test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell -q: 7 passed"
+      ],
+      "test_result": "Daily swing candidates and stop/time exits have a versioned runner-backed paper path; target exits and universal scheduler integration remain outstanding."
     },
     {
       "id": "FB-0474",
