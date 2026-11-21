@@ -18,12 +18,22 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import date, datetime, timedelta
+from typing import Any, TypedDict
 
 from .base import FetchError, FetchResult, Provider
 
 NAV_ALL = "https://portal.amfiindia.com/spages/NAVAll.txt"
 HEADER = "Scheme Code"
 MAX_HISTORY_WINDOW_DAYS = 90
+
+
+class AmfiQualityReport(TypedDict):
+    rows: list[dict[str, Any]]
+    latest_nav_date: str | None
+    repeated_scheme_codes: list[str]
+    stale_scheme_codes: list[str]
+    unavailable: list[dict[str, str]]
+    stale_after_days: int
 
 
 def bounded_history_windows(
@@ -123,7 +133,7 @@ def parse_quality_report(
     *,
     stale_after_days: int,
     known_scheme_codes: tuple[str, ...] = (),
-) -> dict[str, object]:
+) -> AmfiQualityReport:
     """Report mixed-date, repeated, stale, and unavailable rows without inventing NAVs.
 
     Staleness is relative to the latest valid date in this file and uses an explicit

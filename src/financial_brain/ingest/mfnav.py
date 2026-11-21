@@ -14,29 +14,32 @@ from datetime import date, datetime, timezone
 
 from ..evidence import ledger
 from ..lake.store import RawLake
-from ..providers.amfi import AmfiNav, parse
+from ..providers.amfi import AmfiNav, parse_quality_report
 
 SOURCE, DATASET = "AMFI", "mf_nav"
+DEFAULT_STALE_AFTER_DAYS = 7
 
 
-def ingest(con, cfg, business_date: date | None = None, *, provider=None) -> dict:
-    """Fetch (or re-read) today's NAV file and preserve each observed row version."""
+def ingest(
+    con,
+    cfg,
+    business_date: date | None = None,
+    *,
+    provider=None,
+    stale_after_days: int = DEFAULT_STALE_AFTER_DAYS,
+    known_scheme_codes: tuple[str, ...] = (),
+) -> dict:
+    """Fetch today's NAV file, preserve each row version, and report feed quality.
+
+    The seven-day staleness threshold is an explicit operational default and may be
+    overridden by a caller. Missing-scheme diagnostics require a caller-provided,
+    point-in-time universe; no universe is inferred here.
+    """
+    if stale_after_days < 0:
+        raise ValueError("stale_after_days cannot be negative")
     d = business_date or date.today()
     provider = provider or AmfiNav()
-    lake = RawLake(cfg.lake)
     res = provider.fetch(d)
-    obj = lake.put(source=SOURCE, dataset=DATASET, business_date=d,
-                   filename=res.filename, payload=res.payload, url=res.url,
-                   content_type=res.content_type, http_status=res.http_status,
-                   retrieved_at=res.retrieved_at)
-    con.execute("""INSERT INTO lake_manifest (key, source, dataset, business_date,
-                   filename, url, retrieved_at, sha256, size_bytes, http_status,
-                   content_type) VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                   ON CONFLICT (key) DO NOTHING""",
-                [obj.key, obj.source, obj.dataset, obj.business_date, obj.filename,
-                 obj.url, obj.retrieved_at, obj.sha256, obj.size_bytes, obj.http_status,
-                 obj.content_type])
-
     observed_at = res.retrieved_at
     if observed_at.tzinfo is None or observed_at.utcoffset() is None:
         raise ValueError("AMFI retrieved_at must be timezone-aware")
@@ -49,7 +52,24 @@ def ingest(con, cfg, business_date: date | None = None, *, provider=None) -> dic
             raise ValueError("source_published_at must be a timezone-aware datetime")
         source_published_at = source_published_at.astimezone(timezone.utc)
 
-    rows = parse(res.payload)
+    report = parse_quality_report(
+        res.payload,
+        stale_after_days=stale_after_days,
+        known_scheme_codes=known_scheme_codes,
+    )
+    rows = report["rows"]
+    lake = RawLake(cfg.lake)
+    obj = lake.put(source=SOURCE, dataset=DATASET, business_date=d,
+                   filename=res.filename, payload=res.payload, url=res.url,
+                   content_type=res.content_type, http_status=res.http_status,
+                   retrieved_at=res.retrieved_at)
+    con.execute("""INSERT INTO lake_manifest (key, source, dataset, business_date,
+                   filename, url, retrieved_at, sha256, size_bytes, http_status,
+                   content_type) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT (key) DO NOTHING""",
+                [obj.key, obj.source, obj.dataset, obj.business_date, obj.filename,
+                 obj.url, obj.retrieved_at, obj.sha256, obj.size_bytes, obj.http_status,
+                 obj.content_type])
     observations = []
     for row_number, row in enumerate(rows, start=1):
         fields = {
@@ -101,19 +121,29 @@ def ingest(con, cfg, business_date: date | None = None, *, provider=None) -> dic
 
     latest = max((r["nav_date"] for r in rows), default=None)
     fresh = sum(1 for r in rows if r["nav_date"] == latest)
+    quality = {
+        "latest_nav_date": report["latest_nav_date"],
+        "stale_after_days": report["stale_after_days"],
+        "repeated_scheme_codes": report["repeated_scheme_codes"],
+        "stale_scheme_codes": report["stale_scheme_codes"],
+        "unavailable": report["unavailable"],
+        "known_universe_supplied": bool(known_scheme_codes),
+        "known_universe_size": len(set(known_scheme_codes)),
+    }
     if latest:
         ledger.mint(con, kind="mf_nav_file", subject="AMFI", as_of=latest,
                     claim=f"AMFI NAV rows observed for {fresh} schemes as of {latest}",
                     value={"schemes": len(rows), "as_of_latest": fresh,
                            "latest_date": latest.isoformat(), "lake_key": obj.key,
-                           "payload_sha256": obj.sha256},
+                           "payload_sha256": obj.sha256,
+                           "quality": quality},
                     source=SOURCE, source_tier=1, lake_key=obj.key,
                     derivation="providers/amfi NAVAll.txt")
     return {"schemes": len(rows), "latest_date": str(latest), "on_latest_date": fresh,
             "lake_key": obj.key, "observations_recorded": len(observations),
             "source_published_at": (source_published_at.isoformat()
                                      if source_published_at else None),
-            "observed_at": observed_at.isoformat()}
+            "observed_at": observed_at.isoformat(), "quality": quality}
 
 
 def as_known_on(con, scheme_code: str, nav_date: date, *, known_at: datetime) -> dict | None:
