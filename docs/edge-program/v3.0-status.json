@@ -1607,12 +1607,21 @@
     {
       "id": "FB-0464",
       "text": "Implement persistent trigger state machines with partial-fill-aware SL/TP quantity adjustments, no duplicate exits, no overselling and restart-safe trigger evaluation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/exit_protection_ledger.py records entry fills, armed protections, emitted exit intents and partial exit fills in the existing hash-chained DurableJournal; state is reconstructed by replay after restart.",
+        "Idempotency keys and fill IDs prevent duplicate accounting; open, pending and remaining quantities are recomputed and over-reservation/overselling is rejected before append.",
+        "Tests reopen the journal, recover partial fills and pending trigger quantity, and verify duplicate, conflicting, unknown, unarmed, wrong-parent and excess-quantity events fail safely."
+      ],
+      "blocker": "This ledger is not yet called by ForwardSessionRunner/OMS and does not evaluate market triggers itself; quote-event evaluation, OCO sibling cancellation, persisted database wiring and production recovery orchestration remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T18:16:34+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0464-final2 tests/test_exit_protection_ledger.py tests/test_position_signals.py -q: 16 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "The append-only journal reconstructs partial-fill protection state after restart, rejects duplicate/conflicting events, and prevents exits from exceeding unreserved open quantity."
     },
     {
       "id": "FB-0465",
