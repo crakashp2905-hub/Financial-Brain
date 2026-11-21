@@ -555,6 +555,30 @@ CREATE TABLE IF NOT EXISTS mf_nav (
     PRIMARY KEY (scheme_code, nav_date)
 );
 
+-- Append-only observations of AMFI NAV rows. A source may republish a corrected NAV for
+-- the same scheme/date; keep every byte-backed observation and use observed_at as the
+-- conservative availability bound. AMFI's daily file does not provide a per-row
+-- publication timestamp, so source_published_at remains NULL unless an authorized
+-- provider explicitly supplies one.
+CREATE TABLE IF NOT EXISTS mf_nav_observations (
+    observation_id      VARCHAR PRIMARY KEY,
+    scheme_code         VARCHAR NOT NULL,
+    isin_growth         VARCHAR,
+    isin_reinvest       VARCHAR,
+    scheme_name         VARCHAR NOT NULL,
+    fund_house          VARCHAR,
+    scheme_type         VARCHAR,
+    plan                VARCHAR,
+    option              VARCHAR,
+    nav                 DOUBLE NOT NULL,
+    nav_date            DATE NOT NULL,
+    lake_key            VARCHAR NOT NULL,
+    row_number          INTEGER NOT NULL,
+    row_sha256          VARCHAR NOT NULL,
+    source_published_at TIMESTAMPTZ,
+    observed_at         TIMESTAMPTZ NOT NULL
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
