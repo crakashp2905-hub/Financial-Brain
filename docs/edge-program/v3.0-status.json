@@ -429,7 +429,7 @@
       ],
       "blocker": "Partial: the transition contract is implemented, but it is not yet populated from the exchange/AMC/AMFI sources or wired into canonical holdings migrations, historical signal identifiers and cost-basis transformations. Old records cannot be rewritten without source evidence.",
       "last_audited_at_utc": "2026-11-21T13:52:00+00:00",
-      "commit": "PENDING",
+      "commit": "ab08f4a4",
       "test_evidence": [
         "python -m pytest tests/test_kernel_instrument_history.py tests/test_kernel_architecture.py tests/test_kernel_instruments.py tests/test_forward_edge_registry.py tests/test_checklist_audit_export.py tests/test_launch_gates.py -q: 43 passed",
         "Ruff: passed",
