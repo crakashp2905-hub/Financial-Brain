@@ -3322,122 +3322,146 @@
     {
       "id": "FB-1101",
       "text": "Single dashboard shows consolidated account NAV, available/blocked capital, daily and cumulative realized/unrealized P&L and drawdown.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/terminal.py (equity opportunity and owner Kite portfolio panels; lacks consolidated five-desk NAV, available/blocked capital and total P&L reconciliation)"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1102",
       "text": "Five desk pages: Equity Swing / Intraday / Options / ETF / MF; show local times and correct frequency (MF not 'live tick').",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/terminal.py (market, equity swing and intraday sections); no separate complete Options, ETF and MF desk pages"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1103",
       "text": "Display each signal with timestamp, provenance, intent type, candidate-vs-trade-eligible status, **BUY/SELL closing side, SL, TP, trailing/time exit and trigger state**, costs, uncertainty, risk, capacity, strategy and evidence class.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/terminal.py:book_panel and decision_first (equity candidates show timestamp/context, modeled costs, uncertainty/stop and evidence caveats); no consistent five-desk action/exit/provenance record"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1104",
       "text": "Provide `APPROVE`, `REJECT`, `WATCH`, `NO_TRADE` for manual-approval paper sleeves; no UI action directly authorizes physical cash orders.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "tests/test_decision_first.py and src/financial_brain/paper/terminal.py (read-only display only; no APPROVE/REJECT/WATCH/NO_TRADE workflow for paper sleeves)"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1105",
       "text": "Independent automatic paper and human-approved paper performance, with same quote feed, risk parameters and market conditions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No paired automatic vs human-approved paper sleeves with matched eligibility, quote feed and risk parameters found"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1106",
       "text": "ETFs display underlying benchmark, bid/ask, quoted premium/discount to fresh iNAV, estimated tracking difference, cost and liquidity.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No ETF desk panel rendering benchmark, live spread, fresh iNAV premium/discount, tracking difference, cost and liquidity found"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1107",
       "text": "MFs display scheme/plan/option, current/published NAV, available NAV date, cutoff, pending allotment, units, cost basis, exit load, settlement and tax estimate.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No MF holding panel rendering scheme class, NAV/cutoff, pending units, cost basis, exit load, settlement and tax estimate found"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1108",
       "text": "Show MF `SUBSCRIBE`, `REDEEM`, `SWITCH`, `SIP`, `HOLD` as decisions, not misleading buy-at-current-price buttons.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No MF decision workflow for SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD found; recommendations remain research primitives"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1109",
       "text": "Create trade attribution: thesis→BUY/entry signal→entry fill→precommitted SL/TP→actual SELL/exit signal→exit fill→net P&L, plus skipped/rejected opportunities.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/lifecycle.py (equity opportunity decision-to-exit timeline) and src/financial_brain/paper/daily_results.py (intraday cost/P&L attribution); no universal five-desk attribution including rejected opportunities"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1110",
       "text": "Add alerts for order execution, stale data, MF payout/units pending, ETF dislocation, options expiry and risk budget changes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/alerts.py and src/financial_brain/cli.py:cmd_alerts (opportunity, holding-exit and system/run alerts); checklist-specific MF, ETF, options-expiry and desk risk-budget alert coverage is incomplete"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1111",
       "text": "Export reproducible CSV/Parquet/JSON + signed/hash-stamped audit reports with exact code/data revisions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/decision_journal.py (hash-stamped decision snapshots) and intraday reports/manifests (reproducible subsets); no universal multi-format export and signed complete five-desk audit report"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1112",
       "text": "Daily owner-readable report: which desks won/lost, why, costs, cash drag, risks and whether results beat their matched benchmark.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/daily_results.py (readable intraday results, costs and live/replay distinction); no unified desk-by-desk weekly owner report with cash drag and matched benchmark attribution"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
+      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
     },
     {
       "id": "FB-1201",
@@ -15507,9 +15531,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 26,
-    "PARTIAL": 171,
+    "PARTIAL": 178,
     "EXTERNAL_BLOCKED": 1,
-    "UNASSESSED": 1161,
-    "NOT_STARTED": 19
+    "UNASSESSED": 1149,
+    "NOT_STARTED": 24
   }
 }
