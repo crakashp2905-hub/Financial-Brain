@@ -7497,15 +7497,24 @@
     {
       "id": "SL-00-14",
       "text": "Write `fb learning audit` planned CLI contract that fails closed on any unmerged dependency, missing test or source permission.",
-      "source_checked": false,
-      "status": "NOT_STARTED",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/forward_edge/audit.py (existing forward-edge audit only)",
-        "src/financial_brain/forward_edge/cli.py"
+        "src/financial_brain/learning_audit.py (fails closed on unmerged PR dependencies, incomplete/missing evidence and unauthorized/stale source permissions)",
+        "src/financial_brain/cli.py (`fb learning audit`; concise output and --json full result)",
+        "tests/test_learning_audit.py (positive, negative, missing-artifact, missing-test, stale-snapshot and CLI cases)",
+        "tests/test_forward_edge_f00.py (protected trial charter/cohort scope governance)",
+        "3f3f3e43"
       ],
-      "blocker": "No `fb learning audit` contract or command was found that checks unmerged dependencies, missing tests and source permissions together.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T06:36:44+00:00",
+      "commit": "61af4825",
+      "test_evidence": [
+        "tests/test_learning_audit.py",
+        "tests/test_forward_edge_f00.py",
+        "tests/test_standard.py"
+      ],
+      "artifact_sha256": "7ae416944fedbda0b2081cfdf714af8b8d85b0c7bc10c9a2445d74d02c3e1f88"
     },
     {
       "id": "SL-00-15",
@@ -13860,7 +13869,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T06:15:08.398246+00:00",
+    "as_of_utc": "2026-11-21T06:36:44+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13885,15 +13894,16 @@
     "status_counts": {
       "UNASSESSED": 1360,
       "PARTIAL": 13,
-      "NOT_STARTED": 4,
-      "EXTERNAL_BLOCKED": 1
+      "NOT_STARTED": 3,
+      "EXTERNAL_BLOCKED": 1,
+      "COMPLETE": 1
     },
-    "verified_complete_count": 0,
+    "verified_complete_count": 1,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "SL-00-05: restored fixture gate invocation and tracker-derived capability matrix locally; charter/cohort enforcement remains open."
+    "evidence_update": "SL-00-14 COMPLETE: fail-closed fb learning audit CLI and stale evidence rejection; 68 focused tests pass. Current blockers are reported by the command."
   }
 }
