@@ -26,13 +26,13 @@
       ],
       "blocker": "The latest hosted run passes market-data source rights and repository inventory gates but fails at a generated fixture report because the fixture audit hashes include checkout-specific provenance. The fixture adapter now uses a synthetic-only provenance marker; full Ubuntu/Windows CI must pass on the next head.",
       "last_audited_at_utc": "2026-11-21T10:58:02+00:00",
-      "commit": null,
+      "commit": "35478c70",
       "test_evidence": [
         "tests/test_checklist_baseline.py",
         "tests/test_market_data_source_validator.py",
         "scripts/trial_preservation_audit.py --check"
       ],
-      "test_result": "Starting checkout baseline recorded and self-validated; protected trial preservation audit passes. Three focused tests pass, market-data validator passes, Ruff/mypy and source/graph freshness checks pass. Hosted CI on source commit 3b68ca06 completed with two reproduction jobs successful and both test jobs failing at the source-matrix validator; corrected validator will be validated on the next head."
+      "test_result": "Starting checkout baseline recorded and self-validated; protected trial preservation audit passes. The runtime-source alias and fixture provenance fixes pass focused local tests and the source/graph freshness checks pass. Hosted run 44896239124 passed rights and inventory gates on both OSes but failed at fixture report freshness; a new full CI run is required."
     },
     {
       "id": "FB-0002",
@@ -50,7 +50,7 @@
       ],
       "blocker": "Partial: AlgorithmSpec and StrategySpec identity/promotion remain split; the inventory intentionally covers trader-core rather than all 623 Python modules, and the broker, kernel, forward-paper and legacy-paper persistence domains remain separate. Its freshness gate passed on both OSes; a separate checkout-specific synthetic fixture provenance issue caused the latest run to fail later and now has an in-house regression fix. Fresh hosted CI remains pending.",
       "last_audited_at_utc": "2026-11-21T10:58:02+00:00",
-      "commit": null
+      "commit": "35478c70"
     },
     {
       "id": "FB-0003",
@@ -66,7 +66,7 @@
       ],
       "blocker": "Partial: core paper reports and selected evaluation/export surfaces derive distinct evidence labels, but a repository-wide inventory and migration audit of every pre-existing evaluation artifact and legacy report path has not been completed.",
       "last_audited_at_utc": "2026-11-21T10:35:58+00:00",
-      "commit": null
+      "commit": "d5d4d81b"
     },
     {
       "id": "FB-0004",
@@ -82,7 +82,7 @@
       ],
       "blocker": "Partial: protected trial outcomes and version/authorization controls are preserved, but 10 of the 13 historical trials lack original dataset hashes and read windows. Those facts cannot be reconstructed or backfilled; future Q1-2027 research also requires owner authorization.",
       "last_audited_at_utc": "2026-11-21T10:35:58+00:00",
-      "commit": null
+      "commit": "d5d4d81b"
     },
     {
       "id": "FB-0005",
@@ -98,7 +98,7 @@
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T10:42:00+00:00",
       "artifact_hash": "c8cf4c3cad11bede741be3d42415010ccf540f09b89be4838105e305b8cccfdc",
-      "commit": null
+      "commit": "35478c70"
     },
     {
       "id": "FB-0006",
