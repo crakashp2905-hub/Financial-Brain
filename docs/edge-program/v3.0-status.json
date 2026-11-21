@@ -506,12 +506,22 @@
     {
       "id": "FB-0202",
       "text": "Cover equity broad-market/sector/factor, bond/debt, gold, silver, international and other listed ETFs; classify exposures without assuming same benchmark or treatment.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_reference.py::ETFExposureCategory enumerates broad-market equity, sector, factor, bond/debt, gold, silver, international, other-listed and UNKNOWN exposures",
+        "Exposure is source-declared and enters the reference content hash; names/tickers do not infer a category",
+        "No complete permissioned NSE/BSE/AMC ETF universe has been loaded, so coverage across categories is not established"
+      ],
+      "blocker": "Partial: category taxonomy and no-guess classification are implemented, but complete point-in-time ETF listings and source-backed category assignments require permitted exchange/AMC reference data.",
+      "last_audited_at_utc": "2026-11-21T14:06:00+00:00",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_etf_reference.py: 14 passed, including each exposure class and proof that a GOLDTRACKER symbol remains UNKNOWN without source-declared classification",
+        "Ruff and targeted mypy passed"
+      ],
+      "test_result": "ETF exposure classes are distinct, source-declared and do not inherit equity/bond/commodity behavior from symbol text; live universe coverage remains unproven.",
+      "commit": "991e6cd8"
     },
     {
       "id": "FB-0203",
