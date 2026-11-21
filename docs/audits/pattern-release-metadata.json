@@ -1,0 +1,23 @@
+{
+  "docs": [
+    "docs/CHANGELOG-PATTERNS.md",
+    "docs/PATTERNS-ARCHITECTURE.md",
+    "docs/PATTERNS-OPERATIONS-GUIDE.md",
+    "docs/PATTERNS-DETECTOR-AUTHORING.md",
+    "docs/PATTERNS-MIGRATION-POLICY.md"
+  ],
+  "fixture_seeds": {
+    "demo_corpus_seed": "demo SEED 20261107; corpus hash pinned in docs/audits/demo-corpus.sha256",
+    "family_examples.json": "7c11c71f910a04809e251e5ee62d5067c73de7893a19258e492bf7fa29996a69",
+    "snapshots.json": "81c4545c0a31a1f6cbfd9574fc8e85211fea9d17bd65e1e051ef063d3d886caa"
+  },
+  "note": "Built and checked on Windows only. Linux build smoke test pending CI.",
+  "package": "financial_brain",
+  "version": "0.1.0",
+  "wheel": {
+    "built_with": "python -m build --wheel",
+    "dist_ignored_by_git": true,
+    "file": "dist/financial_brain-0.1.0-py3-none-any.whl",
+    "sha256": "f6c6d3798812c5878fa12abbecb255d0b8149ea9e4abbd3fb4179e3cb3f5b394"
+  }
+}

@@ -49,6 +49,27 @@ def cmd_agent_eval(args) -> int:
     return 0 if result["failed"] == 0 else 1
 
 
+def cmd_learning_audit(args) -> int:
+    """Fail-closed readiness check for merged dependencies, checklist evidence and data permissions."""
+    from pathlib import Path
+
+    from .learning_audit import audit
+
+    result = audit(Path(args.repo))
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print(f"learning audit: {result['status']} ({result['blocker_count']} blocker(s))")
+        for check in result["checks"]:
+            print(f"  {'PASS' if check['passed'] else 'BLOCKED'} {check['name']}: "
+                  f"{len(check['blockers'])} issue(s)")
+        for blocker in result["blockers"][:20]:
+            print(f"  - {blocker}")
+        if result["blocker_count"] > 20:
+            print(f"  ... {result['blocker_count'] - 20} more; use --json for the full list")
+    return 0 if result["status"] == "READY" else 1
+
+
 def cmd_trader_core(args) -> int:
     """Read-only integrated status of the trader's saved research artifacts."""
     from .interfaces.trader_core import status
@@ -1459,6 +1480,7 @@ def cmd_costs_calc(args) -> int:
 def cmd_paper_intraday(args) -> int:
     """Intraday paper trading: live from Kite quotes, a replay of a past day, or the evidence so far."""
     import logging
+    from pathlib import Path
     from .paper import intraday_runner as IR
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     if args.report:
@@ -1471,7 +1493,14 @@ def cmd_paper_intraday(args) -> int:
     if args.replay:
         out = IR.run_replay(_d(args.replay), n=args.names)
     else:
-        out = IR.run_live(n=args.names)
+        permission = None
+        if args.data_permission_file:
+            try:
+                permission = json.loads(Path(args.data_permission_file).read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                print(json.dumps({"status": "rights_blocked", "reason": f"cannot load permission: {exc}"}))
+                return 2
+        out = IR.run_live(n=args.names, data_permission=permission)
     print(out)
     return 0
 
@@ -2649,9 +2678,18 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fb", description="Financial-Brain")
     sub = p.add_subparsers(dest="cmd", required=True)
 
+    from .forward_edge.cli import add_parser as add_forward_parser
+    add_forward_parser(sub)
+
     sub.add_parser("migrate", help="create/update the schema").set_defaults(fn=cmd_migrate)
     sub.add_parser("status", help="what the system currently holds").set_defaults(fn=cmd_status)
     sub.add_parser("agent-eval", help="run versioned read-only agent guardrail cases").set_defaults(fn=cmd_agent_eval)
+    g = sub.add_parser("learning", help="fail-closed learning readiness gates")
+    learning_sub = g.add_subparsers(dest="learning_action", required=True)
+    a = learning_sub.add_parser("audit", help="audit merged dependencies, evidence and market-data permissions")
+    a.add_argument("--repo", default=".", help="repository root (default: current directory)")
+    a.add_argument("--json", action="store_true", help="emit the full machine-readable audit result")
+    a.set_defaults(fn=cmd_learning_audit)
     g = sub.add_parser("trader-core", help="read-only integrated trader research status")
     g.add_argument("--limit", type=int, default=20)
     g.set_defaults(fn=cmd_trader_core)
@@ -2902,6 +2940,7 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--replay")
     g.add_argument("--report", action="store_true")
     g.add_argument("--names", type=int, default=200)
+    g.add_argument("--data-permission-file", help="reviewed source/use permission JSON required for live Kite quotes")
     g.set_defaults(fn=cmd_paper_intraday)
 
     g = sub.add_parser("paper-compare", help="read-only exact-day live/replay reconciliation")
@@ -3241,8 +3280,20 @@ def main(argv: list[str] | None = None) -> int:
     from . import commands as _commands
     _commands.register_all(sub)
 
+    # Chart-pattern research is offline and paper-only; it has its own parser (CP-0365).
+    g = sub.add_parser("patterns", help="chart-pattern research: offline, paper-only, no orders")
+    g.add_argument("pattern_args", nargs=argparse.REMAINDER)
+    g.set_defaults(fn=_cmd_patterns)
+
     args = p.parse_args(argv)
     return args.fn(args)
+
+
+def _cmd_patterns(args: argparse.Namespace) -> int:
+    from financial_brain.patterns.cli import main as patterns_main
+
+    rest = [a for a in args.pattern_args if a != "--"]
+    return patterns_main(rest)
 
 
 if __name__ == "__main__":

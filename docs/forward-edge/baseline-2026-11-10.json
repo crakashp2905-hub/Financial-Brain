@@ -1,0 +1,123 @@
+{
+  "captured_at_utc": "2026-11-10T07:30:00+00:00",
+  "credentials_present": {
+    "FB_TIMESTAMP_PROVIDER": false,
+    "FB_TRUST_ROOTS": false,
+    "KITE_ACCESS_TOKEN": false,
+    "KITE_API_KEY": false
+  },
+  "datasets": {
+    "artifacts": {
+      "present": true,
+      "top_level_bytes": 4589,
+      "top_level_files": 1
+    },
+    "data": {
+      "present": true,
+      "top_level_bytes": 70579387005,
+      "top_level_files": 76
+    },
+    "docs/trials": {
+      "present": true,
+      "top_level_bytes": 12172,
+      "top_level_files": 1
+    }
+  },
+  "git": {
+    "branch": "feature/forward-edge-f00-f01",
+    "dirty_entries": 11,
+    "head": "7e2167450d4c3384a489835c442d3d97a231db36",
+    "untracked_or_modified": [
+      "M src/financial_brain/kernel/events.py",
+      " M src/financial_brain/kernel/oms.py",
+      " M src/financial_brain/kernel/pilot.py",
+      " M tests/test_kernel_oms.py",
+      " M tests/test_kernel_pilot.py",
+      "?? .pytest_tmp_live2/",
+      "?? .pytest_tmp_live4/",
+      "?? docs/forward-edge/",
+      "?? src/financial_brain/forward_edge/",
+      "?? tests/test_forward_edge_f00.py",
+      "?? tests/test_forward_edge_f01.py"
+    ]
+  },
+  "missing_prerequisites": [
+    "custody:trusted_timestamp_roots_not_pinned",
+    "env:FB_TIMESTAMP_PROVIDER",
+    "env:FB_TRUST_ROOTS",
+    "env:KITE_ACCESS_TOKEN",
+    "env:KITE_API_KEY"
+  ],
+  "open_pull_requests": [
+    {
+      "headRefName": "codex/source-notes-pattern-books",
+      "number": 18,
+      "title": "Source notes for Nison and Bulkowski, testability synthesis, pattern catalogue"
+    },
+    {
+      "headRefName": "codex/ops-reliability-20261104",
+      "number": 17,
+      "title": "Preflight, verified backups, tested lockfile, venv-based nightly refresh"
+    },
+    {
+      "headRefName": "codex/protocol-date-validation-20261103",
+      "number": 16,
+      "title": "Reject malformed protocol schedule dates"
+    }
+  ],
+  "runtime": {
+    "platform": "Windows",
+    "python": "3.13.5"
+  },
+  "schema": "fb.forward_edge.baseline.v1",
+  "sources": {
+    "README.md": {
+      "present": true,
+      "sha256": "dd9598027bc88a0ac250f2890df8d9c2d7d74ac7debbdda92046bf855a9408ac"
+    },
+    "docs/READINESS.md": {
+      "present": true,
+      "sha256": "364de1b915646b1484ed4faccec8f73e14c90ddfa6f5639fc95f369943f58053"
+    },
+    "docs/TRADING-EDGE-CHECKLIST-STATUS-2026-10-30.md": {
+      "present": true,
+      "sha256": "4b4037855d1f863b6a424b6efb9bcb6fa80cf4bfd25707394ca4ccc3443d5027"
+    },
+    "docs/adr/0004-one-evidence-standard.md": {
+      "present": true,
+      "sha256": "7bb21af726f7f056d3bd956c7f33a07093e5d077fd1c1ea89d3049826691d991"
+    },
+    "docs/trials/ledger.jsonl": {
+      "present": true,
+      "sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1"
+    },
+    "src/financial_brain/evaluation/champion.py": {
+      "present": true,
+      "sha256": "6f3dd486d4feba6f37c350a0278f86750703cc5938b2dd6a8b96caaff7c6b6f5"
+    },
+    "src/financial_brain/evaluation/prospective.py": {
+      "present": true,
+      "sha256": "0ff090368cc2819d27076d3d0efe130e61102ad9bbf17ce89a937025f0b7e164"
+    },
+    "src/financial_brain/kernel/events.py": {
+      "present": true,
+      "sha256": "2824939364d771c695657d54137f590b3c27e6cc039811f0205ecd3b81036217"
+    },
+    "src/financial_brain/kernel/oms.py": {
+      "present": true,
+      "sha256": "2264e9fe7197ebff00b943fcba1876ae01f0402102372091604d3fa43e991c6e"
+    },
+    "src/financial_brain/kernel/pilot.py": {
+      "present": true,
+      "sha256": "438205261a76b6b709fa6d75d840886ebe46814d33f64b99fd8294570c478269"
+    },
+    "src/financial_brain/paper/engine.py": {
+      "present": true,
+      "sha256": "0aebb123342da718ba1067e04a6d3d51a3b9bb43140f926d060a8f63a2f7b888"
+    },
+    "src/financial_brain/paper/intraday_runner.py": {
+      "present": true,
+      "sha256": "fb2fe8606193712de06b8ececbe4d841594c076fd49b2e30406f6ac2de73af3f"
+    }
+  }
+}

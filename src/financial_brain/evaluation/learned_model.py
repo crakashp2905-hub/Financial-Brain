@@ -8,9 +8,13 @@ version, pre-registered first.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+import tempfile
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -26,19 +30,75 @@ class LearnedModelError(RuntimeError):
 
 
 def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int = 30,
-                model_path: Path = MODEL, meta_path: Path = META) -> dict:
+                model_path: Path = MODEL, meta_path: Path = META,
+                version: str = VERSION) -> dict:
     import lightgbm as lgb
     from . import deep_library as DL
+    if not version.strip() or embargo_days < 0:
+        raise LearnedModelError("training version and non-negative embargo are required")
+    if not features or len(features) != len(set(features)):
+        raise LearnedModelError("feature names must be non-empty and unique")
+    missing = set(["d", "fwd20", *features]) - set(panel.columns)
+    if missing:
+        raise LearnedModelError(f"training panel is missing columns: {sorted(missing)}")
+    if any(not pd.api.types.is_numeric_dtype(panel[name]) for name in features):
+        raise LearnedModelError("training features must be numeric")
+    model_path, meta_path = Path(model_path), Path(meta_path)
+    if model_path.exists() or meta_path.exists():
+        raise LearnedModelError("model version artifacts are immutable; choose new output paths and version")
     p = panel.dropna(subset=["fwd20"])
+    if p.empty or not np.isfinite(p["fwd20"].to_numpy(dtype=float)).all():
+        raise LearnedModelError("training outcomes must contain finite matured labels")
     cutoff = p["d"].max() - timedelta(days=embargo_days)
     p = p[p["d"] <= cutoff]
-    X = p.groupby("d")[features].rank(pct=True).to_numpy(np.float32)
-    y = p.groupby("d")["fwd20"].rank(pct=True).to_numpy()
-    m = lgb.LGBMRegressor(**DL.GBM_PARAMS).fit(X, y)
-    m.booster_.save_model(str(model_path))
-    meta = {"version": VERSION, "features": features, "trained_through": str(cutoff), "rows": int(len(p)),
-            "params": DL.GBM_PARAMS}
-    meta_path.write_text(json.dumps(meta, indent=1), encoding="utf-8")
+    if p.empty:
+        raise LearnedModelError("embargo leaves no training rows")
+    sort_columns = ["d", *features, "fwd20"] + (["lineage"] if "lineage" in p.columns else [])
+    p = p.sort_values(sort_columns, kind="mergesort", na_position="last").reset_index(drop=True)
+    if np.isinf(p[features].to_numpy(dtype=float)).any():
+        raise LearnedModelError("training features cannot contain infinite values")
+    x_ranked = p.groupby("d", sort=True)[features].rank(pct=True, method="average")
+    y_ranked = p.groupby("d", sort=True)["fwd20"].rank(pct=True, method="average")
+    X = x_ranked.to_numpy(np.float32)
+    y = y_ranked.to_numpy(np.float64)
+    training_data_sha256 = hashlib.sha256(
+        p[["d", *features, "fwd20"]].to_json(orient="split", index=False,
+                                                 date_format="iso", double_precision=15).encode("utf-8")
+    ).hexdigest()
+    schema = {"features": [{"name": name, "dtype": str(p[name].dtype)} for name in features],
+              "target": {"name": "fwd20", "dtype": str(p["fwd20"].dtype)},
+              "transform": "cross_sectional_average_percentile_rank_by_decision_date",
+              "embargo_days": embargo_days}
+    feature_schema_sha256 = hashlib.sha256(json.dumps(
+        schema, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+    params: dict[str, object] = {**DL.GBM_PARAMS, "random_state": 0, "bagging_seed": 0,
+                                 "feature_fraction_seed": 0, "data_random_seed": 0,
+                                 "deterministic": True, "force_col_wise": True,
+                                 "num_threads": 1}
+    estimator: Any = lgb.LGBMRegressor
+    model = estimator(**params).fit(X, y)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    model_fd, model_tmp = tempfile.mkstemp(prefix=model_path.name + ".", dir=model_path.parent)
+    meta_fd, meta_tmp = tempfile.mkstemp(prefix=meta_path.name + ".", dir=meta_path.parent)
+    os.close(model_fd)
+    os.close(meta_fd)
+    try:
+        model.booster_.save_model(model_tmp)
+        model_sha256 = hashlib.sha256(Path(model_tmp).read_bytes()).hexdigest()
+        meta = {"version": version, "features": features, "trained_through": str(cutoff),
+                "rows": int(len(p)), "params": params, "schema": schema,
+                "feature_schema_sha256": feature_schema_sha256,
+                "training_data_sha256": training_data_sha256, "model_sha256": model_sha256,
+                "lightgbm_version": lgb.__version__, "pandas_version": pd.__version__,
+                "numpy_version": np.__version__, "seed": 0}
+        Path(meta_tmp).write_text(json.dumps(meta, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        os.replace(model_tmp, model_path)
+        os.replace(meta_tmp, meta_path)
+    except Exception:
+        Path(model_tmp).unlink(missing_ok=True)
+        Path(meta_tmp).unlink(missing_ok=True)
+        raise
     return meta
 
 
@@ -46,13 +106,39 @@ def load(model_path: Path = MODEL, meta_path: Path = META):
     import lightgbm as lgb
     if not model_path.exists() or not meta_path.exists():
         raise LearnedModelError("no trained model - run train_final first")
-    return lgb.Booster(model_file=str(model_path)), json.loads(meta_path.read_text(encoding="utf-8"))
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    if meta.get("model_sha256"):
+        digest = hashlib.sha256(model_path.read_bytes()).hexdigest()
+        if digest != meta["model_sha256"]:
+            raise LearnedModelError("model artifact hash differs from frozen metadata")
+    return lgb.Booster(model_file=str(model_path)), meta
 
 
 def score_frame(frame: pd.DataFrame, booster, features: list[str]) -> pd.Series:
     """``frame``: one row per name for one day, with the features. Ranked per feature across the names, as trained."""
     X = frame[features].rank(pct=True).to_numpy(np.float32)
     return pd.Series(booster.predict(X), index=frame.index)
+
+
+def prediction_lineage(frame: pd.DataFrame, meta: dict, predictions: pd.Series) -> dict[str, str]:
+    """Hash the exact model, frozen schema, ordered feature inputs and prediction output."""
+    features = meta.get("features")
+    if not isinstance(features, list) or not features or any(name not in frame for name in features):
+        raise LearnedModelError("prediction frame does not match the frozen feature schema")
+    if len(predictions) != len(frame) or not np.isfinite(predictions.to_numpy(dtype=float)).all():
+        raise LearnedModelError("prediction output length or values are invalid")
+    if not meta.get("model_sha256") or not meta.get("feature_schema_sha256"):
+        raise LearnedModelError("model metadata lacks frozen artifact/schema hashes")
+    input_frame = frame[features]
+    input_sha256 = hashlib.sha256(input_frame.to_json(
+        orient="split", index=False, double_precision=15).encode("utf-8")).hexdigest()
+    payload = {"model_sha256": meta["model_sha256"],
+               "feature_schema_sha256": meta["feature_schema_sha256"],
+               "prediction_input_sha256": input_sha256,
+               "predictions": predictions.to_list()}
+    return {**{key: str(value) for key, value in payload.items()},
+            "lineage_sha256": hashlib.sha256(json.dumps(
+                payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()}
 
 
 #: Neutral names for the features; each reason adds where the name sits on it today (high / middle / low against the

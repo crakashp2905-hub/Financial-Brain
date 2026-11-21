@@ -1,0 +1,55 @@
+{
+  "schema": "fb.unified_checklist_baseline.v1",
+  "captured_at_utc": "2026-11-21T10:17:20Z",
+  "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
+  "git": {
+    "source_commit": "3b68ca06b3151b78e0c35a4492a31a15c69c9923",
+    "tree_sha": "723a6ed29cacd61b000bd6ae81c0df8df366a18f",
+    "working_tree_clean_at_capture": true,
+    "feature_branch": "codex/update-pr40-learning-audit",
+    "delivery_branch": "merge/forward-edge-branch-version",
+    "upstream": "origin/merge/forward-edge-branch-version",
+    "parent_commit": "9e15be47d0ea40e33e6c3c6d92cc1754ce9caf24"
+  },
+  "dependencies": {
+    "lockfile": "requirements-lock.txt",
+    "worktree_sha256": "47f613e2e061e88a22a3a2e996c581e7fcf1c42db2f3b468183b915345abf852",
+    "commit_blob_sha256": "975c74c23711a48b02a11bf6868ac4a70982e54391cfd9a1da4ac1d0f2682681",
+    "note": "Git worktree file bytes use CRLF on Windows; committed Git blob bytes use LF. Both content hashes are recorded."
+  },
+  "tests": {
+    "collection_command": "python -m pytest --collect-only -q",
+    "collected": 3733,
+    "result": "collection completed",
+    "captured_for_commit": "3b68ca06b3151b78e0c35a4492a31a15c69c9923"
+  },
+  "ci": {
+    "provider": "GitHub Actions",
+    "run_id": 44893421153,
+    "status": "completed",
+    "conclusion": "failure",
+    "source_commit": "3b68ca06b3151b78e0c35a4492a31a15c69c9923",
+    "evidence": "GitHub connector fetch_commit_workflow_runs",
+    "limitation": "Hosted run was not complete at capture time; do not treat as green.",
+    "failed_jobs": [
+      "test (windows-latest)",
+      "test (ubuntu-24.04)"
+    ],
+    "failure_step": "Validate market-data source rights and credential inventory",
+    "successful_jobs": [
+      "reproducibility (ubuntu-24.04)",
+      "reproducibility (windows-2022)"
+    ]
+  },
+  "protected_trial_ledger": {
+    "audit_command": "python scripts/trial_preservation_audit.py --check",
+    "result": "PASS",
+    "protected_files": 9,
+    "note": "Protected pins, trial ledger and manifests verify; no protected trial records were rewritten."
+  },
+  "evidence_limits": [
+    "CI result is in progress, not green.",
+    "Branch protection and required-check settings are not included in this baseline.",
+    "The test count is collection count, not tests passed."
+  ]
+}

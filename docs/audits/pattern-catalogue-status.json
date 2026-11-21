@@ -1,0 +1,370 @@
+{
+  "counts": {
+    "implemented": 19,
+    "missing": 38,
+    "partial": 9,
+    "research_only": 6
+  },
+  "rows": [
+    {
+      "evidence": "broadening bottom not modelled",
+      "id": "B01",
+      "status": "missing"
+    },
+    {
+      "evidence": "right-angled ascending broadening not modelled",
+      "id": "B02",
+      "status": "missing"
+    },
+    {
+      "evidence": "right-angled descending broadening not modelled",
+      "id": "B03",
+      "status": "missing"
+    },
+    {
+      "evidence": "broadening top not modelled",
+      "id": "B04",
+      "status": "missing"
+    },
+    {
+      "evidence": "broadening wedge ascending not modelled",
+      "id": "B05",
+      "status": "missing"
+    },
+    {
+      "evidence": "broadening wedge descending not modelled",
+      "id": "B06",
+      "status": "missing"
+    },
+    {
+      "evidence": "bump-and-run reversal bottom not modelled",
+      "id": "B07",
+      "status": "missing"
+    },
+    {
+      "evidence": "bump-and-run reversal top not modelled",
+      "id": "B08",
+      "status": "missing"
+    },
+    {
+      "evidence": "cup with handle not modelled",
+      "id": "B09",
+      "status": "missing"
+    },
+    {
+      "evidence": "dead-cat bounce not modelled",
+      "id": "B10",
+      "status": "missing"
+    },
+    {
+      "evidence": "diamond not modelled",
+      "id": "B11",
+      "status": "missing"
+    },
+    {
+      "evidence": "detectors.double_extrema (double_bottom)",
+      "id": "B12",
+      "status": "implemented"
+    },
+    {
+      "evidence": "detectors.double_extrema (double_top)",
+      "id": "B13",
+      "status": "implemented"
+    },
+    {
+      "evidence": "detectors.flags; pennants not separated from triangles",
+      "id": "B14",
+      "status": "partial"
+    },
+    {
+      "evidence": "high and tight flag not modelled",
+      "id": "B15",
+      "status": "missing"
+    },
+    {
+      "evidence": "candles.gap_kind; area, breakaway, exhaustion not classified",
+      "id": "B16",
+      "status": "partial"
+    },
+    {
+      "evidence": "c_hammer context; hanging man not a separate rule",
+      "id": "B17",
+      "status": "partial"
+    },
+    {
+      "evidence": "detectors.head_shoulders (bottom)",
+      "id": "B18",
+      "status": "implemented"
+    },
+    {
+      "evidence": "complex head-and-shoulders bottom not modelled",
+      "id": "B19",
+      "status": "missing"
+    },
+    {
+      "evidence": "detectors.head_shoulders (top)",
+      "id": "B20",
+      "status": "implemented"
+    },
+    {
+      "evidence": "complex head-and-shoulders top not modelled",
+      "id": "B21",
+      "status": "missing"
+    },
+    {
+      "evidence": "weekly horn bottom not modelled",
+      "id": "B22",
+      "status": "missing"
+    },
+    {
+      "evidence": "weekly horn top not modelled",
+      "id": "B23",
+      "status": "missing"
+    },
+    {
+      "evidence": "library inside_bar feature; not a catalogue detector",
+      "id": "B24",
+      "status": "partial"
+    },
+    {
+      "evidence": "island reversal not modelled",
+      "id": "B25",
+      "status": "missing"
+    },
+    {
+      "evidence": "measured move down not modelled",
+      "id": "B26",
+      "status": "missing"
+    },
+    {
+      "evidence": "measured move up not modelled",
+      "id": "B27",
+      "status": "missing"
+    },
+    {
+      "evidence": "one-day reversal not modelled",
+      "id": "B28",
+      "status": "missing"
+    },
+    {
+      "evidence": "library outside_bar feature; not a catalogue detector",
+      "id": "B29",
+      "status": "partial"
+    },
+    {
+      "evidence": "weekly pipe bottom not modelled",
+      "id": "B30",
+      "status": "missing"
+    },
+    {
+      "evidence": "weekly pipe top not modelled",
+      "id": "B31",
+      "status": "missing"
+    },
+    {
+      "evidence": "detectors.rectangle (both breakout directions)",
+      "id": "B32",
+      "status": "implemented"
+    },
+    {
+      "evidence": "detectors.rectangle (both breakout directions)",
+      "id": "B33",
+      "status": "implemented"
+    },
+    {
+      "evidence": "rounding bottom not modelled",
+      "id": "B34",
+      "status": "missing"
+    },
+    {
+      "evidence": "rounding top not modelled",
+      "id": "B35",
+      "status": "missing"
+    },
+    {
+      "evidence": "scallops not modelled",
+      "id": "B36",
+      "status": "missing"
+    },
+    {
+      "evidence": "shark-32 not modelled",
+      "id": "B37",
+      "status": "missing"
+    },
+    {
+      "evidence": "detectors.triangles (triangle_ascending)",
+      "id": "B38",
+      "status": "implemented"
+    },
+    {
+      "evidence": "detectors.triangles (triangle_descending)",
+      "id": "B39",
+      "status": "implemented"
+    },
+    {
+      "evidence": "detectors.triangles (triangle_symmetric)",
+      "id": "B40",
+      "status": "implemented"
+    },
+    {
+      "evidence": "detectors.triangles (triangle_symmetric)",
+      "id": "B41",
+      "status": "implemented"
+    },
+    {
+      "evidence": "triple bottom not modelled",
+      "id": "B42",
+      "status": "missing"
+    },
+    {
+      "evidence": "triple top not modelled",
+      "id": "B43",
+      "status": "missing"
+    },
+    {
+      "evidence": "detectors.triangles (wedge_falling)",
+      "id": "B44",
+      "status": "implemented"
+    },
+    {
+      "evidence": "detectors.triangles (wedge_rising)",
+      "id": "B45",
+      "status": "implemented"
+    },
+    {
+      "evidence": "weekly reversal downside not modelled",
+      "id": "B46",
+      "status": "missing"
+    },
+    {
+      "evidence": "weekly reversal upside not modelled",
+      "id": "B47",
+      "status": "missing"
+    },
+    {
+      "evidence": "candles.CANDLE_MAP c_hammer (downtrend context)",
+      "id": "N01",
+      "status": "implemented"
+    },
+    {
+      "evidence": "candles.CANDLE_MAP c_shooting_star (uptrend context)",
+      "id": "N02",
+      "status": "implemented"
+    },
+    {
+      "evidence": "candles.CANDLE_MAP c_bull_engulf, c_bear_engulf",
+      "id": "N03",
+      "status": "implemented"
+    },
+    {
+      "evidence": "candles.CANDLE_MAP c_dark_cloud",
+      "id": "N04",
+      "status": "implemented"
+    },
+    {
+      "evidence": "candles.CANDLE_MAP c_piercing",
+      "id": "N05",
+      "status": "implemented"
+    },
+    {
+      "evidence": "candles.CANDLE_MAP c_morning_star, c_evening_star",
+      "id": "N06",
+      "status": "implemented"
+    },
+    {
+      "evidence": "doji star / abandoned baby not modelled",
+      "id": "N07",
+      "status": "missing"
+    },
+    {
+      "evidence": "c_bull_harami only; bearish harami and cross variants missing",
+      "id": "N08",
+      "status": "partial"
+    },
+    {
+      "evidence": "tweezers not modelled",
+      "id": "N09",
+      "status": "missing"
+    },
+    {
+      "evidence": "c_marubozu approximates belt hold; not the same shape",
+      "id": "N10",
+      "status": "partial"
+    },
+    {
+      "evidence": "counterattack lines not modelled",
+      "id": "N11",
+      "status": "missing"
+    },
+    {
+      "evidence": "upside-gap two crows / mat hold not modelled",
+      "id": "N12",
+      "status": "missing"
+    },
+    {
+      "evidence": "candles.CANDLE_MAP c_three_soldiers, c_three_crows",
+      "id": "N13",
+      "status": "implemented"
+    },
+    {
+      "evidence": "three mountain / Buddha / river not modelled",
+      "id": "N14",
+      "status": "missing"
+    },
+    {
+      "evidence": "dumpling / fry-pan / tower not modelled",
+      "id": "N15",
+      "status": "missing"
+    },
+    {
+      "evidence": "candles.gap_kind range gap primitive; window event not emitted",
+      "id": "N16",
+      "status": "partial"
+    },
+    {
+      "evidence": "pending definitions excluded from inference (candles.PENDING_DEFINITIONS)",
+      "id": "N17",
+      "status": "missing"
+    },
+    {
+      "evidence": "c_doji only; long-legged, gravestone, tri-star and high-wave not separated",
+      "id": "N18",
+      "status": "partial"
+    },
+    {
+      "evidence": "springs and upthrusts not modelled",
+      "id": "N19",
+      "status": "missing"
+    },
+    {
+      "evidence": "change of polarity: descriptive, not formalised",
+      "id": "N20",
+      "status": "research_only"
+    },
+    {
+      "evidence": "retracement levels: fraction primitive exists; no pattern rule",
+      "id": "N21",
+      "status": "research_only"
+    },
+    {
+      "evidence": "indicator combinations: not formalised as a shape",
+      "id": "N22",
+      "status": "research_only"
+    },
+    {
+      "evidence": "volume and open interest combinations: not formalised",
+      "id": "N23",
+      "status": "research_only"
+    },
+    {
+      "evidence": "Elliott wave counts: not formalisable without subjective labels",
+      "id": "N24",
+      "status": "research_only"
+    },
+    {
+      "evidence": "market profile: not formalised",
+      "id": "N25",
+      "status": "research_only"
+    }
+  ]
+}

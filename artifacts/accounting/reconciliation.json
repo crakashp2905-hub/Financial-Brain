@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "code_sha": "1403b8682714393abb118d6c37902c728d5abca8",
+  "generated_at": "2026-11-09T18:51:54.889998+00:00",
+  "environment": {
+    "python": "3.13.5",
+    "os": "Windows"
+  },
+  "fixture_sha256": "7d5f41c0dd803768cf8011b4c238556bc983b8679c22373bdc916f675f9afefd",
+  "status": "PASS",
+  "blockers": [],
+  "synthetic_only": true,
+  "checks": [
+    {
+      "tape": "win",
+      "seed": 1,
+      "trial_balance_ok": true,
+      "cash_equals_net_pnl": true,
+      "net_pnl": "9858.21",
+      "outcome": "WIN"
+    },
+    {
+      "tape": "loss",
+      "seed": 12,
+      "trial_balance_ok": true,
+      "cash_equals_net_pnl": true,
+      "net_pnl": "-5203.00",
+      "outcome": "LOSS"
+    }
+  ],
+  "note": "Synthetic tapes only; reconciles the paper ledger, not broker or market statements."
+}

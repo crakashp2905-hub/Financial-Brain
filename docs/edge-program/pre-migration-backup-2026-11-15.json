@@ -1,0 +1,119 @@
+{
+  "backup_created_at_utc": "2026-11-15T14:16:26.521881+00:00",
+  "data_policy": "Database contents remain local under ignored data/; only metadata and SHA-256 evidence are committed.",
+  "entries": [
+    {
+      "backup": "files/data/paper_book.duckdb",
+      "kind": "duckdb",
+      "sha256": "f3de8485e0da434549a7e5ebcf873edeb4ae1cff541717b79014d265cb5c48dc",
+      "size_bytes": 6828032,
+      "source": "data/paper_book.duckdb"
+    },
+    {
+      "backup": "files/data/paper_book_swing_replay.duckdb",
+      "kind": "duckdb",
+      "sha256": "fe33fb0d2a249c01b43dbc6a7130fe32ff48189b49294b6d9440497fd03a0175",
+      "size_bytes": 2371584,
+      "source": "data/paper_book_swing_replay.duckdb"
+    },
+    {
+      "backup": "files/data/paper_live.duckdb",
+      "kind": "duckdb",
+      "sha256": "a1c3f18af1950ceee62f14f41e31573ac33c75f6dd5f609c5c633eaceb8e9f98",
+      "size_bytes": 29110272,
+      "source": "data/paper_live.duckdb"
+    },
+    {
+      "backup": "files/data/paper_replay_lastweek.duckdb",
+      "kind": "duckdb",
+      "sha256": "1ad3629edaf59fb365f90fb407d1f617a429b8204004a0cb07dc00c746dab86d",
+      "size_bytes": 3682304,
+      "source": "data/paper_replay_lastweek.duckdb"
+    },
+    {
+      "backup": "files/data/paper_zoo.duckdb",
+      "kind": "duckdb",
+      "sha256": "b391134cc33da7c5312e51e64246fdcc62bcfb219d899e9249b6eb7a691f4a16",
+      "size_bytes": 16527360,
+      "source": "data/paper_zoo.duckdb"
+    },
+    {
+      "backup": "files/data/paper_zoo_edges_dryrun.duckdb",
+      "kind": "duckdb",
+      "sha256": "cf2faa8aa80dd07b8814c5e545616c9f1a7c1d1c75403f3c2ba51e6affbeb67f",
+      "size_bytes": 2895872,
+      "source": "data/paper_zoo_edges_dryrun.duckdb"
+    },
+    {
+      "backup": "files/data/paper_zoo_replay_lastweek.duckdb",
+      "kind": "duckdb",
+      "sha256": "95b7191b300d3892c21f6bbe87f8f15532f5298f63356fcfa1d8ce0dd818b805",
+      "size_bytes": 2633728,
+      "source": "data/paper_zoo_replay_lastweek.duckdb"
+    },
+    {
+      "backup": "files/data/my_portfolio.duckdb",
+      "kind": "duckdb",
+      "sha256": "98d1b6187fc98a152cedfc4446bd8dc78fb49d8249e580df5ed5cac28f917bba",
+      "size_bytes": 1323008,
+      "source": "data/my_portfolio.duckdb"
+    },
+    {
+      "backup": "files/data/oms.duckdb",
+      "kind": "duckdb",
+      "sha256": "819bbccc41670284acfba962a2488f152cdb910ded3fa80ca7e6123be6c4024d",
+      "size_bytes": 274432,
+      "source": "data/oms.duckdb"
+    },
+    {
+      "backup": "files/data/quote_archive.duckdb",
+      "kind": "duckdb",
+      "sha256": "c0b0115b790f236d78e31eb5bbbcb280101ff20dd90db5fe2f15d96ab09e78f0",
+      "size_bytes": 129773568,
+      "source": "data/quote_archive.duckdb"
+    },
+    {
+      "backup": "files/docs/forward-edge/protected-pins.json",
+      "kind": "json",
+      "sha256": "20ea2d282f22f8ce556d805b3952ebee728e0a535899e0485b48f1ae9f40babd",
+      "size_bytes": 1228,
+      "source": "docs/forward-edge/protected-pins.json"
+    },
+    {
+      "backup": "files/docs/trials/manifests/is_minute_family.json",
+      "kind": "json",
+      "sha256": "a345734510f51cbbf984acd0cd43690243d341d07b8c9ddc6b5cd8ed92437f26",
+      "size_bytes": 552,
+      "source": "docs/trials/manifests/is_minute_family.json"
+    },
+    {
+      "backup": "files/docs/trials/manifests/mf.json",
+      "kind": "json",
+      "sha256": "20cf2ad9801db62e6a108014e39c27b75eac9a29b5abf485ece089d508f402de",
+      "size_bytes": 960,
+      "source": "docs/trials/manifests/mf.json"
+    },
+    {
+      "backup": "files/docs/trials/manifests/x3.json",
+      "kind": "json",
+      "sha256": "234974220c510238dd16d1f1291efcb41ae60c06988be0bc454e0799396b2524",
+      "size_bytes": 957,
+      "source": "docs/trials/manifests/x3.json"
+    }
+  ],
+  "entry_count": 14,
+  "local_backup_directory": "data/edge_program_backups/pre-migration-20261115",
+  "manifest_sha256": "1e4703a8f72e7c8dbc864dc17ff47f69f9f6fbd0c1e9f29ddb7937c8298b03c7",
+  "not_found": [
+    "data/options_paper_forward.duckdb",
+    "data/depth_archive.duckdb"
+  ],
+  "restore_check": {
+    "all_databases_opened_read_only": true,
+    "all_restored_byte_identical": true,
+    "manifest_sha256": "1e4703a8f72e7c8dbc864dc17ff47f69f9f6fbd0c1e9f29ddb7937c8298b03c7",
+    "restored_count": 14
+  },
+  "schema": "fb.edge-program.pre-migration-backup-evidence.v1",
+  "total_bytes": 195423857
+}

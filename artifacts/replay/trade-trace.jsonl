@@ -1,0 +1,7 @@
+{"complete_at": "2026-11-09T09:29:00+05:30", "high": 509.96, "low": 499.98, "stage": "opening_range", "synthetic": true}
+{"bar": "2026-11-09T09:32:00+05:30", "close": 511.55, "fill_bar": "2026-11-09T09:33:00+05:30", "range_high": 509.96, "stage": "signal"}
+{"decision": "TRADE", "missing": [], "stage": "gate"}
+{"decision": "ALLOW", "reasons": [], "stage": "risk"}
+{"fees": "66.00", "fidelity": "BAR", "mode": "PAPER_SIMULATED", "order": "entry:ABC:2026-11-09", "price": "511.60", "qty": 430, "stage": "fill"}
+{"bar": "2026-11-09T10:40:00+05:30", "fees": "134.99", "gross_pnl": "9993.20", "price": "534.84", "reason": "TARGET", "stage": "exit"}
+{"balanced": true, "cash_balance": "9858.21", "net_pnl": "9858.21", "stage": "ledger"}

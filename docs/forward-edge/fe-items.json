@@ -1,0 +1,1066 @@
+[
+ {
+  "id": "FE-0001",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Capture `git rev-parse HEAD`, branch, open PRs and local dataset inventory without mutating protected data.",
+  "pass": "A dated machine-readable baseline includes hashes and missing prerequisites."
+ },
+ {
+  "id": "FE-0002",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Mark all Q4 2026 research trials exhausted (13/13); preserve historical trial ledger byte-for-byte.",
+  "pass": "A test rejects retrospective edits or new protected trials absent a valid ADR."
+ },
+ {
+  "id": "FE-0003",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Freeze a list of strategies eligible for prospective observation versus merely descriptive shadow monitoring.",
+  "pass": "Every strategy receives an immutable status, source lineage and exclusion reason."
+ },
+ {
+  "id": "FE-0004",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Store a signed/hashable experiment charter with frozen code, parameters, capital, dates, universe and benchmarks.",
+  "pass": "Any modification produces a new version and new prospective clock."
+ },
+ {
+  "id": "FE-0005",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Introduce separate `RESEARCH_REPLAY`, `SHADOW`, `LIVE_PAPER`, `BROKER_DRYRUN`, and `LIVE_CASH` execution modes.",
+  "pass": "Mode boundaries cannot be crossed by changing a single flag."
+ },
+ {
+  "id": "FE-0006",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Make `LIVE_CASH` unavailable by default and require human approval plus broker compliance verification.",
+  "pass": "All automated unit, CI, demo and agent paths fail closed."
+ },
+ {
+  "id": "FE-0007",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Restore reviewed branch governance and required checks; verify protection rather than trusting documentation.",
+  "pass": "GitHub reports rules enabled and a rejected unreviewed push is recorded."
+ },
+ {
+  "id": "FE-0008",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Define owner approvals for strategy, account, venue, leverage and capital; AI actors cannot forge them.",
+  "pass": "Tests reject agent actors and stale approvals."
+ },
+ {
+  "id": "FE-0009",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Prepare reproducible disposable local DuckDB ledgers distinct from actual research and portfolio records.",
+  "pass": "CI can run without credentials and cannot overwrite user data."
+ },
+ {
+  "id": "FE-0010",
+  "wave": "F00",
+  "wave_title": "Baseline, evidence firewall, and deployment safety",
+  "item": "Implement one-command evidence audit emitting red/yellow/green with exact blocking explanations.",
+  "pass": "A failing independent-identity or cost gate is never green."
+ },
+ {
+  "id": "FE-0011",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Replace pre-action idempotency marking in `kernel/events.py` with a durable outbox.",
+  "pass": "Injected exception leaves a recoverable PENDING/UNKNOWN intent, never a false ACK."
+ },
+ {
+  "id": "FE-0012",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Introduce monotonic order/event IDs, durable transitions and write-ahead persistence.",
+  "pass": "Crash injection at every transition reconstructs the correct state."
+ },
+ {
+  "id": "FE-0013",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Require reconciliation before replay of UNKNOWN broker or paper order outcomes.",
+  "pass": "No duplicate orders after timeouts or lost acknowledgements."
+ },
+ {
+  "id": "FE-0014",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Validate order fill state and amount before mutation in `kernel/oms.py`.",
+  "pass": "Invalid fills leave quantities, reservations and cash bit-identical."
+ },
+ {
+  "id": "FE-0015",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Use one authoritative cash-and-margin ledger for OMS reservations and position inventory.",
+  "pass": "Full buys reduce available buying power; duplicated fills do not."
+ },
+ {
+  "id": "FE-0016",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Make partial-fill reservations decrement by actual filled notional without unlocking spent cash.",
+  "pass": "Cash and pending exposure reconcile after 10,000 randomized transitions."
+ },
+ {
+  "id": "FE-0017",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Fix `kernel/pilot.py` so skipped dispatch cannot create a synthetic fill or ledger posting.",
+  "pass": "Second execution of same intent reconstructs existing state, not phantom trades."
+ },
+ {
+  "id": "FE-0018",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Represent sell/short, cover, dividend, splits, futures variation and option settlement as balanced ledger events.",
+  "pass": "Per-currency trial balance and equity identities always hold."
+ },
+ {
+  "id": "FE-0019",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Add deterministic tests for cancel/fill races, duplicate postbacks and stale order acknowledgements.",
+  "pass": "Exactly one economic fill per unique provider fill ID."
+ },
+ {
+  "id": "FE-0020",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Test power loss at receipt, signal, risk gate, outbox send, broker ACK, fill, ledger and recovery.",
+  "pass": "After restart: no economic event lost, duplicated or invented."
+ },
+ {
+  "id": "FE-0021",
+  "wave": "F01",
+  "wave_title": "Fix transactional correctness before any session",
+  "item": "Verify atomic rollover/compaction and independent backup restoration of active journals.",
+  "pass": "Restore reproduces order, cash, risk and P&L hashes."
+ },
+ {
+  "id": "FE-0022",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Inventory existing M1 momentum, opportunity/risk filters, intraday ORB, gap, zoo, options, futures, chart patterns, TradingView/MQL5 clean-room strategies.",
+  "pass": "All code paths map to registered IDs; duplicates and missing adapters reported."
+ },
+ {
+  "id": "FE-0023",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Create immutable `StrategySpec`: ID, family, version, code hash, asset scope, decision clock, direction, stop/exit, horizon and data requirements.",
+  "pass": "Validated schema; missing fields fail registration."
+ },
+ {
+  "id": "FE-0024",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Classify `FAILED`, `EXPLORATORY`, `SHADOW_ONLY`, `PAPER_ELIGIBLE`, `FROZEN_CHALLENGER`, `VERIFIED`, `RETIRED`.",
+  "pass": "Failed historical strategies cannot quietly become a live champion."
+ },
+ {
+  "id": "FE-0025",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Add versioned benchmark reference for each strategy: flat/cash, sector-matched, index, equal-risk and momentum matched as appropriate.",
+  "pass": "Benchmark selection is frozen before new forward results."
+ },
+ {
+  "id": "FE-0026",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Expose read-only shadow signal adapters for every registrable family.",
+  "pass": "No shadow agent or failed strategy can submit even simulated funded orders."
+ },
+ {
+  "id": "FE-0027",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Select one existing preregistered slow-momentum candidate for primary prospective evaluation if eligibility still holds.",
+  "pass": "Only its previously frozen configuration can be enrolled without a new trial."
+ },
+ {
+  "id": "FE-0028",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Create separate strategy-specific paper books/virtual subaccounts with an aggregate comparison dashboard.",
+  "pass": "No capital, fills or risk implicitly pooled across families."
+ },
+ {
+  "id": "FE-0029",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Add strategy retirement and version-handoff rules; never rewrite historical predictions.",
+  "pass": "Old cohorts remain linked to their exact model version."
+ },
+ {
+  "id": "FE-0030",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Register an explicit NULL/no-trade portfolio and random or matched placebo controllers.",
+  "pass": "Every study includes a measurable null."
+ },
+ {
+  "id": "FE-0031",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Deduplicate strongly correlated candidates and cap hypothesis families before evaluation.",
+  "pass": "Effective number of trials reported and multiplicity controlled."
+ },
+ {
+  "id": "FE-0032",
+  "wave": "F02",
+  "wave_title": "One strategy registry and honest onboarding of everything",
+  "item": "Block performance-conditioned selection on live shadow results unless a trial was preregistered.",
+  "pass": "Cherry-picked shadow winners are labeled exploratory only."
+ },
+ {
+  "id": "FE-0033",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Implement one normalized event type for tick, quote, book depth, bar, halt, auction, corporate action and broker update.",
+  "pass": "UTC event/received/available/decision clocks are preserved."
+ },
+ {
+  "id": "FE-0034",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Map NSE/BSE trading calendars including holidays, special sessions and corporate-action effective dates.",
+  "pass": "Next tradable session logic uses venue calendar not weekday guesses."
+ },
+ {
+  "id": "FE-0035",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Use Kite quote/WebSocket adapter only when valid user-supplied credentials and data rights exist.",
+  "pass": "Offline replay works fully with fixture-only adapter."
+ },
+ {
+  "id": "FE-0036",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Archive bid/ask, visible depth, LTP, quantities, exchange timestamps and sequence markers in append-only form.",
+  "pass": "Raw messages retained with content hashes and capture loss counters."
+ },
+ {
+  "id": "FE-0037",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Record data age, quote gaps, disconnections, reconnects and dropped updates.",
+  "pass": "A broken quote stream triggers entry abstention instead of forward filling."
+ },
+ {
+  "id": "FE-0038",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Keep a separate decision-time snapshot for each signal with all relevant input hashes.",
+  "pass": "Auditor can reconstruct exactly what the strategy knew."
+ },
+ {
+  "id": "FE-0039",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Enforce instrument master: ISIN, symbols, expiry, strike, lot, tick, freeze limits, trading status and rights.",
+  "pass": "Nontradable/delisted/expired instruments never emit eligible intents."
+ },
+ {
+  "id": "FE-0040",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Add options bid/ask/depth snapshots and provenance to all option-leg intents.",
+  "pass": "An option mid-price without two-sided executable quotes is not a tradeable fill."
+ },
+ {
+  "id": "FE-0041",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Record minute OHLCV and end-of-day authoritative close for matched replay.",
+  "pass": "Live-vs-replay divergences are versioned rather than silently corrected."
+ },
+ {
+  "id": "FE-0042",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Implement stale, wide-spread, zero-volume, circuit, freeze and missing-auction data gate.",
+  "pass": "Every rejected trade has a deterministic reason code."
+ },
+ {
+  "id": "FE-0043",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Validate historical timestamps and availability to prevent feature lookahead.",
+  "pass": "Prefix invariance and future perturbation tests pass."
+ },
+ {
+  "id": "FE-0044",
+  "wave": "F03",
+  "wave_title": "Market-session capture and data integrity",
+  "item": "Provide coverage score: % sessions, % names, % intent-notional with sufficient quotes/depth.",
+  "pass": "Coverage included alongside every P&L claim."
+ },
+ {
+  "id": "FE-0045",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Freeze candidate portfolios and scheduled, nonoverlapping evaluation cohorts before first eligible session.",
+  "pass": "Schedule hash immutable once observations begin."
+ },
+ {
+  "id": "FE-0046",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Store canonical DecisionManifest with code/data/config/universe/model/quote hashes and entry-earliest time.",
+  "pass": "Hash reproducible across Linux and Windows."
+ },
+ {
+  "id": "FE-0047",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Implement independent signed timestamp provider abstraction and pinned verifier trust root.",
+  "pass": "Self-signed local receipt cannot count as independent verification."
+ },
+ {
+  "id": "FE-0048",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Record manifest with external timestamp before actionable entry; validate receipt on every use.",
+  "pass": "Late, revoked or wrong-digest receipts excluded from promotion."
+ },
+ {
+  "id": "FE-0049",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Persist submitted signals, withheld signals, abstentions and unsuccessful sessions.",
+  "pass": "Zero-signal days remain in portfolio denominator."
+ },
+ {
+  "id": "FE-0050",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Keep terminal states `VERIFIED`, `LOCAL_ONLY`, `UNVERIFIED`, `LATE`, `CONFLICTED`.",
+  "pass": "Only VERIFIED eligible for formal forward claim."
+ },
+ {
+  "id": "FE-0051",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Wire `prospective.verified_days` to real verifier and immutable cohort schedule.",
+  "pass": "Audit shows independent verified day count rather than local timestamps."
+ },
+ {
+  "id": "FE-0052",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Implement verification fraud tests: false clock, replayed receipt, altered payload, new strategy after entry.",
+  "pass": "Every test fails closed."
+ },
+ {
+  "id": "FE-0053",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Supply fallback local-only mode when external custody inaccessible without misrepresenting proof.",
+  "pass": "Functionality continues but statuses downgrade."
+ },
+ {
+  "id": "FE-0054",
+  "wave": "F04",
+  "wave_title": "Forward decision custody and independent validation",
+  "item": "Export reproducible daily attestation bundle and signed report for external audit.",
+  "pass": "Another machine can verify original decisions and timing."
+ },
+ {
+  "id": "FE-0055",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Unify old paper engines and new kernel through a versioned adapter instead of copying them.",
+  "pass": "Same candidate signal yields equivalent order intent across engines."
+ },
+ {
+  "id": "FE-0056",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Generate intent on completed bar/quote only and earliest fill after decision+latency.",
+  "pass": "No fill uses earlier prices or hindsight range."
+ },
+ {
+  "id": "FE-0057",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Implement simulated marketable limit order with correct bid/ask, tick rounding and visible-size caps.",
+  "pass": "Buy never assumes mid/bid fill unless passively justified."
+ },
+ {
+  "id": "FE-0058",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Implement conservative passive limit queue model with unknown queue position disclosed.",
+  "pass": "Missed fills tracked, never assumed filled because candle touched price."
+ },
+ {
+  "id": "FE-0059",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Model adverse selection, partial fills, price limits, rejects, order slices and freeze rules.",
+  "pass": "Scenario fixtures show these outcomes and correct inventory."
+ },
+ {
+  "id": "FE-0060",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Charge actual-versioned brokerage, exchange fees, STT, stamp duty, GST and other levies as applicable.",
+  "pass": "Ledger cost reconciliation correct per segment, side and effective date."
+ },
+ {
+  "id": "FE-0061",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Include realistic slippage and impact sensitivity at 1x/1.5x/2x observed estimates.",
+  "pass": "Profit claims show which scenarios remain positive."
+ },
+ {
+  "id": "FE-0062",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "For options: enforce executable multi-leg quotes, legging loss, margin and expiry settlement.",
+  "pass": "No mid-price fantasy or unsupported theoretical margin."
+ },
+ {
+  "id": "FE-0063",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "For futures: include expiry/roll, basis, lot changes, margin, financing and mark-to-market.",
+  "pass": "Rollover and negative basis handled correctly."
+ },
+ {
+  "id": "FE-0064",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "For FX: separate instrument jurisdiction/venue rules and quote conventions; simulation only unless authorized.",
+  "pass": "No unlicensed global spot FX execution is implied."
+ },
+ {
+  "id": "FE-0065",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Write immutable execution receipts and mark `SIMULATED_QUOTE`, `SIMULATED_BAR`, `OBSERVED_BROKER` distinctly.",
+  "pass": "No report aggregates all fills as equivalent."
+ },
+ {
+  "id": "FE-0066",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Create per-trade counterfactual fill alternatives and fill uncertainty bounds.",
+  "pass": "Reported net returns come with execution confidence."
+ },
+ {
+  "id": "FE-0067",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Enforce settlement, holdings, cash, financing and margin post-trade identity.",
+  "pass": "Every fill reconciles within fixed currency precision."
+ },
+ {
+  "id": "FE-0068",
+  "wave": "F05",
+  "wave_title": "One genuine execution-aware paper engine",
+  "item": "Make no-trade on outages, stale quotes or insufficient data an explicit positive outcome.",
+  "pass": "No silent fallback to favorable fill."
+ },
+ {
+  "id": "FE-0069",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Create daily preflight before 09:15 IST with calendar, credentials, disk, feeds, data contracts, risk and system health.",
+  "pass": "Blocked preflight leaves no paper intents but writes a report."
+ },
+ {
+  "id": "FE-0070",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Produce 09:15–15:30 IST configurable market-session supervisor for allowed venues.",
+  "pass": "Startup, late start and holiday behavior tested using injected clock."
+ },
+ {
+  "id": "FE-0071",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Freeze opening range/features only when input window genuinely complete.",
+  "pass": "Restart cannot reconstruct a future-completed range as historical knowledge."
+ },
+ {
+  "id": "FE-0072",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Persist every evaluation decision and paper order as append-only journal.",
+  "pass": "Replay generates identical decision and accounting hashes."
+ },
+ {
+  "id": "FE-0073",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Add websocket reconnect and resubscribe with unique packet IDs; dedupe out-of-order data.",
+  "pass": "Network flap integration fixture passes."
+ },
+ {
+  "id": "FE-0074",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Alert on stale quotes, session token expiry, aborted sessions, duplicate orders and ledger differences.",
+  "pass": "One alert per root cause and automatic entry halt."
+ },
+ {
+  "id": "FE-0075",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Automate end-of-session position close/valuation/expiry and next-session carry checks.",
+  "pass": "No forgotten inventory or inappropriate overnight exposure."
+ },
+ {
+  "id": "FE-0076",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Write immutable daily session completeness report with incidents and eligible/not-eligible status.",
+  "pass": "Any missing segment causes evidence downgrade."
+ },
+ {
+  "id": "FE-0077",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Run verified backups and restore drills for quote archive, OMS, paper ledger and decision manifests.",
+  "pass": "Recovered state matches recorded hashes."
+ },
+ {
+  "id": "FE-0078",
+  "wave": "F06",
+  "wave_title": "Session automation, orchestration, and reliability",
+  "item": "Generate one-click operator morning, during-market and evening runbooks.",
+  "pass": "A user can run complete paper session without CLI debugging."
+ },
+ {
+  "id": "FE-0079",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Set passive shadow observation for chart patterns, ORB, Donchian, swing, momentum, option spreads and futures signals.",
+  "pass": "Each family logs all opportunities before any outcomes are known."
+ },
+ {
+  "id": "FE-0080",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "For each strategy, freeze 5/20/60-session or intraday holding horizons appropriate to its mechanics.",
+  "pass": "No profitable horizon is selected after inspecting forward data."
+ },
+ {
+  "id": "FE-0081",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Use benchmark-adjusted *portfolio-level* after-cost returns with realistic financing.",
+  "pass": "Net alpha calculated consistently across cash and leveraged instruments."
+ },
+ {
+  "id": "FE-0082",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Compute paired comparisons against same-session, size/risk/sector/liquidity-matched controls.",
+  "pass": "Incremental value, not market direction alone, is estimated."
+ },
+ {
+  "id": "FE-0083",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Assess chart-pattern uplift after controlling for 12-1 momentum, 52-week high and volatility.",
+  "pass": "Any pattern advantage must exceed already-known factors."
+ },
+ {
+  "id": "FE-0084",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Evaluate abstention/risk filters as part of a frozen policy, with missed-winner accounting.",
+  "pass": "Selective nontrading cannot cherry-pick denominator."
+ },
+ {
+  "id": "FE-0085",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Compare ORB and other intraday mechanisms with simple time-of-day/side nulls.",
+  "pass": "Edge beyond bid-ask and intraday seasonality tested."
+ },
+ {
+  "id": "FE-0086",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Compare futures basis/carry after spread, roll and funding versus matched alternatives.",
+  "pass": "Futures returns include financing and roll drag."
+ },
+ {
+  "id": "FE-0087",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Compare options spreads at executable bid/ask with assignment/expiry stress.",
+  "pass": "Quoted mid returns not eligible."
+ },
+ {
+  "id": "FE-0088",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Keep new hypotheses research-only during exhausted 2026Q4 trial budget unless formal governance amendment.",
+  "pass": "No bypass of 13/13 preregistration limit."
+ },
+ {
+  "id": "FE-0089",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Archive negative and inconclusive cohorts, including no-signal sessions.",
+  "pass": "All exploratory and evaluated variants remain discoverable."
+ },
+ {
+  "id": "FE-0090",
+  "wave": "F07",
+  "wave_title": "Incremental strategy alpha research without leakage",
+  "item": "Block strategy-version parameter tuning on prospective holdout; treat changed model as new trial.",
+  "pass": "No retroactive forward-test contamination."
+ },
+ {
+  "id": "FE-0091",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Compute daily capital-weighted net portfolio return including cash days, carried risk and all charges.",
+  "pass": "Reported returns reconcile to ledger, not chosen winning trades."
+ },
+ {
+  "id": "FE-0092",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Use HAC or stationary-block bootstrap to handle serially correlated return series.",
+  "pass": "Confidence intervals robust to autocorrelation and overlap."
+ },
+ {
+  "id": "FE-0093",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Use block bootstrap or cluster-robust attribution by date and instrument.",
+  "pass": "Nominal trade count not mistaken for independent sample count."
+ },
+ {
+  "id": "FE-0094",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Pre-register family-wise error control (SPA/Reality Check or an justified multiple-test alternative).",
+  "pass": "Probability statement accounts for all tested candidates."
+ },
+ {
+  "id": "FE-0095",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Compute drawdown, max loss, tail conditional drawdown, profit factor and turnover with uncertainty.",
+  "pass": "Risk-adjusted edge displayed beside gross alpha."
+ },
+ {
+  "id": "FE-0096",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Measure capacity and degrade returns as participation/notional rises.",
+  "pass": "Upper trade-size recommendation tied to liquidity."
+ },
+ {
+  "id": "FE-0097",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Use power/precision stopping: minimum >=60 eligible independent sessions is a provisional floor, not proof.",
+  "pass": "Promotion also requires adequate confidence and predeclared sample design."
+ },
+ {
+  "id": "FE-0098",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Report probability or lower-confidence-bound of outperformance over cash and risk-matched benchmark.",
+  "pass": "A positive mean with interval including zero fails promotion."
+ },
+ {
+  "id": "FE-0099",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Stress returns for 1.5x and 2x costs, worse fills, outages and missed fills.",
+  "pass": "Promotion requires robust positive economic effect under chosen prespecified stress."
+ },
+ {
+  "id": "FE-0100",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Split cohorts into preregistered chronological blocks and diagnose regime concentration.",
+  "pass": "Single lucky period cannot pass robustness requirement."
+ },
+ {
+  "id": "FE-0101",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Predeclare stop-for-harm and no-early-promotion rules.",
+  "pass": "Peeking never speeds promotion."
+ },
+ {
+  "id": "FE-0102",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Distinguish `HISTORICAL`, `SHADOW`, `LOCAL_PAPER`, `INDEPENDENT_FORWARD`, `DEPLOYMENT_VALIDATED`.",
+  "pass": "Every chart/table labels exactly one claim tier."
+ },
+ {
+  "id": "FE-0103",
+  "wave": "F08",
+  "wave_title": "Statistical confirmation and evidence tiers",
+  "item": "Generate falsification report: look-ahead, survivorship, delisting, factor overlap, trades rejected, missed fills.",
+  "pass": "Missing evidence makes status insufficient, not fail or win."
+ },
+ {
+  "id": "FE-0104",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Define frozen capital allocation between candidate paper books and no-trade/cash.",
+  "pass": "A losing sub-book is not silently removed from combined result."
+ },
+ {
+  "id": "FE-0105",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Make portfolio-level max gross/net exposure, single-name, sector and factor limits binding.",
+  "pass": "No pair of simultaneous intents bypasses exposure via race."
+ },
+ {
+  "id": "FE-0106",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Include volatility targeting, CVaR and concentration penalties with no future info.",
+  "pass": "Deterministic allocation is explainable and bounded."
+ },
+ {
+  "id": "FE-0107",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Aggregate pending order exposure and worst-case option spread loss.",
+  "pass": "Cash and margin cannot be double-allocated."
+ },
+ {
+  "id": "FE-0108",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Daily limit, drawdown, stale-feed and reconciliation killswitch persists over restart.",
+  "pass": "LLM and agents cannot reset it."
+ },
+ {
+  "id": "FE-0109",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Track realized and unrealized P&L, cash yield, slippage, fees and risk contribution per strategy.",
+  "pass": "Equity changes fully explained by ledger events."
+ },
+ {
+  "id": "FE-0110",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Implement volatility/regime risk throttling without re-fitting rules after seeing forward results.",
+  "pass": "Thresholds versioned and preregistered."
+ },
+ {
+  "id": "FE-0111",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Provide capacity report by daily ADV, quote depth and market impact assumptions.",
+  "pass": "Trade size recommendations risk-calibrated."
+ },
+ {
+  "id": "FE-0112",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Add disaster stress tests: COVID-like gap, limit downs, spread blowouts, expiry shock and network partition.",
+  "pass": "Simulated position and cash invariant preserved."
+ },
+ {
+  "id": "FE-0113",
+  "wave": "F09",
+  "wave_title": "Portfolio-level decision-making and risk",
+  "item": "Treat NO_TRADE, insufficient liquidity and uncertain margin as explicit valid decisions.",
+  "pass": "All rejections are visible in trader terminal."
+ },
+ {
+  "id": "FE-0114",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "Build session landing page with broker/feed health, market status, risk gates and active paper modes.",
+  "pass": "Operator knows immediately whether run is trustworthy."
+ },
+ {
+  "id": "FE-0115",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "List all strategies with class, frozen version, enrollment and evidence tier.",
+  "pass": "Failed strategies visually distinct from promotable candidates."
+ },
+ {
+  "id": "FE-0116",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "Show each signal with as-of evidence, intended order, spread, volume, limits, expiry and reason codes.",
+  "pass": "Trader can trace signal to immutable snapshot."
+ },
+ {
+  "id": "FE-0117",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "Build paper order blotter with CREATED/SUBMITTED/PARTIAL/FILLED/UNKNOWN/CANCELED states.",
+  "pass": "Unknown and unfilled cannot appear as trades."
+ },
+ {
+  "id": "FE-0118",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "Show independent after-cost P&L with gross, taxes/fees, slippage and risk-adjusted benchmark.",
+  "pass": "Charts and table reconcile to ledger exactly."
+ },
+ {
+  "id": "FE-0119",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "Show full-session timeline: preflight, signals, no-trade, fills, missed fills, incidents and close.",
+  "pass": "No session silently omitted from denominators."
+ },
+ {
+  "id": "FE-0120",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "Offer cross-strategy scorecard with aligned cohorts, confidence intervals and capacity.",
+  "pass": "Cannot rank a 5-session intraday strategy as directly comparable to 1-year book."
+ },
+ {
+  "id": "FE-0121",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "Offer analyst notebook and downloadable signed/hashed evidence bundle.",
+  "pass": "Reanalysis reproduces a frozen experiment."
+ },
+ {
+  "id": "FE-0122",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "Make all UI actions read-only until staged manual paper/live approvals.",
+  "pass": "Viewing a strategy never submits orders."
+ },
+ {
+  "id": "FE-0123",
+  "wave": "F10",
+  "wave_title": "Trader cockpit and evidence reports",
+  "item": "Provide simple operator decisions: continue paper, pause, investigate, reject, request review.",
+  "pass": "UI shows why live mode is locked."
+ },
+ {
+  "id": "FE-0124",
+  "wave": "F11",
+  "wave_title": "Model learning, champion/challenger governance",
+  "item": "Create outcome-maturation queue that unlocks labels only after full exit and embargo.",
+  "pass": "No training example includes unfinished outcomes."
+ },
+ {
+  "id": "FE-0125",
+  "wave": "F11",
+  "wave_title": "Model learning, champion/challenger governance",
+  "item": "Train challengers on versioned histories with stable feature schemas and data hashes.",
+  "pass": "Reproducing training yields same model metadata and prediction lineage."
+ },
+ {
+  "id": "FE-0126",
+  "wave": "F11",
+  "wave_title": "Model learning, champion/challenger governance",
+  "item": "Separate learning diagnostics, offline ablations, paper challengers, and promotion-grade validation.",
+  "pass": "New hyperparameter search cannot contaminate a locked cohort."
+ },
+ {
+  "id": "FE-0127",
+  "wave": "F11",
+  "wave_title": "Model learning, champion/challenger governance",
+  "item": "Require frozen champion vs challenger comparison with aligned capital and realistic costs.",
+  "pass": "Challenger must improve *net* executable performance after multiplicity penalties."
+ },
+ {
+  "id": "FE-0128",
+  "wave": "F11",
+  "wave_title": "Model learning, champion/challenger governance",
+  "item": "Restrict promotion to preauthorized strategies with independently verified forward evidence.",
+  "pass": "Missing trusted receipt means no promotion."
+ },
+ {
+  "id": "FE-0129",
+  "wave": "F11",
+  "wave_title": "Model learning, champion/challenger governance",
+  "item": "Require human approval to change live-money champion, max risk or capital.",
+  "pass": "Agent cannot autonomously authorize economic risk."
+ },
+ {
+  "id": "FE-0130",
+  "wave": "F11",
+  "wave_title": "Model learning, champion/challenger governance",
+  "item": "Version and log all downgrades, drift triggers, rollbacks, promotions and human exceptions.",
+  "pass": "Auditable transitions with no deletion."
+ },
+ {
+  "id": "FE-0131",
+  "wave": "F11",
+  "wave_title": "Model learning, champion/challenger governance",
+  "item": "Automatically revert to frozen safe policy on drift, outage or accounting mismatch.",
+  "pass": "Tested rollback leaves no unsafe active new orders."
+ },
+ {
+  "id": "FE-0132",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Keep broker adapter in `READ_ONLY` until strategy plus compliance prerequisites are reviewed.",
+  "pass": "Default code path cannot send an order."
+ },
+ {
+  "id": "FE-0133",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Perform a venue/broker regulatory rules audit for India 2026 before orders are enabled.",
+  "pass": "Owner confirms broker permissions, permitted strategy class and required registrations."
+ },
+ {
+  "id": "FE-0134",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Validate static/registered IP, authorized app, key rotation and exchange-algo identifiers where required.",
+  "pass": "Failed compliance check prevents stage transition."
+ },
+ {
+  "id": "FE-0135",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Execute at least ten scheduled market-hours operator rehearsals with mock/dry-run order responses.",
+  "pass": "Any unrecognized UNKNOWN, duplicate or ledger mismatch resets engineering gate."
+ },
+ {
+  "id": "FE-0136",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Verify independent broker order-status polling and WebSocket updates reconcile under restarts.",
+  "pass": "Order placed does not count as filled without broker confirmation."
+ },
+ {
+  "id": "FE-0137",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Show a human-reviewed capital-risk proposal and maximum per-order/daily loss at micro size.",
+  "pass": "No real trade before explicit manual confirmation."
+ },
+ {
+  "id": "FE-0138",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Require post-session broker tradebook/contract-note reconciliation to canonical ledger.",
+  "pass": "Zero unexplained cash, tax, fee and position mismatches."
+ },
+ {
+  "id": "FE-0139",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Use a staged micro-capital pilot with daily stop, venue restrictions and manual oversight.",
+  "pass": "Unexpected execution behavior immediately disarms the system."
+ },
+ {
+  "id": "FE-0140",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Report observed broker slippage vs simulated paper and quote arrival snapshots.",
+  "pass": "Execution model updated only as new registered version."
+ },
+ {
+  "id": "FE-0141",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Never promote from initial live trading simply due to a profitable week; require ongoing risk/economic evidence.",
+  "pass": "Cash capital scaling requires separate review and explicit approval."
+ },
+ {
+  "id": "FE-0142",
+  "wave": "F12",
+  "wave_title": "Rehearsal and small-capital rollout (never fully automatic)",
+  "item": "Add automatic DISARM on lost heartbeat, stale broker state, reconciliation or risk breach.",
+  "pass": "Restore requires human actor."
+ },
+ {
+  "id": "FE-0143",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Provide one CLI command `fb forward preflight` (proposed) and exact error status codes.",
+  "pass": "Fixture and real-source adapters produce comparable structured reports."
+ },
+ {
+  "id": "FE-0144",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Provide one CLI command `fb forward paper run --date` (proposed) with dry-run and no-broker default.",
+  "pass": "Completes single trading session with trace and ledger."
+ },
+ {
+  "id": "FE-0145",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Provide one CLI command `fb forward close --date` (proposed) that cannot close incomplete evidence as verified.",
+  "pass": "End-of-session closure is idempotent."
+ },
+ {
+  "id": "FE-0146",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Provide one CLI command `fb forward report --as-of` (proposed) with an auditable promotion verdict.",
+  "pass": "Frozen evaluation data, benchmark, coverage and missing data included."
+ },
+ {
+  "id": "FE-0147",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Provide a deterministic win/loss/no-trade/rejection/late-quote/unknown-order/adverse-fill fixture pack.",
+  "pass": "At least one complete example per failure class."
+ },
+ {
+  "id": "FE-0148",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Run cross-platform test matrix and assert byte-identical event/ledger signatures where specified.",
+  "pass": "Linux and Windows outputs match canonical hashes."
+ },
+ {
+  "id": "FE-0149",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Publish complete capability matrix separating implemented, partial, blocked, independently evidenced.",
+  "pass": "Evidence is executable tests and outcomes, not just file existence."
+ },
+ {
+  "id": "FE-0150",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Assert zero feature-level regressions across existing investment and research workflows.",
+  "pass": "Existing CI and protected ledgers remain intact."
+ },
+ {
+  "id": "FE-0151",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Document source rights, privacy, operational troubleshooting, source configs and audit procedures.",
+  "pass": "Another operator can reproduce offline result without your secrets."
+ },
+ {
+  "id": "FE-0152",
+  "wave": "F13",
+  "wave_title": "Final end-to-end release gates and reproducible deliverables",
+  "item": "Require `PAPER_READY`, `FORWARD_VERIFIED`, `BROKER_READY`, `LIVE_APPROVED` as separate immutable release labels.",
+  "pass": "No deploy artifact can advertise higher stage than its evidence permits."
+ }
+]

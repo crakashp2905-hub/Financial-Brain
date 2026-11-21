@@ -1,0 +1,12 @@
+{
+  "description": "SHA-256 of protected research records. Append-only ledgers are excluded; these must never change.",
+  "files": {
+    "brain/07-Research/Chart patterns and candles - what is testable and how.md": "f770f825245ed8b7773dfd02d10609aadada6fc3e65972088710175961d48985",
+    "brain/07-Research/Source notes - Bulkowski Encyclopedia of Chart Patterns.md": "8a75f859a9025eadc5c0305fceb39d93933dbf07b536e5d5c9d5154f5d021b67",
+    "brain/07-Research/Source notes - Nison Japanese Candlestick Charting Techniques.md": "9355ce9fd045881d136b2e9b7ed09a73cd4f9a2af60e207d64fc5da7922fd78b",
+    "docs/sources/pattern-catalogue.v1.json": "aa56c49b6704a6650f2f53d03e67571890d15baf5cde8cf492b39b887e3eb40d",
+    "docs/trials/manifests/is_minute_family.json": "a345734510f51cbbf984acd0cd43690243d341d07b8c9ddc6b5cd8ed92437f26",
+    "docs/trials/manifests/mf.json": "20cf2ad9801db62e6a108014e39c27b75eac9a29b5abf485ece089d508f402de",
+    "docs/trials/manifests/x3.json": "234974220c510238dd16d1f1291efcb41ae60c06988be0bc454e0799396b2524"
+  }
+}

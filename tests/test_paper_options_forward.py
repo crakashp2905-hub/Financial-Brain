@@ -33,7 +33,9 @@ def test_intent_is_append_only_and_rejects_late_registration():
     assert len(digest) == 64
     with pytest.raises(OptionPaperError, match="already exists"):
         record_intent(paper, intent(), now=DECIDED + timedelta(seconds=2))
-    assert audit(paper)["pending"] == 1
+    summary = audit(paper)
+    assert summary["pending"] == 1
+    assert summary["evidence_class"] == "LOCAL_PAPER" and summary["independently_attested"] is False
 
 
 def test_forward_outcome_preserves_missing_quote_and_is_immutable():
@@ -44,6 +46,8 @@ def test_forward_outcome_preserves_missing_quote_and_is_immutable():
         record_outcome(paper, quotes, i, now=DECIDED + timedelta(minutes=5))
     result = record_outcome(paper, quotes, i, now=DECIDED + timedelta(minutes=7))
     assert result["status"] == "NO_ENTRY_QUOTE"
+    assert result["mode"] == "local_paper" and result["evidence_class"] == "LOCAL_PAPER"
+    assert result["independently_attested"] is False
     with pytest.raises(OptionPaperError, match="already recorded"):
         record_outcome(paper, quotes, i, now=DECIDED + timedelta(minutes=8))
     assert audit(paper)["outcomes"] == 1
@@ -63,4 +67,5 @@ def test_forward_fill_needs_observed_fresh_quotes_after_registration():
                        'TWO_SIDED')""", [received, received - timedelta(seconds=1), date(2026, 11, 5), bid, bid + 1])
     result = record_outcome(paper, quotes, i, now=DECIDED + timedelta(minutes=7))
     assert result["status"] == "CLOSED" and result["net_pnl_inr"] > 0
+    assert result["evidence_class"] == "LOCAL_PAPER" and result["independently_attested"] is False
     assert audit(paper)["external_timestamp_attested"] is False

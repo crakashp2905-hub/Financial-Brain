@@ -1,0 +1,43 @@
+# Domain routing map for review ownership. GitHub will use these assignments only when
+# repository review rules require or request CODEOWNERS review; this file does not change
+# branch protection or make approval a merge requirement by itself.
+
+# Source adapters and market data
+/src/financial_brain/providers/ @crakashp2905-hub
+/src/financial_brain/ingest/ @crakashp2905-hub
+/src/financial_brain/forward_edge/market_data.py @crakashp2905-hub
+/src/financial_brain/forward_edge/kite_live.py @crakashp2905-hub
+/src/financial_brain/forward_edge/quote_archive.py @crakashp2905-hub
+
+# Simulation and paper-trading sessions
+/src/financial_brain/paper/ @crakashp2905-hub
+/src/financial_brain/forward_edge/session_runner.py @crakashp2905-hub
+/src/financial_brain/forward_edge/fixture_adapter.py @crakashp2905-hub
+
+# Reinforcement learning and forecasting
+/src/financial_brain/forecasting/ @crakashp2905-hub
+/src/financial_brain/agents/ @crakashp2905-hub
+
+# Research governance, approvals, and evidence
+/src/financial_brain/research/ @crakashp2905-hub
+/src/financial_brain/evidence/ @crakashp2905-hub
+/src/financial_brain/forward_edge/trials.py @crakashp2905-hub
+/src/financial_brain/forward_edge/approvals.py @crakashp2905-hub
+
+# Risk controls
+/src/financial_brain/risk/ @crakashp2905-hub
+
+# Portfolio construction and allocation
+/src/financial_brain/portfolio/ @crakashp2905-hub
+/src/financial_brain/decisions/ @crakashp2905-hub
+
+# Trader-facing interfaces
+/src/financial_brain/interfaces/ @crakashp2905-hub
+/src/financial_brain/api/ @crakashp2905-hub
+/src/financial_brain/commands/ @crakashp2905-hub
+
+# Accounting, costs, and OMS
+/src/financial_brain/kernel/ @crakashp2905-hub
+/src/financial_brain/costs/ @crakashp2905-hub
+/src/financial_brain/execution/oms/ @crakashp2905-hub
+/src/financial_brain/forward_edge/paper_accounting.py @crakashp2905-hub

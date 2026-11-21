@@ -1,0 +1,36 @@
+{
+  "schema": "fb.edge_program.reproducibility_contract.v1",
+  "python_version": "3.13.5",
+  "timezone_environment": "UTC",
+  "python_hash_seed": "20261112",
+  "exchange_timezone": "Asia/Kolkata",
+  "dependency_lock": {
+    "path": "requirements-lock.txt",
+    "sha256": "e9a4610c4441b2377f6b6b9f5cdfefb63df8b856c6a72913beb37db9fbf19726",
+    "snapshot_note": "Exact dependency snapshot re-recorded from a clean `pip install -e .[dev]` venv (duckdb capped below 2; 1,692 passed, 3 skipped; pip-audit clean) when the lockfile was refreshed in the ops-reliability change; the previous snapshot was recorded 2026-10-15. Clean lock-install verification is run separately from the pyproject-based full CI matrix."
+  },
+  "build_tools": {
+    "pip": "25.2",
+    "setuptools": "80.9.0",
+    "wheel": "0.45.1"
+  },
+  "deterministic_fixture": {
+    "path": "docs/forward-edge/fixtures/session-cases.v1.json",
+    "sha256": "885685e43c36aa6e72762d29a7f749d36da4907e14e6bbca59f56e8b2ce27cab",
+    "test": "tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl",
+    "scope": "Synthetic acceptance cases only; this hash is not market evidence."
+  },
+  "install_and_verify": [
+    "python -m pip install --upgrade pip==25.2 setuptools==80.9.0 wheel==0.45.1",
+    "python -m pip install -r requirements-lock.txt",
+    "python -m pip install -e . --no-deps --no-build-isolation",
+    "python -m pip check",
+    "python scripts/verify_reproducibility.py",
+    "python -m pytest -q tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl"
+  ],
+  "ci_platforms": [
+    "ubuntu-24.04",
+    "windows-2022"
+  ],
+  "market_network_access_in_fixture_check": false
+}

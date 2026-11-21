@@ -1,0 +1,15 @@
+{
+  "bars_per_symbol": 1500,
+  "budget_seconds": 600.0,
+  "decision": "python_sufficient",
+  "hotspots": [
+    "1    0.000    0.000    0.165    0.165 D:\\Finance-Brain\\src\\financial_brain\\patterns\\detectors.py:445(discover)",
+    "4341    0.045    0.000    0.074    0.000 D:\\Finance-Brain\\src\\financial_brain\\patterns\\detectors.py:80(atr)",
+    "1    0.003    0.003    0.051    0.051 D:\\Finance-Brain\\src\\financial_brain\\patterns\\detectors.py:176(rectangle)"
+  ],
+  "per_symbol_seconds": 0.0587,
+  "platform": "win32",
+  "projected_full_scan_seconds": 29.36,
+  "python": "3.13.5",
+  "universe_symbols": 500
+}

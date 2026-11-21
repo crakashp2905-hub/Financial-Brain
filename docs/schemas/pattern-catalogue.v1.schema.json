@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pattern-catalogue entry (v1)",
+  "type": "object",
+  "required": [
+    "id",
+    "source",
+    "name",
+    "family",
+    "direction",
+    "definition",
+    "confirmation",
+    "book_stats",
+    "caveat",
+    "repo_status",
+    "data_needed"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(N|B)[0-9]{2,3}$"
+    },
+    "source": {
+      "enum": [
+        "nison",
+        "bulkowski"
+      ]
+    },
+    "family": {
+      "type": "string"
+    },
+    "direction": {
+      "type": "string"
+    },
+    "book_stats": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "n": {
+              "type": "string"
+            },
+            "failure_pct": {
+              "type": "string"
+            },
+            "avg_move_pct": {
+              "type": "string"
+            },
+            "likely_move_pct": {
+              "type": "string"
+            },
+            "target_hit_pct": {
+              "type": "string"
+            },
+            "basis": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "additionalProperties": true
+}
