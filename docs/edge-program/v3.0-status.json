@@ -269,22 +269,43 @@
     {
       "id": "FB-0101",
       "text": "Build canonical `InstrumentId` with `asset_class`, `market`, `exchange`, `symbol`, `isin`, `provider_token`, `effective_from/to`, and underlying lineage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::InstrumentId contains canonical market, exchange, symbol, asset_class, ISIN, provider token, effective_from/to and underlying lineage; identity fields are normalized and included in a stable key.",
+        "InstrumentMaster.resolve selects the unique effective listing version by market/exchange/symbol/date; InstrumentMaster.add rejects overlapping active identity ranges.",
+        "Instrument.tradable fails closed outside the identity effective window and canonical ISIN is reconciled with the instrument record.",
+        "tests/test_kernel_instruments.py covers ticker/ISIN succession, date resolution, lineage, key distinction, overlap refusal and out-of-window tradability."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T13:05:00+00:00",
+      "commit": "868ff339",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_instruments.py tests/test_forward_edge_registry.py -q: 16 passed",
+        "ruff check src/financial_brain/kernel/instruments.py tests/test_kernel_instruments.py: passed",
+        "python -m mypy src/financial_brain/kernel/instruments.py --follow-imports=silent: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "Canonical identifiers include every requested identity attribute and can resolve successive ISIN versions of one ticker by effective date. Overlapping identities and out-of-window trading fail closed."
     },
     {
       "id": "FB-0102",
       "text": "Add `AssetClass = EQUITY | ETF | OPTION | MUTUAL_FUND` and `Desk = SWING | INTRADAY | OPTIONS | ETF | MUTUAL_FUND` independently (ETF trades can be swing/intraday).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::AssetClass and Desk are separate enums with the exact v3.0 values.",
+        "desk_supports_asset_class explicitly permits ETF instruments on SWING and INTRADAY desks.",
+        "tests/test_kernel_instruments.py::test_asset_classes_and_desks_are_independent"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T13:05:00+00:00",
+      "commit": "868ff339",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_instruments.py tests/test_forward_edge_registry.py -q: 16 passed",
+        "ruff check src/financial_brain/kernel/instruments.py tests/test_kernel_instruments.py: passed"
+      ],
+      "test_result": "The four requested asset classes and five desks are independent types; ETF can be used by either swing or intraday. Existing instrument identities remain source-compatible."
     },
     {
       "id": "FB-0103",
