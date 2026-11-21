@@ -7590,16 +7590,26 @@
     {
       "id": "SL-00-18",
       "text": "Produce reproducible signed-or-hashed release evidence bundle without claiming local hashes are independently timestamped.",
-      "source_checked": false,
-      "status": "PARTIAL",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/forward_edge/evidence_bundle.py",
-        "src/financial_brain/forward_edge/custody.py",
-        "python -m financial_brain.forward_edge.audit --json (custody RED)"
+        "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip (deterministic frozen release bundle)",
+        "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip.sha256 (detached local SHA-256 checksum)",
+        "docs/edge-program/release-evidence-inputs.v1.json (source commit, scope, included paths and focused reproduction command)",
+        "scripts/build_checklist_evidence_bundle.py (rebuild and --check from frozen commit; deterministic ZIP generation)",
+        "tests/test_checklist_evidence_bundle.py and tests/test_forward_edge_evidence_bundle.py (repeat-build equality and bundle verification)",
+        "CI step: .github/workflows/ci.yml (bundle freshness verification)",
+        "Bundle scope is frozen through SL-00-17; hashes are local integrity checks, not independent timestamps or external attestation"
       ],
-      "blocker": "Evidence bundle/custody code exists, but independent timestamp roots are absent and reproducible signed-or-hashed release package acceptance is not demonstrated.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T07:57:00+00:00",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_checklist_evidence_bundle.py",
+        "tests/test_forward_edge_evidence_bundle.py"
+      ],
+      "artifact_sha256": "1dc9807f2475599cc6eeacaed6c5ad16eaf04f2f67f96821c51ba0cbde41e090",
+      "test_result": "Deterministic bundle rebuild and committed bundle verification passed; focused tests 5 passed; Ruff, mypy and git diff --check passed. Bundle SHA-256: 1dc9807f2475599cc6eeacaed6c5ad16eaf04f2f67f96821c51ba0cbde41e090."
     },
     {
       "id": "SL-01-01",
@@ -13903,7 +13913,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T07:49:35+00:00",
+    "as_of_utc": "2026-11-21T07:57:00+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13927,22 +13937,25 @@
     "audited_count": 18,
     "status_counts": {
       "UNASSESSED": 1360,
-      "PARTIAL": 12,
+      "PARTIAL": 11,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 1,
-      "COMPLETE": 4
+      "COMPLETE": 5
     },
-    "verified_complete_count": 4,
+    "verified_complete_count": 5,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/forward-edge-equivalence-report.v1.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json",
       "docs/edge-program/ownership-map.v1.json",
+      "docs/edge-program/release-evidence-inputs.v1.json",
+      "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip",
+      "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip.sha256",
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
       "docs/forward-edge/reference-candidates.v1.json"
     ],
-    "evidence_update": "SL-00-17 COMPLETE: H005, H003 and P3 now have separate versioned reference entries with formula descriptions and SHA-256 source pins. Validator and CI reject source drift without an explicit manifest update and prohibit labeling any as confirmed prospective edge. P3 historical failure remains explicit; H003/H005 source candidate labels are retained as historical research status."
+    "evidence_update": "SL-00-18 COMPLETE: deterministic evidence bundle from frozen commit c0fbd419 was generated, rebuilt byte-identically, verified and checksummed. Bundle integrity hashes are explicitly local and make no independent timestamp/attestation claim."
   }
 }
