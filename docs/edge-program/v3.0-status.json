@@ -1113,12 +1113,22 @@
     {
       "id": "FB-0401",
       "text": "Create immutable typed `Signal` with `signal_id, desk_id, strategy_id/version/hash, instrument_id, side, as_of, decision_at, expires_at, evidence_tier, source_hash`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/kernel/trader_signal.py defines an immutable, slotted typed TraderSignal with every required field: signal UUID, desk, strategy ID/version/hash, instrument, side, as-of/decision/expiry timestamps, evidence tier, and source hash.",
+        "The constructor validates UUID and SHA-256 formats, enum domains, required identity, timezone-aware clocks, no future as-of timestamp, and expiry strictly after decision time.",
+        "The signal envelope is intentionally a data contract; wiring individual strategy emitters to it is covered by later checklist requirements."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T17:24:00+00:00",
+      "commit": "1aceca29",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-trader-signal tests/test_trader_signal.py -q: 8 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/trader_signal.py: passed"
+      ],
+      "test_result": "Valid signals preserve immutable typed identity and provenance; malformed IDs/hashes, missing timezone, temporal lookahead, and blank instruments are rejected."
     },
     {
       "id": "FB-0402",
