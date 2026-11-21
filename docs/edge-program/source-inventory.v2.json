@@ -5889,6 +5889,8 @@
         "__future__",
         "datetime",
         "evidence",
+        "hashlib",
+        "json",
         "lake.store",
         "providers.amfi"
       ],
@@ -5896,7 +5898,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/mfnav.py",
-      "source_sha256": "0711ca0b38fa9a24bc11c6d94407d9387a69c9166b7b32caa4828f0a5e6e96de",
+      "source_sha256": "af2c593997004056e524a36f127679b312a236df326520b3f26706abe87e8476",
       "test_paths": []
     },
     {

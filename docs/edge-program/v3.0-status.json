@@ -465,12 +465,23 @@
     {
       "id": "FB-0110",
       "text": "Add semantic data lineage; reject unknown instrument identity, overlapping active identities and future-published data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::InstrumentId stores semantic underlying lineage in its stable identity key; InstrumentMaster rejects overlapping effective ticker identities and resolves as of dates.",
+        "InstrumentMaster.get fails closed for unknown identities; InstrumentHistory adds source hashes and publication-time visibility for identity transitions.",
+        "tests/test_kernel_instrument_integrity.py proves semantic lineage is identity-bearing, unknown identity and overlapping active version rejection, and future-published MarketEvent lookahead rejection."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T14:06:00+00:00",
+      "commit": "25796d1e",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_instrument_integrity.py tests/test_kernel_instruments.py tests/test_kernel_instrument_history.py tests/test_forward_edge_market_events.py -q: 48 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/instruments.py src/financial_brain/kernel/instrument_history.py: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "The instrument foundation carries explicit lineage, prevents unknown/overlapping identity use, and refuses publication-time lookahead in market events."
     },
     {
       "id": "FB-0201",
@@ -645,12 +656,22 @@
     {
       "id": "FB-0304",
       "text": "Extend `mfnav.py` to retain NAV revision history and source publication/ingestion timestamps; do not silently backdate corrected data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/storage/schema.sql adds append-only mf_nav_observations keyed by source-file/row identity, retaining lake key, row hash, NAV value/date, optional source_published_at and observed_at.",
+        "src/financial_brain/ingest/mfnav.py records every changed NAVAll payload as an observation, keeps identical replay idempotent, and advances the legacy mf_nav projection only to the latest observed timestamp.",
+        "The AMFI NAVAll provider supplies no per-row publication timestamp; source_published_at remains NULL unless explicitly provided by a provider, so publication time is not fabricated."
+      ],
+      "blocker": "Partial: append-only revision and ingestion-time history are implemented, but the current AMFI NAVAll feed does not expose per-row publication timestamps; source publication time remains unknown.",
+      "last_audited_at_utc": "2026-11-21T15:46:04+00:00",
+      "commit": "a0f85c3e",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mfnav tests/test_mfnav_revisions.py tests/test_phase2_sources.py -q: 20 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/ingest/mfnav.py: passed"
+      ],
+      "test_result": "Changed source files preserve later NAV revisions and retrieval timestamps without overwriting historical observations; source publication time is explicitly unknown when absent."
     },
     {
       "id": "FB-0305",
@@ -685,12 +706,22 @@
     {
       "id": "FB-0308",
       "text": "Add `as_known_on()` and NAV `published_at` availability semantics; same-day after-close NAV cannot be used for a pre-cutoff decision that same day.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "mfnav.as_known_on() selects only observations with observed_at <= timezone-aware known_at and returns the latest visible source version.",
+        "Before the first observed file, the query returns no row; between an original file and corrected file, it returns the original NAV; after correction receipt, it returns the corrected NAV.",
+        "Source publication time is carried only when explicitly supplied and is never inferred from nav_date or the fetch date."
+      ],
+      "blocker": "Partial: point-in-time retrieval semantics are implemented, but AMFI NAVAll provides no authoritative per-row published_at timestamp; availability conservatively uses observed_at.",
+      "last_audited_at_utc": "2026-11-21T15:46:04+00:00",
+      "commit": "a0f85c3e",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mfnav tests/test_mfnav_revisions.py tests/test_phase2_sources.py -q: 20 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/ingest/mfnav.py: passed"
+      ],
+      "test_result": "As-known MF NAV queries enforce receipt-time availability and cannot expose a same-day row before the file was observed."
     },
     {
       "id": "FB-0309",
@@ -14280,7 +14311,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T14:51:59+00:00",
+    "as_of_utc": "2026-11-21T15:46:04+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14303,6 +14334,9 @@
       "FB-0107",
       "FB-0108",
       "FB-0109",
+      "FB-0110",
+      "FB-0304",
+      "FB-0308",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14323,15 +14357,15 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 40,
+    "audited_count": 43,
     "status_counts": {
-      "COMPLETE": 22,
-      "PARTIAL": 17,
+      "COMPLETE": 23,
+      "PARTIAL": 19,
       "NOT_STARTED": 0,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1338
+      "UNASSESSED": 1335
     },
-    "verified_complete_count": 22,
+    "verified_complete_count": 23,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
