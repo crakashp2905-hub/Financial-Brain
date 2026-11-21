@@ -7160,7 +7160,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/instruments.py",
-      "source_sha256": "fd60b46823059d650be0c03d6b676ea5029c57908a37dbad336175d306e59fd6",
+      "source_sha256": "32558c38745a8cab3aac4898743c64f48bbdc593247010ffd23f7109cd50a113",
       "test_paths": []
     },
     {

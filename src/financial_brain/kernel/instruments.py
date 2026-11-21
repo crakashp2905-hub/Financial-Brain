@@ -83,6 +83,11 @@ class InstrumentId:
     effective_from: date | None = None
     effective_to: date | None = None
     underlying_lineage: tuple[str, ...] = ()
+    underlying_index: str | None = None
+    contract_expiry: date | None = None
+    scheme_code: str | None = None
+    plan: str | None = None
+    option: str | None = None
 
     def __post_init__(self) -> None:
         market = self.market.strip().upper()
@@ -108,6 +113,16 @@ class InstrumentId:
             raise InstrumentError("underlying lineage must contain unique, non-empty identities")
         if symbol in lineage:
             raise InstrumentError("instrument cannot be its own underlying")
+        for name in ("underlying_index", "scheme_code", "plan", "option"):
+            value = getattr(self, name)
+            if value is not None:
+                normalized = value.strip().upper()
+                if not normalized:
+                    raise InstrumentError(f"{name} cannot be blank")
+                object.__setattr__(self, name, normalized)
+        if asset_class == AssetClass.MUTUAL_FUND.value and not all(
+                (self.scheme_code, self.plan, self.option)):
+            raise InstrumentError("mutual-fund identity requires scheme_code, plan and option")
         object.__setattr__(self, "market", market)
         object.__setattr__(self, "exchange", exchange)
         object.__setattr__(self, "venue", exchange)
@@ -121,7 +136,9 @@ class InstrumentId:
                  self.isin or "", self.provider_token or "",
                  self.effective_from.isoformat() if self.effective_from else "",
                  self.effective_to.isoformat() if self.effective_to else "",
-                 ",".join(self.underlying_lineage))
+                 ",".join(self.underlying_lineage), self.underlying_index or "",
+                 self.contract_expiry.isoformat() if self.contract_expiry else "",
+                 self.scheme_code or "", self.plan or "", self.option or "")
         return json.dumps(parts, ensure_ascii=True, separators=(",", ":"))
 
     def same_listing_series(self, other: InstrumentId) -> bool:
@@ -139,10 +156,13 @@ class RuleVersion:
     multiplier: Decimal = Decimal(1)
     settlement_lag_days: int = 1
     max_order_quantity: int | None = None
+    effective_to: date | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "tick", to_decimal(self.tick))
         object.__setattr__(self, "multiplier", to_decimal(self.multiplier))
+        if self.effective_to is not None and self.effective_to < self.effective_from:
+            raise InstrumentError("rule effective_to precedes effective_from")
         if self.tick <= 0 or self.lot < 1 or self.multiplier <= 0 or self.settlement_lag_days < 0:
             raise InstrumentError("tick, lot and multiplier must be positive; settlement lag non-negative")
 
@@ -165,9 +185,17 @@ class Instrument:
             raise InstrumentError("Instrument ISIN conflicts with canonical InstrumentId")
         if identity_isin and self.isin is None:
             self.isin = identity_isin
+        identity_expiry = self.instrument.contract_expiry
+        if identity_expiry and self.expiry and identity_expiry != self.expiry:
+            raise InstrumentError("instrument expiry conflicts with canonical InstrumentId")
+        if identity_expiry and self.expiry is None:
+            self.expiry = identity_expiry
         self.rules = sorted(self.rules, key=lambda r: r.effective_from)
         if len({r.effective_from for r in self.rules}) != len(self.rules):
             raise InstrumentError("duplicate rule effective dates")
+        for prior, following in zip(self.rules, self.rules[1:]):
+            if prior.effective_to is not None and prior.effective_to >= following.effective_from:
+                raise InstrumentError("overlapping effective market-rule versions")
         if not self.status_history:
             self.status_history = [(self.rules[0].effective_from, Status.ACTIVE)]
         self.status_history.sort(key=lambda s: s[0])
@@ -210,10 +238,11 @@ class Instrument:
         return not reasons, tuple(reasons)
 
     def rule_on(self, day: date) -> RuleVersion:
-        applicable = [r for r in self.rules if r.effective_from <= day]
+        applicable = [r for r in self.rules if r.effective_from <= day
+                      and (r.effective_to is None or day <= r.effective_to)]
         if not applicable:
             raise InstrumentError(f"no rule effective on {day.isoformat()}; refusing to guess")
-        return applicable[-1]
+        return max(applicable, key=lambda rule: rule.effective_from)
 
     def status_on(self, day: date) -> Status:
         current = None
