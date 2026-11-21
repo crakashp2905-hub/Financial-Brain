@@ -1727,7 +1727,7 @@
         "Tests verify restart recovery, idempotent unresolved-intent writes, and no fabricated closure/fill during the quote-outage interval."
       ],
       "blocker": "The forward paper runner does not yet call this unresolved-intent path or dispatch operator alerts; market halt and provider-outage detection must be wired to the durable lifecycle.",
-      "last_audited_at_utc": "2026-11-21T18:30:38+00:00",
+      "last_audited_at_utc": "2026-11-21T18:42:38+00:00",
       "commit": null,
       "test_evidence": [
         "python -m pytest --basetemp .pytest-fb-0470 tests/test_exit_protection_ledger.py -q: 8 passed",
@@ -1741,17 +1741,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "ExitProtectionLedger records per-position ENTRY_FILL, PROTECTION_ARMED, EXIT_TRIGGERED, EXIT_FILL and unresolved-exit records in the hash-chained DurableJournal, with idempotency keys and replayed quantity state.",
-        "Events retain entry/protection/trigger identities, source evidence hashes, timestamps and quantities; conflicting duplicate identities fail closed."
+        "ExitProtectionLedger now records ENTRY_SIGNAL, ENTRY_INTENT, ENTRY_FILL, PROTECTION_ARMED, EXIT_TRIGGERED, EXIT_FILL, unresolved exit and POSITION_CLOSED records in the hash-chained DurableJournal, with per-position identities and idempotency keys.",
+        "Entry signal/intent decisions preserve canonical original snapshots and SHA-256 hashes; protection and exit events preserve policy/source identity, timestamps and quantities.",
+        "Replay validates intent-to-fill quantities, recovers partial fills and unresolved exits, and position closure is appended only after fills remove all open and pending risk."
       ],
-      "blocker": "ENTRY_SIGNAL, ENTRY_INTENT and an explicit POSITION_CLOSED/settlement event with full original decision snapshots are not yet modeled as a unified event sequence; runner/OMS integration is also absent.",
-      "last_audited_at_utc": "2026-11-21T18:31:18+00:00",
+      "blocker": "This per-position event ledger is not yet called by the forward runner/all paper books, and full immutable market/quote snapshots are not yet attached to every protection and exit-fill event.",
+      "last_audited_at_utc": "2026-11-21T18:42:38+00:00",
       "commit": null,
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-fb-0470 tests/test_exit_protection_ledger.py -q: 8 passed",
+        "python -m pytest --basetemp .pytest-fb-0471-r3 tests/test_exit_protection_ledger.py tests/test_exit_policy.py tests/test_gap_exit.py -q: 22 passed",
         "Ruff and targeted mypy: passed"
       ],
-      "test_result": "Implemented ledger events replay without double-counting and preserve fill/protection evidence; the complete required event vocabulary and position-close event remain outstanding."
+      "test_result": "The required entry/exit/close event sequence and decision snapshots persist and replay with idempotency; full runner integration and every market quote snapshot remain outstanding."
     },
     {
       "id": "FB-0472",
@@ -1764,10 +1765,10 @@
         "Regression tests cover missing pre-armed protection, protected quantity, unresolved exits, and fill-backed position quantity."
       ],
       "blocker": "The ledger has not yet bound every open to a versioned ExitPolicy/TradePlan or been integrated with all paper books; explicit POSITION_CLOSED and non-exchange settlement events are not yet modeled.",
-      "last_audited_at_utc": "2026-11-21T18:35:31+00:00",
+      "last_audited_at_utc": "2026-11-21T18:42:38+00:00",
       "commit": null,
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-fb-0472-final tests/test_exit_protection_ledger.py tests/test_exit_policy.py -q: 14 passed",
+        "python -m pytest --basetemp .pytest-fb-0471-r3 tests/test_exit_protection_ledger.py tests/test_exit_policy.py tests/test_gap_exit.py -q: 22 passed",
         "Ruff and targeted mypy: passed"
       ],
       "test_result": "Entry fills cannot be recorded without matching prior hard-stop coverage; unresolved exits remain open and quantities fall only on explicit exit fills."

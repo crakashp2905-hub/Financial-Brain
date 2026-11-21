@@ -7261,6 +7261,8 @@
         "datetime",
         "decimal",
         "financial_brain.forward_edge.durable",
+        "hashlib",
+        "json",
         "position_signals",
         "trader_signal",
         "uuid"
@@ -7269,7 +7271,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/exit_protection_ledger.py",
-      "source_sha256": "a66cea9eb553af8fd402a954c930447170539885c4567d40ee65e2c8762bd82c",
+      "source_sha256": "f1bbd1ac891ae79a1af331939505a7ed056329e8609106acff85173059cd4013",
       "test_paths": []
     },
     {

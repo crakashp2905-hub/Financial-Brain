@@ -53,10 +53,19 @@ def _event(quantity="6", key="pos:1:stop", **changes):
 
 def _armed(path):
     ledger = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    _prepare_entry(ledger)
     ledger.arm(_protection(), idempotency_key="protection:arm:1")
     ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
-                             side=EntrySide.BUY, idempotency_key="entry:fill:1")
+                             side=EntrySide.BUY, intent_id="entry-intent-1", idempotency_key="entry:fill:1")
     return ledger
+
+
+def _prepare_entry(ledger):
+    ledger.record_entry_signal(_entry(), snapshot={"setup": "breakout", "stop": "95"},
+                               idempotency_key="entry:signal:1")
+    ledger.record_entry_intent(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1",
+                               quantity=Decimal("10"), snapshot={"quantity": "10", "limit": "100"},
+                               idempotency_key="entry:intent:1")
 
 
 def test_trigger_and_partial_exit_fills_recover_from_hash_chained_journal(tmp_path):
@@ -89,12 +98,13 @@ def test_duplicate_fill_is_idempotent_but_conflicting_id_is_rejected(tmp_path):
 def test_exit_must_be_armed_and_cannot_reserve_more_than_unreserved_open_quantity(tmp_path):
     path = tmp_path / "position.journal"
     ledger = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    _prepare_entry(ledger)
     with pytest.raises(ExitLedgerError, match="pre-armed hard-stop"):
         ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
-                                 side=EntrySide.BUY, idempotency_key="entry:fill:1")
+                                 side=EntrySide.BUY, intent_id="entry-intent-1", idempotency_key="entry:fill:1")
     ledger.arm(_protection(), idempotency_key="protection:arm:1")
     ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
-                             side=EntrySide.BUY, idempotency_key="entry:fill:1")
+                             side=EntrySide.BUY, intent_id="entry-intent-1", idempotency_key="entry:fill:1")
     ledger.emit(_entry(), _protection(), _event("6", "pos:1:stop"))
     with pytest.raises(ExitLedgerError, match="does not match the recorded entry"):
         ledger.arm(_protection(parent_entry_signal_id="550e8400-e29b-41d4-a716-446655440009"),
@@ -118,8 +128,8 @@ def test_exit_fill_cannot_exceed_trigger_or_unknown_trigger(tmp_path):
 def test_entry_fill_identity_and_side_cannot_change_mid_position(tmp_path):
     ledger = _armed(tmp_path / "position.journal")
     with pytest.raises(ExitLedgerError, match="one signal identity and side"):
-        ledger.record_entry_fill(entry_signal_id="550e8400-e29b-41d4-a716-446655440009",
-                                 fill_id="entry-fill-2", quantity=Decimal("1"), side=EntrySide.BUY,
+        ledger.record_entry_fill(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1",
+                                 fill_id="entry-fill-2", quantity=Decimal("1"), side=EntrySide.SELL_SHORT,
                                  idempotency_key="entry:fill:2")
 
 
@@ -132,8 +142,9 @@ def test_oco_partial_fill_cancels_sibling_and_recovers_remaining_protection(tmp_
                          trigger=ExitTrigger.TAKE_PROFIT, trigger_price=Decimal("110"), oco_group_id=group)
     ledger.arm(stop, idempotency_key="protection:stop")
     ledger.arm(target, idempotency_key="protection:target")
+    _prepare_entry(ledger)
     ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
-                             side=EntrySide.BUY, idempotency_key="entry:fill:1")
+                             side=EntrySide.BUY, intent_id="entry-intent-1", idempotency_key="entry:fill:1")
     ledger.emit(_entry(), stop, _event("10", "exit:stop", oco_group_id=group))
     ledger.emit(_entry(), target, _event(
         "10", "exit:target", protection_id=target.protection_id, trigger=ExitTrigger.TAKE_PROFIT,
@@ -188,12 +199,58 @@ def test_unresolved_exit_requires_armed_protection_and_aware_timestamp(tmp_path)
             trigger=ExitTrigger.HARD_STOP, quantity=Decimal("1"), observed_at=NOW,
             reason="halt", idempotency_key="unresolved:1",
         )
+    _prepare_entry(ledger)
     ledger.arm(_protection(), idempotency_key="protection:arm:1")
     ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
-                             side=EntrySide.BUY, idempotency_key="entry:fill:1")
+                             side=EntrySide.BUY, intent_id="entry-intent-1", idempotency_key="entry:fill:1")
     with pytest.raises(ExitLedgerError, match="timezone-aware"):
         ledger.record_unresolved_exit(
             intent_id="550e8400-e29b-41d4-a716-446655440012", protection_id=PROTECTION_ID,
             trigger=ExitTrigger.HARD_STOP, quantity=Decimal("1"),
             observed_at=datetime(2026, 11, 21, 11), reason="halt", idempotency_key="unresolved:1",
         )
+
+
+def test_entry_signal_intent_snapshots_precede_fill_and_replay_with_hashes(tmp_path):
+    path = tmp_path / "entry-lifecycle.journal"
+    ledger = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    with pytest.raises(ExitLedgerError, match="ENTRY_SIGNAL"):
+        ledger.record_entry_intent(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1",
+                                   quantity=Decimal("10"), snapshot={}, idempotency_key="entry:intent:early")
+    _prepare_entry(ledger)
+    ledger.arm(_protection(), idempotency_key="protection:arm:1")
+    ledger.record_entry_fill(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1", fill_id="fill-1",
+                             quantity=Decimal("5"), side=EntrySide.BUY, idempotency_key="entry:fill:1")
+    ledger.record_entry_fill(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1", fill_id="fill-2",
+                             quantity=Decimal("5"), side=EntrySide.BUY, idempotency_key="entry:fill:2")
+    recovered = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    records = recovered.journal.records()
+    event_types = [record["type"] for record in records if record.get("position_id") == POSITION_ID]
+    assert event_types.index("ENTRY_SIGNAL") < event_types.index("ENTRY_INTENT") < event_types.index("ENTRY_FILL")
+    assert all(len(record["snapshot_sha256"]) == 64 for record in records
+               if record.get("type") in {"ENTRY_SIGNAL", "ENTRY_INTENT"})
+    assert recovered.state.entry_filled_quantity == Decimal("10")
+
+
+def test_position_close_requires_all_recorded_exit_fills_and_survives_restart(tmp_path):
+    path = tmp_path / "closed.journal"
+    ledger = _armed(path)
+    ledger.emit(_entry(), _protection(), _event("10", "full-exit"))
+    close = {"event_id": "550e8400-e29b-41d4-a716-446655440020", "reason": "fully filled exit",
+             "occurred_at": datetime(2026, 11, 21, 12, tzinfo=timezone.utc),
+             "idempotency_key": "position:closed:1"}
+    with pytest.raises(ExitLedgerError, match="recorded fills"):
+        ledger.record_position_closed(**close)
+    ledger.record_exit_fill(exit_key="full-exit", fill_id="close-fill-1", quantity=Decimal("5"),
+                            idempotency_key="exit:close:1")
+    with pytest.raises(ExitLedgerError, match="recorded fills"):
+        ledger.record_position_closed(**close)
+    ledger.record_exit_fill(exit_key="full-exit", fill_id="close-fill-2", quantity=Decimal("5"),
+                            idempotency_key="exit:close:2")
+    assert ledger.record_position_closed(**close)
+    recovered = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    assert recovered.state.open_quantity == 0
+    assert recovered.state.closed_event_id == close["event_id"]
+    assert not recovered.record_exit_fill(exit_key="full-exit", fill_id="close-fill-2", quantity=Decimal("5"),
+                                          idempotency_key="exit:close:2")
+    assert not recovered.record_position_closed(**close)
