@@ -7504,10 +7504,12 @@
         "src/financial_brain/cli.py (`fb learning audit`; concise output and --json full result)",
         "tests/test_learning_audit.py (positive, negative, missing-artifact, missing-test, stale-snapshot and CLI cases)",
         "tests/test_forward_edge_f00.py (protected trial charter/cohort scope governance)",
-        "2e420cc4"
+        "2e420cc4",
+        "docs/edge-program/source-inventory.v2.json (refreshed for the new module)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (verified current)"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-21T06:42:46+00:00",
+      "last_audited_at_utc": "2026-11-21T07:30:48+00:00",
       "commit": "470a4b22",
       "test_evidence": [
         "tests/test_learning_audit.py",
@@ -7516,7 +7518,8 @@
         "tests/test_forward_edge_integrity_gates.py",
         "tests/test_forward_edge_tracker.py"
       ],
-      "artifact_sha256": "57053b59ea85e4eecb32467d58f45bdc9d4850f73451034ed1e4ad361b1c4f9c"
+      "artifact_sha256": "57053b59ea85e4eecb32467d58f45bdc9d4850f73451034ed1e4ad361b1c4f9c",
+      "test_result": "Full Windows local suite on PR #40 integration branch: 3,698 passed, 1 skipped, 0 failed; focused readiness/governance suite: 79 passed."
     },
     {
       "id": "SL-00-15",
@@ -13871,7 +13874,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T06:42:46+00:00",
+    "as_of_utc": "2026-11-21T07:30:48+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13904,8 +13907,10 @@
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
-      "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
+      "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+      "docs/edge-program/source-inventory.v2.json",
+      "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "SL-00-14 COMPLETE on PR #40 integration branch: fail-closed learning audit CLI and stale evidence rejection; 79 focused regression tests pass on the integrated branch. Current blocked gates are reported by the command."
+    "evidence_update": "SL-00-14 COMPLETE on PR #40 integration branch: fail-closed learning audit CLI and stale evidence rejection; focused tests 79 passed and full suite 3,698 passed/1 skipped/0 failed. Source and dependency snapshots refreshed. Current merge, checklist and data-rights blockers remain."
   }
 }
