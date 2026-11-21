@@ -51,7 +51,14 @@ class SleeveOutcome:
     actor: str
     decided_at: datetime
     outcome_available_at: datetime
-    net_nav_contribution: float
+    gross_nav_contribution: float | None
+    cost_nav_contribution: float
+
+    @property
+    def net_nav_contribution(self) -> float | None:
+        if self.gross_nav_contribution is None:
+            return None
+        return self.gross_nav_contribution - self.cost_nav_contribution
 
 
 def _sha(value: str, name: str) -> None:
@@ -98,12 +105,19 @@ def compare_paper_sleeves(*, eligible: tuple[EligibleSignal, ...],
     session_rows = []
     for session in sessions:
         ids = [signal.signal_id for signal in eligible if signal.session == session]
-        auto_return = sum(auto_rows[sid].net_nav_contribution for sid in ids)
-        human_return = sum(human_rows[sid].net_nav_contribution for sid in ids)
-        session_rows.append({"session": session.isoformat(), "eligible_signals": len(ids),
-                             "automatic_net_return": auto_return,
-                             "human_net_return": human_return,
-                             "human_minus_automatic": human_return - auto_return})
+        auto_return = _session_net(auto_rows, ids)
+        human_return = _session_net(human_rows, ids)
+        session_rows.append({
+            "session": session.isoformat(), "eligible_signals": len(ids),
+            "automatic_gross_return": _session_gross(auto_rows, ids),
+            "automatic_cost_contribution": sum(auto_rows[sid].cost_nav_contribution for sid in ids),
+            "automatic_net_return": auto_return,
+            "human_gross_return": _session_gross(human_rows, ids),
+            "human_cost_contribution": sum(human_rows[sid].cost_nav_contribution for sid in ids),
+            "human_net_return": human_return,
+            "human_minus_automatic": (human_return - auto_return
+                                       if human_return is not None and auto_return is not None else None),
+        })
     unknown = sum(row.status == "UNKNOWN" for row in automatic + human)
     payload = {
         "schema": "fb.paired_paper_comparison.v1",
@@ -133,8 +147,13 @@ def _index_outcomes(rows: tuple[SleeveOutcome, ...], eligible: dict[str, Eligibl
         _aware(row.outcome_available_at, "outcome_available_at")
         if row.decided_at < signal.signal_at or row.outcome_available_at <= row.decided_at:
             raise PairedPaperError("decisions must follow the signal and precede outcome availability")
-        if not math.isfinite(row.net_nav_contribution):
-            raise PairedPaperError("net NAV contribution must be finite")
+        if not math.isfinite(row.cost_nav_contribution) or row.cost_nav_contribution < 0:
+            raise PairedPaperError("cost contribution must be finite and nonnegative")
+        if row.status == "UNKNOWN":
+            if row.gross_nav_contribution is not None:
+                raise PairedPaperError("unknown outcomes cannot claim a gross contribution")
+        elif row.gross_nav_contribution is None or not math.isfinite(row.gross_nav_contribution):
+            raise PairedPaperError("resolved outcomes need a finite gross contribution")
         if mode == "automatic":
             if row.action not in AUTO_ACTIONS or not row.actor.startswith("system:"):
                 raise PairedPaperError("automatic outcomes need TAKE/NO_TRADE and a system actor")
@@ -146,8 +165,10 @@ def _index_outcomes(rows: tuple[SleeveOutcome, ...], eligible: dict[str, Eligibl
             if row.status != "NOT_TAKEN":
                 raise PairedPaperError("no-trade/rejected/watch decisions must be NOT_TAKEN")
             expected_cash = signal.capital_weight * cash_return_by_signal[row.signal_id]
-            if not math.isclose(row.net_nav_contribution, expected_cash, rel_tol=1e-10, abs_tol=1e-12):
-                raise PairedPaperError("NOT_TAKEN return must equal its frozen cash contribution")
+            if (row.cost_nav_contribution != 0 or row.gross_nav_contribution is None
+                    or not math.isclose(row.gross_nav_contribution, expected_cash,
+                                        rel_tol=1e-10, abs_tol=1e-12)):
+                raise PairedPaperError("NOT_TAKEN gross return must equal its frozen cash contribution and have no costs")
         elif row.status not in TAKEN_STATUSES:
             raise PairedPaperError("taken decisions need an explicit fill/unknown status")
         indexed[row.signal_id] = row
@@ -158,9 +179,24 @@ def _index_outcomes(rows: tuple[SleeveOutcome, ...], eligible: dict[str, Eligibl
 
 
 def _serialize(rows: dict[str, SleeveOutcome]) -> list[dict]:
-    return [{**asdict(row), "decided_at": row.decided_at.astimezone(timezone.utc).isoformat(),
+    return [{**asdict(row), "net_nav_contribution": row.net_nav_contribution,
+             "decided_at": row.decided_at.astimezone(timezone.utc).isoformat(),
              "outcome_available_at": row.outcome_available_at.astimezone(timezone.utc).isoformat()}
             for _, row in sorted(rows.items())]
+
+
+def _session_net(rows: dict[str, SleeveOutcome], ids: list[str]) -> float | None:
+    returns = [rows[sid].net_nav_contribution for sid in ids]
+    if any(value is None for value in returns):
+        return None
+    return sum(value for value in returns if value is not None)
+
+
+def _session_gross(rows: dict[str, SleeveOutcome], ids: list[str]) -> float | None:
+    returns = [rows[sid].gross_nav_contribution for sid in ids]
+    if any(value is None for value in returns):
+        return None
+    return sum(value for value in returns if value is not None)
 
 
 def _digest(value: object) -> str:
