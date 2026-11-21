@@ -550,6 +550,54 @@ def render(path: Path | None = None) -> str:
     return text
 
 
+def capability_matrix() -> dict:
+    """Return the machine-readable capability matrix derived from the same tracker data.
+
+    This deliberately keeps independent evidence empty: local tests and synthetic
+    fixtures cannot establish independent market-forward evidence.
+    """
+    items = json.loads(Path(__file__).resolve().parents[3].joinpath("docs/forward-edge/fe-items.json").read_text(
+        encoding="utf-8"))
+    table = entries()
+    groups = {"DONE": "implemented", "PARTIAL": "partial", "BLOCKED": "blocked",
+              "NOT_STARTED": "not_started"}
+    matrix: dict[str, object] = {
+        "schema": "fb.forward-edge.capability-matrix.v1",
+        "implemented": [],
+        "partial": [],
+        "blocked": [],
+        "not_started": [],
+        "independently_evidenced": [],
+        "note": ("Status is derived from tracker evidence and applies only to its stated scope. "
+                 "No capability is independently market-forward evidenced by this local matrix."),
+        "capabilities": [],
+    }
+    capabilities: list[dict[str, object]] = []
+    for item in items:
+        identifier = item["id"]
+        entry = table[identifier]
+        group = groups[entry.status]
+        matrix[group].append(identifier)  # type: ignore[union-attr]
+        capabilities.append({
+            "id": identifier,
+            "wave": item["wave"],
+            "status": entry.status,
+            "tests": list(entry.tests),
+            "blockers": list(entry.blockers),
+            "note": entry.note,
+        })
+    matrix["capabilities"] = capabilities
+    return matrix
+
+
+def render_capability_matrix(path: Path | None = None) -> str:
+    """Render the F13 machine-readable capability matrix without hand-maintained status drift."""
+    text = json.dumps(capability_matrix(), indent=2, ensure_ascii=False) + "\n"
+    if path is not None:
+        path.write_text(text, encoding="utf-8")
+    return text
+
+
 UNBLOCK = {
     "BLK-BROKER": "Owner obtains a broker account with API access; a sandbox or fixture stands in offline.",
     "BLK-DATA": "Owner licenses real-time quote and depth data under the exchange/vendor terms; fixtures stand in offline.",

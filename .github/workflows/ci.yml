@@ -32,6 +32,8 @@ jobs:
         run: python -m ruff check src tests
       - name: Validate capability claims
         run: python scripts/validate_capability_matrix.py
+      - name: Verify forward-edge capability matrix rendering
+        run: python scripts/forward_edge_capability_matrix.py --check
       - name: Validate market-data source rights and credential inventory
         run: python scripts/validate_market_data_sources.py
       - name: Validate independent release semantics
