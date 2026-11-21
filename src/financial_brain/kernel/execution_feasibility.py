@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 
@@ -34,6 +35,12 @@ class ExecutionEvidence:
     option_spread_bps: Decimal | None = None
     max_option_spread_bps: Decimal | None = None
     redemption_allowed: bool | None = None
+    quote_source_id: str | None = None
+    quote_source_hash: str | None = None
+    quote_event_at: datetime | None = None
+    quote_received_at: datetime | None = None
+    observed_at: datetime | None = None
+    ltp_only: bool = False
 
     def __post_init__(self) -> None:
         if self.max_quote_age_ms <= 0 or (self.quote_age_ms is not None and self.quote_age_ms < 0):
@@ -59,6 +66,15 @@ class ExecutionEvidence:
             raise FeasibilityError("option spread and its limit must be supplied together")
         if self.max_option_spread_bps == 0:
             raise FeasibilityError("max_option_spread_bps must be positive")
+        for name in ("quote_event_at", "quote_received_at", "observed_at"):
+            value = getattr(self, name)
+            if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+                raise FeasibilityError(f"{name} must be timezone-aware")
+        if self.quote_source_hash is not None and (
+            len(self.quote_source_hash) != 64
+            or any(char not in "0123456789abcdef" for char in self.quote_source_hash)
+        ):
+            raise FeasibilityError("quote_source_hash must be lowercase SHA-256")
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +95,25 @@ def assess_execution_feasibility(evidence: ExecutionEvidence) -> FeasibilityDeci
     watch: list[str] = []
     if evidence.market_halted:
         hard.append("market_halted")
+    if evidence.ltp_only:
+        watch.append("ltp_only_non_executable")
+    if not evidence.quote_source_id or not evidence.quote_source_hash:
+        watch.append("quote_source_provenance_missing")
+    clocks = (evidence.quote_event_at, evidence.quote_received_at, evidence.observed_at)
+    if any(clock is None for clock in clocks):
+        watch.append("quote_event_receipt_or_observation_clock_missing")
+    else:
+        event_at, received_at, observed_at = clocks
+        assert event_at is not None and received_at is not None and observed_at is not None
+        if received_at.astimezone(timezone.utc) < event_at.astimezone(timezone.utc):
+            watch.append("quote_receipt_precedes_event")
+        age_ms = (observed_at.astimezone(timezone.utc) - received_at.astimezone(timezone.utc)).total_seconds() * 1000
+        if age_ms < 0:
+            watch.append("quote_received_in_future")
+        elif age_ms > evidence.max_quote_age_ms:
+            watch.append("quote_timestamp_stale")
+        if evidence.quote_age_ms is not None and age_ms >= 0 and abs(age_ms - evidence.quote_age_ms) > 1:
+            watch.append("quote_age_mismatch")
     if evidence.redemption_allowed is False:
         hard.append("fund_redemption_blocked")
     if evidence.bid is None or evidence.ask is None or evidence.bid <= 0 or evidence.ask < evidence.bid:

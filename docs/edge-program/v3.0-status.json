@@ -1578,10 +1578,10 @@
         "Unknown execution evidence routes to WATCH; explicit hard constraints route to NO_TRADE, with sorted reason codes suitable for decision evidence."
       ],
       "blocker": "This decision gate is not yet wired into every strategy adapter, signal publication path, option contract resolver, MF lifecycle source, or paper OMS admission; feed-specific quote provenance and policy calibration remain external requirements.",
-      "last_audited_at_utc": "2026-11-21T18:12:50+00:00",
+      "last_audited_at_utc": "2026-11-21T18:28:34+00:00",
       "commit": null,
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-fb-0462 tests/test_execution_feasibility.py -q: 12 passed",
+        "python -m pytest --basetemp .pytest-fb-0469 tests/test_execution_feasibility.py -q: 17 passed",
         "Ruff and targeted mypy: passed"
       ],
       "test_result": "Actionable status requires a fresh two-sided quote, acceptable spread and slippage, sufficient visible quantity, no halt, and satisfied MF/option gates; unknown inputs never become actionable."
@@ -1701,12 +1701,20 @@
     {
       "id": "FB-0469",
       "text": "On tick feeds, check source/receipt timestamps, quote age, spread, depth and circuit/halts before triggering/filling. `LTP` alone can trigger research alerts but must not fabricate executable fills.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ExecutionEvidence now requires source identity/hash and event/receipt/observation clocks for ACTIONABLE status; missing provenance/time, stale or future quotes, and mismatched quote-age evidence produce WATCH.",
+        "The gate checks two-sided spread, visible size, slippage limits and market halts; an LTP-only packet is explicitly non-executable and remains WATCH."
+      ],
+      "blocker": "The contract is not yet enforced by every tick trigger, market-data adapter or ForwardSessionRunner; exchange circuit-state adapters and full production provenance remain incomplete.",
+      "last_audited_at_utc": "2026-11-21T18:28:34+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0469 tests/test_execution_feasibility.py -q: 17 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "Source/clock gaps, stale or future quotes, spread/depth/slippage failures, halts and LTP-only observations never become actionable executions."
     },
     {
       "id": "FB-0470",

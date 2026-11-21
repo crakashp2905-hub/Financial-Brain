@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -11,12 +12,16 @@ from financial_brain.kernel.execution_feasibility import (
 
 
 def _evidence(**changes):
+    now = datetime(2026, 11, 21, 10, tzinfo=timezone.utc)
     values = {
         "bid": Decimal("99.95"), "ask": Decimal("100.00"),
-        "quote_age_ms": 100, "max_quote_age_ms": 500,
+        "quote_age_ms": 50, "max_quote_age_ms": 500,
         "spread_bps": Decimal("5"), "max_spread_bps": Decimal("10"),
         "estimated_slippage_bps": Decimal("2"), "max_slippage_bps": Decimal("8"),
         "visible_quantity": Decimal("20"), "required_quantity": Decimal("10"),
+        "quote_source_id": "kite:NSE", "quote_source_hash": "a" * 64,
+        "quote_event_at": now - timedelta(milliseconds=100),
+        "quote_received_at": now - timedelta(milliseconds=50), "observed_at": now,
     }
     return ExecutionEvidence(**(values | changes))
 
@@ -46,6 +51,24 @@ def test_unknown_quote_quality_is_watch_and_never_actionable():
     decision = assess_execution_feasibility(_evidence(spread_bps=None))
     assert decision.state is FeasibilityState.WATCH
     assert "spread_unknown" in decision.reasons
+
+
+@pytest.mark.parametrize("change, reason", [
+    ({"ltp_only": True}, "ltp_only_non_executable"),
+    ({"quote_source_id": None}, "quote_source_provenance_missing"),
+    ({"quote_received_at": None}, "quote_event_receipt_or_observation_clock_missing"),
+    ({"quote_received_at": datetime(2026, 11, 21, 10, tzinfo=timezone.utc) + timedelta(seconds=1)},
+     "quote_received_in_future"),
+    ({"quote_source_hash": "bad"}, "SHA-256"),
+])
+def test_feed_provenance_clock_and_ltp_requirements(change, reason):
+    if reason == "SHA-256":
+        with pytest.raises(FeasibilityError, match=reason):
+            _evidence(**change)
+        return
+    decision = assess_execution_feasibility(_evidence(**change))
+    assert decision.state is FeasibilityState.WATCH
+    assert reason in decision.reasons
 
 
 def test_invalid_option_spread_pair_is_rejected():
