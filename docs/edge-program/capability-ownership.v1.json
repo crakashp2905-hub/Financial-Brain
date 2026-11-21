@@ -2043,6 +2043,12 @@
       "module_owner": "src/financial_brain/ingest/mf_scheme_master.py"
     },
     {
+      "capability_id": "module:src/financial_brain/ingest/mf_scheme_terms.py",
+      "path": "src/financial_brain/ingest/mf_scheme_terms.py",
+      "module_role": "feed_ingester",
+      "module_owner": "src/financial_brain/ingest/mf_scheme_terms.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/ingest/mfnav.py",
       "path": "src/financial_brain/ingest/mfnav.py",
       "module_role": "feed_ingester",
@@ -2773,6 +2779,12 @@
       "path": "src/financial_brain/providers/mf_scheme_master.py",
       "module_role": "provider_adapter",
       "module_owner": "src/financial_brain/providers/mf_scheme_master.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/providers/mf_scheme_terms.py",
+      "path": "src/financial_brain/providers/mf_scheme_terms.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/mf_scheme_terms.py"
     },
     {
       "capability_id": "module:src/financial_brain/providers/news_article.py",

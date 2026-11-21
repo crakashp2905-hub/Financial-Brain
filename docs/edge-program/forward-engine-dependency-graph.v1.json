@@ -358,6 +358,6 @@
     "financial_brain.forward_edge.market_events",
     "financial_brain.forward_edge.quote_archive"
   ],
-  "source_count": 631,
-  "source_tree_sha256": "97242a4a8aa07607379e6645063adacc975a63683b288b2fbfeab08c78f5d681"
+  "source_count": 633,
+  "source_tree_sha256": "7d17c84c04417e2f9a35f17dc87bf51b71ccf11c090a265c9e1a9c66e7c9c189"
 }
