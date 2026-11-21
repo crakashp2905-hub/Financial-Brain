@@ -2031,6 +2031,12 @@
       "module_owner": "src/financial_brain/ingest/macro.py"
     },
     {
+      "capability_id": "module:src/financial_brain/ingest/mf_scheme_flows.py",
+      "path": "src/financial_brain/ingest/mf_scheme_flows.py",
+      "module_role": "feed_ingester",
+      "module_owner": "src/financial_brain/ingest/mf_scheme_flows.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/ingest/mf_scheme_lifecycle.py",
       "path": "src/financial_brain/ingest/mf_scheme_lifecycle.py",
       "module_role": "feed_ingester",
@@ -2395,6 +2401,12 @@
       "path": "src/financial_brain/paper/mf_exit_loads.py",
       "module_role": "paper_engine_or_output",
       "module_owner": "src/financial_brain/paper/mf_exit_loads.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/mf_scheme_flows.py",
+      "path": "src/financial_brain/paper/mf_scheme_flows.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_scheme_flows.py"
     },
     {
       "capability_id": "module:src/financial_brain/paper/options.py",
@@ -2779,6 +2791,12 @@
       "path": "src/financial_brain/providers/kite_login_server.py",
       "module_role": "provider_adapter",
       "module_owner": "src/financial_brain/providers/kite_login_server.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/providers/mf_scheme_flows.py",
+      "path": "src/financial_brain/providers/mf_scheme_flows.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/mf_scheme_flows.py"
     },
     {
       "capability_id": "module:src/financial_brain/providers/mf_scheme_lifecycle.py",

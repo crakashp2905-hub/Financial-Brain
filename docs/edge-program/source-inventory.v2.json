@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 641,
+  "source_count": 644,
   "sources": [
     {
       "capability_ids": [],
@@ -5962,6 +5962,23 @@
         "datetime",
         "forward_edge.data_permissions",
         "kernel.trading_clock",
+        "providers.mf_scheme_flows"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
+      "source": "src/financial_brain/ingest/mf_scheme_flows.py",
+      "source_sha256": "e1c2e2a75dde785963b4028e4e5e7d0de91efdfb0d47e38b14d5cd6fb3fd15c8",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "forward_edge.data_permissions",
+        "kernel.trading_clock",
         "providers.mf_scheme_lifecycle"
       ],
       "maturity": "unassessed",
@@ -8566,6 +8583,25 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "forward_edge.data_permissions",
+        "kernel.trading_clock",
+        "providers.mf_scheme_flows"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_scheme_flows.py",
+      "source_sha256": "47092bdf16cf79558b1641689fedf9d5e87fe3359e6bb0f8802eb2f01f4a6cf9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "costs.india",
         "dataclasses",
         "datetime"
@@ -9818,6 +9854,27 @@
       "parse_status": "ok",
       "source": "src/financial_brain/providers/kite_login_server.py",
       "source_sha256": "cfe7481c6f418184799853b2abf09360d2dca3793678effaed70c597aca98c71",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "forward_edge.data_permissions",
+        "hashlib",
+        "json",
+        "kernel.trading_clock"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
+      "source": "src/financial_brain/providers/mf_scheme_flows.py",
+      "source_sha256": "872e9380567c743c698cfe54d1895ac0ff5a3698f1852e2e65c628c488240c96",
       "test_paths": []
     },
     {
@@ -11180,6 +11237,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 626,
+  "unassessed_count": 629,
   "unassigned_role_count": 376
 }
