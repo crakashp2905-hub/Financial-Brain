@@ -34,7 +34,13 @@ NOW = datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc)
 
 def make_config(*, max_quote_age_ms=None):
     constraints = {"max_positions": 1, "session_phase": "CONTINUOUS",
-                   "instrument_rules": fixture_rule_book("NSE:INFY")}
+                   "allow_synthetic_fixture_events": True,
+                   "instrument_rules": fixture_rule_book("NSE:INFY"),
+                   "data_permissions": [{"source_id": "KITE_CONNECT_READ_ONLY",
+                                        "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
+                                        "effective_from": "2026-11-13", "effective_through": None,
+                                        "evidence_ref": "tests/fixture-kite-permission",
+                                        "reviewer": "test-fixture"}]}
     if max_quote_age_ms is not None:
         constraints["max_quote_age_ms"] = max_quote_age_ms
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
@@ -43,6 +49,12 @@ def make_config(*, max_quote_age_ms=None):
 
 def make_config_with_constraints(constraints):
     constraints = {"session_phase": "CONTINUOUS",
+                   "allow_synthetic_fixture_events": True,
+                   "data_permissions": [{"source_id": "KITE_CONNECT_READ_ONLY",
+                                        "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
+                                        "effective_from": "2026-11-13", "effective_through": None,
+                                        "evidence_ref": "tests/fixture-kite-permission",
+                                        "reviewer": "test-fixture"}],
                    "instrument_rules": fixture_rule_book("NSE:INFY"), **constraints}
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
                             ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
@@ -87,6 +99,31 @@ def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
     assert records["events"][0]["ingested_at"] == archived_at.isoformat()
     assert records["events"][0]["ingest_clock_source"] == "QUOTE_ARCHIVE"
     archive.close()
+    runner.close()
+
+
+def test_nonfixture_kite_data_requires_current_purpose_scoped_permission(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config_with_constraints({"data_permissions": [], "allow_synthetic_fixture_events": False})
+    opened(runner, config=config)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.05, "volume": 100,
+             "depth": {"buy": [{"price": 100.0, "quantity": 50}],
+                       "sell": [{"price": 100.1, "quantity": 40}]}}
+    observed = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    with pytest.raises(ForwardSessionRunnerError, match="rights are unknown"):
+        runner.ingest("s", config, [observed])
+    assert runner.records("s")["events"] == []
+    assert runner.records("s")["data_rejections"]
+    runner.close()
+
+
+def test_fixture_source_cannot_bypass_rights_gate_without_frozen_fixture_scope(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config_with_constraints({"allow_synthetic_fixture_events": False})
+    opened(runner, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="fixture market events require"):
+        runner.ingest("s", config, [make_event()])
+    assert runner.records("s")["events"] == []
     runner.close()
 
 

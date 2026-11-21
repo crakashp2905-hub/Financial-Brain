@@ -19,6 +19,7 @@ from financial_brain.forward_edge.execution_scenario import (
     evaluate_scenario,
 )
 from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
+from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_local_time
 from financial_brain.forward_edge.intent_timing import create_timed_intent
@@ -363,6 +364,28 @@ class ForwardSessionRunner:
                 counts["received"] += 1
                 if event.instrument_id not in expected:
                     raise ForwardSessionRunnerError("event instrument is outside frozen universe")
+                permission_evidence: dict[str, Any] | None = None
+                if event.source in {"FIXTURE", "SYNTHETIC_FIXTURE"}:
+                    if config.constraints.get("allow_synthetic_fixture_events") is not True:
+                        raise ForwardSessionRunnerError(
+                            "fixture market events require an explicit frozen synthetic-fixture session constraint")
+                else:
+                    permission_rows = config.constraints.get("data_permissions", [])
+                    matching = [row for row in permission_rows if isinstance(row, dict)
+                                and row.get("source_id") == event.source
+                                and row.get("use") == DataUse.PAPER_SIMULATION.value]
+                    if len(matching) != 1:
+                        raise ForwardSessionRunnerError(
+                            f"market data rights are unknown for source {event.source!r} and paper simulation")
+                    try:
+                        permission = DataPermission.from_dict(matching[0])
+                    except (KeyError, TypeError, ValueError) as exc:
+                        raise ForwardSessionRunnerError(f"invalid market data permission: {exc}") from exc
+                    local_date = event.available_at.astimezone(IST).date()
+                    if not permission.allows(source_id=event.source, use=DataUse.PAPER_SIMULATION, on=local_date):
+                        raise ForwardSessionRunnerError(
+                            f"market data permission does not allow paper simulation for {event.source!r}")
+                    permission_evidence = dict(matching[0])
                 if event.event_time.astimezone(IST).date() != config.exchange_date:
                     raise ForwardSessionRunnerError("event exchange date differs from frozen session date")
                 if event.available_at < event.received_at:
@@ -411,6 +434,7 @@ class ForwardSessionRunner:
                                    {"event": payload, "event_sha256": digest,
                                     "ingested_at": ingested_at.isoformat(),
                                     "ingest_clock_source": ingest_source,
+                                    "data_permission": permission_evidence,
                                     "provenance": self.provenance})
                 counts["persisted"] += 1
         except Exception as exc:

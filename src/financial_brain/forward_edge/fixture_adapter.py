@@ -124,6 +124,7 @@ def record_fixture_decision(fx: dict[str, Any], legacy_result: dict[str, Any], *
             session_date, "fixture-v1", str(fx["strategy_sha256"]), str(fx["benchmark_id"]),
             (instrument,), Decimal("1000000"),
             {"max_positions": 1, "max_quote_age_ms": 5_000, "session_phase": "CONTINUOUS",
+             "allow_synthetic_fixture_events": True,
              "liquidity_bucket": "large", "cost_schedule": cost_schedule_data,
              "instrument_rules": fixture_rule_book(instrument, tick_size=str(fx["tick"]),
                                                      freeze_quantity=max(1000, quantity))},

@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 622,
+  "source_count": 623,
   "sources": [
     {
       "capability_ids": [],
@@ -269,7 +269,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "9f97a118eeda514cc11541ca408b44e3aa91dc95832be10616127a93ba4476f0",
+      "source_sha256": "983f170f1bab9c6764277da9f495190a85bdbbafa1f0b91b5071bc15ab4d2944",
       "test_paths": []
     },
     {
@@ -3742,13 +3742,31 @@
         "dataclasses",
         "datetime",
         "decimal",
-        "enum"
+        "enum",
+        "financial_brain.forward_edge.data_permissions",
+        "zoneinfo"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/data_gate.py",
-      "source_sha256": "4d6fb892b8fbb0dc822ece4fee7d94a754f83832d000b7536619bf8c7ff50276",
+      "source_sha256": "9a73e39d6eeac7ff2ad8ef06d6e1272b83a71595f1215e974fdc19719daa91f8",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "enum"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/data_permissions.py",
+      "source_sha256": "f09f618cf8e6f10f68e333e7f4596bcd0e32627bec41fe8bdf4c0e42a187fd05",
       "test_paths": []
     },
     {
@@ -4111,7 +4129,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/fixture_adapter.py",
-      "source_sha256": "522b709370b300d0833d2538c2767102b257507fd3363e8b6a40d2743a30a472",
+      "source_sha256": "c532beb331abc5a054b1fb674d4a009782978a9760e690d442fde46c7618b3c6",
       "test_paths": []
     },
     {
@@ -4682,6 +4700,7 @@
         "decimal",
         "financial_brain.forward_edge",
         "financial_brain.forward_edge.data_gate",
+        "financial_brain.forward_edge.data_permissions",
         "financial_brain.forward_edge.fixture_adapter",
         "financial_brain.forward_edge.instrument_rules",
         "financial_brain.forward_edge.modes",
@@ -4694,7 +4713,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/pipeline.py",
-      "source_sha256": "194fffe015f5ab06001e4e7088c7307d008b20678379fdc032e4c6974547c6f8",
+      "source_sha256": "8d74d751b321e8403ac05a64e23789a384cdf0323e3d7a56dd205b798ba152bb",
       "test_paths": []
     },
     {
@@ -5035,6 +5054,7 @@
         "financial_brain.evidence.decision_manifest",
         "financial_brain.forward_edge.clock",
         "financial_brain.forward_edge.cost_schedule",
+        "financial_brain.forward_edge.data_permissions",
         "financial_brain.forward_edge.durable",
         "financial_brain.forward_edge.execution_scenario",
         "financial_brain.forward_edge.instrument_rules",
@@ -5060,7 +5080,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "07db86d3b722955d4178de2e1f6dd13d6dcba3fd5028915cae3a924886dd6c2c",
+      "source_sha256": "e052d9324bf67b8254e9220254f0601421ae53a5bd87cc7336b380fbd390ce81",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
@@ -8222,6 +8242,7 @@
         "datetime",
         "duckdb",
         "forward_edge.clock",
+        "forward_edge.data_permissions",
         "forward_edge.feed_health",
         "forward_edge.market_data",
         "hashlib",
@@ -8242,7 +8263,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/intraday_runner.py",
-      "source_sha256": "c9e2ffa53afbd5a3a9acf471b84b441d7accbacf9808f8a03beec38ccfaf0742",
+      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e",
       "test_paths": [
         "tests/test_forward_edge_cli.py",
         "tests/test_phase5_intraday_runner.py"
@@ -10821,6 +10842,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 607,
-  "unassigned_role_count": 372
+  "unassessed_count": 608,
+  "unassigned_role_count": 373
 }

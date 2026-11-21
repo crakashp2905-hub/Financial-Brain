@@ -221,9 +221,10 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
              rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
-             clock=None) -> dict:
+             clock=None, data_permission=None) -> dict:
     from ..providers import kite_data as kd
     from ..forward_edge.clock import ClockProvider, SystemClock
+    from ..forward_edge.data_permissions import DataPermission, DataUse
 
     if clock is not None and now_fn is not None:
         raise ValueError("pass either clock or legacy now_fn, not both")
@@ -234,6 +235,18 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     day = now.date().isoformat()
     if now.time() > CLOSE or now.weekday() >= 5:
         return {"day": day, "status": "not_a_session", "why": "after the close or a weekend: nothing recorded"}
+    try:
+        permission = (DataPermission.from_dict(data_permission) if isinstance(data_permission, dict)
+                      else data_permission)
+    except (KeyError, TypeError, ValueError) as exc:
+        return {"day": day, "status": "rights_blocked", "reason": f"invalid data permission: {exc}",
+                "quote_requests": 0, "broker_orders": False}
+    if (not isinstance(permission, DataPermission)
+            or not permission.allows(source_id="KITE_CONNECT_READ_ONLY",
+                                     use=DataUse.PAPER_SIMULATION, on=now.date())):
+        return {"day": day, "status": "rights_blocked",
+                "reason": "a current KITE_CONNECT_READ_ONLY PAPER_SIMULATION permission is required",
+                "quote_requests": 0, "broker_orders": False}
     path, fingerprint = cohort_path(path, cohort, strategies, rules)
     con = ledger(path)
     uni = universe(n)

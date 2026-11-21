@@ -109,7 +109,28 @@ def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(R, "daily_up", lambda d: None)                     # nor for the daily trend
     from financial_brain.ingest import quote_archive as QA
     monkeypatch.setattr(QA, "PATH", tmp_path / "quotes.duckdb")          # nor the real quote archive
+    run_live = R.run_live
+    test_permission = {"source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+                       "status": "USE_ALLOWED", "effective_from": "2026-01-01",
+                       "effective_through": None, "evidence_ref": "tests/synthetic-feed",
+                       "reviewer": "test-fixture"}
+
+    def run_live_with_permission(*args, **kwargs):
+        kwargs.setdefault("data_permission", test_permission)
+        return run_live(*args, **kwargs)
+
+    monkeypatch.setattr(R, "run_live", run_live_with_permission)
     return tmp_path
+
+
+def test_live_kite_runner_blocks_missing_permission_before_quote_request(monkeypatch, tmp_path):
+    clock = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    requested = []
+    result = R.run_live(quote_fn=lambda *_args: requested.append(True), now_fn=clock.now,
+                        path=tmp_path / "must-not-create.duckdb")
+    assert result["status"] == "rights_blocked"
+    assert result["quote_requests"] == 0 and requested == []
+    assert result["broker_orders"] is False
 
 
 def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger(setup):

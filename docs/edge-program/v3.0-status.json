@@ -7462,16 +7462,32 @@
     {
       "id": "SL-00-08",
       "text": "Keep Kite/exchange data licensing status as separate permission objects; do not infer paper/synthetic use rights from quote API success.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/market-data-sources.v1.json",
-        "docs/edge-program/current-baseline.json (rights UNVERIFIED)",
-        "src/financial_brain/forward_edge/data_gate.py"
+        "docs/edge-program/data-permissions.v1.json",
+        "docs/edge-program/data-permission-operations.md",
+        "docs/edge-program/market-data-sources.v1.json (Kite runtime source alias)",
+        "src/financial_brain/forward_edge/data_permissions.py",
+        "src/financial_brain/forward_edge/data_gate.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/pipeline.py",
+        "src/financial_brain/paper/intraday_runner.py::run_live",
+        "src/financial_brain/cli.py::cmd_paper_intraday",
+        "tests/test_forward_edge_data_gate.py",
+        "tests/test_forward_edge_session_runner.py",
+        "tests/test_phase5_intraday_runner.py"
       ],
-      "blocker": "Source inventory and data gates exist; specific current Kite/exchange permission objects and approved-use evidence are absent.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": "Source-scoped, effective-dated runtime permissions now cover the normalized forward runner and legacy live Kite runner, but no provider/account terms or reviewed approved-use evidence are present to move Kite/exchange permissions from UNKNOWN_RIGHTS to USE_ALLOWED. Other data adapters still need full rights-gate inventory.",
+      "last_audited_at_utc": "2026-11-21T09:56:29Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forward_edge_data_gate.py",
+        "tests/test_forward_edge_session_runner.py",
+        "tests/test_phase5_intraday_runner.py",
+        "tests/test_forward_edge_pipeline_compat.py"
+      ],
+      "test_result": "Full permission/session/pipeline/intraday focused run initially had 93 passing tests and one enum-vs-string registry expectation failure; that assertion was fixed. The registry test and data-gate module then pass (11 tests), six focused end-to-end regressions pass including a full live-paper day and broker isolation. Ruff clean, six changed production modules pass mypy, \fb paper-intraday --help exposes permission file, inventory/dependency graph freshness checks pass. The corrected complete 94-test aggregate was not rerun."
     },
     {
       "id": "SL-00-09",
@@ -7745,12 +7761,32 @@
     {
       "id": "SL-01-06",
       "text": "Create explicit `USE_ALLOWED`, `UNKNOWN_RIGHTS`, `DENIED` entitlement states and fail closed on unknown permissions for operational market feed consumers.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/data-permissions.v1.json",
+        "docs/edge-program/data-permission-operations.md",
+        "docs/edge-program/market-data-sources.v1.json (Kite runtime source alias)",
+        "src/financial_brain/forward_edge/data_permissions.py",
+        "src/financial_brain/forward_edge/data_gate.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/pipeline.py",
+        "src/financial_brain/paper/intraday_runner.py::run_live",
+        "src/financial_brain/cli.py::cmd_paper_intraday",
+        "tests/test_forward_edge_data_gate.py",
+        "tests/test_forward_edge_session_runner.py",
+        "tests/test_phase5_intraday_runner.py"
+      ],
+      "blocker": "Source-scoped, effective-dated runtime permissions now cover the normalized forward runner and legacy live Kite runner, but no provider/account terms or reviewed approved-use evidence are present to move Kite/exchange permissions from UNKNOWN_RIGHTS to USE_ALLOWED. Other data adapters still need full rights-gate inventory.",
+      "last_audited_at_utc": "2026-11-21T09:56:29Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forward_edge_data_gate.py",
+        "tests/test_forward_edge_session_runner.py",
+        "tests/test_phase5_intraday_runner.py",
+        "tests/test_forward_edge_pipeline_compat.py"
+      ],
+      "test_result": "Full permission/session/pipeline/intraday focused run initially had 93 passing tests and one enum-vs-string registry expectation failure; that assertion was fixed. The registry test and data-gate module then pass (11 tests), six focused end-to-end regressions pass including a full live-paper day and broker isolation. Ruff clean, six changed production modules pass mypy, \fb paper-intraday --help exposes permission file, inventory/dependency graph freshness checks pass. The corrected complete 94-test aggregate was not rerun."
     },
     {
       "id": "SL-01-07",

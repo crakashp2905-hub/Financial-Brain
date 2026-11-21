@@ -14,15 +14,35 @@
       "id": "kite_connect_quotes_history_instruments",
       "provider": "Zerodha Kite Connect",
       "category": "broker_api_market_data",
-      "products": ["live LTP/OHLC/full quotes and visible top-of-book", "historical candles", "instrument master"],
+      "products": [
+        "live LTP/OHLC/full quotes and visible top-of-book",
+        "historical candles",
+        "instrument master"
+      ],
       "status": "LICENSED",
       "access": {
         "method": "Authenticated read-only GET endpoints; provider module allowlists paths and throttles calls.",
         "credential_flags": [
-          {"name": "KITE_API_KEY", "present": false, "observed_from": "process environment"},
-          {"name": "KITE_API_SECRET", "present": false, "observed_from": "process environment"},
-          {"name": "KITE_ACCESS_TOKEN", "present": false, "observed_from": "process environment"},
-          {"name": "today_stored_kite_token", "present": true, "observed_from": "boolean result of stored-token lookup; value not recorded"}
+          {
+            "name": "KITE_API_KEY",
+            "present": false,
+            "observed_from": "process environment"
+          },
+          {
+            "name": "KITE_API_SECRET",
+            "present": false,
+            "observed_from": "process environment"
+          },
+          {
+            "name": "KITE_ACCESS_TOKEN",
+            "present": false,
+            "observed_from": "process environment"
+          },
+          {
+            "name": "today_stored_kite_token",
+            "present": true,
+            "observed_from": "boolean result of stored-token lookup; value not recorded"
+          }
         ],
         "authorization_evidence": "Owner reported paying for Kite Connect API access in this conversation; account entitlement was not independently inspected.",
         "runtime_ready": false
@@ -30,7 +50,11 @@
       "latency": {
         "availability": "Live quote path retains exchange and receive/availability clocks; historical candles are returned by request.",
         "measured": false,
-        "observed_clock_fields": ["exchange timestamp", "local receipt timestamp", "availability timestamp"],
+        "observed_clock_fields": [
+          "exchange timestamp",
+          "local receipt timestamp",
+          "availability timestamp"
+        ],
         "measurement_gap": "No per-request latency distribution, quote staleness report, or exchange-to-receipt clock-skew validation is attached."
       },
       "retention": {
@@ -38,200 +62,589 @@
         "evidence": null,
         "gap": "API subscription does not by itself establish archival duration, derived-data use, or redistribution rights; the applicable account terms are not filed here."
       },
-      "evidence_paths": ["src/financial_brain/providers/kite_data.py", "src/financial_brain/providers/kite.py", "src/financial_brain/forward_edge/market_data.py", "docs/edge-program/current-baseline.json"],
-      "limitations": ["Current API key is absent from the process environment, so the stored daily token alone does not make this checkout runtime-ready.", "Owner subscription statement is not third-party entitlement evidence."]
+      "evidence_paths": [
+        "src/financial_brain/providers/kite_data.py",
+        "src/financial_brain/providers/kite.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "docs/edge-program/current-baseline.json"
+      ],
+      "limitations": [
+        "Current API key is absent from the process environment, so the stored daily token alone does not make this checkout runtime-ready.",
+        "Owner subscription statement is not third-party entitlement evidence."
+      ],
+      "runtime_source_id": "KITE_CONNECT_READ_ONLY"
     },
     {
       "id": "local_kite_quote_archive",
       "provider": "Local archive populated from Kite Connect quote snapshots",
       "category": "local_market_data_archive",
-      "products": ["normalized historical quote observations"],
+      "products": [
+        "normalized historical quote observations"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Local DuckDB archive; no network access required to read existing rows.", "credential_flags": [], "authorization_evidence": "Upstream source is labeled Kite; per-row provider entitlement is not independently attested.", "runtime_ready": true},
-      "latency": {"availability": "Stored observations include source and exchange/receive clocks where available.", "measured": false, "observed_clock_fields": ["exchange timestamp", "receive timestamp", "availability timestamp"], "measurement_gap": "Archive coverage and freshness are captured in current-baseline.json; end-to-end latency and complete coverage are not proven."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Local persistence is present; permitted retention period and redistribution rights are not documented."},
-      "evidence_paths": ["docs/edge-program/current-baseline.json", "src/financial_brain/forward_edge/quote_archive.py"],
-      "limitations": ["Local rows do not establish the source account's entitlement or completeness."]
+      "access": {
+        "method": "Local DuckDB archive; no network access required to read existing rows.",
+        "credential_flags": [],
+        "authorization_evidence": "Upstream source is labeled Kite; per-row provider entitlement is not independently attested.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Stored observations include source and exchange/receive clocks where available.",
+        "measured": false,
+        "observed_clock_fields": [
+          "exchange timestamp",
+          "receive timestamp",
+          "availability timestamp"
+        ],
+        "measurement_gap": "Archive coverage and freshness are captured in current-baseline.json; end-to-end latency and complete coverage are not proven."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Local persistence is present; permitted retention period and redistribution rights are not documented."
+      },
+      "evidence_paths": [
+        "docs/edge-program/current-baseline.json",
+        "src/financial_brain/forward_edge/quote_archive.py"
+      ],
+      "limitations": [
+        "Local rows do not establish the source account's entitlement or completeness."
+      ]
     },
     {
       "id": "nse_equity_bhavcopy",
       "provider": "NSE archive",
       "category": "exchange_eod_prices",
-      "products": ["daily equity OHLCV and security reference fields"],
+      "products": [
+        "daily equity OHLCV and security reference fields"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Unauthenticated HTTP GET of exchange archive files; no access credential is configured in this provider.", "credential_flags": [], "authorization_evidence": "Provider code and resource register describe public archive downloads; terms for automated collection and retained copies are not attached.", "runtime_ready": true},
-      "latency": {"availability": "End-of-day archive after exchange publication.", "measured": false, "observed_clock_fields": ["business date", "retrieved_at"], "measurement_gap": "Publication delay and fetch latency are not measured as a time series."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Public download is not treated as proof of archival or redistribution permission."},
-      "evidence_paths": ["src/financial_brain/providers/bhavcopy.py", "docs/RESOURCES.md"],
-      "limitations": ["Historical file formats and archive coverage vary by period."]
+      "access": {
+        "method": "Unauthenticated HTTP GET of exchange archive files; no access credential is configured in this provider.",
+        "credential_flags": [],
+        "authorization_evidence": "Provider code and resource register describe public archive downloads; terms for automated collection and retained copies are not attached.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "End-of-day archive after exchange publication.",
+        "measured": false,
+        "observed_clock_fields": [
+          "business date",
+          "retrieved_at"
+        ],
+        "measurement_gap": "Publication delay and fetch latency are not measured as a time series."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Public download is not treated as proof of archival or redistribution permission."
+      },
+      "evidence_paths": [
+        "src/financial_brain/providers/bhavcopy.py",
+        "docs/RESOURCES.md"
+      ],
+      "limitations": [
+        "Historical file formats and archive coverage vary by period."
+      ]
     },
     {
       "id": "bse_equity_bhavcopy",
       "provider": "BSE archive",
       "category": "exchange_eod_prices",
-      "products": ["daily equity OHLCV and BSE security codes"],
+      "products": [
+        "daily equity OHLCV and BSE security codes"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Unauthenticated HTTP GET of exchange archive files; no access credential is configured in this provider.", "credential_flags": [], "authorization_evidence": "Provider code and resource register describe public archive downloads; terms for automated collection and retained copies are not attached.", "runtime_ready": true},
-      "latency": {"availability": "End-of-day archive after exchange publication.", "measured": false, "observed_clock_fields": ["business date", "retrieved_at"], "measurement_gap": "Publication delay and fetch latency are not measured as a time series."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Public download is not treated as proof of archival or redistribution permission."},
-      "evidence_paths": ["src/financial_brain/providers/bhavcopy.py", "docs/RESOURCES.md"],
-      "limitations": ["Legacy and current archive layouts require separate parsing paths."]
+      "access": {
+        "method": "Unauthenticated HTTP GET of exchange archive files; no access credential is configured in this provider.",
+        "credential_flags": [],
+        "authorization_evidence": "Provider code and resource register describe public archive downloads; terms for automated collection and retained copies are not attached.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "End-of-day archive after exchange publication.",
+        "measured": false,
+        "observed_clock_fields": [
+          "business date",
+          "retrieved_at"
+        ],
+        "measurement_gap": "Publication delay and fetch latency are not measured as a time series."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Public download is not treated as proof of archival or redistribution permission."
+      },
+      "evidence_paths": [
+        "src/financial_brain/providers/bhavcopy.py",
+        "docs/RESOURCES.md"
+      ],
+      "limitations": [
+        "Legacy and current archive layouts require separate parsing paths."
+      ]
     },
     {
       "id": "nse_delivery_mto",
       "provider": "NSE archive",
       "category": "exchange_eod_market_activity",
-      "products": ["daily security-wise delivery quantities and delivery percentage"],
+      "products": [
+        "daily security-wise delivery quantities and delivery percentage"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Unauthenticated HTTP GET of daily MTO archive files.", "credential_flags": [], "authorization_evidence": "Public archive endpoint is implemented; automated access and retention terms are not filed.", "runtime_ready": true},
-      "latency": {"availability": "Daily exchange file; exact publication time is not captured.", "measured": false, "observed_clock_fields": ["trade date from file header", "retrieved_at"], "measurement_gap": "Publication delay and fetch latency are not measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Archival and redistribution rights are not documented."},
-      "evidence_paths": ["src/financial_brain/providers/nse_delivery.py"],
-      "limitations": ["A missing file is classified as a non-session day only after provider response; full archive coverage is not attested."]
+      "access": {
+        "method": "Unauthenticated HTTP GET of daily MTO archive files.",
+        "credential_flags": [],
+        "authorization_evidence": "Public archive endpoint is implemented; automated access and retention terms are not filed.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Daily exchange file; exact publication time is not captured.",
+        "measured": false,
+        "observed_clock_fields": [
+          "trade date from file header",
+          "retrieved_at"
+        ],
+        "measurement_gap": "Publication delay and fetch latency are not measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Archival and redistribution rights are not documented."
+      },
+      "evidence_paths": [
+        "src/financial_brain/providers/nse_delivery.py"
+      ],
+      "limitations": [
+        "A missing file is classified as a non-session day only after provider response; full archive coverage is not attested."
+      ]
     },
     {
       "id": "nse_reference_and_fno_files",
       "provider": "NSE archive",
       "category": "exchange_reference_and_risk_data",
-      "products": ["index closes and valuation fields", "equity security list", "F&O market lots", "F&O ban list"],
+      "products": [
+        "index closes and valuation fields",
+        "equity security list",
+        "F&O market lots",
+        "F&O ban list"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Unauthenticated exchange archive HTTP GETs.", "credential_flags": [], "authorization_evidence": "Read-only provider code exists; automated-use and retention terms are not filed.", "runtime_ready": true},
-      "latency": {"availability": "Daily/reference files; per-file retrieval clock is recorded where fetched.", "measured": false, "observed_clock_fields": ["business date", "retrieved_at"], "measurement_gap": "Freshness thresholds and delayed-publication distributions are not measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Archive and redistribution terms are not documented."},
-      "evidence_paths": ["src/financial_brain/providers/reference.py", "src/financial_brain/execution/oms/risk_gate.py"],
-      "limitations": ["NSE website JSON endpoints that return access denials are not treated as usable sources; the archive-host paths are separate."]
+      "access": {
+        "method": "Unauthenticated exchange archive HTTP GETs.",
+        "credential_flags": [],
+        "authorization_evidence": "Read-only provider code exists; automated-use and retention terms are not filed.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Daily/reference files; per-file retrieval clock is recorded where fetched.",
+        "measured": false,
+        "observed_clock_fields": [
+          "business date",
+          "retrieved_at"
+        ],
+        "measurement_gap": "Freshness thresholds and delayed-publication distributions are not measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Archive and redistribution terms are not documented."
+      },
+      "evidence_paths": [
+        "src/financial_brain/providers/reference.py",
+        "src/financial_brain/execution/oms/risk_gate.py"
+      ],
+      "limitations": [
+        "NSE website JSON endpoints that return access denials are not treated as usable sources; the archive-host paths are separate."
+      ]
     },
     {
       "id": "nifty_indices_tri_and_constituents",
       "provider": "NSE Indices / niftyindices.com",
       "category": "benchmark_and_constituent_data",
-      "products": ["total-return index history", "current constituent snapshots"],
+      "products": [
+        "total-return index history",
+        "current constituent snapshots"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Unauthenticated HTTP GET/POST endpoints; no API credential is configured.", "credential_flags": [], "authorization_evidence": "Provider documents the public endpoints and robots policy; retention/redistribution terms are not filed.", "runtime_ready": true},
-      "latency": {"availability": "Historical total-return requests and current constituent file; no live feed.", "measured": false, "observed_clock_fields": ["requested date range", "retrieved_at"], "measurement_gap": "Fetch latency and constituent publication-time latency are not measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Historical retention and redistribution rights are not established."},
-      "evidence_paths": ["src/financial_brain/ingest/index_tri.py"],
-      "limitations": ["Historical point-in-time constituents are only accumulated from the date snapshots began."]
+      "access": {
+        "method": "Unauthenticated HTTP GET/POST endpoints; no API credential is configured.",
+        "credential_flags": [],
+        "authorization_evidence": "Provider documents the public endpoints and robots policy; retention/redistribution terms are not filed.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Historical total-return requests and current constituent file; no live feed.",
+        "measured": false,
+        "observed_clock_fields": [
+          "requested date range",
+          "retrieved_at"
+        ],
+        "measurement_gap": "Fetch latency and constituent publication-time latency are not measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Historical retention and redistribution rights are not established."
+      },
+      "evidence_paths": [
+        "src/financial_brain/ingest/index_tri.py"
+      ],
+      "limitations": [
+        "Historical point-in-time constituents are only accumulated from the date snapshots began."
+      ]
     },
     {
       "id": "nse_financial_results_xbrl",
       "provider": "NSE corporate filings and archive hosts",
       "category": "issuer_fundamental_and_event_data",
-      "products": ["financial-results filing index", "XBRL instances", "dissemination timestamps"],
+      "products": [
+        "financial-results filing index",
+        "XBRL instances",
+        "dissemination timestamps"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Public read-only GET; the filing index warms a transient cookie session.", "credential_flags": [], "authorization_evidence": "Exchange endpoints are implemented; terms for systematic retrieval and retained XBRL copies are not attached.", "runtime_ready": true},
-      "latency": {"availability": "As published by the exchange; dissemination time is available in filing records.", "measured": false, "observed_clock_fields": ["exchange dissemination timestamp", "retrieved_at"], "measurement_gap": "Polling delay and delivery latency are not measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Reuse, archival, and redistribution permission is not documented."},
-      "evidence_paths": ["src/financial_brain/providers/nse_results.py", "src/financial_brain/docintel/xbrl_results.py"],
-      "limitations": ["Current terms, endpoint availability, and full historical coverage have not been independently verified."]
+      "access": {
+        "method": "Public read-only GET; the filing index warms a transient cookie session.",
+        "credential_flags": [],
+        "authorization_evidence": "Exchange endpoints are implemented; terms for systematic retrieval and retained XBRL copies are not attached.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "As published by the exchange; dissemination time is available in filing records.",
+        "measured": false,
+        "observed_clock_fields": [
+          "exchange dissemination timestamp",
+          "retrieved_at"
+        ],
+        "measurement_gap": "Polling delay and delivery latency are not measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Reuse, archival, and redistribution permission is not documented."
+      },
+      "evidence_paths": [
+        "src/financial_brain/providers/nse_results.py",
+        "src/financial_brain/docintel/xbrl_results.py"
+      ],
+      "limitations": [
+        "Current terms, endpoint availability, and full historical coverage have not been independently verified."
+      ]
     },
     {
       "id": "bse_announcements_actions_filings",
       "provider": "BSE corporate disclosures and archive",
       "category": "issuer_fundamental_and_event_data",
-      "products": ["announcements", "corporate actions", "filing attachments"],
+      "products": [
+        "announcements",
+        "corporate actions",
+        "filing attachments"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Read-only HTTP GETs; provider-specific rate limits; no account credential configured.", "credential_flags": [], "authorization_evidence": "Public disclosure endpoints are implemented; terms for automated collection and stored attachment copies are not filed.", "runtime_ready": true},
-      "latency": {"availability": "Announcement rows carry company-submitted, exchange-disseminated, and news timestamps where supplied.", "measured": false, "observed_clock_fields": ["submitted_at", "disseminated_at", "news_at", "retrieved_at"], "measurement_gap": "Feed polling-to-receipt latency and missing timestamp coverage are not measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Automated archival, attachment storage, and redistribution rights are not established."},
-      "evidence_paths": ["src/financial_brain/providers/bse_announcements.py", "src/financial_brain/providers/bse_corpact.py", "src/financial_brain/providers/bse_filing.py"],
-      "limitations": ["Old attachments may move between archive paths; response availability does not prove a filing is complete."]
+      "access": {
+        "method": "Read-only HTTP GETs; provider-specific rate limits; no account credential configured.",
+        "credential_flags": [],
+        "authorization_evidence": "Public disclosure endpoints are implemented; terms for automated collection and stored attachment copies are not filed.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Announcement rows carry company-submitted, exchange-disseminated, and news timestamps where supplied.",
+        "measured": false,
+        "observed_clock_fields": [
+          "submitted_at",
+          "disseminated_at",
+          "news_at",
+          "retrieved_at"
+        ],
+        "measurement_gap": "Feed polling-to-receipt latency and missing timestamp coverage are not measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Automated archival, attachment storage, and redistribution rights are not established."
+      },
+      "evidence_paths": [
+        "src/financial_brain/providers/bse_announcements.py",
+        "src/financial_brain/providers/bse_corpact.py",
+        "src/financial_brain/providers/bse_filing.py"
+      ],
+      "limitations": [
+        "Old attachments may move between archive paths; response availability does not prove a filing is complete."
+      ]
     },
     {
       "id": "amfi_mutual_fund_nav",
       "provider": "AMFI NAV publication",
       "category": "fund_nav",
-      "products": ["daily mutual-fund scheme NAV and identifiers"],
+      "products": [
+        "daily mutual-fund scheme NAV and identifiers"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Public unauthenticated text-file download.", "credential_flags": [], "authorization_evidence": "Provider is described as a public daily NAV feed; licensing/retention text is not attached.", "runtime_ready": true},
-      "latency": {"availability": "Daily publication; each row carries its stated NAV date.", "measured": false, "observed_clock_fields": ["NAV date", "retrieved_at"], "measurement_gap": "Publication time and ingestion delay are not measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Long-term retention and redistribution permission are not established."},
-      "evidence_paths": ["src/financial_brain/providers/amfi.py", "docs/RESOURCES.md"],
-      "limitations": ["NAV is not a tradable intraday quote."]
+      "access": {
+        "method": "Public unauthenticated text-file download.",
+        "credential_flags": [],
+        "authorization_evidence": "Provider is described as a public daily NAV feed; licensing/retention text is not attached.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Daily publication; each row carries its stated NAV date.",
+        "measured": false,
+        "observed_clock_fields": [
+          "NAV date",
+          "retrieved_at"
+        ],
+        "measurement_gap": "Publication time and ingestion delay are not measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Long-term retention and redistribution permission are not established."
+      },
+      "evidence_paths": [
+        "src/financial_brain/providers/amfi.py",
+        "docs/RESOURCES.md"
+      ],
+      "limitations": [
+        "NAV is not a tradable intraday quote."
+      ]
     },
     {
       "id": "screener_company_ratios",
       "provider": "Screener.in",
       "category": "third_party_fundamentals",
-      "products": ["company headline ratios and summary fields"],
+      "products": [
+        "company headline ratios and summary fields"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "On-demand page retrieval constrained by the provider wrapper and robots rules.", "credential_flags": [], "authorization_evidence": "Resource register records unclear terms; no data license is on file.", "runtime_ready": true},
-      "latency": {"availability": "Latest displayed page values; no point-in-time release timestamp guarantee.", "measured": false, "observed_clock_fields": ["retrieved_at"], "measurement_gap": "Freshness and restatement latency are not measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Terms are unclear and the data is not point-in-time; persistent storage rights are unverified."},
-      "evidence_paths": ["src/financial_brain/providers/screener.py", "docs/RESOURCES.md"],
-      "limitations": ["Not suitable as authoritative point-in-time financial evidence."]
+      "access": {
+        "method": "On-demand page retrieval constrained by the provider wrapper and robots rules.",
+        "credential_flags": [],
+        "authorization_evidence": "Resource register records unclear terms; no data license is on file.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Latest displayed page values; no point-in-time release timestamp guarantee.",
+        "measured": false,
+        "observed_clock_fields": [
+          "retrieved_at"
+        ],
+        "measurement_gap": "Freshness and restatement latency are not measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Terms are unclear and the data is not point-in-time; persistent storage rights are unverified."
+      },
+      "evidence_paths": [
+        "src/financial_brain/providers/screener.py",
+        "docs/RESOURCES.md"
+      ],
+      "limitations": [
+        "Not suitable as authoritative point-in-time financial evidence."
+      ]
     },
     {
       "id": "moneycontrol_news_headlines",
       "provider": "Moneycontrol",
       "category": "news_and_sentiment_context",
-      "products": ["headline and limited article metadata for links referenced by filings"],
+      "products": [
+        "headline and limited article metadata for links referenced by filings"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Narrow on-demand fetch for allowlisted URLs; robots rules and crawl delay are enforced.", "credential_flags": [], "authorization_evidence": "Resource register records unclear terms; no content license is on file.", "runtime_ready": true},
-      "latency": {"availability": "Only when a referenced URL is fetched; not a real-time news feed.", "measured": false, "observed_clock_fields": ["publication timestamp when present", "retrieved_at"], "measurement_gap": "News coverage, timestamp accuracy, and fetch delay are not measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Article bodies are not stored; permission to persist extracted headline metadata is not documented."},
-      "evidence_paths": ["src/financial_brain/providers/news_article.py", "src/financial_brain/ingest/newsfetch.py", "docs/RESOURCES.md"],
-      "limitations": ["Not a complete or independently licensed newswire."]
+      "access": {
+        "method": "Narrow on-demand fetch for allowlisted URLs; robots rules and crawl delay are enforced.",
+        "credential_flags": [],
+        "authorization_evidence": "Resource register records unclear terms; no content license is on file.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Only when a referenced URL is fetched; not a real-time news feed.",
+        "measured": false,
+        "observed_clock_fields": [
+          "publication timestamp when present",
+          "retrieved_at"
+        ],
+        "measurement_gap": "News coverage, timestamp accuracy, and fetch delay are not measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Article bodies are not stored; permission to persist extracted headline metadata is not documented."
+      },
+      "evidence_paths": [
+        "src/financial_brain/providers/news_article.py",
+        "src/financial_brain/ingest/newsfetch.py",
+        "docs/RESOURCES.md"
+      ],
+      "limitations": [
+        "Not a complete or independently licensed newswire."
+      ]
     },
     {
       "id": "fred_macro_series",
       "provider": "Federal Reserve Bank of St. Louis FRED",
       "category": "macro_context",
-      "products": ["USD/INR, crude, rates, CPI, reserves, credit, and commodity series"],
+      "products": [
+        "USD/INR, crude, rates, CPI, reserves, credit, and commodity series"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Public CSV GET; no API key is used by the implemented path.", "credential_flags": [], "authorization_evidence": "Public CSV endpoint is implemented; dataset-specific license and redistribution terms are not attached.", "runtime_ready": true},
-      "latency": {"availability": "Daily, monthly, or quarterly observation periods; revisions and release lags apply.", "measured": false, "observed_clock_fields": ["observation period", "local observed_at"], "measurement_gap": "The feed does not provide release-time history for all series; fetch latency is not measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Terms differ by series and upstream source; retention/redistribution scope has not been reviewed."},
-      "evidence_paths": ["src/financial_brain/ingest/macro.py"],
-      "limitations": ["Latest revisions are served; the observation date is not the publication date."]
+      "access": {
+        "method": "Public CSV GET; no API key is used by the implemented path.",
+        "credential_flags": [],
+        "authorization_evidence": "Public CSV endpoint is implemented; dataset-specific license and redistribution terms are not attached.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Daily, monthly, or quarterly observation periods; revisions and release lags apply.",
+        "measured": false,
+        "observed_clock_fields": [
+          "observation period",
+          "local observed_at"
+        ],
+        "measurement_gap": "The feed does not provide release-time history for all series; fetch latency is not measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Terms differ by series and upstream source; retention/redistribution scope has not been reviewed."
+      },
+      "evidence_paths": [
+        "src/financial_brain/ingest/macro.py"
+      ],
+      "limitations": [
+        "Latest revisions are served; the observation date is not the publication date."
+      ]
     },
     {
       "id": "mospi_cpi_iip",
       "provider": "Ministry of Statistics and Programme Implementation API",
       "category": "macro_context",
-      "products": ["CPI and IIP series"],
+      "products": [
+        "CPI and IIP series"
+      ],
       "status": "UNVERIFIED",
-      "access": {"method": "Public unauthenticated GET for implemented CPI/IIP endpoints.", "credential_flags": [], "authorization_evidence": "No API key is used by the implemented endpoints; data reuse and retention terms are not attached.", "runtime_ready": true},
-      "latency": {"availability": "Monthly releases with conservative inferred available_on dates.", "measured": false, "observed_clock_fields": ["period", "inferred available_on", "retrieved_at"], "measurement_gap": "Actual publication timestamps are not supplied by the endpoint and are not independently measured."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "Archival and redistribution terms are not documented."},
-      "evidence_paths": ["src/financial_brain/ingest/mospi.py"],
-      "limitations": ["CPI base-year coverage has a documented break; inferred availability dates are not exchange attestations."]
+      "access": {
+        "method": "Public unauthenticated GET for implemented CPI/IIP endpoints.",
+        "credential_flags": [],
+        "authorization_evidence": "No API key is used by the implemented endpoints; data reuse and retention terms are not attached.",
+        "runtime_ready": true
+      },
+      "latency": {
+        "availability": "Monthly releases with conservative inferred available_on dates.",
+        "measured": false,
+        "observed_clock_fields": [
+          "period",
+          "inferred available_on",
+          "retrieved_at"
+        ],
+        "measurement_gap": "Actual publication timestamps are not supplied by the endpoint and are not independently measured."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "Archival and redistribution terms are not documented."
+      },
+      "evidence_paths": [
+        "src/financial_brain/ingest/mospi.py"
+      ],
+      "limitations": [
+        "CPI base-year coverage has a documented break; inferred availability dates are not exchange attestations."
+      ]
     },
     {
       "id": "nse_licensed_realtime_depth",
       "provider": "NSE commercial market-data products",
       "category": "licensed_realtime_market_depth",
-      "products": ["licensed L1/L2/L3 and tick/order-book data"],
+      "products": [
+        "licensed L1/L2/L3 and tick/order-book data"
+      ],
       "status": "MISSING",
-      "access": {"method": "No licensed feed integration or entitlement record in this repository.", "credential_flags": [], "authorization_evidence": "No contract or feed credential is recorded.", "runtime_ready": false},
-      "latency": {"availability": "Not available.", "measured": false, "observed_clock_fields": [], "measurement_gap": "No feed to measure."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "No entitlement or retention terms have been acquired."},
-      "evidence_paths": ["docs/RESOURCES.md"],
-      "limitations": ["Do not infer licensed depth from top-of-book quantities returned by a broker quote API."]
+      "access": {
+        "method": "No licensed feed integration or entitlement record in this repository.",
+        "credential_flags": [],
+        "authorization_evidence": "No contract or feed credential is recorded.",
+        "runtime_ready": false
+      },
+      "latency": {
+        "availability": "Not available.",
+        "measured": false,
+        "observed_clock_fields": [],
+        "measurement_gap": "No feed to measure."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "No entitlement or retention terms have been acquired."
+      },
+      "evidence_paths": [
+        "docs/RESOURCES.md"
+      ],
+      "limitations": [
+        "Do not infer licensed depth from top-of-book quantities returned by a broker quote API."
+      ]
     },
     {
       "id": "expired_options_history_and_chain",
       "provider": "No provider configured",
       "category": "derivatives_history",
-      "products": ["historical option chains, expired contracts, and historical option depth"],
+      "products": [
+        "historical option chains, expired contracts, and historical option depth"
+      ],
       "status": "MISSING",
-      "access": {"method": "No source adapter or entitlement recorded for the required historical coverage.", "credential_flags": [], "authorization_evidence": "No provider contract or archive coverage evidence is present.", "runtime_ready": false},
-      "latency": {"availability": "Not available from a verified source.", "measured": false, "observed_clock_fields": [], "measurement_gap": "No source to measure."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "No data rights or retention terms are recorded."},
-      "evidence_paths": ["docs/RESOURCES.md", "docs/edge-program/MASTER_CHECKLIST_2026-11-12.md"],
-      "limitations": ["Current contract quotes may be available through Kite, but they do not provide verified expired-option history or a complete historical chain."]
+      "access": {
+        "method": "No source adapter or entitlement recorded for the required historical coverage.",
+        "credential_flags": [],
+        "authorization_evidence": "No provider contract or archive coverage evidence is present.",
+        "runtime_ready": false
+      },
+      "latency": {
+        "availability": "Not available from a verified source.",
+        "measured": false,
+        "observed_clock_fields": [],
+        "measurement_gap": "No source to measure."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "No data rights or retention terms are recorded."
+      },
+      "evidence_paths": [
+        "docs/RESOURCES.md",
+        "docs/edge-program/MASTER_CHECKLIST_2026-11-12.md"
+      ],
+      "limitations": [
+        "Current contract quotes may be available through Kite, but they do not provide verified expired-option history or a complete historical chain."
+      ]
     },
     {
       "id": "us_equity_market_data",
       "provider": "No provider configured",
       "category": "international_equity_market_data",
-      "products": ["US equity/index prices and cross-market reference data"],
+      "products": [
+        "US equity/index prices and cross-market reference data"
+      ],
       "status": "MISSING",
-      "access": {"method": "No US market-data adapter or entitlement recorded.", "credential_flags": [], "authorization_evidence": "No provider integration or license record is present.", "runtime_ready": false},
-      "latency": {"availability": "Not available from a verified source.", "measured": false, "observed_clock_fields": [], "measurement_gap": "No source to measure."},
-      "retention": {"status": "UNVERIFIED", "evidence": null, "gap": "No data rights or retention terms are recorded."},
+      "access": {
+        "method": "No US market-data adapter or entitlement recorded.",
+        "credential_flags": [],
+        "authorization_evidence": "No provider integration or license record is present.",
+        "runtime_ready": false
+      },
+      "latency": {
+        "availability": "Not available from a verified source.",
+        "measured": false,
+        "observed_clock_fields": [],
+        "measurement_gap": "No source to measure."
+      },
+      "retention": {
+        "status": "UNVERIFIED",
+        "evidence": null,
+        "gap": "No data rights or retention terms are recorded."
+      },
       "evidence_paths": [],
-      "limitations": ["The repository has no configured US equities feed; correlations must not be populated from undocumented downloads."]
+      "limitations": [
+        "The repository has no configured US equities feed; correlations must not be populated from undocumented downloads."
+      ]
     }
   ]
 }
