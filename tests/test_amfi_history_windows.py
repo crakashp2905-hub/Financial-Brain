@@ -95,6 +95,20 @@ def test_authorized_fetcher_requires_both_current_data_permissions_before_call()
     assert calls == []
 
 
+def test_authorized_fetcher_rejects_adapter_source_mismatch_before_call():
+    calls = []
+    adapter = _Adapter(lambda *_: calls.append(True))
+    adapter.source_id = "KITE"
+    with pytest.raises(ValueError, match="does not match"):
+        fetch_authorized_history_windows(
+            date(2026, 1, 1), date(2026, 1, 2),
+            adapter=adapter, source_id="AMFI",
+            permission_checked_on=date(2026, 11, 22),
+            permissions=_permissions(DataUse.RESEARCH, DataUse.RETENTION),
+        )
+    assert calls == []
+
+
 def test_authorized_fetcher_retries_transient_errors_and_spaces_requests():
     class FakeClock:
         now = 0.0
