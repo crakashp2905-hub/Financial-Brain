@@ -35,19 +35,20 @@ def _protection(quantity="10", **changes):
     return ExitProtectionIntent(**(values | changes))
 
 
-def _event(quantity="6", key="pos:1:stop"):
-    return EmittedExitEvent(
-        exit_signal=ExitSignal(
+def _event(quantity="6", key="pos:1:stop", **changes):
+    signal = ExitSignal(
             signal_id="550e8400-e29b-41d4-a716-446655440002", closes_position_id=POSITION_ID,
             strategy_id="breakout", strategy_version="1", instrument_id="NSE:INFY",
             closing_action=ClosingAction.SELL_TO_CLOSE, quote_source_id="kite:NSE",
             source_hash="c" * 64, occurred_at=datetime(2026, 11, 21, 11, tzinfo=timezone.utc),
             parent_signal_id=ENTRY_ID, reason="hard stop trigger observed",
-        ),
-        protection_id=PROTECTION_ID, trigger=ExitTrigger.HARD_STOP,
-        idempotency_key=key, quantity=Decimal(quantity),
-        observed_trigger_at=datetime(2026, 11, 21, 10, 59, tzinfo=timezone.utc),
-    )
+        )
+    values = {
+        "exit_signal": signal, "protection_id": PROTECTION_ID, "trigger": ExitTrigger.HARD_STOP,
+        "idempotency_key": key, "quantity": Decimal(quantity),
+        "observed_trigger_at": datetime(2026, 11, 21, 10, 59, tzinfo=timezone.utc),
+    }
+    return EmittedExitEvent(**(values | changes))
 
 
 def _armed(path):
@@ -119,3 +120,36 @@ def test_entry_fill_identity_and_side_cannot_change_mid_position(tmp_path):
         ledger.record_entry_fill(entry_signal_id="550e8400-e29b-41d4-a716-446655440009",
                                  fill_id="entry-fill-2", quantity=Decimal("1"), side=EntrySide.BUY,
                                  idempotency_key="entry:fill:2")
+
+
+def test_oco_partial_fill_cancels_sibling_and_recovers_remaining_protection(tmp_path):
+    path = tmp_path / "oco.journal"
+    ledger = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
+                             side=EntrySide.BUY, idempotency_key="entry:fill:1")
+    group = "550e8400-e29b-41d4-a716-446655440010"
+    stop = _protection(oco_group_id=group)
+    target = _protection(protection_id="550e8400-e29b-41d4-a716-446655440011",
+                         trigger=ExitTrigger.TAKE_PROFIT, trigger_price=Decimal("110"), oco_group_id=group)
+    ledger.arm(stop, idempotency_key="protection:stop")
+    ledger.arm(target, idempotency_key="protection:target")
+    ledger.emit(_entry(), stop, _event("10", "exit:stop", oco_group_id=group))
+    ledger.emit(_entry(), target, _event(
+        "10", "exit:target", protection_id=target.protection_id, trigger=ExitTrigger.TAKE_PROFIT,
+        oco_group_id=group,
+    ))
+    assert ledger.state.exit_pending_quantity == Decimal("10")
+
+    ledger.record_exit_fill(exit_key="exit:stop", fill_id="stop-fill-partial", quantity=Decimal("2"),
+                            idempotency_key="fill:stop:1")
+    recovered = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    assert recovered.state.exit_filled_quantity == Decimal("2")
+    assert recovered.state.exit_pending_quantity == Decimal("8")
+    assert recovered.state.open_quantity == Decimal("8")
+    assert not recovered.record_exit_fill(exit_key="exit:stop", fill_id="stop-fill-partial", quantity=Decimal("2"),
+                                          idempotency_key="fill:stop:1")
+    with pytest.raises(ExitLedgerError, match="suppressed after the first sibling fill"):
+        recovered.emit(_entry(), target, _event(
+            "8", "exit:target-after-fill", protection_id=target.protection_id,
+            trigger=ExitTrigger.TAKE_PROFIT, oco_group_id=group,
+        ))

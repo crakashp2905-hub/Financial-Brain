@@ -7247,7 +7247,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/exit_protection_ledger.py",
-      "source_sha256": "93f2c1c10345e70c223a1112e3ce12d6fec8fb623d6bda7c5c347ae49c532a32",
+      "source_sha256": "044b3802f3fdab2890a75298319f694f24cbc7d42e1e33e062fe81dc8c783c0c",
       "test_paths": []
     },
     {
@@ -7752,7 +7752,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/position_signals.py",
-      "source_sha256": "3c39bd9bf45ebde63899e8c30068d399362faf7ff14e70f7d1b7bdd56ef9d71f",
+      "source_sha256": "40773cdcdfb66cf03cedd2dc30698c7e74f4aeb4beda0da51d82f5b47730f595",
       "test_paths": []
     },
     {

@@ -106,6 +106,7 @@ class ExitProtectionIntent:
     quantity: Decimal
     created_at: datetime
     source_hash: str
+    oco_group_id: str | None = None
 
     def __post_init__(self) -> None:
         for name in ("protection_id", "position_id", "parent_entry_signal_id"):
@@ -123,6 +124,8 @@ class ExitProtectionIntent:
         _aware("created_at", self.created_at)
         if len(self.source_hash) != 64 or any(c not in "0123456789abcdef" for c in self.source_hash):
             raise PositionSignalError("source_hash must be lowercase SHA-256")
+        if self.oco_group_id is not None:
+            _uuid("oco_group_id", self.oco_group_id)
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,6 +138,7 @@ class EmittedExitEvent:
     idempotency_key: str
     quantity: Decimal
     observed_trigger_at: datetime
+    oco_group_id: str | None = None
 
     def __post_init__(self) -> None:
         _uuid("protection_id", self.protection_id)
@@ -142,6 +146,8 @@ class EmittedExitEvent:
             raise PositionSignalError("emitted exit trigger must be an ExitTrigger")
         if not self.idempotency_key.strip():
             raise PositionSignalError("exit idempotency_key is required")
+        if self.oco_group_id is not None:
+            _uuid("oco_group_id", self.oco_group_id)
         try:
             quantity = Decimal(self.quantity)
         except (InvalidOperation, TypeError) as exc:
@@ -168,6 +174,8 @@ def validate_protection_emission(
         raise PositionSignalError("protection does not identify its entry signal")
     if protection.trigger is not event.trigger or protection.protection_id != event.protection_id:
         raise PositionSignalError("emitted exit differs from its protection intent")
+    if protection.oco_group_id != event.oco_group_id:
+        raise PositionSignalError("emitted exit differs from its protection OCO group")
     if event.exit_signal.parent_signal_id != entry.signal_id:
         raise PositionSignalError("emitted exit does not identify its entry signal")
     validate_entry_exit_link(entry, event.exit_signal)

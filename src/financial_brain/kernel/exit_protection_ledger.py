@@ -71,6 +71,16 @@ class ExitProtectionLedger:
         protections = {r["protection_id"] for r in records if r["type"] == "PROTECTION_ARMED"}
         intents = {r["idempotency_key"]: _decimal(r["quantity"], "exit intent")
                    for r in records if r["type"] == "EXIT_TRIGGERED"}
+        cancelled: dict[str, Decimal] = {}
+        for record in records:
+            if record["type"] == "EXIT_CANCELLED":
+                key = record["exit_key"]
+                cancelled[key] = cancelled.get(key, Decimal(0)) + _decimal(record["quantity"], "cancel quantity")
+            elif record["type"] == "EXIT_FILL":
+                for cancellation in record.get("oco_cancelled_siblings", []):
+                    key = cancellation["exit_key"]
+                    cancelled[key] = cancelled.get(key, Decimal(0)) + _decimal(
+                        cancellation["quantity"], "cancel quantity")
         fills: dict[str, Decimal] = {}
         for record in records:
             if record["type"] == "EXIT_FILL":
@@ -78,9 +88,22 @@ class ExitProtectionLedger:
                     record["quantity"], "exit fill")
         entry_qty = sum(entries.values(), Decimal(0))
         exit_qty = sum(fills.values(), Decimal(0))
-        pending = sum((qty - fills.get(key, Decimal(0)) for key, qty in intents.items()), Decimal(0))
-        if any(fills.get(key, Decimal(0)) > qty for key, qty in intents.items()):
-            raise ExitLedgerError("journal contains exit fills above emitted intent")
+        remaining = {key: qty - fills.get(key, Decimal(0)) - cancelled.get(key, Decimal(0))
+                     for key, qty in intents.items()}
+        groups = {r["idempotency_key"]: r.get("oco_group_id") for r in records
+                  if r.get("type") == "EXIT_TRIGGERED"}
+        grouped_pending: dict[str, Decimal] = {}
+        pending = Decimal(0)
+        for key, quantity in remaining.items():
+            group = groups.get(key)
+            if group is None:
+                pending += quantity
+            else:
+                grouped_pending[group] = max(grouped_pending.get(group, Decimal(0)), quantity)
+        pending += sum(grouped_pending.values(), Decimal(0))
+        if any(fills.get(key, Decimal(0)) + cancelled.get(key, Decimal(0)) > qty
+               for key, qty in intents.items()):
+            raise ExitLedgerError("journal contains exit fills/cancellations above emitted intent")
         if exit_qty + pending > entry_qty:
             raise ExitLedgerError("journal contains exit intents/fills above entry quantity")
         return ExitLedgerState(
@@ -133,7 +156,8 @@ class ExitProtectionLedger:
                   "parent_entry_signal_id": protection.parent_entry_signal_id,
                   "trigger": protection.trigger.value, "trigger_price": str(protection.trigger_price),
                   "quantity": str(protection.quantity), "created_at": protection.created_at.isoformat(),
-                  "source_hash": protection.source_hash, "idempotency_key": idempotency_key}
+                  "source_hash": protection.source_hash, "oco_group_id": protection.oco_group_id,
+                  "idempotency_key": idempotency_key}
         return self._append_idempotent(self.journal, records, record, idempotency_key)
 
     def emit(self, entry: EntrySignal, protection: ExitProtectionIntent, event: EmittedExitEvent) -> bool:
@@ -143,19 +167,32 @@ class ExitProtectionLedger:
         state = self.state
         if protection.protection_id not in state.armed_protection_ids:
             raise ExitLedgerError("protection must be durably armed before trigger emission")
+        if protection.oco_group_id is not None:
+            group_exit_keys = {r["idempotency_key"] for r in records
+                               if r.get("type") == "EXIT_TRIGGERED" and r.get("oco_group_id") == protection.oco_group_id}
+            already_filled = any(r.get("type") == "EXIT_FILL" and r.get("exit_key") in group_exit_keys
+                                 for r in records)
+            if already_filled:
+                raise ExitLedgerError("OCO sibling trigger is suppressed after the first sibling fill")
         key = event.idempotency_key
         record = {"type": "EXIT_TRIGGERED", "position_id": self.position_id,
                   "exit_signal_id": event.exit_signal.signal_id,
                   "protection_id": event.protection_id, "trigger": event.trigger.value,
                   "quantity": str(event.quantity), "occurred_at": event.exit_signal.occurred_at.isoformat(),
                   "observed_trigger_at": event.observed_trigger_at.isoformat(),
-                  "source_hash": event.exit_signal.source_hash, "idempotency_key": key}
+                  "source_hash": event.exit_signal.source_hash, "oco_group_id": event.oco_group_id,
+                  "idempotency_key": key}
         prior = next((r for r in records if r.get("idempotency_key") == key), None)
         if prior is not None:
             if prior != record:
                 raise ExitLedgerError("idempotency key conflicts with previously journaled evidence")
             return False
-        if event.quantity > state.open_quantity - state.exit_pending_quantity:
+        already_reserved_oco_group = event.oco_group_id is not None and any(
+            r.get("type") == "EXIT_TRIGGERED" and r.get("oco_group_id") == event.oco_group_id
+            for r in records
+        )
+        if (not already_reserved_oco_group
+                and event.quantity > state.open_quantity - state.exit_pending_quantity):
             raise ExitLedgerError("exit quantity exceeds unreserved open position quantity")
         try:
             validate_protection_emission(entry, protection, event, open_quantity=state.open_quantity)
@@ -183,13 +220,42 @@ class ExitProtectionLedger:
             raise ExitLedgerError("exit fill id conflicts with prior evidence")
         filled_for_exit = sum((_decimal(r["quantity"], "exit fill") for r in records
                                if r.get("type") == "EXIT_FILL" and r.get("exit_key") == exit_key), Decimal(0))
-        if filled_for_exit + qty > intents[exit_key]:
+        cancelled_for_exit = sum((_decimal(r["quantity"], "exit cancellation") for r in records
+                                  if r.get("type") == "EXIT_CANCELLED" and r.get("exit_key") == exit_key), Decimal(0))
+        if filled_for_exit + cancelled_for_exit + qty > intents[exit_key]:
             raise ExitLedgerError("exit fill quantity exceeds emitted exit intent")
-        record = {"type": "EXIT_FILL", "position_id": self.position_id, "exit_key": exit_key,
-                  "fill_id": fill_id, "quantity": str(qty), "idempotency_key": idempotency_key}
-        created = self._append_idempotent(self.journal, records, record, idempotency_key)
+        record: dict[str, object] = {"type": "EXIT_FILL", "position_id": self.position_id, "exit_key": exit_key,
+                                     "fill_id": fill_id, "quantity": str(qty),
+                                     "idempotency_key": idempotency_key}
+        prior_records = [r for r in records if r.get("idempotency_key") == idempotency_key]
+        if prior_records:
+            if prior_records[0] != record:
+                raise ExitLedgerError("idempotency key conflicts with previously journaled evidence")
+            return False
+        sibling_cancellations: list[dict[str, str]] = []
+        intent_record = next((r for r in records if r.get("type") == "EXIT_TRIGGERED"
+                              and r.get("idempotency_key") == exit_key), None)
+        if intent_record is None:
+            raise ExitLedgerError("exit fill references an unknown emitted exit")
+        group = intent_record.get("oco_group_id")
+        if group is not None:
+            group_intents = [r for r in records if r.get("type") == "EXIT_TRIGGERED"
+                             and r.get("oco_group_id") == group and r.get("idempotency_key") != exit_key]
+            for sibling in group_intents:
+                sibling_key = sibling["idempotency_key"]
+                sibling_filled = sum((_decimal(r["quantity"], "sibling fill") for r in records
+                                      if r.get("type") == "EXIT_FILL" and r.get("exit_key") == sibling_key), Decimal(0))
+                sibling_cancelled = sum((_decimal(r["quantity"], "sibling cancellation") for r in records
+                                         if r.get("type") == "EXIT_CANCELLED" and r.get("exit_key") == sibling_key), Decimal(0))
+                remainder = _decimal(sibling["quantity"], "sibling intent") - sibling_filled - sibling_cancelled
+                if remainder > 0:
+                    sibling_cancellations.append({"exit_key": sibling_key, "quantity": str(remainder)})
+        # One hash-chained journal record makes the winner fill and OCO sibling
+        # reductions inseparable during crash recovery.
+        record["oco_cancelled_siblings"] = sibling_cancellations
+        self.journal.append(record)
         _ = self.state
-        return created
+        return True
 
 
 __all__ = ["ExitLedgerError", "ExitLedgerState", "ExitProtectionLedger"]
