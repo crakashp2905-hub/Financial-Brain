@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 631,
+  "source_count": 632,
   "sources": [
     {
       "capability_ids": [],
@@ -2922,6 +2922,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_bars.py",
       "source_sha256": "d9ca5460325446d79a674a10bd369e1649d4e7b621cd27adc41dd7b3927ab110",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "financial_brain.forward_edge.market_data",
+        "financial_brain.forward_edge.market_events",
+        "math",
+        "statistics",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_liquidity.py",
+      "source_sha256": "734948c655f59b9bfdd2b2bc2b57633564523bd368bd3ac154a90f55b5742f59",
       "test_paths": []
     },
     {
@@ -10988,6 +11008,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 616,
+  "unassessed_count": 617,
   "unassigned_role_count": 376
 }
