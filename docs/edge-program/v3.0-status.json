@@ -1571,12 +1571,20 @@
     {
       "id": "FB-0462",
       "text": "Add explicit `NO_TRADE`/`WATCH` when no viable price entry, insufficient quote quality, too much slippage, option spread or fund redemption constraint defeats the plan.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/execution_feasibility.py provides a fail-closed ACTIONABLE/WATCH/NO_TRADE gate for missing or stale two-sided quotes, spread/slippage limits, visible depth, halts, option spreads, and blocked fund redemptions.",
+        "Unknown execution evidence routes to WATCH; explicit hard constraints route to NO_TRADE, with sorted reason codes suitable for decision evidence."
+      ],
+      "blocker": "This decision gate is not yet wired into every strategy adapter, signal publication path, option contract resolver, MF lifecycle source, or paper OMS admission; feed-specific quote provenance and policy calibration remain external requirements.",
+      "last_audited_at_utc": "2026-11-21T18:08:58+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0462 tests/test_execution_feasibility.py -q: 12 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "Actionable status requires a fresh two-sided quote, acceptable spread and slippage, sufficient visible quantity, no halt, and satisfied MF/option gates; unknown inputs never become actionable."
     },
     {
       "id": "FB-0463",
