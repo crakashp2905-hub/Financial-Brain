@@ -2614,14 +2614,23 @@
       "id": "FB-0709",
       "text": "Implement redemption cash state `REDEMPTION_PENDING -> VALUE_CONFIRMED -> PAYOUT_PENDING -> CASH_AVAILABLE`; prohibit redeploying unsettled proceeds.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "COMPLETE",
       "evidence": [
-        "No redemption cash-state machine or unsettled-proceeds restriction was found; exit-load valuation is a calculation, not a payout lifecycle."
+        "src/financial_brain/storage/schema.sql adds account-scoped settlement state and immutable transition tables for REDEMPTION_PENDING, VALUE_CONFIRMED, PAYOUT_PENDING and CASH_AVAILABLE.",
+        "paper.mf_redemption_settlement.request_redemption reserves open units, counts concurrent pending requests, and is idempotent by account and settlement ID.",
+        "paper.mf_lot_book.redeem accepts a settlement request only with matching account/scheme/units and an exact persisted as-known NAV observation; it updates lots and records VALUE_CONFIRMED then PAYOUT_PENDING atomically without crediting spendable cash.",
+        "paper.mf_redemption_settlement.make_cash_available credits cash once; simulated payouts cannot precede their due date and observed payouts require an evidence reference, SHA-256 source hash and effective PAPER_SIMULATION permission.",
+        "paper.mf_lot_book.account_snapshot separates available cash from pending redemption receivables so unsettled proceeds cannot be reused as cash."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "last_audited_at_utc": "2026-11-21T23:11:43+00:00",
+      "commit": "2ea026de",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mf-settlement-final2 tests/test_mf_lot_book.py tests/test_mf_flow_book.py tests/test_migrations.py -q: 18 passed",
+        "Ruff: passed for MF lot book, redemption settlement and tests.",
+        "python -m mypy src/financial_brain/paper/mf_lot_book.py src/financial_brain/paper/mf_redemption_settlement.py: passed"
+      ],
+      "test_result": "The tested lifecycle reserves redemption units, resolves value from a persisted NAV observation, records all four ordered states, keeps proceeds outside available cash until the due-date payout event, and does not double-credit on replay."
     },
     {
       "id": "FB-0710",
@@ -2709,14 +2718,18 @@
       "id": "FB-0716",
       "text": "Reconcile pending application, allotment confirmation, units, external flows, cash reserve and bank payout to one canonical ledger.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "The MF order, allotment, pending NAV, external-flow and payout components are not joined into one canonical account ledger."
+        "The MF paper book now links the redemption request, exact NAV observation, redeemed lot units, pending proceeds and cash-availability event under an account-scoped settlement ID.",
+        "account_snapshot reports available cash and pending redemption receivables separately; mf_paper_flow_events separately journals IDCW/unit/scheme flows."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "blocker": "Partial: subscription application/payment, NAV allotment, external contribution/withdrawal and independently evidenced bank payout are not yet reconciled in one canonical double-entry MF account ledger.",
+      "last_audited_at_utc": "2026-11-21T23:11:43+00:00",
+      "commit": "2ea026de",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mf-settlement-final2 tests/test_mf_lot_book.py tests/test_mf_flow_book.py tests/test_migrations.py -q: 18 passed"
+      ],
+      "test_result": "The redemption-side unit/value/receivable/payout path is reconciled, but other cash-in/out, allotment and bank confirmation events remain separate or unmodeled."
     },
     {
       "id": "FB-0717",

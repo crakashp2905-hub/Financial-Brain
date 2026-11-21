@@ -2474,6 +2474,12 @@
       "module_owner": "src/financial_brain/paper/mf_redemption_constraints.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/mf_redemption_settlement.py",
+      "path": "src/financial_brain/paper/mf_redemption_settlement.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_redemption_settlement.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/mf_scheme_flows.py",
       "path": "src/financial_brain/paper/mf_scheme_flows.py",
       "module_role": "paper_engine_or_output",
