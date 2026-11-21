@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 
 from financial_brain.forward_edge import approvals as A
-from financial_brain.forward_edge import audit, baseline, charter, custody, modes, trials
+from financial_brain.forward_edge import audit, baseline, charter, custody, decision_custody, modes, trials
 from financial_brain.forward_edge.modes import ComplianceRecord, Mode, ModeError, SessionMode
 
 REPO = Path(__file__).resolve().parents[1]
@@ -57,6 +57,19 @@ def _override_trial_program(monkeypatch: pytest.MonkeyPatch, program_id: str, **
 
         monkeypatch.setattr(Path, "glob", glob)
     return program
+
+
+def _trial_identity(trial_name: str, proposed_on: date):
+    trial_charter = charter.ExperimentCharter(
+        charter_id=trial_name, version=1, strategy_id=trial_name, code_sha256=SHA,
+        capital_inr="100000", start_on=proposed_on.isoformat(),
+        end_on=(proposed_on + timedelta(days=30)).isoformat(), universe=("INFY",),
+        benchmarks=("NIFTY50_TRI",), horizon_sessions=10,
+    )
+    cohort = decision_custody.Cohort(
+        cohort_id=f"{trial_name}-cohort", start=trial_charter.start_on, end=trial_charter.end_on)
+    schedule = decision_custody.CohortSchedule(trial_charter.sha256(), (cohort,))
+    return trial_charter, schedule, trials.protected_trial_scope_sha256(trial_charter, schedule)
 
 
 # ---------- FE-0001 baseline ----------
@@ -172,9 +185,12 @@ def test_q4_budget_amendment_requires_recorded_capacity_and_matching_owner_appro
     with pytest.raises(trials.TrialGovernanceError, match="needs a TRIAL_BUDGET_AMENDMENT"):
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
                                                   approvals=only_trial, now=NOW, scope_sha256=SHA)
-    approvals = only_trial + (_approval("TRIAL_BUDGET_AMENDMENT", subject="M9", adr="ADR-0006"),)
+    trial_charter, schedule, scope = _trial_identity("M9", date(2026, 11, 10))
+    approvals = (_approval("PROTECTED_TRIAL", subject="M9", adr="ADR-0004", scope=scope),
+                 _approval("TRIAL_BUDGET_AMENDMENT", subject="M9", adr="ADR-0006", scope=scope))
     status = trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
-                                                        approvals=approvals, now=NOW, scope_sha256=SHA)
+                                                        approvals=approvals, now=NOW, scope_sha256=scope,
+                                                        charter=trial_charter, cohort_schedule=schedule)
     assert status.spent == 13 and status.remaining == 1
 
 
@@ -214,11 +230,50 @@ def test_q1_2027_requires_protocol_amendment_and_trial_approval(monkeypatch: pyt
     with pytest.raises(trials.TrialGovernanceError, match="configured owner owner:akash"):
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
                                                   approvals=wrong_owner, now=NOW, scope_sha256=SHA)
-    approvals = only_trial + (_approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
-                                        valid_to=expires),)
+    trial_charter, schedule, scope = _trial_identity("M1-2027", date(2027, 1, 15))
+    approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007",
+                           scope=scope, valid_to=expires),
+                 _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                           scope=scope, valid_to=expires))
     status = trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
-                                                        approvals=approvals, now=NOW, scope_sha256=SHA)
+                                                        approvals=approvals, now=NOW, scope_sha256=scope,
+                                                        charter=trial_charter, cohort_schedule=schedule)
     assert status.budget == 1 and status.remaining == 1
+
+
+def test_protected_trial_requires_charter_and_matching_cohort_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    _override_trial_program(monkeypatch, "Q1-2027", status="ACTIVE", budget=1,
+                            protocol_adr_ref="ADR-0007", authorized_owner_id="owner:akash")
+    proposed_on = date(2027, 1, 15)
+    trial_charter, schedule, scope = _trial_identity("M1-2027", proposed_on)
+    expires = datetime(2027, 1, 16, tzinfo=timezone.utc)
+    approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007",
+                           scope=scope, valid_to=expires),
+                 _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                           scope=scope, valid_to=expires))
+    with pytest.raises(trials.TrialGovernanceError, match="exact frozen charter and cohort schedule"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=proposed_on, trial_name="M1-2027",
+                                                  approvals=approvals, now=NOW, scope_sha256=scope)
+    outside = decision_custody.CohortSchedule(trial_charter.sha256(), (
+        decision_custody.Cohort("later-cohort", "2027-02-01", "2027-02-10"),))
+    outside_scope = trials.protected_trial_scope_sha256(trial_charter, outside)
+    outside_approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007",
+                                   scope=outside_scope, valid_to=expires),
+                         _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                                   scope=outside_scope, valid_to=expires))
+    with pytest.raises(trials.TrialGovernanceError, match="not covered"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=proposed_on, trial_name="M1-2027",
+                                                  approvals=outside_approvals, now=NOW,
+                                                  scope_sha256=outside_scope,
+                                                  charter=trial_charter, cohort_schedule=outside)
+    wrong_scope_approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007",
+                                       scope=SHA, valid_to=expires),
+                             _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                                       scope=SHA, valid_to=expires))
+    with pytest.raises(trials.TrialGovernanceError, match="approval scope hash must bind"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=proposed_on, trial_name="M1-2027",
+                                                  approvals=wrong_scope_approvals, now=NOW, scope_sha256=SHA,
+                                                  charter=trial_charter, cohort_schedule=schedule)
 
 
 def test_q1_2027_explicit_budget_is_a_hard_capacity_limit(monkeypatch: pytest.MonkeyPatch) -> None:
