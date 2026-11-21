@@ -7460,16 +7460,29 @@
     {
       "id": "SL-00-10",
       "text": "Separate historical replay, deterministic fixture, local paper, prospectively observed session and independently attested forward evidence in types, not dashboard text.",
-      "source_checked": false,
-      "status": "PARTIAL",
+    "source_checked": true,
+    "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/forward_edge/modes.py",
-        "src/financial_brain/forward_edge/claim_tier.py",
-        "src/financial_brain/forward_edge/fixtures.py"
+      "src/financial_brain/forward_edge/evidence_labels.py (EvidenceClass now defines distinct historical replay, deterministic fixture, local paper, prospectively observed session and independently attested forward types)",
+      "src/financial_brain/forward_edge/evidence_stats.py (export rows derive evidence class from execution mode and facts; historical and local-paper claim tiers preserve the more specific class)",
+      "src/financial_brain/evaluation/evidence_tiers.py (fixtures remain historical/research claims and cannot be upgraded by observed or custody fields)",
+      "tests/test_evidence_labels.py (mode separation, complete prospective session, custody gate, replay/fixture non-promotion, and export consistency)",
+      "tests/test_evidence_claims.py (source-aware claim promotion only for complete observed sessions; fixtures stay replicated)",
+      "49 focused evidence/report/export tests passed; Ruff and git diff --check passed"
       ],
-      "blocker": "Modes and claim tiers exist; all requested evidence categories are not proven as distinct types end to end.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+    "blocker": null,
+    "last_audited_at_utc": "2026-11-21T08:23:02+00:00",
+    "commit": "11dad209",
+    "test_evidence": [
+      "tests/test_evidence_labels.py",
+      "tests/test_evidence_claims.py",
+      "tests/test_paper_execution_audit.py",
+      "tests/test_paper_options_runner.py",
+      "tests/test_paper_options_forward.py",
+      "tests/test_forward_edge_f08.py",
+      "tests/test_forward_edge_falsification.py"
+    ],
+    "test_result": "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy and git diff --check passed."
     },
     {
       "id": "SL-00-11",
