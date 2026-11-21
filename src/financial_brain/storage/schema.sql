@@ -606,6 +606,26 @@ CREATE TABLE IF NOT EXISTS mf_scheme_master (
     observed_at     TIMESTAMPTZ NOT NULL
 );
 
+-- Append-only, permission-gated lifecycle facts keep closed, merged, renamed, and
+-- suspended schemes in point-in-time universes. Successor links are explicit evidence;
+-- they are never inferred from similar names or current scheme availability.
+CREATE TABLE IF NOT EXISTS mf_scheme_lifecycle (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    lifecycle       VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,
+    successor_scheme_code VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
