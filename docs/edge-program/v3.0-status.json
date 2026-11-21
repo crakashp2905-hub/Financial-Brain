@@ -826,19 +826,21 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/storage/schema.sql adds append-only mf_nav_observations keyed by source-file/row identity, retaining lake key, row hash, NAV value/date, optional source_published_at and observed_at.",
+        "src/financial_brain/storage/schema.sql adds append-only mf_nav_observations keyed by source-file/row identity, retaining lake key, row hash, NAV value/date, optional source_published_at, provider observed_at and local ingested_at.",
         "src/financial_brain/ingest/mfnav.py records every changed NAVAll payload as an observation, keeps identical replay idempotent, and advances the legacy mf_nav projection only to the latest observed timestamp.",
+        "New NAV rows record the local ingestion clock after the raw payload is captured; as_known_on gates availability on ingested_at and falls back to observed_at only for legacy rows whose ingestion time cannot be reconstructed.",
+        "Database migration adds ingested_at without fabricating it for pre-existing rows.",
         "The AMFI NAVAll provider supplies no per-row publication timestamp; source_published_at remains NULL unless explicitly provided by a provider, so publication time is not fabricated."
       ],
       "blocker": "Partial: append-only revision and ingestion-time history are implemented, but the current AMFI NAVAll feed does not expose per-row publication timestamps; source publication time remains unknown.",
-      "last_audited_at_utc": "2026-11-21T15:46:04+00:00",
-      "commit": "a0f85c3e",
+      "last_audited_at_utc": "2026-11-21T22:22:00+00:00",
+      "commit": "ed91cd52",
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-mfnav tests/test_mfnav_revisions.py tests/test_phase2_sources.py -q: 20 passed",
+        "python -m pytest --basetemp .pytest-mfnav-final tests/test_mfnav_revisions.py tests/test_phase2_sources.py tests/test_migrations.py -q: 25 passed",
         "Ruff: passed",
         "python -m mypy src/financial_brain/ingest/mfnav.py: passed"
       ],
-      "test_result": "Changed source files preserve later NAV revisions and retrieval timestamps without overwriting historical observations; source publication time is explicitly unknown when absent."
+      "test_result": "Changed source files preserve later NAV revisions and source retrieval plus local ingestion timestamps; as-known lookup prevents a backfill from appearing available before local ingestion. Legacy rows are not backdated. Source publication time remains explicitly unknown when absent."
     },
     {
       "id": "FB-0305",
