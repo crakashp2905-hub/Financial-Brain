@@ -1213,12 +1213,22 @@
     {
       "id": "FB-0406",
       "text": "Deduplicate repeated alerts without erasing new rule versions or materially changed prices; ensure event-time ordering.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/trader_signal.py compare_alerts() treats strategy ID/version/hash as part of identity, so rule revisions are preserved; it only deduplicates same-target alerts within a caller-specified time window and below a caller-specified material entry-zone price-change threshold.",
+        "The function rejects event-time regressions and reports whether an alert is a repeat, a new rule/target, outside the window, or a material price change.",
+        "The comparison helper is not yet wired into the signal event publisher or durable deduplication store; configured materiality thresholds are not calibrated by desk/instrument."
+      ],
+      "blocker": "Partial: pure version- and price-aware deduplication contract is implemented, but event-publisher integration, persistence and threshold governance remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T18:12:00+00:00",
+      "commit": "54095664",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-alert-dedup tests/test_trader_signal.py -q: 24 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/trader_signal.py: passed"
+      ],
+      "test_result": "Equivalent alerts within the dedup window are recognized, while strategy version changes, material entry-zone price moves and out-of-order events remain distinct or fail."
     },
     {
       "id": "FB-0407",
