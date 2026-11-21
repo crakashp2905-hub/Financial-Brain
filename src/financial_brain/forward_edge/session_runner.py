@@ -24,6 +24,7 @@ from financial_brain.forward_edge.clock import ClockProvider, SystemClock, captu
 from financial_brain.forward_edge.intent_timing import create_timed_intent
 from financial_brain.forward_edge.market_data import executable_quote
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
+from financial_brain.forward_edge.provenance import repository_provenance
 from financial_brain.forward_edge.quote_archive import QuoteArchive
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
@@ -53,6 +54,7 @@ class ForwardSessionRunner:
         self.state_store = state
         self.clock = clock or SystemClock()
         self.journal_path = Path(journal_path)
+        self.provenance = repository_provenance(entry_point="ForwardSessionRunner")
         self.journal_path.parent.mkdir(parents=True, exist_ok=True)
         self._con = sqlite3.connect(str(self.journal_path))
         self._con.execute("PRAGMA journal_mode=WAL")
@@ -408,7 +410,8 @@ class ForwardSessionRunner:
                 self._append_audit("market_event", session_id, event.event_id, ingested_at,
                                    {"event": payload, "event_sha256": digest,
                                     "ingested_at": ingested_at.isoformat(),
-                                    "ingest_clock_source": ingest_source})
+                                    "ingest_clock_source": ingest_source,
+                                    "provenance": self.provenance})
                 counts["persisted"] += 1
         except Exception as exc:
             self._con.execute("ROLLBACK TO ingest_batch")
@@ -486,7 +489,8 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("decision clock cannot move backwards within a session")
         self._con.execute("INSERT INTO runner_decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
                           [session_id, decision_id, strategy_id, outcome, clock.isoformat(), digest, canonical])
-        self._append_audit("decision", session_id, decision_id, clock, body)
+        self._append_audit("decision", session_id, decision_id, clock,
+                           {**body, "provenance": self.provenance})
         self._con.commit()
         return True
 
@@ -524,7 +528,8 @@ class ForwardSessionRunner:
             return False
         self._con.execute("INSERT INTO runner_risk_verdicts VALUES (?, ?, ?, ?, ?, ?)",
                           [session_id, decision_id, verdict_id, int(allowed), digest, canonical])
-        self._append_audit("risk_verdict", session_id, verdict_id, occurred, record)
+        self._append_audit("risk_verdict", session_id, verdict_id, occurred,
+                           {**record, "provenance": self.provenance})
         self._con.commit()
         return True
 
@@ -578,7 +583,8 @@ class ForwardSessionRunner:
         self._con.execute("INSERT INTO runner_decision_manifests VALUES (?, ?, ?, ?)",
                           [session_id, decision_id, digest, encoded])
         self._append_audit("decision_manifest", session_id, decision_id, decision_at,
-                           {"decision_id": decision_id, "manifest_sha256": digest, "manifest": json.loads(encoded)})
+                           {"decision_id": decision_id, "manifest_sha256": digest,
+                            "manifest": json.loads(encoded), "provenance": self.provenance})
         self._con.commit()
         return digest
 
@@ -648,6 +654,9 @@ class ForwardSessionRunner:
                 self._con.execute(f"DELETE FROM {table} WHERE session_id=?", [session_id])
             for kind, encoded in audit:
                 body = json.loads(encoded)
+                # Provenance belongs to the immutable audit envelope. Materialized rows keep
+                # their original contracts so replay/rebuild remains byte-equivalent.
+                materialized = {key: value for key, value in body.items() if key != "provenance"}
                 if kind in {"preflight", "calendar_plan"}:
                     event_id = f"{session_id}:{kind}"
                     digest = self._sha256(body)
@@ -665,14 +674,16 @@ class ForwardSessionRunner:
                                        body["event_sha256"], json.dumps(event, sort_keys=True,
                                        separators=(",", ":"), allow_nan=False)])
                 elif kind == "decision":
-                    encoded_body = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                    encoded_body = json.dumps(materialized, sort_keys=True, separators=(",", ":"), allow_nan=False)
                     self._con.execute("INSERT INTO runner_decisions VALUES (?,?,?,?,?,?,?)",
-                                      [session_id, body["decision_id"], body["strategy_id"], body["outcome"],
-                                       body["decided_at"], self._sha256(body), encoded_body])
+                                      [session_id, materialized["decision_id"], materialized["strategy_id"],
+                                       materialized["outcome"], materialized["decided_at"],
+                                       self._sha256(materialized), encoded_body])
                 elif kind == "risk_verdict":
                     self._con.execute("INSERT INTO runner_risk_verdicts VALUES (?,?,?,?,?,?)",
-                                      [session_id, body["decision_id"], body["verdict_id"],
-                                       int(body["allowed"]), self._sha256(body), encoded])
+                                      [session_id, materialized["decision_id"], materialized["verdict_id"],
+                                       int(materialized["allowed"]), self._sha256(materialized),
+                                       json.dumps(materialized, sort_keys=True, separators=(",", ":"), allow_nan=False)])
                 elif kind == "decision_manifest":
                     manifest_json = json.dumps(body["manifest"], sort_keys=True,
                                                separators=(",", ":"), allow_nan=False)
@@ -682,16 +693,16 @@ class ForwardSessionRunner:
                     self._con.execute("INSERT INTO runner_data_rejections VALUES (?,?,?,?)",
                                       [session_id, body["rejection_id"], self._sha256(body), encoded])
                 elif kind == "paper_intent":
-                    request = body
+                    request = materialized
                     request_json = json.dumps(request, sort_keys=True, separators=(",", ":"), allow_nan=False)
                     request_hash = self._sha256(request)
                     self._con.execute("INSERT INTO paper_intents VALUES (?,?,?,?,?,?)",
                                       [session_id, request["order_id"], request["decision_id"],
                                        request["event_id"], request_hash, request_json])
                 elif kind == "execution_receipt":
-                    encoded_body = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                    encoded_body = json.dumps(materialized, sort_keys=True, separators=(",", ":"), allow_nan=False)
                     self._con.execute("INSERT INTO paper_execution_receipts VALUES (?,?,?,?)",
-                                      [session_id, body["order_id"], self._sha256(body), encoded_body])
+                                      [session_id, materialized["order_id"], self._sha256(materialized), encoded_body])
                 elif kind == "session_report":
                     encoded_body = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
                     self._con.execute("INSERT INTO runner_session_reports VALUES (?,?,?,?)",
@@ -1040,7 +1051,8 @@ class ForwardSessionRunner:
         if not existing:
             self._con.execute("INSERT INTO paper_intents VALUES (?, ?, ?, ?, ?, ?)",
                               [session_id, order_id, decision_id, event_id, request_sha, request_json])
-            self._append_audit("paper_intent", session_id, order_id, simulated_at, request)
+            self._append_audit("paper_intent", session_id, order_id, simulated_at,
+                               {**request, "provenance": self.provenance})
             self._con.commit()
 
         def persist_simulation() -> None:
@@ -1193,7 +1205,8 @@ class ForwardSessionRunner:
             self._con.execute("INSERT INTO paper_execution_receipts VALUES (?, ?, ?, ?)",
                               [session_id, order_id, digest, canonical])
             self._append_audit("execution_receipt", session_id, order_id,
-                               datetime.fromisoformat(body["simulated_at"]), body)
+                               datetime.fromisoformat(body["simulated_at"]),
+                               {**body, "provenance": self.provenance})
             if commit:
                 self._con.commit()
 

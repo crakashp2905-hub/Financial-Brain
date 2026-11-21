@@ -841,6 +841,21 @@ def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_p
     runner.close()
 
 
+def test_trading_audit_rows_bind_source_commit_and_executable_runner(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    rows = runner.records("s")["audit_log"]
+    for kind in ("market_event", "decision", "decision_manifest", "risk_verdict",
+                 "paper_intent", "execution_receipt"):
+        row = next(item for item in rows if item["kind"] == kind)
+        provenance = row["record"]["provenance"]
+        assert provenance["executable_entry_point"] == "ForwardSessionRunner"
+        assert provenance["source_tree_state"] in {"CLEAN", "DIRTY", "UNKNOWN"}
+        assert "source_commit" in provenance
+        assert "branch_ancestry_sha256" in provenance
+    runner.close()
+
+
 def test_lifecycle_event_and_audit_append_roll_back_and_resume_atomically(tmp_path, monkeypatch):
     runner = make_runner(tmp_path)
     record = {"session_id": "s", "occurred_at": NOW.isoformat(), "status": "OPEN"}

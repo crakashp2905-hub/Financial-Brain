@@ -7476,15 +7476,25 @@
     {
       "id": "SL-00-09",
       "text": "Add branch ancestry, source commit and executable entry point to every policy, experiment, quote and simulated trade.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/decision_manifest.py",
-        "src/financial_brain/forward_edge/evidence_bundle.py"
+        "src/financial_brain/forward_edge/provenance.py (captures HEAD commit, branch, parent-ancestry digest, tree state and executable entry point; unavailable Git values remain null)",
+        "src/financial_brain/forward_edge/session_runner.py (attaches provenance to append-only audit records for quotes, decisions, risk verdicts, manifests, intents and simulated fills)",
+        "tests/test_forward_edge_provenance.py",
+        "tests/test_forward_edge_session_runner.py::test_trading_audit_rows_bind_source_commit_and_executable_runner",
+        "docs/edge-program/source-inventory.v2.json (622 Python files)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json"
       ],
-      "blocker": "Decision/evidence lineage mechanisms exist, but source commit and executable entry-point coverage for every policy, experiment, quote and simulated trade is not proven.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": "New prospective-session trading audit records carry source provenance, but lineage is not yet proven for every historical policy, experiment, quote and simulated trade across all paper engines; dirty source trees are labeled rather than content-snapshotted, and Git ancestry/HEAD is local evidence rather than independent attestation.",
+      "last_audited_at_utc": "2026-11-21T16:05:00+05:30",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forward_edge_provenance.py",
+        "tests/test_forward_edge_session_runner.py",
+        "tests/test_decision_manifest.py"
+      ],
+      "test_result": "70 focused tests passed; Ruff clean; mypy clean for provenance.py and session_runner.py; source inventory and forward-engine graph freshness checks passed; git diff --check clean."
     },
     {
       "id": "SL-00-10",

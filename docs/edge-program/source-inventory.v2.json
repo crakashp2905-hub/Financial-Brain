@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 621,
+  "source_count": 622,
   "sources": [
     {
       "capability_ids": [],
@@ -3556,7 +3556,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/cli.py",
-      "source_sha256": "f5706059e835e4eee5a001df122de6f8993bbf427b50d447882d66bab09942e5",
+      "source_sha256": "95298b02934a00bda067b3b64aeed353e7fca03908429198ada75f88efb281ef",
       "test_paths": [
         "tests/test_forward_edge_cli.py",
         "tests/test_phase5_intraday_runner.py"
@@ -4773,6 +4773,23 @@
       "test_paths": []
     },
     {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "hashlib",
+        "json",
+        "pathlib",
+        "subprocess"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/provenance.py",
+      "source_sha256": "f8f2c3194cebea3387edf782af215f0c541e73c0757f3fdb62c3445645e00db2",
+      "test_paths": []
+    },
+    {
       "capability_ids": [
         "real-feed-kite-read-only"
       ],
@@ -5025,6 +5042,7 @@
         "financial_brain.forward_edge.market_data",
         "financial_brain.forward_edge.market_events",
         "financial_brain.forward_edge.paper_accounting",
+        "financial_brain.forward_edge.provenance",
         "financial_brain.forward_edge.quote_archive",
         "financial_brain.forward_edge.session_state",
         "financial_brain.forward_edge.venue_calendar",
@@ -5042,7 +5060,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "5cf3ffc2c1a38e6064faa87a80d452ad1305e632dba61e2f144ae0f15c4d778e",
+      "source_sha256": "07db86d3b722955d4178de2e1f6dd13d6dcba3fd5028915cae3a924886dd6c2c",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
@@ -10803,6 +10821,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 606,
-  "unassigned_role_count": 371
+  "unassessed_count": 607,
+  "unassigned_role_count": 372
 }
