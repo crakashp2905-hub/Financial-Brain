@@ -44,6 +44,20 @@ def test_catalogue_change_requires_new_version_and_source_edits_are_detected(tmp
         validate_catalogue(changed, REPO)
 
 
+def test_catalogue_hashes_are_stable_across_crlf_and_lf_worktrees(monkeypatch: pytest.MonkeyPatch) -> None:
+    expected = build_catalogue(REPO)
+    read_bytes = Path.read_bytes
+
+    def crlf_worktree_bytes(path: Path) -> bytes:
+        data = read_bytes(path)
+        if path.name in {"algorithm-source-registry.json", "ledger.jsonl"}:
+            return data.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+        return data
+
+    monkeypatch.setattr(Path, "read_bytes", crlf_worktree_bytes)
+    assert build_catalogue(REPO) == expected
+
+
 def test_missing_exclusion_reason_and_unknown_status_are_rejected() -> None:
     catalogue = build_catalogue(REPO)
     catalogue["candidates"][0]["exclusion_reason"] = ""

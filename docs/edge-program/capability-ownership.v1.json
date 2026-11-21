@@ -242,7 +242,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#A10 published price anomalies (16-anomaly family)",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -250,7 +250,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#B4 index mean reversion and VWAP (9-rule family)",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -258,7 +258,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#BAB betting against beta in futures",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -266,7 +266,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#C1 rich-basis carry",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -274,7 +274,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#D1 delivery share long-short in futures",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -282,7 +282,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#EAP earnings-announcement premium in futures",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -290,7 +290,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#F3 short build-up avoid filter",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -298,7 +298,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#I/S intraday and swing family on minute bars (9 rules)",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -306,7 +306,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#K7 chart and candle setups in futures (17-setup family)",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -314,7 +314,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#M1 cost-aware momentum book",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -322,7 +322,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#MF multi-factor quality value low-risk book",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -330,7 +330,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#N2F rejected results as hedged futures short",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -338,7 +338,7 @@
       "status": "FAILED",
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#X3 earnings surprise drift out of sample",
-      "source_sha256": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+      "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -346,7 +346,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-001",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -354,7 +354,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-002",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -362,7 +362,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-003",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -370,7 +370,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-004",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -378,7 +378,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-005",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -386,7 +386,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-006",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -394,7 +394,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-007",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -402,7 +402,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-008",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -410,7 +410,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-001",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -418,7 +418,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-002",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -426,7 +426,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-003",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -434,7 +434,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-004",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -442,7 +442,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-005",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -450,7 +450,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-006",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -458,7 +458,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-007",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -466,7 +466,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-008",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -474,7 +474,7 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-009",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
@@ -482,11 +482,11 @@
       "status": "EXPLORATORY",
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-010",
-      "source_sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
       "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     }
   ],
-  "strategy_catalogue_sha256": "863c57138ba785625169ad6d58e5c7475d16ac1ea086bdc6c084680ee1cf864b",
+  "strategy_catalogue_sha256": "92764e72bad129a784a6b7d761b971c2b0e1e69e98d4c6d8a4c3369ab713beb6",
   "module_inventory": [
     {
       "capability_id": "module:src/financial_brain/api/app.py",

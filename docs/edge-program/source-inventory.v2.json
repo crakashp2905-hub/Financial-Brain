@@ -3920,7 +3920,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/eligibility.py",
-      "source_sha256": "8f6e9058677c573f150bc5e319315e123f29f5170f228702e3d06298c7028454",
+      "source_sha256": "513169cb4f68fbbc7661aed0b30f312372684308fa48132ab9afabddfd946472",
       "test_paths": []
     },
     {

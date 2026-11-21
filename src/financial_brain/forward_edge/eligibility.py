@@ -39,15 +39,20 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _canonical_text_bytes(data: bytes) -> bytes:
+    """Hash checked-in text identically on CRLF and LF working trees."""
+    return data.replace(b"\r\n", b"\n")
+
+
 def build_catalogue(repo_root: Path) -> dict[str, Any]:
     """Build a deterministic, conservative catalogue from the checked-in source registries."""
     root = Path(repo_root)
     external_path = root / "docs/sources/algorithm-source-registry.json"
-    external_bytes = external_path.read_bytes()
+    external_bytes = _canonical_text_bytes(external_path.read_bytes())
     external = json.loads(external_bytes)
     external_hash = _sha256(external_bytes)
     trial_path = root / "docs/trials/ledger.jsonl"
-    trial_bytes = trial_path.read_bytes()
+    trial_bytes = _canonical_text_bytes(trial_path.read_bytes())
     trial_hash = _sha256(trial_bytes)
     trials = [json.loads(line) for line in trial_bytes.decode("utf-8").splitlines() if line.strip()]
     verdicts = {str(row["name"]): str(row.get("verdict", "UNVERDICTED")).upper()
