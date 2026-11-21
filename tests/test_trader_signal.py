@@ -9,6 +9,7 @@ from financial_brain.kernel.trader_signal import (
     EntryCondition, ExecutionIntent, ExecutionIntentType,
     ExpectedReturnDistribution, SignalContractError, SignalSide, TradePlan, TraderSignal,
     SignalLifecycle, SignalLifecycleEvent, SignalState,
+    compare_alerts,
 )
 
 
@@ -228,3 +229,45 @@ def test_signal_lifecycle_rejects_backwards_event_time():
         lifecycle.advance(SignalLifecycleEvent(
             SignalState.SHADOW, t0 + timedelta(seconds=1), "shadow",
         ))
+
+
+def test_alert_deduplication_preserves_versions_price_changes_and_event_order():
+    prior = _signal()
+    prior_plan = TradePlan(
+        instrument_id="NSE:INFY", side="BUY", entry_condition=EntryCondition.LIMIT_ZONE,
+        entry_low=Decimal("100"), entry_high=Decimal("101"), stop_price=Decimal("95"),
+        target_price=Decimal("110"), invalidation="support break", max_holding_sessions=5,
+        tick_size=Decimal("0.05"), lot_size=Decimal("1"), unit_precision=0,
+        paper_execution_eligible=True,
+    )
+    same = _signal(decision_at=prior.decision_at + timedelta(seconds=2))
+    assert compare_alerts(
+        prior, prior_plan, same, prior_plan, deduplication_window=timedelta(minutes=1),
+        material_price_move_bps=Decimal("25"),
+    ).reason == "REPEATED_ALERT"
+
+    new_version = _signal(
+        decision_at=prior.decision_at + timedelta(seconds=2), strategy_version="2.2.0",
+    )
+    assert compare_alerts(
+        prior, prior_plan, new_version, prior_plan, deduplication_window=timedelta(minutes=1),
+        material_price_move_bps=Decimal("25"),
+    ).reason == "NEW_RULE_OR_TARGET"
+
+    changed_plan = TradePlan(
+        instrument_id="NSE:INFY", side="BUY", entry_condition=EntryCondition.LIMIT_ZONE,
+        entry_low=Decimal("102"), entry_high=Decimal("103"), stop_price=Decimal("98"),
+        target_price=Decimal("112"), invalidation="support break", max_holding_sessions=5,
+        tick_size=Decimal("0.05"), lot_size=Decimal("1"), unit_precision=0,
+        paper_execution_eligible=True,
+    )
+    moved = compare_alerts(
+        prior, prior_plan, same, changed_plan, deduplication_window=timedelta(minutes=1),
+        material_price_move_bps=Decimal("25"),
+    )
+    assert moved.reason == "MATERIAL_PRICE_CHANGE" and not moved.duplicate
+    with pytest.raises(SignalContractError, match="backwards"):
+        compare_alerts(
+            same, prior_plan, prior, prior_plan, deduplication_window=timedelta(minutes=1),
+            material_price_move_bps=Decimal("25"),
+        )

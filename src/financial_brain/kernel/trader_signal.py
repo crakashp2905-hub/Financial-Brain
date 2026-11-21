@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 import hashlib
@@ -407,9 +407,59 @@ class SignalLifecycle:
         return SignalLifecycle(self.signal_id, (*self.events, event))
 
 
+@dataclass(frozen=True, slots=True)
+class AlertDeduplication:
+    duplicate: bool
+    reason: str
+    price_move_bps: Decimal | None
+
+
+def compare_alerts(
+    prior_signal: TraderSignal,
+    prior_plan: TradePlan,
+    candidate_signal: TraderSignal,
+    candidate_plan: TradePlan,
+    *,
+    deduplication_window: timedelta,
+    material_price_move_bps: Decimal | str | int,
+) -> AlertDeduplication:
+    """Compare alerts without collapsing new versions or meaningful price changes."""
+    if candidate_signal.decision_at.astimezone(timezone.utc) < prior_signal.decision_at.astimezone(timezone.utc):
+        raise SignalContractError("alert event time cannot move backwards")
+    if deduplication_window <= timedelta(0):
+        raise SignalContractError("deduplication_window must be positive")
+    try:
+        threshold = Decimal(material_price_move_bps)
+    except (InvalidOperation, TypeError) as exc:
+        raise SignalContractError("material_price_move_bps must be decimal") from exc
+    if not threshold.is_finite() or threshold < 0:
+        raise SignalContractError("material_price_move_bps must be finite and non-negative")
+    same_rule = (
+        prior_signal.strategy_id == candidate_signal.strategy_id
+        and prior_signal.strategy_version == candidate_signal.strategy_version
+        and prior_signal.strategy_hash == candidate_signal.strategy_hash
+    )
+    same_target = (prior_signal.instrument_id == candidate_signal.instrument_id
+                   and prior_signal.side == candidate_signal.side
+                   and prior_plan.side == candidate_plan.side)
+    if not same_rule or not same_target:
+        return AlertDeduplication(False, "NEW_RULE_OR_TARGET", None)
+    elapsed = (candidate_signal.decision_at.astimezone(timezone.utc)
+               - prior_signal.decision_at.astimezone(timezone.utc))
+    if elapsed > deduplication_window:
+        return AlertDeduplication(False, "OUTSIDE_DEDUPLICATION_WINDOW", None)
+    prior_mid = (prior_plan.entry_low + prior_plan.entry_high) / Decimal(2)
+    candidate_mid = (candidate_plan.entry_low + candidate_plan.entry_high) / Decimal(2)
+    move_bps = abs(candidate_mid - prior_mid) / prior_mid * Decimal(10_000)
+    if move_bps > threshold:
+        return AlertDeduplication(False, "MATERIAL_PRICE_CHANGE", move_bps)
+    return AlertDeduplication(True, "REPEATED_ALERT", move_bps)
+
+
 __all__ = [
-    "DecisionAssessment", "DecisionFeature", "DeskId", "EvidenceTier",
+    "AlertDeduplication", "DecisionAssessment", "DecisionFeature", "DeskId", "EvidenceTier",
     "EntryCondition", "ExecutionIntent", "ExecutionIntentType",
     "ExpectedReturnDistribution", "SignalContractError", "SignalLifecycle",
     "SignalLifecycleEvent", "SignalSide", "SignalState", "TradePlan", "TraderSignal",
+    "compare_alerts",
 ]
