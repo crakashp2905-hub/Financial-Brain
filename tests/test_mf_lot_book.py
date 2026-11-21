@@ -18,6 +18,11 @@ from financial_brain.paper.mf_lot_book import (
     redeem,
     subscribe,
 )
+from financial_brain.paper.mf_redemption_settlement import (
+    make_cash_available,
+    request_redemption,
+    settlement_snapshot,
+)
 from financial_brain.providers.mf_scheme_terms import (
     ExitLoadBand,
     ExitRestriction,
@@ -145,6 +150,7 @@ def _redeem(
     terms=None,
     permissions=None,
     decision_at=DECISION,
+    nav_per_unit=100,
     account_id="paper-1",
     **kwargs,
 ):
@@ -161,7 +167,7 @@ def _redeem(
         isin="INF000000001",
         redemption_date=redemption_date,
         redemption_units=units,
-        nav_per_unit=100,
+        nav_per_unit=nav_per_unit,
         terms=selected_terms,
         permissions=selected_permissions,
         decision_at=decision_at,
@@ -443,5 +449,166 @@ def test_migration_adds_identity_and_lock_fields_to_existing_paper_tables(tmp_pa
         event_columns = {
             row[1] for row in con.execute("PRAGMA table_info('mf_paper_events')").fetchall()
         }
+        settlement_columns = {
+            row[1] for row in con.execute(
+                "PRAGMA table_info('mf_paper_redemption_settlements')"
+            ).fetchall()
+        }
+        transition_columns = {
+            row[1] for row in con.execute(
+                "PRAGMA table_info('mf_paper_redemption_transitions')"
+            ).fetchall()
+        }
     assert {"plan", "option", "lock_in_until"} <= lot_columns
     assert {"plan", "option"} <= event_columns
+    assert {"state", "request_sha256", "net_inr", "payout_sha256"} <= settlement_columns
+    assert {"sequence", "state", "event_sha256", "evidence_json"} <= transition_columns
+
+
+def _persist_nav_observation(con, *, observation_id, nav_date, nav, available_at):
+    con.execute("""INSERT INTO mf_nav_observations (
+        observation_id, scheme_code, isin_growth, isin_reinvest, scheme_name,
+        fund_house, scheme_type, plan, option, nav, nav_date, lake_key, row_number,
+        row_sha256, source_published_at, observed_at, ingested_at)
+        VALUES (?, '100001', 'INF000000001', NULL, 'Example Fund', 'AMC', 'EQUITY',
+                'DIRECT', 'GROWTH', ?, ?, 'lake-nav', 1, ?, NULL, ?, ?)""",
+        [observation_id, nav, nav_date, HASH_A, available_at, available_at])
+
+
+def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(connection):
+    con = connection
+    create_account(con, "paper-1", 1000, now=NOW)
+    _, terms = _subscribe(
+        con, event_id="sub-settlement", lot_id="lot-settlement", amount=1000,
+        schedule=(), digest=HASH_A,
+    )
+    request_at = datetime(2026, 1, 10, 12, tzinfo=timezone.utc)
+    request = request_redemption(
+        con, account_id="paper-1", settlement_id="red-settlement",
+        scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+        requested_units=4, requested_on=date(2026, 1, 10), requested_at=request_at,
+        now=request_at,
+    )
+    assert request["state"] == "REDEMPTION_PENDING"
+    assert account_snapshot(con, "paper-1")["cash_inr"] == Decimal("0")
+    replayed_request = request_redemption(
+        con, account_id="paper-1", settlement_id="red-settlement",
+        scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+        requested_units=4, requested_on=date(2026, 1, 10), requested_at=request_at,
+        now=request_at,
+    )
+    assert replayed_request["status"] == "already_submitted"
+
+    with pytest.raises(MfPaperBookError, match="exceed the paper-book precision"):
+        request_redemption(
+            con, account_id="paper-1", settlement_id="red-precision",
+            scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+            requested_units="0.0000000000000000001",
+            requested_on=date(2026, 1, 10), requested_at=request_at, now=request_at,
+        )
+
+    with pytest.raises(MfPaperBookError, match="unreserved open units"):
+        request_redemption(
+            con, account_id="paper-1", settlement_id="red-overlap",
+            scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+            requested_units=7, requested_on=date(2026, 1, 10), requested_at=request_at,
+            now=request_at,
+        )
+
+    nav_date = date(2026, 1, 16)
+    nav_available_at = datetime(2026, 1, 16, 10, 5, tzinfo=timezone.utc)
+    _persist_nav_observation(
+        con, observation_id="nav-settlement", nav_date=nav_date, nav=120,
+        available_at=nav_available_at,
+    )
+    decision_at = datetime(2026, 1, 16, 11, tzinfo=timezone.utc)
+    result = _redeem(
+        con, event_id="redeem-settlement", redemption_date=nav_date, units=4,
+        terms=terms, decision_at=decision_at, nav_per_unit=120,
+        settlement_id="red-settlement", nav_observation_id="nav-settlement",
+        payout_due_date=date(2026, 1, 19),
+    )
+    assert result["state"] == "PAYOUT_PENDING"
+    assert result["net_inr"] == Decimal("480.00")
+    snapshot = account_snapshot(con, "paper-1")
+    assert snapshot["cash_inr"] == Decimal("0")
+    assert snapshot["pending_redemption_inr"] == Decimal("480.00")
+    assert snapshot["cash_plus_pending_redemption_inr"] == Decimal("480.00")
+
+    settlement = settlement_snapshot(
+        con, account_id="paper-1", settlement_id="red-settlement",
+    )
+    assert settlement["state"] == "PAYOUT_PENDING"
+    assert settlement["nav_observation_id"] == "nav-settlement"
+    assert [item[0] for item in settlement["transitions"]] == [
+        "REDEMPTION_PENDING", "VALUE_CONFIRMED", "PAYOUT_PENDING",
+    ]
+
+    early = datetime(2026, 1, 18, 12, tzinfo=timezone.utc)
+    with pytest.raises(MfPaperBookError, match="cannot precede its due date"):
+        make_cash_available(
+            con, account_id="paper-1", settlement_id="red-settlement",
+            available_at=early, now=early,
+        )
+    assert account_snapshot(con, "paper-1")["cash_inr"] == Decimal("0")
+    observed_at = datetime(2026, 1, 19, 12, tzinfo=timezone.utc)
+    with pytest.raises(MfPaperBookError, match="PAPER_SIMULATION permission"):
+        make_cash_available(
+            con, account_id="paper-1", settlement_id="red-settlement",
+            available_at=observed_at, basis="OBSERVED_EVIDENCE",
+            evidence_ref="payout-receipt", source_id="AMC", source_sha256=HASH_A,
+            permissions=(), now=observed_at,
+        )
+    assert account_snapshot(con, "paper-1")["cash_inr"] == Decimal("0")
+
+    paid_at = datetime(2026, 1, 19, 12, tzinfo=timezone.utc)
+    payout = make_cash_available(
+        con, account_id="paper-1", settlement_id="red-settlement",
+        available_at=paid_at, now=paid_at,
+    )
+    assert payout["state"] == "CASH_AVAILABLE"
+    assert payout["basis"] == "SIMULATED_ASSUMPTION"
+    assert account_snapshot(con, "paper-1")["cash_inr"] == Decimal("480.00")
+    assert account_snapshot(con, "paper-1")["pending_redemption_inr"] == Decimal("0")
+
+    replay = make_cash_available(
+        con, account_id="paper-1", settlement_id="red-settlement",
+        available_at=paid_at, now=paid_at,
+    )
+    assert replay["status"] == "already_applied"
+    assert account_snapshot(con, "paper-1")["cash_inr"] == Decimal("480.00")
+    assert settlement_snapshot(
+        con, account_id="paper-1", settlement_id="red-settlement",
+    )["state"] == "CASH_AVAILABLE"
+
+
+def test_settlement_value_requires_exact_as_known_nav_observation(connection):
+    con = connection
+    create_account(con, "paper-1", 1000, now=NOW)
+    _, terms = _subscribe(
+        con, event_id="sub-nav-gate", lot_id="lot-nav-gate", amount=1000,
+        schedule=(), digest=HASH_A,
+    )
+    requested_at = datetime(2026, 1, 10, 12, tzinfo=timezone.utc)
+    request_redemption(
+        con, account_id="paper-1", settlement_id="red-nav-gate",
+        scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+        requested_units=1, requested_on=date(2026, 1, 10), requested_at=requested_at,
+        now=requested_at,
+    )
+    nav_date = date(2026, 1, 16)
+    nav_at = datetime(2026, 1, 16, 10, tzinfo=timezone.utc)
+    _persist_nav_observation(
+        con, observation_id="nav-exact", nav_date=nav_date, nav=100,
+        available_at=nav_at,
+    )
+    with pytest.raises(MfPaperBookError, match="as-known observation"):
+        _redeem(
+            con, event_id="redeem-nav-gate", redemption_date=nav_date, units=1,
+            terms=terms, decision_at=datetime(2026, 1, 16, 11, tzinfo=timezone.utc),
+            settlement_id="red-nav-gate", nav_observation_id="wrong-observation",
+            payout_due_date=date(2026, 1, 19),
+        )
+    assert settlement_snapshot(
+        con, account_id="paper-1", settlement_id="red-nav-gate",
+    )["state"] == "REDEMPTION_PENDING"

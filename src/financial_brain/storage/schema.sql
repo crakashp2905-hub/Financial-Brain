@@ -744,6 +744,57 @@ CREATE TABLE IF NOT EXISTS mf_paper_events (
     PRIMARY KEY (account_id, event_id)
 );
 
+-- MF redemption requests reserve units at submission, realize value only after the
+-- eligible NAV is known, and keep proceeds unavailable until the payout transition.
+CREATE TABLE IF NOT EXISTS mf_paper_redemption_settlements (
+    account_id VARCHAR NOT NULL,
+    settlement_id VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    isin VARCHAR NOT NULL,
+    requested_units DECIMAL(38, 18) NOT NULL CHECK (requested_units > 0),
+    requested_on DATE NOT NULL,
+    requested_at TIMESTAMPTZ NOT NULL,
+    state VARCHAR NOT NULL CHECK (state IN (
+        'REDEMPTION_PENDING', 'VALUE_CONFIRMED', 'PAYOUT_PENDING', 'CASH_AVAILABLE'
+    )),
+    redemption_event_id VARCHAR,
+    eligible_nav_date DATE,
+    nav_observation_id VARCHAR,
+    nav_per_unit DECIMAL(38, 18),
+    gross_inr DECIMAL(38, 18),
+    exit_load_inr DECIMAL(38, 18),
+    net_inr DECIMAL(38, 18),
+    payout_due_date DATE,
+    payout_available_at TIMESTAMPTZ,
+    payout_basis VARCHAR,
+    payout_evidence_ref VARCHAR,
+    payout_source_id VARCHAR,
+    payout_source_sha256 VARCHAR,
+    request_sha256 VARCHAR NOT NULL,
+    value_sha256 VARCHAR,
+    payout_sha256 VARCHAR,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, settlement_id),
+    UNIQUE (account_id, redemption_event_id)
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_redemption_transitions (
+    account_id VARCHAR NOT NULL,
+    settlement_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    state VARCHAR NOT NULL CHECK (state IN (
+        'REDEMPTION_PENDING', 'VALUE_CONFIRMED', 'PAYOUT_PENDING', 'CASH_AVAILABLE'
+    )),
+    transitioned_at TIMESTAMPTZ NOT NULL,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, settlement_id, sequence),
+    UNIQUE (account_id, settlement_id, state)
+);
+
 -- Durable paper-book application of already-attested, point-in-time MF economic
 -- flows. The source event remains in mf_scheme_flows; this account-scoped journal
 -- makes unit/cash adjustments idempotent and auditable across restart.
