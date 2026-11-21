@@ -586,22 +586,41 @@
     {
       "id": "FB-0206",
       "text": "Implement market-session safe tick/bar aggregation for ETFs, using the same low-latency code as equities but ETF-specific gates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_bars.py aggregates only normalized NSE/BSE tick/quote events within the source-versioned VenueCalendar session bounds",
+        "Decision-time availability cutoff is enforced; missing buckets remain absent; cumulative volume never goes negative and first-observation volume is conservatively zero",
+        "tests/test_etf_bars.py: 3 passed for session boundaries, sourced calendar absence, venue mismatch, interval validation and future-available event exclusion"
+      ],
+      "blocker": "Partial: session-safe event aggregation is implemented, but it is not yet wired into ForwardSessionRunner or the existing equities bar service, and ETF-specific production gates/coverage are not validated.",
+      "last_audited_at_utc": "2026-11-21T14:24:43+00:00",
+      "commit": "26bd526e",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_bars.py tests/test_etf_prices.py tests/test_etf_reference.py tests/test_etf_valuation.py -q: 28 passed",
+        "Ruff, targeted mypy, source inventory and dependency graph checks passed"
+      ],
+      "test_result": "No ETF bar is emitted outside a sourced exchange session or before the event is available to the decision, and empty intervals are not synthesized."
     },
     {
       "id": "FB-0207",
       "text": "Implement `iNAV` freshness, source, timestamp, quote-vs-iNAV premium/discount and refusal to compare asynchronous values.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_valuation.py::compare_quote_to_inav requires a complete executable two-sided quote and matching ETF identity",
+        "Both quote and iNAV must be available by decision_time, inside caller-supplied age budgets, and within a caller-supplied event-time skew; otherwise it raises a typed refusal",
+        "Successful comparison uses quote midpoint and exact Decimal iNAV, reports premium/discount bps, timestamps, age/skew and both content hashes",
+        "tests/test_etf_valuation.py: fresh comparison, stale quote, stale iNAV, future availability, asynchronous observations and mismatched identity"
+      ],
+      "blocker": "Partial: fail-closed freshness and comparison logic is implemented, but age/skew budgets are not calibrated against a permissioned live ETF feed and the result is not yet exposed in trader UI or integrated into the paper decision pipeline.",
+      "last_audited_at_utc": "2026-11-21T14:24:43+00:00",
+      "commit": "26bd526e",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_valuation.py -q: 6 passed",
+        "Ruff and targeted mypy passed"
+      ],
+      "test_result": "The system refuses stale, future-available, asynchronous, non-executable or mismatched quote/iNAV inputs instead of manufacturing a premium/discount."
     },
     {
       "id": "FB-0208",
