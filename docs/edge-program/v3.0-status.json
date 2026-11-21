@@ -1513,22 +1513,42 @@
     {
       "id": "FB-0459",
       "text": "Reject nonsensical plans: long SL >= entry, long TP <= entry, short SL <= entry, short TP >= entry, zero/negative tick prices, or incompatible option expiries, unless an explicitly validated exception is versioned.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/trader_signal.py TradePlan rejects nonpositive prices/tick/lot, malformed entry zones, a long stop at/above entry or target at/below entry, and a short stop at/below entry or target at/above entry.",
+        "These plan invariants run before an eligible plan can be used and are covered by focused negative-case tests.",
+        "Option expiry/contract compatibility checks and exchange tick rounding/revalidation are not implemented in this trade-plan model."
+      ],
+      "blocker": "Partial: common long/short plan contradictions are rejected, but option contract-expiry compatibility and post-rounding validation remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T18:04:30+00:00",
+      "commit": "d82fed62",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-trader-plan2 tests/test_trader_signal.py tests/test_candidate_publication.py -q: 29 passed",
+        "python -m pytest --basetemp .pytest-risk-sizing tests/test_risk_sizing.py -q: 4 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "Nonsensical long/short price relationships fail closed; risk sizing respects the tightest supplied cap, floors lots, and blocks zero-feasible-quantity plans."
     },
     {
       "id": "FB-0460",
       "text": "Size position using stop-distance risk budget, available cash, contract lot size, notional caps, depth and correlated exposure; mark stop-loss risk as *planned*, never a guaranteed upper bound during gaps.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/risk_sizing.py caps quantity by stop-distance risk budget, available capital, maximum notional, depth participation, correlated-exposure room and intended size.",
+        "The result floors to the instrument lot size and unit precision, reports binding limits, and abstains when no feasible lot remains.",
+        "All portfolio exposure/correlation/depth/capital values are caller-supplied snapshots; margin, portfolio recomputation and runner/OMS sizing enforcement remain outstanding."
+      ],
+      "blocker": "Partial: deterministic stop-risk and capacity-aware sizing is implemented, but live portfolio-state integration, margin rules, and universal OMS enforcement are not connected.",
+      "last_audited_at_utc": "2026-11-21T18:04:30+00:00",
+      "commit": "d82fed62",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-trader-plan2 tests/test_trader_signal.py tests/test_candidate_publication.py -q: 29 passed",
+        "python -m pytest --basetemp .pytest-risk-sizing tests/test_risk_sizing.py -q: 4 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "Nonsensical long/short price relationships fail closed; risk sizing respects the tightest supplied cap, floors lots, and blocks zero-feasible-quantity plans."
     },
     {
       "id": "FB-0461",

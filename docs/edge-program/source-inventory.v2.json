@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 655,
+  "source_count": 656,
   "sources": [
     {
       "capability_ids": [],
@@ -7883,6 +7883,22 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "decimal",
+        "trader_signal"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/risk_sizing.py",
+      "source_sha256": "9df1d0cba18c82ce334b52a9d9da2d5df3a15bba0db1155c2e9cefc1f215054d",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "datetime",
         "decimal"
       ],
@@ -11436,6 +11452,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 640,
-  "unassigned_role_count": 382
+  "unassessed_count": 641,
+  "unassigned_role_count": 383
 }
