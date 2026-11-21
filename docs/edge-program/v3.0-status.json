@@ -442,12 +442,25 @@
     {
       "id": "FB-0109",
       "text": "Implement effective-dated transaction calendars and fund-specific overrides from the relevant SID/KIM/AMC notice; a universal cutoff is not sufficient.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/fund_transactions.py::SchemeTransactionRule stores scheme/action-specific cutoffs, effective dates, publication time, timezone, pre/post-cutoff and closed-day lags, and source hash/reference.",
+        "SchemeTransactionCalendar uses the scheme's own source-bounded BusinessCalendar; no universal cutoff or weekday/holiday inference exists.",
+        "NAV assignment distinguishes PURCHASE/REDEMPTION/SWITCH actions, applies fund-specific lags and fails closed for missing, future-published, overlapping or out-of-calendar rules.",
+        "tests/test_kernel_fund_transactions.py covers fund/action overrides, cutoff boundaries, holiday/weekend next-business-day behavior, publication lookahead, overlap and missing-rule refusal."
+      ],
+      "blocker": "Partial: the contract is implemented, but SID/KIM/AMC notices have not yet been ingested into a source-reviewed rule catalogue, and NAV assignment is not yet wired into the mutual-fund paper subscription/redemption accounting path.",
+      "last_audited_at_utc": "2026-11-21T14:00:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_fund_transactions.py tests/test_kernel_trading_clock.py tests/test_kernel_instrument_history.py tests/test_kernel_architecture.py tests/test_kernel_instruments.py tests/test_forward_edge_registry.py tests/test_checklist_audit_export.py tests/test_launch_gates.py -q: 53 passed",
+        "Ruff: passed",
+        "targeted mypy: passed",
+        "source inventory and forward-engine graph freshness checks: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "The model requires scheme-specific published rules and a separate scheme calendar for each action. It never substitutes a global NAV cutoff; production source coverage and MF lifecycle integration remain outstanding."
     },
     {
       "id": "FB-0110",
