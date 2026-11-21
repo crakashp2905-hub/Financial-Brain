@@ -7408,14 +7408,22 @@
     {
       "id": "SL-00-06",
       "text": "Migrate legacy intraday, swing, options, ETF and MF books to a canonical portfolio ledger without inventing fills or changing past marks.",
-      "source_checked": false,
-      "status": "NOT_STARTED",
+    "source_checked": true,
+    "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/state-ownership.v1.json"
+      "src/financial_brain/portfolio/canonical_ledger.py (append-only cross-asset event store and deterministic as-of projection for explicit cash flows, fills, fees and marks)",
+      "UNRESOLVED_POSITION events preserve source-reported positions without creating fills and force projection_complete=false",
+      "docs/edge-program/canonical-portfolio-ledger.v1.md (schema, semantics, verification and explicit migration limits)",
+      "tests/test_canonical_portfolio_ledger.py (5 synthetic tests cover equities, ETFs, options, fractional MF units, idempotency, atomic imports, as-of marks and unresolved rows)",
+      "docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json regenerated and verified against current source"
       ],
-      "blocker": "Ownership manifest identifies separate forward, broker and swing scopes; a canonical migrated multi-asset portfolio ledger was not evidenced.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+    "blocker": "No source-specific adapters or runtime book databases have been migrated. Existing local formats include strategy outcomes and snapshots without consistent fill IDs, contract identity, costs or mark lineage; missing facts must remain unresolved. Cash/position accounting for settlement, tax, corporate actions, FX, margin, option lifecycle and fund allotment remains unimplemented.",
+    "last_audited_at_utc": "2026-11-21T08:37:56+00:00",
+    "commit": "15c3057d",
+    "test_evidence": [
+      "tests/test_canonical_portfolio_ledger.py"
+    ],
+    "test_result": "5 synthetic canonical-ledger tests passed; Ruff and mypy passed; source inventory and forward-engine dependency graph freshness checks passed. No production or local runtime books were migrated in this increment."
     },
     {
       "id": "SL-00-07",
@@ -7468,7 +7476,7 @@
       "src/financial_brain/evaluation/evidence_tiers.py (fixtures remain historical/research claims and cannot be upgraded by observed or custody fields)",
       "tests/test_evidence_labels.py (mode separation, complete prospective session, custody gate, replay/fixture non-promotion, and export consistency)",
       "tests/test_evidence_claims.py (source-aware claim promotion only for complete observed sessions; fixtures stay replicated)",
-      "docs/edge-program/source-inventory.v2.json refreshed and verified with scripts/source_inventory.py --check (619 Python files)",
+      "docs/edge-program/source-inventory.v2.json refreshed and verified with scripts/source_inventory.py --check (620 Python files)",
       "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy and git diff --check passed"
       ],
     "blocker": null,
@@ -7484,7 +7492,7 @@
       "tests/test_forward_edge_f08.py",
       "tests/test_forward_edge_falsification.py"
     ],
-    "test_result": "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy, source-inventory freshness, and git diff --check passed. The first hosted CI run failed at stale source-inventory verification; the inventory has since been regenerated and its local --check passes. CI rerun remains pending."
+    "test_result": "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy, source-inventory freshness, dependency-graph freshness, and git diff --check passed. Hosted runs first exposed stale generated inventory and then stale dependency-graph snapshots; both have since been refreshed. Run 44885143362 failed at dependency-graph freshness; a new CI run is expected after the next push."
     },
     {
       "id": "SL-00-11",
