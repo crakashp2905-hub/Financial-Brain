@@ -16,10 +16,14 @@ Tier 1: AMFI is the industry body that publishes these NAVs, not a scraper of th
 """
 from __future__ import annotations
 
+import time
 from collections import Counter
+from collections.abc import Callable
 from datetime import date, datetime, timedelta
-from typing import Any, TypedDict
+from math import isfinite
+from typing import Any, Protocol, TypedDict
 
+from ..forward_edge.data_permissions import DataPermission, DataUse
 from .base import FetchError, FetchResult, Provider
 
 NAV_ALL = "https://portal.amfiindia.com/spages/NAVAll.txt"
@@ -34,6 +38,14 @@ class AmfiQualityReport(TypedDict):
     stale_scheme_codes: list[str]
     unavailable: list[dict[str, str]]
     stale_after_days: int
+
+
+class HistoryWindowAdapter(Protocol):
+    """Adapter whose declared source identity is checked against data rights."""
+
+    source_id: str
+
+    def fetch_window(self, start_date: date, end_date: date) -> FetchResult: ...
 
 
 def bounded_history_windows(
@@ -60,6 +72,68 @@ def bounded_history_windows(
         windows.append((window_start, window_end))
         window_start = window_end + timedelta(days=1)
     return windows
+
+
+def fetch_authorized_history_windows(
+    start_date: date,
+    end_date: date,
+    *,
+    adapter: HistoryWindowAdapter,
+    source_id: str,
+    permission_checked_on: date,
+    permissions: tuple[DataPermission, ...],
+    max_attempts: int = 3,
+    min_interval_seconds: float = 2.0,
+    retry_backoff_seconds: float = 1.0,
+    sleep: Callable[[float], None] = time.sleep,
+    monotonic: Callable[[], float] = time.monotonic,
+) -> list[tuple[date, date, FetchResult]]:
+    """Fetch through a permission-gated adapter using windows no longer than 90 days.
+
+    This function does not choose an endpoint or grant source rights. The injected
+    adapter must implement the separately approved access method. Effective RESEARCH
+    and RETENTION permissions are checked before calling it; only retryable source
+    failures are retried, and every request is separated by the configured interval.
+    """
+    if not source_id.strip():
+        raise ValueError("source_id is required")
+    if adapter.source_id != source_id:
+        raise ValueError("history adapter source_id does not match permission source_id")
+    if (isinstance(max_attempts, bool) or not isinstance(max_attempts, int)
+            or max_attempts < 1):
+        raise ValueError("max_attempts must be a positive integer")
+    if (not isfinite(min_interval_seconds) or not isfinite(retry_backoff_seconds)
+            or min_interval_seconds < 0 or retry_backoff_seconds < 0):
+        raise ValueError("rate interval and retry backoff cannot be negative")
+    for use in (DataUse.RESEARCH, DataUse.RETENTION):
+        if not any(permission.allows(
+            source_id=source_id, use=use, on=permission_checked_on
+        ) for permission in permissions):
+            raise PermissionError(
+                f"source {source_id} lacks effective {use.value} permission"
+            )
+
+    windows = bounded_history_windows(start_date, end_date)
+    fetched: list[tuple[date, date, FetchResult]] = []
+    last_request_at: float | None = None
+    for window_start, window_end in windows:
+        for attempt in range(max_attempts):
+            if last_request_at is not None:
+                wait_seconds = min_interval_seconds - (monotonic() - last_request_at)
+                if wait_seconds > 0:
+                    sleep(wait_seconds)
+            last_request_at = monotonic()
+            try:
+                result = adapter.fetch_window(window_start, window_end)
+                if not isinstance(result, FetchResult):
+                    raise TypeError("history adapter must return FetchResult")
+                fetched.append((window_start, window_end, result))
+                break
+            except FetchError as exc:
+                if not exc.retryable or attempt + 1 == max_attempts:
+                    raise
+                sleep(retry_backoff_seconds * (2 ** attempt))
+    return fetched
 
 
 class AmfiNav(Provider):
