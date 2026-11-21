@@ -13,12 +13,25 @@
     {
       "id": "FB-0001",
       "text": "Record current commit SHA, tree, dependency lock, test count and CI results; create new feature branch and do not rewrite the protected trial ledger.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/checklist-baseline.v1.json (starting commit, tree, branch/upstream, worktree/blob dependency-lock hashes, 3,733-test collection count, CI run 44893421153 and protected pin result)",
+        "scripts/audit_checklist_baseline.py (verifies source commit/tree and dependency-lock blob hashes)",
+        "tests/test_checklist_baseline.py",
+        "scripts/trial_preservation_audit.py --check (9 protected files verify unchanged)",
+        "GitHub Actions run 44893421153: two reproducibility jobs passed; Ubuntu and Windows test jobs failed at market-data source rights inventory validation",
+        "scripts/validate_market_data_sources.py and tests/test_market_data_source_validator.py (fix for optional runtime-source alias)"
+      ],
+      "blocker": "The starting head CI failed in both OS test jobs on the strict market-data source validator. The validator fix is implemented locally, but the new pushed head must receive green Ubuntu and Windows CI before this checklist item can be complete.",
+      "last_audited_at_utc": "2026-11-21T10:20:06Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_checklist_baseline.py",
+        "tests/test_market_data_source_validator.py",
+        "scripts/trial_preservation_audit.py --check"
+      ],
+      "test_result": "Starting checkout baseline recorded and self-validated; protected trial preservation audit passes. Three focused tests pass, market-data validator passes, Ruff/mypy and source/graph freshness checks pass. Hosted CI on source commit 3b68ca06 completed with two reproduction jobs successful and both test jobs failing at the source-matrix validator; corrected validator will be validated on the next head."
     },
     {
       "id": "FB-0002",

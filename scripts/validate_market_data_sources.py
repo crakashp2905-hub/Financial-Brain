@@ -13,6 +13,7 @@ REQUIRED_SOURCE_FIELDS = {
     "id", "provider", "category", "products", "status", "access", "latency",
     "retention", "evidence_paths", "limitations",
 }
+OPTIONAL_SOURCE_FIELDS = {"runtime_source_id"}
 
 
 def validate(path: Path, root: Path) -> list[str]:
@@ -33,9 +34,12 @@ def validate(path: Path, root: Path) -> list[str]:
         return errors + ["sources must be a nonempty list"]
 
     seen: set[str] = set()
+    seen_runtime: set[str] = set()
     for index, source in enumerate(sources):
         label = f"source {index}"
-        if not isinstance(source, dict) or set(source) != REQUIRED_SOURCE_FIELDS:
+        if (not isinstance(source, dict)
+                or not REQUIRED_SOURCE_FIELDS.issubset(source)
+                or set(source) - REQUIRED_SOURCE_FIELDS - OPTIONAL_SOURCE_FIELDS):
             errors.append(f"{label}: missing or unexpected fields")
             continue
         identifier = source["id"]
@@ -44,6 +48,14 @@ def validate(path: Path, root: Path) -> list[str]:
         else:
             seen.add(identifier)
             label = identifier
+        runtime_source_id = source.get("runtime_source_id")
+        if runtime_source_id is not None and (
+                not isinstance(runtime_source_id, str) or not runtime_source_id.strip()):
+            errors.append(f"{label}: runtime_source_id must be a nonempty string")
+        elif runtime_source_id is not None:
+            if runtime_source_id in seen_runtime:
+                errors.append(f"{label}: duplicate runtime_source_id")
+            seen_runtime.add(runtime_source_id)
         if source["status"] not in STATUSES:
             errors.append(f"{label}: unsupported status")
         if not isinstance(source["products"], list) or not source["products"]:
