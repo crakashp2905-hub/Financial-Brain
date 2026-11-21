@@ -72,6 +72,10 @@ def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
     assert snapshot["cash"] == {}
     assert snapshot["unresolved_positions"][0]["metadata"]["reason"] == "legacy row has no execution receipt"
     assert snapshot["projection_complete"] is False
+    assert snapshot["pnl_promotion_gate"]["status"] == "BLOCKED"
+    assert "UNRESOLVED_LEGACY_POSITIONS" in snapshot["pnl_promotion_gate"]["blockers"]
+    assert "INCOMPLETE_POSITION_PROJECTION" in snapshot["pnl_promotion_gate"]["blockers"]
+    assert "OPENING_BALANCE_MISSING" in snapshot["pnl_promotion_gate"]["blockers"]
 
 
 def test_sleeves_keep_separate_basis_and_pnl_before_consolidated_netting(tmp_path):

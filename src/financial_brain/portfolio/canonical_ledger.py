@@ -380,6 +380,16 @@ class CanonicalPortfolioLedger:
                 "currency": rows[0]["currency"],
             })
         has_opening_balance = any(_is_opening_balance(event) for event in events)
+        projection_complete = not unresolved and all(
+            p["mark"] is not None or p["quantity"] == 0 for p in rendered_positions
+        )
+        pnl_promotion_blockers: list[str] = []
+        if unresolved:
+            pnl_promotion_blockers.append("UNRESOLVED_LEGACY_POSITIONS")
+        if not projection_complete:
+            pnl_promotion_blockers.append("INCOMPLETE_POSITION_PROJECTION")
+        if not has_opening_balance:
+            pnl_promotion_blockers.append("OPENING_BALANCE_MISSING")
         return {"account_id": account_id, "as_of": as_of, "cash": cash,
                 "opening_balance_supplied": has_opening_balance,
                 "cash_scope": "COMPLETE_WITH_OPENING_BALANCE" if has_opening_balance
@@ -387,8 +397,12 @@ class CanonicalPortfolioLedger:
                 "positions": sorted(rendered_positions, key=lambda p: (str(p["asset_class"]), str(p["instrument_id"]))),
                 "consolidated_positions": consolidated_positions,
                 "unresolved_positions": unresolved,
-                "projection_complete": not unresolved and all(p["mark"] is not None or p["quantity"] == 0
-                                                               for p in rendered_positions)}
+                "projection_complete": projection_complete,
+                "pnl_promotion_gate": {
+                    "status": "BLOCKED" if pnl_promotion_blockers else "ELIGIBLE_FOR_REVIEW",
+                    "blockers": pnl_promotion_blockers,
+                    "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+                }}
 
 
 __all__ = ["AssetClass", "CanonicalLedgerError", "CanonicalPortfolioLedger", "EventKind", "PortfolioEvent"]

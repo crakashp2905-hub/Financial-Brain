@@ -99,6 +99,8 @@ def test_source_book_migration_is_read_only_idempotent_and_reports_unavailable_d
     assert second["sources"]["swing"]["events"]["added"] == 0
     assert first["unavailable_desks"] == ["options", "ETF-specific", "mutual_fund"]
     assert first["original_databases_modified"] is False
+    assert first["pnl_promotion_gate"]["status"] == "BLOCKED"
+    assert "OPENING_BALANCE_MISSING" in first["pnl_promotion_gate"]["reason_codes"]
     ledger = CanonicalPortfolioLedger(output)
     assert len(ledger.events("intraday:v1:live")) == 3
     assert len(ledger.events("swing:swing-v1:live")) == 2
@@ -108,4 +110,7 @@ def test_source_book_migration_is_read_only_idempotent_and_reports_unavailable_d
     assert audit["ledger"]["missing_source_events"] == 0
     assert audit["ledger"]["mismatched_source_events"] == 0
     assert audit["ledger"]["ledger_events_without_scanned_sources"] == 0
+    assert audit["pnl_promotion_gate"]["status"] == "BLOCKED"
+    assert audit["pnl_promotion_gate"]["blocked_accounts"] == 2
+    assert "OPENING_BALANCE_MISSING" in audit["pnl_promotion_gate"]["reason_codes"]
     assert audit["source_rows_contain_no_trade_level_values"] is True

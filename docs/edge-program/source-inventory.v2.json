@@ -9124,7 +9124,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/canonical_ledger.py",
-      "source_sha256": "26cf2399ac36a02a87d86f62ada48512b6aaf07d0644d69452d9fe4879fb1c84",
+      "source_sha256": "ac0bf8fc1dc603e8009513cbb060ec75ab05f721e86001a7e7cde822fd6d5445",
       "test_paths": []
     },
     {
@@ -9180,7 +9180,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/legacy_migration.py",
-      "source_sha256": "18075efc0cad6b2e8e0d7d33de077f34061fa4923b4fadaee4b913e4a9523328",
+      "source_sha256": "1ad429189af4743aba71f660fa37b3e8c470663cc7717f25c05a16194df2bc3c",
       "test_paths": []
     },
     {

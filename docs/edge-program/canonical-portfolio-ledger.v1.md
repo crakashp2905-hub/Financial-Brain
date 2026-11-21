@@ -17,6 +17,14 @@ means the local event projection has no unresolved positions and has marks for a
 positions. It is not broker reconciliation or a claim that cash/charges match an external
 account. A row with no explicit execution is never silently turned into a fill.
 
+Each account snapshot also carries `pnl_promotion_gate`. It blocks account P&L promotion for
+unresolved legacy positions, incomplete position projection, or missing opening cash. The
+migration and audit CLIs surface the same gate. `ELIGIBLE_FOR_REVIEW` only means these local
+book-integrity blockers are absent; it does not establish positive returns, independent
+attestation, statistical validity, or automatic strategy promotion. An unresolved exit can
+only be resolved after receipt-backed execution facts are recorded and the source audit is
+re-run; changing a label or synthesizing a fill cannot release the gate.
+
 ## Legacy paper-book migration
 
 `financial_brain.portfolio.legacy_migration` maps persisted rows from the existing intraday
@@ -61,11 +69,11 @@ paper-book reconciliation only, not a broker reconciliation or performance evalu
 
 ## Migration status and limits
 
-The in-repository code now includes adapters for the two local equity paper books. Broader
-multi-asset migration remains partial: there are no verified source adapters or source-book
-rows for options, ETF-specific trading or mutual-fund orders in the scanned databases.
-Opening cash, source-specific charge verification and external account reconciliation are
-also missing. Any new source row without fill and mark provenance must remain unresolved.
+The in-repository code now includes source adapters for the two local equity paper books.
+Broader multi-asset migration remains partial: no source-book rows for options, ETF-specific
+trading or mutual-fund orders were found in the scanned databases. Opening cash, source-specific
+charge verification and external account reconciliation are also missing. Any new source row
+without fill and mark provenance must remain unresolved.
 
 The current projection also does not model settlement calendars, taxes, corporate actions,
 FX conversion, margin, exercise/assignment, option expiry, fund allotment/redemption pending

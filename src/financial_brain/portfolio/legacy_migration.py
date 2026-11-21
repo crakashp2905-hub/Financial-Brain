@@ -255,7 +255,7 @@ def migrate_legacy_paper_books(data_dir: Path, ledger_path: Path) -> dict[str, o
     report: dict[str, object] = {"ledger_path": str(ledger_path), "sources": {}, "accounts": {},
                                  "unavailable_desks": ["options", "ETF-specific", "mutual_fund"],
                                  "original_databases_modified": False}
-    summaries: dict[str, object] = {}
+    summaries: dict[str, dict[str, Any]] = {}
     for name, (path, table, convert) in sources.items():
         rows = _read_rows(path, table)
         events: list[PortfolioEvent] = []
@@ -281,8 +281,23 @@ def migrate_legacy_paper_books(data_dir: Path, ledger_path: Path) -> dict[str, o
             "unresolved_records": len(snapshot["unresolved_positions"]),
             "projection_complete": snapshot["projection_complete"],
             "cash_scope": snapshot["cash_scope"],
+            "pnl_promotion_gate": snapshot["pnl_promotion_gate"],
         }
     report["accounts"] = account_summaries
+    blocked_accounts = [account for account in account_summaries.values()
+                        if account["pnl_promotion_gate"]["status"] == "BLOCKED"]
+    promotion_reasons = {reason for account in blocked_accounts
+                         for reason in account["pnl_promotion_gate"]["blockers"]}
+    if any(int(source["rejected_rows"]) > 0 for source in summaries.values()):
+        promotion_reasons.add("SOURCE_ROWS_REJECTED")
+    if not account_summaries:
+        promotion_reasons.add("NO_IMPORTED_ACCOUNTS")
+    report["pnl_promotion_gate"] = {
+        "status": "BLOCKED" if promotion_reasons else "ELIGIBLE_FOR_REVIEW",
+        "blocked_accounts": len(blocked_accounts),
+        "reason_codes": sorted(promotion_reasons),
+        "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+    }
     return report
 
 
@@ -327,7 +342,20 @@ def audit_legacy_migration(data_dir: Path, ledger_path: Path, *, captured_at_utc
         account_summaries.append({"account_id": account_id, "event_count": len(ledger.events(account_id)),
                                   "open_positions": open_count, "unresolved_records": unresolved_count,
                                   "projection_complete": snapshot["projection_complete"],
-                                  "opening_balance_supplied": snapshot["opening_balance_supplied"]})
+                                  "opening_balance_supplied": snapshot["opening_balance_supplied"],
+                                  "pnl_promotion_gate": snapshot["pnl_promotion_gate"]})
+    promotion_blocked = [row for row in account_summaries
+                         if row["pnl_promotion_gate"]["status"] == "BLOCKED"]
+    promotion_reasons = sorted({reason for row in promotion_blocked
+                                for reason in row["pnl_promotion_gate"]["blockers"]})
+    source_integrity_errors = {
+        "missing_source_events": sum(value["verification"]["missing"] for value in source_report.values()),
+        "mismatched_source_events": sum(value["verification"]["mismatched"] for value in source_report.values()),
+        "rejected_source_rows": rejected_total,
+        "unscanned_ledger_events": ledger.event_count() - verified_total,
+    }
+    if any(source_integrity_errors.values()):
+        promotion_reasons.append("SOURCE_RECONCILIATION_FAILED")
     return {
         "schema": "fb.canonical-paper-ledger-migration-audit.v1",
         "captured_at_utc": captured_at_utc,
@@ -343,7 +371,14 @@ def audit_legacy_migration(data_dir: Path, ledger_path: Path, *, captured_at_utc
             "accounts": account_summaries, "open_sleeve_positions_across_run_books": open_positions,
             "unresolved_records": unresolved, "incomplete_projection_accounts": incomplete_accounts,
             "accounts_without_opening_balance": missing_opening_balances,
+            "source_integrity_errors": source_integrity_errors,
             "note": "Position counts include separate historical replay/challenger books; they are not unique live holdings.",
+        },
+        "pnl_promotion_gate": {
+            "status": "BLOCKED" if promotion_reasons else "ELIGIBLE_FOR_REVIEW",
+            "blocked_accounts": len(promotion_blocked),
+            "reason_codes": sorted(set(promotion_reasons)),
+            "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
         },
         "unavailable_desk_books_in_scanned_sources": ["options", "ETF-specific", "mutual_fund"],
         "not_a_broker_reconciliation_or_profitability_report": True,

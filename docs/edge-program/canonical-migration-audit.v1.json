@@ -1,5 +1,5 @@
 {
-  "captured_at_utc": "2026-11-21T08:57:44+00:00",
+  "captured_at_utc": "2026-11-21T09:10:40+00:00",
   "ledger": {
     "accounts": [
       {
@@ -7,6 +7,15 @@
         "event_count": 3774,
         "open_positions": 51,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "UNRESOLVED_LEGACY_POSITIONS",
+            "INCOMPLETE_POSITION_PROJECTION",
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": false,
         "unresolved_records": 51
       },
@@ -15,6 +24,13 @@
         "event_count": 1068,
         "open_positions": 0,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -23,6 +39,13 @@
         "event_count": 20,
         "open_positions": 10,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -31,6 +54,13 @@
         "event_count": 461,
         "open_positions": 10,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -39,6 +69,13 @@
         "event_count": 20,
         "open_positions": 10,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -47,6 +84,13 @@
         "event_count": 97,
         "open_positions": 20,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -55,6 +99,13 @@
         "event_count": 40,
         "open_positions": 20,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -63,6 +114,13 @@
         "event_count": 100,
         "open_positions": 20,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -71,6 +129,15 @@
         "event_count": 96,
         "open_positions": 19,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "UNRESOLVED_LEGACY_POSITIONS",
+            "INCOMPLETE_POSITION_PROJECTION",
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": false,
         "unresolved_records": 1
       },
@@ -79,6 +146,13 @@
         "event_count": 40,
         "open_positions": 20,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -87,6 +161,15 @@
         "event_count": 96,
         "open_positions": 19,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "UNRESOLVED_LEGACY_POSITIONS",
+            "INCOMPLETE_POSITION_PROJECTION",
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": false,
         "unresolved_records": 1
       },
@@ -95,6 +178,13 @@
         "event_count": 306,
         "open_positions": 0,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -103,6 +193,15 @@
         "event_count": 16927,
         "open_positions": 47,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "UNRESOLVED_LEGACY_POSITIONS",
+            "INCOMPLETE_POSITION_PROJECTION",
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": false,
         "unresolved_records": 3
       },
@@ -111,6 +210,13 @@
         "event_count": 100,
         "open_positions": 50,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -119,6 +225,13 @@
         "event_count": 100,
         "open_positions": 50,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -127,6 +240,13 @@
         "event_count": 97,
         "open_positions": 20,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -135,6 +255,13 @@
         "event_count": 40,
         "open_positions": 20,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       },
@@ -143,6 +270,13 @@
         "event_count": 97,
         "open_positions": 20,
         "opening_balance_supplied": false,
+        "pnl_promotion_gate": {
+          "blockers": [
+            "OPENING_BALANCE_MISSING"
+          ],
+          "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+          "status": "BLOCKED"
+        },
         "projection_complete": true,
         "unresolved_records": 0
       }
@@ -158,10 +292,26 @@
     "rejected_source_rows": 0,
     "source_events_verified": 23479,
     "source_expected_events": 23479,
+    "source_integrity_errors": {
+      "mismatched_source_events": 0,
+      "missing_source_events": 0,
+      "rejected_source_rows": 0,
+      "unscanned_ledger_events": 0
+    },
     "total_events": 23479,
     "unresolved_records": 56
   },
   "not_a_broker_reconciliation_or_profitability_report": true,
+  "pnl_promotion_gate": {
+    "blocked_accounts": 18,
+    "note": "ELIGIBLE_FOR_REVIEW is not a profitability claim or automatic strategy promotion.",
+    "reason_codes": [
+      "INCOMPLETE_POSITION_PROJECTION",
+      "OPENING_BALANCE_MISSING",
+      "UNRESOLVED_LEGACY_POSITIONS"
+    ],
+    "status": "BLOCKED"
+  },
   "schema": "fb.canonical-paper-ledger-migration-audit.v1",
   "source_databases_read_only": true,
   "source_rows_contain_no_trade_level_values": true,
