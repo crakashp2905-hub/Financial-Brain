@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from ..providers.mf_scheme_master import SchemeMasterError, SchemeMasterRecord
 from ..forward_edge.data_permissions import DataPermission
+from ..kernel.trading_clock import IST
 
 
 def _record_payload(record: SchemeMasterRecord) -> dict[str, object]:
@@ -67,7 +68,7 @@ def as_known_on(con, scheme_code: str, plan: str, option: str, isin: str, *,
     """Resolve one effective and already-published version; ambiguity fails closed."""
     if decision_at.tzinfo is None or decision_at.utcoffset() is None:
         raise SchemeMasterError("decision_at must be timezone-aware")
-    local_date = decision_at.date()
+    local_date = decision_at.astimezone(IST).date()
     rows = con.execute("""SELECT record_id, scheme_code, plan, option, isin,
         effective_from, effective_to, structure, investment_style, asset_category,
         category_label, fund_house, riskometer, benchmark_tri, manager, objective,

@@ -155,3 +155,25 @@ def test_invalid_source_hash_and_naive_timestamps_are_rejected():
         _record(source_sha256="NOT-A-HASH")
     with pytest.raises(SchemeMasterError, match="published_at must be timezone-aware"):
         _record(published_at=datetime(2026, 1, 1))
+
+
+def test_effective_date_uses_indian_local_calendar_date(tmp_path):
+    record = _record(
+        effective_from=date(2026, 11, 11), effective_to=None,
+        published_at=datetime(2026, 11, 10, 18, tzinfo=timezone.utc),
+        observed_at=datetime(2026, 11, 10, 18, 15, tzinfo=timezone.utc),
+    )
+    record.require_permissions(_permissions())
+    db = _database(tmp_path)
+    with db.connect() as con:
+        persist(con, record, permissions=_permissions())
+        before_ist_midnight = as_known_on(
+            con, "100001", "DIRECT", "GROWTH", "INF000000001",
+            decision_at=datetime(2026, 11, 10, 17, tzinfo=timezone.utc),
+        )
+        after_ist_midnight = as_known_on(
+            con, "100001", "DIRECT", "GROWTH", "INF000000001",
+            decision_at=datetime(2026, 11, 10, 20, tzinfo=timezone.utc),
+        )
+        assert before_ist_midnight is None
+        assert after_ist_midnight is not None

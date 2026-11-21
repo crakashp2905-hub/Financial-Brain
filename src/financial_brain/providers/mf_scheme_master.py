@@ -6,6 +6,7 @@ from datetime import date, datetime
 from enum import StrEnum
 
 from ..forward_edge.data_permissions import DataPermission, DataUse
+from ..kernel.trading_clock import IST
 
 
 class SchemeMasterError(ValueError):
@@ -102,7 +103,7 @@ class SchemeMasterRecord:
 
     def require_permissions(self, permissions: tuple[DataPermission, ...]) -> None:
         """Require separate source rights for research and durable retention."""
-        acquired_on = self.observed_at.date()
+        acquired_on = self.observed_at.astimezone(IST).date()
         for use in (DataUse.RESEARCH, DataUse.RETENTION):
             if not any(p.allows(source_id=self.source_id, use=use, on=acquired_on)
                        for p in permissions):
