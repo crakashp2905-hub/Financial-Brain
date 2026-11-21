@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 660,
+  "source_count": 661,
   "sources": [
     {
       "capability_ids": [],
@@ -8877,6 +8877,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "math",
+        "options",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/options_plan.py",
+      "source_sha256": "c49d9077b66232402ac41703486cd2f6f39a0626b368e9751b7cedc20d66e357",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections",
         "dataclasses",
         "datetime",
@@ -11530,6 +11548,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 645,
+  "unassessed_count": 646,
   "unassigned_role_count": 387
 }

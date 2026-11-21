@@ -1827,12 +1827,18 @@
     {
       "id": "FB-0476",
       "text": "For options, emit the precise `CE/PE`, strike, expiry, token, side, lots, premium entry band, SL/TP premium or risk terms, and underlying/context invalidation; default to long premiums or defined-risk spreads.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/options_plan.py::build_long_option_plan emits an exact paper-only BUY plan with CE/PE, underlying, strike, expiry, tradingsymbol, token, lot size, quantity, observed bid/ask entry band, premium stop/target, and directional underlying invalidation.",
+        "The plan fails closed on stale/future quotes, insufficient visible ask depth, invalid premium ordering, wrong invalidation direction and targets that do not clear estimated round-trip charges.",
+        "Existing paper/options.py, options_runner.py and options_spread.py provide executable-quote long-premium replay and defined-risk debit verticals; short-premium uncovered orders are not enabled by this plan.",
+        "Remaining: this is a plan adapter, not an independently validated options signal generator; per-contract cost/fill calibration and expiry/settlement handling remain external."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0476-final4 tests/test_paper_options_plan.py tests/test_paper_options.py tests/test_paper_options_runner.py tests/test_paper_options_spread.py -q: 15 passed; Ruff and mypy passed"
     },
     {
       "id": "FB-0477",
