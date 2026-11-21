@@ -17,6 +17,8 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from financial_brain.forward_edge.approvals import Approval, ApprovalError, validate_approval
+from financial_brain.forward_edge.charter import CharterError, ExperimentCharter
+from financial_brain.forward_edge.decision_custody import CohortSchedule
 
 LEDGER_REL = "docs/trials/ledger.jsonl"
 PINS_REL = "docs/forward-edge/protected-pins.json"
@@ -142,6 +144,36 @@ def load_programs(repo_root: Path) -> list[dict]:
     return [item[2] for item in ordered]
 
 
+def protected_trial_scope_sha256(charter: ExperimentCharter, schedule: CohortSchedule) -> str:
+    """Hash the exact charter and its cohort schedule into the approval scope."""
+    if not isinstance(charter, ExperimentCharter) or not isinstance(schedule, CohortSchedule):
+        raise TrialGovernanceError("protected trial requires a typed experiment charter and cohort schedule")
+    charter_sha = charter.sha256()
+    if schedule.charter_sha256 != charter_sha:
+        raise TrialGovernanceError("cohort schedule is bound to a different experiment charter")
+    if not schedule.cohorts:
+        raise TrialGovernanceError("protected trial cohort schedule cannot be empty")
+    # CohortSchedule validates ordering and overlap, but dates and coverage are checked
+    # here because this is the policy boundary, not a general-purpose serialization type.
+    windows: list[tuple[date, date]] = []
+    try:
+        for cohort in schedule.cohorts:
+            if not cohort.cohort_id.strip():
+                raise ValueError("cohort ID is empty")
+            start, end = date.fromisoformat(cohort.start), date.fromisoformat(cohort.end)
+            if end < start:
+                raise ValueError("cohort end precedes its start")
+            windows.append((start, end))
+        charter_start, charter_end = date.fromisoformat(charter.start_on), date.fromisoformat(charter.end_on)
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise TrialGovernanceError("charter/cohort schedule contains invalid dates or IDs") from exc
+    if any(start < charter_start or end > charter_end for start, end in windows):
+        raise TrialGovernanceError("cohort schedule extends outside the charter's frozen dates")
+    payload = json.dumps({"charter_sha256": charter_sha, "cohort_schedule_sha256": schedule.sha256()},
+                         sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def assert_new_protected_trial_allowed(
     repo_root: Path,
     *,
@@ -150,6 +182,8 @@ def assert_new_protected_trial_allowed(
     approvals: tuple[Approval, ...] = (),
     now: datetime,
     scope_sha256: str,
+    charter: ExperimentCharter | None = None,
+    cohort_schedule: CohortSchedule | None = None,
 ) -> BudgetStatus:
     """Raise :class:`TrialGovernanceError` unless a new protected trial has explicit, valid, human authority."""
     if not trial_name.strip():
@@ -194,6 +228,24 @@ def assert_new_protected_trial_allowed(
             owner_id = str(program.get("authorized_owner_id", "")).strip()
             if not owner_id or matches[-1].actor_id != owner_id:
                 raise TrialGovernanceError(f"{kind} must be approved by configured owner {owner_id or '[unset]'}")
+    if charter is None or cohort_schedule is None:
+        raise TrialGovernanceError("new protected trial needs an exact frozen charter and cohort schedule")
+    if charter.charter_id != trial_name:
+        raise TrialGovernanceError("charter ID must match the protected trial name")
+    if charter.start_on != proposed_on.isoformat():
+        raise TrialGovernanceError("charter prospective start must equal the proposed trial date")
+    try:
+        charter_start, charter_end = date.fromisoformat(charter.start_on), date.fromisoformat(charter.end_on)
+        if not charter_start <= proposed_on <= charter_end:
+            raise TrialGovernanceError("proposed trial date falls outside the frozen charter")
+    except (CharterError, TypeError, ValueError) as exc:
+        raise TrialGovernanceError("protected trial charter is invalid") from exc
+    expected_scope = protected_trial_scope_sha256(charter, cohort_schedule)
+    if not any(date.fromisoformat(cohort.start) <= proposed_on <= date.fromisoformat(cohort.end)
+               for cohort in cohort_schedule.cohorts):
+        raise TrialGovernanceError("proposed trial date is not covered by the frozen cohort schedule")
+    if scope_sha256 != expected_scope:
+        raise TrialGovernanceError("approval scope hash must bind the exact charter and cohort schedule")
     return status
 
 

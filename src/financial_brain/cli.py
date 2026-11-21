@@ -49,6 +49,27 @@ def cmd_agent_eval(args) -> int:
     return 0 if result["failed"] == 0 else 1
 
 
+def cmd_learning_audit(args) -> int:
+    """Fail-closed readiness check for merged dependencies, checklist evidence and data permissions."""
+    from pathlib import Path
+
+    from .learning_audit import audit
+
+    result = audit(Path(args.repo))
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print(f"learning audit: {result['status']} ({result['blocker_count']} blocker(s))")
+        for check in result["checks"]:
+            print(f"  {'PASS' if check['passed'] else 'BLOCKED'} {check['name']}: "
+                  f"{len(check['blockers'])} issue(s)")
+        for blocker in result["blockers"][:20]:
+            print(f"  - {blocker}")
+        if result["blocker_count"] > 20:
+            print(f"  ... {result['blocker_count'] - 20} more; use --json for the full list")
+    return 0 if result["status"] == "READY" else 1
+
+
 def cmd_trader_core(args) -> int:
     """Read-only integrated status of the trader's saved research artifacts."""
     from .interfaces.trader_core import status
@@ -2605,6 +2626,12 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("migrate", help="create/update the schema").set_defaults(fn=cmd_migrate)
     sub.add_parser("status", help="what the system currently holds").set_defaults(fn=cmd_status)
     sub.add_parser("agent-eval", help="run versioned read-only agent guardrail cases").set_defaults(fn=cmd_agent_eval)
+    g = sub.add_parser("learning", help="fail-closed learning readiness gates")
+    learning_sub = g.add_subparsers(dest="learning_action", required=True)
+    a = learning_sub.add_parser("audit", help="audit merged dependencies, evidence and market-data permissions")
+    a.add_argument("--repo", default=".", help="repository root (default: current directory)")
+    a.add_argument("--json", action="store_true", help="emit the full machine-readable audit result")
+    a.set_defaults(fn=cmd_learning_audit)
     g = sub.add_parser("trader-core", help="read-only integrated trader research status")
     g.add_argument("--limit", type=int, default=20)
     g.set_defaults(fn=cmd_trader_core)
