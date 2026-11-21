@@ -7444,7 +7444,7 @@
       ],
       "blocker": "The required UNRESOLVED labels and P&L promotion block are implemented, but the 51 source rows contain no recorded exit and no actual Kite/broker execution receipts were available to reconcile them. Keep them unresolved; resolve only after receipt-backed execution facts are added and re-audited.",
       "last_audited_at_utc": "2026-11-21T09:10:40+00:00",
-      "commit": null,
+      "commit": "bf594362",
       "test_evidence": [
         "tests/test_canonical_portfolio_ledger.py",
         "tests/test_legacy_portfolio_migration.py"
