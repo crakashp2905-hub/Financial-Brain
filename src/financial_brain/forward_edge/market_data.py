@@ -198,7 +198,8 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
     return MarketEvent(event_id=event_id, kind=kind, venue=venue.upper(),
                        instrument_id=f"{venue.upper()}:{symbol}", event_time=timestamp,
                        received_at=received_at, available_at=available_at, payload=payload,
-                       source="KITE_CONNECT_READ_ONLY", evidence_id=packet_hash)
+                       source="KITE_CONNECT_READ_ONLY", evidence_id=packet_hash,
+                       source_at=timestamp, exchange_at=timestamp)
 
 
 def archive_kite_quote_batch(archive: QuoteArchive, quotes: dict[str, dict[str, Any]], *,

@@ -352,12 +352,24 @@
     {
       "id": "FB-0105",
       "text": "Store source timestamp, exchange timestamp when present, receipt timestamp, available-to-strategy timestamp, published-at and ingested-at.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/market_events.py::MarketEvent stores event_time, received_at and available_at; optional source_at, exchange_at and published_at are timezone-normalized, serialized and included in content hashes only when explicitly supplied.",
+        "src/financial_brain/forward_edge/market_data.py::normalize_kite_quote records the observed Kite source and exchange timestamps independently from local receipt/availability.",
+        "src/financial_brain/forward_edge/session_runner.py persists ingested_at and ingest_clock_source in runner_events and the append-only audit; records() exports the stored ingest timestamp.",
+        "tests/test_forward_edge_market_events.py and tests/test_forward_edge_kite_market_data.py cover clock-field round trip, publication ordering and explicit Kite source/exchange clocks.",
+        "tests/test_forward_edge_session_runner.py verifies session ingestion/recovery behavior; three focused suites passed."
+      ],
+      "blocker": "Partial: event, Kite quote and paper-runner timestamps are represented and persisted, but there is no repository-wide data-contract audit proving source/exchange/published/ingested clocks survive every provider, filing, NAV, replay and export path. Older records with no such timestamps cannot be backfilled.",
+      "last_audited_at_utc": "2026-11-21T13:27:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_market_events.py tests/test_forward_edge_kite_market_data.py tests/test_forward_edge_session_runner.py -q: 86 passed",
+        "ruff check on changed market-event and Kite-normalization modules/tests: passed",
+        "targeted mypy for market_events.py and market_data.py: passed"
+      ],
+      "test_result": "The live quote and forward paper event path preserves source/exchange, receipt, availability and ingestion times, and event envelopes can preserve publication time when supplied. System-wide coverage remains incomplete."
     },
     {
       "id": "FB-0106",

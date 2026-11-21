@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 624,
+  "source_count": 625,
   "sources": [
     {
       "capability_ids": [],
@@ -4358,7 +4358,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_data.py",
-      "source_sha256": "e801016909fe4df37352e1607932f1251b6c0e9fb28d76cf51a80d2883f79cc8",
+      "source_sha256": "0cc00df6add583051e7bc6ea7a4623414abddcf6c47e7c813329c63f4f61bfec",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"
@@ -4380,7 +4380,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_events.py",
-      "source_sha256": "07daa588ec0314bc1b000646c3ec5900597928a6e14e8252d211115449e7b804",
+      "source_sha256": "e14b54137372eccaf85fd35004f824ed5d6dca3a5b67de14fc4994e565fcf6c0",
       "test_paths": []
     },
     {
@@ -7691,6 +7691,28 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "enum",
+        "financial_brain.forward_edge.venue_calendar",
+        "hashlib",
+        "json",
+        "types",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/trading_clock.py",
+      "source_sha256": "2e7f1e01cbb2c561cec048cb3acd01d362466415cf4e46cf46c2e58c262aebe6",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "decimal",
         "math",
         "re"
@@ -10858,6 +10880,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 609,
-  "unassigned_role_count": 373
+  "unassessed_count": 610,
+  "unassigned_role_count": 374
 }
