@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 626,
+  "source_count": 627,
   "sources": [
     {
       "capability_ids": [],
@@ -7150,6 +7150,24 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "enum",
+        "hashlib",
+        "json"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/instrument_history.py",
+      "source_sha256": "5adcc44f47d7e439821b1afc5c4acc58ee5d3c171b535d877d18061cf14306bd",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "decimal",
         "enum",
         "financial_brain.kernel.market_rules",
@@ -10897,6 +10915,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 611,
-  "unassigned_role_count": 374
+  "unassessed_count": 612,
+  "unassigned_role_count": 375
 }

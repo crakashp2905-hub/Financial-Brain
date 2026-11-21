@@ -419,12 +419,25 @@
     {
       "id": "FB-0108",
       "text": "Preserve ticker changes, corporate actions, renamed/merged schemes and ISIN changes without silently changing historical signals.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/instrument_history.py defines source-hashed ticker/ISIN changes, corporate actions, scheme renames and mergers with effective and publication timestamps; merger events can link multiple successors.",
+        "InstrumentHistory is append-only and idempotent by event ID; conflicting reuse fails. as-of queries hide not-yet-published events and preserve original identifiers rather than rewriting historical signals.",
+        "src/financial_brain/securities/master.py and src/financial_brain/securities/succession.py already retain listing/ISIN succession evidence; src/financial_brain/corpactions/actions.py stores corporate actions and computes price factors from unadjusted prices.",
+        "tests/test_kernel_instrument_history.py covers publication-time visibility, successor linkage, merger fan-out, idempotence and conflict refusal."
+      ],
+      "blocker": "Partial: the transition contract is implemented, but it is not yet populated from the exchange/AMC/AMFI sources or wired into canonical holdings migrations, historical signal identifiers and cost-basis transformations. Old records cannot be rewritten without source evidence.",
+      "last_audited_at_utc": "2026-11-21T13:52:00+00:00",
+      "commit": "ab08f4a4",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_instrument_history.py tests/test_kernel_architecture.py tests/test_kernel_instruments.py tests/test_forward_edge_registry.py tests/test_checklist_audit_export.py tests/test_launch_gates.py -q: 43 passed",
+        "Ruff: passed",
+        "targeted mypy: passed",
+        "source inventory and forward-engine graph freshness checks: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "Sourced, published identity transitions can be represented without changing a historical instrument id. Source ingestion and downstream holdings/cost-basis integration remain partial."
     },
     {
       "id": "FB-0109",
