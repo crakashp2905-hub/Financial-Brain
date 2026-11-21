@@ -671,6 +671,31 @@ CREATE TABLE IF NOT EXISTS mf_scheme_flows (
     observed_at      TIMESTAMPTZ NOT NULL
 );
 
+-- Source-hashed monthly/quarterly portfolio rows, available only after both
+-- publication and observation clocks. Decimal weights and debt metrics retain their
+-- exact source representation; the same disclosure date can have later corrections.
+CREATE TABLE IF NOT EXISTS mf_portfolio_disclosures (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    scheme_isin     VARCHAR NOT NULL,
+    disclosure_date DATE NOT NULL,
+    asset_class     VARCHAR NOT NULL,
+    weight_percent  VARCHAR NOT NULL,
+    asset_id        VARCHAR,
+    asset_name      VARCHAR,
+    sector          VARCHAR,
+    credit_rating   VARCHAR,
+    modified_duration_years VARCHAR,
+    yield_to_maturity_percent VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
