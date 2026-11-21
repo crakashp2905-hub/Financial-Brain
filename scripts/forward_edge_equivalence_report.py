@@ -73,7 +73,9 @@ def build_report() -> dict:
             "not compare historical source revisions, live market sessions, or strategy performance."
         ),
         "source_check": {
-            "golden_signatures_sha256": hashlib.sha256(GOLDEN_PATH.read_bytes()).hexdigest(),
+            "golden_signatures_sha256": hashlib.sha256(
+                GOLDEN_PATH.read_bytes().replace(b"\r\n", b"\n")
+            ).hexdigest(),
             "fixtures": len(rows),
             "all_legacy_fixture_contracts_match": all(row["legacy_pipeline"]["matches_frozen_golden"] for row in rows),
             "all_integrated_fixture_contracts_match": all(row["integrated_paper_journal"]["matches_fixture_contract"] for row in rows),

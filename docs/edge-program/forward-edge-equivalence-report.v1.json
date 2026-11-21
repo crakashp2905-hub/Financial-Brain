@@ -209,7 +209,7 @@
     "all_legacy_fixture_contracts_match": true,
     "all_physical_orders_disabled": true,
     "fixtures": 8,
-    "golden_signatures_sha256": "dcd63f152ad9459bc98ad8e010ad7fc30e33a1c4d4ead6a38931199c6ffabeac",
+    "golden_signatures_sha256": "61408f2c20fe5454d929b72eaed19874edd3655de8486132ce8660aa5ab1af6a",
     "no_trade_fixture_has_zero_intents": true
   }
 }
