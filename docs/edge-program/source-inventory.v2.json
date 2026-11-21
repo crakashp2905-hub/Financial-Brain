@@ -7915,6 +7915,8 @@
         "datetime",
         "decimal",
         "enum",
+        "hashlib",
+        "json",
         "re",
         "typing",
         "uuid"
@@ -7923,7 +7925,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/trader_signal.py",
-      "source_sha256": "a2962b736c49d21e9184e952dd5bb7c316ace4d718d7ec0fe273f8454cffad42",
+      "source_sha256": "0d9d6ed0b67102cc7622c1e5f2f58a1cc82c7190e7a5863c1e357deb66c3e6be",
       "test_paths": []
     },
     {
