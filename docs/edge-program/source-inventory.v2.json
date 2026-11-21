@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 664,
+  "source_count": 665,
   "sources": [
     {
       "capability_ids": [],
@@ -8843,6 +8843,31 @@
         "decimal",
         "forward_edge.data_permissions",
         "hashlib",
+        "ingest.mf_scheme_flows",
+        "ingest.mf_scheme_terms",
+        "json",
+        "kernel.trading_clock",
+        "mf_lot_book",
+        "providers.mf_scheme_flows",
+        "providers.mf_scheme_terms",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_flow_book.py",
+      "source_sha256": "a57a49981b30827a2b5d757c6c9f4b33239808f1e98913e10d6ac996a0693c29",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
+        "forward_edge.data_permissions",
+        "hashlib",
         "ingest.mf_scheme_terms",
         "json",
         "kernel.trading_clock",
@@ -11614,6 +11639,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 649,
+  "unassessed_count": 650,
   "unassigned_role_count": 388
 }
