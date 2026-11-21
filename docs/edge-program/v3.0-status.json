@@ -7603,7 +7603,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T07:57:00+00:00",
-      "commit": null,
+      "commit": "513e840c",
       "test_evidence": [
         "tests/test_checklist_evidence_bundle.py",
         "tests/test_forward_edge_evidence_bundle.py"
