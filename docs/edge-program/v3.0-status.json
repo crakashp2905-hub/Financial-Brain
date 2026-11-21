@@ -903,19 +903,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "mfnav.as_known_on() selects only observations with observed_at <= timezone-aware known_at and returns the latest visible source version.",
-        "Before the first observed file, the query returns no row; between an original file and corrected file, it returns the original NAV; after correction receipt, it returns the corrected NAV.",
+        "mfnav.as_known_on() selects only observations locally ingested by timezone-aware known_at and returns the latest visible source version; legacy rows without an ingestion clock conservatively fall back to observed_at.",
+        "Before local ingestion, the query returns no row; after an original file is ingested and before a correction is ingested, it returns the original NAV; after correction ingestion, it returns the corrected NAV.",
         "Source publication time is carried only when explicitly supplied and is never inferred from nav_date or the fetch date."
       ],
-      "blocker": "Partial: point-in-time retrieval semantics are implemented, but AMFI NAVAll provides no authoritative per-row published_at timestamp; availability conservatively uses observed_at.",
-      "last_audited_at_utc": "2026-11-21T15:46:04+00:00",
-      "commit": "a0f85c3e",
+      "blocker": "Partial: local-ingestion availability semantics are implemented, but AMFI NAVAll provides no authoritative per-row published_at timestamp; source-publication-time correctness remains externally unverifiable.",
+      "last_audited_at_utc": "2026-11-21T22:22:00+00:00",
+      "commit": "ed91cd52",
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-mfnav tests/test_mfnav_revisions.py tests/test_phase2_sources.py -q: 20 passed",
+        "python -m pytest --basetemp .pytest-mfnav-final tests/test_mfnav_revisions.py tests/test_phase2_sources.py tests/test_migrations.py -q: 25 passed",
         "Ruff: passed",
         "python -m mypy src/financial_brain/ingest/mfnav.py: passed"
       ],
-      "test_result": "As-known MF NAV queries enforce receipt-time availability and cannot expose a same-day row before the file was observed."
+      "test_result": "As-known MF NAV queries cannot expose a fetched row before local persistence or a correction before the correction is ingested. The legacy fallback uses observed_at only where no local ingestion timestamp exists; source publication time is not fabricated."
     },
     {
       "id": "FB-0309",
