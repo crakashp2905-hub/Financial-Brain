@@ -6,8 +6,8 @@ import pytest
 
 from financial_brain.kernel.trader_signal import (
     DecisionAssessment, DecisionFeature, DeskId, EvidenceTier,
-    ExecutionIntent, ExecutionIntentType, ExpectedReturnDistribution,
-    SignalContractError, SignalSide, TraderSignal,
+    EntryCondition, ExecutionIntent, ExecutionIntentType,
+    ExpectedReturnDistribution, SignalContractError, SignalSide, TradePlan, TraderSignal,
 )
 
 
@@ -137,3 +137,37 @@ def test_execution_intents_reject_mixed_exchange_and_mf_fields():
             intent_id=common["intent_id"], signal_id=common["signal_id"],
             intent_type=ExecutionIntentType.NO_TRADE,
         )
+
+
+def test_trade_plan_carries_entry_exit_invalidation_horizon_precision_and_eligibility():
+    plan = TradePlan(
+        instrument_id="NSE:INFY", side="BUY", entry_condition=EntryCondition.PULLBACK_CONFIRMATION,
+        entry_low=Decimal("1480"), entry_high=Decimal("1490"), stop_price=Decimal("1450"),
+        target_price=Decimal("1570"), invalidation="daily close below support",
+        max_holding_sessions=12, tick_size=Decimal("0.05"), lot_size=Decimal("1"),
+        unit_precision=0, paper_execution_eligible=True,
+    )
+    assert plan.entry_low < plan.entry_high < plan.target_price
+
+
+@pytest.mark.parametrize("changes, message", [
+    ({"stop_price": Decimal("1485")}, "long stop and target"),
+    ({"target_price": Decimal("100")}, "long stop and target"),
+    ({"side": "SELL_SHORT", "target_price": Decimal("1570")}, "short target and stop"),
+    ({"tick_size": Decimal("0")}, "tick_size"),
+    ({"paper_execution_eligible": False}, "requires a reason"),
+    ({"max_holding_sessions": 0}, "max_holding_sessions"),
+])
+def test_trade_plan_rejects_inconsistent_or_unexecutable_conditions(changes, message):
+    values = {
+        "instrument_id": "NSE:INFY", "side": "BUY",
+        "entry_condition": EntryCondition.LIMIT_ZONE,
+        "entry_low": Decimal("100"), "entry_high": Decimal("101"),
+        "stop_price": Decimal("95"), "target_price": Decimal("110"),
+        "invalidation": "close below support", "max_holding_sessions": 5,
+        "tick_size": Decimal("0.05"), "lot_size": Decimal("1"),
+        "unit_precision": 0, "paper_execution_eligible": True,
+        "ineligibility_reason": None,
+    }
+    with pytest.raises(SignalContractError, match=message):
+        TradePlan(**(values | changes))

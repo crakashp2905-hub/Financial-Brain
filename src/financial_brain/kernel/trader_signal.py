@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
+from typing import Literal
 from uuid import UUID
 
 
@@ -48,6 +49,13 @@ class ExecutionIntentType(StrEnum):
     NO_TRADE = "NO_TRADE"
 
 
+class EntryCondition(StrEnum):
+    LIMIT_ZONE = "LIMIT_ZONE"
+    BREAKOUT_CONFIRMATION = "BREAKOUT_CONFIRMATION"
+    PULLBACK_CONFIRMATION = "PULLBACK_CONFIRMATION"
+    MARKETABLE_QUOTE = "MARKETABLE_QUOTE"
+
+
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -74,6 +82,12 @@ class TraderSignal:
     source_hash: str
 
     def __post_init__(self) -> None:
+        if not isinstance(self.desk_id, DeskId):
+            raise SignalContractError("desk_id must be a DeskId")
+        if not isinstance(self.side, SignalSide):
+            raise SignalContractError("side must be a SignalSide")
+        if not isinstance(self.evidence_tier, EvidenceTier):
+            raise SignalContractError("evidence_tier must be an EvidenceTier")
         try:
             parsed = UUID(self.signal_id)
         except (ValueError, AttributeError) as exc:
@@ -189,6 +203,8 @@ class ExecutionIntent:
     reason: str | None = None
 
     def __post_init__(self) -> None:
+        if not isinstance(self.intent_type, ExecutionIntentType):
+            raise SignalContractError("intent_type must be an ExecutionIntentType")
         for name in ("intent_id", "signal_id"):
             try:
                 UUID(getattr(self, name))
@@ -234,8 +250,68 @@ class ExecutionIntent:
             raise SignalContractError(f"{name} must be finite and positive")
 
 
+@dataclass(frozen=True, slots=True)
+class TradePlan:
+    """Versionable paper-trade conditions and instrument precision constraints."""
+
+    instrument_id: str
+    side: Literal["BUY", "SELL_SHORT"]
+    entry_condition: EntryCondition
+    entry_low: Decimal
+    entry_high: Decimal
+    stop_price: Decimal
+    target_price: Decimal
+    invalidation: str
+    max_holding_sessions: int
+    tick_size: Decimal
+    lot_size: Decimal
+    unit_precision: int
+    paper_execution_eligible: bool
+    ineligibility_reason: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.instrument_id.strip():
+            raise SignalContractError("trade-plan instrument_id is required")
+        if not isinstance(self.entry_condition, EntryCondition):
+            raise SignalContractError("entry_condition must be an EntryCondition")
+        if self.side not in {"BUY", "SELL_SHORT"}:
+            raise SignalContractError("trade-plan side must be BUY or SELL_SHORT")
+        for name in ("entry_low", "entry_high", "stop_price", "target_price", "tick_size", "lot_size"):
+            value = getattr(self, name)
+            try:
+                number = Decimal(value)
+            except (InvalidOperation, TypeError) as exc:
+                raise SignalContractError(f"{name} must be decimal") from exc
+            if not number.is_finite() or number <= 0:
+                raise SignalContractError(f"{name} must be finite and positive")
+            object.__setattr__(self, name, number)
+        if self.entry_low > self.entry_high:
+            raise SignalContractError("entry_low cannot exceed entry_high")
+        if self.side == "BUY" and not (
+            self.stop_price < self.entry_low <= self.entry_high < self.target_price
+        ):
+            raise SignalContractError("long stop and target must bracket the entry zone")
+        if self.side == "SELL_SHORT" and not (
+            self.target_price < self.entry_low <= self.entry_high < self.stop_price
+        ):
+            raise SignalContractError("short target and stop must bracket the entry zone")
+        if not self.invalidation.strip():
+            raise SignalContractError("strategy invalidation is required")
+        if self.max_holding_sessions < 1:
+            raise SignalContractError("max_holding_sessions must be positive")
+        if self.unit_precision < 0 or self.unit_precision > 12:
+            raise SignalContractError("unit_precision must be between 0 and 12")
+        if not self.paper_execution_eligible and not (
+            self.ineligibility_reason and self.ineligibility_reason.strip()
+        ):
+            raise SignalContractError("ineligible trade plan requires a reason")
+        if self.paper_execution_eligible and self.ineligibility_reason is not None:
+            raise SignalContractError("eligible trade plan cannot carry an ineligibility reason")
+
+
 __all__ = [
     "DecisionAssessment", "DecisionFeature", "DeskId", "EvidenceTier",
-    "ExecutionIntent", "ExecutionIntentType", "ExpectedReturnDistribution",
-    "SignalContractError", "SignalSide", "TraderSignal",
+    "EntryCondition", "ExecutionIntent", "ExecutionIntentType",
+    "ExpectedReturnDistribution", "SignalContractError", "SignalSide", "TradePlan",
+    "TraderSignal",
 ]
