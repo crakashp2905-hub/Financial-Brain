@@ -2096,22 +2096,32 @@
     {
       "id": "FB-0494",
       "text": "Evaluate actual net performance by exit reason (SL, TP, trail, time, discretionary) and ablate target/stop rules against simpler exits without rewriting historical decisions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "paper/intraday.py summarizes exit counts and paper/daily_results.py retains net outcomes and costs by trade; paper/loss_review.py groups losses by market/context and proposes hypotheses without retroactively changing rules.",
+        "No tested report estimates after-cost performance and uncertainty by SL/TP/trail/time/discretionary exit reason, and no frozen stop/target-vs-simpler-exit ablation was identified.",
+        "python -m pytest --basetemp .pytest-fb-0494-95 tests/test_phase5_loss_review.py tests/test_exit_protection_ledger.py tests/test_forward_edge_session_runner.py::test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor tests/test_forward_edge_session_runner.py::test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell -q: 24 passed"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0494-95 tests/test_phase5_loss_review.py tests/test_exit_protection_ledger.py tests/test_forward_edge_session_runner.py::test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor tests/test_forward_edge_session_runner.py::test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell -q: 24 passed"
     },
     {
       "id": "FB-0495",
       "text": "Prospective acceptance: every automatically filled exchange paper entry has a linked precommitted SL and TP or documented approved alternate exit; each later SELL/COVER is traceable, quote-feasible, and reflected exactly once in P&L.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "kernel/exit_protection_ledger.py requires a pre-armed versioned hard-stop policy before entry fills, durable trigger/fill events and fill-backed position closure; intraday paper trades store entry stop/target and closed-trade cost/P&L.",
+        "Selected protection-ledger and forward paper-book runner tests passed: 24 passed.",
+        "Remaining: prospective evidence does not yet prove every automatic paper fill across all exchange desks has a precommitted SL/TP or approved alternate, executable later exit, reconciled accounting and independent pre-entry timestamp receipt."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Selected protection-ledger and forward paper-book runner tests passed: 24 passed."
     },
     {
       "id": "FB-0501",
