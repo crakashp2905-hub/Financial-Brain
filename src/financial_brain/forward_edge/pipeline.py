@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_HALF_EVEN, Decimal
 
 from financial_brain.forward_edge import decision_custody as DC
+from financial_brain.forward_edge.data_gate import evaluate_market_data
 from financial_brain.forward_edge import execution as X
+from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
 from financial_brain.forward_edge import session_ops as S
 from financial_brain.forward_edge.modes import Mode, SessionMode, resolve_mode
 from financial_brain.kernel.ledger import CREDIT, DEBIT, DoubleEntryLedger, Entry, Transaction
@@ -34,6 +36,82 @@ def _utc(s: str) -> datetime:
 
 def _canon(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str, allow_nan=False)
+
+
+def _integrity_gate_codes(fx: dict, decision: datetime) -> list[str]:
+    """Apply explicit fixture-supplied instrument and quote-quality gates before execution.
+
+    The pipeline is an offline fixture runner. Missing gate objects remain backward
+    compatible for its historical golden fixtures; when an object is supplied, malformed
+    or failing inputs reject the opportunity with stable reason codes. Live sessions use
+    the durable runner and separately require versioned instrument rules.
+    """
+    codes: list[str] = []
+    rule_data = fx.get("instrument_rules")
+    if rule_data is not None:
+        try:
+            if not isinstance(rule_data, dict):
+                raise InstrumentRuleError("instrument rule catalogue must be an object")
+            rules = InstrumentRuleBook(rule_data)
+            quote_rows = fx.get("quotes")
+            if not isinstance(quote_rows, list) or not quote_rows:
+                raise InstrumentRuleError("a quote is required to validate the order price")
+            quote = quote_rows[0]
+            side = str(fx.get("side", "")).upper()
+            price = Decimal(str(fx.get("limit") or quote["ask" if side == "BUY" else "bid"]))
+            rules.validate_order(
+                instrument=str(fx["instrument"]),
+                day=date.fromisoformat(str(fx.get("instrument_rules_date", decision.date().isoformat()))),
+                session_phase=str(fx["instrument_session_phase"]),
+                quantity=int(fx["quantity"]), limit_price=price,
+                tick_size=Decimal(str(fx["tick"])),
+            )
+        except (InstrumentRuleError, KeyError, TypeError, ValueError, ArithmeticError) as exc:
+            # Do not expose exception text as a code: it may contain provider data and
+            # would make the reject taxonomy unstable across library versions.
+            message = str(exc).lower()
+            if "expired" in message:
+                code = "INSTRUMENT_EXPIRED"
+            elif "status" in message or "delisted" in message or "suspended" in message:
+                code = "INSTRUMENT_NOT_TRADABLE_STATUS"
+            elif "lot size" in message:
+                code = "INSTRUMENT_BAD_LOT"
+            elif "freeze" in message:
+                code = "INSTRUMENT_FREEZE_LIMIT"
+            elif "tick" in message or "price" in message:
+                code = "INSTRUMENT_TICK_OR_PRICE_INVALID"
+            elif "session" in message:
+                code = "INSTRUMENT_SESSION_PHASE_INVALID"
+            else:
+                code = "INSTRUMENT_RULES_INVALID"
+            codes.append(code)
+
+    market = fx.get("market_observation")
+    if market is not None:
+        try:
+            if not isinstance(market, dict):
+                raise ValueError("market observation must be an object")
+            quote_time_raw = market.get("quote_time")
+            quote_time = datetime.fromisoformat(str(quote_time_raw)) if quote_time_raw else None
+            result = evaluate_market_data(
+                decision_time=decision,
+                quote_time=quote_time,
+                bid=Decimal(str(market["bid"])) if market.get("bid") is not None else None,
+                ask=Decimal(str(market["ask"])) if market.get("ask") is not None else None,
+                max_age_ms=int(market["max_age_ms"]),
+                max_spread_bps=Decimal(str(market["max_spread_bps"])),
+                volume=market.get("volume"),
+                is_circuit_limited=bool(market.get("circuit_limited", False)),
+                quantity=int(fx["quantity"]),
+                freeze_limit=int(market["freeze_limit"]) if market.get("freeze_limit") is not None else None,
+                session_phase=str(market.get("session_phase", "UNKNOWN")),
+                auction_required=bool(market.get("auction_required", False)),
+                auction_data_present=bool(market.get("auction_data_present", False)),
+            )
+            codes.extend("DATA_" + reason.value for reason in result.reasons)
+        except (KeyError, TypeError, ValueError, ArithmeticError):
+            codes.append("DATA_GATE_INPUT_INVALID")
+    return sorted(set(codes))
 
 
 def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE") -> dict:
@@ -73,7 +151,11 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
         first = X.earliest_quote(quotes, decision, latency)
         late = first is not None and (first.available_utc - decision) > timedelta(milliseconds=int(fx.get("max_wait_ms", 5000)))
 
-        if fx.get("ack_lost"):
+        gate_codes = _integrity_gate_codes(fx, decision)
+        if gate_codes:
+            outcome, reason = "NO_TRADE", "GATE:" + "+".join(gate_codes)
+            trace.append({"stage": "gate", "decision": "NO_TRADE", "codes": gate_codes})
+        elif fx.get("ack_lost"):
             outcome, reason = "UNKNOWN_ORDER", "ACK_LOST_NO_RESEND"
             trace.append({"stage": "order", "state": "UNKNOWN", "resend_allowed": False})
             segments.add("orders")
@@ -147,6 +229,9 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
               "ledger_balanced": ledger.trial_balance_ok(),
               "cash_equals_net": ledger.balance("cash", CCY) == net if outcome in ("WIN", "LOSS", "FLAT") else True,
               "segments": sorted(segments), "trace": trace}
+    gate_trace = next((item for item in trace if item.get("stage") == "gate"), None)
+    if gate_trace is not None:
+        result["reject_codes"] = gate_trace["codes"]
     result["signature"] = hashlib.sha256(_canon({k: v for k, v in result.items()}).encode("utf-8")).hexdigest()
     # Keep the historic economic result signature stable while the canonical journal is wired in.
     # The runner's report remains INCOMPLETE for trade outcomes until its execution receipts and

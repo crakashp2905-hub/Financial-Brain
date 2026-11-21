@@ -7374,10 +7374,18 @@
       "status": "PARTIAL",
       "evidence": [
         "PR #40 description and current source search; F17/F13 references in docs/forward-edge/fe-items.json",
-        "docs/edge-program/v3.0-pr-graph-2026-11-21.json (PR #40 declared F13/F17/charter omissions; PR remains open)"
+        "docs/edge-program/v3.0-pr-graph-2026-11-21.json (PR #40 declared F13/F17/charter omissions; PR remains open)",
+        "src/financial_brain/forward_edge/pipeline.py::_integrity_gate_codes",
+        "src/financial_brain/forward_edge/data_gate.py",
+        "src/financial_brain/forward_edge/instrument_rules.py",
+        "tests/test_forward_edge_integrity_gates.py (4 regression cases)",
+        "src/financial_brain/forward_edge/tracker.py::render_capability_matrix",
+        "scripts/forward_edge_capability_matrix.py --check",
+        "docs/forward-edge/capability-matrix.json",
+        ".github/workflows/ci.yml (matrix freshness check)"
       ],
-      "blocker": "The checklist calls out omissions; no verified restoration or tested replacement evidence was found in the audited sources.",
-      "last_audited_at_utc": "2026-11-21T06:02:13.655717+00:00",
+      "blocker": "F17 gates and F13 capability matrix now have tested local replacements; the remaining PR #40 regression is charter/cohort enforcement on the protected-trial admission path, and hosted CI has not yet run on this change.",
+      "last_audited_at_utc": "2026-11-21T06:15:08.398246+00:00",
       "commit": null
     },
     {
@@ -13852,7 +13860,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T06:02:13.655717+00:00",
+    "as_of_utc": "2026-11-21T06:15:08.398246+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13885,6 +13893,7 @@
     "artifact_updates": [
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
-    ]
+    ],
+    "evidence_update": "SL-00-05: restored fixture gate invocation and tracker-derived capability matrix locally; charter/cohort enforcement remains open."
   }
 }
