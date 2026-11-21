@@ -247,12 +247,24 @@
     {
       "id": "FB-0012",
       "text": "Publish an audit of each task with `{id, status, source, test, artifact_hash, blocker, commit}`; make no unsupported status claims.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/v3.0-audit.jsonl (one deterministic record for each of 1,378 source checklist items, including UNASSESSED entries without inferred completion)",
+        "scripts/export_checklist_audit.py (maps every item to the exact source line and exports status, test evidence, artifact hash, blocker, commit, and evidence references)",
+        ".github/workflows/ci.yml (checks the audit export is current and complete)",
+        "The published rows preserve missing tests/hashes/commits as empty or null; unknown status is not promoted."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T12:51:39+00:00",
+      "commit": "fa51e933",
+      "artifact_hash": null,
+      "test_evidence": [
+        "python scripts/export_checklist_audit.py --check passed; 1,378 rows generated and reconciled to source IDs.",
+        "tests/test_checklist_audit_export.py, tests/test_launch_gates.py, tests/test_product_charter.py, tests/test_evidence_labels.py: 22 passed.",
+        "Ruff, mypy for both audit/launch-gate scripts, JSON parsing, and git diff --check passed."
+      ],
+      "test_result": "The item-level audit is published and deterministic. Every checklist ID includes source path/line/text and the requested status/source/test/artifact_hash/blocker/commit fields. Unassessed requirements remain UNASSESSED and do not inflate audited completion."
     },
     {
       "id": "FB-0101",
@@ -14162,7 +14174,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T12:45:20+00:00",
+    "as_of_utc": "2026-11-21T12:51:39+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14175,6 +14187,7 @@
       "FB-0009",
       "FB-0010",
       "FB-0011",
+      "FB-0012",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14195,14 +14208,14 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 30,
+    "audited_count": 31,
     "status_counts": {
-      "COMPLETE": 17,
+      "COMPLETE": 18,
       "PARTIAL": 12,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1348
+      "UNASSESSED": 1347
     },
-    "verified_complete_count": 17,
+    "verified_complete_count": 18,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -14257,8 +14270,11 @@
       "docs/edge-program/launch-gates.v1.json",
       "docs/edge-program/launch-gate-contract.md",
       "scripts/validate_launch_gates.py",
-      "tests/test_launch_gates.py"
+      "tests/test_launch_gates.py",
+      "docs/edge-program/v3.0-audit.jsonl",
+      "scripts/export_checklist_audit.py",
+      "tests/test_checklist_audit_export.py"
     ],
-    "evidence_update": "FB-0011 COMPLETE: versioned fail-closed five-desk launch-gate/evidence-label contract, desk preflight gates, validator and CI check; focused verification 20 passed."
+    "evidence_update": "FB-0012 COMPLETE: deterministic JSONL audit export now contains a source-linked record for all 1,378 checklist IDs and retains unaudited items as UNASSESSED. The export is validated in CI."
   }
 }
