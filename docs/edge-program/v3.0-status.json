@@ -7324,7 +7324,7 @@
       ],
       "blocker": "Actual scheduled paper runner checkout and external owner approvals/branch protection cannot be verified from repository configuration or available GitHub API; the PR description claim and absence of review submissions are recorded without treating them as proof.",
       "last_audited_at_utc": "2026-11-21T08:10:36+00:00",
-      "commit": null,
+      "commit": "8037c1f2",
       "artifact_sha256": "b94345baf3c680171f419dd15c542690bce2a4a0ec00347b1a5ff0612b8c5341",
       "test_result": "Baseline JSON schema parsed; detached checksum created. Snapshot records CI as in progress, not green, and records absent local market data rather than reusing a stale data claim."
     },
@@ -7341,7 +7341,7 @@
       ],
       "blocker": "The stacked base-ref graph is captured and file overlaps are enumerated, but #39-to-#40 commit ancestry and content-level resolution for all overwritten files have not been independently reconciled.",
       "last_audited_at_utc": "2026-11-21T08:10:36+00:00",
-      "commit": null,
+      "commit": "8037c1f2",
       "artifact_sha256": "f2711506358f95200f3f2aee4fd3aaea917305db6be7278a9c9f337312d2e4be",
       "test_result": "Live GitHub PR metadata and changed-filename pages fetched for #34 and #36-#40; graph structure and path overlaps serialized. No code/test result was transferred from one PR head to another."
     },
