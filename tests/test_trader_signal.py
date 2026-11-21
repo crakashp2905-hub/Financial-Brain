@@ -8,7 +8,7 @@ from financial_brain.kernel.trader_signal import (
     DecisionAssessment, DecisionFeature, DeskId, EvidenceTier,
     EntryCondition, ExecutionIntent, ExecutionIntentType,
     ExpectedReturnDistribution, ExitTrigger, SignalContractError, SignalSide,
-    TradePlan, TraderSignal, validate_trade_plan_signal,
+    PriceBasis, TradePlan, TraderSignal, validate_trade_plan_signal,
     SignalLifecycle, SignalLifecycleEvent, SignalState,
     compare_alerts,
 )
@@ -144,7 +144,8 @@ def test_execution_intents_reject_mixed_exchange_and_mf_fields():
 
 def test_trade_plan_carries_entry_exit_invalidation_horizon_precision_and_eligibility():
     plan = TradePlan(
-        instrument_id="NSE:INFY", side="BUY", entry_condition=EntryCondition.PULLBACK_CONFIRMATION,
+        instrument_id="NSE:INFY", side="BUY", price_basis=PriceBasis.UNDERLYING,
+        entry_condition=EntryCondition.PULLBACK_CONFIRMATION,
         entry_low=Decimal("1480"), entry_high=Decimal("1490"), stop_price=Decimal("1450"),
         target_price=Decimal("1570"), invalidation="daily close below support",
         max_holding_sessions=12, tick_size=Decimal("0.05"), lot_size=Decimal("1"),
@@ -164,12 +165,13 @@ def test_trade_plan_carries_entry_exit_invalidation_horizon_precision_and_eligib
     ({"target_price": Decimal("100")}, "long stop and target"),
     ({"side": "SELL_SHORT", "target_price": Decimal("1570")}, "short target and stop"),
     ({"tick_size": Decimal("0")}, "tick_size"),
+    ({"price_basis": "OPTION_EXECUTABLE_PREMIUM"}, "price_basis"),
     ({"paper_execution_eligible": False}, "requires a reason"),
     ({"max_holding_sessions": 0}, "max_holding_sessions"),
 ])
 def test_trade_plan_rejects_inconsistent_or_unexecutable_conditions(changes, message):
     values = {
-        "instrument_id": "NSE:INFY", "side": "BUY",
+        "instrument_id": "NSE:INFY", "side": "BUY", "price_basis": PriceBasis.UNDERLYING,
         "entry_condition": EntryCondition.LIMIT_ZONE,
         "entry_low": Decimal("100"), "entry_high": Decimal("101"),
         "stop_price": Decimal("95"), "target_price": Decimal("110"),
@@ -243,7 +245,8 @@ def test_signal_lifecycle_rejects_backwards_event_time():
 def test_alert_deduplication_preserves_versions_price_changes_and_event_order():
     prior = _signal()
     prior_plan = TradePlan(
-        instrument_id="NSE:INFY", side="BUY", entry_condition=EntryCondition.LIMIT_ZONE,
+        instrument_id="NSE:INFY", side="BUY", price_basis=PriceBasis.UNDERLYING,
+        entry_condition=EntryCondition.LIMIT_ZONE,
         entry_low=Decimal("100"), entry_high=Decimal("101"), stop_price=Decimal("95"),
         target_price=Decimal("110"), invalidation="support break", max_holding_sessions=5,
         tick_size=Decimal("0.05"), lot_size=Decimal("1"), unit_precision=0,
@@ -266,7 +269,8 @@ def test_alert_deduplication_preserves_versions_price_changes_and_event_order():
     ).reason == "NEW_RULE_OR_TARGET"
 
     changed_plan = TradePlan(
-        instrument_id="NSE:INFY", side="BUY", entry_condition=EntryCondition.LIMIT_ZONE,
+        instrument_id="NSE:INFY", side="BUY", price_basis=PriceBasis.UNDERLYING,
+        entry_condition=EntryCondition.LIMIT_ZONE,
         entry_low=Decimal("102"), entry_high=Decimal("103"), stop_price=Decimal("98"),
         target_price=Decimal("112"), invalidation="support break", max_holding_sessions=5,
         tick_size=Decimal("0.05"), lot_size=Decimal("1"), unit_precision=0,

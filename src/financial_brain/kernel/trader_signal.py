@@ -70,6 +70,14 @@ class ExitTrigger(StrEnum):
     EXPIRY_OR_CORPORATE_ACTION = "EXPIRY_OR_CORPORATE_ACTION"
 
 
+class PriceBasis(StrEnum):
+    UNDERLYING = "UNDERLYING"
+    ETF_MARKET_QUOTE = "ETF_MARKET_QUOTE"
+    OPTION_EXECUTABLE_PREMIUM = "OPTION_EXECUTABLE_PREMIUM"
+    OPTION_SPREAD_VALUE = "OPTION_SPREAD_VALUE"
+    PUBLISHED_NAV_POLICY = "PUBLISHED_NAV_POLICY"
+
+
 class SignalState(StrEnum):
     DETECTED = "DETECTED"
     ELIGIBLE = "ELIGIBLE"
@@ -297,6 +305,7 @@ class TradePlan:
 
     instrument_id: str
     side: Literal["BUY", "SELL_SHORT"]
+    price_basis: PriceBasis
     entry_condition: EntryCondition
     entry_low: Decimal
     entry_high: Decimal
@@ -318,6 +327,8 @@ class TradePlan:
             raise SignalContractError("trade-plan instrument_id is required")
         if not isinstance(self.entry_condition, EntryCondition):
             raise SignalContractError("entry_condition must be an EntryCondition")
+        if not isinstance(self.price_basis, PriceBasis):
+            raise SignalContractError("price_basis must be a PriceBasis")
         if self.side not in {"BUY", "SELL_SHORT"}:
             raise SignalContractError("trade-plan side must be BUY or SELL_SHORT")
         for name in ("entry_low", "entry_high", "stop_price", "target_price", "tick_size",
@@ -491,7 +502,7 @@ def compare_alerts(
 __all__ = [
     "AlertDeduplication", "DecisionAssessment", "DecisionFeature", "DeskId", "EvidenceTier",
     "EntryCondition", "ExecutionIntent", "ExecutionIntentType",
-    "ExpectedReturnDistribution", "ExitTrigger", "SignalContractError", "SignalLifecycle",
+    "ExpectedReturnDistribution", "ExitTrigger", "PriceBasis", "SignalContractError", "SignalLifecycle",
     "SignalLifecycleEvent", "SignalSide", "SignalState", "TradePlan", "TraderSignal",
     "compare_alerts", "validate_trade_plan_signal",
 ]
