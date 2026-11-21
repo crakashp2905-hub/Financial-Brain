@@ -6,11 +6,11 @@ outside the trading phase all make the instrument non-tradable; the caller must 
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 from enum import Enum, StrEnum
-from urllib.parse import quote
 
 from financial_brain.kernel.units import to_decimal
 
@@ -122,7 +122,7 @@ class InstrumentId:
                  self.effective_from.isoformat() if self.effective_from else "",
                  self.effective_to.isoformat() if self.effective_to else "",
                  ",".join(self.underlying_lineage))
-        return "|".join(quote(value, safe="") for value in parts)
+        return json.dumps(parts, ensure_ascii=True, separators=(",", ":"))
 
     def same_listing_series(self, other: InstrumentId) -> bool:
         """Whether two versions refer to the same market/exchange/symbol history."""

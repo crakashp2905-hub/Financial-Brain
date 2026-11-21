@@ -7137,13 +7137,13 @@
         "enum",
         "financial_brain.kernel.market_rules",
         "financial_brain.kernel.units",
-        "urllib.parse"
+        "json"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/instruments.py",
-      "source_sha256": "99ef7d1e1bec65630c9504d2610a6e6e36fc8c686fddb3a3f0059db5481b397d",
+      "source_sha256": "fd60b46823059d650be0c03d6b676ea5029c57908a37dbad336175d306e59fd6",
       "test_paths": []
     },
     {
