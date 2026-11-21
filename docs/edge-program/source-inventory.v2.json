@@ -4129,7 +4129,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/fixture_adapter.py",
-      "source_sha256": "c532beb331abc5a054b1fb674d4a009782978a9760e690d442fde46c7618b3c6",
+      "source_sha256": "3e8242dd797f1e8fb50de249ce2c08e00d8743c6528fc48af237578d4ebcbf83",
       "test_paths": []
     },
     {
@@ -5080,7 +5080,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "e052d9324bf67b8254e9220254f0601421ae53a5bd87cc7336b380fbd390ce81",
+      "source_sha256": "6fca1e42135b2d0f28402c65398475439fd17e351968f3cfae85e4eb03f48f45",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
