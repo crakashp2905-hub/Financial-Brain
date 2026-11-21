@@ -792,12 +792,22 @@
     {
       "id": "FB-0304",
       "text": "Extend `mfnav.py` to retain NAV revision history and source publication/ingestion timestamps; do not silently backdate corrected data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/storage/schema.sql adds append-only mf_nav_observations keyed by source-file/row identity, retaining lake key, row hash, NAV value/date, optional source_published_at and observed_at.",
+        "src/financial_brain/ingest/mfnav.py records every changed NAVAll payload as an observation, keeps identical replay idempotent, and advances the legacy mf_nav projection only to the latest observed timestamp.",
+        "The AMFI NAVAll provider supplies no per-row publication timestamp; source_published_at remains NULL unless explicitly provided by a provider, so publication time is not fabricated."
+      ],
+      "blocker": "Partial: append-only revision and ingestion-time history are implemented, but the current AMFI NAVAll feed does not expose per-row publication timestamps; source publication time remains unknown.",
+      "last_audited_at_utc": "2026-11-21T15:46:04+00:00",
+      "commit": "a0f85c3e",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mfnav tests/test_mfnav_revisions.py tests/test_phase2_sources.py -q: 20 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/ingest/mfnav.py: passed"
+      ],
+      "test_result": "Changed source files preserve later NAV revisions and retrieval timestamps without overwriting historical observations; source publication time is explicitly unknown when absent."
     },
     {
       "id": "FB-0305",
@@ -832,12 +842,22 @@
     {
       "id": "FB-0308",
       "text": "Add `as_known_on()` and NAV `published_at` availability semantics; same-day after-close NAV cannot be used for a pre-cutoff decision that same day.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "mfnav.as_known_on() selects only observations with observed_at <= timezone-aware known_at and returns the latest visible source version.",
+        "Before the first observed file, the query returns no row; between an original file and corrected file, it returns the original NAV; after correction receipt, it returns the corrected NAV.",
+        "Source publication time is carried only when explicitly supplied and is never inferred from nav_date or the fetch date."
+      ],
+      "blocker": "Partial: point-in-time retrieval semantics are implemented, but AMFI NAVAll provides no authoritative per-row published_at timestamp; availability conservatively uses observed_at.",
+      "last_audited_at_utc": "2026-11-21T15:46:04+00:00",
+      "commit": "a0f85c3e",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mfnav tests/test_mfnav_revisions.py tests/test_phase2_sources.py -q: 20 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/ingest/mfnav.py: passed"
+      ],
+      "test_result": "As-known MF NAV queries enforce receipt-time availability and cannot expose a same-day row before the file was observed."
     },
     {
       "id": "FB-0309",
@@ -14427,7 +14447,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T15:37:18+00:00",
+    "as_of_utc": "2026-11-21T15:46:04+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14465,6 +14485,8 @@
       "FB-0212",
       "FB-0213",
       "FB-0214",
+      "FB-0304",
+      "FB-0308",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14485,13 +14507,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 55,
+    "audited_count": 57,
     "status_counts": {
       "COMPLETE": 23,
-      "PARTIAL": 31,
+      "PARTIAL": 33,
       "NOT_STARTED": 0,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1323
+      "UNASSESSED": 1321
     },
     "verified_complete_count": 23,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
