@@ -515,23 +515,32 @@
       ],
       "blocker": "Partial: category taxonomy and no-guess classification are implemented, but complete point-in-time ETF listings and source-backed category assignments require permitted exchange/AMC reference data.",
       "last_audited_at_utc": "2026-11-21T14:06:00+00:00",
-      "commit": null,
+      "commit": "991e6cd8",
       "test_evidence": [
         "tests/test_etf_reference.py: 14 passed, including each exposure class and proof that a GOLDTRACKER symbol remains UNKNOWN without source-declared classification",
         "Ruff and targeted mypy passed"
       ],
-      "test_result": "ETF exposure classes are distinct, source-declared and do not inherit equity/bond/commodity behavior from symbol text; live universe coverage remains unproven.",
-      "commit": "991e6cd8"
+      "test_result": "ETF exposure classes are distinct, source-declared and do not inherit equity/bond/commodity behavior from symbol text; live universe coverage remains unproven."
     },
     {
       "id": "FB-0203",
       "text": "Map ETF → underlying benchmark (prefer total-return index), fund house, inception/listing dates, NAV and indicative NAV if available.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETFReferenceRecord stores source-declared underlying benchmark, fund house, inception and listing dates in the version hash",
+        "ETFValuationObservation stores distinct NAV/iNAV observations with exact decimals, source hash, valuation date, publication and observation clocks",
+        "ETFReferenceCatalog admits observations only when separately permissioned and when ISIN matches the point-in-time listing identity; as-of lookup excludes future-published values",
+        "No real reference or valuation observations are loaded; benchmark TRI semantics and universe mapping are not audited"
+      ],
+      "blocker": "Partial: the point-in-time metadata and valuation contracts exist, but no permitted source data has populated or validated the actual ETF-to-benchmark/NAV mapping.",
+      "last_audited_at_utc": "2026-11-21T14:07:00+00:00",
+      "commit": "9801de02",
+      "test_evidence": [
+        "tests/test_etf_reference.py: 17 passed, including valuation publication-time visibility, point-in-time ISIN match, decimal valuation and inception/listing date validation",
+        "Ruff and targeted mypy passed"
+      ],
+      "test_result": "ETF reference benchmark fields and permissioned NAV/iNAV observation contracts preserve source identity and point-in-time availability; actual data coverage remains unverified."
     },
     {
       "id": "FB-0204",
