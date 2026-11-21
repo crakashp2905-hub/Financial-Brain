@@ -7370,23 +7370,27 @@
     {
       "id": "SL-00-05",
       "text": "Investigate PR #40 omissions: restore F17 instrument/data gates, F13 renderer, charter/cohort enforcement or document explicit tested replacements.",
-      "source_checked": false,
-      "status": "PARTIAL",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        "PR #40 description and current source search; F17/F13 references in docs/forward-edge/fe-items.json",
-        "docs/edge-program/v3.0-pr-graph-2026-11-21.json (PR #40 declared F13/F17/charter omissions; PR remains open)",
-        "src/financial_brain/forward_edge/pipeline.py::_integrity_gate_codes",
-        "src/financial_brain/forward_edge/data_gate.py",
-        "src/financial_brain/forward_edge/instrument_rules.py",
-        "tests/test_forward_edge_integrity_gates.py (4 regression cases)",
-        "src/financial_brain/forward_edge/tracker.py::render_capability_matrix",
-        "scripts/forward_edge_capability_matrix.py --check",
-        "docs/forward-edge/capability-matrix.json",
-        ".github/workflows/ci.yml (matrix freshness check)"
+        "src/financial_brain/forward_edge/pipeline.py (_integrity_gate_codes applies F17 instrument/data gates)",
+        "tests/test_forward_edge_integrity_gates.py (gate rejects and stable reason codes)",
+        "src/financial_brain/forward_edge/tracker.py and scripts/forward_edge_capability_matrix.py (F13 tracker-derived capability matrix)",
+        "tests/test_forward_edge_tracker.py and CI freshness check for generated matrix",
+        "src/financial_brain/forward_edge/trials.py (protected trial admission binds charter and cohort schedule hashes)",
+        "tests/test_forward_edge_f00.py and tests/test_forward_edge_pipeline_compat.py (charter/cohort enforcement and fixture behavior)",
+        "Combined regression evidence on PR #40: prior full suite 3,698 passed/1 skipped; current focused F00/F13/F17 set 60 passed after workspace-local pytest temp configuration"
       ],
-      "blocker": "F17 gates and F13 capability matrix now have tested local replacements; the remaining PR #40 regression is charter/cohort enforcement on the protected-trial admission path, and hosted CI has not yet run on this change.",
-      "last_audited_at_utc": "2026-11-21T06:15:08.398246+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T08:02:12+00:00",
+      "commit": "2e420cc4",
+      "test_evidence": [
+        "tests/test_forward_edge_integrity_gates.py",
+        "tests/test_forward_edge_tracker.py",
+        "tests/test_forward_edge_f00.py",
+        "tests/test_forward_edge_pipeline_compat.py"
+      ],
+      "test_result": "F17/F13/F00 local focused suite 60 passed; prior full suite 3,698 passed, 1 skipped, 0 failed on PR #40 integration branch. Current hosted CI run remains queued and is not represented as green."
     },
     {
       "id": "SL-00-06",
@@ -13913,7 +13917,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T07:57:00+00:00",
+    "as_of_utc": "2026-11-21T08:02:12+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13937,12 +13941,12 @@
     "audited_count": 18,
     "status_counts": {
       "UNASSESSED": 1360,
-      "PARTIAL": 11,
+      "PARTIAL": 10,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 1,
-      "COMPLETE": 5
+      "COMPLETE": 6
     },
-    "verified_complete_count": 5,
+    "verified_complete_count": 6,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/forward-edge-equivalence-report.v1.json",
@@ -13956,6 +13960,6 @@
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
       "docs/forward-edge/reference-candidates.v1.json"
     ],
-    "evidence_update": "SL-00-18 COMPLETE: deterministic evidence bundle from frozen commit c0fbd419 was generated, rebuilt byte-identically, verified and checksummed. Bundle integrity hashes are explicitly local and make no independent timestamp/attestation claim."
+    "evidence_update": "SL-00-05 COMPLETE: PR #40 omissions have tested replacements for F17 data/instrument gates, F13 capability-matrix rendering, and protected-trial charter/cohort admission. Local regression evidence is recorded; hosted CI is still queued and is not claimed green."
   }
 }
