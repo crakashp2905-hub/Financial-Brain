@@ -57,7 +57,10 @@ def audit(repo: Path, *, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     errors: list[str] = []
     try:
-        graph = _read_json(repo / "docs/edge-program/v3.0-pr-graph-2026-11-21.json")
+        graph_paths = sorted((repo / "docs/edge-program").glob("v3.0-pr-graph-*.json"))
+        if not graph_paths:
+            raise ValueError("no v3.0 PR dependency graph found")
+        graph = _read_json(graph_paths[-1])
         stale = _freshness(graph, "observed_at_utc", now=now, source_name="PR graph")
         if stale:
             errors.append(stale)
