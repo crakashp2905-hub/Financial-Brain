@@ -545,12 +545,23 @@
     {
       "id": "FB-0204",
       "text": "Import historic ETF EOD OHLCV, adjusted close and trading days through existing ingestion with source hashes and corrections.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_prices.py rebuilds `etf_daily_prices` from the existing curated `eod_prices`, `universe_snapshots`, `lake_manifest` and corporate-action adjustment factors",
+        "Daily ETF rows retain raw OHLCV/turnover, trading date, lake evidence key, verified source SHA-256 and a separately labelled adjusted close",
+        "Rows with missing/invalid source hashes, absent point-in-time ETF universe membership or absent exchange rows are omitted rather than imputed",
+        "tests/test_etf_prices.py: 2 passed, including split adjustment, non-ETF exclusion and missing provenance exclusion"
+      ],
+      "blocker": "Partial: the in-repo ETF daily mart is implemented and reuses existing EOD ingestion, but no permission-cleared historical ETF archive is loaded, and the curated partition exposes only the current revision rather than a queryable correction history.",
+      "last_audited_at_utc": "2026-11-21T14:08:00+00:00",
+      "commit": "f5249d0b",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_prices.py tests/test_etf_reference.py -q: 19 passed",
+        "Ruff and targeted mypy passed",
+        "Source inventory and forward-engine graph regenerated; both freshness checks and git diff --check passed"
+      ],
+      "test_result": "ETF historical OHLCV can be derived from the existing hashed exchange EOD path without inventing missing bars; actual permitted data coverage and point-in-time corrections remain outstanding."
     },
     {
       "id": "FB-0205",
