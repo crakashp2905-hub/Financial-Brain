@@ -7372,7 +7372,7 @@
       ],
       "blocker": "Ten historical trial rows have no matching dataset-hash/read-window manifest in the committed source. Their original data access cannot be reconstructed byte-for-byte from this repository.",
       "last_audited_at_utc": "2026-11-21T08:13:54+00:00",
-      "commit": null,
+      "commit": "bd4ab91b",
       "test_evidence": [
         "tests/test_trial_preservation_audit.py",
         "tests/test_forward_edge_f00.py"
