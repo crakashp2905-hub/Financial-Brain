@@ -158,12 +158,29 @@
     {
       "id": "FB-0008",
       "text": "Audit exchange and AMFI data retention/licensing, permitted redistribution, quote archival, contract metadata and platform terms (**EXTERNAL review**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "EXTERNAL_BLOCKED",
+      "evidence": [
+        "docs/edge-program/market-data-rights-review.v1.md (official-source research snapshot, source/use findings, and exact owner/provider questions)",
+        "docs/edge-program/data-permissions.v1.json (102 source/use permissions across 17 sources and six uses remain UNKNOWN_RIGHTS)",
+        "docs/edge-program/market-data-sources.v1.json (access, credential-presence, latency and retention inventory; no reviewed retention permissions)",
+        "Official Zerodha Kite Connect API terms: https://www.kite.trade/terms/ (live data mock/virtual app restriction; permanent-copy/redistribution restrictions)",
+        "Zerodha-hosted Kite Connect clarification: https://kite.trade/forum/discussion/16304/written-clarification-for-self-built-kite-connect-trading-system (personal live-data paper trading and permanent storage restricted)",
+        "Official NSE Data Sharing & Usage Policy: https://betanseapi.nseindia.com/static/market-data/nse-data-policy (intended use and handling agreement; redistribution contract-bound)",
+        "Official NSE Non-Display Usage Policy: https://nsearchives.nseindia.com/s3fs-public/inline-files/Non_Display_Policy.pdf (automated trading-decision and derived-data uses)",
+        "Official AMFI Terms of Use: https://www.amfiindia.com/terms-of-use (personal/non-commercial site use; significant electronic storage and derivative/public use restrictions)",
+        "Official BSE Self Data Feed: https://marketdata.bseindia.com/ (registration, data plans, agreements)",
+        "Official TradingView Advanced Charts terms/docs: https://www.tradingview.com/charting-library-docs/latest/introduction/ and https://www.tradingview.com/charting-library-docs/latest/connecting_data/datafeed-api/ (public-implementation condition; separate data source required)"
+      ],
+      "blocker": "External blocker: obtain and review the exact Kite account/API subscription terms and written Zerodha clarification for personal live-data paper simulation, permanent quote/candle/instrument-master retention, replay, derived data and private chart display; also resolve NSE/BSE/AMFI source-specific terms and TradingView library eligibility. Current published terms contain restrictions that could conflict with the intended paper-trading/archive workflow. Do not upgrade any permission based on the paid subscription alone.",
+      "last_audited_at_utc": "2026-11-21T11:43:55+00:00",
+      "commit": "7361694b",
+      "artifact_hash": "2ceb2382ecee21e24d448eacb947f9f5b3c931b036b975b6afe8b4f2db85cb20",
+      "test_evidence": [
+        "scripts/validate_market_data_sources.py passed (source inventory schema and evidence paths)",
+        "Permission register audited by count: 102 UNKNOWN_RIGHTS records, 17 source identities × six uses; no rights were upgraded"
+      ],
+      "test_result": "Completed official-source terms research and prepared an owner/provider review packet. Repository evidence is insufficient to establish the exact account-specific use and retention permissions; item remains externally blocked."
     },
     {
       "id": "FB-0009",
@@ -14105,7 +14122,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T11:39:04+00:00",
+    "as_of_utc": "2026-11-21T11:43:55+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14132,14 +14149,15 @@
       "SL-00-18",
       "SL-01-06",
       "FB-0006",
-      "FB-0007"
+      "FB-0007",
+      "FB-0008"
     ],
-    "audited_count": 26,
+    "audited_count": 27,
     "status_counts": {
       "PARTIAL": 14,
       "COMPLETE": 11,
-      "UNASSESSED": 1352,
-      "EXTERNAL_BLOCKED": 1
+      "EXTERNAL_BLOCKED": 2,
+      "UNASSESSED": 1351
     },
     "verified_complete_count": 11,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -14150,8 +14168,10 @@
       "docs/edge-program/V3.0_PROGRESS.md",
       "docs/edge-program/canonical-migration-audit.v1.json",
       "docs/edge-program/capability-ownership.v1.json",
+      "docs/edge-program/data-permission-operations.md",
       "docs/edge-program/forward-edge-equivalence-report.v1.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json",
+      "docs/edge-program/market-data-rights-review.v1.md",
       "docs/edge-program/ownership-map.v1.json",
       "docs/edge-program/product-charter.v1.json",
       "docs/edge-program/release-evidence-inputs.v1.json",
@@ -14191,6 +14211,6 @@
       "tests/test_oms.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0001: previous full hosted run exposed four synthetic-fixture rights omissions; test inputs now carry explicit test-only permission and the affected seven tests pass locally; next full CI remains pending."
+    "evidence_update": "FB-0008: terms research found provider restrictions that may conflict with personal live-data paper trading and archival; 102 permission records remain UNKNOWN_RIGHTS pending exact account/provider review."
   }
 }
