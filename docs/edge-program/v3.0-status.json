@@ -2126,122 +2126,166 @@
     {
       "id": "FB-0501",
       "text": "Cross-sectional momentum/relative-strength ranking **among comparable ETFs** with fixed horizons and exposure controls.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Candidate publication ranks ETF-desk signals supplied by upstream callers, but no comparable-ETF cross-sectional momentum/relative-strength calculator with fixed horizons and exposure controls was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0502",
       "text": "Trend continuation, moving-average rules, medium-horizon mean-reversion and volatility-adjusted position sizing, each pre-registered before decisive tests.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Generic equity indicators and ranking infrastructure exist, but no ETF-specific, pre-registered trend, moving-average, mean-reversion and volatility-sizing strategy family was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0503",
       "text": "Cross-asset rotation across equity, debt, gold/silver ETF sleeves using equal-vol, buy-and-hold, same-risk and cash controls.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "ETF reference metadata distinguishes broad equity, debt, gold, silver and international exposures, but no ETF sleeve-rotation study with equal-volatility, buy-and-hold, same-risk and cash controls was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0504",
       "text": "ETF short-horizon signal studies only for instruments whose spread/depth make cost-adjusted intraday trading plausible.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "ETF bars and quote/liquidity diagnostics exist, but no short-horizon ETF signal study connects spread/depth admissibility to cost-adjusted intraday outcomes."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0505",
       "text": "Premium/discount-to-iNAV anomaly detector with stale-iNAV and time-of-day guards; treat quoted premium as observation, not free arbitrage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "features/etf_valuation.py synchronizes a two-sided quote with point-in-time iNAV, checks identity/freshness/skew and flags stale valuation, market-closed underlyings and large observed premiums.",
+        "The comparison uses a midquote and is descriptive; time-of-day guards and executable opportunity/after-cost tests are not integrated."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0506",
       "text": "Compare market-price ETF returns net of execution friction against NAV/underlying TRI: separate tracking effect from selection alpha.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "features/etf_prices.py::separate_etf_return_series preserves sourced ETF-price, NAV and underlying total-return-index series without filling missing sessions.",
+        "It does not yet net ETF execution friction or attribute tracking difference separately from security-selection alpha."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0507",
       "text": "Model ETF liquidity tier, concentration, capacity, creation-unit microstructure implications and impact at submitted size.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "features/etf_liquidity.py reports observed spread/depth, turnover, coverage, intended-notional participation and an explicitly uncalibrated Amihud size-impact proxy.",
+        "Concentration, creation-unit mechanics and empirically calibrated impact at actual submitted size are missing."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0508",
       "text": "Disallow inverse/leveraged product assumptions if absent from actual Indian listed universe; no synthetic exposures presented as available.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "providers/etf_reference.py uses a closed exposure-category enum and explicit UNKNOWN category instead of inferring exposures from tickers; no synthetic inverse/leveraged product implementation was found.",
+        "An explicit point-in-time listed-product universe gate that refuses unsupported inverse/leveraged exposures has not been verified."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0509",
       "text": "Use stress tests for global-hours mismatch, commodity gaps, stale iNAV, liquidity collapse and widened spreads.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF pricing and valuation modules fail closed on stale/missing iNAV, stale quotes and asynchronous underlying markets; generic stress/scenario infrastructure exists.",
+        "Dedicated ETF stress cohorts for global-hours mismatch, commodity gaps, liquidity collapse and spread widening have not been found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0510",
       "text": "Preserve fixed champion and multiple-testing adjusted challengers for each family; include no-trade and simple equal-weight ETF baselines.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The repository has general champion/challenger, multiplicity and preregistration infrastructure, and ETF rankings remain separately desk-labelled.",
+        "No ETF-specific frozen champion/challenger family, multiplicity ledger, no-trade control and equal-weight ETF baseline is registered."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0511",
       "text": "Quantify incremental performance over holding the underlying benchmark with a matching risk budget and execution regime.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF price/NAV/underlying TRI series are available as separate sourced inputs.",
+        "No same-risk-budget, same-execution-regime portfolio comparison against underlying benchmark holding was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0512",
       "text": "Emit `ETF_SHADOW_ONLY` when cost or statistical confidence fails—even if a ranking exists.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "CandidatePublication keeps ETF candidates separate and filters caller-marked ineligible candidates.",
+        "There is no derived ETF_SHADOW_ONLY state binding cost limits and statistical confidence to each candidate; ranking eligibility remains caller-owned."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
     },
     {
       "id": "FB-0601",
