@@ -579,6 +579,33 @@ CREATE TABLE IF NOT EXISTS mf_nav_observations (
     observed_at         TIMESTAMPTZ NOT NULL
 );
 
+-- Effective-dated mutual-fund reference metadata. Each immutable row carries its source
+-- hash and both publication and observation clocks; unavailable classifications are
+-- explicit UNKNOWN values rather than guessed from a scheme name.
+CREATE TABLE IF NOT EXISTS mf_scheme_master (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,
+    structure       VARCHAR NOT NULL,
+    investment_style VARCHAR NOT NULL,
+    asset_category  VARCHAR NOT NULL,
+    category_label  VARCHAR NOT NULL,
+    fund_house      VARCHAR,
+    riskometer      VARCHAR,
+    benchmark_tri   VARCHAR,
+    manager         VARCHAR,
+    objective       VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref      VARCHAR NOT NULL,
+    source_sha256   VARCHAR NOT NULL,
+    published_at    TIMESTAMPTZ NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
