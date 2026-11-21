@@ -195,12 +195,17 @@
     {
       "id": "FB-0010",
       "text": "Activate GitHub branch governance and required checks (**owner action**), verify actual protection via API.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/main-branch-protection.v1.md (GitHub REST read-back at 2026-11-21T12:00:30Z)",
+        "main protected: PR required, strict Ubuntu/Windows test and reproducibility checks, administrator enforcement, 0 required approvals per owner instruction",
+        "GET /repos/crakashp2905-hub/Financial-Brain/branches/main/protection verified response after update"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T12:00:30+00:00",
+      "commit": null,
+      "artifact_hash": "03fd2c38c8fca0e3db64a250364adf8464765a33097e2a1c532f1e6e5137bc49"
     },
     {
       "id": "FB-0011",
@@ -14122,13 +14127,17 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T11:43:55+00:00",
+    "as_of_utc": "2026-11-21T12:00:30+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
       "FB-0003",
       "FB-0004",
       "FB-0005",
+      "FB-0006",
+      "FB-0007",
+      "FB-0008",
+      "FB-0010",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14147,19 +14156,16 @@
       "SL-00-16",
       "SL-00-17",
       "SL-00-18",
-      "SL-01-06",
-      "FB-0006",
-      "FB-0007",
-      "FB-0008"
+      "SL-01-06"
     ],
-    "audited_count": 27,
+    "audited_count": 28,
     "status_counts": {
       "PARTIAL": 14,
-      "COMPLETE": 11,
+      "COMPLETE": 12,
       "EXTERNAL_BLOCKED": 2,
-      "UNASSESSED": 1351
+      "UNASSESSED": 1350
     },
-    "verified_complete_count": 11,
+    "verified_complete_count": 12,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -14209,8 +14215,9 @@
       "tests/test_learning_audit.py",
       "tests/test_legacy_portfolio_migration.py",
       "tests/test_oms.py",
-      "tests/test_product_charter.py"
+      "tests/test_product_charter.py",
+      "docs/edge-program/main-branch-protection.v1.md"
     ],
-    "evidence_update": "FB-0008: terms research found provider restrictions that may conflict with personal live-data paper trading and archival; 102 permission records remain UNKNOWN_RIGHTS pending exact account/provider review."
+    "evidence_update": "FB-0010 COMPLETE: main branch protection verified by GitHub REST API; requires PRs and strict Ubuntu/Windows test and reproducibility checks, enforces protection for administrators, and requires zero approvals per owner instruction."
   }
 }
