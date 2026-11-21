@@ -27,6 +27,29 @@
       "boundary": "Enumerates current source candidates and protected historical trials with explicit status; candidate presence does not imply paper eligibility or validated edge."
     },
     {
+      "id": "paired_paper_sleeve_evaluation",
+      "category": "evaluation",
+      "owner": "src/financial_brain/forward_edge/paired_paper.py",
+      "owner_symbol": "compare_paper_sleeves",
+      "implementations": [
+        "src/financial_brain/forward_edge/paired_controls.py"
+      ],
+      "boundary": "Compares automatic and human-reviewed paper outcomes over one frozen eligible signal set; requires cash outcomes for abstentions and never authenticates actors or promotes a strategy."
+    },
+    {
+      "id": "mf_paper_lot_accounting",
+      "category": "ledger",
+      "owner": "src/financial_brain/paper/mf_lot_book.py",
+      "owner_symbol": "subscribe/redeem/account_snapshot",
+      "implementations": [
+        "src/financial_brain/paper/mf_exit_loads.py",
+        "src/financial_brain/paper/mf_redemption_constraints.py",
+        "src/financial_brain/providers/mf_scheme_terms.py",
+        "src/financial_brain/storage/schema.sql"
+      ],
+      "boundary": "Durable paper MF cash and FIFO purchase-lot accounting with event idempotency, source-hashed exit-load schedules, effective-dated terms and fail-closed redemption restrictions. It consumes supplied NAVs and does not model tax, settlement or production orders."
+    },
+    {
       "id": "algorithm_behavior_spec",
       "category": "strategy",
       "owner": "src/financial_brain/strategies/specs.py",
@@ -1689,6 +1712,12 @@
       "module_owner": "src/financial_brain/forward_edge/paired_controls.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/paired_paper.py",
+      "path": "src/financial_brain/forward_edge/paired_paper.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/paired_paper.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/paper_accounting.py",
       "path": "src/financial_brain/forward_edge/paper_accounting.py",
       "module_role": "forward_trading_contract_or_support",
@@ -2037,6 +2066,36 @@
       "module_owner": "src/financial_brain/ingest/macro.py"
     },
     {
+      "capability_id": "module:src/financial_brain/ingest/mf_portfolio_disclosures.py",
+      "path": "src/financial_brain/ingest/mf_portfolio_disclosures.py",
+      "module_role": "feed_ingester",
+      "module_owner": "src/financial_brain/ingest/mf_portfolio_disclosures.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/ingest/mf_scheme_flows.py",
+      "path": "src/financial_brain/ingest/mf_scheme_flows.py",
+      "module_role": "feed_ingester",
+      "module_owner": "src/financial_brain/ingest/mf_scheme_flows.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/ingest/mf_scheme_lifecycle.py",
+      "path": "src/financial_brain/ingest/mf_scheme_lifecycle.py",
+      "module_role": "feed_ingester",
+      "module_owner": "src/financial_brain/ingest/mf_scheme_lifecycle.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/ingest/mf_scheme_master.py",
+      "path": "src/financial_brain/ingest/mf_scheme_master.py",
+      "module_role": "feed_ingester",
+      "module_owner": "src/financial_brain/ingest/mf_scheme_master.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/ingest/mf_scheme_terms.py",
+      "path": "src/financial_brain/ingest/mf_scheme_terms.py",
+      "module_role": "feed_ingester",
+      "module_owner": "src/financial_brain/ingest/mf_scheme_terms.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/ingest/mfnav.py",
       "path": "src/financial_brain/ingest/mfnav.py",
       "module_role": "feed_ingester",
@@ -2181,6 +2240,12 @@
       "module_owner": "src/financial_brain/kernel/batch20e_strategies.py"
     },
     {
+      "capability_id": "module:src/financial_brain/kernel/candidate_publication.py",
+      "path": "src/financial_brain/kernel/candidate_publication.py",
+      "module_role": "signal_report_or_trader_renderer",
+      "module_owner": "src/financial_brain/kernel/candidate_publication.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/kernel/execution_model.py",
       "path": "src/financial_brain/kernel/execution_model.py",
       "module_role": "canonical_contract_or_signal_output",
@@ -2191,6 +2256,12 @@
       "path": "src/financial_brain/kernel/execution_tools.py",
       "module_role": "canonical_contract_or_signal_output",
       "module_owner": "src/financial_brain/kernel/execution_tools.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/kernel/exit_protection_ledger.py",
+      "path": "src/financial_brain/kernel/exit_protection_ledger.py",
+      "module_role": "ledger_or_journal",
+      "module_owner": "src/financial_brain/kernel/exit_protection_ledger.py"
     },
     {
       "capability_id": "module:src/financial_brain/kernel/fills.py",
@@ -2379,6 +2450,30 @@
       "module_owner": "src/financial_brain/paper/loss_review.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/mf_exit_loads.py",
+      "path": "src/financial_brain/paper/mf_exit_loads.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_exit_loads.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/mf_lot_book.py",
+      "path": "src/financial_brain/paper/mf_lot_book.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_lot_book.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/mf_redemption_constraints.py",
+      "path": "src/financial_brain/paper/mf_redemption_constraints.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_redemption_constraints.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/mf_scheme_flows.py",
+      "path": "src/financial_brain/paper/mf_scheme_flows.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_scheme_flows.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/options.py",
       "path": "src/financial_brain/paper/options.py",
       "module_role": "paper_engine_or_output",
@@ -2389,6 +2484,12 @@
       "path": "src/financial_brain/paper/options_forward.py",
       "module_role": "paper_engine_or_output",
       "module_owner": "src/financial_brain/paper/options_forward.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/options_plan.py",
+      "path": "src/financial_brain/paper/options_plan.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/options_plan.py"
     },
     {
       "capability_id": "module:src/financial_brain/paper/options_runner.py",
@@ -2763,6 +2864,36 @@
       "module_owner": "src/financial_brain/providers/kite_login_server.py"
     },
     {
+      "capability_id": "module:src/financial_brain/providers/mf_portfolio_disclosures.py",
+      "path": "src/financial_brain/providers/mf_portfolio_disclosures.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/mf_portfolio_disclosures.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/providers/mf_scheme_flows.py",
+      "path": "src/financial_brain/providers/mf_scheme_flows.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/mf_scheme_flows.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/providers/mf_scheme_lifecycle.py",
+      "path": "src/financial_brain/providers/mf_scheme_lifecycle.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/mf_scheme_lifecycle.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/providers/mf_scheme_master.py",
+      "path": "src/financial_brain/providers/mf_scheme_master.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/mf_scheme_master.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/providers/mf_scheme_terms.py",
+      "path": "src/financial_brain/providers/mf_scheme_terms.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/mf_scheme_terms.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/providers/news_article.py",
       "path": "src/financial_brain/providers/news_article.py",
       "module_role": "provider_adapter",
@@ -2881,6 +3012,24 @@
       "path": "src/financial_brain/research/knowledge.py",
       "module_role": "research_or_strategy_research",
       "module_owner": "src/financial_brain/research/knowledge.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/mf_peer_comparison.py",
+      "path": "src/financial_brain/research/mf_peer_comparison.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/mf_peer_comparison.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/mf_portfolio_analytics.py",
+      "path": "src/financial_brain/research/mf_portfolio_analytics.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/mf_portfolio_analytics.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/mf_return_accounting.py",
+      "path": "src/financial_brain/research/mf_return_accounting.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/mf_return_accounting.py"
     },
     {
       "capability_id": "module:src/financial_brain/research/preregistry.py",

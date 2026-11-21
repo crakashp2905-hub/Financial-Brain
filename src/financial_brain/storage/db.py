@@ -52,6 +52,11 @@ class Database:
         # Which text the tone model actually read: the filing, or the news headline the
         # filing quotes (events/newsref.py).
         "ALTER TABLE announcement_tone ADD COLUMN IF NOT EXISTS text_source VARCHAR",
+        "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'UNKNOWN'",
+        "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS option VARCHAR DEFAULT 'UNKNOWN'",
+        "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS lock_in_until DATE",
+        "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'UNKNOWN'",
+        "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS option VARCHAR DEFAULT 'UNKNOWN'",
     ]
 
     def migrate(self) -> None:

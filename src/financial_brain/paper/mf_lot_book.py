@@ -1,0 +1,615 @@
+"""Durable paper-book accounting for MF subscription lots and redemptions.
+
+Each subscription creates an immutable lot with its own source-pinned exit-load
+schedule. Redemptions allocate FIFO across those lots, reconcile fees into account
+cash, and are idempotent by caller-supplied event ID.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
+from typing import Any
+
+from ..forward_edge.data_permissions import DataPermission, DataUse
+from ..ingest.mf_scheme_terms import as_known_on as mf_terms_as_known_on
+from ..kernel.trading_clock import IST
+from ..providers.mf_scheme_terms import (
+    ExitLoadBand,
+    ExitRestriction,
+    SchemeCommercialTerms,
+)
+from .mf_exit_loads import PurchaseLot, calculate_exit_loads
+from .mf_redemption_constraints import resolve_redemption_eligibility
+
+
+class MfPaperBookError(ValueError):
+    """The requested paper-book event cannot be reconciled safely."""
+
+
+def _decimal(value: Decimal | str | int, name: str, *, positive: bool = True) -> Decimal:
+    try:
+        result = value if isinstance(value, Decimal) else Decimal(str(value))
+    except (InvalidOperation, ValueError) as exc:
+        raise MfPaperBookError(f"{name} must be decimal") from exc
+    if not result.is_finite() or result < 0 or (positive and result == 0):
+        qualifier = "positive" if positive else "non-negative"
+        raise MfPaperBookError(f"{name} must be {qualifier}")
+    return result
+
+
+def _aware(value: datetime | None) -> datetime:
+    result = value or datetime.now(timezone.utc)
+    if result.tzinfo is None or result.utcoffset() is None:
+        raise MfPaperBookError("event timestamp must be timezone-aware")
+    return result.astimezone(timezone.utc)
+
+
+def _schedule_json(schedule: tuple[ExitLoadBand, ...] | None) -> str | None:
+    if schedule is None:
+        return None
+    return json.dumps(
+        [
+            {
+                "days_from_purchase": band.days_from_purchase,
+                "rate_percent": str(band.rate_percent),
+            }
+            for band in schedule
+        ],
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _schedule_from_json(raw: str | None) -> tuple[ExitLoadBand, ...] | None:
+    if raw is None:
+        return None
+    values = json.loads(raw)
+    return tuple(
+        ExitLoadBand(item["days_from_purchase"], item["rate_percent"]) for item in values
+    )
+
+
+def _sha256(value: str, label: str) -> str:
+    if not re.fullmatch(r"[0-9a-fA-F]{64}", value):
+        raise MfPaperBookError(f"{label} must be a 64-character SHA-256 digest")
+    return value.lower()
+
+
+def _event_hash(payload: dict[str, Any]) -> str:
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _permission_evidence(permissions: tuple[DataPermission, ...]) -> list[tuple]:
+    return sorted(
+        (
+            permission.source_id,
+            permission.use.value,
+            permission.status.value,
+            permission.effective_from,
+            permission.effective_through,
+            permission.evidence_ref,
+            permission.reviewer,
+        )
+        for permission in permissions
+    )
+
+
+def _require_paper_terms(
+    con,
+    terms: SchemeCommercialTerms,
+    permissions: tuple[DataPermission, ...],
+    decision_at: datetime,
+) -> None:
+    if terms.published_at > decision_at or terms.observed_at > decision_at:
+        raise MfPaperBookError("commercial terms were not available at the decision time")
+    try:
+        terms.require_permissions(permissions)
+    except ValueError as exc:
+        raise MfPaperBookError(str(exc)) from exc
+    permission_date = decision_at.astimezone(IST).date()
+    if not any(
+        permission.allows(
+            source_id=terms.source_id,
+            use=DataUse.PAPER_SIMULATION,
+            on=permission_date,
+        )
+        for permission in permissions
+    ):
+        raise MfPaperBookError("source lacks effective PAPER_SIMULATION permission")
+    try:
+        known = mf_terms_as_known_on(
+            con,
+            terms.scheme_code,
+            terms.plan,
+            terms.option,
+            terms.isin,
+            decision_date=permission_date,
+            decision_at=decision_at,
+        )
+    except ValueError as exc:
+        raise MfPaperBookError(str(exc)) from exc
+    if known is None or known["record_id"] != terms.record_id:
+        raise MfPaperBookError("supplied commercial terms are not the resolved as-known version")
+
+
+def create_account(
+    con,
+    account_id: str,
+    opening_cash_inr: Decimal | str | int,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Create an account once; repeating the same opening balance is a no-op."""
+    if not account_id.strip():
+        raise MfPaperBookError("account_id is required")
+    cash = _decimal(opening_cash_inr, "opening cash", positive=False)
+    created = _aware(now)
+    con.execute("BEGIN TRANSACTION")
+    try:
+        old = con.execute(
+            "SELECT cash_inr FROM mf_paper_accounts WHERE account_id = ?", [account_id]
+        ).fetchone()
+        if old is not None:
+            if Decimal(old[0]) != cash:
+                raise MfPaperBookError(
+                    "account already exists with a different opening balance"
+                )
+            con.execute("COMMIT")
+            return {"account_id": account_id, "cash_inr": cash, "status": "exists"}
+        con.execute(
+            "INSERT INTO mf_paper_accounts VALUES (?, ?, ?)", [account_id, cash, created]
+        )
+        con.execute("COMMIT")
+    except Exception:
+        con.execute("ROLLBACK")
+        raise
+    return {"account_id": account_id, "cash_inr": cash, "status": "created"}
+
+
+def _existing_event(con, account_id: str, event_id: str, digest: str):
+    row = con.execute(
+        """SELECT kind, scheme_code, plan, option, isin, event_date, nav_per_unit,
+        units, gross_inr, exit_load_inr, net_inr, event_sha256
+        FROM mf_paper_events WHERE account_id = ? AND event_id = ?""",
+        [account_id, event_id],
+    ).fetchone()
+    if row is None:
+        return None
+    if row[-1] != digest:
+        raise MfPaperBookError("event_id was already used for different event content")
+    keys = (
+        "kind",
+        "scheme_code",
+        "plan",
+        "option",
+        "isin",
+        "event_date",
+        "nav_per_unit",
+        "units",
+        "gross_inr",
+        "exit_load_inr",
+        "net_inr",
+    )
+    result = dict(zip(keys, row[:-1], strict=True))
+    result.update(account_id=account_id, event_id=event_id, status="already_applied")
+    return result
+
+
+def subscribe(
+    con,
+    *,
+    account_id: str,
+    event_id: str,
+    lot_id: str,
+    scheme_code: str,
+    plan: str,
+    option: str,
+    isin: str,
+    allotted_on: date,
+    lock_in_until: date | None = None,
+    investment_inr: Decimal | str | int,
+    nav_per_unit: Decimal | str | int,
+    exit_loads: tuple[ExitLoadBand, ...] | None,
+    exit_loads_sha256: str | None,
+    terms: SchemeCommercialTerms,
+    permissions: tuple[DataPermission, ...],
+    decision_at: datetime,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Debit cash and create a subscription lot using the explicitly supplied NAV."""
+    for label, value in (
+        ("account_id", account_id),
+        ("event_id", event_id),
+        ("lot_id", lot_id),
+        ("scheme_code", scheme_code),
+        ("plan", plan),
+        ("option", option),
+        ("isin", isin),
+    ):
+        if not value.strip():
+            raise MfPaperBookError(f"{label} is required")
+    if lock_in_until is not None and lock_in_until < allotted_on:
+        raise MfPaperBookError("lock_in_until precedes lot allotment")
+    amount, nav = _decimal(investment_inr, "investment"), _decimal(nav_per_unit, "NAV")
+    decision_at = _aware(decision_at)
+    event_at = _aware(now)
+    if event_at < decision_at:
+        raise MfPaperBookError("subscription event timestamp precedes the decision time")
+    if (terms.scheme_code, terms.plan, terms.option, terms.isin) != (
+        scheme_code,
+        plan,
+        option,
+        isin,
+    ):
+        raise MfPaperBookError(
+            "commercial terms identity does not match the subscribed lot"
+        )
+    if not terms.effective_from <= allotted_on or (
+        terms.effective_to is not None and allotted_on > terms.effective_to
+    ):
+        raise MfPaperBookError("commercial terms are not effective on the allotment date")
+    if terms.exit_loads != exit_loads:
+        raise MfPaperBookError("lot exit-load schedule differs from commercial terms")
+    _require_paper_terms(con, terms, permissions, decision_at)
+    schedule = _schedule_json(exit_loads)
+    if exit_loads is None:
+        if exit_loads_sha256 is not None:
+            raise MfPaperBookError("unknown exit-load schedule cannot have a schedule hash")
+        schedule_hash = None
+    else:
+        if exit_loads_sha256 is None:
+            raise MfPaperBookError("known exit-load schedule requires its source hash")
+        schedule_hash = _sha256(exit_loads_sha256, "exit-load source hash")
+        if schedule_hash != terms.source_sha256:
+            raise MfPaperBookError("exit-load hash differs from the source terms hash")
+    units = amount / nav
+    payload = {
+        "kind": "SUBSCRIBE",
+        "account_id": account_id,
+        "event_id": event_id,
+        "lot_id": lot_id,
+        "scheme_code": scheme_code,
+        "plan": plan,
+        "option": option,
+        "isin": isin,
+        "allotted_on": allotted_on,
+        "lock_in_until": lock_in_until,
+        "investment_inr": amount,
+        "nav_per_unit": nav,
+        "exit_loads_json": schedule,
+        "exit_loads_sha256": schedule_hash,
+        "terms_record_id": terms.record_id,
+        "decision_at": decision_at,
+        "permission_evidence": _permission_evidence(permissions),
+    }
+    digest = _event_hash(payload)
+
+    con.execute("BEGIN TRANSACTION")
+    try:
+        existing = _existing_event(con, account_id, event_id, digest)
+        if existing is not None:
+            con.execute("COMMIT")
+            return existing
+        account = con.execute(
+            "SELECT cash_inr FROM mf_paper_accounts WHERE account_id = ?", [account_id]
+        ).fetchone()
+        if account is None:
+            raise MfPaperBookError("paper account does not exist")
+        cash = Decimal(account[0])
+        if amount > cash:
+            raise MfPaperBookError("subscription exceeds available paper cash")
+        con.execute(
+            """INSERT INTO mf_paper_lots (
+            account_id, lot_id, scheme_code, plan, option, isin, allotted_on, lock_in_until,
+            units_original, units_remaining, purchase_nav, exit_loads_json, exit_loads_sha256,
+            subscription_event_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                account_id,
+                lot_id,
+                scheme_code,
+                plan,
+                option,
+                isin,
+                allotted_on,
+                lock_in_until,
+                units,
+                units,
+                nav,
+                schedule,
+                schedule_hash,
+                event_id,
+                event_at,
+            ],
+        )
+        con.execute(
+            "UPDATE mf_paper_accounts SET cash_inr = ? WHERE account_id = ?",
+            [cash - amount, account_id],
+        )
+        con.execute(
+            """INSERT INTO mf_paper_events (
+            account_id, event_id, kind, scheme_code, plan, option, isin, event_date,
+            nav_per_unit, units, gross_inr, exit_load_inr, net_inr, event_sha256, created_at)
+            VALUES (
+            ?, ?, 'SUBSCRIBE', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)""",
+            [
+                account_id,
+                event_id,
+                scheme_code,
+                plan,
+                option,
+                isin,
+                allotted_on,
+                nav,
+                units,
+                amount,
+                amount,
+                digest,
+                event_at,
+            ],
+        )
+        con.execute("COMMIT")
+    except Exception:
+        con.execute("ROLLBACK")
+        raise
+    return {
+        "account_id": account_id,
+        "event_id": event_id,
+        "kind": "SUBSCRIBE",
+        "scheme_code": scheme_code,
+        "plan": plan,
+        "option": option,
+        "isin": isin,
+        "event_date": allotted_on,
+        "nav_per_unit": nav,
+        "units": units,
+        "gross_inr": amount,
+        "exit_load_inr": Decimal(0),
+        "net_inr": amount,
+        "status": "applied",
+    }
+
+
+def redeem(
+    con,
+    *,
+    account_id: str,
+    event_id: str,
+    scheme_code: str,
+    plan: str,
+    option: str,
+    isin: str,
+    redemption_date: date,
+    redemption_units: Decimal | str | int,
+    nav_per_unit: Decimal | str | int,
+    terms: SchemeCommercialTerms,
+    permissions: tuple[DataPermission, ...],
+    decision_at: datetime,
+    redemption_window_open: bool | None = None,
+    gating_remaining_units: Decimal | str | int | None = None,
+    segregated_portfolio_units: Decimal | str | int | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Apply FIFO lot allocation and credit proceeds net of per-lot exit loads."""
+    for label, value in (
+        ("account_id", account_id),
+        ("event_id", event_id),
+        ("scheme_code", scheme_code),
+        ("plan", plan),
+        ("option", option),
+        ("isin", isin),
+    ):
+        if not value.strip():
+            raise MfPaperBookError(f"{label} is required")
+    units = _decimal(redemption_units, "redemption units")
+    nav = _decimal(nav_per_unit, "NAV")
+    event_at = _aware(now)
+    decision_at = _aware(decision_at)
+    if (terms.scheme_code, terms.plan, terms.option, terms.isin) != (
+        scheme_code,
+        plan,
+        option,
+        isin,
+    ):
+        raise MfPaperBookError("commercial terms identity does not match the redeemed lots")
+    if not terms.effective_from <= redemption_date or (
+        terms.effective_to is not None and redemption_date > terms.effective_to
+    ):
+        raise MfPaperBookError("commercial terms are not effective on the redemption date")
+    if event_at < decision_at:
+        raise MfPaperBookError("redemption event timestamp precedes the decision time")
+    _require_paper_terms(con, terms, permissions, decision_at)
+    payload = {
+        "kind": "REDEEM",
+        "account_id": account_id,
+        "event_id": event_id,
+        "scheme_code": scheme_code,
+        "plan": plan,
+        "option": option,
+        "isin": isin,
+        "redemption_date": redemption_date,
+        "redemption_units": units,
+        "nav_per_unit": nav,
+        "terms_record_id": terms.record_id,
+        "decision_at": decision_at,
+        "redemption_window_open": redemption_window_open,
+        "gating_remaining_units": gating_remaining_units,
+        "segregated_portfolio_units": segregated_portfolio_units,
+        "permission_evidence": _permission_evidence(permissions),
+    }
+    digest = _event_hash(payload)
+    con.execute("BEGIN TRANSACTION")
+    try:
+        existing = _existing_event(con, account_id, event_id, digest)
+        if existing is not None:
+            con.execute("COMMIT")
+            return existing
+        account = con.execute(
+            "SELECT cash_inr FROM mf_paper_accounts WHERE account_id = ?", [account_id]
+        ).fetchone()
+        if account is None:
+            raise MfPaperBookError("paper account does not exist")
+        rows = con.execute(
+            """SELECT lot_id, allotted_on, units_remaining, exit_loads_json, lock_in_until
+            FROM mf_paper_lots WHERE account_id = ? AND scheme_code = ? AND plan = ?
+            AND option = ? AND isin = ? AND units_remaining > 0
+            ORDER BY allotted_on, lot_id""",
+            [account_id, scheme_code, plan, option, isin],
+        ).fetchall()
+        if not rows:
+            raise MfPaperBookError("no open purchase lots for this scheme")
+        lots = tuple(
+            PurchaseLot(row[0], row[1], Decimal(row[2]), _schedule_from_json(row[3]))
+            for row in rows
+        )
+        restrictions = terms.exit_restrictions
+        if restrictions is None:
+            raise MfPaperBookError("commercial redemption restrictions are unknown")
+        available_units = sum((Decimal(lot.units) for lot in lots), Decimal(0))
+        global_eligibility = resolve_redemption_eligibility(
+            as_of=redemption_date,
+            requested_units=units,
+            lot_units=available_units,
+            restrictions=tuple(
+                item for item in restrictions if item != ExitRestriction.ELSS_LOCK_IN
+            ),
+            redemption_window_open=redemption_window_open,
+            gating_remaining_units=gating_remaining_units,
+            segregated_portfolio_units=segregated_portfolio_units,
+        )
+        if not global_eligibility.eligible:
+            raise MfPaperBookError(",".join(global_eligibility.reasons))
+        remaining_to_check = units
+        gate_remaining = (
+            Decimal(str(gating_remaining_units))
+            if gating_remaining_units is not None
+            else None
+        )
+        segregated_remaining = (
+            Decimal(str(segregated_portfolio_units))
+            if segregated_portfolio_units is not None
+            else None
+        )
+        for lot, row in zip(lots, rows, strict=True):
+            if remaining_to_check <= 0:
+                break
+            lot_units = Decimal(lot.units)
+            portion = min(remaining_to_check, lot_units)
+            lot_eligibility = resolve_redemption_eligibility(
+                as_of=redemption_date,
+                requested_units=portion,
+                lot_units=lot_units,
+                restrictions=restrictions,
+                lock_in_until=row[4],
+                redemption_window_open=redemption_window_open,
+                gating_remaining_units=gate_remaining,
+                segregated_portfolio_units=segregated_remaining,
+            )
+            if not lot_eligibility.eligible:
+                raise MfPaperBookError(",".join(lot_eligibility.reasons))
+            remaining_to_check -= portion
+            if gate_remaining is not None:
+                gate_remaining -= portion
+            if segregated_remaining is not None:
+                segregated_remaining -= portion
+        result = calculate_exit_loads(
+            lots,
+            redemption_date=redemption_date,
+            redemption_units=units,
+            nav_per_unit=nav,
+        )
+        for allocation in result.allocations:
+            con.execute(
+                "UPDATE mf_paper_lots SET units_remaining = ? "
+                "WHERE account_id = ? AND lot_id = ?",
+                [allocation.units_remaining, account_id, allocation.lot_id],
+            )
+        con.execute(
+            "UPDATE mf_paper_accounts SET cash_inr = cash_inr + ? WHERE account_id = ?",
+            [result.net_redemption_inr, account_id],
+        )
+        con.execute(
+            """INSERT INTO mf_paper_events (
+            account_id, event_id, kind, scheme_code, plan, option, isin, event_date,
+            nav_per_unit, units, gross_inr, exit_load_inr, net_inr, event_sha256, created_at)
+            VALUES (
+            ?, ?, 'REDEEM', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                account_id,
+                event_id,
+                scheme_code,
+                plan,
+                option,
+                isin,
+                redemption_date,
+                nav,
+                result.redeemed_units,
+                result.gross_redemption_inr,
+                result.exit_load_inr,
+                result.net_redemption_inr,
+                digest,
+                event_at,
+            ],
+        )
+        con.execute("COMMIT")
+    except Exception:
+        con.execute("ROLLBACK")
+        raise
+    return {
+        "account_id": account_id,
+        "event_id": event_id,
+        "kind": "REDEEM",
+        "scheme_code": scheme_code,
+        "plan": plan,
+        "option": option,
+        "isin": isin,
+        "event_date": redemption_date,
+        "nav_per_unit": nav,
+        "units": result.redeemed_units,
+        "gross_inr": result.gross_redemption_inr,
+        "exit_load_inr": result.exit_load_inr,
+        "net_inr": result.net_redemption_inr,
+        "allocations": result.allocations,
+        "status": "applied",
+    }
+
+
+def account_snapshot(con, account_id: str) -> dict[str, Any]:
+    """Return reconciled cash, units, and remaining subscription cost basis by scheme."""
+    row = con.execute(
+        "SELECT cash_inr FROM mf_paper_accounts WHERE account_id = ?", [account_id]
+    ).fetchone()
+    if row is None:
+        raise MfPaperBookError("paper account does not exist")
+    lots = con.execute(
+        """SELECT scheme_code, plan, option, isin, units_remaining, purchase_nav
+        FROM mf_paper_lots WHERE account_id = ? AND units_remaining > 0
+        ORDER BY scheme_code, plan, option, isin, allotted_on, lot_id""",
+        [account_id],
+    ).fetchall()
+    grouped: dict[tuple[str, str, str, str], tuple[Decimal, Decimal]] = {}
+    for scheme_code, plan, option, isin, raw_units, raw_nav in lots:
+        key = (scheme_code, plan, option, isin)
+        units, cost = grouped.get(key, (Decimal(0), Decimal(0)))
+        lot_units, purchase_nav = Decimal(raw_units), Decimal(raw_nav)
+        grouped[key] = (units + lot_units, cost + lot_units * purchase_nav)
+    positions = [
+        {
+            "scheme_code": key[0],
+            "plan": key[1],
+            "option": key[2],
+            "isin": key[3],
+            "units": values[0],
+            "cost_basis_inr": values[1],
+        }
+        for key, values in sorted(grouped.items())
+    ]
+    return {"account_id": account_id, "cash_inr": Decimal(row[0]), "positions": positions}
+
+
+__all__ = ["MfPaperBookError", "account_snapshot", "create_account", "redeem", "subscribe"]
