@@ -7269,7 +7269,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/exit_protection_ledger.py",
-      "source_sha256": "b6253521387157c8225d1722c923944ca66524d186dbbab308cd8fb4efd0a6a0",
+      "source_sha256": "a66cea9eb553af8fd402a954c930447170539885c4567d40ee65e2c8762bd82c",
       "test_paths": []
     },
     {

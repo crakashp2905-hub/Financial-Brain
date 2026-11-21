@@ -53,9 +53,9 @@ def _event(quantity="6", key="pos:1:stop", **changes):
 
 def _armed(path):
     ledger = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    ledger.arm(_protection(), idempotency_key="protection:arm:1")
     ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
                              side=EntrySide.BUY, idempotency_key="entry:fill:1")
-    ledger.arm(_protection(), idempotency_key="protection:arm:1")
     return ledger
 
 
@@ -89,15 +89,16 @@ def test_duplicate_fill_is_idempotent_but_conflicting_id_is_rejected(tmp_path):
 def test_exit_must_be_armed_and_cannot_reserve_more_than_unreserved_open_quantity(tmp_path):
     path = tmp_path / "position.journal"
     ledger = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    with pytest.raises(ExitLedgerError, match="pre-armed hard-stop"):
+        ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
+                                 side=EntrySide.BUY, idempotency_key="entry:fill:1")
+    ledger.arm(_protection(), idempotency_key="protection:arm:1")
     ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
                              side=EntrySide.BUY, idempotency_key="entry:fill:1")
-    with pytest.raises(ExitLedgerError, match="durably armed"):
-        ledger.emit(_entry(), _protection(), _event())
-    ledger.arm(_protection(), idempotency_key="protection:arm:1")
+    ledger.emit(_entry(), _protection(), _event("6", "pos:1:stop"))
     with pytest.raises(ExitLedgerError, match="does not match the recorded entry"):
         ledger.arm(_protection(parent_entry_signal_id="550e8400-e29b-41d4-a716-446655440009"),
                    idempotency_key="protection:wrong-parent")
-    ledger.emit(_entry(), _protection(), _event("6"))
     with pytest.raises(ExitLedgerError, match="unreserved open"):
         ledger.emit(_entry(), _protection(), _event("5", "pos:1:other"))
     assert ledger.state.exit_pending_quantity == Decimal("6")
@@ -125,14 +126,14 @@ def test_entry_fill_identity_and_side_cannot_change_mid_position(tmp_path):
 def test_oco_partial_fill_cancels_sibling_and_recovers_remaining_protection(tmp_path):
     path = tmp_path / "oco.journal"
     ledger = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
-    ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
-                             side=EntrySide.BUY, idempotency_key="entry:fill:1")
     group = "550e8400-e29b-41d4-a716-446655440010"
     stop = _protection(oco_group_id=group)
     target = _protection(protection_id="550e8400-e29b-41d4-a716-446655440011",
                          trigger=ExitTrigger.TAKE_PROFIT, trigger_price=Decimal("110"), oco_group_id=group)
     ledger.arm(stop, idempotency_key="protection:stop")
     ledger.arm(target, idempotency_key="protection:target")
+    ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
+                             side=EntrySide.BUY, idempotency_key="entry:fill:1")
     ledger.emit(_entry(), stop, _event("10", "exit:stop", oco_group_id=group))
     ledger.emit(_entry(), target, _event(
         "10", "exit:target", protection_id=target.protection_id, trigger=ExitTrigger.TAKE_PROFIT,
@@ -187,9 +188,9 @@ def test_unresolved_exit_requires_armed_protection_and_aware_timestamp(tmp_path)
             trigger=ExitTrigger.HARD_STOP, quantity=Decimal("1"), observed_at=NOW,
             reason="halt", idempotency_key="unresolved:1",
         )
+    ledger.arm(_protection(), idempotency_key="protection:arm:1")
     ledger.record_entry_fill(entry_signal_id=ENTRY_ID, fill_id="entry-fill-1", quantity=Decimal("10"),
                              side=EntrySide.BUY, idempotency_key="entry:fill:1")
-    ledger.arm(_protection(), idempotency_key="protection:arm:1")
     with pytest.raises(ExitLedgerError, match="timezone-aware"):
         ledger.record_unresolved_exit(
             intent_id="550e8400-e29b-41d4-a716-446655440012", protection_id=PROTECTION_ID,

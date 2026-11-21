@@ -1756,12 +1756,21 @@
     {
       "id": "FB-0472",
       "text": "Ensure a paper position cannot be opened without a valid exit policy, and is never treated as closed until recorded fill or correctly modeled settlement completes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ExitProtectionLedger.record_entry_fill now refuses any new open quantity unless a matching, pre-armed HARD_STOP protection covers the cumulative entry fills for the recorded entry signal.",
+        "Journal state derives open quantity only from recorded entry fills minus recorded exit fills; unresolved stops do not create fills or close positions.",
+        "Regression tests cover missing pre-armed protection, protected quantity, unresolved exits, and fill-backed position quantity."
+      ],
+      "blocker": "The ledger has not yet bound every open to a versioned ExitPolicy/TradePlan or been integrated with all paper books; explicit POSITION_CLOSED and non-exchange settlement events are not yet modeled.",
+      "last_audited_at_utc": "2026-11-21T18:35:31+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0472-final tests/test_exit_protection_ledger.py tests/test_exit_policy.py -q: 14 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "Entry fills cannot be recorded without matching prior hard-stop coverage; unresolved exits remain open and quantities fall only on explicit exit fills."
     },
     {
       "id": "FB-0473",

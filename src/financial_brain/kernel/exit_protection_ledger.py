@@ -144,6 +144,18 @@ class ExitProtectionLedger:
         prior_fill = next((r for r in records if r.get("type") == "ENTRY_FILL" and r.get("fill_id") == fill_id), None)
         if prior_fill is not None and prior_fill != record:
             raise ExitLedgerError("entry fill id conflicts with prior evidence")
+        if prior_fill is None:
+            planned_entry_quantity = sum(
+                (_decimal(r["quantity"], "entry fill") for r in prior_entries), Decimal(0)
+            ) + qty
+            hard_stop_capacity = max((
+                _decimal(r["quantity"], "hard-stop protection")
+                for r in records if r.get("type") == "PROTECTION_ARMED"
+                and r.get("trigger") == ExitTrigger.HARD_STOP.value
+                and r.get("parent_entry_signal_id") == entry_signal_id
+            ), default=Decimal(0))
+            if planned_entry_quantity > hard_stop_capacity:
+                raise ExitLedgerError("position entry requires a pre-armed hard-stop exit policy covering filled quantity")
         self._append_idempotent(self.journal, records, record, idempotency_key)
         _ = self.state
         return prior_fill is None
@@ -153,11 +165,9 @@ class ExitProtectionLedger:
             raise ExitLedgerError("protection belongs to a different position")
         records = self._position_records()
         entry_records = [r for r in records if r["type"] == "ENTRY_FILL"]
-        if not entry_records:
-            raise ExitLedgerError("cannot arm exit protection before an entry fill")
-        if any(r["entry_signal_id"] != protection.parent_entry_signal_id for r in entry_records):
+        if entry_records and any(r["entry_signal_id"] != protection.parent_entry_signal_id for r in entry_records):
             raise ExitLedgerError("protection does not match the recorded entry signal")
-        if protection.quantity > self.state.open_quantity:
+        if entry_records and protection.quantity > self.state.open_quantity:
             raise ExitLedgerError("protected quantity exceeds open position quantity")
         record = {"type": "PROTECTION_ARMED", "position_id": self.position_id,
                   "protection_id": protection.protection_id,
