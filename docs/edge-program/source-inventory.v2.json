@@ -7916,13 +7916,14 @@
         "decimal",
         "enum",
         "re",
+        "typing",
         "uuid"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/trader_signal.py",
-      "source_sha256": "b042a4894825fa69e5a9f4a28e03908e9e2dd4f4c34a396b36382e39f4499c76",
+      "source_sha256": "a2962b736c49d21e9184e952dd5bb7c316ace4d718d7ec0fe273f8454cffad42",
       "test_paths": []
     },
     {
