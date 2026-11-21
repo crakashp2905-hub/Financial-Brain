@@ -645,12 +645,23 @@
     {
       "id": "FB-0209",
       "text": "Ingest AMC/exchange ETF disclosed tracking difference, tracking error and total expense ratio when permissioned; keep effective dates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_reference.py::ETFTrackingMetrics stores tracking difference, tracking error and expense ratio in basis points with effective interval, source hash and publication/observation clocks",
+        "ETFReferenceCatalog requires separate RESEARCH and RETENTION permission for the source and resolves only effective, already-published records matching the point-in-time ISIN",
+        "Negative tracking error/expense, malformed hashes, future-published facts and conflicting equal-clock rows are rejected",
+        "tests/test_etf_reference.py: effective-date and publication-time lookup, permission, sign and content-hash cases"
+      ],
+      "blocker": "Partial: the permission-gated disclosure contract is implemented, but no permissioned AMC/exchange tracking or TER observations have been ingested or reconciled against actual source documents.",
+      "last_audited_at_utc": "2026-11-21T14:31:00+00:00",
+      "commit": "79eb8ed2",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_reference.py tests/test_etf_liquidity.py tests/test_etf_valuation.py -q: 28 passed",
+        "Ruff and targeted mypy passed",
+        "Source inventory and forward-engine graph freshness checks passed"
+      ],
+      "test_result": "Permissioned ETF disclosures can be stored and resolved without backdating, while absent and future-published facts remain unavailable."
     },
     {
       "id": "FB-0210",
