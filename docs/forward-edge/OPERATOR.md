@@ -1,8 +1,9 @@
 # Forward-edge operator commands
 
-These commands do not submit broker orders. The existing intraday paper engine has both live-quote and historical
-replay paths, but the unified `ForwardSessionRunner`, independently timestamped pre-entry receipts, and a single
-reconciled session ledger are not yet wired. Command output must be read with that limitation in mind.
+These commands do not submit broker orders. `ForwardSessionRunner` persists normalized events, decisions, paper
+intents, receipts and accounting, but it is not yet the entry point for the existing intraday runner. Independent
+timestamp custody and a complete cross-desk lifecycle remain outstanding. Command output must be read with that
+limitation in mind.
 
 ## Preflight
 
@@ -13,7 +14,10 @@ fb forward preflight --json
 
 Exit `0` means the repository audit checks are green. Exit `2` means formal readiness is blocked. Even a green
 repository audit does not claim a session is ready; the JSON includes `paper_session_ready: false` until the
-integrated runner and custody path exist.
+integrated environment checks and custody path exist. At the runner boundary, `begin()` requires explicit true
+values for calendar, credentials, disk, feeds, data contracts, risk, system health and broker-disabled checks.
+Omitted checks are recorded as false and reject the session. This contract validates caller-supplied booleans; it
+does not itself query account state, prove entitlements, measure quote quality or verify dashboard readiness.
 
 ## Paper replay
 

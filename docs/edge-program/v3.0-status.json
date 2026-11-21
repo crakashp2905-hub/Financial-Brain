@@ -3181,11 +3181,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/paper/intraday_runner.py (Kite token/session retries, quote polling, market-session detection, feed health; no unified pre-open account+entitlement+calendar+dashboard readiness gate)"
+        "src/financial_brain/forward_edge/session_runner.py:ForwardSessionRunner.begin and REQUIRED_PREFLIGHT (explicit required checks are persisted; omitted checks become false and reject session)",
+        "tests/test_forward_edge_session_runner.py::test_omitted_required_preflight_checks_are_recorded_as_failures (runner/calendar/feed/credential/disk/data-contract/risk/system-health/broker-disabled omissions fail closed)",
+        "docs/forward-edge/OPERATOR.md (documents remaining live account, entitlement, quote-quality and dashboard readiness probes)",
+        "Focused runner/checkpoint/CLI suite: 68 passed; Ruff and mypy passed"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
-      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
+      "last_audited_at_utc": "2026-11-21T19:43:11.492925Z",
+      "commit": "c85716e2aa0d0d6699d8038eb7003b03bda31822"
     },
     {
       "id": "FB-1002",
@@ -3289,11 +3292,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/paper/intraday_runner.py (feed health, retries, stale-quote-labelled EOD close); src/financial_brain/paper/daily.py (kill-switch for stale/degraded inputs); no common pre-trade gate across desks"
+        "src/financial_brain/forward_edge/session_runner.py:ForwardSessionRunner.begin (missing required readiness flags are persisted as false and block session open)",
+        "src/financial_brain/paper/intraday_runner.py (feed health, retries and stale-quote-labelled close); src/financial_brain/paper/daily.py (stale/degraded kill switch)",
+        "tests/test_forward_edge_session_runner.py::test_omitted_required_preflight_checks_are_recorded_as_failures; focused runner/checkpoint/CLI suite: 68 passed",
+        "Remaining gap: automatic cross-desk account/portfolio-state and drawdown gate before all entry paths"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
-      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
+      "last_audited_at_utc": "2026-11-21T19:43:52.489858Z",
+      "commit": "c85716e2aa0d0d6699d8038eb7003b03bda31822"
     },
     {
       "id": "FB-1011",

@@ -5173,6 +5173,7 @@
         "financial_brain.forward_edge.paper_accounting",
         "financial_brain.forward_edge.provenance",
         "financial_brain.forward_edge.quote_archive",
+        "financial_brain.forward_edge.session_ops",
         "financial_brain.forward_edge.session_state",
         "financial_brain.forward_edge.venue_calendar",
         "financial_brain.kernel.events",
@@ -5189,7 +5190,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "e052d9324bf67b8254e9220254f0601421ae53a5bd87cc7336b380fbd390ce81",
+      "source_sha256": "e019387f8371865fb43190b2f376b2c39da95f96d51966d4dc5262fbf6b760c6",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
