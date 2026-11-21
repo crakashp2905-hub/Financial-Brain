@@ -63,6 +63,9 @@ def ingest(
                    filename=res.filename, payload=res.payload, url=res.url,
                    content_type=res.content_type, http_status=res.http_status,
                    retrieved_at=res.retrieved_at)
+    # The source payload is now durably captured locally. This is the conservative
+    # earliest point at which its row observations can become available to consumers.
+    ingested_at = datetime.now(timezone.utc)
     con.execute("""INSERT INTO lake_manifest (key, source, dataset, business_date,
                    filename, url, retrieved_at, sha256, size_bytes, http_status,
                    content_type) VALUES (?,?,?,?,?,?,?,?,?,?,?)
@@ -89,14 +92,14 @@ def ingest(
             observation_id, row["scheme_code"], row["isin_growth"], row["isin_reinvest"],
             row["scheme_name"], row["fund_house"], row["scheme_type"], row["plan"],
             row["option"], row["nav"], row["nav_date"], obj.key, row_number,
-            row_digest, source_published_at, observed_at,
+            row_digest, source_published_at, observed_at, ingested_at,
         ))
 
     con.executemany("""INSERT INTO mf_nav_observations (
         observation_id, scheme_code, isin_growth, isin_reinvest, scheme_name,
         fund_house, scheme_type, plan, option, nav, nav_date, lake_key, row_number,
-        row_sha256, source_published_at, observed_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (observation_id) DO NOTHING""",
+        row_sha256, source_published_at, observed_at, ingested_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (observation_id) DO NOTHING""",
         observations)
     # Keep the legacy table as the latest known projection. Historical/as-known queries
     # use mf_nav_observations, which is never overwritten by this update.
@@ -143,29 +146,36 @@ def ingest(
             "lake_key": obj.key, "observations_recorded": len(observations),
             "source_published_at": (source_published_at.isoformat()
                                      if source_published_at else None),
-            "observed_at": observed_at.isoformat(), "quality": quality}
+            "observed_at": observed_at.isoformat(),
+            "ingested_at": ingested_at.isoformat(), "quality": quality}
 
 
 def as_known_on(con, scheme_code: str, nav_date: date, *, known_at: datetime) -> dict | None:
-    """Return the latest NAV observation that had been retrieved by ``known_at``.
+    """Return the latest NAV observation locally available by ``known_at``.
 
     AMFI's NAVAll feed does not expose a per-row publication timestamp. In that case
-    observed_at is the earliest defensible strategy-availability bound. A publication
-    timestamp is preserved when an authorized provider supplies one, but is never
-    inferred from nav_date or the request date.
+    observed_at records provider retrieval; ingested_at records when this database
+    persisted it. New observations use the latter as their availability bound. Older
+    rows without it conservatively fall back to observed_at. A publication timestamp is
+    preserved when an authorized provider supplies one, but never inferred from NAV or
+    request date.
     """
     if known_at.tzinfo is None or known_at.utcoffset() is None:
         raise ValueError("known_at must be timezone-aware")
     row = con.execute("""SELECT observation_id, scheme_code, nav, nav_date, lake_key,
-        row_number, row_sha256, source_published_at, observed_at
+        row_number, row_sha256, source_published_at, observed_at, ingested_at,
+        COALESCE(ingested_at, observed_at) AS available_at
         FROM mf_nav_observations
-        WHERE scheme_code = ? AND nav_date = ? AND observed_at <= ?
-        ORDER BY observed_at DESC, lake_key DESC, row_number DESC LIMIT 1""",
+        WHERE scheme_code = ? AND nav_date = ?
+          AND COALESCE(ingested_at, observed_at) <= ?
+        ORDER BY COALESCE(ingested_at, observed_at) DESC, lake_key DESC,
+                 row_number DESC LIMIT 1""",
         [scheme_code, nav_date, known_at.astimezone(timezone.utc)]).fetchone()
     if row is None:
         return None
     keys = ("observation_id", "scheme_code", "nav", "nav_date", "lake_key",
-            "row_number", "row_sha256", "source_published_at", "observed_at")
+            "row_number", "row_sha256", "source_published_at", "observed_at",
+            "ingested_at", "available_at")
     return dict(zip(keys, row, strict=True))
 
 
