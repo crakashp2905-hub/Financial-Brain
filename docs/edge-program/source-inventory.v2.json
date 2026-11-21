@@ -7699,7 +7699,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/units.py",
-      "source_sha256": "1c3e9c261d11b02eae02e6b920eebb59779c5c14be60b4f7f38705f8ec8858f9",
+      "source_sha256": "eac2a5d096ac202159e0add006d64bec7b994543013d63a04ffc627e6685cea0",
       "test_paths": []
     },
     {
