@@ -224,12 +224,25 @@
     {
       "id": "FB-0011",
       "text": "Define five-desk launch gates and independent evidence labels: FIXTURE, REPLAY, LOCAL_PAPER, ATTESTED_FORWARD, BROKER_APPROVED.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/launch-gates.v1.json (versioned launch-gate taxonomy and desk-specific preflight requirements)",
+        "docs/edge-program/launch-gate-contract.md (definitions, allowed claims, stage progression, and external blockers)",
+        "src/financial_brain/forward_edge/evidence_labels.py (FIXTURE/REPLAY/LOCAL_PAPER/ATTESTED_FORWARD map to fail-closed canonical evidence classes)",
+        "src/financial_brain/forward_edge/modes.py and src/financial_brain/execution/order_policy.py (BROKER_APPROVED remains a separate blocked deployment gate; physical orders disabled)",
+        "scripts/validate_launch_gates.py and .github/workflows/ci.yml (contract freshness and fail-closed checks run in CI)"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T12:45:20+00:00",
+      "commit": "2fc45bdb",
+      "artifact_hash": "946fb742b58c5aa353a9611c884a6dab04686fc7e3d95c373b593966c7129320",
+      "test_evidence": [
+        "python scripts/validate_launch_gates.py --check passed",
+        "tests/test_launch_gates.py, tests/test_product_charter.py and tests/test_evidence_labels.py: 20 passed",
+        "Ruff, mypy scripts/validate_launch_gates.py, JSON validation and git diff --check passed"
+      ],
+      "test_result": "The five required labels and five desk-specific launch preflight sets are defined and validated. Unknown/failed gates block promotion; source rights are required for LOCAL_PAPER; ATTESTED_FORWARD requires sealed pre-entry evidence, complete session and verified custody; BROKER_APPROVED remains a separate blocked deployment gate. No physical-order permission is enabled."
     },
     {
       "id": "FB-0012",
@@ -14149,7 +14162,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T12:20:44+00:00",
+    "as_of_utc": "2026-11-21T12:45:20+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14161,6 +14174,7 @@
       "FB-0008",
       "FB-0009",
       "FB-0010",
+      "FB-0011",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14181,14 +14195,14 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 29,
+    "audited_count": 30,
     "status_counts": {
-      "COMPLETE": 16,
+      "COMPLETE": 17,
       "PARTIAL": 12,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1349
+      "UNASSESSED": 1348
     },
-    "verified_complete_count": 16,
+    "verified_complete_count": 17,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -14239,8 +14253,12 @@
       "tests/test_legacy_portfolio_migration.py",
       "tests/test_oms.py",
       "tests/test_product_charter.py",
-      "docs/edge-program/main-branch-protection.v1.md"
+      "docs/edge-program/main-branch-protection.v1.md",
+      "docs/edge-program/launch-gates.v1.json",
+      "docs/edge-program/launch-gate-contract.md",
+      "scripts/validate_launch_gates.py",
+      "tests/test_launch_gates.py"
     ],
-    "evidence_update": "FB-0009 and SL-00-12 COMPLETE after current-head hosted CI run 44901944665: all four Linux/Windows test and reproducibility jobs passed; each test job reports 3,742 passed, 3 skipped, 0 failures/errors, with coverage and JUnit artifacts."
+    "evidence_update": "FB-0011 COMPLETE: versioned fail-closed five-desk launch-gate/evidence-label contract, desk preflight gates, validator and CI check; focused verification 20 passed."
   }
 }
