@@ -363,7 +363,7 @@
       ],
       "blocker": "Partial: event, Kite quote and paper-runner timestamps are represented and persisted, but there is no repository-wide data-contract audit proving source/exchange/published/ingested clocks survive every provider, filing, NAV, replay and export path. Older records with no such timestamps cannot be backfilled.",
       "last_audited_at_utc": "2026-11-21T13:27:00+00:00",
-      "commit": "8fb47252",
+      "commit": "cfdd5ad1",
       "test_evidence": [
         "python -m pytest tests/test_forward_edge_market_events.py tests/test_forward_edge_kite_market_data.py tests/test_forward_edge_session_runner.py -q: 86 passed",
         "ruff check on changed market-event and Kite-normalization modules/tests: passed",
