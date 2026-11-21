@@ -1,0 +1,270 @@
+{
+  "schema": "fb.financial_brain.unified_checklist.baseline.v3",
+  "captured_at_utc": "2026-11-21T06:01:52.817048+00:00",
+  "repository": "https://github.com/crakashp2905-hub/Financial-Brain",
+  "local": {
+    "path": "D:\\Finance-Brain",
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.5",
+    "branch": "feature/forward-edge-f00-f01",
+    "head_sha": "93acc1b3590c5c557deb9c206634d9ece31bcf13",
+    "tree_sha": "d542744a5b8df335339c3dce2b95c3b22ca2c451",
+    "working_tree_state": "DIRTY",
+    "porcelain_entries": 33,
+    "status_sha256": "e4faa307f7aad628126c50d18bd9b79b154036663ed73f27a734fd00c97f71a4"
+  },
+  "mainline": {
+    "sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+    "source": "GitHub API latest default-branch commit on 2026-11-21",
+    "remote_git_ls_remote": "UNAVAILABLE_DNS_THREAD_START_FAILURE"
+  },
+  "dependencies": {
+    "pyproject_sha256": "cbce3d4809f1d18b4d8c1b3491fd91473d33e00e76cd99b746563a1d9498b593",
+    "requirements_lock_sha256": "47f613e2e061e88a22a3a2e996c581e7fcf1c42db2f3b468183b915345abf852"
+  },
+  "data_artifacts": [
+    {
+      "path": "data/analogue_pool.parquet",
+      "bytes": 79193925,
+      "modified_utc": "2026-10-05T14:45:18.938793+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/anything.duckdb",
+      "bytes": 12288,
+      "modified_utc": "2026-11-11T21:06:23.147421+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/basis_contracts.parquet",
+      "bytes": 638172,
+      "modified_utc": "2026-10-07T05:58:56.710874+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/consensus_directions.parquet",
+      "bytes": 3857,
+      "modified_utc": "2026-10-07T15:21:12.106653+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/exec_algos_test.parquet",
+      "bytes": 7608270,
+      "modified_utc": "2026-10-06T19:03:04.364394+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/feature_library_books.parquet",
+      "bytes": 22190,
+      "modified_utc": "2026-10-06T17:58:33.243518+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/feature_library_panel.parquet",
+      "bytes": 180500731,
+      "modified_utc": "2026-10-06T17:50:53.631884+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/feature_library_sweep.parquet",
+      "bytes": 37461,
+      "modified_utc": "2026-10-06T17:55:47.365271+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/financial_brain.duckdb",
+      "bytes": 16363302912,
+      "modified_utc": "2026-11-20T14:28:22.402276+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/fo_history.duckdb",
+      "bytes": 13482078208,
+      "modified_utc": "2026-11-19T13:41:19.363525+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/futures_history.duckdb",
+      "bytes": 9187328,
+      "modified_utc": "2026-10-07T05:58:56.889722+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/half_life_table.parquet",
+      "bytes": 10297,
+      "modified_utc": "2026-10-06T15:06:49.206137+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/knowledge.duckdb",
+      "bytes": 3682304,
+      "modified_utc": "2026-10-15T11:41:14.592828+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/minute_history.duckdb",
+      "bytes": 39893872640,
+      "modified_utc": "2026-10-15T13:23:02.426112+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/my_portfolio.duckdb",
+      "bytes": 2109440,
+      "modified_utc": "2026-11-20T14:41:34.411306+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/neutral_panel.parquet",
+      "bytes": 6420700,
+      "modified_utc": "2026-10-06T04:07:48.446815+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/oms.duckdb",
+      "bytes": 274432,
+      "modified_utc": "2026-10-13T04:04:16.561722+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/orb_trend_trades.parquet",
+      "bytes": 2703507,
+      "modified_utc": "2026-10-06T03:39:47.570614+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/paper_book.duckdb",
+      "bytes": 6828032,
+      "modified_utc": "2026-11-20T14:33:04.909575+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/paper_book_swing_replay.duckdb",
+      "bytes": 2371584,
+      "modified_utc": "2026-10-05T16:26:55.500316+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/paper_live-forward-events.sqlite",
+      "bytes": 624738304,
+      "modified_utc": "2026-11-20T09:59:54.383595+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/paper_live.duckdb",
+      "bytes": 35926016,
+      "modified_utc": "2026-11-20T14:46:51.900750+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/paper_replay_lastweek.duckdb",
+      "bytes": 3682304,
+      "modified_utc": "2026-10-07T16:33:41.982676+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/paper_zoo.duckdb",
+      "bytes": 18886656,
+      "modified_utc": "2026-11-20T14:41:07.520053+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/paper_zoo_edges_dryrun.duckdb",
+      "bytes": 2895872,
+      "modified_utc": "2026-10-08T04:12:09.252914+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/paper_zoo_replay_lastweek.duckdb",
+      "bytes": 2633728,
+      "modified_utc": "2026-10-07T16:26:37.565753+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/quote_archive.duckdb",
+      "bytes": 142356480,
+      "modified_utc": "2026-11-20T10:00:21.267343+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/ranking_v2_test.parquet",
+      "bytes": 27551,
+      "modified_utc": "2026-10-06T16:42:26.362964+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/rule_systems_daily.parquet",
+      "bytes": 405282,
+      "modified_utc": "2026-10-06T18:51:10.022297+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/sharpe_allocation.parquet",
+      "bytes": 32943,
+      "modified_utc": "2026-10-07T15:32:50.082053+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/strategy_monthly_panel.parquet",
+      "bytes": 41288,
+      "modified_utc": "2026-10-07T15:32:49.381764+00:00",
+      "content_hash": "NOT_COMPUTED"
+    },
+    {
+      "path": "data/xbrl_stage.duckdb",
+      "bytes": 536621056,
+      "modified_utc": "2026-10-05T16:19:22.942708+00:00",
+      "content_hash": "NOT_COMPUTED"
+    }
+  ],
+  "data_versioning": "UNKNOWN; local names/sizes/mtime are inventoried, but source-level version manifests and content hashes are not captured.",
+  "active_scheduled_checkout": {
+    "status": "UNVERIFIED",
+    "local_task_query": "No matching FinanceBrain task visible from Get-ScheduledTask in this session.",
+    "reported_checkout": "D:\\Finance-Brain from PR #39 description; task action was not observed."
+  },
+  "ci": {
+    "workflow_path": ".github/workflows/ci.yml",
+    "workflow_sha256": "6088b594a71301bd5017ff15e97cb1314f7f3fd9b958747fc934f616da817868",
+    "configured_matrix": [
+      "ubuntu-latest",
+      "windows-latest"
+    ],
+    "hosted_runs": {
+      "PR34": {
+        "run_id": 44362030156,
+        "conclusion": "success"
+      },
+      "PR36": {
+        "run_id": 44231236180,
+        "conclusion": "failure",
+        "jobs": [
+          "test (windows-latest)",
+          "test (ubuntu-latest)"
+        ]
+      },
+      "PR37": {
+        "run_id": 44315164700,
+        "conclusion": "success"
+      },
+      "PR38": {
+        "run_id": 44328601523,
+        "conclusion": "success"
+      },
+      "PR39": {
+        "run_id": 44332936987,
+        "conclusion": "success"
+      },
+      "PR40": {
+        "run_id": 44351936484,
+        "conclusion": "success"
+      }
+    },
+    "local_head_ci": "No PR-triggered workflow run returned for local HEAD."
+  },
+  "owner_approvals": {
+    "status": "NOT_CAPTURED",
+    "note": "No current approval artifacts were located or retrieved; no approval is inferred."
+  },
+  "open_pr_graph": "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+  "completeness": "PARTIAL: active scheduled checkout, data versions, and current owner approvals remain unverified; GitHub PR graph captured separately."
+}

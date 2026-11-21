@@ -1,0 +1,115 @@
+{
+  "schema": "fb.financial_brain.unified_checklist.pr_graph.v1",
+  "observed_at_utc": "2026-11-21T06:01:52.817048+00:00",
+  "source": "GitHub repository and pull request API; branch refs and workflow runs returned at capture time",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "main_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+  "pull_requests": [
+    {
+      "number": 34,
+      "state": "open",
+      "head": "feature/dynamic-evidence-standard",
+      "head_sha": "b0039b5f3269905db2be3728275a2292a4530ed5",
+      "base": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "depends_on": [],
+      "declared_contains": [],
+      "ci": {
+        "run_id": 44362030156,
+        "conclusion": "success"
+      }
+    },
+    {
+      "number": 36,
+      "state": "open",
+      "head": "feature/five-desk-d2-data-parity",
+      "head_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+      "base": "feature/five-desk-d1-instruments",
+      "base_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+      "depends_on": [
+        37
+      ],
+      "declared_contains": [],
+      "ci": {
+        "run_id": 44231236180,
+        "conclusion": "failure",
+        "failed_jobs": [
+          "test (windows-latest)",
+          "test (ubuntu-latest)"
+        ]
+      }
+    },
+    {
+      "number": 37,
+      "state": "open",
+      "head": "feature/five-desk-d1-instruments",
+      "head_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+      "base": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "depends_on": [],
+      "declared_contains": [],
+      "ci": {
+        "run_id": 44315164700,
+        "conclusion": "success"
+      }
+    },
+    {
+      "number": 38,
+      "state": "open",
+      "head": "feature/four-node-variants",
+      "head_sha": "bdfb292ae2f45fc83e698084b2ac4fb1d6966842",
+      "base": "feature/five-desk-d2-data-parity",
+      "base_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+      "depends_on": [
+        36,
+        37
+      ],
+      "declared_contains": [],
+      "ci": {
+        "run_id": 44328601523,
+        "conclusion": "success"
+      }
+    },
+    {
+      "number": 39,
+      "state": "open",
+      "head": "feature/momentum-shadow-abort-closeout",
+      "head_sha": "a1cdb2ce7b7b29facbf3da1630dd17e73076ba50",
+      "base": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "depends_on": [],
+      "declared_contains": [],
+      "ci": {
+        "run_id": 44332936987,
+        "conclusion": "success"
+      }
+    },
+    {
+      "number": 40,
+      "state": "open",
+      "head": "merge/forward-edge-branch-version",
+      "head_sha": "3f34d023b8e40b82a7ffdbac17649d675694c327",
+      "base": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "depends_on": [],
+      "declared_contains": [
+        39
+      ],
+      "ci": {
+        "run_id": 44351936484,
+        "conclusion": "success"
+      },
+      "declared_omissions": [
+        "F17 instrument/data gate fixtures",
+        "F13 capability-matrix renderer",
+        "charter/cohort enforcement on trials path"
+      ]
+    }
+  ],
+  "reconciliation_notes": [
+    "#36 is based on #37; #38 is based on #36 and therefore #37.",
+    "PR #40 explicitly declares it contains #39 fixes, but #40 is not merged and removes/omits important F13/F17/charter behavior; treat its green CI as necessary, not sufficient.",
+    "PR #36 latest observed run fails on both OS jobs; #38 green does not replace retesting the full stack against a current base.",
+    "#34, #37, #39 and #40 target main independently. No branch is treated as mainline capability until merged and verified."
+  ]
+}
