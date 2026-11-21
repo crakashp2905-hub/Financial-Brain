@@ -7536,14 +7536,25 @@
     {
       "id": "SL-00-16",
       "text": "Add migration/equivalence report: compare old versus integrated paper decisions on fixed fixture sessions; explain every divergence, including changes to no-trade decisions.",
-      "source_checked": false,
-      "status": "NOT_STARTED",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        "docs/edge-program/ (no migration/equivalence report found)"
+        "scripts/forward_edge_equivalence_report.py (reproducible report generator and --check freshness gate)",
+        "docs/edge-program/forward-edge-equivalence-report.v1.json (all 8 synthetic fixed fixtures; legacy golden signature and integrated journal comparison; no-trade explicitly explained)",
+        "tests/test_forward_edge_equivalence_report.py (all fixtures, no-trade mapping, unresolved-order explanation)",
+        "tests/test_forward_edge_pipeline_compat.py (legacy frozen signature and integrated runner regression contract)",
+        "CI step: .github/workflows/ci.yml (report freshness verification)",
+        "Scope limitation: report explicitly does not claim historic source-revision field-level diff or live strategy parity"
       ],
-      "blocker": "No fixed-session old-versus-integrated paper decision equivalence report was found.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T07:40:41+00:00",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forward_edge_equivalence_report.py",
+        "tests/test_forward_edge_pipeline_compat.py"
+      ],
+      "artifact_sha256": "1bbd1b2915745ce114af3ce538d289461089fa201431843ad1a05879b2323f6c",
+      "test_result": "Focused fixture/report tests: 12 passed; Ruff and mypy passed; report --check passed; git diff --check passed."
     },
     {
       "id": "SL-00-17",
@@ -13874,7 +13885,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T07:30:48+00:00",
+    "as_of_utc": "2026-11-21T07:40:41+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13899,18 +13910,19 @@
     "status_counts": {
       "UNASSESSED": 1360,
       "PARTIAL": 13,
-      "NOT_STARTED": 3,
+      "NOT_STARTED": 2,
       "EXTERNAL_BLOCKED": 1,
-      "COMPLETE": 1
+      "COMPLETE": 2
     },
-    "verified_complete_count": 1,
+    "verified_complete_count": 2,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
-      "docs/edge-program/v3.0-baseline-2026-11-21.json",
-      "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+      "docs/edge-program/forward-edge-equivalence-report.v1.json",
+      "docs/edge-program/forward-engine-dependency-graph.v1.json",
       "docs/edge-program/source-inventory.v2.json",
-      "docs/edge-program/forward-engine-dependency-graph.v1.json"
+      "docs/edge-program/v3.0-baseline-2026-11-21.json",
+      "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "SL-00-14 COMPLETE on PR #40 integration branch: fail-closed learning audit CLI and stale evidence rejection; focused tests 79 passed and full suite 3,698 passed/1 skipped/0 failed. Source and dependency snapshots refreshed. Current merge, checklist and data-rights blockers remain."
+    "evidence_update": "SL-00-16 COMPLETE: generated and tested fixed-fixture comparison across all 8 deterministic sessions. Current legacy outputs match frozen signatures; integrated runner outcomes match fixture contracts including NO_TRADE. UNKNOWN_ORDER remains INCOMPLETE with explicit fail-closed rationale. Full historical version diffs and live strategy parity are explicitly outside what the signature-only synthetic oracle proves."
   }
 }
