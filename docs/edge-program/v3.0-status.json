@@ -3607,14 +3607,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/paired_paper.py (same frozen signal denominator, explicit human approve/reject/watch/no-trade, cash outcomes, version hashes, no-fill/unknown status, per-session paired return delta; evaluation only)",
-        "tests/test_forward_edge_paired_paper.py: 10 passed (missing/duplicate rows, decision timing, actor guard, unknown outcomes, cash accounting, capital bounds)",
-        "src/financial_brain/forward_edge/paired_controls.py and tests/test_forward_edge_paired_controls.py (pre-existing matched controls)",
-        "Remaining: no production paired-sleeve data capture or authenticated dashboard/CLI workflow; actor strings are not identity authentication"
+        "src/financial_brain/forward_edge/paired_paper.py (same frozen signal denominator, explicit human approve/reject/watch/no-trade, version hashes, cost-reconciled gross-to-net NAV contribution, and explicit unknown outcomes; evaluation only)",
+        "tests/test_forward_edge_paired_paper.py: 14 passed with tests/test_forward_edge_paired_controls.py (paired evaluator and matched-control suites)",
+        "Sleeve net return is derived as gross NAV contribution minus cost NAV contribution; unknown rows keep session net return unresolved and prevent promotion.",
+        "Remaining: no production paired-sleeve data capture or authenticated dashboard/CLI workflow; actor strings are not identity authentication and prospective paired sessions have not been collected."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:48:31.118734Z",
-      "commit": "e91c33962ed99d81b35d466b2f8dd8b8c8c76548"
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": "32884ab33d48230747f633fd3d5dde966d0caa7a"
     },
     {
       "id": "FB-1213",

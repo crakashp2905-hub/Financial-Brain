@@ -4700,7 +4700,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/paired_paper.py",
-      "source_sha256": "5b870376e148e802f15ab2584b145978dc478d5e664616662e2186d358bb0343",
+      "source_sha256": "caa2a83a9235e068b2dbd1ed03b27383f52a22303ae11e549fee9865e15a016d",
       "test_paths": []
     },
     {
