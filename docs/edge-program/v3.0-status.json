@@ -1070,17 +1070,21 @@
       "evidence": [
         "src/financial_brain/providers/mf_scheme_flows.py models source-hashed IDCW payout/reinvestment, unit split, and scheme merger events with effective, published, and observed clocks; mergers require explicit successor scheme code and ISIN.",
         "src/financial_brain/ingest/mf_scheme_flows.py persists events idempotently only with RESEARCH and RETENTION permissions and resolves them as known by the India-local decision clock.",
-        "src/financial_brain/paper/mf_scheme_flows.py applies each flow once to paper units/cash and reconciles pre/post economic value in INR paise, avoiding phantom P&L from repeating fractional units. It is not yet integrated with the canonical MF book or real source history."
+        "src/financial_brain/paper/mf_scheme_flows.py applies each flow once to paper units/cash and reconciles pre/post economic value in INR paise, avoiding phantom P&L from repeating fractional units.",
+        "src/financial_brain/paper/mf_flow_book.py::apply_economic_flow integrates payout, reinvestment, unit split, and merger events into durable canonical MF paper accounts; cash/units and pre/post value are updated atomically in an account-scoped idempotent flow journal.",
+        "The account integration requires a persisted source flow available as known at decision time, RESEARCH/RETENTION/PAPER_SIMULATION permission, dated reinvestment terms, and successor terms for mergers. Reinvestment creates a separate dated lot; splits/mergers update open lots without changing their source-pinned exit-load schedules.",
+        "Remaining: authorized historical event facts are not loaded, paper-session dispatch is not automated, and NAV values for attribution are caller-supplied rather than resolved from pinned NAV observation IDs."
       ],
-      "blocker": "Partial: flow modeling and paper-value reconciliation are implemented, but authorized corporate-action history and canonical MF-book integration remain outstanding.",
-      "last_audited_at_utc": "2026-11-21T16:50:48+00:00",
-      "commit": "fbcaca7b",
+      "blocker": "Partial: canonical paper-account flow integration is implemented, but permissioned historical event acquisition, automatic session dispatch, and source-pinned NAV attribution remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T21:57:17+00:00",
+      "commit": "f1ed7860",
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-mf-flows2 tests/test_mf_scheme_flows.py -q: 6 passed",
-        "Ruff: passed",
-        "python -m mypy src/financial_brain/providers/mf_scheme_flows.py src/financial_brain/ingest/mf_scheme_flows.py src/financial_brain/paper/mf_scheme_flows.py: passed"
+        "python -m pytest --basetemp .pytest-mf-flow-book-full [17 AMFI/MF/NAV test modules] -q: 98 passed",
+        "python -m pytest --basetemp .pytest-mf-flow-book-migrations tests/test_migrations.py tests/test_kernel_schemas.py tests/test_legacy_portfolio_migration.py -q: 13 passed",
+        "Ruff: passed for src/financial_brain/paper/mf_flow_book.py and tests/test_mf_flow_book.py",
+        "mypy src/financial_brain/paper/mf_flow_book.py: passed"
       ],
-      "test_result": "IDCW payouts, reinvestments, unit splits and mergers reconcile value across NAV changes; duplicate events are idempotent, unknown permissions and future evidence are rejected."
+      "test_result": "The canonical MF book applies IDCW cash/reinvestment, unit splits, and mergers with source and permission checks, reconciles held value across NAV changes, preserves lot cost basis, rejects unauthorized or unknown ELSS terms, and makes duplicate applications idempotent. External event history and NAV observation provenance remain unverified."
     },
     {
       "id": "FB-0317",

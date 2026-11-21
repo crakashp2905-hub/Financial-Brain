@@ -743,6 +743,37 @@ CREATE TABLE IF NOT EXISTS mf_paper_events (
     PRIMARY KEY (account_id, event_id)
 );
 
+-- Durable paper-book application of already-attested, point-in-time MF economic
+-- flows. The source event remains in mf_scheme_flows; this account-scoped journal
+-- makes unit/cash adjustments idempotent and auditable across restart.
+CREATE TABLE IF NOT EXISTS mf_paper_flow_events (
+    account_id VARCHAR NOT NULL,
+    source_flow_id VARCHAR NOT NULL,
+    flow_kind VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    isin VARCHAR NOT NULL,
+    target_scheme_code VARCHAR NOT NULL,
+    target_plan VARCHAR NOT NULL,
+    target_option VARCHAR NOT NULL,
+    target_isin VARCHAR NOT NULL,
+    effective_date DATE NOT NULL,
+    units_before DECIMAL(38, 18) NOT NULL,
+    units_after DECIMAL(38, 18) NOT NULL,
+    cash_delta_inr DECIMAL(38, 18) NOT NULL,
+    nav_before DECIMAL(38, 18) NOT NULL,
+    nav_after DECIMAL(38, 18) NOT NULL,
+    value_before_inr DECIMAL(38, 18) NOT NULL,
+    value_after_inr DECIMAL(38, 18) NOT NULL,
+    total_return_percent DECIMAL(38, 18) NOT NULL,
+    reinvestment_lot_id VARCHAR,
+    terms_record_id VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, source_flow_id)
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
