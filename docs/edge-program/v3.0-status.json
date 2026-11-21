@@ -1033,12 +1033,22 @@
     {
       "id": "FB-0315",
       "text": "Add schemes with ELSS lock-in, segregated portfolios, gating, special redemption restrictions, and closed-end windows; disallow impossible redemptions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/mf_redemption_constraints.py resolves redemption eligibility against explicit source-pinned restriction inputs for ELSS lock-in dates, closed redemption, closed-ended windows, gating capacity, and segregated-portfolio units.",
+        "Unknown restrictions, unknown ELSS lock-in dates, unknown gate capacity, unknown segregated allocation, and other unspecified restrictions fail closed; a redemption exceeding available units is rejected.",
+        "Scheme terms and effective-dated lot constraints are not yet connected to the canonical MF paper book, and no permissioned scheme restriction records are loaded."
+      ],
+      "blocker": "Partial: deterministic fail-closed eligibility logic is implemented, but source-backed restriction ingestion and paper-book enforcement remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T17:15:56+00:00",
+      "commit": "23282380",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mf-redemption tests/test_mf_redemption_constraints.py -q: 4 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/paper/mf_redemption_constraints.py: passed"
+      ],
+      "test_result": "Restricted, unavailable, or over-limit redemptions are rejected; confirmed unrestricted and within-gate redemptions are eligible."
     },
     {
       "id": "FB-0316",
