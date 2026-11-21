@@ -1956,102 +1956,142 @@
     {
       "id": "FB-0484",
       "text": "For all five desks, route strategy-generated entry and triggered exits into autonomous paper, and mirror trader-approved choices in a separate comparable account.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Forward-edge paper_book_adapter and session runner connect candidate paper-book entries and selected swing exits to a journaled account; intraday/options have separate paper paths. The cockpit/readiness model exposes paper modes and fail-closed readiness.",
+        "No single dispatcher routes all five desks and no fully separated matched autonomous-vs-human book workflow has been verified."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0484-89 tests/test_phase5_account_journal_alerts.py tests/test_paper_live_view.py tests/test_forward_edge_alerts.py tests/test_forward_edge_cockpit.py tests/test_paper_reconcile.py tests/test_paper_execution_audit.py tests/test_forward_edge_paired_controls.py -q: 32 passed"
     },
     {
       "id": "FB-0485",
       "text": "Allow manual `APPROVE/REJECT/WATCH` and explicit manual exits, but preserve the immutable original algorithmic entry/SL/TP and human edits as separate events with timestamps.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "paper/decision_journal.py records owner-entered NO_TRADE/WATCH/PAPER_TRADE/HOLDING_REVIEW choices with timestamps and a hashed decision snapshot; it is a separate research journal, not an order ledger.",
+        "The workflow does not implement APPROVE/REJECT controls, manual exit events, or a linked immutable algorithmic entry/protection plus subsequent human-edit event chain."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0484-89 tests/test_phase5_account_journal_alerts.py tests/test_paper_live_view.py tests/test_forward_edge_alerts.py tests/test_forward_edge_cockpit.py tests/test_paper_reconcile.py tests/test_paper_execution_audit.py tests/test_forward_edge_paired_controls.py -q: 32 passed"
     },
     {
       "id": "FB-0486",
       "text": "Stream UI alerts for `BUY_READY`, `SELL_READY`, `STOP_HIT`, `TP_HIT`, `TRAIL_MOVED`, `ENTRY_EXPIRED`, `NO_FILL`, `EXIT_UNPRICED`, `MF_NAV_PENDING` and `POSITION_CLOSED`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "forward_edge/alerts.py provides durable deduplicated alerts, acknowledgement/clear state and entry-halt behavior for stale quote, token expiry, session abort, duplicate order and ledger difference.",
+        "It is not a streaming trader UI and does not yet emit the requested BUY/SELL/SL/TP/trailing/no-fill/MF-pending lifecycle event set."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0484-89 tests/test_phase5_account_journal_alerts.py tests/test_paper_live_view.py tests/test_forward_edge_alerts.py tests/test_forward_edge_cockpit.py tests/test_paper_reconcile.py tests/test_paper_execution_audit.py tests/test_forward_edge_paired_controls.py -q: 32 passed"
     },
     {
       "id": "FB-0487",
       "text": "Show live per-position mark-to-market, realized P&L, remaining quantity, stop/target distance, expected cost-to-exit and last quote freshness; never label stale marks as live.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "paper/live_view.py shows open/closed positions, last received mark, gross open P&L, realized net, stop/target, exit reason and cost; it labels stale snapshots and unavailable marks.",
+        "Per-position quote age, remaining quantity for partial fills, stop/target distance and executable expected cost-to-exit are not all displayed or uniformly sourced."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0484-89 tests/test_phase5_account_journal_alerts.py tests/test_paper_live_view.py tests/test_forward_edge_alerts.py tests/test_forward_edge_cockpit.py tests/test_paper_reconcile.py tests/test_paper_execution_audit.py tests/test_forward_edge_paired_controls.py -q: 32 passed"
     },
     {
       "id": "FB-0488",
       "text": "Emit a machine-readable and trader-friendly paired lifecycle report: original BUY timestamp and thesis, order/fill prices, original SL/TP, all revisions, exit SELL reason/time, net P&L and R-multiple.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "paper/live_view.py and paper/execution_audit.py preserve/display trade entries, protection levels, exits, costs, net P&L and fill coverage; forward_edge paired controls/reconciliation provide diagnostic comparisons.",
+        "There is no universal lifecycle report linking original thesis and timestamps, all revisions, partial quantities, final exit reason and R-multiple across five books."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0484-89 tests/test_phase5_account_journal_alerts.py tests/test_paper_live_view.py tests/test_forward_edge_alerts.py tests/test_forward_edge_cockpit.py tests/test_paper_reconcile.py tests/test_paper_execution_audit.py tests/test_forward_edge_paired_controls.py -q: 32 passed"
     },
     {
       "id": "FB-0489",
       "text": "Provide CLI/API targets: `fb signals --with-exits`, `fb positions --protective-orders`, `fb exits --desk all`, `fb paper trades --paired`, `fb paper pnl --by-exit-reason`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The CLI and APIs provide separate paper, signal and planning functions, but source search found none of the requested targets: signals --with-exits, positions --protective-orders, exits --desk all, paper trades --paired or paper pnl --by-exit-reason.",
+        "Existing CLI/API test suites do not demonstrate these exact operator workflows."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0484-89 tests/test_phase5_account_journal_alerts.py tests/test_paper_live_view.py tests/test_forward_edge_alerts.py tests/test_forward_edge_cockpit.py tests/test_paper_reconcile.py tests/test_paper_execution_audit.py tests/test_forward_edge_paired_controls.py -q: 32 passed"
     },
     {
       "id": "FB-0490",
       "text": "Create table-driven unit tests for long/short stop and target inequalities, tick rounding, R-multiple, fees, expired entries, option contract identity and MF NAV threshold semantics.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Tests cover versioned protection rules, long/short fill inequalities, adverse stop/target ordering, gap-through stops, tick rounding, option CE/PE and contract identity, MF NAV/cutoff semantics, costs and idempotent partial exits.",
+        "These are distributed tests rather than a single complete table-driven cross-asset suite; requested behavioral cases remain unverified in several adapters."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0490-93 tests/test_exit_protection_ledger.py tests/test_exit_policy.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_forward_edge_f01.py tests/test_paper_options_plan.py tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py -q: 97 passed"
     },
     {
       "id": "FB-0491",
       "text": "Create deterministic price-path integration tests for SL-only, TP-only, both touched in one bar, gap-through-SL, gap-through-TP, trailing stop, partial entry and partial exit.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Deterministic path tests cover stop-only, target-only, same-bar stop and target with adverse resolution, gap-through stops, option quote entry/exit and durable partial exit recovery.",
+        "A single integration matrix for trailing stops, gap-through targets, partial entry/exit and all desk runners is still missing."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0490-93 tests/test_exit_protection_ledger.py tests/test_exit_policy.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_forward_edge_f01.py tests/test_paper_options_plan.py tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py -q: 97 passed"
     },
     {
       "id": "FB-0492",
       "text": "Create failure tests for stale quotes, feed disconnection, halts, high slippage, no liquidity, repeated ticks, out-of-order events, ledger recovery and duplicate exit submissions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Selected tests exercise stale/no quote, outage-as-no-trade, quote depth, OCO partial fill, duplicate-fill idempotency, ledger restart/recovery and OMS unknown-state reconciliation.",
+        "Halt, exchange halt, high-slippage, out-of-order feed and repeated exit-dispatch cases are not comprehensively drilled across the integrated runner."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0490-93 tests/test_exit_protection_ledger.py tests/test_exit_policy.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_forward_edge_f01.py tests/test_paper_options_plan.py tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py -q: 97 passed"
     },
     {
       "id": "FB-0493",
       "text": "Create property tests: no position with missing protective policy; no double-selling; exit filled quantity <= open position; cash/units/debits reconcile; no forward fills before signal.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "forward_edge F01 contains 10,000 seeded randomized state transitions that assert cash/position reconciliation; other tests enforce fill <= order, exit <= protected/open quantity, idempotency and no pre-decision fill.",
+        "A repository-wide property-based suite across MF units, options legs, five desk ledgers and every paper adapter is not present."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0490-93 tests/test_exit_protection_ledger.py tests/test_exit_policy.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_forward_edge_f01.py tests/test_paper_options_plan.py tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py -q: 97 passed"
     },
     {
       "id": "FB-0494",
