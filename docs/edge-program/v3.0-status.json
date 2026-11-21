@@ -717,12 +717,22 @@
     {
       "id": "FB-0306",
       "text": "Respect AMFI's historical report limit of up to 90 days per download; do not circumvent permission/technical restrictions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/amfi.py provides bounded_history_windows(), partitioning inclusive history ranges into contiguous windows no longer than 90 calendar days; it refuses larger configured windows and reversed ranges.",
+        "The helper constructs request bounds only. Historical provider acquisition is not implemented or permissioned; no endpoint access or terms circumvention is performed."
+      ],
+      "blocker": "Partial: bounded date-window planning is implemented, but authorized historical data acquisition, rate limits, retries, and source-rights approval remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T16:07:32+00:00",
+      "commit": "6ad94fd7",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mf0306 tests/test_amfi_history_windows.py -q: 5 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/providers/amfi.py: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "History range partitioning is inclusive, contiguous, capped at 90 days per window, and rejects invalid limits and reversed ranges."
     },
     {
       "id": "FB-0307",
@@ -14342,7 +14352,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T16:01:33+00:00",
+    "as_of_utc": "2026-11-21T16:07:32+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14370,6 +14380,7 @@
       "FB-0302",
       "FB-0303",
       "FB-0304",
+      "FB-0306",
       "FB-0308",
       "SL-00-01",
       "SL-00-02",
@@ -14391,13 +14402,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 46,
+    "audited_count": 47,
     "status_counts": {
       "COMPLETE": 23,
-      "PARTIAL": 22,
+      "PARTIAL": 23,
       "NOT_STARTED": 0,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1332
+      "UNASSESSED": 1331
     },
     "verified_complete_count": 23,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
