@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 633,
+  "source_count": 634,
   "sources": [
     {
       "capability_ids": [],
@@ -8455,6 +8455,23 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "providers.mf_scheme_terms"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_exit_loads.py",
+      "source_sha256": "7ec575dcd862859ed48dd1aaf3d0d697c2aba2101ed42db49482d02302e7ef0e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "costs.india",
         "dataclasses",
         "datetime"
@@ -11032,6 +11049,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 618,
+  "unassessed_count": 619,
   "unassigned_role_count": 376
 }
