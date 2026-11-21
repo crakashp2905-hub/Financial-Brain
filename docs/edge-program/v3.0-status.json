@@ -625,12 +625,22 @@
     {
       "id": "FB-0208",
       "text": "Compute effective spread, depth, median traded value, stale-quote rate, illiquidity, volatility, trading gaps, halted periods and costs at intended size.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_liquidity.py::analyze_etf_liquidity reports observed top spread/depth, median daily turnover, stale/non-executable quote fraction, adjacent-session Amihud ratio, annualized daily-return volatility, sourced-session gaps, intended-notional participation, and an explicitly labelled cost proxy",
+        "Every decision threshold and other round-trip cost input is explicit; the report returns INSUFFICIENT_DATA and limits_met=false when price/quote evidence is sparse",
+        "tests/test_etf_liquidity.py: 3 passed for spread/depth/cost report, stale data, missing sessions and duplicate revision rejection"
+      ],
+      "blocker": "Partial: observed-data diagnostics exist, but halted-period sources, live ETF data coverage, calibrated market-impact execution models and prospective capacity validation are absent. The Amihud term is an uncalibrated size proxy, not a fill guarantee.",
+      "last_audited_at_utc": "2026-11-21T14:30:00+00:00",
+      "commit": "a12f53f1",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_liquidity.py tests/test_etf_valuation.py tests/test_etf_bars.py -q: 12 passed",
+        "Ruff and targeted mypy passed",
+        "Source inventory and forward-engine graph freshness checks passed"
+      ],
+      "test_result": "ETF spread, depth, staleness, daily liquidity, gaps, volatility and an explicitly uncalibrated size-cost proxy are visible together without filling missing observations."
     },
     {
       "id": "FB-0209",
