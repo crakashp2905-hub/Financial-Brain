@@ -27,7 +27,9 @@ import numpy as np
 import pandas as pd
 
 VERDICT = {"edge_p1_residual_mom": "failed (t -0.3 / +1.8)", "edge_p2_volmanaged_mom": "failed (t +2.3 / +1.2; halves drawdown)",
-           "edge_p3_frog_in_pan": "failed (t +3.3 / +1.7)", "edge_s1_no_news_reversal": "failed (t -4.3 / -0.6)",
+           "edge_p3_frog_in_pan": "failed (t +3.3 / +1.7)",
+           "edge_h003_riskadj_mom": "ADR-0007 CANDIDATE_SMALL (t +3.2, P 0.72)",
+           "edge_h005_industry_mom": "ADR-0007 CANDIDATE_SMALL (t +3.5, P 0.88)", "edge_s1_no_news_reversal": "failed (t -4.3 / -0.6)",
            "edge_s2_reaction_drift": "failed (t -0.8 / +0.8)", "edge_f1_long_buildup": "failed (t +0.2 / -2.0)",
            "edge_f2_short_covering": "failed (t +0.6 / -0.5)", "edge_z1_turn_of_month": "failed (t +1.3 / +0.9)",
            "edge_i1_index_intraday": "failed (gross 0.0 bp, t -7.5 / -8.1 net)",
@@ -68,11 +70,12 @@ def monthly_targets(rcon, day: date) -> dict[str, dict]:
     # P2: the plain momentum book's monthly net history decides the scale
     # A P2 failure must not block the other books: on 2026-11-02 a gap in P2's history
     # (2023-11-30, INE509F01029) raised here and every monthly book kept October's targets.
-    # When P2 cannot be computed it is left out, and the caller keeps P2's previous targets.
+    # A past holding with no later price is scored at its last traded price (forward fill); if P2 still
+    # cannot be computed it is left out, and the caller keeps P2's previous targets.
     try:
         picks = E.top_picks(P, mom)
         picks[last] = list(m.nlargest(20).index)
-        hist = E.monthly_selection(P, picks)["net"]
+        hist = E.monthly_selection({**P, "C": P["C"].ffill()}, picks)["net"]
     except ValueError as e:
         out["_errors"] = {"edge_p2_volmanaged_mom": str(e)[:200]}
         return out
@@ -80,6 +83,30 @@ def monthly_targets(rcon, day: date) -> dict[str, dict]:
     w = float(min(1.5, 0.12 / vol)) if vol == vol and vol > 0 else 1.0
     top = m.nlargest(20).index
     out["edge_p2_volmanaged_mom"] = {k: w / len(top) for k in top}
+    out.update(hundred_targets(rcon, P, m))
+    return out
+
+
+def hundred_targets(rcon, P: dict, m: pd.Series) -> dict[str, dict]:
+    """H003 and H005 of ``PRE-REGISTERED the hundred candidates under the dynamic standard``: the two books
+    graded CANDIDATE_SMALL. ``m``: 12-1 momentum of the universe's names on the last close. Same rules as
+    ``scripts/research/hundred.py`` (top 20, equal weight)."""
+    C = P["C"]
+    out = {}
+    vol = C.pct_change(fill_method=None).rolling(250, min_periods=200).std().iloc[-1]
+    pick = (m / vol.reindex(m.index)).replace([np.inf, -np.inf], np.nan).dropna().nlargest(20).index
+    out["edge_h003_riskadj_mom"] = {k: 1.0 / len(pick) for k in pick} if len(pick) else {}
+    ind = dict(rcon.execute("""SELECT a.lineage, any_value(i.industry) FROM index_membership i
+                               JOIN (SELECT DISTINCT isin, lineage FROM adjusted_prices) a USING (isin)
+                               WHERE i.index_name = 'NIFTY 500' GROUP BY a.lineage""").fetchall())
+    industry = pd.Series(ind).reindex(m.index)
+    if len(C) > 126 and industry.notna().any():
+        r6 = (C.iloc[-1] / C.iloc[-127] - 1).reindex(m.index)
+        g = r6.groupby(industry).mean()
+        g = g[industry.value_counts().reindex(g.index) >= 8].dropna()
+        best = set(g.nlargest(3).index)
+        pick = m[industry.isin(best).to_numpy()].nlargest(20).index
+        out["edge_h005_industry_mom"] = {k: 1.0 / len(pick) for k in pick} if len(pick) else {}
     return out
 
 

@@ -58,6 +58,14 @@ REGISTERED = (
                  "data/edges/hv2_improving_liquidity_net.parquet"),
     Registration("combo_m1_carry", "PRE-REGISTERED out-of-sample batch three", "2026-10-13", 1, "",
                  components=(("edge_m1_momentum_book", 0.5), ("carry_basis_10", 0.5))),
+    # ADR-0007 (out of sample only): prior A, family 20. The series is net excess over the equal-weight 500.
+    Registration("edge_p3_frog_in_pan", "PRE-REGISTERED frog-in-the-pan momentum under the dynamic standard",
+                 "2026-11-16", 21, "docs/trials/dynamic/momentum-excess-series.parquet",
+                 column="P3 frog in the pan"),
+    Registration("edge_h003_riskadj_mom", "PRE-REGISTERED the hundred candidates under the dynamic standard",
+                 "2026-11-17", 21, "docs/trials/dynamic/hundred/survivors.parquet", column="H003"),
+    Registration("edge_h005_industry_mom", "PRE-REGISTERED the hundred candidates under the dynamic standard",
+                 "2026-11-17", 21, "docs/trials/dynamic/hundred/survivors.parquet", column="H005"),
 )
 
 
