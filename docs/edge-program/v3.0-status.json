@@ -406,7 +406,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T13:46:00+00:00",
-      "commit": "PENDING",
+      "commit": "eaed2a57",
       "test_evidence": [
         "python -m pytest tests/test_kernel_architecture.py tests/test_kernel_instruments.py tests/test_forward_edge_registry.py -q: 30 passed",
         "Ruff: passed",
