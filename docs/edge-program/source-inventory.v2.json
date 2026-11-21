@@ -9618,7 +9618,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/etf_reference.py",
-      "source_sha256": "91448a84ffc2558c50ef38e201a4bcf8119ee7e67752a961942d53a3e23013c8",
+      "source_sha256": "c82ff478f864119eda42c7ecdc0bc87e1499d713938928ff701e60db762ce5e1",
       "test_paths": []
     },
     {

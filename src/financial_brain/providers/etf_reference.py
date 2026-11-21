@@ -54,6 +54,16 @@ def _positive_decimal(value: Decimal | str | int, field: str) -> Decimal:
     return normalized
 
 
+def _finite_decimal(value: Decimal | str | int, field: str) -> Decimal:
+    try:
+        normalized = Decimal(value)
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ETFReferenceError(f"{field} must be a finite decimal") from exc
+    if not normalized.is_finite():
+        raise ETFReferenceError(f"{field} must be a finite decimal")
+    return normalized
+
+
 @dataclass(frozen=True)
 class ETFReferenceRecord:
     """One source-versioned ETF listing/metadata row; facts are not backdated by observation."""
@@ -204,12 +214,80 @@ class ETFValuationObservation:
         return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+@dataclass(frozen=True)
+class ETFTrackingMetrics:
+    """Effective-dated tracking and fund-cost figures from an authorized disclosure."""
+
+    source_id: str
+    exchange: str
+    symbol: str
+    isin: str
+    effective_from: date
+    effective_to: date | None
+    tracking_difference_bps: Decimal
+    tracking_error_bps: Decimal
+    expense_ratio_bps: Decimal
+    published_at: datetime
+    observed_at: datetime
+    source_ref: str
+    source_sha256: str
+
+    def __post_init__(self) -> None:
+        source = self.source_id.strip().upper()
+        exchange = self.exchange.strip().upper()
+        symbol = self.symbol.strip().upper()
+        isin = self.isin.strip().upper()
+        if source not in ALLOWED_SOURCES or exchange not in ALLOWED_EXCHANGES:
+            raise ETFReferenceError("tracking metrics require a recognized NSE/BSE/AMC source and exchange")
+        if source in ALLOWED_EXCHANGES and source != exchange:
+            raise ETFReferenceError("exchange source and tracking-metric exchange must agree")
+        if (not symbol or len(isin) != 12 or not isin.isalnum()
+                or (self.effective_to is not None and self.effective_to < self.effective_from)):
+            raise ETFReferenceError("tracking metrics require a valid identity and effective interval")
+        if not self.source_ref.strip():
+            raise ETFReferenceError("tracking-metric source reference is required")
+        if len(self.source_sha256) != 64 or any(c not in "0123456789abcdef" for c in self.source_sha256):
+            raise ETFReferenceError("source_sha256 must be lowercase SHA-256")
+        diff = _finite_decimal(self.tracking_difference_bps, "tracking_difference_bps")
+        error = _finite_decimal(self.tracking_error_bps, "tracking_error_bps")
+        expense = _finite_decimal(self.expense_ratio_bps, "expense_ratio_bps")
+        if error < 0 or expense < 0:
+            raise ETFReferenceError("tracking error and expense ratio cannot be negative")
+        published_at, observed_at = _aware(self.published_at, "published_at"), _aware(self.observed_at, "observed_at")
+        if observed_at < published_at:
+            raise ETFReferenceError("tracking metrics were observed before publication")
+        object.__setattr__(self, "source_id", source)
+        object.__setattr__(self, "exchange", exchange)
+        object.__setattr__(self, "symbol", symbol)
+        object.__setattr__(self, "isin", isin)
+        object.__setattr__(self, "tracking_difference_bps", diff)
+        object.__setattr__(self, "tracking_error_bps", error)
+        object.__setattr__(self, "expense_ratio_bps", expense)
+        object.__setattr__(self, "published_at", published_at)
+        object.__setattr__(self, "observed_at", observed_at)
+
+    def content_sha256(self) -> str:
+        body = {
+            "source_id": self.source_id, "exchange": self.exchange, "symbol": self.symbol,
+            "isin": self.isin, "effective_from": self.effective_from.isoformat(),
+            "effective_to": self.effective_to.isoformat() if self.effective_to else None,
+            "tracking_difference_bps": str(self.tracking_difference_bps),
+            "tracking_error_bps": str(self.tracking_error_bps),
+            "expense_ratio_bps": str(self.expense_ratio_bps),
+            "published_at": self.published_at.isoformat(), "observed_at": self.observed_at.isoformat(),
+            "source_ref": self.source_ref, "source_sha256": self.source_sha256,
+        }
+        encoded = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 class ETFReferenceCatalog:
     """In-memory validated reference catalog; callers must provide both rights grants."""
 
     def __init__(self) -> None:
         self._records: list[ETFReferenceRecord] = []
         self._valuations: list[ETFValuationObservation] = []
+        self._tracking_metrics: list[ETFTrackingMetrics] = []
 
     def add(self, record: ETFReferenceRecord, *, retention_permission: DataPermission,
             research_permission: DataPermission) -> None:
@@ -247,6 +325,46 @@ class ETFReferenceCatalog:
         if identity.isin != observation.isin:
             raise ETFReferenceError("valuation ISIN does not match the point-in-time ETF identity")
         self._valuations.append(observation)
+
+    def add_tracking_metrics(
+        self,
+        metrics: ETFTrackingMetrics,
+        *,
+        retention_permission: DataPermission,
+        research_permission: DataPermission,
+    ) -> None:
+        as_of = metrics.observed_at.date()
+        for permission, use in ((retention_permission, DataUse.RETENTION),
+                                (research_permission, DataUse.RESEARCH)):
+            if not permission.allows(source_id=metrics.source_id, use=use, on=as_of):
+                raise ETFReferenceError(f"{use.value} permission is missing or ineffective for {metrics.source_id}")
+        identity = self.resolve(exchange=metrics.exchange, symbol=metrics.symbol, as_of=metrics.observed_at)
+        if identity.isin != metrics.isin:
+            raise ETFReferenceError("tracking-metric ISIN does not match the point-in-time ETF identity")
+        self._tracking_metrics.append(metrics)
+
+    def resolve_tracking_metrics(
+        self, *, exchange: str, symbol: str, isin: str, as_of: datetime
+    ) -> ETFTrackingMetrics:
+        cutoff = _aware(as_of, "as_of")
+        identity = self.resolve(exchange=exchange, symbol=symbol, as_of=cutoff)
+        if identity.isin != isin.strip().upper():
+            raise ETFReferenceError("requested metrics do not match the point-in-time ETF identity")
+        rows = [row for row in self._tracking_metrics
+                if row.exchange == exchange.strip().upper()
+                and row.symbol == symbol.strip().upper()
+                and row.isin == isin.strip().upper()
+                and row.effective_from <= cutoff.date()
+                and (row.effective_to is None or cutoff.date() <= row.effective_to)
+                and row.published_at <= cutoff and row.observed_at <= cutoff]
+        if not rows:
+            raise ETFReferenceError("no published ETF tracking metrics are effective as of the requested time")
+        rows.sort(key=lambda row: (row.published_at, row.observed_at), reverse=True)
+        if (len(rows) > 1 and (rows[0].published_at, rows[0].observed_at)
+                == (rows[1].published_at, rows[1].observed_at)
+                and rows[0].content_sha256() != rows[1].content_sha256()):
+            raise ETFReferenceError("conflicting ETF tracking metrics share the same publication clocks")
+        return rows[0]
 
     def resolve_valuation(
         self,
@@ -292,5 +410,5 @@ class ETFReferenceCatalog:
 
 __all__ = [
     "ETFExposureCategory", "ETFReferenceCatalog", "ETFReferenceError",
-    "ETFReferenceRecord", "ETFValuationObservation",
+    "ETFReferenceRecord", "ETFTrackingMetrics", "ETFValuationObservation",
 ]

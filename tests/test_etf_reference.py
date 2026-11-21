@@ -14,6 +14,7 @@ from financial_brain.providers.etf_reference import (
     ETFReferenceCatalog,
     ETFReferenceError,
     ETFReferenceRecord,
+    ETFTrackingMetrics,
     ETFValuationObservation,
 )
 
@@ -39,9 +40,10 @@ def record() -> ETFReferenceRecord:
     )
 
 
-def _permission(use: DataUse, *, status: PermissionStatus = PermissionStatus.USE_ALLOWED) -> DataPermission:
+def _permission(use: DataUse, *, source_id: str = "NSE",
+                status: PermissionStatus = PermissionStatus.USE_ALLOWED) -> DataPermission:
     return DataPermission(
-        source_id="NSE",
+        source_id=source_id,
         use=use,
         status=status,
         effective_from=(date(2020, 1, 1) if status is PermissionStatus.USE_ALLOWED else None),
@@ -226,3 +228,48 @@ def test_valuation_cannot_cross_point_in_time_listing_identity(record: ETFRefere
 def test_inception_date_cannot_follow_listing_date(record: ETFReferenceRecord) -> None:
     with pytest.raises(ETFReferenceError, match="inception cannot follow"):
         ETFReferenceRecord(**{**record.__dict__, "inception_date": date(2020, 1, 3)})
+
+
+def test_tracking_error_and_expense_ratio_are_effective_and_publication_time_gated(
+    record: ETFReferenceRecord,
+) -> None:
+    catalog = ETFReferenceCatalog()
+    _add(catalog, record)
+    metrics = ETFTrackingMetrics(
+        source_id="AMC", exchange="NSE", symbol="INDEXETF", isin=record.isin,
+        effective_from=date(2026, 4, 1), effective_to=None,
+        tracking_difference_bps="-14.5", tracking_error_bps="22.0", expense_ratio_bps="5.0",
+        published_at=datetime(2026, 11, 12, 10, tzinfo=timezone.utc),
+        observed_at=datetime(2026, 11, 12, 10, 1, tzinfo=timezone.utc),
+        source_ref="AMC monthly tracking report", source_sha256="d" * 64,
+    )
+    catalog.add_tracking_metrics(
+        metrics,
+        retention_permission=_permission(DataUse.RETENTION, source_id="AMC"),
+        research_permission=_permission(DataUse.RESEARCH, source_id="AMC"),
+    )
+    with pytest.raises(ETFReferenceError, match="no published"):
+        catalog.resolve_tracking_metrics(
+            exchange="NSE", symbol="INDEXETF", isin=record.isin,
+            as_of=datetime(2026, 11, 12, 10, tzinfo=timezone.utc),
+        )
+    resolved = catalog.resolve_tracking_metrics(
+        exchange="NSE", symbol="INDEXETF", isin=record.isin,
+        as_of=datetime(2026, 11, 12, 11, tzinfo=timezone.utc),
+    )
+    assert resolved.tracking_difference_bps == -14.5
+    assert resolved.tracking_error_bps == 22
+    assert resolved.expense_ratio_bps == 5
+    assert len(resolved.content_sha256()) == 64
+
+
+def test_tracking_error_and_expense_ratio_cannot_be_negative(record: ETFReferenceRecord) -> None:
+    with pytest.raises(ETFReferenceError, match="cannot be negative"):
+        ETFTrackingMetrics(
+            source_id="NSE", exchange="NSE", symbol=record.symbol, isin=record.isin,
+            effective_from=date(2026, 1, 1), effective_to=None,
+            tracking_difference_bps="-1", tracking_error_bps="-2", expense_ratio_bps="0",
+            published_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            observed_at=datetime(2026, 1, 3, tzinfo=timezone.utc),
+            source_ref="notice", source_sha256="e" * 64,
+        )
