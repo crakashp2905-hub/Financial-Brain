@@ -9457,7 +9457,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/amfi.py",
-      "source_sha256": "4a24ab55d8efb496da7ef016fd355bbaabfc1a6979d3cae9d4119fec135a5d2d",
+      "source_sha256": "1690838c2a2e1beae751adf17909f31193a5ab4c075f1f3d5e90f6089c5dd169",
       "test_paths": []
     },
     {
