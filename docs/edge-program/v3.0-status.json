@@ -666,12 +666,21 @@
     {
       "id": "FB-0210",
       "text": "Detect NAV/iNAV gaps, large premiums/discounts, stale iNAV, known international underlying market closures and multi-day stale NAVs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_valuation.py::detect_etf_valuation_anomalies identifies missing NAV/iNAV sessions, stale latest NAV/iNAV, NAV values repeated across sourced sessions, closed underlying sessions and large premium/discounts from synchronized comparison records",
+        "Caller supplies sourced ETF sessions, underlying session states, age limits, repeated-value limit and premium threshold; no missing valuation is forward-filled",
+        "tests/test_etf_valuation.py: anomaly matrix checks NAV/iNAV gaps, stale iNAV, repeated NAV, underlying closure and large premium; unresolved revisions fail closed"
+      ],
+      "blocker": "Partial: anomaly detection primitives are implemented, but there are no real ETF valuation histories/underlying-market calendars, and outputs are not integrated into session health or trader alerts.",
+      "last_audited_at_utc": "2026-11-21T14:33:00+00:00",
+      "commit": "54f29565",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_valuation.py tests/test_etf_reference.py -q: 27 passed",
+        "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
+      ],
+      "test_result": "The anomaly report identifies missing, stale, repeated, asynchronous-premium and closed-underlying conditions while preserving explicit evidence gaps."
     },
     {
       "id": "FB-0211",
