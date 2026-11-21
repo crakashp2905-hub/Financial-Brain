@@ -43,9 +43,10 @@
         "scripts/capability_ownership.py (deterministic inventory generator and freshness check)",
         "tests/test_capability_ownership.py (canonical-owner uniqueness, module coverage and path integrity)",
         ".github/workflows/ci.yml (capability inventory freshness gate)",
+        "GitHub Actions run 44895355701: trader capability owners gate passed on Ubuntu and Windows before a later generated-report freshness failure",
         "Focused verification: 3 tests passed; Ruff, mypy, inventory freshness and git diff --check passed"
       ],
-      "blocker": "Partial: AlgorithmSpec and StrategySpec identity/promotion remain split; the inventory intentionally covers trader-core rather than all 623 Python modules, and the broker, kernel, forward-paper and legacy-paper persistence domains remain separate. Hosted CI run 44893932986 failed because the generated fixture-equivalence report was stale; it has since been refreshed locally and needs a new hosted run.",
+      "blocker": "Partial: AlgorithmSpec and StrategySpec identity/promotion remain split; the inventory intentionally covers trader-core rather than all 623 Python modules, and the broker, kernel, forward-paper and legacy-paper persistence domains remain separate. The capability freshness gate passed on both OSes, but hosted run 44895355701 later failed because the fixture-equivalence report was stale; it has since been refreshed and is pending a fresh full CI run.",
       "last_audited_at_utc": "2026-11-21T10:05:00+00:00",
       "commit": null
     },
