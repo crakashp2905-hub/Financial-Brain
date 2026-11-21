@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 618,
+  "source_count": 619,
   "sources": [
     {
       "capability_ids": [],
@@ -236,6 +236,7 @@
         "interfaces.trader_core",
         "json",
         "lake.store",
+        "learning_audit",
         "llm",
         "logging",
         "opportunity",
@@ -268,7 +269,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "bcf1279d94c3cdb7deded8c6314869e32ceb32056b581e1aeb9f86709dc0b7c2",
+      "source_sha256": "9f97a118eeda514cc11541ca408b44e3aa91dc95832be10616127a93ba4476f0",
       "test_paths": []
     },
     {
@@ -4680,7 +4681,9 @@
         "datetime",
         "decimal",
         "financial_brain.forward_edge",
+        "financial_brain.forward_edge.data_gate",
         "financial_brain.forward_edge.fixture_adapter",
+        "financial_brain.forward_edge.instrument_rules",
         "financial_brain.forward_edge.modes",
         "financial_brain.kernel.ledger",
         "financial_brain.kernel.units",
@@ -4691,7 +4694,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/pipeline.py",
-      "source_sha256": "a2df52eb4c4fb1a3da551e6d0c07b4a32ff9a22a358c737f058361dfd0c1f6c6",
+      "source_sha256": "194fffe015f5ab06001e4e7088c7307d008b20678379fdc032e4c6974547c6f8",
       "test_paths": []
     },
     {
@@ -5238,7 +5241,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/tracker.py",
-      "source_sha256": "bb4b51eeca34dd352f6cf5ea0a758def79eabdb0d0714eb043a1fcd1a7c9262e",
+      "source_sha256": "8b39be97320e9eb63e32922ddf358d867979eecd8fe7a544c964e4a396a5fec7",
       "test_paths": []
     },
     {
@@ -5249,6 +5252,8 @@
         "dataclasses",
         "datetime",
         "financial_brain.forward_edge.approvals",
+        "financial_brain.forward_edge.charter",
+        "financial_brain.forward_edge.decision_custody",
         "hashlib",
         "json",
         "pathlib",
@@ -5258,7 +5263,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/trials.py",
-      "source_sha256": "62bd55f76e2fd43c62deaf312edddbaa17de81946d8e60ffeb00ace43cda26d8",
+      "source_sha256": "94a97734e280d8ac88a476f560b8a3a7cf0ace4f2a833d03e55506a1c430fea3",
       "test_paths": []
     },
     {
@@ -7686,6 +7691,23 @@
       "parse_status": "ok",
       "source": "src/financial_brain/lake/store.py",
       "source_sha256": "0b0ccdbd733fea56b115e3850bc0fff17e93e662be4fbf352ead2b18e474f49c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "json",
+        "pathlib"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/learning_audit.py",
+      "source_sha256": "7ae416944fedbda0b2081cfdf714af8b8d85b0c7bc10c9a2445d74d02c3e1f88",
       "test_paths": []
     },
     {
@@ -10735,6 +10757,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 603,
-  "unassigned_role_count": 368
+  "unassessed_count": 604,
+  "unassigned_role_count": 369
 }
