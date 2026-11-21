@@ -384,7 +384,7 @@
       ],
       "blocker": "Partial: the versioned domain model is implemented, but permissioned historical exchange listings/tick/lot/expiry files, ETF benchmark histories, and AMFI/AMC scheme metadata are not yet ingested and validated as source-backed production catalogues.",
       "last_audited_at_utc": "2026-11-21T13:40:00+00:00",
-      "commit": "PENDING",
+      "commit": "82fdfe22",
       "test_evidence": [
         "python -m pytest tests/test_kernel_architecture.py tests/test_kernel_instruments.py tests/test_forward_edge_registry.py tests/test_checklist_audit_export.py tests/test_launch_gates.py -q: 30 passed",
         "Ruff: passed",
