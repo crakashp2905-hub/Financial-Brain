@@ -19,6 +19,7 @@ from .position_signals import (
     validate_protection_emission,
 )
 from .trader_signal import ExitTrigger
+from .exit_policy import ExitPolicy
 
 
 class ExitLedgerError(ValueError):
@@ -218,6 +219,7 @@ class ExitProtectionLedger:
                 for r in records if r.get("type") == "PROTECTION_ARMED"
                 and r.get("trigger") == ExitTrigger.HARD_STOP.value
                 and r.get("parent_entry_signal_id") == entry_signal_id
+                and r.get("exit_policy_hash")
             ), default=Decimal(0))
             if planned_entry_quantity > hard_stop_capacity:
                 raise ExitLedgerError("position entry requires a pre-armed hard-stop exit policy covering filled quantity")
@@ -225,13 +227,27 @@ class ExitProtectionLedger:
         _ = self.state
         return prior_fill is None
 
-    def arm(self, protection: ExitProtectionIntent, *, idempotency_key: str) -> bool:
+    def arm(self, protection: ExitProtectionIntent, *, exit_policy: ExitPolicy,
+            idempotency_key: str) -> bool:
         if self.state.closed_event_id is not None:
             raise ExitLedgerError("cannot arm protection on a closed position")
         if protection.position_id != self.position_id:
             raise ExitLedgerError("protection belongs to a different position")
         records = self._position_records()
         entry_records = [r for r in records if r["type"] == "ENTRY_FILL"]
+        signal = next((r for r in records if r.get("type") == "ENTRY_SIGNAL"
+                       and r.get("signal_id") == protection.parent_entry_signal_id), None)
+        if signal is None:
+            raise ExitLedgerError("exit policy must bind to a journaled entry signal")
+        if (exit_policy.strategy_id, exit_policy.strategy_version) != (
+            signal["strategy_id"], signal["strategy_version"]
+        ):
+            raise ExitLedgerError("exit policy strategy identity differs from its entry signal")
+        matching_rule = next((rule for rule in exit_policy.rules if rule.trigger is protection.trigger), None)
+        if matching_rule is None or (
+            matching_rule.trigger_price is not None and matching_rule.trigger_price != protection.trigger_price
+        ):
+            raise ExitLedgerError("protection intent is not covered by the versioned exit policy")
         if entry_records and any(r["entry_signal_id"] != protection.parent_entry_signal_id for r in entry_records):
             raise ExitLedgerError("protection does not match the recorded entry signal")
         if entry_records and protection.quantity > self.state.open_quantity:
@@ -242,6 +258,8 @@ class ExitProtectionLedger:
                   "trigger": protection.trigger.value, "trigger_price": str(protection.trigger_price),
                   "quantity": str(protection.quantity), "created_at": protection.created_at.isoformat(),
                   "source_hash": protection.source_hash, "oco_group_id": protection.oco_group_id,
+                  "exit_policy_version": exit_policy.policy_version,
+                  "exit_policy_hash": exit_policy.policy_hash,
                   "idempotency_key": idempotency_key}
         return self._append_idempotent(self.journal, records, record, idempotency_key)
 

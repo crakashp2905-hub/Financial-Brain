@@ -7260,6 +7260,7 @@
         "dataclasses",
         "datetime",
         "decimal",
+        "exit_policy",
         "financial_brain.forward_edge.durable",
         "hashlib",
         "json",
@@ -7271,7 +7272,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/exit_protection_ledger.py",
-      "source_sha256": "f1bbd1ac891ae79a1af331939505a7ed056329e8609106acff85173059cd4013",
+      "source_sha256": "f0cfc099f1718c72afab260ea070a036d4ac2f5f52a17749d0fbf6a95644234d",
       "test_paths": []
     },
     {

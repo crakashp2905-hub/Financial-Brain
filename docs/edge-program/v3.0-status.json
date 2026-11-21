@@ -1761,14 +1761,15 @@
       "status": "PARTIAL",
       "evidence": [
         "ExitProtectionLedger.record_entry_fill now refuses any new open quantity unless a matching, pre-armed HARD_STOP protection covers the cumulative entry fills for the recorded entry signal.",
-        "Journal state derives open quantity only from recorded entry fills minus recorded exit fills; unresolved stops do not create fills or close positions.",
+        "Protection arming requires a versioned ExitPolicy bound to the journaled entry strategy/version, and the specific stop/target rule and level must cover the protection intent.",
+        "Journal state derives open quantity only from recorded entry fills minus recorded exit fills; unresolved stops do not create fills or close positions, and POSITION_CLOSED is accepted only after quantity reaches zero.",
         "Regression tests cover missing pre-armed protection, protected quantity, unresolved exits, and fill-backed position quantity."
       ],
-      "blocker": "The ledger has not yet bound every open to a versioned ExitPolicy/TradePlan or been integrated with all paper books; explicit POSITION_CLOSED and non-exchange settlement events are not yet modeled.",
-      "last_audited_at_utc": "2026-11-21T18:42:38+00:00",
+      "blocker": "The ledger has not yet been integrated with all paper books and has no MF/non-exchange settlement path; explicit runner/OMS enforcement remains outstanding.",
+      "last_audited_at_utc": "2026-11-21T18:46:36+00:00",
       "commit": null,
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-fb-0471-r3 tests/test_exit_protection_ledger.py tests/test_exit_policy.py tests/test_gap_exit.py -q: 22 passed",
+        "python -m pytest --basetemp .pytest-fb-0472-policy-final tests/test_exit_protection_ledger.py tests/test_exit_policy.py -q: 17 passed",
         "Ruff and targeted mypy: passed"
       ],
       "test_result": "Entry fills cannot be recorded without matching prior hard-stop coverage; unresolved exits remain open and quantities fall only on explicit exit fills."
