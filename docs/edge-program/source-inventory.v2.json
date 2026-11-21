@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 628,
+  "source_count": 629,
   "sources": [
     {
       "capability_ids": [],
@@ -2903,6 +2903,19 @@
       "parse_status": "ok",
       "source": "src/financial_brain/features/candles.py",
       "source_sha256": "7cf629647f8407d299b84bc6400a5a058baccdfa6103cbb1fea422736225b006",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_prices.py",
+      "source_sha256": "3a2c248cc9bb7c679cf9878031ccd4d37adbeb83439550f9e7b603fffd0240f0",
       "test_paths": []
     },
     {
@@ -10937,6 +10950,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 613,
+  "unassessed_count": 614,
   "unassigned_role_count": 376
 }
