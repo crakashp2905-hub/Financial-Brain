@@ -2290,142 +2290,196 @@
     {
       "id": "FB-0601",
       "text": "Produce same-category rolling 1/3/5-year returns, volatility, drawdown, downside deviation, consistency and risk-adjusted performance.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "research/mf_peer_comparison.py accepts same-period, same-category return and annualized-volatility observations and normalizes peers to a common risk budget.",
+        "No sourced rolling 1/3/5-year report with drawdown, downside deviation and consistency metrics is integrated."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0602",
       "text": "Compare every fund with its declared benchmark TRI, a low-cost passive alternative and relevant peer-group baselines.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MfPeerPeriod binds a source-hashed fund return to a declared benchmark TRI whose effective interval covers the comparison period; peer-category comparison is same-window and point-in-time.",
+        "Low-cost passive alternative and a unified benchmark-plus-peer scorecard are not part of the comparison function."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0603",
       "text": "Calculate fee-aware direct-vs-regular plan selection, avoiding fee double-counting in historical NAV returns.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "research/mf_return_accounting.py marks published NAV ratios as already TER-reflected and applies TER separately only in explicitly forward projections.",
+        "No sourced direct-vs-regular plan pair-selection study with share-class identity, fee differences and decision output was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0604",
       "text": "Model exposure overlap, style drift, size/sector concentration, manager effects, fund size and capacity when historical disclosures allow.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "research/mf_portfolio_analytics.py computes reported/unreported weight, concentration, sector coverage, debt duration/YTM/ratings and recursive fund-of-funds look-through.",
+        "Historical style drift, manager attribution, fund-size/capacity history and cross-scheme overlap through time are not integrated."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0605",
       "text": "Evaluate active-vs-passive fund selection with persistence controls, survivorship-aware scheme history and multiple-hypothesis penalties.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Scheme master and lifecycle providers support effective-dated scheme identity/history; portfolio records are permission-gated and source-hashed; peer comparisons refuse category/window/as-known mismatches.",
+        "No survivorship-aware active/passive selection study with persistence tests and multiple-hypothesis correction is registered."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0606",
       "text": "Add investor cash-management allocation: liquid/overnight/debt funds and ETFs compared against cash, accounting for payout lag and risks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Debt, cash, ETF and MF descriptive analytics exist separately, but no investor cash-management allocator compares liquid/overnight/debt products with cash after payout-lag and liquidity-risk constraints."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0607",
       "text": "Optimize multi-fund portfolio for return, covariance, liquidity lockup, exit loads, tax, turnover, drawdown and marginal risk contribution.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The repository has generic risk and capital-allocation primitives and MF lot/redemption cost constraints.",
+        "No multi-fund optimizer binds expected return, covariance, lockup, exit loads, tax, turnover, drawdown and marginal contribution into one allocation."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0608",
       "text": "Implement disciplined lump-sum, scheduled SIP, STP, SWP and rule-driven rebalance simulation with actual date/cutoff/fund availability mechanics.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Fund transaction calendar assigns a published scheme/action-specific NAV date; scheme paper flows handle distributions/reinvestment/splits and MF lots track redemption aging.",
+        "A rules-based, scheduled SIP/STP/SWP and rebalance simulator with real cutoff, fund-availability, accepted-request and allotment events was not found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0609",
       "text": "Implement timing/rebalance hypotheses as independent prospective studies, never as guaranteed `buy today's NAV` outcomes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "General preregistration and forward-study infrastructure exist; MF recommendation and transaction components preserve decision and cutoff timestamps.",
+        "No independent registered prospective MF timing/rebalancing study with actual future NAV-allotment outcomes was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0610",
       "text": "Rank fund suggestions with `BUY_MORE | HOLD | REDUCE | SWITCH | REDEEM | NO_ACTION`, including time horizon and after-exit-load/tax rationale.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MFAllocationRecommendation supports ALLOCATE/ADD/REDUCE/REDEEM/SWITCH/SIP/HOLD with scheme identity, benchmark, amount, horizon, rationale and NAV state.",
+        "It lacks the requested BUY_MORE/NO_ACTION vocabulary and integrated ranking with target allocation, after-exit-load/tax rationale and validated signal outputs."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0611",
       "text": "Demonstrate value beyond same-category passive funds, direct-plan benchmark and static allocations after tax and turnover; do not call mutual funds a scalping desk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Repository contains same-category peer comparison primitives, but no evidence-backed result shows MF selection beating a passive same-category/direct-plan benchmark and static allocation after tax and turnover."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0612",
       "text": "Require fund-category-specific holding periods and liquidity constraints; no fake 5-minute MF alpha.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Scheme transaction calendars, source-bound redemption restrictions and per-lot exit-load aging enforce some fund-specific date/liquidity constraints.",
+        "A category-specific minimum holding policy and explicit guard that rejects intraday/5-minute MF alpha are not integrated across strategy registration."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0613",
       "text": "Include owner-controlled SIP and allocation parameters without assuming access to a live folio or external fund transaction API.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "MF recommendations accept explicit scheme, amount, horizon and cutoff inputs without using a broker or folio API.",
+        "No owner-managed SIP schedule, configurable allocation policy or persistent owner-control interface was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0614",
       "text": "Maintain versioned strategy charters and scorecard with a cash/no-action control and actual prospective NAV allotment.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "General strategy preregistration, evidence tiers and MF NAV transaction primitives exist.",
+        "No versioned MF strategy charter/scorecard with cash/no-action control and actual prospective allotment cohort was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0701",
