@@ -279,7 +279,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T13:05:00+00:00",
-      "commit": "652394bd",
+      "commit": "868ff339",
       "test_evidence": [
         "python -m pytest tests/test_kernel_instruments.py tests/test_forward_edge_registry.py -q: 16 passed",
         "ruff check src/financial_brain/kernel/instruments.py tests/test_kernel_instruments.py: passed",
@@ -300,7 +300,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T13:05:00+00:00",
-      "commit": "652394bd",
+      "commit": "868ff339",
       "test_evidence": [
         "python -m pytest tests/test_kernel_instruments.py tests/test_forward_edge_registry.py -q: 16 passed",
         "ruff check src/financial_brain/kernel/instruments.py tests/test_kernel_instruments.py: passed"
