@@ -9,6 +9,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 
 from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
@@ -43,6 +44,16 @@ def _aware(value: datetime, field: str) -> datetime:
     return value.astimezone(timezone.utc)
 
 
+def _positive_decimal(value: Decimal | str | int, field: str) -> Decimal:
+    try:
+        normalized = Decimal(value)
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ETFReferenceError(f"{field} must be a finite positive decimal") from exc
+    if not normalized.is_finite() or normalized <= 0:
+        raise ETFReferenceError(f"{field} must be a finite positive decimal")
+    return normalized
+
+
 @dataclass(frozen=True)
 class ETFReferenceRecord:
     """One source-versioned ETF listing/metadata row; facts are not backdated by observation."""
@@ -59,6 +70,7 @@ class ETFReferenceRecord:
     observed_at: datetime
     source_ref: str
     source_sha256: str
+    inception_date: date | None = None
     underlying_index: str | None = None
     fund_house: str | None = None
     provider_token: str | None = None
@@ -83,6 +95,8 @@ class ETFReferenceRecord:
             raise ETFReferenceError("effective_to precedes effective_from")
         if self.listing_date > self.effective_from:
             raise ETFReferenceError("reference version cannot start before the exchange listing date")
+        if self.inception_date is not None and self.inception_date > self.listing_date:
+            raise ETFReferenceError("ETF inception cannot follow its first exchange listing")
         if len(self.source_sha256) != 64 or any(c not in "0123456789abcdef" for c in self.source_sha256):
             raise ETFReferenceError("source_sha256 must be lowercase SHA-256")
         for field in ("underlying_index", "fund_house", "provider_token"):
@@ -120,6 +134,7 @@ class ETFReferenceRecord:
             "isin": self.isin, "listing_date": self.listing_date.isoformat(),
             "effective_from": self.effective_from.isoformat(),
             "effective_to": self.effective_to.isoformat() if self.effective_to else None,
+            "inception_date": self.inception_date.isoformat() if self.inception_date else None,
             "series": self.series, "published_at": self.published_at.isoformat(),
             "observed_at": self.observed_at.isoformat(), "source_ref": self.source_ref,
             "source_sha256": self.source_sha256, "underlying_index": self.underlying_index,
@@ -130,11 +145,71 @@ class ETFReferenceRecord:
         return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+@dataclass(frozen=True)
+class ETFValuationObservation:
+    """One source-hashed NAV or iNAV point, visible only after its publication time."""
+
+    source_id: str
+    exchange: str
+    symbol: str
+    isin: str
+    valuation_type: str
+    valuation_date: date
+    value_per_unit: Decimal
+    published_at: datetime
+    observed_at: datetime
+    source_ref: str
+    source_sha256: str
+
+    def __post_init__(self) -> None:
+        source = self.source_id.strip().upper()
+        exchange = self.exchange.strip().upper()
+        symbol = self.symbol.strip().upper()
+        isin = self.isin.strip().upper()
+        valuation_type = self.valuation_type.strip().upper()
+        if source not in ALLOWED_SOURCES or exchange not in ALLOWED_EXCHANGES:
+            raise ETFReferenceError("valuation source and exchange must identify NSE, BSE or AMC")
+        if source in ALLOWED_EXCHANGES and source != exchange:
+            raise ETFReferenceError("exchange source and valuation exchange must agree")
+        if not symbol or len(isin) != 12 or not isin.isalnum():
+            raise ETFReferenceError("valuation requires symbol and a 12-character alphanumeric ISIN")
+        if valuation_type not in {"NAV", "INAV"}:
+            raise ETFReferenceError("valuation_type must be NAV or INAV")
+        if not self.source_ref.strip():
+            raise ETFReferenceError("valuation source reference is required")
+        if len(self.source_sha256) != 64 or any(c not in "0123456789abcdef" for c in self.source_sha256):
+            raise ETFReferenceError("source_sha256 must be lowercase SHA-256")
+        published_at, observed_at = _aware(self.published_at, "published_at"), _aware(self.observed_at, "observed_at")
+        if observed_at < published_at:
+            raise ETFReferenceError("valuation was observed before publication")
+        object.__setattr__(self, "source_id", source)
+        object.__setattr__(self, "exchange", exchange)
+        object.__setattr__(self, "symbol", symbol)
+        object.__setattr__(self, "isin", isin)
+        object.__setattr__(self, "valuation_type", valuation_type)
+        object.__setattr__(self, "value_per_unit", _positive_decimal(self.value_per_unit, "value_per_unit"))
+        object.__setattr__(self, "published_at", published_at)
+        object.__setattr__(self, "observed_at", observed_at)
+
+    def content_sha256(self) -> str:
+        body = {
+            "source_id": self.source_id, "exchange": self.exchange, "symbol": self.symbol,
+            "isin": self.isin, "valuation_type": self.valuation_type,
+            "valuation_date": self.valuation_date.isoformat(),
+            "value_per_unit": str(self.value_per_unit), "published_at": self.published_at.isoformat(),
+            "observed_at": self.observed_at.isoformat(), "source_ref": self.source_ref,
+            "source_sha256": self.source_sha256,
+        }
+        encoded = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 class ETFReferenceCatalog:
     """In-memory validated reference catalog; callers must provide both rights grants."""
 
     def __init__(self) -> None:
         self._records: list[ETFReferenceRecord] = []
+        self._valuations: list[ETFValuationObservation] = []
 
     def add(self, record: ETFReferenceRecord, *, retention_permission: DataPermission,
             research_permission: DataPermission) -> None:
@@ -151,6 +226,52 @@ class ETFReferenceCatalog:
             if max(prior_start, record_start) <= min(prior_end, record_end):
                 raise ETFReferenceError("overlapping effective ETF listing identities")
         self._records.append(record)
+
+    def add_valuation(
+        self,
+        observation: ETFValuationObservation,
+        *,
+        retention_permission: DataPermission,
+        research_permission: DataPermission,
+    ) -> None:
+        as_of = observation.observed_at.date()
+        for permission, use in ((retention_permission, DataUse.RETENTION),
+                                (research_permission, DataUse.RESEARCH)):
+            if not permission.allows(source_id=observation.source_id, use=use, on=as_of):
+                raise ETFReferenceError(f"{use.value} permission is missing or ineffective for {observation.source_id}")
+        identity = self.resolve(
+            exchange=observation.exchange,
+            symbol=observation.symbol,
+            as_of=observation.observed_at,
+        )
+        if identity.isin != observation.isin:
+            raise ETFReferenceError("valuation ISIN does not match the point-in-time ETF identity")
+        self._valuations.append(observation)
+
+    def resolve_valuation(
+        self,
+        *,
+        exchange: str,
+        symbol: str,
+        isin: str,
+        valuation_type: str,
+        valuation_date: date,
+        as_of: datetime,
+    ) -> ETFValuationObservation:
+        cutoff = _aware(as_of, "as_of")
+        identity = self.resolve(exchange=exchange, symbol=symbol, as_of=cutoff)
+        if identity.isin != isin.strip().upper():
+            raise ETFReferenceError("requested valuation ISIN does not match point-in-time ETF identity")
+        matches = [row for row in self._valuations
+                   if row.exchange == exchange.strip().upper()
+                   and row.symbol == symbol.strip().upper()
+                   and row.isin == isin.strip().upper()
+                   and row.valuation_type == valuation_type.strip().upper()
+                   and row.valuation_date == valuation_date
+                   and row.published_at <= cutoff and row.observed_at <= cutoff]
+        if not matches:
+            raise ETFReferenceError("no published ETF valuation is available as of the requested time")
+        return max(matches, key=lambda row: (row.published_at, row.observed_at))
 
     def resolve(self, *, exchange: str, symbol: str, as_of: datetime) -> ETFReferenceRecord:
         cutoff = _aware(as_of, "as_of")
@@ -169,4 +290,7 @@ class ETFReferenceCatalog:
         return len(self._records)
 
 
-__all__ = ["ETFExposureCategory", "ETFReferenceCatalog", "ETFReferenceError", "ETFReferenceRecord"]
+__all__ = [
+    "ETFExposureCategory", "ETFReferenceCatalog", "ETFReferenceError",
+    "ETFReferenceRecord", "ETFValuationObservation",
+]

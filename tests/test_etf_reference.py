@@ -14,6 +14,7 @@ from financial_brain.providers.etf_reference import (
     ETFReferenceCatalog,
     ETFReferenceError,
     ETFReferenceRecord,
+    ETFValuationObservation,
 )
 
 
@@ -165,3 +166,63 @@ def test_symbol_name_does_not_infer_exposure_category(record: ETFReferenceRecord
     assert gold_named.exposure_category is ETFExposureCategory.UNKNOWN
     with pytest.raises(ETFReferenceError, match="explicit and recognized"):
         ETFReferenceRecord(**{**record.__dict__, "exposure_category": "PRECIOUS_METAL"})
+
+
+def test_nav_and_inav_are_source_hashed_and_publication_time_gated(
+    record: ETFReferenceRecord,
+) -> None:
+    catalog = ETFReferenceCatalog()
+    _add(catalog, record)
+    observation = ETFValuationObservation(
+        source_id="NSE",
+        exchange="NSE",
+        symbol="INDEXETF",
+        isin="INE000A01001",
+        valuation_type="INAV",
+        valuation_date=date(2020, 1, 2),
+        value_per_unit="101.25",
+        published_at=datetime(2020, 1, 2, 6, tzinfo=timezone.utc),
+        observed_at=datetime(2020, 1, 2, 7, tzinfo=timezone.utc),
+        source_ref="NSE iNAV observation",
+        source_sha256="b" * 64,
+    )
+    catalog.add_valuation(
+        observation,
+        retention_permission=_permission(DataUse.RETENTION),
+        research_permission=_permission(DataUse.RESEARCH),
+    )
+
+    with pytest.raises(ETFReferenceError, match="no published ETF valuation"):
+        catalog.resolve_valuation(
+            exchange="NSE", symbol="INDEXETF", isin="INE000A01001", valuation_type="INAV",
+            valuation_date=date(2020, 1, 2), as_of=datetime(2020, 1, 2, 6, 30, tzinfo=timezone.utc),
+        )
+    resolved = catalog.resolve_valuation(
+        exchange="NSE", symbol="INDEXETF", isin="INE000A01001", valuation_type="INAV",
+        valuation_date=date(2020, 1, 2), as_of=datetime(2020, 1, 2, 8, tzinfo=timezone.utc),
+    )
+    assert resolved.value_per_unit.as_tuple().digits == (1, 0, 1, 2, 5)
+    assert len(resolved.content_sha256()) == 64
+
+
+def test_valuation_cannot_cross_point_in_time_listing_identity(record: ETFReferenceRecord) -> None:
+    catalog = ETFReferenceCatalog()
+    _add(catalog, record)
+    row = ETFValuationObservation(
+        source_id="NSE", exchange="NSE", symbol="INDEXETF", isin="INE999A01019",
+        valuation_type="NAV", valuation_date=date(2020, 1, 2), value_per_unit="10",
+        published_at=datetime(2020, 1, 2, 6, tzinfo=timezone.utc),
+        observed_at=datetime(2020, 1, 2, 7, tzinfo=timezone.utc), source_ref="wrong ISIN",
+        source_sha256="c" * 64,
+    )
+    with pytest.raises(ETFReferenceError, match="does not match"):
+        catalog.add_valuation(
+            row,
+            retention_permission=_permission(DataUse.RETENTION),
+            research_permission=_permission(DataUse.RESEARCH),
+        )
+
+
+def test_inception_date_cannot_follow_listing_date(record: ETFReferenceRecord) -> None:
+    with pytest.raises(ETFReferenceError, match="inception cannot follow"):
+        ETFReferenceRecord(**{**record.__dict__, "inception_date": date(2020, 1, 3)})
