@@ -30,6 +30,10 @@ from financial_brain.forward_edge.venue_calendar import Session as VenueSession,
 
 
 NOW = datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc)
+READY_PREFLIGHT = {name: True for name in (
+    "calendar", "credentials", "disk", "feeds", "data_contracts", "risk", "system_health",
+    "broker_disabled",
+)}
 
 
 def make_config(*, max_quote_age_ms=None):
@@ -71,7 +75,8 @@ def make_runner(tmp_path):
 
 def opened(runner, session_id="s", config=None):
     return runner.begin(session_id, config or make_config(), now=NOW,
-                        preflight={"data_rights_configured": True, "risk_policy_loaded": True})
+                        preflight={**READY_PREFLIGHT, "data_rights_configured": True,
+                                   "risk_policy_loaded": True})
 
 
 def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
@@ -165,10 +170,24 @@ def test_runner_event_schema_migration_adds_ingest_provenance_columns(tmp_path):
 
 def test_preflight_failures_reject_the_session_without_accepting_market_events(tmp_path):
     runner = make_runner(tmp_path)
-    state = runner.begin("s", make_config(), now=NOW, preflight={"feed_entitlement": False})
+    state = runner.begin("s", make_config(), now=NOW,
+                         preflight={**READY_PREFLIGHT, "feeds": False, "feed_entitlement": False})
     assert state is SessionState.REJECTED
+    assert set(runner.records("s")["lifecycle"][0]["checks"]) >= set(READY_PREFLIGHT)
     with pytest.raises(ForwardSessionRunnerError, match="OPEN session"):
         runner.ingest("s", make_config(), [make_event()])
+    runner.close()
+
+
+def test_omitted_required_preflight_checks_are_recorded_as_failures(tmp_path):
+    runner = make_runner(tmp_path)
+    state = runner.begin("missing-checks", make_config(), now=NOW,
+                         preflight={"risk_policy_loaded": True})
+    assert state is SessionState.REJECTED
+    checks = runner.records("missing-checks")["lifecycle"][0]["checks"]
+    assert all(checks[name] is False for name in READY_PREFLIGHT)
+    with pytest.raises(ForwardSessionRunnerError, match="OPEN session"):
+        runner.ingest("missing-checks", make_config(), [make_event()])
     runner.close()
 
 
@@ -215,7 +234,7 @@ def test_special_session_requires_explicit_support_and_enforces_sourced_bounds(t
 
     opened_state = runner.plan_calendar_day(
         "special-on", make_config(), venue="NSE", calendar=calendar, now=NOW,
-        preflight={"special_session_adapter": True}, supported_session_types=frozenset({"SPECIAL"}))
+        preflight={**READY_PREFLIGHT, "special_session_adapter": True}, supported_session_types=frozenset({"SPECIAL"}))
     assert opened_state is SessionState.OPEN
     pre_open = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-13 09:30:00", "last_price": 100.0, "volume": 100,
@@ -232,7 +251,7 @@ def test_planned_session_resumed_after_source_close_becomes_durable_incomplete(t
     calendar = _calendar(date(2026, 11, 13))
     runner = make_runner(tmp_path)
     state = runner.plan_calendar_day("planned", make_config(), venue="NSE", calendar=calendar,
-                                    now=NOW, preflight={"risk_policy_loaded": True})
+                                    now=NOW, preflight={**READY_PREFLIGHT, "risk_policy_loaded": True})
     assert state is SessionState.OPEN
     _, closes = calendar.session_bounds_utc("NSE", date(2026, 11, 13))
     assert runner.resume("planned", now=closes - timedelta(seconds=1))["state"] == "OPEN"
@@ -252,7 +271,7 @@ def test_supervisor_marks_stale_feed_incomplete_and_keeps_fresh_feed_open(tmp_pa
     runner = make_runner(tmp_path)
     for session_id in ("stale", "fresh"):
         assert runner.plan_calendar_day(session_id, make_config(), venue="NSE", calendar=calendar,
-                                        now=NOW, preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+                                        now=NOW, preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     event = make_event(event_id="fresh-quote")
     runner.ingest("fresh", make_config(), [event],
                   ingest_metadata={event.event_id: (NOW, "SUPERVISOR_TEST_CLOCK")})
@@ -935,7 +954,7 @@ def test_shared_paper_ledger_carries_inventory_across_sessions_without_expiry(tm
     second_config = replace(make_config(), exchange_date=second_day)
     second_start = NOW + timedelta(days=3)
     assert runner.begin("s2", second_config, now=second_start,
-                        preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+                        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     before_sell = runner.records("s2")["accounting"]
     assert before_sell["positions"] == {"NSE:INFY": 2}
     assert before_sell["cash_inr"] == first_day_accounting["cash_inr"]
@@ -988,7 +1007,7 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
     config = replace(make_config(), exchange_date=exchange_day)
     runner = make_runner(tmp_path)
     assert runner.begin("book-adapter", config, now=start,
-                        preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+                        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     quote = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-16 10:15:00", "last_price": 101.0, "volume": 1000,
         "depth": {"buy": [{"price": 100.95, "quantity": 20}],
@@ -1160,7 +1179,7 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(
     exit_day = date(2026, 11, 16)
     exit_config = replace(entry_config, exchange_date=exit_day)
     exit_start = NOW + timedelta(days=3)
-    runner.begin("s2", exit_config, now=exit_start, preflight={"risk_policy_loaded": True})
+    runner.begin("s2", exit_config, now=exit_start, preflight={**READY_PREFLIGHT, "risk_policy_loaded": True})
     stop_quote = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-16 10:15:00", "last_price": 94.9, "volume": 1000,
         "depth": {"buy": [{"price": 94.95, "quantity": 20}],
@@ -1366,7 +1385,7 @@ def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
     runner = ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"),
                                   tmp_path / "journal.sqlite", clock=clock)
     assert runner.begin("clock-session", make_config(),
-                        preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+                        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     signal_event = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
         "depth": {"buy": [{"price": 99.95, "quantity": 20}],

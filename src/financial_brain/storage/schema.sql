@@ -579,6 +579,170 @@ CREATE TABLE IF NOT EXISTS mf_nav_observations (
     observed_at         TIMESTAMPTZ NOT NULL
 );
 
+-- Effective-dated mutual-fund reference metadata. Each immutable row carries its source
+-- hash and both publication and observation clocks; unavailable classifications are
+-- explicit UNKNOWN values rather than guessed from a scheme name.
+CREATE TABLE IF NOT EXISTS mf_scheme_master (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,
+    structure       VARCHAR NOT NULL,
+    investment_style VARCHAR NOT NULL,
+    asset_category  VARCHAR NOT NULL,
+    category_label  VARCHAR NOT NULL,
+    fund_house      VARCHAR,
+    riskometer      VARCHAR,
+    benchmark_tri   VARCHAR,
+    manager         VARCHAR,
+    objective       VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref      VARCHAR NOT NULL,
+    source_sha256   VARCHAR NOT NULL,
+    published_at    TIMESTAMPTZ NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL
+);
+
+-- Append-only, permission-gated lifecycle facts keep closed, merged, renamed, and
+-- suspended schemes in point-in-time universes. Successor links are explicit evidence;
+-- they are never inferred from similar names or current scheme availability.
+CREATE TABLE IF NOT EXISTS mf_scheme_lifecycle (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    lifecycle       VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,
+    successor_scheme_code VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
+-- Disclosed, effective-dated fees and dealing constraints. Numeric amounts/rates are
+-- stored as text so source decimal precision survives round trips; JSON null means
+-- unknown while [] means a source explicitly reported no schedule/restriction.
+CREATE TABLE IF NOT EXISTS mf_scheme_commercial_terms (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,
+    ter_percent     VARCHAR,
+    aum_inr         VARCHAR,
+    exit_loads_json VARCHAR,
+    minimum_initial_inr VARCHAR,
+    minimum_additional_inr VARCHAR,
+    exit_restrictions_json VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
+-- Permission-gated, append-only IDCW and unit/scheme transition facts for MF paper
+-- accounting and total-return reconstruction. All per-unit amounts and ratios retain
+-- source decimal precision as text.
+CREATE TABLE IF NOT EXISTS mf_scheme_flows (
+    event_id        VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    kind            VARCHAR NOT NULL,
+    effective_date  DATE NOT NULL,
+    cash_per_unit   VARCHAR,
+    reinvestment_nav VARCHAR,
+    unit_ratio      VARCHAR,
+    successor_scheme_code VARCHAR,
+    successor_isin   VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
+-- Source-hashed monthly/quarterly portfolio rows, available only after both
+-- publication and observation clocks. Decimal weights and debt metrics retain their
+-- exact source representation; the same disclosure date can have later corrections.
+CREATE TABLE IF NOT EXISTS mf_portfolio_disclosures (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    scheme_isin     VARCHAR NOT NULL,
+    disclosure_date DATE NOT NULL,
+    asset_class     VARCHAR NOT NULL,
+    weight_percent  VARCHAR NOT NULL,
+    asset_id        VARCHAR,
+    asset_name      VARCHAR,
+    sector          VARCHAR,
+    credit_rating   VARCHAR,
+    modified_duration_years VARCHAR,
+    yield_to_maturity_percent VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
+-- Durable paper mutual-fund accounting. Exit-load terms are frozen per purchase lot
+-- so a later schedule revision cannot rewrite an existing lot's redemption economics.
+CREATE TABLE IF NOT EXISTS mf_paper_accounts (
+    account_id VARCHAR PRIMARY KEY,
+    cash_inr DECIMAL(38, 18) NOT NULL CHECK (cash_inr >= 0),
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_lots (
+    account_id VARCHAR NOT NULL,
+    lot_id VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    isin VARCHAR NOT NULL,
+    allotted_on DATE NOT NULL,
+    lock_in_until DATE,
+    units_original DECIMAL(38, 18) NOT NULL CHECK (units_original > 0),
+    units_remaining DECIMAL(38, 18) NOT NULL CHECK (units_remaining >= 0),
+    purchase_nav DECIMAL(38, 18) NOT NULL CHECK (purchase_nav > 0),
+    exit_loads_json VARCHAR,
+    exit_loads_sha256 VARCHAR,
+    subscription_event_id VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, lot_id),
+    UNIQUE (account_id, subscription_event_id)
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_events (
+    account_id VARCHAR NOT NULL,
+    event_id VARCHAR NOT NULL,
+    kind VARCHAR NOT NULL CHECK (kind IN ('SUBSCRIBE', 'REDEEM')),
+    scheme_code VARCHAR,
+    plan VARCHAR,
+    option VARCHAR,
+    isin VARCHAR,
+    event_date DATE,
+    nav_per_unit DECIMAL(38, 18),
+    units DECIMAL(38, 18),
+    gross_inr DECIMAL(38, 18),
+    exit_load_inr DECIMAL(38, 18),
+    net_inr DECIMAL(38, 18),
+    event_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, event_id)
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
