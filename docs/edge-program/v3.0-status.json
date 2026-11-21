@@ -705,12 +705,22 @@
     {
       "id": "FB-0213",
       "text": "Keep ETF price-return series, NAV-return series and underlying total-return benchmarks separate and clearly labelled.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_prices.py::separate_etf_return_series returns distinct ETF_PRICE_RETURN, ETF_NAV_RETURN and UNDERLYING_TOTAL_RETURN_INDEX maps",
+        "Returns are produced only across adjacent sourced sessions; missing values are null and no series is cross-filled or bridged",
+        "ETF price/NAV distribution reinvestment is explicitly false, and the underlying benchmark input must be source-designated TRI",
+        "tests/test_etf_return_series.py: distinct output labels, no bridging across missing prices, duplicate NAV rejection and refusal to treat iNAV as NAV"
+      ],
+      "blocker": "Partial: separate return calculations and labels exist, but no permissioned historical ETF price/NAV/TRI panel has been populated or reconciled to source adjustment conventions.",
+      "last_audited_at_utc": "2026-11-21T14:36:00+00:00",
+      "commit": "09bb2cad",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_return_series.py tests/test_etf_prices.py -q: 4 passed",
+        "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
+      ],
+      "test_result": "Price, NAV and underlying TRI return series cannot be confused by name or by filling missing dates; real return history remains absent."
     },
     {
       "id": "FB-0214",
