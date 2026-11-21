@@ -7468,7 +7468,8 @@
       "src/financial_brain/evaluation/evidence_tiers.py (fixtures remain historical/research claims and cannot be upgraded by observed or custody fields)",
       "tests/test_evidence_labels.py (mode separation, complete prospective session, custody gate, replay/fixture non-promotion, and export consistency)",
       "tests/test_evidence_claims.py (source-aware claim promotion only for complete observed sessions; fixtures stay replicated)",
-      "49 focused evidence/report/export tests passed; Ruff and git diff --check passed"
+      "docs/edge-program/source-inventory.v2.json refreshed and verified with scripts/source_inventory.py --check (619 Python files)",
+      "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy and git diff --check passed"
       ],
     "blocker": null,
     "last_audited_at_utc": "2026-11-21T08:23:02+00:00",
@@ -7476,13 +7477,14 @@
     "test_evidence": [
       "tests/test_evidence_labels.py",
       "tests/test_evidence_claims.py",
+      "tests/test_forward_edge_cli.py",
       "tests/test_paper_execution_audit.py",
       "tests/test_paper_options_runner.py",
       "tests/test_paper_options_forward.py",
       "tests/test_forward_edge_f08.py",
       "tests/test_forward_edge_falsification.py"
     ],
-    "test_result": "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy and git diff --check passed."
+    "test_result": "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy, source-inventory freshness, and git diff --check passed. The first hosted CI run failed at stale source-inventory verification; the inventory has since been regenerated and its local --check passes. CI rerun remains pending."
     },
     {
       "id": "SL-00-11",
