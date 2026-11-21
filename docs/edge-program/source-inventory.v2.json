@@ -6100,7 +6100,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/mfnav.py",
-      "source_sha256": "af2c593997004056e524a36f127679b312a236df326520b3f26706abe87e8476",
+      "source_sha256": "cf41778161de014b6180c56e1369dd5332f90da75df23f936f3c4257c7c9fd1b",
       "test_paths": []
     },
     {
@@ -9976,13 +9976,14 @@
         "__future__",
         "base",
         "collections",
-        "datetime"
+        "datetime",
+        "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/amfi.py",
-      "source_sha256": "e9be582f72c32cfaee1db18aba8efd9758bee169848ca22e87523d19e3d94295",
+      "source_sha256": "14cadc7cf3c394587d5ed80ce1658372705dab7d7a4f378a0e83918fc8a4b749",
       "test_paths": []
     },
     {
