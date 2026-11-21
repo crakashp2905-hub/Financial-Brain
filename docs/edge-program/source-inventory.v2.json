@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 624,
+  "source_count": 625,
   "sources": [
     {
       "capability_ids": [],
@@ -1362,6 +1362,23 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "numpy",
+        "pandas",
+        "scipy.stats"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/evaluation/dynamic_standard.py",
+      "source_sha256": "45931a87ebb010e722204e82c0804b967176ebf79ead8383aff5270722745612",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "features",
         "numpy",
         "pandas"
@@ -1910,7 +1927,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/oos_monitor.py",
-      "source_sha256": "b39a1b88c8f301461e486f43cef88d951cca250818dfd825d4a7898948c004d1",
+      "source_sha256": "7902f46a665719cd8dcf269d8ef59b643a607d963a558a16b27f23511f13e12a",
       "test_paths": []
     },
     {
@@ -8569,7 +8586,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/zoo_edges.py",
-      "source_sha256": "c08485ecc18c05d942a43ba7bad866b9ad243828e71d73123dbcd10fd47a46a8",
+      "source_sha256": "eb6c6a1435d1721c7f4a2f7b7cda3a82eba2112aeb965665d55b3f99f9b8cf9f",
       "test_paths": []
     },
     {
@@ -10857,6 +10874,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 609,
+  "unassessed_count": 610,
   "unassigned_role_count": 373
 }

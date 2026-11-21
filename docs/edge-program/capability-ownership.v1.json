@@ -789,6 +789,12 @@
       "module_owner": "src/financial_brain/evaluation/delivery_share.py"
     },
     {
+      "capability_id": "module:src/financial_brain/evaluation/dynamic_standard.py",
+      "path": "src/financial_brain/evaluation/dynamic_standard.py",
+      "module_role": "strategy_research_or_evaluation",
+      "module_owner": "src/financial_brain/evaluation/dynamic_standard.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/evaluation/earnings_reaction.py",
       "path": "src/financial_brain/evaluation/earnings_reaction.py",
       "module_role": "strategy_research_or_evaluation",
