@@ -6100,7 +6100,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/mfnav.py",
-      "source_sha256": "cf41778161de014b6180c56e1369dd5332f90da75df23f936f3c4257c7c9fd1b",
+      "source_sha256": "e65b7718889b4afcdaff36b519dac9c2db5333c3f78d0a2f0bf7190e1794d880",
       "test_paths": []
     },
     {
@@ -11365,7 +11365,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/storage/db.py",
-      "source_sha256": "16dcb0cf0a1d260c4df1b5f8f176d6bea9102edf3c28c507a7abde41b953ab88",
+      "source_sha256": "f33df0bc7326207f4c64f5ab4779125ed57b26e62c5e3786c0a831817c61cfc0",
       "test_paths": []
     },
     {

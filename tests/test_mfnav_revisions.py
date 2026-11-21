@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import date, datetime, timezone
 
+import duckdb
 import pytest
 
 from financial_brain.config import Config
@@ -59,9 +60,16 @@ def test_nav_revisions_are_append_only_and_as_known_queries_do_not_look_ahead(tm
         )
         assert before_first is None
 
-        first_known = mfnav.as_known_on(con, "100001", nav_date, known_at=first_seen)
+        # A provider's retrieval clock alone cannot make a row available before this
+        # database has persisted it.
+        assert mfnav.as_known_on(con, "100001", nav_date, known_at=first_seen) is None
+        first_ingested = datetime.fromisoformat(first["ingested_at"])
+        first_known = mfnav.as_known_on(con, "100001", nav_date, known_at=first_ingested)
         assert first_known is not None and first_known["nav"] == pytest.approx(10.2)
         assert first_known["source_published_at"] is None
+        assert first_known["observed_at"] == first_seen
+        assert first_known["ingested_at"] == first_ingested
+        assert first_known["available_at"] == first_ingested
         first_key = first_known["lake_key"]
 
         # Replaying the same payload/key is idempotent, while a changed source file is
@@ -72,15 +80,14 @@ def test_nav_revisions_are_append_only_and_as_known_queries_do_not_look_ahead(tm
             provider=_Provider(_payload("10.2500"), corrected_seen),
         )
 
-        historical = mfnav.as_known_on(
-            con, "100001", nav_date,
-            known_at=datetime(2026, 11, 20, 10, 2, tzinfo=timezone.utc),
-        )
-        latest = mfnav.as_known_on(con, "100001", nav_date, known_at=corrected_seen)
+        corrected_ingested = datetime.fromisoformat(corrected["ingested_at"])
+        historical = mfnav.as_known_on(con, "100001", nav_date, known_at=first_ingested)
+        latest = mfnav.as_known_on(con, "100001", nav_date, known_at=corrected_ingested)
         assert historical is not None and historical["nav"] == pytest.approx(10.2)
         assert latest is not None and latest["nav"] == pytest.approx(10.25)
         assert latest["lake_key"] != first_key
         assert corrected["source_published_at"] is None
+        assert corrected_ingested >= first_ingested
         assert con.execute("SELECT count(*) FROM mf_nav_observations").fetchone()[0] == 2
         assert con.execute("SELECT nav FROM mf_nav WHERE scheme_code='100001'").fetchone()[0] == pytest.approx(10.25)
 
@@ -103,13 +110,14 @@ def test_source_published_timestamp_is_validated_and_preserved(tmp_path):
     retrieved = datetime(2026, 11, 20, 10, 0, tzinfo=timezone.utc)
     published = datetime(2026, 11, 20, 9, 30, tzinfo=timezone.utc)
     with db.connect() as con:
-        mfnav.ingest(
+        result = mfnav.ingest(
             con, cfg, date(2026, 11, 20),
             provider=_Provider(_payload("10.2"), retrieved,
                                extra={"source_published_at": published}),
         )
+        ingested = datetime.fromisoformat(result["ingested_at"])
         row = mfnav.as_known_on(
-            con, "100001", date(2026, 11, 20), known_at=retrieved,
+            con, "100001", date(2026, 11, 20), known_at=ingested,
         )
         assert row is not None and row["source_published_at"] == published
 
@@ -160,4 +168,20 @@ def test_ingest_rejects_invalid_quality_threshold_before_fetch_or_write(tmp_path
     with pytest.raises(ValueError, match="stale_after_days"):
         with db.connect() as con:
             mfnav.ingest(con, cfg, provider=MustNotFetch(), stale_after_days=-1)
+
+
+def test_migration_adds_ingestion_clock_without_backfilling_legacy_rows(tmp_path):
+    cfg = Config(data_root=tmp_path).ensure()
+    with duckdb.connect(str(cfg.db_path)) as con:
+        con.execute("""CREATE TABLE mf_nav_observations (
+            observation_id VARCHAR, observed_at TIMESTAMPTZ)""")
+        observed = datetime(2026, 11, 20, 10, 0, tzinfo=timezone.utc)
+        con.execute("INSERT INTO mf_nav_observations VALUES ('legacy', ?)", [observed])
+
+    Database(cfg).migrate()
+
+    with Database(cfg).connect() as con:
+        row = con.execute("""SELECT observed_at, ingested_at
+            FROM mf_nav_observations WHERE observation_id='legacy'""").fetchone()
+        assert row == (observed, None)
 
