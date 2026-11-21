@@ -1,9 +1,10 @@
 """Synchronous, freshness-gated quote versus indicative-NAV comparison."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from financial_brain.forward_edge.market_data import executable_quote
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
@@ -79,3 +80,100 @@ def compare_quote_to_inav(
 
 
 __all__ = ["compare_quote_to_inav"]
+
+
+def detect_etf_valuation_anomalies(
+    *,
+    expected_sessions: list[date],
+    navs: list[ETFValuationObservation],
+    inavs: list[ETFValuationObservation],
+    premium_comparisons: list[dict[str, Any]],
+    underlying_open_by_session: dict[date, bool | None],
+    as_of: datetime,
+    max_nav_age: timedelta,
+    max_inav_age: timedelta,
+    max_repeated_nav_sessions: int,
+    max_abs_premium_discount_bps: Decimal | str | int,
+) -> list[dict[str, Any]]:
+    """Find missing/stale NAV evidence, extreme synchronized premium and sourced closures.
+
+    Input NAV/iNAV rows must already be selected as the point-in-time revisions by the
+    catalog. The function reports gaps and never carries yesterday's value forward.
+    """
+    if as_of.tzinfo is None or as_of.utcoffset() is None:
+        raise ETFReferenceError("as_of must be timezone aware")
+    if max_nav_age < timedelta(0) or max_inav_age < timedelta(0):
+        raise ETFReferenceError("valuation age thresholds cannot be negative")
+    if max_repeated_nav_sessions < 1:
+        raise ETFReferenceError("max_repeated_nav_sessions must be positive")
+    try:
+        premium_limit = Decimal(max_abs_premium_discount_bps)
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ETFReferenceError("premium threshold must be finite and non-negative") from exc
+    if not premium_limit.is_finite() or premium_limit < 0:
+        raise ETFReferenceError("premium threshold must be finite and non-negative")
+    cutoff = as_of.astimezone(timezone.utc)
+    sessions = sorted(set(expected_sessions))
+    nav_by_day = {row.valuation_date: row for row in navs if row.valuation_type == "NAV"}
+    inav_by_day = {row.valuation_date: row for row in inavs if row.valuation_type == "INAV"}
+    if len(nav_by_day) != len([row for row in navs if row.valuation_type == "NAV"]):
+        raise ETFReferenceError("resolve NAV revisions before anomaly analysis")
+    if len(inav_by_day) != len([row for row in inavs if row.valuation_type == "INAV"]):
+        raise ETFReferenceError("resolve iNAV revisions before anomaly analysis")
+    findings: list[dict[str, Any]] = []
+    for day in sessions:
+        if day not in nav_by_day:
+            findings.append({"type": "NAV_GAP", "session_date": day.isoformat()})
+        if day not in inav_by_day:
+            findings.append({"type": "INAV_GAP", "session_date": day.isoformat()})
+        if underlying_open_by_session.get(day) is False:
+            findings.append({"type": "UNDERLYING_MARKET_CLOSED", "session_date": day.isoformat()})
+
+    if nav_by_day:
+        latest_nav = max(nav_by_day.values(), key=lambda row: (row.valuation_date, row.published_at))
+        if latest_nav.observed_at > cutoff or latest_nav.published_at > cutoff:
+            findings.append({"type": "NAV_NOT_YET_AVAILABLE", "session_date": latest_nav.valuation_date.isoformat()})
+        elif cutoff - latest_nav.observed_at > max_nav_age:
+            findings.append({"type": "NAV_STALE", "session_date": latest_nav.valuation_date.isoformat(),
+                             "age_seconds": (cutoff - latest_nav.observed_at).total_seconds()})
+        streak = 1
+        previous_value = None
+        for day in sessions:
+            row = nav_by_day.get(day)
+            if row is None:
+                streak = 1
+                previous_value = None
+                continue
+            if row.value_per_unit == previous_value:
+                streak += 1
+            else:
+                streak = 1
+            previous_value = row.value_per_unit
+            if streak > max_repeated_nav_sessions:
+                findings.append({"type": "NAV_REPEATED_ACROSS_SESSIONS", "session_date": day.isoformat(),
+                                 "repeated_sessions": streak})
+
+    if inav_by_day:
+        latest_inav = max(inav_by_day.values(), key=lambda row: (row.observed_at, row.published_at))
+        if latest_inav.observed_at > cutoff or latest_inav.published_at > cutoff:
+            findings.append({"type": "INAV_NOT_YET_AVAILABLE", "session_date": latest_inav.valuation_date.isoformat()})
+        elif cutoff - latest_inav.observed_at > max_inav_age:
+            findings.append({"type": "INAV_STALE", "session_date": latest_inav.valuation_date.isoformat(),
+                             "age_seconds": (cutoff - latest_inav.observed_at).total_seconds()})
+
+    ist = ZoneInfo("Asia/Kolkata")
+    for comparison in premium_comparisons:
+        try:
+            premium = Decimal(str(comparison["premium_discount_bps"]))
+            quote_time = datetime.fromisoformat(str(comparison["quote_event_time"]))
+        except (KeyError, TypeError, ValueError, InvalidOperation):
+            continue
+        if not premium.is_finite():
+            continue
+        if abs(premium) > premium_limit:
+            findings.append({"type": "LARGE_PREMIUM_DISCOUNT", "session_date": quote_time.astimezone(ist).date().isoformat(),
+                             "premium_discount_bps": format(premium.normalize(), "f")})
+    return findings
+
+
+__all__.append("detect_etf_valuation_anomalies")

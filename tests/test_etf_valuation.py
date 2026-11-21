@@ -4,7 +4,10 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from financial_brain.features.etf_valuation import compare_quote_to_inav
+from financial_brain.features.etf_valuation import (
+    compare_quote_to_inav,
+    detect_etf_valuation_anomalies,
+)
 from financial_brain.forward_edge.market_data import normalize_kite_quote
 from financial_brain.providers.etf_reference import (
     ETFReferenceError,
@@ -83,3 +86,46 @@ def test_stale_future_or_asynchronous_values_are_refused(quote, inav, decision, 
 def test_inav_for_another_symbol_is_refused() -> None:
     with pytest.raises(ETFReferenceError, match="same point-in-time ETF identity"):
         _compare(_quote(), _inav(symbol="OTHERETF"))
+
+
+def _valuation(kind: str, day: date, value: str, hour: int) -> ETFValuationObservation:
+    observed = datetime(day.year, day.month, day.day, hour, tzinfo=UTC)
+    return ETFValuationObservation(
+        source_id="NSE", exchange="NSE", symbol="INDEXETF", isin="INE000A01001",
+        valuation_type=kind, valuation_date=day, value_per_unit=value,
+        published_at=observed - timedelta(minutes=1), observed_at=observed,
+        source_ref=f"{kind} source record", source_sha256=("c" if kind == "NAV" else "d") * 64,
+    )
+
+
+def test_anomaly_report_finds_nav_inav_gaps_repeats_staleness_closures_and_premiums() -> None:
+    sessions = [date(2026, 11, 10), date(2026, 11, 11), date(2026, 11, 12)]
+    navs = [_valuation("NAV", day, "100", 12) for day in sessions]
+    inavs = [_valuation("INAV", sessions[-1], "100", 4)]
+    as_of = datetime(2026, 11, 12, 5, tzinfo=UTC)
+    findings = detect_etf_valuation_anomalies(
+        expected_sessions=sessions, navs=navs, inavs=inavs,
+        premium_comparisons=[{"premium_discount_bps": "250", "quote_event_time": "2026-11-12T04:59:00+00:00"}],
+        underlying_open_by_session={sessions[1]: False}, as_of=as_of,
+        max_nav_age=timedelta(hours=24), max_inav_age=timedelta(minutes=30),
+        max_repeated_nav_sessions=2, max_abs_premium_discount_bps="150",
+    )
+    types = [row["type"] for row in findings]
+    assert types.count("INAV_GAP") == 2
+    assert "INAV_STALE" in types
+    assert "NAV_REPEATED_ACROSS_SESSIONS" in types
+    assert "UNDERLYING_MARKET_CLOSED" in types
+    assert "LARGE_PREMIUM_DISCOUNT" in types
+    assert "NAV_GAP" not in types
+
+
+def test_anomaly_report_requires_resolved_valuation_revisions() -> None:
+    day = date(2026, 11, 12)
+    nav = _valuation("NAV", day, "100", 12)
+    with pytest.raises(ETFReferenceError, match="resolve NAV revisions"):
+        detect_etf_valuation_anomalies(
+            expected_sessions=[day], navs=[nav, nav], inavs=[], premium_comparisons=[],
+            underlying_open_by_session={}, as_of=NOW, max_nav_age=timedelta(days=1),
+            max_inav_age=timedelta(minutes=1), max_repeated_nav_sessions=2,
+            max_abs_premium_discount_bps=100,
+        )

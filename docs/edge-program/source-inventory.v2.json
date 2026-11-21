@@ -2967,13 +2967,14 @@
         "financial_brain.forward_edge.market_data",
         "financial_brain.forward_edge.market_events",
         "financial_brain.providers.etf_reference",
-        "typing"
+        "typing",
+        "zoneinfo"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_valuation.py",
-      "source_sha256": "2479f4642bc31139e4429deaee15c14d3a1cd13f68b01867f4fb2a45d6b5ba3a",
+      "source_sha256": "467a173c9bb3685e68fb2af286d84b594d48999f87dcf1410fa0dd2da398151d",
       "test_paths": []
     },
     {
