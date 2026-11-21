@@ -2948,13 +2948,18 @@
       "capability_ids": [],
       "human_owner": null,
       "imports": [
-        "__future__"
+        "__future__",
+        "collections.abc",
+        "datetime",
+        "financial_brain.providers.etf_reference",
+        "math",
+        "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_prices.py",
-      "source_sha256": "3a2c248cc9bb7c679cf9878031ccd4d37adbeb83439550f9e7b603fffd0240f0",
+      "source_sha256": "5323ffac6ff9c0e7460c23479c303adbff731eff47f20eed1b1bf739434b6396",
       "test_paths": []
     },
     {

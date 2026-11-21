@@ -5,6 +5,12 @@ source payload hash together. It never invents a price for a missing exchange ro
 """
 from __future__ import annotations
 
+import math
+from collections.abc import Mapping
+from datetime import date
+from typing import Any
+
+from financial_brain.providers.etf_reference import ETFValuationObservation
 
 BUILD_SQL = """
 CREATE OR REPLACE TABLE etf_daily_prices AS
@@ -54,4 +60,52 @@ def build(con) -> dict[str, int]:
     return {"rows": int(row_count), "source_payloads": int(source_count)}
 
 
-__all__ = ["BUILD_SQL", "build"]
+def separate_etf_return_series(
+    *,
+    expected_sessions: list[date],
+    etf_price_close: Mapping[date, float],
+    nav_observations: list[ETFValuationObservation],
+    underlying_total_return_index: Mapping[date, float],
+) -> dict[str, Any]:
+    """Return price, NAV and underlying TRI returns as separate, non-filled series.
+
+    A return is emitted only when both endpoints are present on adjacent sourced sessions.
+    ETF price and NAV changes do not include distribution reinvestment; the benchmark input
+    must be a source-designated total-return index.
+    """
+    sessions = sorted(set(expected_sessions))
+    if any(row.valuation_type != "NAV" for row in nav_observations):
+        raise ValueError("NAV return series accepts NAV observations only; iNAV is a separate market estimate")
+    if len({row.valuation_date for row in nav_observations}) != len(nav_observations):
+        raise ValueError("resolve NAV revisions before computing ETF return series")
+    nav_values = {row.valuation_date: float(row.value_per_unit) for row in nav_observations
+                  if row.valuation_type == "NAV"}
+    sources: dict[str, Mapping[date, float]] = {
+        "ETF_PRICE_RETURN": etf_price_close,
+        "ETF_NAV_RETURN": nav_values,
+        "UNDERLYING_TOTAL_RETURN_INDEX": underlying_total_return_index,
+    }
+    output: dict[str, Any] = {}
+    for name, values in sources.items():
+        if any(day not in sessions for day in values):
+            raise ValueError(f"{name} contains a date outside sourced expected sessions")
+        if any(not math.isfinite(value) or value <= 0 for value in values.values()):
+            raise ValueError(f"{name} values must be finite and positive")
+        returns: dict[str, float | None] = {}
+        prior_value: float | None = None
+        for day in sessions:
+            current = values.get(day)
+            returns[day.isoformat()] = (current / prior_value - 1.0
+                                        if current is not None and prior_value is not None else None)
+            prior_value = current
+        output[name] = returns
+    output["methodology"] = {
+        "return_type": "simple percentage change",
+        "price_and_nav_distributions_reinvested": False,
+        "benchmark_input": "source-designated total-return index level",
+        "missing_session_policy": "null; do not bridge missing sourced sessions",
+    }
+    return output
+
+
+__all__ = ["BUILD_SQL", "build", "separate_etf_return_series"]
