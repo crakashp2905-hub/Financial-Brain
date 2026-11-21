@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 635,
+  "source_count": 641,
   "sources": [
     {
       "capability_ids": [],
@@ -2903,6 +2903,100 @@
       "parse_status": "ok",
       "source": "src/financial_brain/features/candles.py",
       "source_sha256": "7cf629647f8407d299b84bc6400a5a058baccdfa6103cbb1fea422736225b006",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections",
+        "datetime",
+        "financial_brain.forward_edge.market_events",
+        "financial_brain.forward_edge.venue_calendar",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_bars.py",
+      "source_sha256": "d9ca5460325446d79a674a10bd369e1649d4e7b621cd27adc41dd7b3927ab110",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "financial_brain.forward_edge.market_data",
+        "financial_brain.forward_edge.market_events",
+        "math",
+        "statistics",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_liquidity.py",
+      "source_sha256": "734948c655f59b9bfdd2b2bc2b57633564523bd368bd3ac154a90f55b5742f59",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "datetime",
+        "financial_brain.providers.etf_reference",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_prices.py",
+      "source_sha256": "5323ffac6ff9c0e7460c23479c303adbff731eff47f20eed1b1bf739434b6396",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "financial_brain.forward_edge.market_data",
+        "financial_brain.forward_edge.market_events",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_pricing.py",
+      "source_sha256": "a4b71054dda047312e43f6d49aa89777eb203c6c81ad9161274fc433cf7fe91e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
+        "financial_brain.forward_edge.market_data",
+        "financial_brain.forward_edge.market_events",
+        "financial_brain.providers.etf_reference",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_valuation.py",
+      "source_sha256": "467a173c9bb3685e68fb2af286d84b594d48999f87dcf1410fa0dd2da398151d",
       "test_paths": []
     },
     {
@@ -5822,7 +5916,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/kite_live.py",
-      "source_sha256": "5874642e5f704845b2bd713683677a9d81358e773551aa65df0719fb3557a7bd",
+      "source_sha256": "fb202a199c1e4edcc002bc9401370d369f026c18aacd05c1e174647336b3fa6c",
       "test_paths": []
     },
     {
@@ -9608,6 +9702,27 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "financial_brain.forward_edge.data_permissions",
+        "financial_brain.kernel.instruments",
+        "hashlib",
+        "json"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
+      "source": "src/financial_brain/providers/etf_reference.py",
+      "source_sha256": "820deee03684fc9dadcf01df5b3fde668a501bb10f16151f7e15021f92a8a56a",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "base",
         "csv",
         "datetime",
@@ -11065,6 +11180,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 620,
+  "unassessed_count": 626,
   "unassigned_role_count": 376
 }
