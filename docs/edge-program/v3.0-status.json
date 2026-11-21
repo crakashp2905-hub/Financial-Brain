@@ -22,17 +22,17 @@
         "scripts/trial_preservation_audit.py --check (9 protected files verify unchanged)",
         "GitHub Actions run 44896239124: both reproducibility jobs passed; source-rights, capability-ownership and dependency-graph checks passed on Ubuntu and Windows; test jobs then failed at the fixture-equivalence report",
         "scripts/validate_market_data_sources.py and tests/test_market_data_source_validator.py (runtime-source alias fix)",
-        "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py (fixture-only provenance removes synthetic checkout-specific report drift; 12 focused compatibility/charter tests passed)"
+        "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py (fixture-only provenance removes synthetic checkout-specific report drift; tests/test_forward_edge_pipeline_compat.py plus tests/test_forward_edge_session_runner.py: 66 passed)"
       ],
       "blocker": "The latest hosted run passes market-data source rights and repository inventory gates but fails at a generated fixture report because the fixture audit hashes include checkout-specific provenance. The fixture adapter now uses a synthetic-only provenance marker; full Ubuntu/Windows CI must pass on the next head.",
-      "last_audited_at_utc": "2026-11-21T10:58:02+00:00",
+      "last_audited_at_utc": "2026-11-21T11:07:12+00:00",
       "commit": "35478c70",
       "test_evidence": [
         "tests/test_checklist_baseline.py",
         "tests/test_market_data_source_validator.py",
         "scripts/trial_preservation_audit.py --check"
       ],
-      "test_result": "Starting checkout baseline recorded and self-validated; protected trial preservation audit passes. The runtime-source alias and fixture provenance fixes pass focused local tests and the source/graph freshness checks pass. Hosted run 44896239124 passed rights and inventory gates on both OSes but failed at fixture report freshness; a new full CI run is required."
+      "test_result": "Starting checkout baseline recorded and self-validated; protected trial preservation audit passes. The runtime-source alias and fixture provenance fixes pass locally; 66 compatibility/session-runner tests, source/graph freshness checks and the synthetic report check pass. Hosted run 44896239124 passed rights and inventory gates on both OSes but failed at fixture report freshness; a new full CI run is required."
     },
     {
       "id": "FB-0002",
@@ -45,11 +45,11 @@
         "tests/test_capability_ownership.py (canonical-owner uniqueness, module coverage and path integrity)",
         ".github/workflows/ci.yml (capability inventory freshness gate)",
         "GitHub Actions run 44896239124: trader capability owners gate passed on Ubuntu and Windows before a later fixture-equivalence report failure",
-        "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py (fixture provenance no longer depends on Git checkout identity; 12 focused tests passed)",
+        "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py (fixture provenance no longer depends on Git checkout identity; 66 compatibility/session-runner tests passed)",
         "Focused verification: 3 tests passed; Ruff, mypy, inventory freshness and git diff --check passed"
       ],
       "blocker": "Partial: AlgorithmSpec and StrategySpec identity/promotion remain split; the inventory intentionally covers trader-core rather than all 623 Python modules, and the broker, kernel, forward-paper and legacy-paper persistence domains remain separate. Its freshness gate passed on both OSes; a separate checkout-specific synthetic fixture provenance issue caused the latest run to fail later and now has an in-house regression fix. Fresh hosted CI remains pending.",
-      "last_audited_at_utc": "2026-11-21T10:58:02+00:00",
+      "last_audited_at_utc": "2026-11-21T11:07:12+00:00",
       "commit": "35478c70"
     },
     {
@@ -14070,7 +14070,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T10:58:02+00:00",
+    "as_of_utc": "2026-11-21T11:07:12+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14115,6 +14115,7 @@
       "tests/test_product_charter.py",
       "tests/test_capability_ownership.py",
       "src/financial_brain/forward_edge/fixture_adapter.py",
+      "src/financial_brain/forward_edge/session_runner.py",
       "tests/test_forward_edge_pipeline_compat.py",
       "docs/edge-program/canonical-migration-audit.v1.json",
       "docs/edge-program/forward-edge-equivalence-report.v1.json",
