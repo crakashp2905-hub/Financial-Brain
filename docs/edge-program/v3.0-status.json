@@ -1353,12 +1353,22 @@
     {
       "id": "FB-0451",
       "text": "Add typed `EntrySignal` and `ExitSignal`, with UUIDs, explicit `opens_position_id`/`closes_position_id`, strategy/version, instrument, quote-source identity, timestamp and parent signal lineage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/position_signals.py defines frozen EntrySignal and ExitSignal types with UUID IDs, opens/closes position IDs, strategy/version, instrument, side/action, quote source, source hash, timestamp and parent lineage.",
+        "validate_entry_exit_link() enforces matching position, parent-entry signal, strategy/version/instrument, nondecreasing event time, and closing semantics BUY→SELL_TO_CLOSE, SELL_SHORT→BUY_TO_COVER, MF_SUBSCRIBE→MF_REDEEM/MF_SWITCH.",
+        "The linked signal types are not yet emitted by paper OMS entry/exit events, and multi-leg option position identity/quantity closure is not modeled here."
+      ],
+      "blocker": "Partial: typed linked entry/exit contract and side semantics are implemented, but OMS/position lifecycle integration and multi-leg option quantity handling remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T17:51:20+00:00",
+      "commit": "4cdfab0f",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-position-signals tests/test_position_signals.py -q: 5 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/position_signals.py: passed"
+      ],
+      "test_result": "Equity long, short, and MF entry signals accept only their corresponding closing actions and matching stable position/parent identifiers."
     },
     {
       "id": "FB-0452",
