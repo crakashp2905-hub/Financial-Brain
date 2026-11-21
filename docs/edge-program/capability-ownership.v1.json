@@ -27,6 +27,16 @@
       "boundary": "Enumerates current source candidates and protected historical trials with explicit status; candidate presence does not imply paper eligibility or validated edge."
     },
     {
+      "id": "paired_paper_sleeve_evaluation",
+      "category": "evaluation",
+      "owner": "src/financial_brain/forward_edge/paired_paper.py",
+      "owner_symbol": "compare_paper_sleeves",
+      "implementations": [
+        "src/financial_brain/forward_edge/paired_controls.py"
+      ],
+      "boundary": "Compares automatic and human-reviewed paper outcomes over one frozen eligible signal set; requires cash outcomes for abstentions and never authenticates actors or promotes a strategy."
+    },
+    {
       "id": "algorithm_behavior_spec",
       "category": "strategy",
       "owner": "src/financial_brain/strategies/specs.py",
@@ -1681,6 +1691,12 @@
       "path": "src/financial_brain/forward_edge/paired_controls.py",
       "module_role": "forward_trading_contract_or_support",
       "module_owner": "src/financial_brain/forward_edge/paired_controls.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forward_edge/paired_paper.py",
+      "path": "src/financial_brain/forward_edge/paired_paper.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/paired_paper.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/paper_accounting.py",

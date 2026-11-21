@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 661,
+  "source_count": 662,
   "sources": [
     {
       "capability_ids": [],
@@ -4683,6 +4683,24 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/paired_controls.py",
       "source_sha256": "1d139b073075f9ea8b73f80d3a42638e54a6b1aa12d4d6ea12c0835198d0b7d2",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/paired_paper.py",
+      "source_sha256": "5b870376e148e802f15ab2584b145978dc478d5e664616662e2186d358bb0343",
       "test_paths": []
     },
     {
@@ -11549,6 +11567,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 646,
-  "unassigned_role_count": 387
+  "unassessed_count": 647,
+  "unassigned_role_count": 388
 }
