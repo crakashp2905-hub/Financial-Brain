@@ -319,7 +319,7 @@
       ],
       "blocker": "Partial: typed primitives are implemented and tested but core OMS, forward paper order/accounting, risk sizing, MF allotment and persistence still exchange generic integers/Decimals/floats. End-to-end enforcement across those state transitions and serialized schemas is not yet proven.",
       "last_audited_at_utc": "2026-11-21T13:15:00+00:00",
-      "commit": "PENDING",
+      "commit": "df854e22",
       "test_evidence": [
         "python -m pytest tests/test_kernel_units_clock.py -q: 19 passed",
         "ruff check src/financial_brain/kernel/units.py tests/test_kernel_units_clock.py: passed",
