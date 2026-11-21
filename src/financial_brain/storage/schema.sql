@@ -650,6 +650,27 @@ CREATE TABLE IF NOT EXISTS mf_scheme_commercial_terms (
     observed_at      TIMESTAMPTZ NOT NULL
 );
 
+-- Permission-gated, append-only IDCW and unit/scheme transition facts for MF paper
+-- accounting and total-return reconstruction. All per-unit amounts and ratios retain
+-- source decimal precision as text.
+CREATE TABLE IF NOT EXISTS mf_scheme_flows (
+    event_id        VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    kind            VARCHAR NOT NULL,
+    effective_date  DATE NOT NULL,
+    cash_per_unit   VARCHAR,
+    reinvestment_nav VARCHAR,
+    unit_ratio      VARCHAR,
+    successor_scheme_code VARCHAR,
+    successor_isin   VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
