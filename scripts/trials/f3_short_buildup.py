@@ -1,5 +1,5 @@
 import json, warnings; warnings.simplefilter("ignore")
-import duckdb, numpy as np, pandas as pd
+import duckdb, pandas as pd
 from financial_brain.evaluation import short_buildup as SB, standard as S
 con=duckdb.connect("data/financial_brain.duckdb",read_only=True); fut=duckdb.connect("data/futures_history.duckdb",read_only=True)
 r=SB.run(con,fut); con.close(); fut.close()
