@@ -7474,16 +7474,25 @@
     {
       "id": "SL-00-11",
       "text": "Enforce broker isolation at import, runtime, network transport and integration-test layers; no automated policy writes to physical order endpoints.",
-      "source_checked": false,
-      "status": "PARTIAL",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/forward_edge/modes.py (PHYSICAL_ORDERS_ENABLED=False)",
-        "tests/test_forward_edge_f00.py",
-        "tests/test_algo_final.py"
+        "scripts/forward_engine_graph.py and tests/test_source_inventory.py (static import closures exclude execution.oms.kite_broker from both paper entrypoints)",
+        "src/financial_brain/forward_edge/modes.py and tests/test_forward_edge_f00.py (every session mode denies physical orders; only LIVE_PAPER may emit simulated fills)",
+        "tests/test_forward_edge_session_runner.py::test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags (forged flags, broker method, request transport, and HTTP opener traps)",
+        "tests/test_phase5_intraday_runner.py::test_live_paper_and_replay_never_call_physical_broker_even_with_forged_flags (live-paper/replay broker and transport traps)",
+        "8 targeted import/runtime/network/integration tests passed; Ruff and git diff --check passed"
       ],
-      "blocker": "Build-time disablement and selected isolation tests exist; the full import/runtime/network-transport/integration-test acceptance was not established.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T08:17:51+00:00",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_source_inventory.py",
+        "tests/test_forward_edge_f00.py",
+        "tests/test_forward_edge_session_runner.py",
+        "tests/test_phase5_intraday_runner.py"
+      ],
+      "test_result": "8 targeted broker-isolation and source-graph tests passed with forged flags; physical broker place/request methods and urllib HTTP transport were trapped."
     },
     {
       "id": "SL-00-12",
@@ -13930,7 +13939,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T08:13:54+00:00",
+    "as_of_utc": "2026-11-21T08:17:51+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13954,12 +13963,12 @@
     "audited_count": 18,
     "status_counts": {
       "UNASSESSED": 1360,
-      "PARTIAL": 10,
+      "PARTIAL": 9,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 1,
-      "COMPLETE": 6
+      "COMPLETE": 7
     },
-    "verified_complete_count": 6,
+    "verified_complete_count": 7,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/forward-edge-equivalence-report.v1.json",
@@ -13977,6 +13986,6 @@
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
       "docs/forward-edge/reference-candidates.v1.json"
     ],
-    "evidence_update": "SL-00-04 remains PARTIAL after a record-level audit. The protected ledger is unchanged and pinned, all 13 registrations/verdicts are present, but only 3/13 have dataset hashes and historical read windows. Ten missing historical records cannot be recreated without inventing provenance."
+    "evidence_update": "SL-00-11 COMPLETE: both paper entrypoints have static import-closure exclusion of the physical Kite broker, runtime mode denies cash orders, and forged-flag integration tests trap broker transport and HTTP opener calls."
   }
 }

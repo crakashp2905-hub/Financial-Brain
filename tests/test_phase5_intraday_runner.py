@@ -231,11 +231,17 @@ def test_replay_runs_the_same_engine_on_minute_candles_and_labels_it(setup):
 
 def test_live_paper_and_replay_never_call_physical_broker_even_with_forged_flags(setup, monkeypatch):
     """Exercise both intraday simulation entry points under a forged live-order config."""
+    import urllib.request
+
     from financial_brain.execution.oms.kite_broker import KiteBroker
     from financial_brain.forward_edge import modes
 
     calls = []
     monkeypatch.setattr(KiteBroker, "place", lambda *_args, **_kwargs: calls.append("place"))
+    monkeypatch.setattr(KiteBroker, "_request",
+                        lambda *_args, **_kwargs: pytest.fail("paper/replay called Kite transport"))
+    monkeypatch.setattr(urllib.request, "urlopen",
+                        lambda *_args, **_kwargs: pytest.fail("paper/replay opened an HTTP transport"))
     monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
     monkeypatch.setenv("FB_LIVE_ORDERS", "1")
 

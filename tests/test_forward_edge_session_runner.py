@@ -598,11 +598,17 @@ def test_quote_that_ages_out_during_simulated_latency_cannot_create_an_intent(tm
 
 
 def test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags(tmp_path, monkeypatch):
+    import urllib.request
+
     from financial_brain.execution.oms.kite_broker import KiteBroker
     from financial_brain.forward_edge import modes
 
     calls = []
     monkeypatch.setattr(KiteBroker, "place", lambda *_args, **_kwargs: calls.append("place"))
+    monkeypatch.setattr(KiteBroker, "_request",
+                        lambda *_args, **_kwargs: pytest.fail("paper session called Kite transport"))
+    monkeypatch.setattr(urllib.request, "urlopen",
+                        lambda *_args, **_kwargs: pytest.fail("paper session opened an HTTP transport"))
     monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
     monkeypatch.setenv("FB_LIVE_ORDERS", "1")
     runner, event, decided = trade_setup(tmp_path)

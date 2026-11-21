@@ -48,6 +48,13 @@ def test_committed_source_and_runner_graph_snapshots_are_current():
     assert graph["entrypoints"]["forward_session_runner"] in graph["closures"]["forward_session_runner"]
 
 
+def test_paper_runner_import_closures_exclude_the_physical_kite_broker():
+    graph = build_graph(ROOT)
+    broker = "financial_brain.execution.oms.kite_broker"
+    assert broker not in graph["closures"]["legacy_intraday_paper"]
+    assert broker not in graph["closures"]["forward_session_runner"]
+
+
 def test_state_ownership_is_scoped_and_duplicate_authorities_are_rejected():
     registry = load_ownership(ROOT)
     assert len(registry["unresolved_domains"]) == 2
