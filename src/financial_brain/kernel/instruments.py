@@ -51,10 +51,16 @@ def desk_supports_asset_class(desk: Desk, asset_class: AssetClass) -> bool:
 
 
 class Status(str, Enum):
+    LISTED = "LISTED"
     ACTIVE = "ACTIVE"
     SUSPENDED = "SUSPENDED"
+    HALTED = "HALTED"
     EXPIRED = "EXPIRED"
     DELISTED = "DELISTED"
+    MATURED = "MATURED"
+    CLOSED_FOR_PURCHASE = "CLOSED_FOR_PURCHASE"
+    CLOSED_FOR_REDEMPTION = "CLOSED_FOR_REDEMPTION"
+    RESTRICTED = "RESTRICTED"
 
 
 class Phase(str, Enum):
@@ -199,6 +205,9 @@ class Instrument:
         if not self.status_history:
             self.status_history = [(self.rules[0].effective_from, Status.ACTIVE)]
         self.status_history.sort(key=lambda s: s[0])
+        if len({day for day, _ in self.status_history}) != len(self.status_history):
+            raise InstrumentError("duplicate instrument status effective dates")
+        self.status_history = [(day, Status(status)) for day, status in self.status_history]
         if self.strike is not None:
             self.strike = to_decimal(self.strike)
             if self.strike <= 0:
@@ -262,7 +271,7 @@ class Instrument:
         if self.expiry is not None and day > self.expiry:
             return False, "EXPIRED_BY_DATE"
         status = self.status_on(day)
-        if status is not Status.ACTIVE:
+        if status not in {Status.ACTIVE, Status.LISTED}:
             return False, f"STATUS_{status.value}"
         if phase is not Phase.CONTINUOUS:
             return False, f"PHASE_{phase.value}"
