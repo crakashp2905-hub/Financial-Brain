@@ -32,6 +32,10 @@ FIXTURE_PROVENANCE: dict[str, str | None] = {
     "executable_entry_point": "ForwardSessionRunner:synthetic-fixture",
 }
 
+#: Pinned provenance for fixed-fixture runs: the fixtures, not the checkout, define their records.
+FIXTURE_PROVENANCE = {"source_commit": "FIXTURE", "source_branch": None, "source_tree_state": "FIXTURE",
+                      "branch_ancestry_sha256": None, "executable_entry_point": "ForwardSessionRunner"}
+
 
 def _fixture_cost_schedule(day, fee_bps: str) -> tuple[dict[str, Any], str]:
     fee_rate = float(Decimal(fee_bps) / Decimal(10_000))
@@ -122,13 +126,8 @@ def record_fixture_decision(fx: dict[str, Any], legacy_result: dict[str, Any], *
         temporary = None
         directory = Path(state_dir)
         directory.mkdir(parents=True, exist_ok=True)
-    # Golden fixture hashes must not bind to the developer checkout or GitHub's synthetic
-    # PR merge commit. This override is confined to this synthetic-only adapter; ordinary
-    # observed/local-paper runners retain the real repository provenance.
-    with patch("financial_brain.forward_edge.session_runner.repository_provenance",
-               return_value=FIXTURE_PROVENANCE):
-        runner = ForwardSessionRunner(ForwardSessionStore(directory / "state.sqlite"),
-                                      directory / "journal.sqlite")
+    runner = ForwardSessionRunner(ForwardSessionStore(directory / "state.sqlite"), directory / "journal.sqlite",
+                                  provenance=FIXTURE_PROVENANCE)
     try:
         cost_schedule_data, cost_schedule_sha256 = _fixture_cost_schedule(
             session_date, str(fx.get("fee_bps", "3")))

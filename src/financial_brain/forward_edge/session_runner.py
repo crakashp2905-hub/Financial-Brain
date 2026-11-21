@@ -51,11 +51,13 @@ class ForwardSessionRunner:
     """
 
     def __init__(self, state: ForwardSessionStore, journal_path: Path, *,
-                 clock: ClockProvider | None = None) -> None:
+                 clock: ClockProvider | None = None,
+                 provenance: dict[str, str | None] | None = None) -> None:
         self.state_store = state
         self.clock = clock or SystemClock()
         self.journal_path = Path(journal_path)
-        self.provenance = repository_provenance(entry_point="ForwardSessionRunner")
+        # Fixed fixtures pass a pinned provenance so their record hashes do not change with every commit.
+        self.provenance = provenance or repository_provenance(entry_point="ForwardSessionRunner")
         self.journal_path.parent.mkdir(parents=True, exist_ok=True)
         self._con = sqlite3.connect(str(self.journal_path))
         self._con.execute("PRAGMA journal_mode=WAL")
