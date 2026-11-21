@@ -474,10 +474,11 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T14:06:00+00:00",
-      "commit": "PENDING",
+      "commit": "25796d1e",
       "test_evidence": [
         "python -m pytest tests/test_kernel_instrument_integrity.py tests/test_kernel_instruments.py tests/test_kernel_instrument_history.py tests/test_forward_edge_market_events.py -q: 48 passed",
         "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/instruments.py src/financial_brain/kernel/instrument_history.py: passed",
         "git diff --check: passed"
       ],
       "test_result": "The instrument foundation carries explicit lineage, prevents unknown/overlapping identity use, and refuses publication-time lookahead in market events."
