@@ -7361,16 +7361,24 @@
     {
       "id": "SL-00-04",
       "text": "Preserve original protected Q4 2026 trial ledger, registration timestamps, failure outcomes, input hashes and historical read windows byte-for-byte.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/forward-edge/protected-pins.json",
-        "docs/trials/ledger.jsonl",
-        "python -m financial_brain.forward_edge.audit --json (protected_pins GREEN)"
+        "docs/forward-edge/protected-pins.json (ledger and available original manifests match their protected SHA-256 pins)",
+        "docs/edge-program/trial-preservation-audit.v1.json (per-trial record hashes and provenance coverage)",
+        "scripts/trial_preservation_audit.py --check (recomputable preservation/coverage report)",
+        "tests/test_trial_preservation_audit.py (pin equality, 13 timestamps/verdicts, and explicit missing-provenance cases)",
+        "Audit result: 13/13 registration timestamps and failure outcomes preserved; 3/13 input hashes and historical read windows present; missing historical facts are not backfilled."
       ],
-      "blocker": "Protected pins verify, but this does not prove byte-for-byte preservation of every specified Q4 ledger field and historical read window.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": "Ten historical trial rows have no matching dataset-hash/read-window manifest in the committed source. Their original data access cannot be reconstructed byte-for-byte from this repository.",
+      "last_audited_at_utc": "2026-11-21T08:13:54+00:00",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_trial_preservation_audit.py",
+        "tests/test_forward_edge_f00.py"
+      ],
+      "artifact_sha256": "5e58275ce2f9bcc344ec52131eec37cd778fdd63349bf2f2a20a941896ee3139",
+      "test_result": "Trial preservation audit tests 2 passed; protected pin validator reports no errors. Coverage gaps remain as listed."
     },
     {
       "id": "SL-00-05",
@@ -13922,7 +13930,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T08:10:36+00:00",
+    "as_of_utc": "2026-11-21T08:13:54+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13961,6 +13969,7 @@
       "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip",
       "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip.sha256",
       "docs/edge-program/source-inventory.v2.json",
+      "docs/edge-program/trial-preservation-audit.v1.json",
       "docs/edge-program/v3.0-baseline-2026-11-21-r2.json",
       "docs/edge-program/v3.0-baseline-2026-11-21-r2.json.sha256",
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
@@ -13968,6 +13977,6 @@
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
       "docs/forward-edge/reference-candidates.v1.json"
     ],
-    "evidence_update": "Fresh SL-00-01/02 snapshots added. Main and feature refs, dependencies, market-data freshness, review submissions, CI and PR changed-file overlaps are now recorded. Scheduled runner identity and branch protection remain unknown; PR #40 CI is in progress; PR #39/#40 ancestry and overwritten-file resolution remain to be reconciled."
+    "evidence_update": "SL-00-04 remains PARTIAL after a record-level audit. The protected ledger is unchanged and pinned, all 13 registrations/verdicts are present, but only 3/13 have dataset hashes and historical read windows. Ten missing historical records cannot be recreated without inventing provenance."
   }
 }
