@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 625,
+  "source_count": 626,
   "sources": [
     {
       "capability_ids": [],
@@ -4375,7 +4375,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_data.py",
-      "source_sha256": "e801016909fe4df37352e1607932f1251b6c0e9fb28d76cf51a80d2883f79cc8",
+      "source_sha256": "0cc00df6add583051e7bc6ea7a4623414abddcf6c47e7c813329c63f4f61bfec",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"
@@ -4397,7 +4397,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_events.py",
-      "source_sha256": "07daa588ec0314bc1b000646c3ec5900597928a6e14e8252d211115449e7b804",
+      "source_sha256": "e14b54137372eccaf85fd35004f824ed5d6dca3a5b67de14fc4994e565fcf6c0",
       "test_paths": []
     },
     {
@@ -7153,13 +7153,14 @@
         "decimal",
         "enum",
         "financial_brain.kernel.market_rules",
-        "financial_brain.kernel.units"
+        "financial_brain.kernel.units",
+        "json"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/instruments.py",
-      "source_sha256": "4ec267d6693ce808d6a458dfa525ac6cbb04b6f85b2073f1393868bf6b876dd2",
+      "source_sha256": "fd60b46823059d650be0c03d6b676ea5029c57908a37dbad336175d306e59fd6",
       "test_paths": []
     },
     {
@@ -7707,6 +7708,28 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "enum",
+        "financial_brain.forward_edge.venue_calendar",
+        "hashlib",
+        "json",
+        "types",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/trading_clock.py",
+      "source_sha256": "2e7f1e01cbb2c561cec048cb3acd01d362466415cf4e46cf46c2e58c262aebe6",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "decimal",
         "math",
         "re"
@@ -7715,7 +7738,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/units.py",
-      "source_sha256": "1c3e9c261d11b02eae02e6b920eebb59779c5c14be60b4f7f38705f8ec8858f9",
+      "source_sha256": "eac2a5d096ac202159e0add006d64bec7b994543013d63a04ffc627e6685cea0",
       "test_paths": []
     },
     {
@@ -10874,6 +10897,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 610,
-  "unassigned_role_count": 373
+  "unassessed_count": 611,
+  "unassigned_role_count": 374
 }
