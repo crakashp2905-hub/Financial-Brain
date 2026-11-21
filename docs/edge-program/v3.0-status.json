@@ -14,7 +14,7 @@
       "id": "FB-0001",
       "text": "Record current commit SHA, tree, dependency lock, test count and CI results; create new feature branch and do not rewrite the protected trial ledger.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
         "docs/edge-program/checklist-baseline.v1.json (starting commit, tree, branch/upstream, worktree/blob dependency-lock hashes, 3,733-test collection count, CI run 44893421153 and protected pin result)",
         "scripts/audit_checklist_baseline.py (verifies source commit/tree and dependency-lock blob hashes)",
@@ -24,16 +24,18 @@
         "scripts/validate_market_data_sources.py and tests/test_market_data_source_validator.py (runtime-source alias fix)",
         "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py (fixture-only provenance removes synthetic checkout-specific report drift; tests/test_forward_edge_pipeline_compat.py plus tests/test_forward_edge_session_runner.py: 66 passed)",
         "Hosted CI run 44898633158: reproducibility jobs and all pre-test freshness gates passed on Ubuntu and Windows; 3,735 tests passed but four fixture-permission tests failed on both platforms.",
-        "Commit d6008d1d gives those synthetic fixture tests explicit frozen fixture opt-in or a test-only PAPER_SIMULATION permission; tests/test_forward_edge_checkpoints.py plus tests/test_forward_edge_integrity_gates.py: 7 passed locally."
+        "Commit d6008d1d gives those synthetic fixture tests explicit frozen fixture opt-in or a test-only PAPER_SIMULATION permission; tests/test_forward_edge_checkpoints.py plus tests/test_forward_edge_integrity_gates.py: 7 passed locally.",
+        "GitHub Actions run 44900645078 on commit 0bf2a13d: clean Ubuntu and Windows test jobs, 3,742 passed / 3 skipped / 0 failures / 0 errors per OS; both locked-environment reproducibility jobs passed; CI reports and artifacts uploaded."
       ],
-      "blocker": "Partial: run 44898633158 still failed at four test fixtures that omitted explicit synthetic/test-only data rights. The fixtures are now corrected in d6008d1d and pass locally; a fresh full Ubuntu/Windows hosted run is required before CI is called green.",
-      "last_audited_at_utc": "2026-11-21T11:39:04+00:00",
-      "commit": "d6008d1d",
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T12:13:18+00:00",
+      "commit": "0bf2a13d",
       "test_evidence": [
-        "GitHub Actions run 44898633158: both reproducibility jobs pass, both platform test jobs have 3,735 passed and 4 fixture permission failures",
-        "tests/test_forward_edge_checkpoints.py and tests/test_forward_edge_integrity_gates.py: 7 passed after explicit synthetic permission fixtures"
+        "GitHub Actions run 44900645078: test (ubuntu-24.04) and test (windows-latest) completed successfully; each reported 3,742 passed, 3 skipped, 0 failures and 0 errors.",
+        "GitHub Actions run 44900645078: reproducibility (ubuntu-24.04) and reproducibility (windows-2022) completed successfully.",
+        "pytest-results artifacts: Ubuntu 14705709005; Windows 14705174861. Coverage artifacts: Ubuntu 14705729024; Windows 14706620429."
       ],
-      "test_result": "Hosted inventory and reproducibility gates passed on Ubuntu and Windows. The full suite exposed four fixture tests missing explicit synthetic/test-only paper-simulation rights. Commit d6008d1d fixes them; the 7 affected tests pass locally. Full hosted CI must be rerun."
+      "test_result": "Fresh hosted run 44900645078 passed on both operating systems with locked-environment reproducibility, lint, types, migration checks, test artifacts, critical-module coverage, 94% chart-pattern package coverage, and pip-audit. Each OS reported 3,742 passed, 3 skipped, 0 failures/errors. The later commits on this branch only update checklist documentation and external branch-protection evidence; follow-up run 44901944665 is verifying the current PR head."
     },
     {
       "id": "FB-0002",
@@ -185,12 +187,24 @@
     {
       "id": "FB-0009",
       "text": "Establish clean CI on Windows/Linux with pinned dependencies, lint, type checks, per-module coverage and test artifacts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        ".github/workflows/ci.yml (Ubuntu/Windows test matrix; locked Ubuntu/Windows reproducibility matrix; Ruff, type checks, migrations, full tests, JUnit artifacts, critical-module coverage report, chart-pattern coverage floor, coverage XML artifacts, and dependency audit)",
+        "requirements-lock.txt and scripts/verify_reproducibility.py (pinned environment validation)",
+        "GitHub Actions run 44901944665 on current head 11e3797249b75cef6a001e69f7b64313b28e0c29: all four required Linux/Windows test and reproducibility jobs passed",
+        "Artifacts: JUnit Ubuntu 14706477507, JUnit Windows 14707050755, coverage Ubuntu 14706552268, coverage Windows 14707060773"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T12:20:44+00:00",
+      "commit": "11e37972",
+      "test_evidence": [
+        "Run 44901944665: all four required jobs passed on the current PR head.",
+        "Ubuntu and Windows each report 3,742 passed, 3 skipped, 0 failures/errors.",
+        "Critical-module coverage report generated; selected critical files aggregate to 82%; chart-pattern package is 94% and passes its 85% floor.",
+        "JUnit and coverage XML artifacts uploaded for both OSes; pip-audit reports no known vulnerabilities."
+      ],
+      "test_result": "GitHub Actions run 44901944665 on current PR head 11e3797249b75cef6a001e69f7b64313b28e0c29: test (ubuntu-24.04), test (windows-latest), reproducibility (ubuntu-24.04), and reproducibility (windows-2022) all completed successfully. Both OS test jobs reported 3,742 passed, 3 skipped, 0 failures and 0 errors; critical-module coverage report generated (82% aggregate across selected critical files), chart-pattern package coverage was 94% against the 85% floor, coverage XML and JUnit artifacts uploaded, and pip-audit reported no known vulnerabilities."
     },
     {
       "id": "FB-0010",
@@ -7419,7 +7433,7 @@
         "GitHub API: main SHA 5c7ae82a314b1e547d345e7b988e90f77d57224b; integration head c0059bbc10bf0d9df6eae1658c94b0b1e7a5af39; PR #34/#36-#40 review counts all zero; PR #40 CI run 44883135745 in progress",
         "git ls-remote: feature/forward-edge-f00-f01 at d97dacc78d36e36e1130f94547a5dab691ce12dc"
       ],
-      "blocker": "Actual scheduled paper runner checkout and external owner approvals/branch protection cannot be verified from repository configuration or available GitHub API; the PR description claim and absence of review submissions are recorded without treating them as proof.",
+      "blocker": "Actual scheduled paper-runner checkout and external owner approvals remain unverified. Main branch protection and required checks are now verified separately in docs/edge-program/main-branch-protection.v1.md.",
       "last_audited_at_utc": "2026-11-21T08:10:36+00:00",
       "commit": "8037c1f2",
       "artifact_sha256": "b94345baf3c680171f419dd15c542690bce2a4a0ec00347b1a5ff0612b8c5341",
@@ -7664,28 +7678,36 @@
     {
       "id": "SL-00-12",
       "text": "Require CI on Windows and Linux: source lint, mypy critical modules, unit tests, integration, property/adversarial tests and code coverage per critical learning service.",
-      "source_checked": false,
-      "status": "PARTIAL",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        ".github/workflows/ci.yml",
-        "docs/edge-program/v3.0-baseline-2026-11-21.json (fresh PR CI evidence: #36 failed both OS jobs; #34/#37–#40 latest observed runs passed)"
+        ".github/workflows/ci.yml (both OS matrices include lint, type, migration, complete test suite, property/adversarial regressions, critical-module coverage and reports)",
+        "GitHub Actions run 44901944665 on current PR head 11e3797249b75cef6a001e69f7b64313b28e0c29: test (ubuntu-24.04), test (windows-latest), reproducibility (ubuntu-24.04), and reproducibility (windows-2022) all completed successfully.",
+        "Both OS test jobs reported 3,742 passed, 3 skipped, 0 failures and 0 errors; critical-module coverage report generated (82% aggregate across selected critical files), chart-pattern package coverage was 94% against the 85% floor, coverage XML and JUnit artifacts uploaded, and pip-audit reported no known vulnerabilities.",
+        "JUnit and coverage artifacts for Ubuntu and Windows are retained by the run; artifact IDs are recorded under FB-0009."
       ],
-      "blocker": "Workflow config covers both OSes, lint, type checks, migrations, full suite and coverage. Hosted green status for the present head and all required property/adversarial coverage is unverified.",
-      "last_audited_at_utc": "2026-11-21T06:02:13.655717+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T12:20:44+00:00",
+      "commit": "11e37972",
+      "test_evidence": [
+        "Run 44901944665: Ubuntu and Windows test jobs plus both reproducibility jobs succeeded on the current PR head.",
+        "3,742 passed / 3 skipped / 0 failed / 0 errors on each OS; coverage reports and test artifacts uploaded."
+      ],
+      "test_result": "Required current-head CI passed on Windows and Ubuntu. Coverage is reported for critical modules; chart-pattern package floor passed at 94%. The workflow runs full unit, integration and adversarial/property suites."
     },
     {
       "id": "SL-00-13",
       "text": "Check main branch protection and mandatory checks through GitHub API; mark OWNER_BLOCKED rather than asserting active protections.",
-      "source_checked": false,
-      "status": "EXTERNAL_BLOCKED",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        "docs/edge-program/current-baseline.json (branch protection UNAVAILABLE)",
-        "GitHub branch-protection API evidence recorded in baseline"
+        "docs/edge-program/main-branch-protection.v1.md (GitHub REST read-back at 2026-11-21T12:00:30Z)",
+        "GET /repos/crakashp2905-hub/Financial-Brain/branches/main/protection confirms strict required checks, pull requests, administrator enforcement, and zero required approvals per owner instruction"
       ],
-      "blocker": "Current branch protection and required checks cannot be verified from available repository/API evidence; do not infer settings.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T12:12:11+00:00",
+      "commit": null,
+      "artifact_hash": "03fd2c38c8fca0e3db64a250364adf8464765a33097e2a1c532f1e6e5137bc49"
     },
     {
       "id": "SL-00-14",
@@ -14127,7 +14149,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T12:00:30+00:00",
+    "as_of_utc": "2026-11-21T12:20:44+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14137,6 +14159,7 @@
       "FB-0006",
       "FB-0007",
       "FB-0008",
+      "FB-0009",
       "FB-0010",
       "SL-00-01",
       "SL-00-02",
@@ -14158,14 +14181,14 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 28,
+    "audited_count": 29,
     "status_counts": {
-      "PARTIAL": 14,
-      "COMPLETE": 12,
-      "EXTERNAL_BLOCKED": 2,
-      "UNASSESSED": 1350
+      "COMPLETE": 16,
+      "PARTIAL": 12,
+      "EXTERNAL_BLOCKED": 1,
+      "UNASSESSED": 1349
     },
-    "verified_complete_count": 12,
+    "verified_complete_count": 16,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -14218,6 +14241,6 @@
       "tests/test_product_charter.py",
       "docs/edge-program/main-branch-protection.v1.md"
     ],
-    "evidence_update": "FB-0010 COMPLETE: main branch protection verified by GitHub REST API; requires PRs and strict Ubuntu/Windows test and reproducibility checks, enforces protection for administrators, and requires zero approvals per owner instruction."
+    "evidence_update": "FB-0009 and SL-00-12 COMPLETE after current-head hosted CI run 44901944665: all four Linux/Windows test and reproducibility jobs passed; each test job reports 3,742 passed, 3 skipped, 0 failures/errors, with coverage and JUnit artifacts."
   }
 }
