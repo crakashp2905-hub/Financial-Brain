@@ -1273,12 +1273,22 @@
     {
       "id": "FB-0409",
       "text": "Connect researcher/scanner, event ingestion, news and signals to read-only signal generation; never let an LLM send orders directly.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/agents/brain.py consumes a terminal opportunities snapshot and produces deterministic research-only verdicts with execution_allowed=false, including abstain and human-review outcomes.",
+        "src/financial_brain/llm/gate.py is disabled by default, limits use to summarise/extract/classify/argue purposes, records prompt/output hashes and evidence, and disallows price-prediction purposes; tests cover the read-only agent and the LLM gate.",
+        "The scanner, event/news ingestion, and canonical TraderSignal generation are not wired into one feed; LLM commentary remains separate from evidence-backed deterministic signals."
+      ],
+      "blocker": "Partial: read-only agent and LLM restrictions exist, but unified scanner/event/news-to-signal integration remains outstanding.",
+      "last_audited_at_utc": "2026-11-21T17:43:11+00:00",
+      "commit": "4ca1e4cb",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-agent-safety tests/test_brain_agent.py tests/test_phase2_llm_gate.py -q: 7 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/agents/brain.py src/financial_brain/llm/gate.py: passed after numeric conversion typing fix"
+      ],
+      "test_result": "Agent verdicts remain non-executable; unapproved LLM purposes are blocked and calls are evidence-linked and hashed."
     },
     {
       "id": "FB-0410",

@@ -42,7 +42,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/agents/brain.py",
-      "source_sha256": "f476b034365ee31f2411fcbd5e56c20fdcedcff180970f0f1cbe2138bd636bce",
+      "source_sha256": "1fc67b90d9b5b349f03b571d49a8692816689163b0aa3e832bf836995f84e091",
       "test_paths": []
     },
     {
