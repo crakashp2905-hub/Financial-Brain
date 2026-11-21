@@ -7548,7 +7548,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T07:40:41+00:00",
-      "commit": null,
+      "commit": "589accd7",
       "test_evidence": [
         "tests/test_forward_edge_equivalence_report.py",
         "tests/test_forward_edge_pipeline_compat.py"
