@@ -7444,13 +7444,13 @@
         "docs/edge-program/canonical-migration-audit.v1.json (SHA-256 b41590765d3c8d3ef8b285744e0e123be45c9fb3da67559a71d28fa4bee9ee78)"
       ],
       "blocker": "The required UNRESOLVED labels and P&L promotion block are implemented, but the 51 source rows contain no recorded exit and no actual Kite/broker execution receipts were available to reconcile them. Keep them unresolved; resolve only after receipt-backed execution facts are added and re-audited.",
-      "last_audited_at_utc": "2026-11-21T09:24:00+00:00",
-      "commit": "aef99efa",
+      "last_audited_at_utc": "2026-11-21T09:27:23+00:00",
+      "commit": null,
       "test_evidence": [
         "tests/test_canonical_portfolio_ledger.py",
         "tests/test_legacy_portfolio_migration.py"
       ],
-      "test_result": "13 focused canonical-ledger/migration tests pass. Tests prove missing exits remain unresolved and P&L-blocked, paper fills cannot clear the block, and an exact complete broker-receipt set idempotently resolves only its linked position. Current local data still has no actual receipts for the 51 missing exits."
+      "test_result": "20 focused learning-audit/canonical-ledger/migration tests pass. Tests prove missing exits remain unresolved and P&L-blocked, local-paper fills cannot clear the block, exact complete broker receipts idempotently resolve their linked position, and the learning-readiness CLI rejects unresolved or stale portfolio reports. Current local data has no actual receipts for the 51 missing-exit records."
     },
     {
       "id": "SL-00-08",
@@ -7569,20 +7569,21 @@
         "tests/test_forward_edge_f00.py (protected trial charter/cohort scope governance)",
         "2e420cc4",
         "docs/edge-program/source-inventory.v2.json (refreshed for the new module)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (verified current)"
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (verified current)",
+        "src/financial_brain/learning_audit.py: portfolio_pnl_integrity check requires a fresh migration audit, zero unresolved/incomplete/missing-opening-balance counts, zero source-integrity errors, and ELIGIBLE_FOR_REVIEW gate"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-21T07:30:48+00:00",
-      "commit": "470a4b22",
+      "last_audited_at_utc": "2026-11-21T09:27:23+00:00",
+      "commit": null,
       "test_evidence": [
-        "tests/test_learning_audit.py",
         "tests/test_forward_edge_f00.py",
-        "tests/test_standard.py",
         "tests/test_forward_edge_integrity_gates.py",
-        "tests/test_forward_edge_tracker.py"
+        "tests/test_forward_edge_tracker.py",
+        "tests/test_learning_audit.py",
+        "tests/test_standard.py"
       ],
       "artifact_sha256": "57053b59ea85e4eecb32467d58f45bdc9d4850f73451034ed1e4ad361b1c4f9c",
-      "test_result": "Full Windows local suite on PR #40 integration branch: 3,698 passed, 1 skipped, 0 failed; focused readiness/governance suite: 79 passed."
+      "test_result": "7 learning-audit tests pass, including unresolved-P&L blocking and stale canonical-audit rejection; CLI fails closed on blocked evidence."
     },
     {
       "id": "SL-00-15",
@@ -13976,7 +13977,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T09:24:00+00:00",
+    "as_of_utc": "2026-11-21T09:27:23+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -14023,9 +14024,11 @@
       "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
       "docs/forward-edge/reference-candidates.v1.json",
+      "src/financial_brain/learning_audit.py",
       "src/financial_brain/portfolio/canonical_ledger.py",
       "src/financial_brain/portfolio/legacy_migration.py",
       "tests/test_canonical_portfolio_ledger.py",
+      "tests/test_learning_audit.py",
       "tests/test_legacy_portfolio_migration.py"
     ],
     "evidence_update": "SL-00-07: unresolved missing-exit rows now block account P&L promotion; no synthetic exit or profitability claim is made."

@@ -7707,7 +7707,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/learning_audit.py",
-      "source_sha256": "7ae416944fedbda0b2081cfdf714af8b8d85b0c7bc10c9a2445d74d02c3e1f88",
+      "source_sha256": "25b3cc571cb13e3856b68be73d580554e82cf36903a6bf87917033d9a9da1696",
       "test_paths": []
     },
     {

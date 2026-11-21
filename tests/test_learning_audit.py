@@ -34,6 +34,18 @@ def _ready_repo(root: Path) -> None:
         "observed_at_utc": stamp,
         "sources": [{"id": "market-data", "status": "READY", "retention": {"status": "VERIFIED"}}],
     })
+    _write(root / "docs/edge-program/canonical-migration-audit.v1.json", {
+        "captured_at_utc": stamp,
+        "ledger": {
+            "unresolved_records": 0, "incomplete_projection_accounts": 0,
+            "accounts_without_opening_balance": 0,
+            "source_integrity_errors": {
+                "missing_source_events": 0, "mismatched_source_events": 0,
+                "rejected_source_rows": 0, "unscanned_ledger_events": 0,
+            },
+        },
+        "pnl_promotion_gate": {"status": "ELIGIBLE_FOR_REVIEW", "reason_codes": []},
+    })
 
 
 def test_learning_audit_fails_closed_for_unmerged_pr_incomplete_evidence_and_permissions(tmp_path: Path) -> None:
@@ -79,6 +91,25 @@ def test_learning_audit_missing_artifact_is_a_blocker(tmp_path: Path) -> None:
     assert any("references missing test evidence" in blocker for blocker in result["blockers"])
 
 
+def test_learning_audit_blocks_pnl_promotion_when_legacy_positions_are_unresolved(tmp_path: Path) -> None:
+    _ready_repo(tmp_path)
+    path = tmp_path / "docs/edge-program/canonical-migration-audit.v1.json"
+    report = json.loads(path.read_text(encoding="utf-8"))
+    report["ledger"]["unresolved_records"] = 51
+    report["ledger"]["incomplete_projection_accounts"] = 1
+    report["pnl_promotion_gate"] = {
+        "status": "BLOCKED", "reason_codes": ["UNRESOLVED_LEGACY_POSITIONS"],
+    }
+    path.write_text(json.dumps(report), encoding="utf-8")
+
+    result = audit(tmp_path)
+
+    assert result["status"] == "BLOCKED"
+    assert any("canonical portfolio audit reports 51 unresolved records" in blocker
+               for blocker in result["blockers"])
+    assert any("canonical P&L promotion gate is BLOCKED" in blocker for blocker in result["blockers"])
+
+
 def test_learning_audit_missing_test_evidence_is_a_blocker(tmp_path: Path) -> None:
     _ready_repo(tmp_path)
     status_path = tmp_path / "docs/edge-program/v3.0-status.json"
@@ -102,12 +133,17 @@ def test_learning_audit_stale_dependency_and_permission_snapshots_fail_closed(tm
     permissions = json.loads(permissions_path.read_text(encoding="utf-8"))
     permissions["observed_at_utc"] = "2020-01-01T00:00:00+00:00"
     permissions_path.write_text(json.dumps(permissions), encoding="utf-8")
+    portfolio_path = tmp_path / "docs/edge-program/canonical-migration-audit.v1.json"
+    portfolio = json.loads(portfolio_path.read_text(encoding="utf-8"))
+    portfolio["captured_at_utc"] = "2020-01-01T00:00:00+00:00"
+    portfolio_path.write_text(json.dumps(portfolio), encoding="utf-8")
 
     result = audit(tmp_path, now=datetime(2026, 11, 21, tzinfo=timezone.utc))
 
     assert result["status"] == "BLOCKED"
     assert any("PR graph is stale" in blocker for blocker in result["blockers"])
     assert any("market-data permissions is stale" in blocker for blocker in result["blockers"])
+    assert any("canonical portfolio audit is stale" in blocker for blocker in result["blockers"])
 
 
 def test_fb_learning_audit_cli_returns_success_only_when_ready(tmp_path: Path, capsys) -> None:
