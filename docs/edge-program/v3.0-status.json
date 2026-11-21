@@ -1020,19 +1020,22 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/paper/mf_exit_loads.py allocates a requested redemption FIFO across dated purchase lots, applies each lot's source-pinned exit-load schedule, handles partial and full redemptions, and returns gross/load/net amounts and remaining units.",
-        "Unknown schedules and over-redemptions fail closed; explicitly empty schedules mean zero load. Amounts use Decimal and rupee fees round to paise only after per-lot fee aggregation.",
-        "The simulator is not yet wired into canonical MF paper-book entries, and actual AMC schedules remain unpopulated."
+        "src/financial_brain/paper/mf_exit_loads.py performs FIFO full/partial redemptions with per-lot holding-period schedules, explicit unknown-vs-zero schedules, paise-rounded costs, and remaining units.",
+        "src/financial_brain/paper/mf_lot_book.py and mf_paper_accounts/mf_paper_lots/mf_paper_events in storage/schema.sql connect that calculation to durable paper cash and lot balances. Each lot freezes its own schedule and source digest; subscription/redemption event IDs are idempotent and updates are transactional.",
+        "tests/test_mf_lot_book.py, tests/test_mf_exit_loads.py, and tests/test_mf_scheme_terms.py: 11 passed; covers partial FIFO across separately priced schedules, net-cash reconciliation, duplicate replay, event-ID collision, and unknown-schedule rollback.",
+        "Remaining: permissioned AMC schedule ingestion and integration with the broader MF order/NAV assignment lifecycle are not complete; this account path consumes explicitly supplied NAVs and does not model tax or settlement."
       ],
-      "blocker": "Partial: deterministic lot-level cost simulation is implemented, but integration with the paper MF accounting book and permissioned source schedules remains outstanding.",
-      "last_audited_at_utc": "2026-11-21T16:32:24+00:00",
-      "commit": "1dbcac02",
+      "blocker": "Partial: durable paper cash and lot accounting now use the per-lot load calculation, but authorized source schedules and integration with the full MF NAV/order/settlement lifecycle remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T20:03:41Z",
+      "commit": "7aca7c78052237a93703bc66b86062aff26ccd49",
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-mf-exit tests/test_mf_exit_loads.py -q: 4 passed",
+        "python -m pytest --basetemp .pytest-mf-lot-book3 tests/test_mf_lot_book.py tests/test_mf_exit_loads.py tests/test_mf_scheme_terms.py -q: 11 passed",
         "Ruff: passed",
-        "python -m mypy src/financial_brain/paper/mf_exit_loads.py: passed"
+        "python -m mypy src/financial_brain/paper/mf_lot_book.py: passed",
+        "Database migration exercised by MF paper-book tests: passed",
+        "Mutual-fund and AMFI history test slice: 56 passed across tests/test_mf_*.py and tests/test_amfi_history_windows.py."
       ],
-      "test_result": "Full and partial redemptions allocate FIFO by allotment date, apply per-lot holding-period rates, and calculate remaining lot units; unknown fees block the simulation."
+      "test_result": "Durable MF subscription lots retain source-hashed load schedules; FIFO full/partial redemptions reconcile per-lot fees to cash, retries do not duplicate events, and missing schedules leave balances unchanged."
     },
     {
       "id": "FB-0315",
