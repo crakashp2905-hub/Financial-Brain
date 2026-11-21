@@ -1,0 +1,1027 @@
+{
+  "schema": "fb.data_permissions.v1",
+  "as_of": "2026-11-21",
+  "purpose": "Permission facts are per source and use. Unknown means deny operational use; a successful request or subscription label is not sufficient evidence.",
+  "permissions": [
+    {
+      "source_id": "KITE_CONNECT_READ_ONLY",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "KITE_CONNECT_READ_ONLY",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "KITE_CONNECT_READ_ONLY",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "KITE_CONNECT_READ_ONLY",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "KITE_CONNECT_READ_ONLY",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "KITE_CONNECT_READ_ONLY",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "local_kite_quote_archive",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "local_kite_quote_archive",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "local_kite_quote_archive",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "local_kite_quote_archive",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "local_kite_quote_archive",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "local_kite_quote_archive",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_equity_bhavcopy",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_equity_bhavcopy",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_equity_bhavcopy",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_equity_bhavcopy",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_equity_bhavcopy",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_equity_bhavcopy",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_equity_bhavcopy",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_equity_bhavcopy",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_equity_bhavcopy",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_equity_bhavcopy",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_equity_bhavcopy",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_equity_bhavcopy",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_delivery_mto",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_delivery_mto",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_delivery_mto",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_delivery_mto",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_delivery_mto",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_delivery_mto",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_reference_and_fno_files",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_reference_and_fno_files",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_reference_and_fno_files",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_reference_and_fno_files",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_reference_and_fno_files",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_reference_and_fno_files",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nifty_indices_tri_and_constituents",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nifty_indices_tri_and_constituents",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nifty_indices_tri_and_constituents",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nifty_indices_tri_and_constituents",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nifty_indices_tri_and_constituents",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nifty_indices_tri_and_constituents",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_financial_results_xbrl",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_financial_results_xbrl",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_financial_results_xbrl",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_financial_results_xbrl",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_financial_results_xbrl",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_financial_results_xbrl",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_announcements_actions_filings",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_announcements_actions_filings",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_announcements_actions_filings",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_announcements_actions_filings",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_announcements_actions_filings",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "bse_announcements_actions_filings",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "amfi_mutual_fund_nav",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "amfi_mutual_fund_nav",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "amfi_mutual_fund_nav",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "amfi_mutual_fund_nav",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "amfi_mutual_fund_nav",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "amfi_mutual_fund_nav",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "screener_company_ratios",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "screener_company_ratios",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "screener_company_ratios",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "screener_company_ratios",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "screener_company_ratios",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "screener_company_ratios",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "moneycontrol_news_headlines",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "moneycontrol_news_headlines",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "moneycontrol_news_headlines",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "moneycontrol_news_headlines",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "moneycontrol_news_headlines",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "moneycontrol_news_headlines",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "fred_macro_series",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "fred_macro_series",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "fred_macro_series",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "fred_macro_series",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "fred_macro_series",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "fred_macro_series",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "mospi_cpi_iip",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "mospi_cpi_iip",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "mospi_cpi_iip",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "mospi_cpi_iip",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "mospi_cpi_iip",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "mospi_cpi_iip",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_licensed_realtime_depth",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_licensed_realtime_depth",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_licensed_realtime_depth",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_licensed_realtime_depth",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_licensed_realtime_depth",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "nse_licensed_realtime_depth",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "expired_options_history_and_chain",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "expired_options_history_and_chain",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "expired_options_history_and_chain",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "expired_options_history_and_chain",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "expired_options_history_and_chain",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "expired_options_history_and_chain",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "us_equity_market_data",
+      "use": "RESEARCH",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "us_equity_market_data",
+      "use": "PAPER_SIMULATION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "us_equity_market_data",
+      "use": "DISPLAY",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "us_equity_market_data",
+      "use": "RETENTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "us_equity_market_data",
+      "use": "REDISTRIBUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    },
+    {
+      "source_id": "us_equity_market_data",
+      "use": "LIVE_EXECUTION",
+      "status": "UNKNOWN_RIGHTS",
+      "effective_from": null,
+      "effective_through": null,
+      "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+      "reviewer": null,
+      "notes": "No source-specific approved-use evidence is recorded."
+    }
+  ]
+}

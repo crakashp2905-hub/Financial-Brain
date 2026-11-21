@@ -1,91 +1,126 @@
 {
-  "schema_version": "1.0",
-  "observed_at": "2026-11-13",
+  "schema": "fb.financial_brain.current_baseline.v1",
+  "captured_at_utc": "2026-11-16T12:38:12Z",
   "repository": "https://github.com/crakashp2905-hub/Financial-Brain",
-  "main": {
-    "sha": "054193a524dd35eaa258df0ac352a58fc369e937",
-    "latest_first_parent_commits": [
-      "054193a Merge pull request #30 from crakashp2905-hub/codex/evidence-boundaries-20261113",
-      "4add801 Merge pull request #28 from crakashp2905-hub/codex/evaluation-identity-20261113",
-      "3806fc3 Merge pull request #27 from crakashp2905-hub/codex/champion-executable-resolution-20261113"
-    ],
-    "recent_checklist_pull_requests": [
-      {"number": 27, "state": "MERGED", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/27"},
-      {"number": 28, "state": "MERGED", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/28"},
-      {"number": 30, "state": "MERGED", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/30"},
-      {"number": 29, "state": "CLOSED_UNMERGED", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/29",
-       "note": "GitHub closed the stacked PR when its temporary base branch was deleted; its changes were carried by PR #30."}
-    ]
-  },
-  "branch_governance": {
-    "main_classic_protection": "NOT_ENABLED",
-    "repository_rulesets": [],
-    "required_checks_enforced": false,
-    "evidence": "GitHub branch-protection API returned 404 Branch not protected; repository rulesets API returned an empty list.",
-    "release_effect": "PR CI passed, but GitHub does not enforce required checks or review before main updates."
+  "git": {
+    "observed_main_ref": {
+      "sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
+      "evidence": "git ls-remote origin refs/heads/main at capture time",
+      "limitation": "Direct advertised ref read; PR graph is recorded below; branch-protection endpoint is unavailable under the current private-repository plan."
+    },
+    "head": {
+      "branch": "feature/forward-edge-f00-f01",
+      "sha": "164aedf9e9b8a42bb7b75d8f5f77411a3f346052",
+      "evidence": "git rev-parse HEAD and git ls-remote origin refs/heads/feature/forward-edge-f00-f01 agreed at capture; https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43868266721"
+    },
+    "open_pull_requests": {
+      "status": "OBSERVED",
+      "evidence": "gh pr list --state all and gh pr view for #32/#33 last queried at 2026-11-16T12:21:46Z",
+      "items": [
+        {"number": 16, "state": "OPEN", "head": "codex/protocol-date-validation-20261103", "base": "main", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/16"},
+        {"number": 17, "state": "OPEN", "head": "codex/ops-reliability-20261104", "base": "main", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/17"},
+        {"number": 18, "state": "OPEN", "head": "codex/source-notes-pattern-books", "base": "main", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/18"},
+        {"number": 32, "state": "OPEN", "head": "codex/branch-protection-evidence-20261113", "head_sha": "b2fa176041e3818a33c1e748e5206fffa57b7eba", "base": "main", "mergeable": true, "checks": "Ubuntu passed; one Windows check failed; one Windows check passed", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/32"},
+        {"number": 33, "state": "OPEN", "head": "integrate/clean-branches-20261114", "head_sha": "380e1171f7899c46c8f99ad0372ff0d179d1eeaa", "base": "main", "mergeable": true, "checks": "Ubuntu, Windows and locked-install checks passed on latest observed runs", "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/33"}
+      ]
+    },
+    "branch_protection": {
+      "status": "UNAVAILABLE",
+      "evidence": "GET https://api.github.com/repos/crakashp2905-hub/Financial-Brain/branches/main/protection returned HTTP 403: Upgrade to GitHub Pro or make this repository public to enable this feature. Required reviews/checks cannot be verified from this private-repository plan."
+    },
+    "working_tree": {
+      "tracked_changes": 0,
+      "untracked_paths": [
+        ".pe18-scratch/",
+        ".pytest_tmp_live2/",
+        ".pytest_tmp_live4/",
+        ".pytest_tmp_pe13/",
+        ".worktrees/",
+        "docs/forward-edge/exploratory/",
+        "docs/forward-edge/logs/f04-fix-exit.txt",
+        "docs/forward-edge/logs/f04-tip-exit.txt",
+        "docs/forward-edge/logs/full-suite-f04-fixed.txt",
+        "docs/forward-edge/logs/full-suite-f04-tip.txt",
+        "scripts/exploratory/"
+      ]
+    }
   },
   "runtime": {
-    "audit_host": "Windows",
-    "audit_python": "3.13.5",
-    "project_python_requirement": ">=3.11",
-    "ci_python": "3.13",
-    "ci_operating_systems": ["ubuntu-latest", "windows-latest"],
-    "ci_definition": ".github/workflows/ci.yml",
-    "timezone_for_market_sessions": "Asia/Kolkata"
+    "os": "Windows",
+    "python": "3.13.5",
+    "timezone": "Asia/Calcutta",
+    "evidence": "python --version; process timezone from workspace context"
   },
   "market_data": {
-    "implemented_source": "Kite Connect read-only API adapter",
-    "capabilities": [
-      "historical candles through the provider adapter",
-      "full quote with exchange and receipt clocks",
-      "best bid/ask and displayed depth when returned by the provider",
-      "LTP-only observations explicitly remain non-executable"
-    ],
-    "source_code": [
-      "src/financial_brain/providers/kite_data.py",
-      "src/financial_brain/ingest/kite_live.py",
-      "src/financial_brain/forward_edge/market_data.py"
-    ],
-    "latest_observed_market_quote": null,
-    "freshness_status": "NO_CURRENT_CAPTURE_EVIDENCED",
-    "credential_status": "NOT_CHECKED; secret values were not inspected",
-    "entitlement_and_retention": "Owner reports a paid Kite Connect API subscription. Current credentials, exchange-data entitlements, persistence and redistribution rights were not independently verified in this audit.",
-    "limitations": [
-      "No fresh observed market session or quote was captured for this baseline.",
-      "Provider access does not itself prove the right to retain or redistribute exchange data.",
-      "No broker order endpoint is part of this adapter; this integration is read-only."
+    "quote_archive": {
+      "path": "data/quote_archive.duckdb",
+      "query": "SELECT count(*), min(ts), max(ts), count(distinct symbol) FROM quotes",
+      "rows": 2471710,
+      "symbols": 229,
+      "first_quote_local_time": "2026-10-07T09:15:00.000559",
+      "latest_quote_local_time": "2026-11-16T15:29:45.831049",
+      "freshness": "Through the 2026-11-16 NSE session close; paper_live.duckdb was also modified on 2026-11-16, while paper_book.duckdb remains dated 2026-11-13.",
+      "source_entitlement_and_retention_rights": "UNVERIFIED"
+    },
+    "credentials_present": {
+      "KITE_API_KEY": false,
+      "KITE_ACCESS_TOKEN": false,
+      "FB_TIMESTAMP_PROVIDER": false,
+      "FB_TRUST_ROOTS": false
+    },
+    "access_limitations": [
+      "No Kite credentials were present in the process environment at capture.",
+      "Quote archive provenance, Kite entitlement and retention rights are not proved by the local rows.",
+      "No independent timestamp provider or pinned trust root is configured."
     ]
   },
-  "paper_and_evidence_capabilities": {
-    "durable_forward_session_runner": "Implemented and fixture-tested; a qualifying real session is not evidenced.",
-    "canonical_paper_account": "Durable OMS and double-entry long-only single-currency cash book; NAV snapshots include marked holdings and external flows.",
-    "evidence_classification": "Fixture/replay, local paper and independently attested forward are labeled separately.",
-    "independently_evidenced_live_sessions": 0,
-    "profitability_claim": "NONE; executable positive forward net alpha has not been established."
+  "source_capabilities": {
+    "read_only_kite_quotes": {
+      "status": "CODE_PRESENT_CREDENTIALS_MISSING",
+      "evidence": ["src/financial_brain/forward_edge/session_runner.py::ingest_kite_archive", "src/financial_brain/forward_edge/quote_archive.py"],
+      "limitation": "No current live session or entitlement evidence."
+    },
+    "historical_replay": {
+      "status": "CODE_PRESENT",
+      "evidence": ["src/financial_brain/forward_edge/cli.py", "src/financial_brain/paper/intraday_runner.py::run_replay"],
+      "limitation": "Replay does not prove prospective performance."
+    },
+    "shadow": {
+      "status": "MODE_DEFINED_RUNTIME_UNVERIFIED",
+      "evidence": ["src/financial_brain/forward_edge/modes.py::Mode.SHADOW"],
+      "limitation": "Continuous scheduled shadow operation is not evidenced here."
+    },
+    "local_paper": {
+      "status": "SIMULATION_CODE_AND_LOCAL_BOOKS_PRESENT",
+      "evidence": ["src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/kernel/oms.py", "data/paper_live.duckdb", "data/paper_book.duckdb"],
+      "limitation": "Latest local paper database mtime is 2026-11-13; this baseline does not establish cost-complete profitability."
+    },
+    "broker_dryrun": {
+      "status": "MODE_DEFINED_EXTERNAL_COMPLIANCE_UNVERIFIED",
+      "evidence": ["src/financial_brain/forward_edge/modes.py::Mode.BROKER_DRYRUN"],
+      "limitation": "No broker account or compliance evidence was inspected."
+    },
+    "live_cash": {
+      "status": "DISABLED",
+      "evidence": ["src/financial_brain/forward_edge/modes.py::PHYSICAL_ORDERS_ENABLED"],
+      "limitation": "Build policy disables physical orders; no live authorization is asserted."
+    }
   },
-  "latest_ci": {
-    "pull_request": 30,
-    "head_sha": "a3f3b750bf1d73326788a537879ff7f961d18586",
-    "merge_commit": "054193a524dd35eaa258df0ac352a58fc369e937",
-    "ubuntu": "SUCCESS",
-    "windows": "SUCCESS",
-    "run_urls": [
-      "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43313853867",
-      "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43313847240",
-      "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43314065701"
-    ]
+  "release_state": {
+    "infrastructure": "RED_HOSTED_CI_BLOCKED_BY_ACCOUNT_BILLING_AND_BRANCH_PROTECTION_UNAVAILABLE",
+    "research": "RED_NO_PROMOTION_GRADE_INDEPENDENT_FORWARD_EVIDENCE",
+    "trading": "RED_LIVE_CASH_DISABLED"
   },
   "evidence_sources": [
-    "https://github.com/crakashp2905-hub/Financial-Brain/commits/main",
-    "https://github.com/crakashp2905-hub/Financial-Brain/pulls?q=is%3Apr+is%3Amerged",
-    "https://github.com/crakashp2905-hub/Financial-Brain/actions/workflows/ci.yml",
-    ".github/workflows/ci.yml",
-    "docs/forward-edge/capability-matrix.json",
-    "docs/forward-edge/OPERATIONS.md",
-    "src/financial_brain/providers/kite_data.py",
-    "src/financial_brain/ingest/kite_live.py",
-    "src/financial_brain/forward_edge/market_data.py",
+    "git rev-parse HEAD",
+    "git ls-remote origin refs/heads/main refs/heads/feature/forward-edge-f00-f01",
+    "gh pr list --state all; gh pr view 32/33",
+    "gh api repos/crakashp2905-hub/Financial-Brain/branches/main/protection (HTTP 403: plan limitation)",
+    "gh run view 43868266721 and job annotation (hosted jobs blocked before start by account billing/spending limit)",
+    "git status --porcelain=v1",
+    "read-only DuckDB query against data/quote_archive.duckdb",
+    "src/financial_brain/forward_edge/modes.py",
     "src/financial_brain/forward_edge/session_runner.py",
-    "src/financial_brain/kernel/paper_account.py"
+    "docs/edge-program/PROGRESS.md"
   ]
 }

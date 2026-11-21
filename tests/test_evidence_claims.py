@@ -11,6 +11,10 @@ def test_claims_are_monotone():
     assert ET.source_aware_claim_tier(replicated=True, paper_forward=True, confirmed=True,
                                       evidence_mode="replay") == ET.REPLICATED
     assert ET.source_aware_claim_tier(replicated=True, paper_forward=True, confirmed=True,
+                                      evidence_mode="fixture_replay", market_observed=True,
+                                      pre_entry_sealed=True, session_complete=True,
+                                      custody_status=CustodyStatus.VERIFIED) == ET.REPLICATED
+    assert ET.source_aware_claim_tier(replicated=True, paper_forward=True, confirmed=True,
                                       evidence_mode="live") == ET.REPLICATED
     assert ET.source_aware_claim_tier(replicated=True, paper_forward=True, confirmed=True,
                                       evidence_mode="live", market_observed=True, pre_entry_sealed=True,

@@ -41,7 +41,7 @@ def inputs(*, horizon=2, order_status="CANCELED", include_exit_mark=True):
 def resolve(args, *, horizon=2):
     scheduled, calendar, evidence, orders, fills, marks = args
     ledger = duckdb.connect()
-    count = C.resolve_executable(ledger, scheduled=scheduled, exchange_sessions=calendar,
+    count = C.resolve_executable_ledger(ledger, scheduled=scheduled, exchange_sessions=calendar,
                                  session_evidence=evidence, orders=orders, fills=fills, marks=marks,
                                  horizon=horizon)
     return ledger, count

@@ -29,6 +29,19 @@ def test_an_unfinished_position_stays_open_and_is_marked():
     assert w["exit_day"] is None and w["last_px"] == 104 and w["held"] == 1
 
 
+def test_momentum_book_preserves_a_20_session_horizon_across_overnight_marks():
+    horizon = B.MOMENTUM.horizon
+    assert horizon == 20
+    overnight = B.walk(path([100, 101]), stop=90, horizon=horizon)
+    assert overnight["entry_day"] == D0 + timedelta(days=1)
+    assert overnight["exit_day"] is None and overnight["held"] == 1
+
+    full_horizon = B.walk(path(list(range(100, 121))), stop=90, horizon=horizon)
+    assert full_horizon["exit_reason"] == "time"
+    assert full_horizon["held"] == horizon
+    assert full_horizon["exit_day"] == D0 + timedelta(days=horizon + 1)
+
+
 def test_no_data_yet_means_waiting_to_buy():
     assert B.walk(pd.Series(dtype=float), stop=90, horizon=5)["entry_day"] is None
 
