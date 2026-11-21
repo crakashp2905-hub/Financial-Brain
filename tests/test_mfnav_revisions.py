@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import date, datetime, timezone
 
 import pytest
@@ -111,4 +112,52 @@ def test_source_published_timestamp_is_validated_and_preserved(tmp_path):
             con, "100001", date(2026, 11, 20), known_at=retrieved,
         )
         assert row is not None and row["source_published_at"] == published
+
+
+def test_ingest_returns_and_attests_quality_report_without_inferred_universe(tmp_path):
+    cfg = Config(data_root=tmp_path).ensure()
+    db = Database(cfg)
+    db.migrate()
+    payload = (
+        "Scheme Code;ISIN Growth;ISIN Reinvestment;Scheme Name;Plan;Option;NAV;Date\n"
+        "Open Ended Schemes(Equity Scheme - Large Cap Fund)\n"
+        "Example Mutual Fund\n"
+        "100001;INF000000001;-;Example Fund;Direct Plan;Growth Option;10.0;20-Nov-2026\n"
+        "100001;INF000000001;-;Example Fund;Direct Plan;Growth Option;11.0;20-Nov-2026\n"
+        "100002;-;-;No NAV;Direct Plan;Growth Option;N.A.;20-Nov-2026\n"
+    ).encode()
+    retrieved = datetime(2026, 11, 20, 10, 0, tzinfo=timezone.utc)
+
+    with db.connect() as con:
+        result = mfnav.ingest(
+            con, cfg, date(2026, 11, 20),
+            provider=_Provider(payload, retrieved),
+            stale_after_days=0,
+            known_scheme_codes=("100001", "100002", "100003"),
+        )
+
+        quality = result["quality"]
+        assert quality["repeated_scheme_codes"] == ["100001"]
+        assert quality["stale_scheme_codes"] == []
+        assert quality["known_universe_supplied"] is True
+        assert {item["scheme_code"] for item in quality["unavailable"]} == {
+            "100002", "100003",
+        }
+        evidence = json.loads(con.execute(
+            "SELECT value FROM evidence WHERE kind = 'mf_nav_file'"
+        ).fetchone()[0])
+        assert evidence["quality"] == quality
+
+
+def test_ingest_rejects_invalid_quality_threshold_before_fetch_or_write(tmp_path):
+    cfg = Config(data_root=tmp_path).ensure()
+    db = Database(cfg)
+
+    class MustNotFetch:
+        def fetch(self, _business_date):
+            raise AssertionError("invalid threshold should fail before provider fetch")
+
+    with pytest.raises(ValueError, match="stale_after_days"):
+        with db.connect() as con:
+            mfnav.ingest(con, cfg, provider=MustNotFetch(), stale_after_days=-1)
 
