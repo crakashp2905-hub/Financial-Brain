@@ -3178,122 +3178,146 @@
     {
       "id": "FB-1001",
       "text": "Pre-open: validate account, data entitlements, session calendar, tick feed, quote quality and dashboard readiness.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/intraday_runner.py (Kite token/session retries, quote polling, market-session detection, feed health; no unified pre-open account+entitlement+calendar+dashboard readiness gate)"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1002",
       "text": "During open: process equity/ETF ticks and completed bars; generate event-driven intraday signals if eligible.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/intraday_runner.py (polls Kite full quotes, archives observed events, builds opening-range board, processes prices; tick stream/event-driven strategy dispatch not established)"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1003",
       "text": "During open: stream underlying/options observations; signal only from actually available and sufficiently fresh contract data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "src/financial_brain/cli.py:cmd_fno_snapshot (end-of-day read-only F&O snapshot only; no continuous option observation stream tied to signal freshness)"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1004",
       "text": "Intraday: auto-paper execute eligible orders, continuously monitor **SL/TP/trailing/time signals**, emit corresponding SELL/COVER events, and enforce end-of-day closeout where rules require it.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_phase5_intraday_runner.py (36 passed: paper intraday processing, SL/TP/time exits, retry/close paths); expiry/desk-wide continuous lifecycle still not unified"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1005",
       "text": "After market: compute up to five equity swing candidates and independently ranked ETF opportunities, locked for next eligible session.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/cli.py:cmd_book and scripts/daily_refresh.cmd (daily position/swing suggestion book refresh); no independently scheduled ETF opportunity lock verified"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1006",
       "text": "After AMFI NAV publication: update MF NAV history, mark holdings, then produce next-business-day allocation candidates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/cli.py:cmd_daily (AMFI NAV ingest and paper mark); MF next-business-day allocation recommendation not wired into this daily command"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1007",
       "text": "Before MF cutoffs: process previously approved MF subscriptions/redemptions according to scheme and payment rules; no retroactive NAV access.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "src/financial_brain/kernel/fund_transactions.py (scheme-specific cutoff/NAV assignment primitives); no approved subscription/redemption execution lifecycle or settlement/payment processing"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1008",
       "text": "Daily: close/reconcile all open/expired/missed paper intents, compute realized and unrealized P&L, audit freshness and issue verdict.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/ledger.py:mark (closes matured priced intents); intraday run writes close/exit reports; no unified daily orphan/missed-intent/data-freshness verdict"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1009",
       "text": "Periodic: generate weekly MF reviews, portfolio rebalance suggestions, SIP plans and liquidity-reallocation candidates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No weekly MF review/SIP/liquidity-reallocation scheduler found; allocation primitives and recommendations are not operational workflows"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1010",
       "text": "On feed failure, data-quality error, unexpected portfolio state or high drawdown: fail closed and alert; never trade stale data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/intraday_runner.py (feed health, retries, stale-quote-labelled EOD close); src/financial_brain/paper/daily.py (kill-switch for stale/degraded inputs); no common pre-trade gate across desks"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1011",
       "text": "Provide unambiguous run statuses and retry behavior; avoid double-run double-counting and orphaned pending transactions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/cli.py:cmd_daily reports per-step failures and nonzero exit; src/financial_brain/paper/intraday_runner.py persists run status and intent ids; whole command sequence has no single durable run/idempotent orchestration contract"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1012",
       "text": "Measure signal latency, quote-to-fill delay, drop rates, outages and trading downtime separately for each desk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/execution/oms/quality.py (latency statistics for OMS event histories); does not measure signal/quote/fill/drop/outage SLOs separately for all desks"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
+      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
     },
     {
       "id": "FB-1101",
@@ -15480,5 +15504,12 @@
       "tests/test_mf_scheme_master.py"
     ],
     "evidence_update": "FB-0012 COMPLETE: source-linked audit export contains 1,378 records; new regression check rejects status text that diverges from source. Focused audit/launch-gate suite: 23 passed."
+  },
+  "counts_by_status": {
+    "COMPLETE": 26,
+    "PARTIAL": 171,
+    "EXTERNAL_BLOCKED": 1,
+    "UNASSESSED": 1161,
+    "NOT_STARTED": 19
   }
 }
