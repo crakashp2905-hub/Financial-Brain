@@ -9934,14 +9934,18 @@
         "__future__",
         "base",
         "collections",
+        "collections.abc",
         "datetime",
+        "forward_edge.data_permissions",
+        "math",
+        "time",
         "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/amfi.py",
-      "source_sha256": "14cadc7cf3c394587d5ed80ce1658372705dab7d7a4f378a0e83918fc8a4b749",
+      "source_sha256": "fa801eeb7c30a08fea045dbb5e9858f0ee65b511d20bb52e11c54e898a36989b",
       "test_paths": []
     },
     {

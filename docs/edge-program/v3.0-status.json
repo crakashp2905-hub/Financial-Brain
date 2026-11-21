@@ -848,31 +848,32 @@
       "evidence": [
         "src/financial_brain/providers/amfi.py::bounded_history_windows partitions an inclusive NAV history range into contiguous windows of no more than 90 days and rejects invalid limits.",
         "tests/test_amfi_history_windows.py covers contiguous/inclusive bounds, the 90/91-day boundary, invalid maximums, and reversed ranges.",
-        "Remaining: no authorized AMFI historical export/endpoint adapter or history-ingestion orchestration with retry/rate-limit policy exists; source terms/access and actual historical records remain unverified."
+        "A permission-gated history-window runner now supplies bounded requests, retry behavior, and configurable request spacing, but no authorized AMFI historical export/endpoint adapter or loaded historical records exist; source terms/access remain unverified."
       ],
-      "blocker": "Partial: safe 90-day request-window planning exists, but compliant historical acquisition, retry/rate-limit orchestration, approved endpoint access and loaded history are not implemented or verified.",
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "1d1c09366091b3dad99a04409d846e6c3a15cce4"
+      "blocker": "Partial: the bounded, permission-gated request runner exists, but approved endpoint access and actual AMFI historical acquisition remain unverified.",
+      "last_audited_at_utc": "2026-11-21T21:40:53+00:00",
+      "commit": "962e09f9"
     },
     {
       "id": "FB-0306",
       "text": "Respect AMFI's historical report limit of up to 90 days per download; do not circumvent permission/technical restrictions.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/providers/amfi.py provides bounded_history_windows(), partitioning inclusive history ranges into contiguous windows no longer than 90 calendar days; it refuses larger configured windows and reversed ranges.",
-        "The helper constructs request bounds only. Historical provider acquisition is not implemented or permissioned; no endpoint access or terms circumvention is performed."
+        "src/financial_brain/providers/amfi.py::fetch_authorized_history_windows routes all injected history-adapter requests through bounded_history_windows(), which partitions inclusive dates into contiguous requests capped at 90 calendar days.",
+        "The history fetch runner checks that the adapter's declared source matches the permission source and fails before adapter access unless current source-specific RESEARCH and RETENTION permissions are supplied; it retries only retryable FetchError failures and spaces calls using an explicit caller policy.",
+        "No endpoint or source rights are inferred by the runner; FB-0305 remains PARTIAL until an authorized AMFI history adapter and actual history acquisition are provided."
       ],
-      "blocker": "Partial: bounded date-window planning is implemented, but authorized historical data acquisition, rate limits, retries, and source-rights approval remain outstanding.",
-      "last_audited_at_utc": "2026-11-21T16:07:32+00:00",
-      "commit": "6ad94fd7",
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T21:41:23+00:00",
+      "commit": "68467da7",
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-mf0306 tests/test_amfi_history_windows.py -q: 5 passed",
-        "Ruff: passed",
-        "python -m mypy src/financial_brain/providers/amfi.py: passed",
+        "python -m pytest --basetemp .pytest-mf0306-final tests/test_amfi_history_windows.py -q: 10 passed",
+        "Ruff: passed for AMFI provider and history-window tests",
+        "mypy src/financial_brain/providers/amfi.py: passed",
         "git diff --check: passed"
       ],
-      "test_result": "History range partitioning is inclusive, contiguous, capped at 90 days per window, and rejects invalid limits and reversed ranges."
+      "test_result": "Every request made through the authorization-gated history runner is generated from contiguous windows of at most 90 days; missing source permissions fail before any request, transient retries and rate spacing are tested, and terminal failures are not retried."
     },
     {
       "id": "FB-0307",
@@ -1112,8 +1113,8 @@
         "AMFI ingestion now returns and attests quality diagnostics (duplicate, stale, N.A., and caller-supplied-universe missing codes) in the daily evidence record; its default staleness threshold is an explicit overridable seven calendar days."
       ],
       "blocker": "Partial: automatic ingestion reporting is implemented. Full-universe missing-scheme validation still requires an authorized, point-in-time scheme universe; this system does not infer one.",
-      "last_audited_at_utc": "2026-11-22T02:30:00+00:00",
-      "commit": "042cc5cc",
+      "last_audited_at_utc": "2026-11-21T21:36:22+00:00",
+      "commit": "d971ca2a",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-mf-amfi-complete2 [15 AMFI/MF/NAV test modules] -q: 70 passed",
         "Ruff: passed for AMFI ingest/provider and NAV revision tests",
