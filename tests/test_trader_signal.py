@@ -164,6 +164,7 @@ def test_trade_plan_carries_entry_exit_invalidation_horizon_precision_and_eligib
     ({"stop_price": Decimal("1485")}, "long stop and target"),
     ({"target_price": Decimal("100")}, "long stop and target"),
     ({"side": "SELL_SHORT", "target_price": Decimal("1570")}, "short target and stop"),
+    ({"target_price": Decimal("1600.02")}, "align to tick_size"),
     ({"tick_size": Decimal("0")}, "tick_size"),
     ({"price_basis": "OPTION_EXECUTABLE_PREMIUM"}, "price_basis"),
     ({"paper_execution_eligible": False}, "requires a reason"),

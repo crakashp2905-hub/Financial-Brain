@@ -1553,12 +1553,20 @@
     {
       "id": "FB-0461",
       "text": "Make price rounding exchange tick-aware and revalidate economics *after* rounding; enforce regulatory product support for direction/venue and disallow unsupported overnight equity shorts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "TradePlan now rejects entry-low, entry-high, stop, or target values that are not exact Decimal multiples of its declared positive tick_size.",
+        "Tick alignment is validated at plan construction before the plan can be consumed by downstream code."
+      ],
+      "blocker": "Exchange-specific rounding direction, post-rounding economics recalculation, effective venue/product restrictions, and overnight-short eligibility are not universally integrated with instrument rules or OMS admission.",
+      "last_audited_at_utc": "2026-11-21T18:08:58+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0461 tests/test_trader_signal.py tests/test_trade_economics.py tests/test_strategy_economics_gate.py tests/test_risk_sizing.py -q: 37 passed",
+        "Ruff and targeted mypy: passed"
+      ],
+      "test_result": "Trade plans with a price off the declared exchange tick fail closed; aligned prices preserve current long/short geometry and economic gates."
     },
     {
       "id": "FB-0462",

@@ -299,6 +299,12 @@ class ExecutionIntent:
             raise SignalContractError(f"{name} must be finite and positive")
 
 
+def _is_tick_aligned(price: Decimal, tick_size: Decimal) -> bool:
+    """Return whether a price is an exact multiple of its instrument tick."""
+    units = price / tick_size
+    return units == units.to_integral_value()
+
+
 @dataclass(frozen=True, slots=True)
 class TradePlan:
     """Versionable paper-trade conditions and instrument precision constraints."""
@@ -343,6 +349,11 @@ class TradePlan:
             object.__setattr__(self, name, number)
         if self.entry_low > self.entry_high:
             raise SignalContractError("entry_low cannot exceed entry_high")
+        if not all(
+            _is_tick_aligned(value, self.tick_size)
+            for value in (self.entry_low, self.entry_high, self.stop_price, self.target_price)
+        ):
+            raise SignalContractError("entry, stop, and target prices must align to tick_size")
         if self.side == "BUY" and not (
             self.stop_price < self.entry_low <= self.entry_high < self.target_price
         ):

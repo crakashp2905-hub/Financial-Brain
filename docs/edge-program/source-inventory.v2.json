@@ -8028,7 +8028,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/trader_signal.py",
-      "source_sha256": "1d08d24c31855b18c86a28f3989cd1a23ad5bf7c31a695f880712b5292ef1631",
+      "source_sha256": "c1c860338e589756973d3a868d50ba32efa6d9d6599ca5da97d1752b19bc16ec",
       "test_paths": []
     },
     {
