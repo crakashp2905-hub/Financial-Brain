@@ -626,6 +626,30 @@ CREATE TABLE IF NOT EXISTS mf_scheme_lifecycle (
     observed_at      TIMESTAMPTZ NOT NULL
 );
 
+-- Disclosed, effective-dated fees and dealing constraints. Numeric amounts/rates are
+-- stored as text so source decimal precision survives round trips; JSON null means
+-- unknown while [] means a source explicitly reported no schedule/restriction.
+CREATE TABLE IF NOT EXISTS mf_scheme_commercial_terms (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,
+    ter_percent     VARCHAR,
+    aum_inr         VARCHAR,
+    exit_loads_json VARCHAR,
+    minimum_initial_inr VARCHAR,
+    minimum_additional_inr VARCHAR,
+    exit_restrictions_json VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
