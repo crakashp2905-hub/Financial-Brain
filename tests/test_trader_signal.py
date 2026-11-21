@@ -7,7 +7,8 @@ import pytest
 from financial_brain.kernel.trader_signal import (
     DecisionAssessment, DecisionFeature, DeskId, EvidenceTier,
     EntryCondition, ExecutionIntent, ExecutionIntentType,
-    ExpectedReturnDistribution, SignalContractError, SignalSide, TradePlan, TraderSignal,
+    ExpectedReturnDistribution, ExitTrigger, SignalContractError, SignalSide,
+    TradePlan, TraderSignal, validate_trade_plan_signal,
     SignalLifecycle, SignalLifecycleEvent, SignalState,
     compare_alerts,
 )
@@ -147,9 +148,15 @@ def test_trade_plan_carries_entry_exit_invalidation_horizon_precision_and_eligib
         entry_low=Decimal("1480"), entry_high=Decimal("1490"), stop_price=Decimal("1450"),
         target_price=Decimal("1570"), invalidation="daily close below support",
         max_holding_sessions=12, tick_size=Decimal("0.05"), lot_size=Decimal("1"),
-        unit_precision=0, paper_execution_eligible=True,
+        unit_precision=0, quantity=Decimal("10"),
+        entry_expires_at=datetime(2026, 11, 21, 10, 5, tzinfo=timezone.utc),
+        exit_triggers=(ExitTrigger.HARD_STOP, ExitTrigger.TAKE_PROFIT),
+        paper_execution_eligible=True,
     )
     assert plan.entry_low < plan.entry_high < plan.target_price
+    validate_trade_plan_signal(_signal(), plan)
+    with pytest.raises(SignalContractError, match="expiry differs"):
+        validate_trade_plan_signal(_signal(expires_at=plan.entry_expires_at + timedelta(seconds=1)), plan)
 
 
 @pytest.mark.parametrize("changes, message", [
@@ -168,7 +175,9 @@ def test_trade_plan_rejects_inconsistent_or_unexecutable_conditions(changes, mes
         "stop_price": Decimal("95"), "target_price": Decimal("110"),
         "invalidation": "close below support", "max_holding_sessions": 5,
         "tick_size": Decimal("0.05"), "lot_size": Decimal("1"),
-        "unit_precision": 0, "paper_execution_eligible": True,
+        "unit_precision": 0, "quantity": Decimal("1"),
+        "entry_expires_at": datetime(2026, 11, 21, 10, 5, tzinfo=timezone.utc),
+        "exit_triggers": (ExitTrigger.HARD_STOP,), "paper_execution_eligible": True,
         "ineligibility_reason": None,
     }
     with pytest.raises(SignalContractError, match=message):
@@ -238,6 +247,8 @@ def test_alert_deduplication_preserves_versions_price_changes_and_event_order():
         entry_low=Decimal("100"), entry_high=Decimal("101"), stop_price=Decimal("95"),
         target_price=Decimal("110"), invalidation="support break", max_holding_sessions=5,
         tick_size=Decimal("0.05"), lot_size=Decimal("1"), unit_precision=0,
+        quantity=Decimal("1"), entry_expires_at=prior.expires_at,
+        exit_triggers=(ExitTrigger.HARD_STOP, ExitTrigger.TAKE_PROFIT),
         paper_execution_eligible=True,
     )
     same = _signal(decision_at=prior.decision_at + timedelta(seconds=2))
@@ -259,6 +270,8 @@ def test_alert_deduplication_preserves_versions_price_changes_and_event_order():
         entry_low=Decimal("102"), entry_high=Decimal("103"), stop_price=Decimal("98"),
         target_price=Decimal("112"), invalidation="support break", max_holding_sessions=5,
         tick_size=Decimal("0.05"), lot_size=Decimal("1"), unit_precision=0,
+        quantity=Decimal("1"), entry_expires_at=prior.expires_at,
+        exit_triggers=(ExitTrigger.HARD_STOP, ExitTrigger.TAKE_PROFIT),
         paper_execution_eligible=True,
     )
     moved = compare_alerts(

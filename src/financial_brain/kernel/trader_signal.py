@@ -58,6 +58,18 @@ class EntryCondition(StrEnum):
     MARKETABLE_QUOTE = "MARKETABLE_QUOTE"
 
 
+class ExitTrigger(StrEnum):
+    HARD_STOP = "HARD_STOP"
+    TAKE_PROFIT = "TAKE_PROFIT"
+    TRAILING_STOP = "TRAILING_STOP"
+    SIGNAL_REVERSAL = "SIGNAL_REVERSAL"
+    TIME_STOP = "TIME_STOP"
+    SESSION_FLATTEN = "SESSION_FLATTEN"
+    RISK_KILL_SWITCH = "RISK_KILL_SWITCH"
+    MANUAL_CLOSE = "MANUAL_CLOSE"
+    EXPIRY_OR_CORPORATE_ACTION = "EXPIRY_OR_CORPORATE_ACTION"
+
+
 class SignalState(StrEnum):
     DETECTED = "DETECTED"
     ELIGIBLE = "ELIGIBLE"
@@ -295,6 +307,9 @@ class TradePlan:
     tick_size: Decimal
     lot_size: Decimal
     unit_precision: int
+    quantity: Decimal
+    entry_expires_at: datetime
+    exit_triggers: tuple[ExitTrigger, ...]
     paper_execution_eligible: bool
     ineligibility_reason: str | None = None
 
@@ -305,7 +320,8 @@ class TradePlan:
             raise SignalContractError("entry_condition must be an EntryCondition")
         if self.side not in {"BUY", "SELL_SHORT"}:
             raise SignalContractError("trade-plan side must be BUY or SELL_SHORT")
-        for name in ("entry_low", "entry_high", "stop_price", "target_price", "tick_size", "lot_size"):
+        for name in ("entry_low", "entry_high", "stop_price", "target_price", "tick_size",
+                     "lot_size", "quantity"):
             value = getattr(self, name)
             try:
                 number = Decimal(value)
@@ -326,6 +342,12 @@ class TradePlan:
             raise SignalContractError("short target and stop must bracket the entry zone")
         if not self.invalidation.strip():
             raise SignalContractError("strategy invalidation is required")
+        if self.entry_expires_at.tzinfo is None or self.entry_expires_at.utcoffset() is None:
+            raise SignalContractError("entry_expires_at must be timezone-aware")
+        if not self.exit_triggers or any(not isinstance(trigger, ExitTrigger) for trigger in self.exit_triggers):
+            raise SignalContractError("trade plan requires typed conditional exit triggers")
+        if len(set(self.exit_triggers)) != len(self.exit_triggers):
+            raise SignalContractError("exit triggers must be unique")
         if self.max_holding_sessions < 1:
             raise SignalContractError("max_holding_sessions must be positive")
         if self.unit_precision < 0 or self.unit_precision > 12:
@@ -336,6 +358,16 @@ class TradePlan:
             raise SignalContractError("ineligible trade plan requires a reason")
         if self.paper_execution_eligible and self.ineligibility_reason is not None:
             raise SignalContractError("eligible trade plan cannot carry an ineligibility reason")
+
+
+def validate_trade_plan_signal(signal: TraderSignal, plan: TradePlan) -> None:
+    """Bind plan identity, side and expiry to the immutable decision signal."""
+    if (signal.instrument_id != plan.instrument_id or signal.side.value != plan.side):
+        raise SignalContractError("trade plan instrument/side differs from its signal")
+    if signal.expires_at.astimezone(timezone.utc) != plan.entry_expires_at.astimezone(timezone.utc):
+        raise SignalContractError("trade plan entry expiry differs from signal expiry")
+    if plan.entry_expires_at.astimezone(timezone.utc) <= signal.decision_at.astimezone(timezone.utc):
+        raise SignalContractError("trade plan expiry must be after the signal decision")
 
 
 @dataclass(frozen=True, slots=True)
@@ -459,7 +491,7 @@ def compare_alerts(
 __all__ = [
     "AlertDeduplication", "DecisionAssessment", "DecisionFeature", "DeskId", "EvidenceTier",
     "EntryCondition", "ExecutionIntent", "ExecutionIntentType",
-    "ExpectedReturnDistribution", "SignalContractError", "SignalLifecycle",
+    "ExpectedReturnDistribution", "ExitTrigger", "SignalContractError", "SignalLifecycle",
     "SignalLifecycleEvent", "SignalSide", "SignalState", "TradePlan", "TraderSignal",
-    "compare_alerts",
+    "compare_alerts", "validate_trade_plan_signal",
 ]
