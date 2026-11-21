@@ -163,6 +163,58 @@ def _is_opening_balance(event: dict[str, object]) -> bool:
             and metadata.get("cash_flow_type") == "OPENING_BALANCE")
 
 
+def _resolved_legacy_event_ids(events: list[dict[str, object]]) -> set[str]:
+    """Return unresolved IDs closed by a complete, explicitly sourced broker receipt set."""
+    resolved: set[str] = set()
+    fills = [event for event in events if event.get("event_kind") == EventKind.FILL.value]
+    for unresolved in events:
+        if unresolved.get("event_kind") != EventKind.UNRESOLVED_POSITION.value:
+            continue
+        unresolved_id = unresolved.get("source_event_id")
+        metadata = unresolved.get("metadata")
+        if not isinstance(unresolved_id, str) or not isinstance(metadata, dict):
+            continue
+        legacy_id = metadata.get("legacy_trade_id")
+        trade_side = metadata.get("trade_side")
+        if not isinstance(legacy_id, str) or trade_side not in {"long", "short"}:
+            continue
+        expected_side = "SELL" if trade_side == "long" else "BUY"
+        try:
+            required_quantity = Decimal(str(unresolved["quantity"]))
+            unresolved_at = datetime.fromisoformat(str(unresolved["occurred_at"]))
+        except (KeyError, ValueError, ArithmeticError):
+            continue
+        receipts: list[dict[str, object]] = []
+        for fill in fills:
+            fill_metadata = fill.get("metadata")
+            if not isinstance(fill_metadata, dict):
+                continue
+            if (fill.get("source_system") != "BROKER_EXECUTION_RECEIPT"
+                    or fill.get("evidence_class") != "BROKER_EXECUTION_RECEIPT"
+                    or fill_metadata.get("resolves_unresolved_event_id") != unresolved_id
+                    or fill_metadata.get("legacy_trade_id") != legacy_id
+                    or not fill_metadata.get("broker_order_id")
+                    or fill_metadata.get("broker_trade_id") != fill.get("source_event_id")
+                    or fill.get("instrument_id") != unresolved.get("instrument_id")
+                    or fill.get("side") != expected_side):
+                continue
+            try:
+                fill_at = datetime.fromisoformat(str(fill["occurred_at"]))
+                quantity = Decimal(str(fill["quantity"]))
+            except (KeyError, ValueError, ArithmeticError):
+                continue
+            if fill_at < unresolved_at or quantity <= 0:
+                continue
+            receipts.append(fill)
+        try:
+            receipt_quantity = sum((Decimal(str(fill["quantity"])) for fill in receipts), Decimal(0))
+        except (KeyError, ArithmeticError):
+            continue
+        if receipts and receipt_quantity == required_quantity:
+            resolved.add(unresolved_id)
+    return resolved
+
+
 class CanonicalPortfolioLedger:
     """SQLite event store with idempotent imports and as-of cash/position snapshots."""
 
@@ -278,6 +330,39 @@ class CanonicalPortfolioLedger:
                     mismatched += 1
         return {"verified": len(events) - missing - mismatched, "missing": missing, "mismatched": mismatched}
 
+    def append_execution_receipt_resolution(
+        self, account_id: str, unresolved_event_id: str, receipts: list[PortfolioEvent]
+    ) -> dict[str, int]:
+        """Append a complete broker-receipt-backed close for one unresolved legacy trade.
+
+        The caller must retain and verify the original broker receipt artifact. This method
+        binds receipt IDs and content hashes to the unresolved trade; it does not authenticate
+        a broker or independently attest that caller-supplied receipt bytes are genuine.
+        """
+        if not receipts:
+            raise CanonicalLedgerError("at least one broker execution receipt is required")
+        existing = self.events(account_id)
+        unresolved = next((row for row in existing
+                           if row.get("source_event_id") == unresolved_event_id
+                           and row.get("event_kind") == EventKind.UNRESOLVED_POSITION.value), None)
+        if unresolved is None:
+            raise CanonicalLedgerError("unresolved source event was not found in the account")
+        normalized_receipts = [receipt.normalized() for receipt in receipts]
+        combined: dict[tuple[str, str], dict[str, object]] = {
+            (str(row["source_system"]), str(row["source_event_id"])): row for row in existing
+        }
+        for row in normalized_receipts:
+            if row["account_id"] != account_id:
+                raise CanonicalLedgerError("execution receipt account does not match unresolved position")
+            key = (str(row["source_system"]), str(row["source_event_id"]))
+            prior = combined.get(key)
+            if prior is not None and prior != row:
+                raise CanonicalLedgerError("broker receipt ID was replayed with different content")
+            combined[key] = row
+        if unresolved_event_id not in _resolved_legacy_event_ids(list(combined.values())):
+            raise CanonicalLedgerError("broker receipt set does not exactly resolve the legacy position")
+        return self.import_events(receipts)
+
     def event_count(self) -> int:
         """Return the total append-only journal event count."""
         with self._connection() as con:
@@ -286,6 +371,7 @@ class CanonicalPortfolioLedger:
     def snapshot(self, account_id: str, *, as_of: str | None = None) -> dict[str, Any]:
         """Project cash, positions and unresolved legacy rows; no values are backfilled or inferred."""
         events = self.events(account_id, as_of=as_of)
+        resolved_unresolved_ids = _resolved_legacy_event_ids(events)
         cash: dict[str, Decimal] = {}
         positions: dict[tuple[str, str, str], _Position] = {}
         marks: dict[tuple[str, str], tuple[Decimal, str, str]] = {}
@@ -297,7 +383,8 @@ class CanonicalPortfolioLedger:
                 cash[currency] = cash.get(currency, Decimal(0)) + Decimal(str(event["cash_delta"]))
                 continue
             if kind is EventKind.UNRESOLVED_POSITION:
-                unresolved.append(event)
+                if str(event["source_event_id"]) not in resolved_unresolved_ids:
+                    unresolved.append(event)
                 continue
             instrument = str(event["instrument_id"])
             asset_class = str(event["asset_class"])

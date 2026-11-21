@@ -25,6 +25,14 @@ attestation, statistical validity, or automatic strategy promotion. An unresolve
 only be resolved after receipt-backed execution facts are recorded and the source audit is
 re-run; changing a label or synthesizing a fill cannot release the gate.
 
+`append_execution_receipt_resolution(account_id, unresolved_event_id, receipts)` is the
+explicit receipt path. It requires one or more `BROKER_EXECUTION_RECEIPT` fills with broker
+order/trade IDs, content hashes, matching instrument, closing side and total quantity equal
+to the unresolved position. Local-paper fills and partial receipt sets do not clear the
+unresolved state. The method binds the facts but cannot authenticate the broker or receipt
+bytes; the operator must retain and verify the original receipt artifact. The current 51
+missing-exit records have no such receipts and remain blocked.
+
 ## Legacy paper-book migration
 
 `financial_brain.portfolio.legacy_migration` maps persisted rows from the existing intraday

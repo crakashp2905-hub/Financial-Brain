@@ -78,6 +78,60 @@ def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
     assert "OPENING_BALANCE_MISSING" in snapshot["pnl_promotion_gate"]["blockers"]
 
 
+def test_complete_broker_receipt_set_resolves_unresolved_exit_and_rechecks_gate(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    ledger.import_events([
+        event("opening-cash", EventKind.CASH_FLOW, cash_delta="10000",
+              metadata={"cash_flow_type": "OPENING_BALANCE"}),
+        event("trade-1:entry", EventKind.FILL, asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", side="BUY", quantity="2", price="100",
+              occurred_at="2026-11-20T09:30:00+05:30",
+              metadata={"legacy_trade_id": "trade-1"}),
+        event("trade-1:unresolved-exit", EventKind.UNRESOLVED_POSITION,
+              asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY", quantity="2",
+              occurred_at="2026-11-20T09:30:00+05:30",
+              metadata={"legacy_trade_id": "trade-1", "trade_side": "long",
+                        "reason": "recorded exit is missing"}),
+    ])
+    receipt = PortfolioEvent(
+        account_id="paper-main", sleeve_id="intraday", source_system="BROKER_EXECUTION_RECEIPT",
+        source_event_id="broker-trade-777", source_sha256=hashlib.sha256(b"broker receipt").hexdigest(),
+        event_kind=EventKind.FILL, occurred_at="2026-11-20T10:00:00+05:30",
+        asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY", side="SELL", quantity="2", price="105",
+        evidence_class="BROKER_EXECUTION_RECEIPT",
+        metadata={"resolves_unresolved_event_id": "trade-1:unresolved-exit", "legacy_trade_id": "trade-1",
+                  "broker_order_id": "order-777", "broker_trade_id": "broker-trade-777"},
+    )
+
+    result = ledger.append_execution_receipt_resolution(
+        "paper-main", "trade-1:unresolved-exit", [receipt])
+    assert result == {"received": 1, "added": 1, "already_present": 0}
+    assert ledger.append_execution_receipt_resolution(
+        "paper-main", "trade-1:unresolved-exit", [receipt]) == {
+            "received": 1, "added": 0, "already_present": 1}
+    snapshot = ledger.snapshot("paper-main")
+    assert snapshot["unresolved_positions"] == []
+    assert snapshot["positions"][0]["quantity"] == Decimal(0)
+    assert snapshot["positions"][0]["realized_pnl"] == Decimal(10)
+    assert snapshot["projection_complete"] is True
+    assert snapshot["pnl_promotion_gate"]["status"] == "ELIGIBLE_FOR_REVIEW"
+
+
+def test_local_paper_exit_cannot_resolve_unresolved_position(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    unresolved = event("unresolved", EventKind.UNRESOLVED_POSITION, asset_class=AssetClass.EQUITY,
+                       instrument_id="NSE:INFY", quantity="1",
+                       metadata={"legacy_trade_id": "legacy-1", "trade_side": "long"})
+    ledger.append(unresolved)
+    paper_exit = event("paper-fill", EventKind.FILL, asset_class=AssetClass.EQUITY,
+                       instrument_id="NSE:INFY", side="SELL", quantity="1", price="100",
+                       metadata={"resolves_unresolved_event_id": "unresolved", "legacy_trade_id": "legacy-1",
+                                 "broker_order_id": "not-a-broker-receipt", "broker_trade_id": "paper-fill"})
+    with pytest.raises(CanonicalLedgerError, match="does not exactly resolve"):
+        ledger.append_execution_receipt_resolution("paper-main", "unresolved", [paper_exit])
+    assert ledger.snapshot("paper-main")["pnl_promotion_gate"]["status"] == "BLOCKED"
+
+
 def test_sleeves_keep_separate_basis_and_pnl_before_consolidated_netting(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
     events = [

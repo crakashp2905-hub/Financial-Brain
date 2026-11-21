@@ -9124,7 +9124,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/canonical_ledger.py",
-      "source_sha256": "ac0bf8fc1dc603e8009513cbb060ec75ab05f721e86001a7e7cde822fd6d5445",
+      "source_sha256": "147906a0a134875a6386e34cfb3674662a49fee13cbf75469557aef56a9267d9",
       "test_paths": []
     },
     {

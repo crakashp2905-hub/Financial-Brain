@@ -7428,7 +7428,7 @@
         "tests/test_canonical_portfolio_ledger.py",
         "tests/test_legacy_portfolio_migration.py"
       ],
-      "test_result": "11 migration/ledger tests and 69 combined checklist regression tests passed; Ruff, mypy, source inventory and dependency graph freshness passed. Local migration audit verifies 23,479/23,479 source event payloads with zero rejected, missing, mismatched or unscanned rows. The audit shows 56 unresolved source records, 18 books without opening cash, and missing options/ETF-specific/MF source books; no broker reconciliation or profitability claim is made."
+      "test_result": "13 focused canonical-ledger/migration tests pass after receipt-gate additions; Ruff, mypy, source inventory and dependency graph freshness checks pass. Local source audit verifies 23,479/23,479 source event payloads with zero rejected, missing, mismatched or unscanned rows. The audit shows 56 unresolved source records, 18 books without opening cash, and no options/ETF-specific/MF book rows in scanned sources."
     },
     {
       "id": "SL-00-07",
@@ -7438,18 +7438,19 @@
       "evidence": [
         "src/financial_brain/portfolio/legacy_migration.py: every intraday source row without both recorded exit timestamp and price becomes an UNRESOLVED_POSITION event; no exit is synthesized",
         "src/financial_brain/portfolio/canonical_ledger.py: unresolved positions make projection incomplete and pnl_promotion_gate BLOCKED with UNRESOLVED_LEGACY_POSITIONS",
-        "tests/test_canonical_portfolio_ledger.py::test_unresolved_position_is_visible_but_never_becomes_a_fill verifies unresolved state and promotion blockers",
+        "src/financial_brain/portfolio/canonical_ledger.py::append_execution_receipt_resolution accepts only broker receipt fills with matching unresolved ID, instrument, closing side and full quantity; snapshot removes UNRESOLVED only after the complete receipt set is present",
+        "tests/test_canonical_portfolio_ledger.py::test_complete_broker_receipt_set_resolves_unresolved_exit_and_rechecks_gate and ::test_local_paper_exit_cannot_resolve_unresolved_position",
         "tests/test_legacy_portfolio_migration.py::test_source_book_migration_is_read_only_idempotent_and_reports_unavailable_desks verifies fail-closed account P&L report gate",
         "docs/edge-program/canonical-migration-audit.v1.json (SHA-256 b41590765d3c8d3ef8b285744e0e123be45c9fb3da67559a71d28fa4bee9ee78)"
       ],
       "blocker": "The required UNRESOLVED labels and P&L promotion block are implemented, but the 51 source rows contain no recorded exit and no actual Kite/broker execution receipts were available to reconcile them. Keep them unresolved; resolve only after receipt-backed execution facts are added and re-audited.",
-      "last_audited_at_utc": "2026-11-21T09:10:40+00:00",
-      "commit": "bf594362",
+      "last_audited_at_utc": "2026-11-21T09:22:37+00:00",
+      "commit": null,
       "test_evidence": [
         "tests/test_canonical_portfolio_ledger.py",
         "tests/test_legacy_portfolio_migration.py"
       ],
-      "test_result": "Focused canonical-ledger and legacy migration tests verify unresolved records remain non-fills, incomplete projections block promotion, and source verification stays distinct from P&L readiness."
+      "test_result": "13 focused canonical-ledger/migration tests pass. Tests prove missing exits remain unresolved and P&L-blocked, paper fills cannot clear the block, and an exact complete broker-receipt set idempotently resolves only its linked position. Current local data still has no actual receipts for the 51 missing exits."
     },
     {
       "id": "SL-00-08",
@@ -13975,7 +13976,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T09:10:40+00:00",
+    "as_of_utc": "2026-11-21T09:22:37+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
