@@ -1133,12 +1133,22 @@
     {
       "id": "FB-0402",
       "text": "Add decision-time features and evidence, expected distribution with uncertainty, benchmark, costs, risk/return estimates and contraindications.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/trader_signal.py defines immutable DecisionAssessment, DecisionFeature, and ExpectedReturnDistribution types for decision-time feature/evidence lineage, uncertainty quantiles, confidence, horizon, benchmark, estimated costs, risk budget, expected return, and contraindications.",
+        "The contract rejects future feature/evidence timestamps, invalid distributions, negative costs/risk budgets, and missing benchmark or evidence.",
+        "Live strategy adapters do not yet populate these assessments, and return-distribution calibration, benchmark version resolution, realized cost models, and empirically supported forecasts remain unconnected."
+      ],
+      "blocker": "Partial: typed as-of assessment and uncertainty fields are implemented, but strategy integration and empirical calibration/evaluation remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T17:32:00+00:00",
+      "commit": "be67ac66",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-trader-signal-full tests/test_trader_signal.py -q: 10 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/trader_signal.py: passed"
+      ],
+      "test_result": "Decision assessments preserve immutable decision-time fields, calibrated distribution structure and cost/risk metadata; lookahead and malformed uncertainty inputs are rejected."
     },
     {
       "id": "FB-0403",
