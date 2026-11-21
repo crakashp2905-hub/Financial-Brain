@@ -10,6 +10,7 @@ from financial_brain.forward_edge.data_permissions import (
     PermissionStatus,
 )
 from financial_brain.providers.etf_reference import (
+    ETFExposureCategory,
     ETFReferenceCatalog,
     ETFReferenceError,
     ETFReferenceRecord,
@@ -139,3 +140,28 @@ def test_non_overlapping_symbol_successor_resolves_as_of_date(record: ETFReferen
     assert catalog.resolve(
         exchange="NSE", symbol="INDEXETF", as_of=datetime(2025, 1, 1, 5, tzinfo=timezone.utc)
     ).isin == "INE000A01019"
+
+
+@pytest.mark.parametrize(
+    "category",
+    [
+        "EQUITY_BROAD_MARKET",
+        "EQUITY_SECTOR",
+        "EQUITY_FACTOR",
+        "BOND_DEBT",
+        "GOLD",
+        "SILVER",
+        "INTERNATIONAL",
+        "OTHER_LISTED",
+    ],
+)
+def test_exposure_categories_are_distinct_and_explicit(category: str, record: ETFReferenceRecord) -> None:
+    normalized = ETFReferenceRecord(**{**record.__dict__, "exposure_category": category})
+    assert normalized.exposure_category is ETFExposureCategory(category)
+
+
+def test_symbol_name_does_not_infer_exposure_category(record: ETFReferenceRecord) -> None:
+    gold_named = ETFReferenceRecord(**{**record.__dict__, "symbol": "GOLDTRACKER"})
+    assert gold_named.exposure_category is ETFExposureCategory.UNKNOWN
+    with pytest.raises(ETFReferenceError, match="explicit and recognized"):
+        ETFReferenceRecord(**{**record.__dict__, "exposure_category": "PRECIOUS_METAL"})

@@ -9,6 +9,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from enum import StrEnum
 
 from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
 from financial_brain.kernel.instruments import InstrumentId
@@ -20,6 +21,20 @@ class ETFReferenceError(ValueError):
 
 ALLOWED_SOURCES = frozenset({"NSE", "BSE", "AMC"})
 ALLOWED_EXCHANGES = frozenset({"NSE", "BSE"})
+
+
+class ETFExposureCategory(StrEnum):
+    """Distinct ETF exposures; category is supplied by evidence, never guessed from symbol."""
+
+    EQUITY_BROAD_MARKET = "EQUITY_BROAD_MARKET"
+    EQUITY_SECTOR = "EQUITY_SECTOR"
+    EQUITY_FACTOR = "EQUITY_FACTOR"
+    BOND_DEBT = "BOND_DEBT"
+    GOLD = "GOLD"
+    SILVER = "SILVER"
+    INTERNATIONAL = "INTERNATIONAL"
+    OTHER_LISTED = "OTHER_LISTED"
+    UNKNOWN = "UNKNOWN"
 
 
 def _aware(value: datetime, field: str) -> datetime:
@@ -47,6 +62,7 @@ class ETFReferenceRecord:
     underlying_index: str | None = None
     fund_house: str | None = None
     provider_token: str | None = None
+    exposure_category: ETFExposureCategory = ETFExposureCategory.UNKNOWN
 
     def __post_init__(self) -> None:
         source = self.source_id.strip().upper()
@@ -81,6 +97,10 @@ class ETFReferenceRecord:
         object.__setattr__(self, "symbol", symbol)
         object.__setattr__(self, "isin", isin)
         object.__setattr__(self, "series", self.series.strip().upper())
+        try:
+            object.__setattr__(self, "exposure_category", ETFExposureCategory(self.exposure_category))
+        except ValueError as exc:
+            raise ETFReferenceError("ETF exposure category must be explicit and recognized") from exc
         object.__setattr__(self, "published_at", _aware(self.published_at, "published_at"))
         object.__setattr__(self, "observed_at", _aware(self.observed_at, "observed_at"))
         if self.observed_at < self.published_at:
@@ -104,6 +124,7 @@ class ETFReferenceRecord:
             "observed_at": self.observed_at.isoformat(), "source_ref": self.source_ref,
             "source_sha256": self.source_sha256, "underlying_index": self.underlying_index,
             "fund_house": self.fund_house, "provider_token": self.provider_token,
+            "exposure_category": self.exposure_category.value,
         }
         encoded = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
         return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
@@ -148,4 +169,4 @@ class ETFReferenceCatalog:
         return len(self._records)
 
 
-__all__ = ["ETFReferenceCatalog", "ETFReferenceError", "ETFReferenceRecord"]
+__all__ = ["ETFExposureCategory", "ETFReferenceCatalog", "ETFReferenceError", "ETFReferenceRecord"]

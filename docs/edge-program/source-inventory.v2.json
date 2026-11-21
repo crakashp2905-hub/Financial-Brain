@@ -9536,6 +9536,7 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "enum",
         "financial_brain.forward_edge.data_permissions",
         "financial_brain.kernel.instruments",
         "hashlib",
@@ -9545,7 +9546,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/etf_reference.py",
-      "source_sha256": "e07e0e71b41636597c6234d9cd1ec91eaf0e8f3f4a4bca4f30901ef767f51701",
+      "source_sha256": "e37c6df1b6195cc53c15fe9c6cea089ad1b9ee450fb3d1e6aa399340531bb912",
       "test_paths": []
     },
     {
