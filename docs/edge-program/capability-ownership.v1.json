@@ -2913,6 +2913,12 @@
       "module_owner": "src/financial_brain/research/knowledge.py"
     },
     {
+      "capability_id": "module:src/financial_brain/research/mf_peer_comparison.py",
+      "path": "src/financial_brain/research/mf_peer_comparison.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/mf_peer_comparison.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/research/preregistry.py",
       "path": "src/financial_brain/research/preregistry.py",
       "module_role": "signal_report_or_trader_renderer",

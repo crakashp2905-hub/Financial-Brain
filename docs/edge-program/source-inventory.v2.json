@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 634,
+  "source_count": 635,
   "sources": [
     {
       "capability_ids": [],
@@ -10180,6 +10180,22 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/mf_peer_comparison.py",
+      "source_sha256": "98a5dcd3557c4daeb0fea357fb2167e475c5e748bdc93fc75d14449b0a1799b7",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "hashlib",
         "pathlib",
         "re",
@@ -11049,6 +11065,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 619,
+  "unassessed_count": 620,
   "unassigned_role_count": 376
 }
