@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
+import hashlib
+import json
 from typing import Literal
 from uuid import UUID
 
@@ -54,6 +56,33 @@ class EntryCondition(StrEnum):
     BREAKOUT_CONFIRMATION = "BREAKOUT_CONFIRMATION"
     PULLBACK_CONFIRMATION = "PULLBACK_CONFIRMATION"
     MARKETABLE_QUOTE = "MARKETABLE_QUOTE"
+
+
+class SignalState(StrEnum):
+    DETECTED = "DETECTED"
+    ELIGIBLE = "ELIGIBLE"
+    REJECTED = "REJECTED"
+    APPROVED = "APPROVED"
+    SHADOW = "SHADOW"
+    SUBMITTED = "SUBMITTED"
+    FILLED = "FILLED"
+    PARTIAL = "PARTIAL"
+    MISSED = "MISSED"
+    EXITED = "EXITED"
+    EXPIRED = "EXPIRED"
+
+
+_SIGNAL_TRANSITIONS = {
+    SignalState.DETECTED: {SignalState.ELIGIBLE, SignalState.REJECTED},
+    SignalState.ELIGIBLE: {SignalState.APPROVED, SignalState.SHADOW, SignalState.EXPIRED},
+    SignalState.APPROVED: {SignalState.SUBMITTED, SignalState.EXPIRED},
+    SignalState.SHADOW: {SignalState.SUBMITTED, SignalState.EXPIRED},
+    SignalState.SUBMITTED: {SignalState.FILLED, SignalState.PARTIAL,
+                            SignalState.MISSED, SignalState.EXPIRED},
+    SignalState.PARTIAL: {SignalState.PARTIAL, SignalState.FILLED,
+                          SignalState.MISSED, SignalState.EXPIRED},
+    SignalState.FILLED: {SignalState.EXITED},
+}
 
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -309,9 +338,78 @@ class TradePlan:
             raise SignalContractError("eligible trade plan cannot carry an ineligibility reason")
 
 
+@dataclass(frozen=True, slots=True)
+class SignalLifecycleEvent:
+    state: SignalState
+    occurred_at: datetime
+    idempotency_key: str
+    reason: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.state, SignalState):
+            raise SignalContractError("lifecycle state must be a SignalState")
+        _aware("lifecycle occurred_at", self.occurred_at)
+        if not self.idempotency_key.strip():
+            raise SignalContractError("lifecycle idempotency_key is required")
+        if self.state in {SignalState.REJECTED, SignalState.MISSED, SignalState.EXPIRED} and not (
+            self.reason and self.reason.strip()
+        ):
+            raise SignalContractError(f"{self.state.value} lifecycle event requires a reason")
+
+
+@dataclass(frozen=True, slots=True)
+class SignalLifecycle:
+    """Append-only, event-time-ordered signal state with idempotent transitions."""
+
+    signal_id: str
+    events: tuple[SignalLifecycleEvent, ...]
+
+    def __post_init__(self) -> None:
+        try:
+            UUID(self.signal_id)
+        except (ValueError, AttributeError) as exc:
+            raise SignalContractError("lifecycle signal_id must be a UUID") from exc
+        if not self.events or self.events[0].state is not SignalState.DETECTED:
+            raise SignalContractError("signal lifecycle must start at DETECTED")
+        keys: set[str] = set()
+        for index, event in enumerate(self.events):
+            if event.idempotency_key in keys:
+                raise SignalContractError("lifecycle idempotency keys must be unique")
+            keys.add(event.idempotency_key)
+            if index:
+                previous = self.events[index - 1]
+                if event.occurred_at.astimezone(timezone.utc) < previous.occurred_at.astimezone(timezone.utc):
+                    raise SignalContractError("lifecycle event time cannot move backwards")
+                if event.state not in _SIGNAL_TRANSITIONS.get(previous.state, set()):
+                    raise SignalContractError(
+                        f"invalid signal transition {previous.state.value} -> {event.state.value}"
+                    )
+
+    @property
+    def state(self) -> SignalState:
+        return self.events[-1].state
+
+    @property
+    def digest(self) -> str:
+        body = [{"state": event.state.value,
+                 "occurred_at": event.occurred_at.astimezone(timezone.utc).isoformat(),
+                 "idempotency_key": event.idempotency_key,
+                 "reason": event.reason} for event in self.events]
+        return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+    def advance(self, event: SignalLifecycleEvent) -> SignalLifecycle:
+        prior = next((existing for existing in self.events
+                      if existing.idempotency_key == event.idempotency_key), None)
+        if prior is not None:
+            if prior != event:
+                raise SignalContractError("idempotency key reused with different event")
+            return self
+        return SignalLifecycle(self.signal_id, (*self.events, event))
+
+
 __all__ = [
     "DecisionAssessment", "DecisionFeature", "DeskId", "EvidenceTier",
     "EntryCondition", "ExecutionIntent", "ExecutionIntentType",
-    "ExpectedReturnDistribution", "SignalContractError", "SignalSide", "TradePlan",
-    "TraderSignal",
+    "ExpectedReturnDistribution", "SignalContractError", "SignalLifecycle",
+    "SignalLifecycleEvent", "SignalSide", "SignalState", "TradePlan", "TraderSignal",
 ]

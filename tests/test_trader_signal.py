@@ -8,6 +8,7 @@ from financial_brain.kernel.trader_signal import (
     DecisionAssessment, DecisionFeature, DeskId, EvidenceTier,
     EntryCondition, ExecutionIntent, ExecutionIntentType,
     ExpectedReturnDistribution, SignalContractError, SignalSide, TradePlan, TraderSignal,
+    SignalLifecycle, SignalLifecycleEvent, SignalState,
 )
 
 
@@ -171,3 +172,59 @@ def test_trade_plan_rejects_inconsistent_or_unexecutable_conditions(changes, mes
     }
     with pytest.raises(SignalContractError, match=message):
         TradePlan(**(values | changes))
+
+
+def test_signal_lifecycle_enforces_transitions_time_order_and_idempotency():
+    signal_id = "550e8400-e29b-41d4-a716-446655440000"
+    t0 = datetime(2026, 11, 21, 10, tzinfo=timezone.utc)
+    detected = SignalLifecycle(signal_id, (
+        SignalLifecycleEvent(SignalState.DETECTED, t0, "detect-1"),
+    ))
+    eligible_event = SignalLifecycleEvent(SignalState.ELIGIBLE, t0 + timedelta(seconds=1), "elig-1")
+    eligible = detected.advance(eligible_event)
+    assert eligible.advance(eligible_event) is eligible
+    approved = eligible.advance(SignalLifecycleEvent(
+        SignalState.APPROVED, t0 + timedelta(seconds=2), "approve-1",
+    ))
+    submitted = approved.advance(SignalLifecycleEvent(
+        SignalState.SUBMITTED, t0 + timedelta(seconds=3), "submit-1",
+    ))
+    partial = submitted.advance(SignalLifecycleEvent(
+        SignalState.PARTIAL, t0 + timedelta(seconds=4), "fill-1",
+    ))
+    closed = partial.advance(SignalLifecycleEvent(
+        SignalState.FILLED, t0 + timedelta(seconds=5), "fill-2",
+    )).advance(SignalLifecycleEvent(
+        SignalState.EXITED, t0 + timedelta(seconds=6), "exit-1",
+    ))
+    assert closed.state is SignalState.EXITED
+    assert len(closed.digest) == 64
+    with pytest.raises(SignalContractError, match="different event"):
+        eligible.advance(SignalLifecycleEvent(
+            SignalState.ELIGIBLE, t0 + timedelta(seconds=2), "elig-1",
+        ))
+
+
+@pytest.mark.parametrize("next_state, reason", [
+    (SignalState.SUBMITTED, None),
+    (SignalState.FILLED, None),
+])
+def test_signal_lifecycle_rejects_skipped_states(next_state, reason):
+    t0 = datetime(2026, 11, 21, 10, tzinfo=timezone.utc)
+    lifecycle = SignalLifecycle("550e8400-e29b-41d4-a716-446655440000", (
+        SignalLifecycleEvent(SignalState.DETECTED, t0, "detect"),
+    ))
+    with pytest.raises(SignalContractError, match="invalid signal transition"):
+        lifecycle.advance(SignalLifecycleEvent(next_state, t0 + timedelta(seconds=1), "next", reason))
+
+
+def test_signal_lifecycle_rejects_backwards_event_time():
+    t0 = datetime(2026, 11, 21, 10, tzinfo=timezone.utc)
+    lifecycle = SignalLifecycle("550e8400-e29b-41d4-a716-446655440000", (
+        SignalLifecycleEvent(SignalState.DETECTED, t0, "detect"),
+        SignalLifecycleEvent(SignalState.ELIGIBLE, t0 + timedelta(seconds=2), "eligible"),
+    ))
+    with pytest.raises(SignalContractError, match="move backwards"):
+        lifecycle.advance(SignalLifecycleEvent(
+            SignalState.SHADOW, t0 + timedelta(seconds=1), "shadow",
+        ))
