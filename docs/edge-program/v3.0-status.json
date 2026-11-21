@@ -1373,12 +1373,22 @@
     {
       "id": "FB-0452",
       "text": "Require every eligible exchange trade to publish side (`BUY`, `SELL_SHORT` where permissible), executable entry limit/zone, signal expiry, size, SL, TP, holding horizon, and conditional exit policies *before* paper entry.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/trader_signal.py TradePlan carries side, executable entry zone, positive paper quantity, entry expiry, stop, target, horizon, invalidation, tick/lot/unit precision, and paper eligibility.",
+        "validate_trade_plan_signal() binds instrument, side, and entry-expiry exactly to the decision signal; trade plans require typed conditional exit triggers.",
+        "Every strategy adapter and durable paper OMS does not yet require this plan on entry; exchange price rounding/depth eligibility and actual trigger evaluation remain unconnected."
+      ],
+      "blocker": "Partial: typed pre-entry plans include required sizing and protection fields, but universal strategy/OMS enforcement and market-specific feasibility remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T17:54:07+00:00",
+      "commit": "a831dc8b",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-trader-plan2 tests/test_trader_signal.py tests/test_candidate_publication.py -q: 28 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/trader_signal.py: passed"
+      ],
+      "test_result": "Pre-entry plan fields and all conditional exit trigger categories validate; signal/plan expiry and instrument/side mismatch are rejected."
     },
     {
       "id": "FB-0453",
@@ -1393,12 +1403,22 @@
     {
       "id": "FB-0454",
       "text": "Define `ExitPolicy` with ordered triggers `HARD_STOP`, `TAKE_PROFIT`, `TRAILING_STOP`, `SIGNAL_REVERSAL`, `TIME_STOP`, `SESSION_FLATTEN`, `RISK_KILL_SWITCH`, `MANUAL_CLOSE`, and `EXPIRY_OR_CORPORATE_ACTION`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/trader_signal.py ExitTrigger enumerates HARD_STOP, TAKE_PROFIT, TRAILING_STOP, SIGNAL_REVERSAL, TIME_STOP, SESSION_FLATTEN, RISK_KILL_SWITCH, MANUAL_CLOSE, and EXPIRY_OR_CORPORATE_ACTION.",
+        "TradePlan requires at least one typed unique exit trigger before a paper-eligible plan can be constructed.",
+        "Trigger ordering/state persistence, partial-fill adjustments, OCO behavior and restart-safe evaluation are not implemented by this enum contract."
+      ],
+      "blocker": "Partial: the explicit standard trigger vocabulary is implemented and enforced as plan metadata, but operational trigger state machines and durable execution are outstanding.",
+      "last_audited_at_utc": "2026-11-21T17:54:07+00:00",
+      "commit": "a831dc8b",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-trader-plan2 tests/test_trader_signal.py tests/test_candidate_publication.py -q: 28 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/trader_signal.py: passed"
+      ],
+      "test_result": "Pre-entry plan fields and all conditional exit trigger categories validate; signal/plan expiry and instrument/side mismatch are rejected."
     },
     {
       "id": "FB-0455",
