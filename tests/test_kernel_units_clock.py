@@ -7,7 +7,20 @@ from decimal import Decimal
 import pytest
 
 from financial_brain.kernel.clock import ClockError, Instants, assert_not_future, utc
-from financial_brain.kernel.units import Money, Price, Quantity, UnitError
+from financial_brain.kernel.units import (
+    BasisPoints,
+    CurrencyCode,
+    INRNotional,
+    Money,
+    MutualFundUnits,
+    NavPerUnit,
+    OptionLots,
+    OptionPremiumPerUnit,
+    Price,
+    Quantity,
+    UnitError,
+    WholeUnits,
+)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -49,6 +62,28 @@ def test_float_conversion_uses_shortest_decimal() -> None:
 def test_price_notional_applies_multiplier_and_currency() -> None:
     notional = Price(Decimal("250.50"), "INR").notional(Quantity(Decimal("100")), multiplier=50)
     assert notional == Money.of("1252500", "INR")
+
+
+def test_domain_financial_units_are_explicit_and_validated() -> None:
+    assert CurrencyCode("INR").value == "INR"
+    assert INRNotional.from_money(Money.of("100.25", "INR")).amount == Decimal("100.25")
+    assert WholeUnits(Decimal("-5")).units == Decimal("-5")
+    assert OptionLots(2).lots == 2
+    assert MutualFundUnits(Decimal("1.234567")).units == Decimal("1.234567")
+    assert NavPerUnit(Decimal("42.15")).currency == "INR"
+    assert OptionPremiumPerUnit(Decimal("125.5")).amount == Decimal("125.5")
+    assert BasisPoints(Decimal("12.5")).as_rate() == Decimal("0.00125")
+
+
+def test_domain_financial_units_reject_mismatches() -> None:
+    with pytest.raises(UnitError, match="whole units"):
+        WholeUnits(Decimal("1.5"))
+    with pytest.raises(UnitError, match="positive integer"):
+        OptionLots(Decimal("1.5"))  # type: ignore[arg-type]
+    with pytest.raises(UnitError, match="INR currency"):
+        INRNotional.from_money(Money.of(1, "USD"))
+    with pytest.raises(UnitError, match="denominated in INR"):
+        NavPerUnit(Decimal("2"), currency="USD")
 
 
 def test_price_must_be_positive() -> None:
