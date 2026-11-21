@@ -1,0 +1,71 @@
+{
+  "schema": "fb.forward_edge.reference_candidates.v1",
+  "scope": "Initial H005, H003 and P3 reference implementations, pinned to source bytes and retained strictly as historical research candidates. A pin is not a prospective trial registration, eligibility grant, or profitability claim.",
+  "claim_policy": {
+    "prospective_edge_confirmed": false,
+    "allowed_label": "HISTORICAL_CANDIDATE_ONLY",
+    "promotion_requires": "A separately authorized, preregistered prospective cohort with exact code/data/economics hashes and completed independent evidence gates."
+  },
+  "source_artifacts": [
+    {
+      "path": "src/financial_brain/paper/zoo_edges.py",
+      "sha256_lf": "c08485ecc18c05d942a43ba7bad866b9ad243828e71d73123dbcd10fd47a46a8"
+    },
+    {
+      "path": "src/financial_brain/evaluation/edges.py",
+      "sha256_lf": "21fcdbd42843a3e3ede2e7126e0d96728ff9a43b323fb87dfcb3a76156e2ca6c"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "H005",
+      "reference_version": "historical-reference-v1",
+      "implementation": "financial_brain.paper.zoo_edges.h_targets / edge_h005_industry_mom",
+      "definition": "At monthly rebalance, compute daily 12-1 return as close(t-21)/close(t-252)-1; rank industries by equal-name 6-month return using the top-500 universe, require at least 8 eligible names per industry, select the top 3 industries, then select up to 20 names by 12-1 return and equal-weight them.",
+      "historical_status_in_source": "CANDIDATE_SMALL under ADR-0007; source comment says forward shadow from 2026-11-18.",
+      "evidence_tier": "HISTORICAL_CANDIDATE_ONLY",
+      "prospective_status": "NOT_CONFIRMED",
+      "source_paths": [
+        "src/financial_brain/paper/zoo_edges.py"
+      ],
+      "caveats": [
+        "The pinned source is a shared module, not an independently deployable strategy package.",
+        "No independent prospective profitability claim is made by this register."
+      ]
+    },
+    {
+      "id": "H003",
+      "reference_version": "historical-reference-v1",
+      "implementation": "financial_brain.paper.zoo_edges.h_targets / edge_h003_riskadj_mom",
+      "definition": "At monthly rebalance, compute daily 12-1 return as close(t-21)/close(t-252)-1, divide by trailing 250-session daily-return standard deviation (minimum 200 observations), select up to 20 eligible top-500 names, and equal-weight them.",
+      "historical_status_in_source": "CANDIDATE_SMALL under ADR-0007; source comment says forward shadow from 2026-11-18.",
+      "evidence_tier": "HISTORICAL_CANDIDATE_ONLY",
+      "prospective_status": "NOT_CONFIRMED",
+      "source_paths": [
+        "src/financial_brain/paper/zoo_edges.py"
+      ],
+      "caveats": [
+        "The registered universe's ETF/MF inclusion issue remains a separate versioned research item.",
+        "The pinned source is a shared module, not an independently deployable strategy package.",
+        "No independent prospective profitability claim is made by this register."
+      ]
+    },
+    {
+      "id": "P3",
+      "reference_version": "historical-reference-v1",
+      "implementation": "financial_brain.evaluation.edges.info_discreteness / financial_brain.paper.zoo_edges.monthly_targets / edge_p3_frog_in_pan",
+      "definition": "At monthly endpoints, score sign of the 12-1 return multiplied by (share of down days minus share of up days) over the 12-1 daily window; select the top 20 names in the lower-information half and equal-weight them.",
+      "historical_status_in_source": "The paper zoo records a failed historical verdict (t +3.3 / +1.7); it is retained as a reference candidate, not revived by this pin.",
+      "evidence_tier": "HISTORICAL_CANDIDATE_ONLY",
+      "prospective_status": "NOT_CONFIRMED",
+      "source_paths": [
+        "src/financial_brain/evaluation/edges.py",
+        "src/financial_brain/paper/zoo_edges.py"
+      ],
+      "caveats": [
+        "Historical failed verdict remains visible and binding for the cited evaluation.",
+        "No independent prospective profitability claim is made by this register."
+      ]
+    }
+  ]
+}

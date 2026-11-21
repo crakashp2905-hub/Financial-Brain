@@ -77,6 +77,9 @@ class Instrument:
     rules: list[RuleVersion]
     status_history: list[tuple[date, Status]] = field(default_factory=list)
     expiry: date | None = None
+    isin: str | None = None
+    strike: Decimal | None = None
+    rights_status: str = "unverified"
 
     def __post_init__(self) -> None:
         if not self.rules:
@@ -87,6 +90,43 @@ class Instrument:
         if not self.status_history:
             self.status_history = [(self.rules[0].effective_from, Status.ACTIVE)]
         self.status_history.sort(key=lambda s: s[0])
+        if self.strike is not None:
+            self.strike = to_decimal(self.strike)
+            if self.strike <= 0:
+                raise InstrumentError("strike must be positive")
+        if self.rights_status not in {"unverified", "authorized", "restricted"}:
+            raise InstrumentError("rights_status must be unverified, authorized or restricted")
+        if self.isin is not None and (len(self.isin) != 12 or not self.isin.isalnum()):
+            raise InstrumentError("ISIN must be 12 alphanumeric characters")
+
+    def eligible(self, day: date, phase: Phase, *, quantity: int, price: Decimal,
+                 require_rights: bool = True) -> tuple[bool, tuple[str, ...]]:
+        """Return ticket eligibility with all fail-closed reasons for a dated instrument."""
+        from financial_brain.kernel.market_rules import TicketRules, validate_ticket
+
+        reasons: list[str] = []
+        tradable, reason = self.tradable(day, phase)
+        if not tradable:
+            reasons.append(reason)
+        try:
+            rule = self.rule_on(day)
+        except InstrumentError:
+            reasons.append("MISSING_EFFECTIVE_RULE")
+        else:
+            if rule.max_order_quantity is None:
+                reasons.append("MISSING_FREEZE_LIMIT")
+            else:
+                reasons.extend(validate_ticket(quantity, price, TicketRules(
+                    lot_size=rule.lot, min_notional=Decimal(0), max_freeze_quantity=rule.max_order_quantity)))
+        if self.instrument.asset_class in {"EQUITY", "ETF"} and not self.isin:
+            reasons.append("MISSING_ISIN")
+        if self.instrument.asset_class in {"OPTION", "FUTURE"} and self.expiry is None:
+            reasons.append("MISSING_EXPIRY")
+        if self.instrument.asset_class == "OPTION" and self.strike is None:
+            reasons.append("MISSING_STRIKE")
+        if require_rights and self.rights_status != "authorized":
+            reasons.append("INSTRUMENT_RIGHTS_UNVERIFIED")
+        return not reasons, tuple(reasons)
 
     def rule_on(self, day: date) -> RuleVersion:
         applicable = [r for r in self.rules if r.effective_from <= day]

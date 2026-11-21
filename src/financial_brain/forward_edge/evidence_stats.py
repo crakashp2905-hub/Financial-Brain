@@ -189,16 +189,16 @@ def label_rows(rows: list[dict]) -> list[dict]:
             )
         except EvidenceLabelError as exc:
             raise StatsError(f"row evidence mode is invalid: {exc}") from exc
-        expected: dict[ClaimTier, str] = {
-            ClaimTier.HISTORICAL: "HISTORICAL_REPLAY",
-            ClaimTier.SHADOW: "EXPLORATORY_SHADOW",
-            ClaimTier.LOCAL_PAPER: "LOCAL_PAPER",
-            ClaimTier.INDEPENDENT_FORWARD: "INDEPENDENTLY_ATTESTED_FORWARD",
+        expected: dict[ClaimTier, tuple[str, ...]] = {
+            ClaimTier.HISTORICAL: ("HISTORICAL_REPLAY", "DETERMINISTIC_FIXTURE"),
+            ClaimTier.SHADOW: ("EXPLORATORY_SHADOW",),
+            ClaimTier.LOCAL_PAPER: ("LOCAL_PAPER", "PROSPECTIVELY_OBSERVED_SESSION"),
+            ClaimTier.INDEPENDENT_FORWARD: ("INDEPENDENTLY_ATTESTED_FORWARD",),
         }
         if r["tier"] is ClaimTier.DEPLOYMENT_VALIDATED:
             raise StatsError("deployment validation cannot be asserted by the generic evidence-row exporter")
         expected_class = expected[r["tier"]]
-        if evidence.value != expected_class:
+        if evidence.value not in expected_class:
             raise StatsError(f"tier {r['tier'].value} conflicts with evidence mode {evidence.value}")
         row = dict(r)
         existing = row.get("evidence_class")

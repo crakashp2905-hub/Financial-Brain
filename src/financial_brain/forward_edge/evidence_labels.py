@@ -1,8 +1,7 @@
 """Evidence labels shared by paper reports and exports.
 
-Replay and fixture modes are always historical evidence. A local paper session is promoted to an independently
-attested forward label only when the caller supplies the custody classifier's verified result plus observed, sealed,
-complete-session facts. This module labels evidence; it does not create or verify those facts.
+Historical replay, deterministic fixtures, local paper, prospectively observed sessions and independently
+attested forward sessions are distinct classes. This module labels evidence; it does not create or verify the facts.
 """
 from __future__ import annotations
 
@@ -18,7 +17,9 @@ class EvidenceLabelError(ValueError):
 class EvidenceClass(str, Enum):
     EXPLORATORY_SHADOW = "EXPLORATORY_SHADOW"
     HISTORICAL_REPLAY = "HISTORICAL_REPLAY"
+    DETERMINISTIC_FIXTURE = "DETERMINISTIC_FIXTURE"
     LOCAL_PAPER = "LOCAL_PAPER"
+    PROSPECTIVELY_OBSERVED_SESSION = "PROSPECTIVELY_OBSERVED_SESSION"
     INDEPENDENTLY_ATTESTED_FORWARD = "INDEPENDENTLY_ATTESTED_FORWARD"
 
 
@@ -32,8 +33,8 @@ _FORWARD_CLAIMS = {
 _MODES = {
     "shadow": EvidenceClass.EXPLORATORY_SHADOW,
     "replay": EvidenceClass.HISTORICAL_REPLAY,
-    "fixture": EvidenceClass.HISTORICAL_REPLAY,
-    "fixture_replay": EvidenceClass.HISTORICAL_REPLAY,
+    "fixture": EvidenceClass.DETERMINISTIC_FIXTURE,
+    "fixture_replay": EvidenceClass.DETERMINISTIC_FIXTURE,
     "historical": EvidenceClass.HISTORICAL_REPLAY,
     "historical_replay": EvidenceClass.HISTORICAL_REPLAY,
     "local_paper": EvidenceClass.LOCAL_PAPER,
@@ -49,12 +50,14 @@ def classify(mode: str, *, market_observed: bool = False, pre_entry_sealed: bool
     base = _MODES.get(normalized)
     if base is None:
         raise EvidenceLabelError(f"unsupported evidence mode: {mode!r}")
-    # Replay fixtures cannot become prospective evidence by attaching a custody field after the replay.
-    if base is EvidenceClass.HISTORICAL_REPLAY or base is EvidenceClass.EXPLORATORY_SHADOW:
+    # Replay and fixture evidence cannot become prospective by attaching custody after the fact.
+    if base in (EvidenceClass.HISTORICAL_REPLAY, EvidenceClass.DETERMINISTIC_FIXTURE,
+                EvidenceClass.EXPLORATORY_SHADOW):
         return base
-    if (market_observed and pre_entry_sealed and session_complete
-            and custody_status is CustodyStatus.VERIFIED):
-        return EvidenceClass.INDEPENDENTLY_ATTESTED_FORWARD
+    if market_observed and pre_entry_sealed and session_complete:
+        if custody_status is CustodyStatus.VERIFIED:
+            return EvidenceClass.INDEPENDENTLY_ATTESTED_FORWARD
+        return EvidenceClass.PROSPECTIVELY_OBSERVED_SESSION
     return EvidenceClass.LOCAL_PAPER
 
 

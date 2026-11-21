@@ -1,9 +1,13 @@
 from datetime import date, datetime, timedelta
+import tempfile
+from pathlib import Path
 
+import duckdb
 import pytest
 
 from financial_brain.paper import intraday_runner as R
 from financial_brain.providers import kite_data as KD
+from financial_brain.ingest import quote_archive as QA
 
 
 class Clock:
@@ -15,6 +19,65 @@ class Clock:
 
     def sleep(self, s):
         self.t += timedelta(seconds=s)
+
+
+def test_forward_archive_replay_reads_local_quotes_and_research_without_kite_calls(monkeypatch):
+    day = date(2026, 11, 13)
+    with tempfile.TemporaryDirectory(dir=Path.cwd(), prefix=".pe27-") as directory:
+        root = Path(directory)
+        quote_path, research_path, ledger_path = (root / "quotes.duckdb", root / "research.duckdb",
+                                                  root / "paper.duckdb")
+        quote_con = QA.connect(quote_path)
+        for minute in range(360):
+            ts = datetime(2026, 11, 13, 9, 15) + timedelta(minutes=minute)
+            px = price_at(ts)
+            QA.store(quote_con, ts, {"NSE:INFY": {"last_price": px, "volume": minute + 1,
+                                                    "ohlc": {"open": 100.0, "high": px + .1,
+                                                             "low": px - .1, "close": px}}})
+        quote_con.close()
+        with duckdb.connect(str(research_path)) as con:
+            con.execute("CREATE TABLE adjusted_prices (ticker VARCHAR, business_date DATE, close_adj DOUBLE)")
+            con.execute("INSERT INTO adjusted_prices VALUES ('INFY', '2026-11-12', 99.0)")
+            con.execute("CREATE TABLE index_levels_canonical (index_name VARCHAR, variant VARCHAR, "
+                        "business_date DATE, close_level DOUBLE)")
+        monkeypatch.setattr(R, "universe", lambda n, *, research_path: [{"tradingsymbol": "INFY", "adv": 1e8}])
+        monkeypatch.setattr(R, "REPORTS", root / "reports")
+        monkeypatch.setattr(R, "daily_view", lambda **kwargs: (None, None, None))
+        monkeypatch.setattr(R, "daily_up", lambda day, **kwargs: None)
+        monkeypatch.setattr(KD, "candles", lambda *_args, **_kwargs: pytest.fail("network candle API called"))
+        monkeypatch.setattr(KD, "instruments", lambda *_args, **_kwargs: pytest.fail("network instrument API called"))
+        result = R.run_archive_replay(day, n=1, quote_archive_path=quote_path,
+                                      research_path=research_path, ledger_path=ledger_path,
+                                      cohort="local-fixture")
+        assert result["day"] == day.isoformat()
+        assert result["status"] == "complete" and result["symbols"] == 1
+        assert result["data_source"] == "LOCAL_KITE_QUOTE_ARCHIVE"
+        assert result["network_access"] is False and result["broker_orders"] is False
+        actual_ledger = next(root.glob("paper-local-fixture-*.duckdb"))
+        with duckdb.connect(str(actual_ledger), read_only=True) as con:
+            recorded = con.execute("SELECT status, symbols, note FROM runs WHERE day=? AND mode='replay'",
+                                    [day.isoformat()]).fetchone()
+        assert recorded[0:2] == ("complete", 1)
+        assert recorded[2].startswith("ARCHIVE_REPLAY_SHA256:")
+
+        original_replay = R.run_replay
+        monkeypatch.setattr(R, "run_replay", lambda *_args, **_kwargs: pytest.fail(
+            "identical cohort/date must use verification-only path"))
+        verified = R.run_archive_replay(day, n=1, quote_archive_path=quote_path,
+                                        research_path=research_path, ledger_path=ledger_path,
+                                        cohort="local-fixture")
+        assert verified["status"] == "verified_existing" and verified["verification_only"] is True
+        with QA.connect(quote_path) as con:
+            con.execute("UPDATE quotes SET ltp=ltp + 0.01 WHERE symbol='INFY' AND CAST(ts AS DATE)=?", [day])
+        with pytest.raises(ValueError, match="new cohort identifier"):
+            R.run_archive_replay(day, n=1, quote_archive_path=quote_path,
+                                 research_path=research_path, ledger_path=ledger_path,
+                                 cohort="local-fixture")
+        monkeypatch.setattr(R, "run_replay", original_replay)
+        new_version = R.run_archive_replay(day, n=1, quote_archive_path=quote_path,
+                                           research_path=research_path, ledger_path=ledger_path,
+                                           cohort="local-fixture-v2")
+        assert new_version["status"] == "complete" and new_version["verification_only"] is False
 
 
 def price_at(t):
@@ -46,7 +109,28 @@ def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(R, "daily_up", lambda d: None)                     # nor for the daily trend
     from financial_brain.ingest import quote_archive as QA
     monkeypatch.setattr(QA, "PATH", tmp_path / "quotes.duckdb")          # nor the real quote archive
+    run_live = R.run_live
+    test_permission = {"source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+                       "status": "USE_ALLOWED", "effective_from": "2026-01-01",
+                       "effective_through": None, "evidence_ref": "tests/synthetic-feed",
+                       "reviewer": "test-fixture"}
+
+    def run_live_with_permission(*args, **kwargs):
+        kwargs.setdefault("data_permission", test_permission)
+        return run_live(*args, **kwargs)
+
+    monkeypatch.setattr(R, "run_live", run_live_with_permission)
     return tmp_path
+
+
+def test_live_kite_runner_blocks_missing_permission_before_quote_request(monkeypatch, tmp_path):
+    clock = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    requested = []
+    result = R.run_live(quote_fn=lambda *_args: requested.append(True), now_fn=clock.now,
+                        path=tmp_path / "must-not-create.duckdb")
+    assert result["status"] == "rights_blocked"
+    assert result["quote_requests"] == 0 and requested == []
+    assert result["broker_orders"] is False
 
 
 def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger(setup):
@@ -57,62 +141,6 @@ def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger
     rows = con.execute("SELECT strategy, side, exit_reason, mode FROM trades").fetchall()
     assert ("ORB", "long", "target", "live") in rows
     assert (setup / "reports" / "2026-10-06-live.md").exists()
-
-
-def test_live_runner_can_send_existing_kite_polls_to_forward_event_sink(setup, monkeypatch):
-    from financial_brain.forward_edge.market_data import NormalizedEvent
-    from financial_brain.forward_edge.durable import DurableJournal
-    from financial_brain.forward_edge.modes import Mode
-    from financial_brain.forward_edge.session_runner import ForwardRunConfig, ForwardSessionRunner
-
-    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
-    monkeypatch.setattr(R, "universe", lambda n=200: [
-        {"tradingsymbol": "X", "adv": 5e9}, {"tradingsymbol": "Y", "adv": 4e9}
-    ])
-    forward = ForwardSessionRunner(setup / "forward.jsonl")
-    config = ForwardRunConfig(session_id="PAPER-2026-10-06", exchange_date="2026-10-06", cohort_id="C1",
-                              strategy_sha256="a" * 64, risk_policy_sha256="b" * 64,
-                              constraints_sha256="c" * 64, ledger_id="PAPER-LEDGER-1",
-                              benchmark_id="NIFTY50", instruments=("NSE:X", "NSE:Y"), capital_inr="1000000",
-                              mode=Mode.LIVE_PAPER)
-    forward.begin(config)
-
-    def quote(symbols, kind):
-        assert kind == "full"
-        return {s: {"timestamp": "invalid" if s == "NSE:Y" else c.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "last_price": 100.0,
-                    "last_trade_time": "2026-10-06 09:20:00", "volume": 100,
-                    "ohlc": {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0},
-                    "depth": {"buy": [{"price": 99.95, "quantity": 10}],
-                              "sell": [{"price": 100.05, "quantity": 12}]}}
-                for s in symbols}
-
-    out = R.run_live(quote_fn=quote, now_fn=c.now, sleep_fn=c.sleep, path=setup / "sink.duckdb",
-                     poll=300, event_sink=lambda events: forward.append_events(config, events),
-                     preflight_fn=lambda: {"approved": True, "status": "PASS", "checks": {"kite": True}},
-                     preflight_sink=lambda result: forward.record_preflight(config, result),
-                     rejection_sink=lambda rows: forward.record_data_rejections(config, rows))
-    assert out["status"] == "complete"
-    stored = [r["event"] for r in DurableJournal(setup / "forward.jsonl").records()
-              if r["t"] == "MARKET_EVENT"]
-    assert stored and all(r["kind"] == "QUOTE" for r in stored)
-    assert all(dict(tuple(pair) for pair in r["payload"])["quote_fidelity"] == "EXECUTABLE" for r in stored)
-    assert all(r["received_utc"] == r["available_utc"] for r in stored)
-    assert all(isinstance(e, NormalizedEvent) for e in [
-        NormalizedEvent(r["kind"], r["instrument"], datetime.fromisoformat(r["event_utc"]),
-                        datetime.fromisoformat(r["received_utc"]), datetime.fromisoformat(r["available_utc"]),
-                        tuple(tuple(p) for p in r["payload"])) for r in stored])
-    journal_records = DurableJournal(setup / "forward.jsonl").records()
-    assert any(r["t"] == "PREFLIGHT_RESULT" and r["result"]["approved"] for r in journal_records)
-    data_rejections = [r for r in journal_records if r["t"] == "DATA_REJECTION"]
-    assert data_rejections and all(r["instrument"] == "NSE:Y" for r in data_rejections)
-    assert all(r["reason"] == "INVALID_EXCHANGE_TIMESTAMP" and len(r["event_sha256"]) == 64
-               for r in data_rejections)
-    finished = forward.run(config, [], decision_at=datetime(2026, 10, 6, 9, 30, tzinfo=R.IST),
-                           decision_fn=lambda visible: {"side": "NONE", "observed": len(visible)},
-                           risk_fn=lambda _: {"approved": True}, execution_fn=lambda *_: {})
-    assert finished["status"] == "NO_TRADE"
-    assert finished["event_count"] == len(stored)
 
 
 def test_live_view_tracks_open_then_closed_trades_without_a_database_reader(setup):
@@ -147,8 +175,17 @@ def test_a_failing_feed_aborts_after_the_limit_rather_than_spinning_all_day(setu
 
     def broken(symbols, kind):
         raise RuntimeError("token expired")
-    out = R.run_live(quote_fn=broken, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb", max_failures=5)
+    out = R.run_live(quote_fn=broken, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb",
+                     max_failures=5, poll=30)
     assert out["status"] == "aborted" and "token expired" in out["why"]
+    assert out["feed_health"]["status"] == "STALE"
+    assert out["feed_health"]["decision_status"] == "NO_TRADE"
+    assert out["feed_health"]["poll_attempts"] == out["feed_health"]["failed_polls"] == 5
+    assert out["feed_health"]["dropped_packet_count"] is None
+    note = R.ledger(setup / "l.duckdb").execute(
+        "SELECT note FROM runs WHERE mode = 'live'").fetchone()[0]
+    assert '"decision_status":"NO_TRADE"' in note
+    assert '"failed_polls":5' in note
 
 
 def test_missing_session_retries_then_resumes_without_aborting(setup):
@@ -172,6 +209,8 @@ def test_missing_session_retries_then_resumes_without_aborting(setup):
                      path=setup / "l.duckdb", max_failures=1)
     assert out["status"] == "complete" and out["polls"] > 0
     assert attempts > 2
+    assert out["feed_health"]["reconnects"] == 1
+    assert out["feed_health"]["successful_polls"] == out["polls"]
 
 
 def test_missing_session_at_close_is_not_recorded_as_complete(setup):
@@ -209,6 +248,47 @@ def test_replay_runs_the_same_engine_on_minute_candles_and_labels_it(setup):
     assert out["symbols"] == 1 and out["summary"]["ORB"]["trades"] == 1
     ev = R.evidence(R.ledger(setup / "l.duckdb"))
     assert ev[0]["mode"] == "replay" and ev[0]["status"] == "COLLECTING"
+
+
+def test_live_paper_and_replay_never_call_physical_broker_even_with_forged_flags(setup, monkeypatch):
+    """Exercise both intraday simulation entry points under a forged live-order config."""
+    import urllib.request
+
+    from financial_brain.execution.oms.kite_broker import KiteBroker
+    from financial_brain.forward_edge import modes
+
+    calls = []
+    monkeypatch.setattr(KiteBroker, "place", lambda *_args, **_kwargs: calls.append("place"))
+    monkeypatch.setattr(KiteBroker, "_request",
+                        lambda *_args, **_kwargs: pytest.fail("paper/replay called Kite transport"))
+    monkeypatch.setattr(urllib.request, "urlopen",
+                        lambda *_args, **_kwargs: pytest.fail("paper/replay opened an HTTP transport"))
+    monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
+    monkeypatch.setenv("FB_LIVE_ORDERS", "1")
+
+    def candles(tok, start, end, interval):
+        if interval == "day":
+            return [{"ts": "2026-10-01T00:00:00+0530", "close": 100.0},
+                    {"ts": "2026-10-05T00:00:00+0530", "close": 105.0}]
+        return [{"ts": (datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)).strftime(
+                    "%Y-%m-%dT%H:%M:%S+0530"), "open": price_at(datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)),
+                 "high": price_at(datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)) + 0.05,
+                 "low": price_at(datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)) - 0.05,
+                 "close": price_at(datetime(2026, 10, 5, 9, 15) + timedelta(minutes=k)), "volume": 1000}
+                for k in range(360)]
+
+    clock = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    live = R.run_live(poll=3600, quote_fn=fake_quotes(clock), now_fn=clock.now, sleep_fn=clock.sleep,
+                      candles_fn=candles, token_fn=lambda _symbol: 1,
+                      path=setup / "forged-live-paper.duckdb")
+    assert live["status"] == "complete"
+    assert R.ledger(setup / "forged-live-paper.duckdb").execute(
+        "SELECT COUNT(*) FROM trades").fetchone()[0] > 0
+
+    replay = R.run_replay(date(2026, 10, 5), candles_fn=candles, token_fn=lambda _symbol: 1,
+                          path=setup / "forged-replay.duckdb")
+    assert replay["summary"]["ORB"]["trades"] > 0
+    assert calls == []
 
 
 def test_a_late_start_takes_the_opening_range_from_candles_not_from_the_days_high_and_low(setup):
@@ -276,10 +356,53 @@ def test_live_fills_use_the_order_book_from_full_quotes(setup):
         kinds.append(kind)
         out = base(symbols, kind)
         for v in out.values():
-            v["depth"] = {"buy": [{"price": v["last_price"] - 0.05}], "sell": [{"price": v["last_price"] + 0.05}]}
+            v["timestamp"] = c.now().isoformat()
+            v["depth"] = {"buy": [{"price": v["last_price"] - 0.05, "quantity": 10}],
+                          "sell": [{"price": v["last_price"] + 0.05, "quantity": 12}]}
         return out
-    R.run_live(quote_fn=q, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
+    out = R.run_live(poll=900, quote_fn=q, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
     assert set(kinds) == {"full"}
+    assert out["forward_quote_archive"]["archived"] > 0
+    from financial_brain.forward_edge.quote_archive import QuoteArchive
+    archive = QuoteArchive(setup / "l-forward-events.sqlite")
+    event = archive.get(archive._con.execute("SELECT event_id FROM market_events LIMIT 1").fetchone()[0])
+    archive.close()
+    assert event.source == "KITE_CONNECT_READ_ONLY" and event.venue == "NSE"
+    assert event.received_at == event.available_at
+    assert event.event_time <= event.received_at
     row = R.ledger(setup / "l.duckdb").execute(
         "SELECT entry_px, entry_decision_px, spread_bp, shortfall_bp FROM trades").fetchone()
     assert row[0] == pytest.approx(row[1] + 0.05) and row[2] > 0 and row[3] > 0
+
+
+def _feed_breaks_after_entry(c, recover_at=None):
+    good = fake_quotes(c)
+
+    def q(symbols, kind):
+        m = c.t.hour * 60 + c.t.minute
+        if m >= 592 and (recover_at is None or m < recover_at):      # 09:52: after the ORB entry
+            raise OSError("getaddrinfo failed")
+        if m < 592:
+            return good(symbols, kind)
+        return {s: {"last_price": 106.9, "last_trade_time": "2026-10-06 11:00:00",
+                    "ohlc": {"open": 100.0, "high": 106.9, "low": 99.0, "close": 100.0}} for s in symbols}
+    return q
+
+
+def test_feed_failure_with_open_positions_closes_them_at_the_flatten_not_abandons_them(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    out = R.run_live(quote_fn=_feed_breaks_after_entry(c), now_fn=c.now, sleep_fn=c.sleep,
+                     path=setup / "l.duckdb", max_failures=5)
+    assert out["status"] == "aborted"
+    rows = R.ledger(setup / "l.duckdb").execute("SELECT exit_reason, exit_px, exit_ts FROM trades").fetchall()
+    assert rows and all(r[0] == "time_stale_quote" and abs(r[1] - 101.6) < 0.1 for r in rows)
+    assert all(r[2] >= "2026-10-06T15:15" for r in rows)
+
+
+def test_feed_failure_that_recovers_keeps_the_rules_running(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    out = R.run_live(quote_fn=_feed_breaks_after_entry(c, recover_at=660), now_fn=c.now, sleep_fn=c.sleep,
+                     path=setup / "l.duckdb", max_failures=5)
+    assert out["status"] == "complete"
+    rows = R.ledger(setup / "l.duckdb").execute("SELECT exit_reason FROM trades").fetchall()
+    assert ("target",) in rows

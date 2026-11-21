@@ -270,9 +270,9 @@ def fill_bounds(side: str, quotes: list[Quote]) -> tuple[Decimal, Decimal, Decim
         raise ExecutionError("no quotes in the window")
     if side == "BUY":
         prices = [q.ask for q in quotes]
-        return min(prices), sum(prices) / len(prices), max(prices)
+        return min(prices), sum(prices) / Decimal(len(prices)), max(prices)
     prices = [q.bid for q in quotes]
-    return max(prices), sum(prices) / len(prices), min(prices)
+    return max(prices), sum(prices) / Decimal(len(prices)), min(prices)
 
 
 # ---- FE-0067 post-trade identity ----

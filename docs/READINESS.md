@@ -159,6 +159,7 @@ None has happened.
    * results-event drift by filing type;
    * rating actions and pledges as separate events;
    * the held-out drying-up volume replication already registered.
+   * This list is research scope, not authorization to start trials: `docs/forward-edge/trial-program.v1.json` keeps Q1-2027 closed until an owner-approved protocol ADR and explicit budget are recorded, followed by exact-scope human approvals.
 3. **Engineering:**
    * a research-DB snapshot hash per trial;
    * coverage measurement;

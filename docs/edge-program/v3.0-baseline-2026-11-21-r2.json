@@ -1,0 +1,79 @@
+{
+  "schema": "fb.unified_checklist_baseline.v2",
+  "capture_id": "v3.0-baseline-2026-11-21-r2",
+  "captured_at_utc": "2026-11-21T08:08:19Z",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "source_checkout": {
+    "branch": "codex/update-pr40-learning-audit",
+    "commit": "c0059bbc10bf0d9df6eae1658c94b0b1e7a5af39",
+    "working_tree": "clean at capture before this baseline artifact was added"
+  },
+  "main": {
+    "sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+    "evidence": "git ls-remote origin refs/heads/main"
+  },
+  "integration_branch": {
+    "name": "merge/forward-edge-branch-version",
+    "sha": "c0059bbc10bf0d9df6eae1658c94b0b1e7a5af39",
+    "pull_request": 40,
+    "state": "OPEN",
+    "mergeable": true
+  },
+  "active_scheduled_checkout": {
+    "status": "UNVERIFIED",
+    "claimed_checkout": "feature/forward-edge-f00-f01",
+    "claimed_checkout_sha": "d97dacc78d36e36e1130f94547a5dab691ce12dc",
+    "claim_source": "PR #40 description says the branch is used by scheduled paper runs",
+    "repository_workflow_scan": "Only .github/workflows/ci.yml exists; it has no schedule trigger or scheduled paper job.",
+    "limitation": "The actual external scheduler/runner checkout and deployed SHA are not observable from this repository or connected GitHub evidence."
+  },
+  "dependency_versions": {
+    "python": "3.13.5",
+    "pyproject_toml_sha256_lf": "12eb2c21dd8bdb8638e4a1be0bdc72910b6ac78046f4030f556d748432091bc9",
+    "requirements_lock_sha256_lf": "975c74c23711a48b02a11bf6868ac4a70982e54391cfd9a1da4ac1d0f2682681",
+    "lockfile_is_present": true
+  },
+  "market_data_version": {
+    "current_checkout_data_files": "No quote archive or market-data lake files are present in this isolated checkout; data/curated, data/lake and data/quarantine contain no files.",
+    "latest_prior_recorded_snapshot": {
+      "source": "docs/edge-program/current-baseline.json",
+      "baseline_capture": "2026-11-16T12:38:12Z",
+      "quote_rows": 2471710,
+      "symbols": 229,
+      "latest_quote_local_time": "2026-11-16T15:29:45.831049",
+      "rights_status": "UNVERIFIED"
+    },
+    "current_data_version_status": "NOT_REOBSERVED; prior snapshot is historical and not asserted as present/current"
+  },
+  "ci": {
+    "workflow": ".github/workflows/ci.yml",
+    "workflow_sha256_lf": "e5ae66a0f147cab4ee8d8fe810421cfdf91b5c5d11c5450b57ae28c40127a82d",
+    "jobs": {
+      "test": ["ubuntu-24.04", "windows-latest"],
+      "reproducibility": ["ubuntu-24.04", "windows-2022"]
+    },
+    "pr40_head_run": {
+      "head_sha": "c0059bbc10bf0d9df6eae1658c94b0b1e7a5af39",
+      "run_id": 44883135745,
+      "status_at_capture": "in_progress",
+      "conclusion": null,
+      "combined_status_checks": []
+    }
+  },
+  "owner_approvals": {
+    "review_counts": {"PR-34": 0, "PR-36": 0, "PR-37": 0, "PR-38": 0, "PR-39": 0, "PR-40": 0},
+    "evidence": "GitHub pull-request review list for each PR at capture time",
+    "branch_protection_status": "UNAVAILABLE/UNVERIFIED",
+    "limitation": "No review submissions were returned; the connected API cannot inspect branch protection or external owner approvals."
+  },
+  "pull_request_graph": {
+    "path": "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json",
+    "sha256": "f2711506358f95200f3f2aee4fd3aaea917305db6be7278a9c9f337312d2e4be",
+    "pull_requests": [34, 36, 37, 38, 39, 40]
+  },
+  "capture_limits": [
+    "This manifest is a dated repository evidence snapshot, not independent timestamp attestation.",
+    "Unknown scheduled-runtime and branch-protection facts are explicitly recorded as unverified.",
+    "No market-data rights or current quote archive presence is inferred from historical baseline records."
+  ]
+}

@@ -1,7 +1,11 @@
-# ADR-0005: A broker path, closed until a strategy is confirmed and a human arms a stage
+# ADR-0005: Legacy broker-path design (superseded by the paper-only execution lock)
 
-Status: accepted 2026-10-13 (owner instruction: build the order management system, reconciliation, pre-trade risk
-gate, broker kill switch, audit log, staged rollout and execution measurement)
+Status: historical decision accepted 2026-10-13; physical-order portions superseded 2026-11-21 by FB-0007.
+
+> **Current policy:** `financial_brain.execution.order_policy` permanently denies every broker-side write. No
+> credential, environment variable, approval, UI request, rollout stage or kill-switch state can enable physical
+> orders. The stage and OMS workflows below are historical design context and paper/readiness diagnostics only;
+> this ADR is not an instruction or authorization to submit broker orders.
 
 Supersedes the structural claim in [[Kite readiness]] and `providers/kite_data.py` that no order endpoint exists
 anywhere in the package. That claim still holds for `providers/`: the read-only client keeps its GET allowlist and
