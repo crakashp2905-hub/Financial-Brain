@@ -1,0 +1,13 @@
+{
+  "schema": "fb.forward-edge.session-fixtures.v1",
+  "purpose": "Deterministic acceptance scenarios for a future integrated session runner. Fixtures are synthetic and are never market evidence.",
+  "cases": [
+    {"id":"win","expected":"PAPER_CLOSED","entry_price":100.0,"exit_price":103.0,"costs":0.5,"expected_net_pnl":2.5},
+    {"id":"loss","expected":"PAPER_CLOSED","entry_price":100.0,"exit_price":98.0,"costs":0.5,"expected_net_pnl":-2.5},
+    {"id":"no_trade","expected":"NO_TRADE","signal":null,"expected_orders":0},
+    {"id":"rejection","expected":"REJECTED","risk_approved":false,"expected_orders":0},
+    {"id":"late_quote","expected":"BLOCKED_STALE_DATA","quote_age_ms":5001,"maximum_age_ms":5000,"expected_orders":0},
+    {"id":"unknown_order","expected":"SAFE_HOLD","broker_order_state":"UNKNOWN","new_entries_allowed":false},
+    {"id":"adverse_fill","expected":"PAPER_CLOSED","entry_price":100.5,"exit_price":99.0,"costs":0.7,"expected_net_pnl":-2.2}
+  ]
+}

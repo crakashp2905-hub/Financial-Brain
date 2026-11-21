@@ -119,7 +119,8 @@ def source_aware_claim_tier(*, replicated: bool, paper_forward: bool, confirmed:
                                   custody_status=custody_status)
     except ValueError:
         return REPLICATED
-    if evidence_class in (EvidenceClass.HISTORICAL_REPLAY, EvidenceClass.EXPLORATORY_SHADOW):
+    if evidence_class in (EvidenceClass.HISTORICAL_REPLAY, EvidenceClass.DETERMINISTIC_FIXTURE,
+                          EvidenceClass.EXPLORATORY_SHADOW):
         return REPLICATED
     if not (market_observed and pre_entry_sealed and session_complete):
         return REPLICATED

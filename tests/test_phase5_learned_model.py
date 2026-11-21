@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from financial_brain.evaluation import learned_model as LM
 
@@ -27,6 +28,35 @@ def test_train_saves_the_model_with_its_feature_list_and_embargo(tmp_path):
     day = p[p["d"] == p["d"].max()].reset_index(drop=True)
     s = LM.score_frame(day, booster, m2["features"])
     assert np.corrcoef(s, day["a"])[0, 1] > 0.5            # it learned the planted feature
+
+
+def test_training_artifacts_and_prediction_lineage_are_reproducible_and_frozen(tmp_path):
+    p = panel(n_dates=35, n=210, seed=12)
+    model_a, meta_a = tmp_path / "a.txt", tmp_path / "a.json"
+    model_b, meta_b = tmp_path / "b.txt", tmp_path / "b.json"
+    first = LM.train_final(p, ["a", "b"], model_path=model_a, meta_path=meta_a, version="frozen-v7")
+    second = LM.train_final(p.sample(frac=1, random_state=2), ["a", "b"],
+                            model_path=model_b, meta_path=meta_b, version="frozen-v7")
+    assert first["version"] == "frozen-v7"
+    assert first["training_data_sha256"] == second["training_data_sha256"]
+    assert first["feature_schema_sha256"] == second["feature_schema_sha256"]
+    assert first["model_sha256"] == second["model_sha256"]
+    booster, metadata = LM.load(model_a, meta_a)
+    scored = p[p["d"] == p["d"].max()].reset_index(drop=True)
+    predictions = LM.score_frame(scored, booster, metadata["features"])
+    lineage = LM.prediction_lineage(scored, metadata, predictions)
+    assert len(lineage["lineage_sha256"]) == 64
+    with pytest.raises(LM.LearnedModelError, match="immutable"):
+        LM.train_final(p, ["a", "b"], model_path=model_a, meta_path=meta_a, version="frozen-v7")
+
+
+def test_model_load_refuses_artifact_changed_after_freeze(tmp_path):
+    p = panel(n_dates=35, n=210, seed=18)
+    model, metadata = tmp_path / "model.txt", tmp_path / "model.json"
+    LM.train_final(p, ["a", "b"], model_path=model, meta_path=metadata)
+    model.write_text("tampered", encoding="utf-8")
+    with pytest.raises(LM.LearnedModelError, match="artifact hash"):
+        LM.load(model, metadata)
 
 
 def test_the_challenger_joins_the_competition_only_when_scored():

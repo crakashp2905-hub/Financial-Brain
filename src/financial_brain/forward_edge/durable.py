@@ -1,17 +1,107 @@
-"""Durable write-ahead journal, outbox and crash recovery (FE-0011, FE-0012, FE-0013, FE-0020, FE-0021, FE-0049, FE-0072).
-
-* Every record is appended as one line {seq, prev, hash, rec}, flushed and fsynced. Sequence numbers are monotonic and
-  gap-free; the hash chain makes any edit, drop or reorder detectable.
-* On open, a torn final line (power loss mid-write) is discarded; corruption anywhere else raises ``JournalCorrupt``.
-* The outbox writes PENDING before the external action. After a crash, any key that is not ACKED is UNKNOWN: it is
-  reconciled against the venue, never blindly resent and never assumed filled.
-* ``rollover`` writes a snapshot of folded state into a fresh segment atomically (temp file + replace); the state hash
-  is identical before and after, and a backup restores to the same hash.
-"""
+"""Atomic append-only durability primitives shared by the forward-session runner."""
 from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
+from datetime import datetime, timezone
+from typing import Any
+
+
+class DurableJournalError(ValueError):
+    """Durable journal rejected conflicting or malformed evidence."""
+
+
+class DurableSessionJournal:
+    """Append lifecycle events and their audit records in the runner's SQLite database."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self.connection = connection
+        self.connection.execute("""CREATE TABLE IF NOT EXISTS runner_audit_log (
+            sequence INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL,
+            record_id TEXT NOT NULL, kind TEXT NOT NULL, occurred_at TEXT NOT NULL,
+            record_sha256 TEXT NOT NULL, record_json TEXT NOT NULL,
+            UNIQUE(session_id, record_id))""")
+        self.connection.executescript("""
+            CREATE TRIGGER IF NOT EXISTS runner_audit_no_update
+            BEFORE UPDATE ON runner_audit_log BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
+            CREATE TRIGGER IF NOT EXISTS runner_audit_no_delete
+            BEFORE DELETE ON runner_audit_log BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
+        """)
+
+    @staticmethod
+    def canonical(record: dict[str, Any]) -> tuple[str, str]:
+        try:
+            encoded = json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise DurableJournalError(f"record is not canonical JSON: {exc}") from exc
+        return encoded, hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+    def append_audit(self, *, session_id: str, kind: str, record_id: str,
+                     occurred_at: datetime, record: dict[str, Any]) -> bool:
+        if not session_id.strip() or not kind.strip() or not record_id.strip():
+            raise DurableJournalError("audit session, kind and record identity are required")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise DurableJournalError("audit timestamp must be timezone aware")
+        canonical, digest = self.canonical(record)
+        stable_id = f"{kind}:{record_id}"
+        previous = self.connection.execute(
+            "SELECT record_sha256 FROM runner_audit_log WHERE session_id=? AND record_id=?",
+            [session_id, stable_id]).fetchone()
+        if previous:
+            if previous[0] != digest:
+                raise DurableJournalError("append-only audit record conflicts with prior evidence")
+            return False
+        self.connection.execute(
+            "INSERT INTO runner_audit_log "
+            "(session_id, record_id, kind, occurred_at, record_sha256, record_json) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [session_id, stable_id, kind, occurred_at.astimezone(timezone.utc).isoformat(), digest, canonical])
+        return True
+
+    def append_lifecycle_record(self, *, session_id: str, kind: str, event_id: str,
+                                occurred_at: datetime, record: dict[str, Any]) -> bool:
+        """Atomically persist the materialized lifecycle event and its immutable audit entry."""
+        if not session_id.strip() or not kind.strip() or not event_id.strip():
+            raise DurableJournalError("lifecycle session, kind and event identity are required")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise DurableJournalError("lifecycle timestamp must be timezone aware")
+        canonical, digest = self.canonical(record)
+        event_key = f"{session_id}:{kind}"
+        event_time = occurred_at.astimezone(timezone.utc).isoformat()
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            prior = self.connection.execute(
+                "SELECT event_sha256 FROM runner_events WHERE session_id=? AND event_id=?",
+                [session_id, event_key]).fetchone()
+            if prior and prior[0] != digest:
+                raise DurableJournalError("session lifecycle record conflicts with prior evidence")
+            if not prior:
+                self.connection.execute(
+                    "INSERT INTO runner_events (session_id, event_id, kind, available_at, ingested_at, "
+                    "ingest_clock_source, event_sha256, event_json) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)",
+                    [session_id, event_key, kind, event_time, digest, canonical])
+            self.append_audit(session_id=session_id, kind=kind, record_id=event_key,
+                              occurred_at=occurred_at, record=record)
+            self.connection.commit()
+            return prior is None
+        except Exception:
+            self.connection.rollback()
+            raise
+
+    def audit_records(self, session_id: str) -> list[dict[str, Any]]:
+        rows = self.connection.execute(
+            "SELECT sequence, record_id, kind, occurred_at, record_sha256, record_json "
+            "FROM runner_audit_log WHERE session_id=? ORDER BY sequence", [session_id]).fetchall()
+        return [{"kind": row[2], "record_id": row[1], "occurred_at": row[3],
+                 "record_sha256": row[4], "record": json.loads(row[5])} for row in rows]
+
+
+__all__ = ["DurableJournalError", "DurableSessionJournal"]
+
+
+# ---- merged from main (2026-11-18): definitions main's modules depend on; the branch's own
+# ---- definitions above are unchanged.
 import os
 from pathlib import Path
 
@@ -109,8 +199,6 @@ class DurableJournal:
         return out
 
 
-# ---- state folded from the journal ----
-
 def fold(journal: DurableJournal) -> dict:
     """Rebuild economic state from records alone. Fills are keyed by fill id, so a replayed record cannot double-count."""
     state: dict = {"receipt": False, "signal": None, "risk": None, "outbox": {}, "fills": {}, "ledger": False, "cash": "0"}
@@ -142,8 +230,6 @@ def state_hash(state: dict) -> str:
     return hashlib.sha256(_canon(clean).encode("utf-8")).hexdigest()
 
 
-# ---- simulated venue ----
-
 class SimBroker:
     """In-memory venue stand-in. It remembers what it received, which is what reconciliation asks it."""
 
@@ -161,6 +247,8 @@ class SimBroker:
 
 
 STAGES = ("receipt", "signal", "risk", "outbox_pending", "send", "ack", "fill", "ledger")
+
+
 MODES = ("before", "torn", "after")
 
 
@@ -228,8 +316,6 @@ def recover(journal: DurableJournal, broker: SimBroker, key: str) -> dict:
     return run_session(journal, broker, key)
 
 
-# ---- rollover, backup, restore (FE-0021) ----
-
 def rollover(journal: DurableJournal, archive_path: Path) -> str:
     """Compact: archive the old segment, atomically start a new one whose first record is a state snapshot."""
     st = fold(journal)
@@ -263,3 +349,4 @@ def restore(backup_path: Path, target: Path) -> DurableJournal:
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(backup_path.read_bytes())
     return DurableJournal(target)
+

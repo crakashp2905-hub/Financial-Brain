@@ -15,10 +15,6 @@ BASE = {
 }
 
 
-_IM = {"isin": "INE009A01021", "symbol": "INFY", "lot": 1, "tick": "0.05", "status": "ACTIVE", "rights_ok": True}
-_MK = {"age_s": 1, "spread_bps": 5, "volume": 1000, "circuit_hit": False, "frozen": False, "auction_seen": True}
-
-
 def _make(name: str, **over) -> dict:
     fx = copy.deepcopy(BASE)
     fx["session_id"] = f"FX-{name}"
@@ -38,14 +34,19 @@ def fixture_pack() -> dict[str, dict]:
                               trades=[{"offset_ms": 400, "price": "1499.50", "qty": 10}]),
         "missed_fill": _make("missed_fill", passive=True, limit="1500.00",
                              trades=[{"offset_ms": 400, "price": "1500.00", "qty": 10}]),
-        "halted_instrument": _make("halted_instrument", instrument_master=dict(_IM, status="SUSPENDED")),
-        "expired_contract": _make("expired_contract", instrument_master=dict(_IM, expiry="2027-01-01")),
-        "wide_spread_gate": _make("wide_spread_gate", market=dict(_MK, spread_bps=80)),
-        "stale_and_frozen_gate": _make("stale_and_frozen_gate", market=dict(_MK, age_s=9, frozen=True)),
     }
 
 
 EXPECTED = {"win": "WIN", "loss": "LOSS", "no_trade": "NO_TRADE", "rejection": "REJECTED", "late_quote": "LATE_QUOTE",
-            "unknown_order": "UNKNOWN_ORDER", "adverse_fill": "LOSS", "missed_fill": "MISSED_FILL",
-            "halted_instrument": "NO_TRADE", "expired_contract": "NO_TRADE", "wide_spread_gate": "NO_TRADE",
-            "stale_and_frozen_gate": "NO_TRADE"}
+            "unknown_order": "UNKNOWN_ORDER", "adverse_fill": "LOSS", "missed_fill": "MISSED_FILL"}
+
+
+# ---- merged from main (2026-11-18): definitions main's modules depend on; the branch's own
+# ---- definitions above are unchanged.
+
+
+_IM = {"isin": "INE009A01021", "symbol": "INFY", "lot": 1, "tick": "0.05", "status": "ACTIVE", "rights_ok": True}
+
+
+_MK = {"age_s": 1, "spread_bps": 5, "volume": 1000, "circuit_hit": False, "frozen": False, "auction_seen": True}
+

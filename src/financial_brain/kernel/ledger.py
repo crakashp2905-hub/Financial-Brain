@@ -6,6 +6,8 @@ second truth). Corrections are reversal transactions that cite the original; not
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -114,6 +116,23 @@ class DoubleEntryLedger:
             for c, net in balance_by_currency(self._txns[txn_id].entries).items():
                 totals[c] = totals.get(c, Decimal(0)) + net
         return all(v == 0 for v in totals.values())
+
+    def as_dict(self) -> dict[str, object]:
+        """Return a stable ordered snapshot suitable for audit hashes and recovery comparisons."""
+        transactions = []
+        for txn_id in self._order:
+            txn = self._txns[txn_id]
+            transactions.append({
+                "txn_id": txn.txn_id, "reverses": txn.reverses, "reason": txn.reason,
+                "entries": [{"account": entry.account, "side": entry.side,
+                             "amount": format(entry.amount.amount, "f"),
+                             "currency": entry.amount.currency} for entry in txn.entries],
+            })
+        return {"schema": "fb.double-entry-ledger.v1", "transactions": transactions}
+
+    def sha256(self) -> str:
+        canonical = json.dumps(self.as_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def __len__(self) -> int:
         return len(self._order)

@@ -1,7 +1,11 @@
-# Runbook: the order management system (ADR-0005)
+# Legacy live-order runbook — disabled (historical reference only)
 
-For the owner. Read this before `fb live promote --to 1 --runbook-read`. Nothing below happens without you: Claude
-does not set `FB_LIVE_ORDERS`, arm a stage, approve an order, reset the kill switch, or log in to Kite.
+> **Do not use this document to authorize or attempt physical orders.** Since 2026-11-21, the shared
+> `financial_brain.execution.order_policy` denies every non-GET request in the Kite adapter before credentials or
+> network transport are accessed. Stage promotions, `FB_LIVE_ORDERS`, approvals and kill-switch state cannot bypass
+> this policy. This page is retained as historical context; use the paper-trading runbooks for current workflows.
+
+The rest of this document describes the former staged broker-order design and is not an active procedure.
 
 ## The locks, and where each lives
 
