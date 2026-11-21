@@ -16,12 +16,39 @@ Tier 1: AMFI is the industry body that publishes these NAVs, not a scraper of th
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from .base import FetchError, FetchResult, Provider
 
 NAV_ALL = "https://portal.amfiindia.com/spages/NAVAll.txt"
 HEADER = "Scheme Code"
+MAX_HISTORY_WINDOW_DAYS = 90
+
+
+def bounded_history_windows(
+    start_date: date,
+    end_date: date,
+    *,
+    max_days: int = MAX_HISTORY_WINDOW_DAYS,
+) -> list[tuple[date, date]]:
+    """Partition an inclusive history range into windows no longer than 90 days.
+
+    This pure helper only constructs request bounds. It does not fetch data or grant
+    permission to use an AMFI endpoint; callers must separately verify the provider's
+    current terms and approved access method.
+    """
+    if start_date > end_date:
+        raise ValueError("start_date must be on or before end_date")
+    if not 1 <= max_days <= MAX_HISTORY_WINDOW_DAYS:
+        raise ValueError(f"max_days must be between 1 and {MAX_HISTORY_WINDOW_DAYS}")
+
+    windows: list[tuple[date, date]] = []
+    window_start = start_date
+    while window_start <= end_date:
+        window_end = min(end_date, window_start + timedelta(days=max_days - 1))
+        windows.append((window_start, window_end))
+        window_start = window_end + timedelta(days=1)
+    return windows
 
 
 class AmfiNav(Provider):
