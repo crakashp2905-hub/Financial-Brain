@@ -15,10 +15,11 @@ from enum import Enum
 from collections.abc import Sequence
 
 from financial_brain.forward_edge.approvals import Approval
-
-#: Build policy. Changing this is a reviewed code change, never a runtime setting.
-PHYSICAL_ORDERS_ENABLED = False
-
+from financial_brain.execution.order_policy import (
+    PHYSICAL_ORDERS_ENABLED as PHYSICAL_ORDERS_ENABLED,
+    PhysicalOrderDenied,
+    deny_physical_order,
+)
 
 class Mode(str, Enum):
     RESEARCH_REPLAY = "RESEARCH_REPLAY"
@@ -70,7 +71,10 @@ def resolve_mode(
     if not isinstance(requested, Mode):
         raise ModeError("mode must be a Mode member")
     if requested is Mode.LIVE_CASH:
-        raise ModeError("LIVE_CASH unavailable: physical orders are permanently disabled in this pipeline")
+        try:
+            deny_physical_order("LIVE_CASH")
+        except PhysicalOrderDenied as exc:
+            raise ModeError(f"LIVE_CASH unavailable: {exc}") from exc
     if requested is Mode.BROKER_DRYRUN and (compliance is None or not compliance.verified):
         raise ModeError("BROKER_DRYRUN needs a verified broker compliance record")
     return SessionMode(requested)

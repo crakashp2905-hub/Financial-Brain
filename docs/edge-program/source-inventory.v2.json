@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 623,
+  "source_count": 624,
   "sources": [
     {
       "capability_ids": [],
@@ -2547,7 +2547,7 @@
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/__init__.py",
-      "source_sha256": "1f4a40a924fd7edcdc6c01e5a7d6d07a970799e2746b2275e3e017896bdca435",
+      "source_sha256": "758f6f889ef9aaec90114d3bf48478a18c579ed01f52222130d6bc20bfba5a13",
       "test_paths": []
     },
     {
@@ -2581,7 +2581,7 @@
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/engine.py",
-      "source_sha256": "e3ecf754c8fd658286aca19e23b0ea2e9c150e9642f703479f3ec6b13a8faa9d",
+      "source_sha256": "75f7e9aa8a55574b577fbfc2bde0f6c2b6bf27c77fb9c3d57cd545658bb4304c",
       "test_paths": [
         "tests/test_oms.py",
         "tests/test_oms_shortfall_contract.py"
@@ -2645,6 +2645,7 @@
         "__future__",
         "broker",
         "json",
+        "order_policy",
         "os",
         "providers",
         "providers.kite_data",
@@ -2657,7 +2658,7 @@
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/kite_broker.py",
-      "source_sha256": "4e3138f42bd81960e6a90aa8ce721a92db202a2c7bc3db9d57010bd3b566cfe7",
+      "source_sha256": "0fcedcbfe9eafbc7b3601d216da70a4bc407e702e90a35bc163c18f8e0cc68a0",
       "test_paths": [
         "tests/test_forward_edge_f00.py"
       ]
@@ -2746,7 +2747,7 @@
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/rollout.py",
-      "source_sha256": "df0a92bb91ae8db5bedca674bc7a9a1353685fffc3a64b380e0d493e677224ae",
+      "source_sha256": "d8954c3dc67e0a4ac383d9fff80413420bfe89e087497eed3d5ee077169b24ed",
       "test_paths": []
     },
     {
@@ -2779,6 +2780,19 @@
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/slicer.py",
       "source_sha256": "911f28bd889a809aa814c32531f35200e92538f821975869d0920b109a10c0b7",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Execution",
+      "parse_status": "ok",
+      "source": "src/financial_brain/execution/order_policy.py",
+      "source_sha256": "4be2953f079e4831bba3f61a69006863f36535de0dddd748dbf55540dec6ca1b",
       "test_paths": []
     },
     {
@@ -4399,13 +4413,14 @@
         "dataclasses",
         "datetime",
         "enum",
+        "financial_brain.execution.order_policy",
         "financial_brain.forward_edge.approvals"
       ],
       "maturity": "locally_mapped",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/modes.py",
-      "source_sha256": "1fb6270b7499969fbfc295cf1e7245a68b412a4f62fdbbd768c844e4751d3f13",
+      "source_sha256": "7ecfdf8718b189ed0fc3a867c598d9e0b7fdf68371d1e161f7ac7ffe923e2422",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
@@ -5279,7 +5294,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/tracker.py",
-      "source_sha256": "010ce47532912d8c40afe303f490990339761a45be4770560e5272ed15a05f61",
+      "source_sha256": "6e7340409935be0846728b887e9fd011f821deaa7e199b1b0c4e75bf4c5e6842",
       "test_paths": []
     },
     {
@@ -10842,6 +10857,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 608,
+  "unassessed_count": 609,
   "unassigned_role_count": 373
 }

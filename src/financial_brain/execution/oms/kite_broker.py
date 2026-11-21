@@ -1,9 +1,9 @@
-"""KiteBroker: the one place in the package that can send an order to Kite (ADR-0005).
+"""Legacy Kite account adapter; broker-side writes are permanently disabled.
 
-``providers/kite_data.py`` stays read-only and keeps its GET allowlist; this module has its own, smaller allowlist of
-the order and portfolio endpoints, and it refuses to send anything until :func:`locks` is all open. The locks are
-re-checked on **every** placement, not once at start-up, so tripping the kill switch or disarming a stage stops the
-next order even inside a running process.
+``providers/kite_data.py`` remains the read-only market-data adapter. This legacy module can read the allowlisted
+order/portfolio endpoints for reconciliation, but the shared :mod:`financial_brain.execution.order_policy` refuses
+every non-GET request before credentials or network transport are accessed. Rollout and kill-switch checks remain
+available as readiness diagnostics; passing them does not authorize physical orders.
 
 Kite Connect v3, as documented by Zerodha (verify against the current docs before stage 1):
 
@@ -14,8 +14,8 @@ Kite Connect v3, as documented by Zerodha (verify against the current docs befor
     GET    /portfolio/holdings          delivery holdings (quantity + t1_quantity)
     GET    /quote/ltp                   last prices (served by kite_data's read-only client)
 
-Limit orders only, ``validity=DAY``, product CNC (delivery) unless the stage file allows another. Credentials are read
-from the environment exactly as ``kite_data`` reads them; nothing here stores, prints or asks for one.
+Credentials are read from the environment exactly as ``kite_data`` reads them; nothing here stores, prints or asks
+for one. They cannot override the physical-order lock.
 """
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ import urllib.request
 
 from . import model as M
 from .broker import BrokerError, BrokerOrder, BrokerTimeout
+from ..order_policy import deny_physical_order
 
 API = "https://api.kite.trade"
 ORDER_ENDPOINTS = ("/orders/regular", "/orders", "/portfolio/positions", "/portfolio/holdings")
@@ -41,7 +42,7 @@ class LiveLocked(RuntimeError):
 
 
 def locks(strategy_verdict: str, *, stage_path=None, ks_path=None) -> list[str]:
-    """Every closed lock, in words. Empty means an order may be sent (the risk gate still runs separately)."""
+    """Return rollout readiness diagnostics; an empty list never authorizes a physical order."""
     from . import killswitch as KS
     from . import rollout as RO
     closed = []
@@ -71,6 +72,8 @@ class KiteBroker:
     # ------------------------------------------------------------------ transport
 
     def _request(self, method: str, path: str, data: dict | None = None, timeout: int = 10) -> dict:
+        if method.upper() != "GET":
+            deny_physical_order(f"Kite {method.upper()} {path}")
         if not any(path == p or path.startswith(p + "/") for p in ORDER_ENDPOINTS):
             raise BrokerError(f"refusing {path!r}: not an endpoint this broker uses")
         from ...providers.kite_data import credentials

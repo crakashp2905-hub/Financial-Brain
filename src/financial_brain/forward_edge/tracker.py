@@ -44,6 +44,7 @@ MODE_TESTS = ("test_live_cash_is_unavailable_by_default", "test_credentials_appr
               "test_live_cash_stays_disabled_with_human_approval_and_compliance",
               "test_broker_dryrun_needs_verified_compliance",
               "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+              "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open",
               "test_session_mode_is_immutable")
 APPROVAL_TESTS = ("test_software_actor_identifiers_cannot_approve",
                   "test_non_human_actor_type_is_rejected_even_with_a_human_looking_name",
@@ -478,8 +479,9 @@ OVERRIDES: dict[str, Entry] = {
     "FE-0131": Entry("PARTIAL", ("test_automatic_rollback_enters_safe_hold_and_blocks_new_orders",), (),
                      "Drift, outage, accounting mismatch or manual pause can revert to the frozen safe policy and disable new entries while preserving unknown-order counts. Runtime monitors and every order-entry adapter do not yet invoke the rollback hook."),
     # ---- F12 ----
-    "FE-0132": Entry("PARTIAL", ("test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",), (BLK_BROKER,),
-                     "No broker adapter exists; physical-order gate is False everywhere."),
+    "FE-0132": Entry("PARTIAL", ("test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+                                  "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open"), (BLK_BROKER,),
+                     "Legacy Kite account adapter is read-only: the shared order policy denies every non-GET request; external broker review remains a separate gate."),
     "FE-0133": Entry("BLOCKED", (), (BLK_COMPLIANCE,), "Owner and broker must confirm permissions."),
     "FE-0134": Entry("BLOCKED", (), (BLK_COMPLIANCE,), "Static IP and algo identifiers need broker evidence."),
     "FE-0135": Entry("BLOCKED", (), (BLK_MARKET, BLK_BROKER), "Ten market-hours rehearsals need a broker dry-run."),

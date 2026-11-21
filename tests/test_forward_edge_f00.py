@@ -346,6 +346,9 @@ def test_live_cash_is_unavailable_by_default() -> None:
 
 def test_credentials_approvals_or_runtime_flags_cannot_enable_cash(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
+    monkeypatch.setenv("FB_LIVE_ORDERS", "1")
+    monkeypatch.setenv("KITE_API_KEY", "test-key")
+    monkeypatch.setenv("KITE_ACCESS_TOKEN", "test-token")
     compliance = ComplianceRecord("broker-x", True, NOW, SHA)
     human = _approval("LIVE_CASH_ENABLE", subject="pilot-1", scope=SHA, adr=None)
     with pytest.raises(ModeError, match="permanently disabled"):

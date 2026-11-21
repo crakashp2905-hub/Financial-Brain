@@ -1,4 +1,4 @@
-"""Rollout stages (ADR-0005): what may trade, how much, and who decides to go further.
+"""Legacy rollout readiness stages (ADR-0005); stages cannot enable physical orders.
 
     0 OFF          paper only; KiteBroker sends nothing
     1 TICKET       every order waits for a human approval; total deployed <= Rs 50,000
@@ -13,6 +13,8 @@ starts, and the evidence each needs is gathered by the engine, not asserted by t
 it. A demotion never raises capital, so it needs no one's permission.
 
 Nothing here ever increases capital on its own: limits come from this table or from the owner's stage file.
+The shared execution order policy denies all broker writes regardless of stage. These stages remain useful for
+paper-process testing and diagnostic readiness only; they are not a live execution authorization.
 """
 from __future__ import annotations
 
