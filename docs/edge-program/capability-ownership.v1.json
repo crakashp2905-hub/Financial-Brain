@@ -2727,6 +2727,12 @@
       "module_owner": "src/financial_brain/providers/bse_filing.py"
     },
     {
+      "capability_id": "module:src/financial_brain/providers/etf_reference.py",
+      "path": "src/financial_brain/providers/etf_reference.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/etf_reference.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/providers/kite.py",
       "path": "src/financial_brain/providers/kite.py",
       "module_role": "provider_adapter",

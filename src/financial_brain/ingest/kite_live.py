@@ -72,9 +72,19 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
 
     if not symbols or any(not isinstance(symbol, str) or not symbol.strip() for symbol in symbols):
         raise ValueError("symbols must be non-empty strings")
-    if len(set(symbols)) != len(symbols):
-        raise ValueError("symbols must be unique")
-    keys = [f"NSE:{symbol}" for symbol in symbols]
+    keys = []
+    for value in symbols:
+        value = value.strip()
+        if ":" in value:
+            exchange, symbol = value.split(":", 1)
+            exchange = exchange.strip().upper()
+            if exchange not in {"NSE", "BSE"} or not symbol.strip() or ":" in symbol:
+                raise ValueError("qualified symbols must be NSE:SYMBOL or BSE:SYMBOL")
+            keys.append(f"{exchange}:{symbol.strip()}")
+        else:
+            keys.append(f"NSE:{value}")
+    if len(set(keys)) != len(keys):
+        raise ValueError("exchange-qualified symbols must be unique")
     raw = (quote_fn or kd.quote)(keys, "full")
     receipt = received_at or datetime.now(timezone.utc)
     if receipt.tzinfo is None or receipt.utcoffset() is None:
