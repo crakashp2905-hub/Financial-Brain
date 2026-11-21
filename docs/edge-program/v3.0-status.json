@@ -7504,17 +7504,19 @@
         "src/financial_brain/cli.py (`fb learning audit`; concise output and --json full result)",
         "tests/test_learning_audit.py (positive, negative, missing-artifact, missing-test, stale-snapshot and CLI cases)",
         "tests/test_forward_edge_f00.py (protected trial charter/cohort scope governance)",
-        "3f3f3e43"
+        "2e420cc4"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-21T06:36:44+00:00",
-      "commit": "61af4825",
+      "last_audited_at_utc": "2026-11-21T06:42:46+00:00",
+      "commit": "470a4b22",
       "test_evidence": [
         "tests/test_learning_audit.py",
         "tests/test_forward_edge_f00.py",
-        "tests/test_standard.py"
+        "tests/test_standard.py",
+        "tests/test_forward_edge_integrity_gates.py",
+        "tests/test_forward_edge_tracker.py"
       ],
-      "artifact_sha256": "7ae416944fedbda0b2081cfdf714af8b8d85b0c7bc10c9a2445d74d02c3e1f88"
+      "artifact_sha256": "57053b59ea85e4eecb32467d58f45bdc9d4850f73451034ed1e4ad361b1c4f9c"
     },
     {
       "id": "SL-00-15",
@@ -13869,7 +13871,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T06:36:44+00:00",
+    "as_of_utc": "2026-11-21T06:42:46+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13904,6 +13906,6 @@
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "SL-00-14 COMPLETE: fail-closed fb learning audit CLI and stale evidence rejection; 68 focused tests pass. Current blockers are reported by the command."
+    "evidence_update": "SL-00-14 COMPLETE on PR #40 integration branch: fail-closed learning audit CLI and stale evidence rejection; 79 focused regression tests pass on the integrated branch. Current blocked gates are reported by the command."
   }
 }
