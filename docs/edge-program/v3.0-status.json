@@ -7580,7 +7580,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T07:49:35+00:00",
-      "commit": null,
+      "commit": "1c4f4848",
       "test_evidence": [
         "tests/test_reference_candidates.py"
       ],
