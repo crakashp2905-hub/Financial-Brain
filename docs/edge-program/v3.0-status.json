@@ -7524,14 +7524,24 @@
     {
       "id": "SL-00-15",
       "text": "Create CODEOWNERS-style ownership map for source adapters, simulation, RL, research governance, risk, portfolio, trader UX and accounting.",
-      "source_checked": false,
-      "status": "NOT_STARTED",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        ".github/ (workflows present; CODEOWNERS-style map not found)"
+        ".github/CODEOWNERS (domain path patterns routed to the repository maintainer account)",
+        "docs/edge-program/ownership-map.v1.json (eight requested domains, paths and explicit account identity scope)",
+        "scripts/validate_codeowners_map.py (validates every documented domain path has a matching CODEOWNERS route)",
+        "tests/test_codeowners_map.py",
+        "CI step: .github/workflows/ci.yml (ownership map validation)",
+        "The map uses the known repository maintainer account for all domains; it does not claim separate teams or named functional owners."
       ],
-      "blocker": "No ownership map covering all requested domains was found.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-21T07:45:01+00:00",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_codeowners_map.py"
+      ],
+      "artifact_sha256": "483dfc5036a8cd9f4a06cb1db1aed3b361ebd6937de5bd7dec476f8d46500bb7",
+      "test_result": "CODEOWNERS validator passed; focused test 1 passed; Ruff and mypy passed; git diff --check passed."
     },
     {
       "id": "SL-00-16",
@@ -13885,7 +13895,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T07:40:41+00:00",
+    "as_of_utc": "2026-11-21T07:45:01+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13910,19 +13920,20 @@
     "status_counts": {
       "UNASSESSED": 1360,
       "PARTIAL": 13,
-      "NOT_STARTED": 2,
+      "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 1,
-      "COMPLETE": 2
+      "COMPLETE": 3
     },
-    "verified_complete_count": 2,
+    "verified_complete_count": 3,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/forward-edge-equivalence-report.v1.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json",
+      "docs/edge-program/ownership-map.v1.json",
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "SL-00-16 COMPLETE: generated and tested fixed-fixture comparison across all 8 deterministic sessions. Current legacy outputs match frozen signatures; integrated runner outcomes match fixture contracts including NO_TRADE. UNKNOWN_ORDER remains INCOMPLETE with explicit fail-closed rationale. Full historical version diffs and live strategy parity are explicitly outside what the signature-only synthetic oracle proves."
+    "evidence_update": "SL-00-15 COMPLETE: CODEOWNERS routes all eight requested source, simulation, RL/forecasting, governance, risk, portfolio, trader UX and accounting domains to the known repository maintainer account. A machine-readable registry, validator, test and CI check keep path coverage synchronized. No separate teams or functional owners are asserted."
   }
 }

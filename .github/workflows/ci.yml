@@ -46,6 +46,8 @@ jobs:
         run: python scripts/forward_engine_graph.py --check
       - name: Verify fixed-fixture legacy/integrated paper equivalence report
         run: python scripts/forward_edge_equivalence_report.py --check
+      - name: Verify CODEOWNERS domain coverage
+        run: python scripts/validate_codeowners_map.py
       - name: Verify scoped authoritative state ownership
         run: python scripts/state_ownership.py
       - name: Verify protected-trial program windows and budgets
