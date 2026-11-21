@@ -1293,32 +1293,62 @@
     {
       "id": "FB-0410",
       "text": "Human decisions may create a separate manual-approved paper sleeve, while an autonomous paper sleeve preserves objective original outcomes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/books.py BookSet creates isolated OMS/cash/reservation books and refuses implicit capital transfers.",
+        "src/financial_brain/forward_edge/approvals.py validates human-only, exact-scope, expiring approvals; paper staging policies use scoped human approval.",
+        "A paired manual-approved sleeve and autonomous original-decision sleeve are not currently bound to the same signal identity or reconciled as matched books."
+      ],
+      "blocker": "Partial: separate paper books and exact human approvals exist, but a paired manual/autonomous sleeve workflow preserving the objective original outcome is not integrated.",
+      "last_audited_at_utc": "2026-11-21T17:48:36+00:00",
+      "commit": "236346a2",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0410-12-full tests/test_forward_edge_f14.py tests/test_forward_edge_ui_actions.py -q: 118 passed across the combined command",
+        "Ruff: passed",
+        "mypy: passed for scoped implementation modules"
+      ],
+      "test_result": "Existing isolation, human-approval, counterfactual, evidence-tier and missing-session controls pass focused tests; end-to-end signal/book integration remains incomplete."
     },
     {
       "id": "FB-0411",
       "text": "Store rejected signals and their counterfactual follow-up observations without reclassifying them as actual portfolio P&L.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/abstention.py freezes policy/version lineage and stores TRADE versus ABSTAIN outcomes with explicit RESOLVED/UNRESOLVED states and separate policy-realized versus counterfactual returns.",
+        "Abstention evaluation requires an exact frozen opportunity universe, retains unresolved items in the denominator, and counts missed winners/avoided losses without adding counterfactual return to realized policy P&L.",
+        "src/financial_brain/research/counterfactual_store.py preserves immutable as-of decision context; continuous signal rejection/follow-up capture is not yet wired to it."
+      ],
+      "blocker": "Partial: immutable counterfactual and abstention outcome primitives exist, but automatic rejected-signal capture, follow-up maturation and integrated reporting remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T17:48:36+00:00",
+      "commit": "236346a2",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0410-12-full tests/test_forward_edge_abstention.py tests/test_inverse_strategy.py -q: 118 passed across the combined command",
+        "Ruff: passed",
+        "mypy: passed for scoped implementation modules"
+      ],
+      "test_result": "Existing isolation, human-approval, counterfactual, evidence-tier and missing-session controls pass focused tests; end-to-end signal/book integration remains incomplete."
     },
     {
       "id": "FB-0412",
       "text": "Distinguish signal quality from execution quality and calendar availability; missing data is an explicit state.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/completeness.py models expected/received/missing segments, incidents, close-report completeness and evidence eligibility as an immutable report.",
+        "src/financial_brain/forward_edge/evidence_labels.py keeps fixture/replay/local-paper/forward evidence classes separate; incomplete sessions cannot be promoted by absent incident rows alone.",
+        "Session completeness and evidence tiers are not yet joined to canonical signal/OMS attribution to separately quantify signal quality, execution quality and venue-calendar availability."
+      ],
+      "blocker": "Partial: missing-segment and evidence-tier semantics exist, but cross-layer signal/execution/calendar attribution is not integrated into one report.",
+      "last_audited_at_utc": "2026-11-21T17:48:36+00:00",
+      "commit": "236346a2",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-fb-0410-12-full tests/test_forward_edge_completeness.py tests/test_forward_edge_f06.py tests/test_evidence_labels.py -q: 118 passed across the combined command",
+        "Ruff: passed",
+        "mypy: passed for scoped implementation modules"
+      ],
+      "test_result": "Existing isolation, human-approval, counterfactual, evidence-tier and missing-session controls pass focused tests; end-to-end signal/book integration remains incomplete."
     },
     {
       "id": "FB-0451",
