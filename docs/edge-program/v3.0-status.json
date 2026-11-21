@@ -486,142 +486,278 @@
     {
       "id": "FB-0201",
       "text": "Build `providers/etf_reference.py` using permitted NSE/BSE/AMC reference disclosures, exchange codes, identifiers and effective-dated listing status.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_reference.py (normalizes source-hashed NSE/BSE/AMC ETF rows, canonical identifiers, listing intervals, fund house/index metadata and publication/observation clocks)",
+        "ETFReferenceCatalog requires separately effective RETENTION and RESEARCH DataPermission grants; missing/denied rights fail closed",
+        "No exchange/AMC data was downloaded or retained; real permitted reference disclosures and exchange-code coverage are not yet loaded"
+      ],
+      "blocker": "Partial: validated provider contract and point-in-time catalog are implemented, but no actual permitted exchange/AMC reference snapshots have been loaded and audited; therefore source coverage and rights evidence are not established.",
+      "last_audited_at_utc": "2026-11-21T14:05:00+00:00",
+      "commit": "b9acea15",
+      "test_evidence": [
+        "tests/test_etf_reference.py: 5 passed (identity/hash validation, separate purpose permissions, effective-date overlap/successor handling, and publication-time as-of visibility)",
+        "Ruff and targeted mypy passed",
+        "Source inventory and forward-engine graph regenerated and both freshness checks passed"
+      ],
+      "test_result": "ETF reference rows are permission-gated, source-hashed and point-in-time resolvable; real provider data and source-rights coverage remain unverified."
     },
     {
       "id": "FB-0202",
       "text": "Cover equity broad-market/sector/factor, bond/debt, gold, silver, international and other listed ETFs; classify exposures without assuming same benchmark or treatment.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_reference.py::ETFExposureCategory enumerates broad-market equity, sector, factor, bond/debt, gold, silver, international, other-listed and UNKNOWN exposures",
+        "Exposure is source-declared and enters the reference content hash; names/tickers do not infer a category",
+        "No complete permissioned NSE/BSE/AMC ETF universe has been loaded, so coverage across categories is not established"
+      ],
+      "blocker": "Partial: category taxonomy and no-guess classification are implemented, but complete point-in-time ETF listings and source-backed category assignments require permitted exchange/AMC reference data.",
+      "last_audited_at_utc": "2026-11-21T14:06:00+00:00",
+      "commit": "f3a8f5cd",
+      "test_evidence": [
+        "tests/test_etf_reference.py: 14 passed, including each exposure class and proof that a GOLDTRACKER symbol remains UNKNOWN without source-declared classification",
+        "Ruff and targeted mypy passed"
+      ],
+      "test_result": "ETF exposure classes are distinct, source-declared and do not inherit equity/bond/commodity behavior from symbol text; live universe coverage remains unproven."
     },
     {
       "id": "FB-0203",
       "text": "Map ETF → underlying benchmark (prefer total-return index), fund house, inception/listing dates, NAV and indicative NAV if available.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETFReferenceRecord stores source-declared underlying benchmark, fund house, inception and listing dates in the version hash",
+        "ETFValuationObservation stores distinct NAV/iNAV observations with exact decimals, source hash, valuation date, publication and observation clocks",
+        "ETFReferenceCatalog admits observations only when separately permissioned and when ISIN matches the point-in-time listing identity; as-of lookup excludes future-published values",
+        "No real reference or valuation observations are loaded; benchmark TRI semantics and universe mapping are not audited"
+      ],
+      "blocker": "Partial: the point-in-time metadata and valuation contracts exist, but no permitted source data has populated or validated the actual ETF-to-benchmark/NAV mapping.",
+      "last_audited_at_utc": "2026-11-21T14:07:00+00:00",
+      "commit": "123ebb43",
+      "test_evidence": [
+        "tests/test_etf_reference.py: 17 passed, including valuation publication-time visibility, point-in-time ISIN match, decimal valuation and inception/listing date validation",
+        "Ruff and targeted mypy passed"
+      ],
+      "test_result": "ETF reference benchmark fields and permissioned NAV/iNAV observation contracts preserve source identity and point-in-time availability; actual data coverage remains unverified."
     },
     {
       "id": "FB-0204",
       "text": "Import historic ETF EOD OHLCV, adjusted close and trading days through existing ingestion with source hashes and corrections.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_prices.py rebuilds `etf_daily_prices` from the existing curated `eod_prices`, `universe_snapshots`, `lake_manifest` and corporate-action adjustment factors",
+        "Daily ETF rows retain raw OHLCV/turnover, trading date, lake evidence key, verified source SHA-256 and a separately labelled adjusted close",
+        "Rows with missing/invalid source hashes, absent point-in-time ETF universe membership or absent exchange rows are omitted rather than imputed",
+        "tests/test_etf_prices.py: 2 passed, including split adjustment, non-ETF exclusion and missing provenance exclusion"
+      ],
+      "blocker": "Partial: the in-repo ETF daily mart is implemented and reuses existing EOD ingestion, but no permission-cleared historical ETF archive is loaded, and the curated partition exposes only the current revision rather than a queryable correction history.",
+      "last_audited_at_utc": "2026-11-21T14:08:00+00:00",
+      "commit": "786f6d2a",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_prices.py tests/test_etf_reference.py -q: 19 passed",
+        "Ruff and targeted mypy passed",
+        "Source inventory and forward-engine graph regenerated; both freshness checks and git diff --check passed"
+      ],
+      "test_result": "ETF historical OHLCV can be derived from the existing hashed exchange EOD path without inventing missing bars; actual permitted data coverage and point-in-time corrections remain outstanding."
     },
     {
       "id": "FB-0205",
       "text": "Subscribe eligible ETFs to Kite/WebSocket or permitted quote source for observed bid, ask, depth, last trade, volume and exchange timestamps (**EXTERNAL feed**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/ingest/kite_live.py::forward_events accepts normalized NSE/BSE-qualified keys while preserving the legacy NSE default",
+        "src/financial_brain/forward_edge/market_data.py validates exchange, receipt and available clocks, bid/ask, depth and volume; LTP-only events remain non-executable",
+        "Existing forward session applies PAPER_SIMULATION permission and source freshness gates before accepting observed quotes",
+        "tests/test_kite_live_exchange_symbols.py and tests/test_forward_edge_kite_market_data.py: 20 passed"
+      ],
+      "blocker": "Partial: the existing read-only full-quote path now supports BSE as well as NSE and carries executable quote evidence, but no ETF subscription/universe is wired, no WebSocket coverage is measured, and Kite paper-data rights are still UNKNOWN_RIGHTS.",
+      "last_audited_at_utc": "2026-11-21T14:09:00+00:00",
+      "commit": "509edeec",
+      "test_evidence": [
+        "python -m pytest tests/test_kite_live_exchange_symbols.py tests/test_forward_edge_kite_market_data.py -q: 20 passed",
+        "Ruff and targeted mypy passed"
+      ],
+      "test_result": "Exchange-qualified full quotes normalize into the same source-stamped event contract for NSE and BSE; live ETF coverage and source rights remain unverified."
     },
     {
       "id": "FB-0206",
       "text": "Implement market-session safe tick/bar aggregation for ETFs, using the same low-latency code as equities but ETF-specific gates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_bars.py aggregates only normalized NSE/BSE tick/quote events within the source-versioned VenueCalendar session bounds",
+        "Decision-time availability cutoff is enforced; missing buckets remain absent; cumulative volume never goes negative and first-observation volume is conservatively zero",
+        "tests/test_etf_bars.py: 3 passed for session boundaries, sourced calendar absence, venue mismatch, interval validation and future-available event exclusion"
+      ],
+      "blocker": "Partial: session-safe event aggregation is implemented, but it is not yet wired into ForwardSessionRunner or the existing equities bar service, and ETF-specific production gates/coverage are not validated.",
+      "last_audited_at_utc": "2026-11-21T14:24:43+00:00",
+      "commit": "2ceeeedf",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_bars.py tests/test_etf_prices.py tests/test_etf_reference.py tests/test_etf_valuation.py -q: 28 passed",
+        "Ruff, targeted mypy, source inventory and dependency graph checks passed"
+      ],
+      "test_result": "No ETF bar is emitted outside a sourced exchange session or before the event is available to the decision, and empty intervals are not synthesized."
     },
     {
       "id": "FB-0207",
       "text": "Implement `iNAV` freshness, source, timestamp, quote-vs-iNAV premium/discount and refusal to compare asynchronous values.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_valuation.py::compare_quote_to_inav requires a complete executable two-sided quote and matching ETF identity",
+        "Both quote and iNAV must be available by decision_time, inside caller-supplied age budgets, and within a caller-supplied event-time skew; otherwise it raises a typed refusal",
+        "Successful comparison uses quote midpoint and exact Decimal iNAV, reports premium/discount bps, timestamps, age/skew and both content hashes",
+        "tests/test_etf_valuation.py: fresh comparison, stale quote, stale iNAV, future availability, asynchronous observations and mismatched identity"
+      ],
+      "blocker": "Partial: fail-closed freshness and comparison logic is implemented, but age/skew budgets are not calibrated against a permissioned live ETF feed and the result is not yet exposed in trader UI or integrated into the paper decision pipeline.",
+      "last_audited_at_utc": "2026-11-21T14:24:43+00:00",
+      "commit": "2ceeeedf",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_valuation.py -q: 6 passed",
+        "Ruff and targeted mypy passed"
+      ],
+      "test_result": "The system refuses stale, future-available, asynchronous, non-executable or mismatched quote/iNAV inputs instead of manufacturing a premium/discount."
     },
     {
       "id": "FB-0208",
       "text": "Compute effective spread, depth, median traded value, stale-quote rate, illiquidity, volatility, trading gaps, halted periods and costs at intended size.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_liquidity.py::analyze_etf_liquidity reports observed top spread/depth, median daily turnover, stale/non-executable quote fraction, adjacent-session Amihud ratio, annualized daily-return volatility, sourced-session gaps, intended-notional participation, and an explicitly labelled cost proxy",
+        "Every decision threshold and other round-trip cost input is explicit; the report returns INSUFFICIENT_DATA and limits_met=false when price/quote evidence is sparse",
+        "tests/test_etf_liquidity.py: 3 passed for spread/depth/cost report, stale data, missing sessions and duplicate revision rejection"
+      ],
+      "blocker": "Partial: observed-data diagnostics exist, but halted-period sources, live ETF data coverage, calibrated market-impact execution models and prospective capacity validation are absent. The Amihud term is an uncalibrated size proxy, not a fill guarantee.",
+      "last_audited_at_utc": "2026-11-21T14:30:00+00:00",
+      "commit": "96a89b2c",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_liquidity.py tests/test_etf_valuation.py tests/test_etf_bars.py -q: 12 passed",
+        "Ruff and targeted mypy passed",
+        "Source inventory and forward-engine graph freshness checks passed"
+      ],
+      "test_result": "ETF spread, depth, staleness, daily liquidity, gaps, volatility and an explicitly uncalibrated size-cost proxy are visible together without filling missing observations."
     },
     {
       "id": "FB-0209",
       "text": "Ingest AMC/exchange ETF disclosed tracking difference, tracking error and total expense ratio when permissioned; keep effective dates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_reference.py::ETFTrackingMetrics stores tracking difference, tracking error and expense ratio in basis points with effective interval, source hash and publication/observation clocks",
+        "ETFReferenceCatalog requires separate RESEARCH and RETENTION permission for the source and resolves only effective, already-published records matching the point-in-time ISIN",
+        "Negative tracking error/expense, malformed hashes, future-published facts and conflicting equal-clock rows are rejected",
+        "tests/test_etf_reference.py: effective-date and publication-time lookup, permission, sign and content-hash cases"
+      ],
+      "blocker": "Partial: the permission-gated disclosure contract is implemented, but no permissioned AMC/exchange tracking or TER observations have been ingested or reconciled against actual source documents.",
+      "last_audited_at_utc": "2026-11-21T14:31:00+00:00",
+      "commit": "e92dfe20",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_reference.py tests/test_etf_liquidity.py tests/test_etf_valuation.py -q: 28 passed",
+        "Ruff and targeted mypy passed",
+        "Source inventory and forward-engine graph freshness checks passed"
+      ],
+      "test_result": "Permissioned ETF disclosures can be stored and resolved without backdating, while absent and future-published facts remain unavailable."
     },
     {
       "id": "FB-0210",
       "text": "Detect NAV/iNAV gaps, large premiums/discounts, stale iNAV, known international underlying market closures and multi-day stale NAVs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_valuation.py::detect_etf_valuation_anomalies identifies missing NAV/iNAV sessions, stale latest NAV/iNAV, NAV values repeated across sourced sessions, closed underlying sessions and large premium/discounts from synchronized comparison records",
+        "Caller supplies sourced ETF sessions, underlying session states, age limits, repeated-value limit and premium threshold; no missing valuation is forward-filled",
+        "tests/test_etf_valuation.py: anomaly matrix checks NAV/iNAV gaps, stale iNAV, repeated NAV, underlying closure and large premium; unresolved revisions fail closed"
+      ],
+      "blocker": "Partial: anomaly detection primitives are implemented, but there are no real ETF valuation histories/underlying-market calendars, and outputs are not integrated into session health or trader alerts.",
+      "last_audited_at_utc": "2026-11-21T14:33:00+00:00",
+      "commit": "5e6ef240",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_valuation.py tests/test_etf_reference.py -q: 27 passed",
+        "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
+      ],
+      "test_result": "The anomaly report identifies missing, stale, repeated, asynchronous-premium and closed-underlying conditions while preserving explicit evidence gaps."
     },
     {
       "id": "FB-0211",
       "text": "Track ETF creations/redemptions only as issuer/market-maker reference context, not as retail trader's instant redemption pathway.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_reference.py::ETFPrimaryMarketContext models creation/redemption quantity with source, identity, publication time and content hash",
+        "Catalog requires separate research/retention permissions and point-in-time ISIN match; records are explicitly labeled ISSUER_MARKET_MAKER_REFERENCE_CONTEXT_ONLY and expose retail_order_actionable=false",
+        "tests/test_etf_reference.py: context is hidden before publication, visible afterward, and retail redemption semantics are rejected"
+      ],
+      "blocker": "Partial: context-only data contract exists, but there are no permitted issuer/AP creation-redemption disclosures loaded or consumer-side UI labels using the context.",
+      "last_audited_at_utc": "2026-11-21T14:40:00+00:00",
+      "commit": "640fa76a",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_reference.py -q: 21 passed",
+        "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
+      ],
+      "test_result": "Creation/redemption facts are permission-gated, as-of resolved and cannot be interpreted by the type as an immediate retail redemption action."
     },
     {
       "id": "FB-0212",
       "text": "Handle splits, distributions, fund closure and lot/tick revisions in historical and forward paper ledgers.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Historical ETF daily close applies effective-dated adjustment_factors in src/financial_brain/features/etf_prices.py; test_etf_prices.py verifies split effective-date behavior",
+        "Point-in-time instrument lifecycle and tick/lot versioning exist in src/financial_brain/kernel/instruments.py; ticker/scheme identity history exists in src/financial_brain/kernel/instrument_history.py",
+        "No common ETF accounting/paper-ledger event integration applies fund distributions, closure, or lot/tick changes to open/past positions"
+      ],
+      "blocker": "Partial: historical price adjustment and point-in-time instrument rules exist, but splits, cash distributions, closure handling and revised lot/tick rules are not reconciled end to end in ETF paper positions and accounting.",
+      "last_audited_at_utc": "2026-11-21T14:41:00+00:00",
+      "commit": "24043e1b",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_prices.py tests/test_kernel_instrument_history.py tests/test_kernel_instruments.py -q: 30 passed",
+        "Ruff passed"
+      ],
+      "test_result": "Historical ETF price adjustments and effective-dated instrument rule foundations exist, but corporate-action effects on paper holdings and P&L are not complete."
     },
     {
       "id": "FB-0213",
       "text": "Keep ETF price-return series, NAV-return series and underlying total-return benchmarks separate and clearly labelled.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_prices.py::separate_etf_return_series returns distinct ETF_PRICE_RETURN, ETF_NAV_RETURN and UNDERLYING_TOTAL_RETURN_INDEX maps",
+        "Returns are produced only across adjacent sourced sessions; missing values are null and no series is cross-filled or bridged",
+        "ETF price/NAV distribution reinvestment is explicitly false, and the underlying benchmark input must be source-designated TRI",
+        "tests/test_etf_return_series.py: distinct output labels, no bridging across missing prices, duplicate NAV rejection and refusal to treat iNAV as NAV"
+      ],
+      "blocker": "Partial: separate return calculations and labels exist, but no permissioned historical ETF price/NAV/TRI panel has been populated or reconciled to source adjustment conventions.",
+      "last_audited_at_utc": "2026-11-21T14:36:00+00:00",
+      "commit": "f25edf10",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_return_series.py tests/test_etf_prices.py -q: 4 passed",
+        "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
+      ],
+      "test_result": "Price, NAV and underlying TRI return series cannot be confused by name or by filling missing dates; real return history remains absent."
     },
     {
       "id": "FB-0214",
       "text": "Avoid imputing missing live quotes from same-day NAV or daily close; label `UNPRICED`, not `FILLED`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_pricing.py::resolve_etf_paper_price emits `UNPRICED`, null price fields and `fill_created=false` for missing, stale, future, mismatched or non-executable quotes",
+        "Only a fresh, decision-available, identity-matching full quote with executable two-sided depth can provide a paper price; no NAV/iNAV/EOD fallback argument exists",
+        "tests/test_etf_pricing.py: missing quote, stale quote, LTP-only event, identity mismatch and fresh quote cases"
+      ],
+      "blocker": "Partial: explicit fail-closed pricing state exists, but it is not wired into all ETF paper order/report surfaces; those may still represent missing ETF quotes as generic no-trade/missing-data outcomes rather than `UNPRICED`.",
+      "last_audited_at_utc": "2026-11-21T14:38:00+00:00",
+      "commit": "534e3393",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_pricing.py tests/test_etf_return_series.py tests/test_etf_prices.py -q: 9 passed",
+        "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
+      ],
+      "test_result": "Absent or non-executable ETF quotes cannot emit a price or fill; they produce an explicit UNPRICED result."
     },
     {
       "id": "FB-0301",
@@ -14335,6 +14471,20 @@
       "FB-0108",
       "FB-0109",
       "FB-0110",
+      "FB-0201",
+      "FB-0202",
+      "FB-0203",
+      "FB-0204",
+      "FB-0205",
+      "FB-0206",
+      "FB-0207",
+      "FB-0208",
+      "FB-0209",
+      "FB-0210",
+      "FB-0211",
+      "FB-0212",
+      "FB-0213",
+      "FB-0214",
       "FB-0304",
       "FB-0308",
       "SL-00-01",
@@ -14357,13 +14507,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 43,
+    "audited_count": 57,
     "status_counts": {
       "COMPLETE": 23,
-      "PARTIAL": 19,
+      "PARTIAL": 33,
       "NOT_STARTED": 0,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1335
+      "UNASSESSED": 1321
     },
     "verified_complete_count": 23,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
