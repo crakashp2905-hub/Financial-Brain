@@ -281,6 +281,77 @@ class ETFTrackingMetrics:
         return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+@dataclass(frozen=True)
+class ETFPrimaryMarketContext:
+    """Issuer/AP creation-redemption record, explicitly informational for retail trading."""
+
+    source_id: str
+    exchange: str
+    symbol: str
+    isin: str
+    activity: str
+    context_date: date
+    quantity: Decimal
+    quantity_unit: str
+    published_at: datetime
+    observed_at: datetime
+    source_ref: str
+    source_sha256: str
+
+    def __post_init__(self) -> None:
+        source = self.source_id.strip().upper()
+        exchange = self.exchange.strip().upper()
+        symbol = self.symbol.strip().upper()
+        isin = self.isin.strip().upper()
+        activity = self.activity.strip().upper()
+        unit = self.quantity_unit.strip().upper()
+        if source not in ALLOWED_SOURCES or exchange not in ALLOWED_EXCHANGES:
+            raise ETFReferenceError("primary-market context requires a recognized NSE/BSE/AMC source")
+        if source in ALLOWED_EXCHANGES and source != exchange:
+            raise ETFReferenceError("exchange source and primary-market exchange must agree")
+        if not symbol or len(isin) != 12 or not isin.isalnum():
+            raise ETFReferenceError("primary-market context requires a valid ETF identity")
+        if activity not in {"CREATION", "REDEMPTION"} or unit not in {"UNITS", "INR_NOTIONAL"}:
+            raise ETFReferenceError("activity must be CREATION/REDEMPTION and unit UNITS/INR_NOTIONAL")
+        if not self.source_ref.strip():
+            raise ETFReferenceError("primary-market source reference is required")
+        if len(self.source_sha256) != 64 or any(c not in "0123456789abcdef" for c in self.source_sha256):
+            raise ETFReferenceError("source_sha256 must be lowercase SHA-256")
+        quantity = _positive_decimal(self.quantity, "quantity")
+        published_at, observed_at = _aware(self.published_at, "published_at"), _aware(self.observed_at, "observed_at")
+        if observed_at < published_at:
+            raise ETFReferenceError("primary-market context was observed before publication")
+        object.__setattr__(self, "source_id", source)
+        object.__setattr__(self, "exchange", exchange)
+        object.__setattr__(self, "symbol", symbol)
+        object.__setattr__(self, "isin", isin)
+        object.__setattr__(self, "activity", activity)
+        object.__setattr__(self, "quantity", quantity)
+        object.__setattr__(self, "quantity_unit", unit)
+        object.__setattr__(self, "published_at", published_at)
+        object.__setattr__(self, "observed_at", observed_at)
+
+    @property
+    def retail_order_actionable(self) -> bool:
+        return False
+
+    @property
+    def use_label(self) -> str:
+        return "ISSUER_MARKET_MAKER_REFERENCE_CONTEXT_ONLY"
+
+    def content_sha256(self) -> str:
+        body = {
+            "source_id": self.source_id, "exchange": self.exchange, "symbol": self.symbol,
+            "isin": self.isin, "activity": self.activity, "context_date": self.context_date.isoformat(),
+            "quantity": str(self.quantity), "quantity_unit": self.quantity_unit,
+            "published_at": self.published_at.isoformat(), "observed_at": self.observed_at.isoformat(),
+            "source_ref": self.source_ref, "source_sha256": self.source_sha256,
+            "use_label": self.use_label,
+        }
+        encoded = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 class ETFReferenceCatalog:
     """In-memory validated reference catalog; callers must provide both rights grants."""
 
@@ -288,6 +359,7 @@ class ETFReferenceCatalog:
         self._records: list[ETFReferenceRecord] = []
         self._valuations: list[ETFValuationObservation] = []
         self._tracking_metrics: list[ETFTrackingMetrics] = []
+        self._primary_market_context: list[ETFPrimaryMarketContext] = []
 
     def add(self, record: ETFReferenceRecord, *, retention_permission: DataPermission,
             research_permission: DataPermission) -> None:
@@ -342,6 +414,38 @@ class ETFReferenceCatalog:
         if identity.isin != metrics.isin:
             raise ETFReferenceError("tracking-metric ISIN does not match the point-in-time ETF identity")
         self._tracking_metrics.append(metrics)
+
+    def add_primary_market_context(
+        self,
+        context: ETFPrimaryMarketContext,
+        *,
+        retention_permission: DataPermission,
+        research_permission: DataPermission,
+    ) -> None:
+        as_of = context.observed_at.date()
+        for permission, use in ((retention_permission, DataUse.RETENTION),
+                                (research_permission, DataUse.RESEARCH)):
+            if not permission.allows(source_id=context.source_id, use=use, on=as_of):
+                raise ETFReferenceError(f"{use.value} permission is missing or ineffective for {context.source_id}")
+        identity = self.resolve(exchange=context.exchange, symbol=context.symbol, as_of=context.observed_at)
+        if identity.isin != context.isin:
+            raise ETFReferenceError("primary-market context ISIN does not match the point-in-time ETF identity")
+        self._primary_market_context.append(context)
+
+    def primary_market_context_as_of(
+        self, *, exchange: str, symbol: str, isin: str, as_of: datetime
+    ) -> list[ETFPrimaryMarketContext]:
+        cutoff = _aware(as_of, "as_of")
+        identity = self.resolve(exchange=exchange, symbol=symbol, as_of=cutoff)
+        if identity.isin != isin.strip().upper():
+            raise ETFReferenceError("requested context does not match the point-in-time ETF identity")
+        return sorted(
+            (row for row in self._primary_market_context
+             if row.exchange == exchange.strip().upper() and row.symbol == symbol.strip().upper()
+             and row.isin == isin.strip().upper() and row.context_date <= cutoff.date()
+             and row.published_at <= cutoff and row.observed_at <= cutoff),
+            key=lambda row: (row.context_date, row.published_at, row.observed_at),
+        )
 
     def resolve_tracking_metrics(
         self, *, exchange: str, symbol: str, isin: str, as_of: datetime
@@ -410,5 +514,5 @@ class ETFReferenceCatalog:
 
 __all__ = [
     "ETFExposureCategory", "ETFReferenceCatalog", "ETFReferenceError",
-    "ETFReferenceRecord", "ETFTrackingMetrics", "ETFValuationObservation",
+    "ETFPrimaryMarketContext", "ETFReferenceRecord", "ETFTrackingMetrics", "ETFValuationObservation",
 ]

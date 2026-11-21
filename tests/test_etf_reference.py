@@ -11,6 +11,7 @@ from financial_brain.forward_edge.data_permissions import (
 )
 from financial_brain.providers.etf_reference import (
     ETFExposureCategory,
+    ETFPrimaryMarketContext,
     ETFReferenceCatalog,
     ETFReferenceError,
     ETFReferenceRecord,
@@ -272,4 +273,44 @@ def test_tracking_error_and_expense_ratio_cannot_be_negative(record: ETFReferenc
             published_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
             observed_at=datetime(2026, 1, 3, tzinfo=timezone.utc),
             source_ref="notice", source_sha256="e" * 64,
+        )
+
+
+def test_creation_redemption_records_are_context_only_and_publication_gated(
+    record: ETFReferenceRecord,
+) -> None:
+    catalog = ETFReferenceCatalog()
+    _add(catalog, record)
+    context = ETFPrimaryMarketContext(
+        source_id="NSE", exchange="NSE", symbol=record.symbol, isin=record.isin,
+        activity="REDEMPTION", context_date=date(2026, 11, 12), quantity="50000",
+        quantity_unit="UNITS", published_at=datetime(2026, 11, 13, 4, tzinfo=timezone.utc),
+        observed_at=datetime(2026, 11, 13, 4, 1, tzinfo=timezone.utc),
+        source_ref="exchange aggregate context", source_sha256="f" * 64,
+    )
+    catalog.add_primary_market_context(
+        context,
+        retention_permission=_permission(DataUse.RETENTION),
+        research_permission=_permission(DataUse.RESEARCH),
+    )
+    assert context.retail_order_actionable is False
+    assert context.use_label == "ISSUER_MARKET_MAKER_REFERENCE_CONTEXT_ONLY"
+    assert catalog.primary_market_context_as_of(
+        exchange="NSE", symbol=record.symbol, isin=record.isin,
+        as_of=datetime(2026, 11, 13, 3, 59, tzinfo=timezone.utc),
+    ) == []
+    assert catalog.primary_market_context_as_of(
+        exchange="NSE", symbol=record.symbol, isin=record.isin,
+        as_of=datetime(2026, 11, 13, 5, tzinfo=timezone.utc),
+    ) == [context]
+
+
+def test_primary_market_flow_does_not_accept_retail_order_semantics(record: ETFReferenceRecord) -> None:
+    with pytest.raises(ETFReferenceError, match="activity must be"):
+        ETFPrimaryMarketContext(
+            source_id="NSE", exchange="NSE", symbol=record.symbol, isin=record.isin,
+            activity="RETAIL_REDEEM_NOW", context_date=date(2026, 11, 12), quantity="1",
+            quantity_unit="UNITS", published_at=datetime(2026, 11, 13, tzinfo=timezone.utc),
+            observed_at=datetime(2026, 11, 13, 1, tzinfo=timezone.utc),
+            source_ref="source", source_sha256="f" * 64,
         )
