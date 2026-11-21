@@ -1493,12 +1493,22 @@
     {
       "id": "FB-0458",
       "text": "Support configurable minimum reward:risk and projected net expectancy gates by strategy; require a scientifically defended strategy rule rather than blindly forcing 2:1 targets.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/strategy_economics_gate.py defines immutable, versioned thresholds for each strategy ID/version, independently gating estimated net reward:risk and expected net INR.",
+        "Rules require an evidence SHA-256 and calibration-period dates, and never impose a global 2:1 ratio; the decision labels forecast uncertainty and is research eligibility only.",
+        "Evidence hash contents, sample adequacy, pre-registration custody, and thresholds are not yet resolved through a governed strategy registry or calibrated on prospective outcomes."
+      ],
+      "blocker": "Partial: strategy-specific evidence-referenced thresholds are implemented, but rule governance, calibration validation and prospective integration remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T18:01:48+00:00",
+      "commit": "56e7e8fa",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-strategy-econ tests/test_strategy_economics_gate.py -q: 3 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/strategy_economics_gate.py: passed"
+      ],
+      "test_result": "Different strategy versions can set distinct net RR gates; costs can fail a plan even with positive gross reward, and evidence/version requirements reject malformed rules."
     },
     {
       "id": "FB-0459",

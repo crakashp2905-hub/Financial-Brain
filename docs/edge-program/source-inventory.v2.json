@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 654,
+  "source_count": 655,
   "sources": [
     {
       "capability_ids": [],
@@ -7898,6 +7898,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "re",
+        "trade_economics"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/strategy_economics_gate.py",
+      "source_sha256": "8cf4000e9d8a403ae2513d2104160dd1dafe8b2440269a3754e04ee4736cc996",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections.abc",
         "dataclasses",
         "decimal",
@@ -11418,6 +11436,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 639,
-  "unassigned_role_count": 381
+  "unassessed_count": 640,
+  "unassigned_role_count": 382
 }
