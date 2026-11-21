@@ -2031,6 +2031,12 @@
       "module_owner": "src/financial_brain/ingest/macro.py"
     },
     {
+      "capability_id": "module:src/financial_brain/ingest/mf_portfolio_disclosures.py",
+      "path": "src/financial_brain/ingest/mf_portfolio_disclosures.py",
+      "module_role": "feed_ingester",
+      "module_owner": "src/financial_brain/ingest/mf_portfolio_disclosures.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/ingest/mf_scheme_flows.py",
       "path": "src/financial_brain/ingest/mf_scheme_flows.py",
       "module_role": "feed_ingester",
@@ -2793,6 +2799,12 @@
       "module_owner": "src/financial_brain/providers/kite_login_server.py"
     },
     {
+      "capability_id": "module:src/financial_brain/providers/mf_portfolio_disclosures.py",
+      "path": "src/financial_brain/providers/mf_portfolio_disclosures.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/mf_portfolio_disclosures.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/providers/mf_scheme_flows.py",
       "path": "src/financial_brain/providers/mf_scheme_flows.py",
       "module_role": "provider_adapter",
@@ -2941,6 +2953,12 @@
       "path": "src/financial_brain/research/mf_peer_comparison.py",
       "module_role": "research_or_strategy_research",
       "module_owner": "src/financial_brain/research/mf_peer_comparison.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/mf_portfolio_analytics.py",
+      "path": "src/financial_brain/research/mf_portfolio_analytics.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/mf_portfolio_analytics.py"
     },
     {
       "capability_id": "module:src/financial_brain/research/mf_return_accounting.py",

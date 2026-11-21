@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 645,
+  "source_count": 648,
   "sources": [
     {
       "capability_ids": [],
@@ -5962,6 +5962,23 @@
         "datetime",
         "forward_edge.data_permissions",
         "kernel.trading_clock",
+        "providers.mf_portfolio_disclosures"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
+      "source": "src/financial_brain/ingest/mf_portfolio_disclosures.py",
+      "source_sha256": "9b4d0eab2ffe14fcffbaef0f41ee51e39436fb70aa36f29c6def974a721fd8cd",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "forward_edge.data_permissions",
+        "kernel.trading_clock",
         "providers.mf_scheme_flows"
       ],
       "maturity": "unassessed",
@@ -9874,6 +9891,27 @@
       "maturity": "unassessed",
       "owner_role_hint": "Integration",
       "parse_status": "ok",
+      "source": "src/financial_brain/providers/mf_portfolio_disclosures.py",
+      "source_sha256": "f22533793d3d65c43abcb373c0f1159c262d44a173878435df1700a95bd49c25",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "forward_edge.data_permissions",
+        "hashlib",
+        "json",
+        "kernel.trading_clock"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
       "source": "src/financial_brain/providers/mf_scheme_flows.py",
       "source_sha256": "872e9380567c743c698cfe54d1895ac0ff5a3698f1852e2e65c628c488240c96",
       "test_paths": []
@@ -10362,6 +10400,24 @@
       "parse_status": "ok",
       "source": "src/financial_brain/research/mf_peer_comparison.py",
       "source_sha256": "98a5dcd3557c4daeb0fea357fb2167e475c5e748bdc93fc75d14449b0a1799b7",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections",
+        "dataclasses",
+        "decimal",
+        "providers.mf_portfolio_disclosures",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/mf_portfolio_analytics.py",
+      "source_sha256": "69d42ad1554369d311c34965696bdb347c2312a1a25c5b27704f7044f6032406",
       "test_paths": []
     },
     {
@@ -11254,6 +11310,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 630,
+  "unassessed_count": 633,
   "unassigned_role_count": 376
 }

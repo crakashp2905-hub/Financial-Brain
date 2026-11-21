@@ -953,32 +953,62 @@
     {
       "id": "FB-0311",
       "text": "Ingest monthly/quarterly portfolio disclosures as availability permits, plus top holdings, sectors, concentration, style, duration and credit quality where applicable.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/mf_portfolio_disclosures.py models source-hashed, effective-dated monthly/quarterly holding rows with asset class, issuer, sector, and optional debt fields.",
+        "src/financial_brain/ingest/mf_portfolio_disclosures.py enforces separate RESEARCH/RETENTION grants, append-only corrections, and point-in-time publication/observation visibility.",
+        "Portfolio analytics expose reported and unreported weights, top-five concentration, HHI, sector coverage, and unknown-class weight; no real disclosure rows or provider adapter are loaded."
+      ],
+      "blocker": "Partial: the permission-gated disclosure schema, persistence, and coverage-aware portfolio summary are implemented, but provider-approved monthly/quarterly holdings and scheduled ingestion are absent.",
+      "last_audited_at_utc": "2026-11-21T17:08:11+00:00",
+      "commit": "b59c6f85",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mf-disclosures tests/test_mf_portfolio_disclosures.py -q: 6 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/providers/mf_portfolio_disclosures.py src/financial_brain/ingest/mf_portfolio_disclosures.py src/financial_brain/research/mf_portfolio_analytics.py: passed"
+      ],
+      "test_result": "Source-rights gates, point-in-time disclosure storage, missing-field coverage, debt summaries, and recursive FOF expansion/deduplication pass focused tests."
     },
     {
       "id": "FB-0312",
       "text": "Add debt-fund metrics: duration, yield to maturity, maturity ladder, credit rating mix, downgrade and liquidity risk; label absent fields.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "PortfolioDisclosureRow carries optional modified duration, yield to maturity, and credit rating for debt holdings; non-debt rows cannot silently accept debt-only fields.",
+        "analyze_portfolio() calculates weighted duration/YTM with separate coverage weights and credit-rating exposure; missing debt fields remain NULL and coverage is not imputed.",
+        "Actual debt-fund disclosure history, downgrade events, and liquidity data are not loaded."
+      ],
+      "blocker": "Partial: debt metrics and explicit data-coverage accounting are implemented, but source-backed debt holdings, downgrade history, and liquidity risk inputs remain unavailable.",
+      "last_audited_at_utc": "2026-11-21T17:08:11+00:00",
+      "commit": "b59c6f85",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mf-disclosures tests/test_mf_portfolio_disclosures.py -q: 6 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/providers/mf_portfolio_disclosures.py src/financial_brain/ingest/mf_portfolio_disclosures.py src/financial_brain/research/mf_portfolio_analytics.py: passed"
+      ],
+      "test_result": "Source-rights gates, point-in-time disclosure storage, missing-field coverage, debt summaries, and recursive FOF expansion/deduplication pass focused tests."
     },
     {
       "id": "FB-0313",
       "text": "Add fund-of-funds lookthrough / asset-overlap estimates with double-count prevention and coverage scores.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "look_through_fof() recursively replaces source-declared fund-of-funds allocations with underlying leaf positions; it never counts both the underlying fund units and their look-through positions.",
+        "Repeated security IDs aggregate; missing underlying snapshots remain in unlooked-through weight; portfolio overweights and graph cycles fail closed.",
+        "No licensed underlying-fund holdings are loaded, so live coverage scores and validated overlap estimates are not claimed."
+      ],
+      "blocker": "Partial: recursive lookthrough, double-count prevention, residual coverage, and cycle detection are implemented, but source-approved FOF and underlying snapshots are absent.",
+      "last_audited_at_utc": "2026-11-21T17:08:11+00:00",
+      "commit": "b59c6f85",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-mf-disclosures tests/test_mf_portfolio_disclosures.py -q: 6 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/providers/mf_portfolio_disclosures.py src/financial_brain/ingest/mf_portfolio_disclosures.py src/financial_brain/research/mf_portfolio_analytics.py: passed"
+      ],
+      "test_result": "Source-rights gates, point-in-time disclosure storage, missing-field coverage, debt summaries, and recursive FOF expansion/deduplication pass focused tests."
     },
     {
       "id": "FB-0314",
@@ -14558,7 +14588,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T17:00:31+00:00",
+    "as_of_utc": "2026-11-21T17:08:11+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14605,6 +14635,9 @@
       "FB-0308",
       "FB-0309",
       "FB-0310",
+      "FB-0311",
+      "FB-0312",
+      "FB-0313",
       "FB-0314",
       "FB-0316",
       "FB-0317",
@@ -14629,13 +14662,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 68,
+    "audited_count": 71,
     "status_counts": {
       "COMPLETE": 24,
-      "PARTIAL": 43,
+      "PARTIAL": 46,
       "NOT_STARTED": 0,
       "EXTERNAL_BLOCKED": 1,
-      "UNASSESSED": 1310
+      "UNASSESSED": 1307
     },
     "verified_complete_count": 24,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
