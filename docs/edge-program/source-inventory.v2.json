@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 629,
+  "source_count": 631,
   "sources": [
     {
       "capability_ids": [],
@@ -5867,6 +5867,23 @@
         "__future__",
         "datetime",
         "forward_edge.data_permissions",
+        "kernel.trading_clock",
+        "providers.mf_scheme_lifecycle"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
+      "source": "src/financial_brain/ingest/mf_scheme_lifecycle.py",
+      "source_sha256": "51e26cb99563f355e3e4661f9b83aa74b7ad4eaa9acd59eb556fbbc2efdd78b4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "forward_edge.data_permissions",
         "hashlib",
         "json",
         "kernel.trading_clock",
@@ -9661,6 +9678,26 @@
         "datetime",
         "enum",
         "forward_edge.data_permissions",
+        "hashlib",
+        "json",
+        "kernel.trading_clock"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
+      "source": "src/financial_brain/providers/mf_scheme_lifecycle.py",
+      "source_sha256": "6e2da3e626fce4f7c1b28aa003d045dc2144cd67530cdaf0cf257c59703ee4d8",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "forward_edge.data_permissions",
         "kernel.trading_clock"
       ],
       "maturity": "unassessed",
@@ -10955,6 +10992,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 614,
+  "unassessed_count": 616,
   "unassigned_role_count": 376
 }
