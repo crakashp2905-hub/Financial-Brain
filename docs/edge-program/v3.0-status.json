@@ -36,11 +36,17 @@
     {
       "id": "FB-0002",
       "text": "Inventory every strategy, feed, OMS, ledger, signal renderer and output; assign a single canonical owner per capability.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/capability-ownership.v1.json (21 capability contracts, 429 trader-core modules, 31 strategy candidates with source refs and hashes)",
+        "scripts/capability_ownership.py (deterministic inventory generator and freshness check)",
+        "tests/test_capability_ownership.py (canonical-owner uniqueness, module coverage and path integrity)",
+        ".github/workflows/ci.yml (capability inventory freshness gate)",
+        "Focused verification: 3 tests passed; Ruff, mypy, inventory freshness and git diff --check passed"
+      ],
+      "blocker": "Partial: AlgorithmSpec and StrategySpec identity/promotion remain split; the inventory intentionally covers trader-core rather than all 623 Python modules, and the broker, kernel, forward-paper and legacy-paper persistence domains remain separate. Hosted CI run 44893932986 failed because the generated fixture-equivalence report was stale; it has since been refreshed locally and needs a new hosted run.",
+      "last_audited_at_utc": "2026-11-21T10:05:00+00:00",
       "commit": null
     },
     {
@@ -14045,6 +14051,8 @@
   "assessment_summary": {
     "as_of_utc": "2026-11-21T09:27:23+00:00",
     "audited_ids": [
+      "FB-0001",
+      "FB-0002",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14062,12 +14070,13 @@
       "SL-00-15",
       "SL-00-16",
       "SL-00-17",
-      "SL-00-18"
+      "SL-00-18",
+      "SL-01-06"
     ],
-    "audited_count": 18,
+    "audited_count": 21,
     "status_counts": {
-      "UNASSESSED": 1360,
-      "PARTIAL": 9,
+      "UNASSESSED": 1357,
+      "PARTIAL": 12,
       "COMPLETE": 8,
       "EXTERNAL_BLOCKED": 1
     },
@@ -14075,6 +14084,9 @@
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/V3.0_PROGRESS.md",
+      "docs/edge-program/capability-ownership.v1.json",
+      "scripts/capability_ownership.py",
+      "tests/test_capability_ownership.py",
       "docs/edge-program/canonical-migration-audit.v1.json",
       "docs/edge-program/forward-edge-equivalence-report.v1.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json",
