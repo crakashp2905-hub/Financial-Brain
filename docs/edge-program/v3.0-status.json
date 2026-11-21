@@ -374,12 +374,25 @@
     {
       "id": "FB-0106",
       "text": "Add point-in-time versions for listings, tick sizes, lot sizes, contract expiry, ETF underlying index and MF scheme/plan metadata.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::InstrumentId carries point-in-time listing/ISIN/provider/ETF underlying-index/contract-expiry and MF scheme-code/plan/option metadata with effective_from/to.",
+        "InstrumentMaster resolves one non-overlapping listing version by ticker/date; tests verify ETF underlying-index and ISIN changes resolve to the correct historical identity.",
+        "RuleVersion now carries effective_to for tick/lot/multiplier versions; Instrument.rule_on selects only an in-range version and refuses gaps or overlaps.",
+        "tests/test_kernel_instruments.py covers historical version resolution, rule interval boundaries/gaps, contract expiry, and mandatory scheme plan/option identity."
+      ],
+      "blocker": "Partial: the versioned domain model is implemented, but permissioned historical exchange listings/tick/lot/expiry files, ETF benchmark histories, and AMFI/AMC scheme metadata are not yet ingested and validated as source-backed production catalogues.",
+      "last_audited_at_utc": "2026-11-21T13:40:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_architecture.py tests/test_kernel_instruments.py tests/test_forward_edge_registry.py tests/test_checklist_audit_export.py tests/test_launch_gates.py -q: 30 passed",
+        "Ruff: passed",
+        "python -m mypy src/financial_brain/kernel/instruments.py --follow-imports=silent: passed",
+        "source inventory and forward dependency graph freshness checks: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "Instrument listings and rules can be represented and resolved point in time, including ETF underlying benchmark metadata, contract expiry and MF scheme-plan-option identity. External source ingestion and historical coverage remain incomplete."
     },
     {
       "id": "FB-0107",
