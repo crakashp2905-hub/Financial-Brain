@@ -2730,142 +2730,198 @@
     {
       "id": "FB-0801",
       "text": "Wire all existing exchange strategies through one versioned signal→risk→paper-intent→OMS→fill→account ledger.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ForwardSessionRunner plus normalized signal/risk/paper order path and durable PaperAccount exist for cash equity; long-option replay/plans and defined-risk spreads live in separate paper modules.",
+        "No one versioned pipeline routes all existing equity, ETF and option strategies into one OMS and canonical multi-asset account."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0802",
       "text": "Use instrument-specific quantity units: stocks/ETFs whole exchange units, options standardized contracts/lots and multiple legs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Cash PaperAccount enforces whole-integer stock quantities; options plan and spread helpers enforce contract token/lot sizing and multiple legs.",
+        "Quantity and inventory semantics remain split across the cash OMS and options analyzers; ETF and option orders do not share one canonical unit-aware order model."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0803",
       "text": "Execute fills against observed or deliberately conservative simulated bid/ask/depth, time-of-signal and feasible participation; avoid hindsight close fills.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "kernel/fills.py uses next-bar and adverse-first bar rules; forward runner executes only on causally later, journaled executable quotes with bid/ask/depth and participation constraints; long options use ask-in/bid-out.",
+        "Quote-based and bar-proxy fill families are separate and not every existing algorithm is adapted to a common execution contract."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0804",
       "text": "Distinguish order accepted, working, partial fill, cancelled, rejected, missed, timed out and unknown outcome; never synthesize missing fills.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "kernel/oms.py and the durable forward runner model order transitions, pending/unknown outcome reconciliation, partial fills, expiry/cancel and idempotent receipts.",
+        "State semantics are not unified across legacy intraday, cash PaperAccount, options replay and forward runner adapters."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0805",
       "text": "Implement entry and exit slippage, fees, taxes when applicable, impact, spreads, tick rounding, circuit/halts and exchange session close.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Cost schedules, spread/depth impact, tick rounding, adverse gap fills and explicit options fees exist across fill components.",
+        "Effective exchange fees/taxes, circuit/halt and close behavior are not measured and enforced uniformly across every instrument and runner."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0806",
       "text": "Maintain quote-provenance and simulation-fidelity tags (`OBSERVED_QUOTE_SIM`, `BAR_PROXY_SIM`) on every fill and performance measure.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MarketEvent/Kite normalization preserves exchange/source/event/receipt/availability clocks; forward receipts retain quote hashes and execution basis; bar replay is labelled separately.",
+        "A repository-wide fill and performance schema does not require one fidelity/provenance tag for every account and legacy book."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0807",
       "text": "Implement option-chain contract routing, expiry/strike/lot versioning, bid/ask and premium sizing before eligibility.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "OptionContract paper plan binds CE/PE, underlying, strike, expiry, symbol, provider token, lot size and visible quote depth before eligibility.",
+        "No full option-chain selector routes strategy signals through a point-in-time versioned contract master and expiry/strike/lot rules."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0808",
       "text": "Permit long calls/puts and defined-risk debit spreads first; keep naked writing, margin-intensive strategies, unmodelled physical settlement blocked.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Single-leg recommendation is long premium only; paper debit vertical requires feasible long/short leg quotes and reports bounded economic risk; margin and settlement are explicitly unverified.",
+        "These controls are not an all-strategy OMS gate, so universal enforcement against naked writing and unsupported settlement is unproven."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0809",
       "text": "Implement full option leg state, partial leg fills, hedge risk, fee/margin reserve, expiry and exercise/settlement; otherwise never claim multi-leg production parity.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Options risk/spread calculations check leg-wise quotes, visible size, defined economic loss, intermediate legging risk and expiry scenarios.",
+        "There is no durable multi-leg order state with partial leg fills, hedge, fee/margin reserve and full exercise/settlement reconciliation."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0810",
       "text": "Implement transactionally durable outbox and post-crash idempotent reconciliation, one execution per signal/child order, no duplicate P&L.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ForwardSessionRunner uses a durable event journal/outbox with restart-safe idempotency and reconciliation; PaperAccount folds a durable journal into OMS and double-entry cash.",
+        "One execution-per-signal/child-order semantics are not shared across all legacy and options books."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0811",
       "text": "Ensure expired or invalidated signal never fills on delayed quote; stale live feed forces `HALTED` for affected desk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Forward runner binds decisions to immutable available inputs, enforces signal/order clocks and refuses stale/non-executable quotes; feed supervision marks incomplete sessions.",
+        "A common entry-halt latch for each affected desk on every live-feed staleness, expiry and invalidation path is not connected to all runners."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0812",
       "text": "Maintain same OMS API for automatic and trader-approved paper accounts without mixing their holdings or cash.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "PaperAccount accepts stable account identifiers and maintains separate durable ledgers; forward paper intents require explicit risk verdicts.",
+        "There is no shared API workflow proving isolated autonomous and trader-approved accounts across all desks."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0813",
       "text": "Verify every order/receipt against instrument version, timestamps, available cash and risk limits before commit.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Runner preflight and order paths validate instrument universe, causal timestamps, risk verdict, quote freshness, displayed size, cash/reservations and effective lot rules.",
+        "A common precommit receipt validation across every cash, ETF and options execution adapter is not established."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0814",
       "text": "Rehearse exchange and WebSocket disconnects, holiday/failure sessions, partial fills, late order acknowledgements and crash recovery.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Selected tests cover stale/disconnected feeds, rejected session batches, quote latency, late acknowledgements, durable restart, duplicate fills, partial fills, circuit-touch/non-continuous status and options leg feasibility.",
+        "No single operations rehearsal spans all exchange desks, holidays, websocket failure, exchange halts and cross-ledger recovery."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
       "id": "FB-0901",
