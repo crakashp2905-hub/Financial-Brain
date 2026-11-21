@@ -2484,182 +2484,248 @@
     {
       "id": "FB-0701",
       "text": "Create `MFOrder` with investor account/folio (synthetic in paper), scheme/plan/option, cash amount or units, transaction type and immutable request time.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MFAllocationRecommendation holds scheme/plan/option, action, amount, decision/effective/cutoff times and a UUID recommendation identity.",
+        "It is not an immutable order record and has no synthetic account/folio, transaction lifecycle, or units-versus-cash order schema."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0702",
       "text": "Model request acknowledgement/accepted/rejected, time-stamping at official acceptance point, and platform business-day validity.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "SchemeTransactionCalendar computes an expected NAV date from sourced effective scheme/action rules.",
+        "No request acknowledgement, acceptance/rejection state, official acceptance timestamp or platform validity lifecycle was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0703",
       "text": "Model purchase payment initiation time, credited-to-scheme time and funds-available-for-utilization time separately; never infer one from another.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No source module models payment initiation, scheme credit and usable-funds timestamps as separate events."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0704",
       "text": "Implement effective-dated cutoff engine for normal, liquid, overnight and special schemes; holidays, online-mode exceptions and scheme suspensions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "kernel/fund_transactions.py applies effective-dated, published, scheme- and transaction-specific cutoffs on sourced scheme business calendars.",
+        "No complete normal/liquid/overnight/special category rules, platform-mode exceptions and suspension lifecycle are integrated."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0705",
       "text": "Determine **eligible NAV date** from accepted request + fund realization + effective cutoff; reject any attempt to choose a more favorable historical NAV after the fact.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "SchemeTransactionCalendar assigns a date from received_at using the effective rule that was published and known then.",
+        "It does not incorporate accepted-request status and separate funds-realized/available-to-scheme timestamps; the eligible NAV state is not reconciled against a later NAV revision."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0706",
       "text": "Use `NAV_PENDING` until eligible day's NAV is actually published/observed, then allot fractional MF units with proper precision.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MFAllocationRecommendation distinguishes confirmed-published NAV from pending, stale and unavailable states and requires causal publication/availability clocks.",
+        "No pending-allotment order lifecycle that later posts fractional units at the actually eligible NAV was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0707",
       "text": "Implement redemption with cutoff, lot selection (FIFO default unless an actual platform rule specifies otherwise), units to redeem and deferred proceeds settlement.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "paper/mf_exit_loads.py provides FIFO lot-level partial redemption cost allocation; mf_redemption_constraints.py checks units and sourced restrictions.",
+        "No request/acceptance, eligible NAV, fractional-unit reduction and deferred payout paper redemption lifecycle is integrated."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0708",
       "text": "Book exit loads by purchase lot and holding age, stamp duties and any relevant charges by effective-dated rule.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "paper/mf_exit_loads.py charges source-specified exit-load bands by purchase lot and age, failing closed on unknown terms.",
+        "Stamp duty and the full effective-dated scheme/platform transaction charge set are not combined into a single MF execution ledger."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0709",
       "text": "Implement redemption cash state `REDEMPTION_PENDING -> VALUE_CONFIRMED -> PAYOUT_PENDING -> CASH_AVAILABLE`; prohibit redeploying unsettled proceeds.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No redemption cash-state machine or unsettled-proceeds restriction was found; exit-load valuation is a calculation, not a payout lifecycle."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0710",
       "text": "Simulate switches as paired switch-out and switch-in with asynchronous settlement and no phantom same-minute capital redeployment.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "SWITCH exists as a recommendation action and source-specific cutoffs support switch-out/in date calculation primitives.",
+        "No paired asynchronous switch-out/switch-in settlement lifecycle or capital reuse lock exists."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0711",
       "text": "Model SIP installments as repeated subscriptions with independent payment outcomes and allotment NAV; missed installments must stay missed.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No scheduled SIP engine with independent installment payment outcomes, misses and per-installment allotment NAVs was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0712",
       "text": "Model SWP as redemptions with applicable loads and payouts; STP similarly as redemption and new purchase.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No recurring SWP/STP redemption-and-purchase lifecycle was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0713",
       "text": "Handle minimum subscription/redemption amounts, partial redemption, fractional units, folio restrictions, scheme lock-ins and unavailable NAV days.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MF redemption constraints handle available units, unknown/closed redemption restrictions, lock-ins, ELSS, windows, gating and segregated assets; MF unit flows support fractional units.",
+        "Minimum subscription/redemption, synthetic folio restrictions and fully integrated order availability are not modeled."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0714",
       "text": "Model NAV-related mark-to-market only after publication; earlier performance must display last-known value with a stale flag.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MF recommendation and scheme master preserve NAV status and observation/publication/availability clocks; MF return accounting uses observed NAV ratios.",
+        "No position-level mark-to-market display that carries only last-known NAV with a per-position stale flag was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0715",
       "text": "Model dividend/IDCW cash payouts and reinvestments as posted ledger events with correct units and basis.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "paper/mf_scheme_flows.py applies sourced IDCW cash payouts/reinvestment, unit splits and mergers idempotently while reconciling units/cash across NAVs.",
+        "The flow application is not wired into a canonical account ledger with historical cost-basis and cash reconciliation."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0716",
       "text": "Reconcile pending application, allotment confirmation, units, external flows, cash reserve and bank payout to one canonical ledger.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "The MF order, allotment, pending NAV, external-flow and payout components are not joined into one canonical account ledger."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0717",
       "text": "Distinguish assumed simulated payment realization from independently observed payment realization; forbid fabricated certainty in reports.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MF flow inputs carry source hashes, observed/published clocks and separate research/retention permissions; option/paper evidence labels elsewhere distinguish replay/local prospective records.",
+        "No MF lifecycle report distinguishes simulated payment realization from independently observed bank/scheme payment realization."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0718",
       "text": "Build an explicit **MF PAPER REALISM** score measuring eligible-NAV certainty, payment-time evidence, load completeness and redemption settlement confidence.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No MF PAPER REALISM score aggregating NAV eligibility certainty, payment evidence, load completeness and payout confidence was found."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "commit": null,
+      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
     },
     {
       "id": "FB-0801",
