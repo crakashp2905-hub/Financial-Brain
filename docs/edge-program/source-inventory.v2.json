@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 619,
+  "source_count": 620,
   "sources": [
     {
       "capability_ids": [],
@@ -9108,6 +9108,30 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "contextlib",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "sqlite3",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/canonical_ledger.py",
+      "source_sha256": "19602ec335b8110102e925dd41abb1241f37d21134f28656de4d9a205f26be9a",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "datetime",
         "decisions",
@@ -10757,6 +10781,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 604,
-  "unassigned_role_count": 369
+  "unassessed_count": 605,
+  "unassigned_role_count": 370
 }
