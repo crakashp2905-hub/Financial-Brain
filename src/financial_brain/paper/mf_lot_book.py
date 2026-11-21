@@ -393,9 +393,18 @@ def redeem(
     redemption_window_open: bool | None = None,
     gating_remaining_units: Decimal | str | int | None = None,
     segregated_portfolio_units: Decimal | str | int | None = None,
+    settlement_id: str | None = None,
+    nav_observation_id: str | None = None,
+    payout_due_date: date | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Apply FIFO lot allocation and credit proceeds net of per-lot exit loads."""
+    """Apply FIFO lots, optionally keeping proceeds pending settlement.
+
+    Without ``settlement_id`` this retains the legacy immediate-credit behavior. With
+    one, the NAV must resolve to the exact as-known ingestion observation, the request
+    must be pending, units are reduced once, and proceeds remain unavailable until an
+    explicit cash-availability event.
+    """
     for label, value in (
         ("account_id", account_id),
         ("event_id", event_id),
@@ -424,6 +433,30 @@ def redeem(
     if event_at < decision_at:
         raise MfPaperBookError("redemption event timestamp precedes the decision time")
     _require_paper_terms(con, terms, permissions, decision_at)
+    nav_observation = None
+    if settlement_id is not None:
+        if not settlement_id.strip() or not nav_observation_id or payout_due_date is None:
+            raise MfPaperBookError(
+                "settled redemption requires settlement ID, NAV observation ID and payout due date"
+            )
+        if payout_due_date < redemption_date:
+            raise MfPaperBookError("payout due date precedes the eligible NAV date")
+        from ..ingest.mfnav import as_known_on as mf_nav_as_known_on
+
+        nav_observation = mf_nav_as_known_on(
+            con, scheme_code, redemption_date, known_at=decision_at,
+        )
+        if (nav_observation is None
+                or nav_observation["observation_id"] != nav_observation_id
+                or Decimal(str(nav_observation["nav"])) != nav):
+            raise MfPaperBookError(
+                "settled redemption NAV must match the persisted as-known observation"
+            )
+        source_published_at = nav_observation["source_published_at"]
+        if source_published_at is not None and source_published_at > decision_at:
+            raise MfPaperBookError("NAV source publication was after value confirmation")
+    elif nav_observation_id is not None or payout_due_date is not None:
+        raise MfPaperBookError("NAV observation and payout date require a settlement ID")
     payload = {
         "kind": "REDEEM",
         "account_id": account_id,
@@ -440,6 +473,9 @@ def redeem(
         "redemption_window_open": redemption_window_open,
         "gating_remaining_units": gating_remaining_units,
         "segregated_portfolio_units": segregated_portfolio_units,
+        "settlement_id": settlement_id,
+        "nav_observation_id": nav_observation_id,
+        "payout_due_date": payout_due_date,
         "permission_evidence": _permission_evidence(permissions),
     }
     digest = _event_hash(payload)
@@ -454,6 +490,23 @@ def redeem(
         ).fetchone()
         if account is None:
             raise MfPaperBookError("paper account does not exist")
+        settlement = None
+        if settlement_id is not None:
+            settlement = con.execute("""SELECT scheme_code, plan, option, isin,
+                requested_units, requested_on, requested_at, state
+                FROM mf_paper_redemption_settlements
+                WHERE account_id=? AND settlement_id=?""",
+                [account_id, settlement_id]).fetchone()
+            if settlement is None:
+                raise MfPaperBookError("redemption settlement request does not exist")
+            if settlement[7] != "REDEMPTION_PENDING":
+                raise MfPaperBookError("redemption settlement is not pending value confirmation")
+            if tuple(settlement[:4]) != (scheme_code, plan, option, isin):
+                raise MfPaperBookError("redemption settlement identity does not match request")
+            if Decimal(settlement[4]) != units:
+                raise MfPaperBookError("redemption units differ from the pending request")
+            if settlement[5] > redemption_date or settlement[6] > decision_at:
+                raise MfPaperBookError("redemption valuation predates its request")
         rows = con.execute(
             """SELECT lot_id, allotted_on, units_remaining, exit_loads_json, lock_in_until
             FROM mf_paper_lots WHERE account_id = ? AND scheme_code = ? AND plan = ?
@@ -529,10 +582,11 @@ def redeem(
                 "WHERE account_id = ? AND lot_id = ?",
                 [allocation.units_remaining, account_id, allocation.lot_id],
             )
-        con.execute(
-            "UPDATE mf_paper_accounts SET cash_inr = cash_inr + ? WHERE account_id = ?",
-            [result.net_redemption_inr, account_id],
-        )
+        if settlement_id is None:
+            con.execute(
+                "UPDATE mf_paper_accounts SET cash_inr = cash_inr + ? WHERE account_id = ?",
+                [result.net_redemption_inr, account_id],
+            )
         con.execute(
             """INSERT INTO mf_paper_events (
             account_id, event_id, kind, scheme_code, plan, option, isin, event_date,
@@ -556,6 +610,48 @@ def redeem(
                 event_at,
             ],
         )
+        if settlement_id is not None:
+            assert nav_observation is not None and payout_due_date is not None
+            value_evidence = {
+                "redemption_event_id": event_id,
+                "nav_observation_id": nav_observation_id,
+                "nav_date": redemption_date,
+                "nav_per_unit": nav,
+                "gross_inr": result.gross_redemption_inr,
+                "exit_load_inr": result.exit_load_inr,
+                "net_inr": result.net_redemption_inr,
+            }
+            value_hash = _event_hash({"state": "VALUE_CONFIRMED", **value_evidence})
+            con.execute("""UPDATE mf_paper_redemption_settlements SET
+                state='VALUE_CONFIRMED', redemption_event_id=?, eligible_nav_date=?,
+                nav_observation_id=?, nav_per_unit=?, gross_inr=?, exit_load_inr=?,
+                net_inr=?, value_sha256=?, updated_at=?
+                WHERE account_id=? AND settlement_id=?""",
+                [event_id, redemption_date, nav_observation_id, nav,
+                 result.gross_redemption_inr, result.exit_load_inr,
+                 result.net_redemption_inr, value_hash, event_at,
+                 account_id, settlement_id])
+            con.execute("""INSERT INTO mf_paper_redemption_transitions (
+                account_id, settlement_id, sequence, state, transitioned_at,
+                event_sha256, evidence_json) VALUES (?,?,2,'VALUE_CONFIRMED',?,?,?)""",
+                [account_id, settlement_id, event_at, value_hash,
+                 json.dumps(value_evidence, sort_keys=True, separators=(",", ":"),
+                            default=str)])
+            payout_evidence = {
+                "payout_due_date": payout_due_date,
+                "net_inr": result.net_redemption_inr,
+            }
+            payout_hash = _event_hash({"state": "PAYOUT_PENDING", **payout_evidence})
+            con.execute("""UPDATE mf_paper_redemption_settlements SET
+                state='PAYOUT_PENDING', payout_due_date=?, updated_at=?
+                WHERE account_id=? AND settlement_id=?""",
+                [payout_due_date, event_at, account_id, settlement_id])
+            con.execute("""INSERT INTO mf_paper_redemption_transitions (
+                account_id, settlement_id, sequence, state, transitioned_at,
+                event_sha256, evidence_json) VALUES (?,?,3,'PAYOUT_PENDING',?,?,?)""",
+                [account_id, settlement_id, event_at, payout_hash,
+                 json.dumps(payout_evidence, sort_keys=True, separators=(",", ":"),
+                            default=str)])
         con.execute("COMMIT")
     except Exception:
         con.execute("ROLLBACK")
@@ -575,7 +671,9 @@ def redeem(
         "exit_load_inr": result.exit_load_inr,
         "net_inr": result.net_redemption_inr,
         "allocations": result.allocations,
-        "status": "applied",
+        "settlement_id": settlement_id,
+        "state": "PAYOUT_PENDING" if settlement_id else None,
+        "status": "payout_pending" if settlement_id else "applied",
     }
 
 
@@ -609,7 +707,19 @@ def account_snapshot(con, account_id: str) -> dict[str, Any]:
         }
         for key, values in sorted(grouped.items())
     ]
-    return {"account_id": account_id, "cash_inr": Decimal(row[0]), "positions": positions}
+    pending = con.execute("""SELECT COALESCE(SUM(net_inr), 0)
+        FROM mf_paper_redemption_settlements WHERE account_id=?
+          AND state IN ('VALUE_CONFIRMED', 'PAYOUT_PENDING')""",
+        [account_id]).fetchone()[0]
+    cash = Decimal(row[0])
+    pending_receivable = Decimal(pending)
+    return {
+        "account_id": account_id,
+        "cash_inr": cash,
+        "pending_redemption_inr": pending_receivable,
+        "cash_plus_pending_redemption_inr": cash + pending_receivable,
+        "positions": positions,
+    }
 
 
 __all__ = ["MfPaperBookError", "account_snapshot", "create_account", "redeem", "subscribe"]
