@@ -704,12 +704,21 @@
     {
       "id": "FB-0212",
       "text": "Handle splits, distributions, fund closure and lot/tick revisions in historical and forward paper ledgers.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Historical ETF daily close applies effective-dated adjustment_factors in src/financial_brain/features/etf_prices.py; test_etf_prices.py verifies split effective-date behavior",
+        "Point-in-time instrument lifecycle and tick/lot versioning exist in src/financial_brain/kernel/instruments.py; ticker/scheme identity history exists in src/financial_brain/kernel/instrument_history.py",
+        "No common ETF accounting/paper-ledger event integration applies fund distributions, closure, or lot/tick changes to open/past positions"
+      ],
+      "blocker": "Partial: historical price adjustment and point-in-time instrument rules exist, but splits, cash distributions, closure handling and revised lot/tick rules are not reconciled end to end in ETF paper positions and accounting.",
+      "last_audited_at_utc": "2026-11-21T14:41:00+00:00",
+      "commit": "f5249d0b",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_prices.py tests/test_kernel_instrument_history.py tests/test_kernel_instruments.py -q: 30 passed",
+        "Ruff passed"
+      ],
+      "test_result": "Historical ETF price adjustments and effective-dated instrument rule foundations exist, but corporate-action effects on paper holdings and P&L are not complete."
     },
     {
       "id": "FB-0213",
