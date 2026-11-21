@@ -7485,7 +7485,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T08:17:51+00:00",
-      "commit": null,
+      "commit": "89cf052f",
       "test_evidence": [
         "tests/test_source_inventory.py",
         "tests/test_forward_edge_f00.py",
