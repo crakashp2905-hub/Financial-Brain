@@ -310,12 +310,22 @@
     {
       "id": "FB-0103",
       "text": "Enforce financial unit types: INR notional, currency, equity/ETF whole units, option lots, MF fractional units, NAV per unit, premiums per unit, basis points.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/units.py retains generic Decimal Money/Price/Quantity with currency validation and explicit units.",
+        "src/financial_brain/kernel/units.py adds nominal CurrencyCode, INRNotional, WholeUnits, OptionLots, MutualFundUnits, NavPerUnit, OptionPremiumPerUnit and BasisPoints with domain-specific validation.",
+        "tests/test_kernel_units_clock.py checks whole-vs-fractional units, INR-only amount/price units, positive option lots, and explicit bps conversion."
+      ],
+      "blocker": "Partial: typed primitives are implemented and tested but core OMS, forward paper order/accounting, risk sizing, MF allotment and persistence still exchange generic integers/Decimals/floats. End-to-end enforcement across those state transitions and serialized schemas is not yet proven.",
+      "last_audited_at_utc": "2026-11-21T13:15:00+00:00",
+      "commit": "df854e22",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_units_clock.py -q: 19 passed",
+        "ruff check src/financial_brain/kernel/units.py tests/test_kernel_units_clock.py: passed",
+        "python -m mypy src/financial_brain/kernel/units.py --follow-imports=silent: passed"
+      ],
+      "test_result": "Domain nominal types reject fractional equity/ETF units, non-INR prices/notionals, invalid option-lot counts and invalid currency codes. Shared pipeline integration remains outstanding, so this is partial."
     },
     {
       "id": "FB-0104",
