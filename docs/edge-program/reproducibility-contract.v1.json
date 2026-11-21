@@ -6,8 +6,8 @@
   "exchange_timezone": "Asia/Kolkata",
   "dependency_lock": {
     "path": "requirements-lock.txt",
-    "sha256": "e9a4610c4441b2377f6b6b9f5cdfefb63df8b856c6a72913beb37db9fbf19726",
-    "snapshot_note": "Exact dependency snapshot re-recorded from a clean `pip install -e .[dev]` venv (duckdb capped below 2; 1,692 passed, 3 skipped; pip-audit clean) when the lockfile was refreshed in the ops-reliability change; the previous snapshot was recorded 2026-10-15. Clean lock-install verification is run separately from the pyproject-based full CI matrix."
+    "sha256": "d7d24af10bffdfc771ad53b8a2e7a907c85c8d6c60cc8839cc7bfbd62ee425c3",
+    "snapshot_note": "Exact dependency snapshot re-recorded from a clean `pip install -e .[dev]` venv (duckdb capped below 2; 1,692 passed, 3 skipped; pip-audit clean) when the lockfile was refreshed in the ops-reliability change, and re-recorded 2026-11-21 to add jsonschema and cryptography (3,747 passed, 3 skipped in a clean venv installed exactly from the lock); the first snapshot was recorded 2026-10-15. Clean lock-install verification is run separately from the pyproject-based full CI matrix."
   },
   "build_tools": {
     "pip": "25.2",

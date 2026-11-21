@@ -1,15 +1,18 @@
 # Exact environment the full suite runs in: a clean venv, `pip install -e .[dev]` with duckdb capped below 2, on Windows 11, Python 3.13.5,
-# 2026-11-04: 1,692 passed, 3 skipped (the torch learners); pip-audit: no known vulnerabilities (also checked in CI, job 'test' and 'locked').
+# 2026-11-21 (refreshed to add jsonschema and cryptography, which the dev extra now needs, with their dependencies; every earlier pin unchanged): 3,747 passed, 3 skipped (the torch learners); pip-audit: no known vulnerabilities (also checked in CI, job 'test' and 'locked').
 # Recreate a result with: git checkout <commit>; pip install -r requirements-lock.txt; pip install -e . --no-deps
 # Refresh it only the same way: new clean venv, install, freeze, run the suite and pip-audit, then replace this file.
 ast_serialize==0.13.1
+attrs==26.1.0
 boolean.py==5.0
 CacheControl==0.14.4
 certifi==2026.10.23
+cffi==2.1.1
 charset-normalizer==3.5.2
 cloudpickle==3.1.2
 colorama==0.4.6
 coverage==7.17.1
+cryptography==50.0.2
 cyclonedx-python-lib==11.12.0
 defusedxml==0.7.1
 duckdb==1.5.6
@@ -18,6 +21,8 @@ flatbuffers==25.12.19
 idna==3.20
 iniconfig==2.3.1
 joblib==1.6.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
 librt==0.16.0
 license-expression==30.4.4
 lightgbm==4.7.0
@@ -43,6 +48,7 @@ protobuf==7.36.2
 psutil==7.2.2
 py-serializable==2.1.0
 pyarrow==26.0.1
+pycparser==3.12
 Pygments==2.21.0
 pymupdf==2.1
 pymupdf4llm==2.1
@@ -53,8 +59,10 @@ pytest==9.2.0
 python-dateutil==4.0.0
 pytz==2026.6
 PyYAML==6.0.3
+referencing==0.37.0
 requests==2.34.2
 rich==15.0.0
+rpds-py==2026.9.1
 ruff==0.17.3
 scikit-learn==1.9.1
 scipy==1.18.1
