@@ -1020,22 +1020,23 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/paper/mf_exit_loads.py performs FIFO full/partial redemptions with per-lot holding-period schedules, explicit unknown-vs-zero schedules, paise-rounded costs, and remaining units.",
-        "src/financial_brain/paper/mf_lot_book.py and mf_paper_accounts/mf_paper_lots/mf_paper_events in storage/schema.sql connect that calculation to durable paper cash and lot balances. Each lot freezes its own schedule and source digest; subscription/redemption event IDs are idempotent and updates are transactional.",
-        "tests/test_mf_lot_book.py, tests/test_mf_exit_loads.py, and tests/test_mf_scheme_terms.py: 11 passed; covers partial FIFO across separately priced schedules, net-cash reconciliation, duplicate replay, event-ID collision, and unknown-schedule rollback.",
-        "Remaining: permissioned AMC schedule ingestion and integration with the broader MF order/NAV assignment lifecycle are not complete; this account path consumes explicitly supplied NAVs and does not model tax or settlement."
+        "src/financial_brain/paper/mf_exit_loads.py allocates full/partial redemptions FIFO across dated lots, applies each lot's frozen holding-period schedule, distinguishes unknown from explicitly zero load, rounds fees to paise and returns remaining units.",
+        "src/financial_brain/paper/mf_lot_book.py and the mf_paper_accounts/mf_paper_lots/mf_paper_events schema persist cash, canonical scheme identity, lot units, effective-term source hash and subscription/redemption events in one transaction. Every event ID is idempotent and conflicting replays are rejected.",
+        "A subscription schedule must match a persisted, effective-dated SchemeCommercialTerms record available at the decision time and have source hash plus RESEARCH, RETENTION and PAPER_SIMULATION permissions. Redemption applies the stored per-lot schedule rather than a later schedule revision.",
+        "tests/test_mf_lot_book.py, tests/test_mf_exit_loads.py, and tests/test_mf_scheme_terms.py: 16 passed; includes FIFO partial/full behavior, cash/fee reconciliation, migration from the prior table layout, replay safety and unknown-schedule rollback.",
+        "Remaining: actual permissioned AMC terms are not loaded and the paper book is not connected to the full MF request-cutoff, NAV-allotment, tax and settlement lifecycle."
       ],
-      "blocker": "Partial: durable paper cash and lot accounting now use the per-lot load calculation, but authorized source schedules and integration with the full MF NAV/order/settlement lifecycle remain outstanding.",
-      "last_audited_at_utc": "2026-11-21T20:03:41Z",
-      "commit": "7aca7c78052237a93703bc66b86062aff26ccd49",
+      "blocker": "Partial: the durable paper book now records source-hashed, point-in-time per-lot schedules and reconciles full/partial redemptions; actual authorized AMC terms and the full NAV/order/settlement path remain outstanding.",
+      "last_audited_at_utc": "2026-11-21T20:35:00Z",
+      "commit": "19da600eab8ef49d8a529ee3e1640de9fbed35f1",
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-mf-lot-book3 tests/test_mf_lot_book.py tests/test_mf_exit_loads.py tests/test_mf_scheme_terms.py -q: 11 passed",
+        "python -m pytest tests/test_mf_lot_book.py tests/test_mf_exit_loads.py tests/test_mf_scheme_terms.py -q: 16 passed",
+        "MF/AMFI history suite plus generated forward-edge tracker test: 68 passed",
         "Ruff: passed",
-        "python -m mypy src/financial_brain/paper/mf_lot_book.py: passed",
-        "Database migration exercised by MF paper-book tests: passed",
-        "Mutual-fund and AMFI history test slice: 56 passed across tests/test_mf_*.py and tests/test_amfi_history_windows.py."
+        "mypy src/financial_brain/paper/mf_lot_book.py: passed",
+        "Database migration test upgrades existing mf_paper_lots and mf_paper_events schemas: passed"
       ],
-      "test_result": "Durable MF subscription lots retain source-hashed load schedules; FIFO full/partial redemptions reconcile per-lot fees to cash, retries do not duplicate events, and missing schedules leave balances unchanged."
+      "test_result": "Point-in-time source-hashed schedules are stored per durable subscription lot; full/partial FIFO redemptions net per-lot fees into account cash, and duplicate or unknown-cost cases cannot mutate balances."
     },
     {
       "id": "FB-0315",
@@ -1043,19 +1044,22 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/paper/mf_redemption_constraints.py resolves redemption eligibility against explicit source-pinned restriction inputs for ELSS lock-in dates, closed redemption, closed-ended windows, gating capacity, and segregated-portfolio units.",
-        "Unknown restrictions, unknown ELSS lock-in dates, unknown gate capacity, unknown segregated allocation, and other unspecified restrictions fail closed; a redemption exceeding available units is rejected.",
-        "Scheme terms and effective-dated lot constraints are not yet connected to the canonical MF paper book, and no permissioned scheme restriction records are loaded."
+        "src/financial_brain/paper/mf_redemption_constraints.py provides fail-closed eligibility checks for ELSS lock-in, closed-to-redemption, closed-ended windows, gating, segregated portfolios, other restrictions and units beyond the position.",
+        "src/financial_brain/paper/mf_lot_book.py wires those checks into durable redemption: scheme code/plan/option/ISIN must match; the exact effective-dated terms version must resolve as known at the decision timestamp; source requires RESEARCH, RETENTION and PAPER_SIMULATION permission; per-lot ELSS dates and explicit window/gate/segregated capacities are enforced before any account mutation.",
+        "Unknown restrictions, stale/future/ambiguous terms, missing lock-in dates, missing gate or segregated capacity, closed windows and non-paper entitlements fail closed. Rejected events leave cash, lots and event journal unchanged.",
+        "tests/test_mf_lot_book.py, tests/test_mf_redemption_constraints.py, and tests/test_mf_scheme_terms.py: 16 passed; the complete MF/AMFI and tracker slice passed 68 tests.",
+        "Remaining: permissioned historical restriction records have not been loaded; actual term acquisition, lot-level restriction data population and MF order/NAV settlement integration remain outstanding."
       ],
-      "blocker": "Partial: deterministic fail-closed eligibility logic is implemented, but source-backed restriction ingestion and paper-book enforcement remain outstanding.",
-      "last_audited_at_utc": "2026-11-21T17:15:56+00:00",
-      "commit": "23282380",
+      "blocker": "Partial: persisted point-in-time scheme terms and fail-closed restrictions now govern the MF paper account, but authorized AMC/SID restriction history and full live-data-to-allotment/settlement integration remain absent.",
+      "last_audited_at_utc": "2026-11-21T20:35:00Z",
+      "commit": "19da600eab8ef49d8a529ee3e1640de9fbed35f1",
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-mf-redemption tests/test_mf_redemption_constraints.py -q: 4 passed",
+        "python -m pytest tests/test_mf_lot_book.py tests/test_mf_redemption_constraints.py tests/test_mf_scheme_terms.py -q: 16 passed",
+        "MF/AMFI history suite plus generated forward-edge tracker test: 68 passed",
         "Ruff: passed",
-        "python -m mypy src/financial_brain/paper/mf_redemption_constraints.py: passed"
+        "mypy src/financial_brain/paper/mf_lot_book.py: passed"
       ],
-      "test_result": "Restricted, unavailable, or over-limit redemptions are rejected; confirmed unrestricted and within-gate redemptions are eligible."
+      "test_result": "Only an available, permissioned, matching terms version permits redemption; ELSS lot dates and explicit closed-window, gate and segregated-capacity constraints are enforced before durable FIFO accounting."
     },
     {
       "id": "FB-0316",
@@ -15429,7 +15433,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T00:00:00+00:00",
+    "as_of_utc": "2026-11-21T20:35:00+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15481,6 +15485,7 @@
       "FB-0312",
       "FB-0313",
       "FB-0314",
+      "FB-0315",
       "FB-0316",
       "FB-0317",
       "FB-0318",
@@ -15504,7 +15509,7 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 72,
+    "audited_count": 73,
     "status_counts": {
       "COMPLETE": 26,
       "PARTIAL": 195,
@@ -15576,7 +15581,7 @@
       "src/financial_brain/storage/schema.sql",
       "tests/test_mf_scheme_master.py"
     ],
-    "evidence_update": "FB-0305 audited PARTIAL: AMFI history-window helper is bounded to 90 days and covered by focused tests; compliant historical retrieval and rate-limited/retry ingestion remain absent."
+    "evidence_update": "FB-0314 and FB-0315 audited PARTIAL after durable MF paper-book integration; source-terms resolution, paper-use permissions and redemption restrictions are tested, while authorized historical source coverage and NAV/settlement integration remain absent."
   },
   "counts_by_status": {
     "COMPLETE": 26,
