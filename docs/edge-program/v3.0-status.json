@@ -725,12 +725,21 @@
     {
       "id": "FB-0214",
       "text": "Avoid imputing missing live quotes from same-day NAV or daily close; label `UNPRICED`, not `FILLED`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/etf_pricing.py::resolve_etf_paper_price emits `UNPRICED`, null price fields and `fill_created=false` for missing, stale, future, mismatched or non-executable quotes",
+        "Only a fresh, decision-available, identity-matching full quote with executable two-sided depth can provide a paper price; no NAV/iNAV/EOD fallback argument exists",
+        "tests/test_etf_pricing.py: missing quote, stale quote, LTP-only event, identity mismatch and fresh quote cases"
+      ],
+      "blocker": "Partial: explicit fail-closed pricing state exists, but it is not wired into all ETF paper order/report surfaces; those may still represent missing ETF quotes as generic no-trade/missing-data outcomes rather than `UNPRICED`.",
+      "last_audited_at_utc": "2026-11-21T14:38:00+00:00",
+      "commit": "ee7d5e2d",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_pricing.py tests/test_etf_return_series.py tests/test_etf_prices.py -q: 9 passed",
+        "Ruff, targeted mypy and source inventory/dependency-graph checks passed"
+      ],
+      "test_result": "Absent or non-executable ETF quotes cannot emit a price or fill; they produce an explicit UNPRICED result."
     },
     {
       "id": "FB-0301",
