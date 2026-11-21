@@ -256,15 +256,15 @@
         "The published rows preserve missing tests/hashes/commits as empty or null; unknown status is not promoted."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-21T12:51:39+00:00",
-      "commit": "fa51e933",
+      "last_audited_at_utc": "2026-11-21T12:55:00+00:00",
+      "commit": "9d167d2e",
       "artifact_hash": null,
       "test_evidence": [
-        "python scripts/export_checklist_audit.py --check passed; 1,378 rows generated and reconciled to source IDs.",
-        "tests/test_checklist_audit_export.py, tests/test_launch_gates.py, tests/test_product_charter.py, tests/test_evidence_labels.py: 22 passed.",
+        "python scripts/export_checklist_audit.py --check passed; 1,378 source IDs reconciled to exact Markdown task lines.",
+        "tests/test_checklist_audit_export.py, tests/test_launch_gates.py, tests/test_product_charter.py, tests/test_evidence_labels.py: 23 passed.",
         "Ruff, mypy for both audit/launch-gate scripts, JSON parsing, and git diff --check passed."
       ],
-      "test_result": "The item-level audit is published and deterministic. Every checklist ID includes source path/line/text and the requested status/source/test/artifact_hash/blocker/commit fields. Unassessed requirements remain UNASSESSED and do not inflate audited completion."
+      "test_result": "The item-level audit is deterministic, checks each ledger task text against the exact source checklist line, and publishes all 1,378 IDs. Missing tests/hashes/commits remain empty or null; unassessed requirements remain UNASSESSED."
     },
     {
       "id": "FB-0101",
@@ -14174,7 +14174,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T12:51:39+00:00",
+    "as_of_utc": "2026-11-21T12:55:00+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14275,6 +14275,6 @@
       "scripts/export_checklist_audit.py",
       "tests/test_checklist_audit_export.py"
     ],
-    "evidence_update": "FB-0012 COMPLETE: deterministic JSONL audit export now contains a source-linked record for all 1,378 checklist IDs and retains unaudited items as UNASSESSED. The export is validated in CI."
+    "evidence_update": "FB-0012 COMPLETE: source-linked audit export contains 1,378 records; new regression check rejects status text that diverges from source. Focused audit/launch-gate suite: 23 passed."
   }
 }
