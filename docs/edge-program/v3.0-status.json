@@ -397,12 +397,24 @@
     {
       "id": "FB-0107",
       "text": "Add instrument state: LISTED, SUSPENDED, HALTED, DELISTED, MATURED, CLOSED_FOR_PURCHASE, CLOSED_FOR_REDEMPTION, RESTRICTED.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::Status explicitly supports LISTED, SUSPENDED, HALTED, DELISTED, MATURED, CLOSED_FOR_PURCHASE, CLOSED_FOR_REDEMPTION, RESTRICTED (plus legacy ACTIVE/EXPIRED compatibility).",
+        "Instrument.status_history stores effective-dated status transitions; duplicate dates are rejected and all states outside LISTED/ACTIVE block tradability with a specific reason.",
+        "tests/test_kernel_instruments.py covers each blocked state, historical state resolution and duplicate-date refusal."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T13:46:00+00:00",
+      "commit": "eaed2a57",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_architecture.py tests/test_kernel_instruments.py tests/test_forward_edge_registry.py -q: 30 passed",
+        "Ruff: passed",
+        "targeted mypy: passed",
+        "source inventory and forward-engine graph freshness checks: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "All requested instrument lifecycle states are represented as effective-dated history; every non-listed state fails closed for generic trading eligibility."
     },
     {
       "id": "FB-0108",

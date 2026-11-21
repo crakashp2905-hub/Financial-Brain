@@ -196,3 +196,29 @@ def test_instrument_identity_point_in_time_metadata_for_etf_option_and_fund() ->
         rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
     )
     assert option.expiry == date(2026, 12, 31)
+
+
+@pytest.mark.parametrize("state", [
+    Status.SUSPENDED, Status.HALTED, Status.DELISTED, Status.EXPIRED, Status.MATURED,
+    Status.CLOSED_FOR_PURCHASE, Status.CLOSED_FOR_REDEMPTION, Status.RESTRICTED,
+])
+def test_all_non_listed_instrument_states_fail_closed(state: Status) -> None:
+    instrument = Instrument(
+        InstrumentId("NSE", "EQUITY", "ABC"),
+        rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
+        status_history=[(date(2026, 1, 1), Status.LISTED), (date(2026, 2, 1), state)],
+    )
+    assert instrument.status_on(date(2026, 1, 15)) is Status.LISTED
+    assert instrument.tradable(date(2026, 1, 15), Phase.CONTINUOUS) == (True, "OK")
+    assert instrument.tradable(date(2026, 2, 1), Phase.CONTINUOUS) == (
+        False, f"STATUS_{state.value}")
+
+
+def test_duplicate_status_effective_date_is_rejected() -> None:
+    with pytest.raises(InstrumentError, match="duplicate instrument status"):
+        Instrument(
+            InstrumentId("NSE", "EQUITY", "ABC"),
+            rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
+            status_history=[(date(2026, 1, 1), Status.LISTED),
+                            (date(2026, 1, 1), Status.SUSPENDED)],
+        )
