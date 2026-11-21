@@ -330,12 +330,24 @@
     {
       "id": "FB-0104",
       "text": "Canonical `TradingClock`: exchange session vs scheme business day vs bank settlement day vs NAV publication time; timezone Asia/Kolkata with holiday calendars.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/kernel/trading_clock.py::TradingClock composes distinct NSE/BSE session, per-scheme business, bank settlement and observed NAV publication clocks in Asia/Kolkata.",
+        "BusinessCalendar requires explicit source hash, bounded coverage and sourced open dates; no weekends, holidays, generic NAV cutoff or publication time are inferred.",
+        "NavPublication stores the actual timezone-aware timestamp and source identity; duplicate, pre-business-date and unsourced NAV publications fail closed.",
+        "tests/test_kernel_trading_clock.py and tests/test_forward_edge_venue_calendar.py cover timezone conversion, distinct clocks, holiday/weekend representation, source-horizon refusal and missing NAV timestamps."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-21T13:22:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_trading_clock.py tests/test_forward_edge_venue_calendar.py -q: 8 passed",
+        "ruff check src/financial_brain/kernel/trading_clock.py tests/test_kernel_trading_clock.py: passed",
+        "python -m mypy src/financial_brain/kernel/trading_clock.py --follow-imports=silent: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "The canonical clock treats exchange sessions, scheme business dates, bank settlement dates, and actual NAV publication timestamps as separate source-bounded facts. Missing or stale calendars and missing publication records fail closed."
     },
     {
       "id": "FB-0105",
