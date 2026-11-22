@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 685,
+  "source_count": 686,
   "sources": [
     {
       "capability_ids": [],
@@ -2941,7 +2941,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_liquidity.py",
-      "source_sha256": "734948c655f59b9bfdd2b2bc2b57633564523bd368bd3ac154a90f55b5742f59",
+      "source_sha256": "57baa1283a5ebfc6295f80291427a1f0aae64b23801fc0b9102a61583bae26ff",
       "test_paths": []
     },
     {
@@ -2977,6 +2977,27 @@
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_pricing.py",
       "source_sha256": "a4b71054dda047312e43f6d49aa89777eb203c6c81ad9161274fc433cf7fe91e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
+        "financial_brain.features.etf_valuation",
+        "financial_brain.forward_edge.market_data",
+        "financial_brain.forward_edge.market_events",
+        "financial_brain.providers.etf_reference",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_trader_panel.py",
+      "source_sha256": "2a01b033cffa0b2f0529699ea1ec08911b58739782379166bfd584959072651b",
       "test_paths": []
     },
     {
@@ -12107,6 +12128,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 670,
+  "unassessed_count": 671,
   "unassigned_role_count": 398
 }

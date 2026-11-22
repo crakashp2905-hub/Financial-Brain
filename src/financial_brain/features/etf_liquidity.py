@@ -83,6 +83,7 @@ def analyze_etf_liquidity(
     amihud_median = median(amihud_values) if amihud_values else None
 
     valid_quotes: list[tuple[float, float, float]] = []
+    quote_source_hashes: set[str] = set()
     stale = 0
     quote_count = 0
     for event in quotes:
@@ -94,6 +95,7 @@ def analyze_etf_liquidity(
         if age < timedelta(0) or age > max_quote_age or executable is None:
             stale += 1
             continue
+        quote_source_hashes.add(event.sha256())
         bid, ask = float(executable["bid"]), float(executable["ask"])
         mid = (bid + ask) / 2
         spread_bps = (ask - bid) / mid * 10000
@@ -130,6 +132,7 @@ def analyze_etf_liquidity(
         "median_amihud_illiquidity": amihud_median,
         "quote_observations": quote_count,
         "valid_quote_observations": len(valid_quotes),
+        "source_sha256": sorted({row.source_sha256 for row in observations} | quote_source_hashes),
         "stale_or_non_executable_quote_fraction": stale_fraction,
         "median_spread_bps": median_spread,
         "median_top_bid_depth_inr": median_bid_depth,
