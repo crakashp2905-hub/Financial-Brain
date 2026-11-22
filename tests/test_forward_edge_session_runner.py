@@ -1406,6 +1406,27 @@ def test_partial_missed_and_rejected_scenarios_keep_requested_vs_filled_separate
     runner.close()
 
 
+def test_paper_receipt_records_multi_level_observed_depth_fills(tmp_path):
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+             "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                       "sell": [{"price": 100.05, "quantity": 1},
+                                {"price": 100.10, "quantity": 2},
+                                {"price": 100.15, "quantity": 20}]}}
+    runner, event, decided = trade_setup(tmp_path, quote=quote)
+    receipt = execute(runner, event, decided, qty=3, limit="100.30")
+    assert receipt["status"] == "FILLED"
+    assert receipt["depth_match_mode"] == "OBSERVED_OPPOSING_BOOK_LEVELS"
+    assert receipt["filled_quantity"] == 3
+    assert receipt["visible_depth_fills"] == [
+        {"price": "100.20", "quantity": 1},
+        {"price": "100.25", "quantity": 2},
+    ]
+    assert receipt["observed_opposing_depth_quantity"] == 23
+    assert receipt["average_price"] == "100.2333333333333333333333333"
+    assert runner.records("s")["accounting"]["positions"] == {"NSE:INFY": 3}
+    runner.close()
+
+
 def test_ltp_only_cannot_create_paper_fill_intent(tmp_path):
     runner = make_runner(tmp_path)
     opened(runner)

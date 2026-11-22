@@ -19,6 +19,9 @@ class ScenarioFill:
     child_quantities: tuple[int, ...]
     reject_reason: str | None
     adverse_slippage_bps: Decimal
+    # Price and quantity at each consumed displayed-book level, after adverse stress.
+    # Kept additive so legacy one-touch and passive scenarios remain readable.
+    level_fills: tuple[tuple[Decimal, int], ...] = ()
 
 
 def evaluate_scenario(*, side: str, quantity: int, touch_price: Decimal, limit_price: Decimal,
@@ -61,6 +64,88 @@ def evaluate_scenario(*, side: str, quantity: int, touch_price: Decimal, limit_p
     delta = filled_total if side == "BUY" else -filled_total
     return ScenarioFill(status, quantity, filled_total, delta, stressed, tuple(children), None,
                         adverse_slippage_bps)
+
+
+def evaluate_depth_scenario(*, side: str, quantity: int,
+                            levels: tuple[tuple[Decimal, int], ...], limit_price: Decimal,
+                            tick_size: Decimal, freeze_limit: int, slice_size: int,
+                            adverse_slippage_bps: Decimal,
+                            price_band: tuple[Decimal, Decimal] | None = None) -> ScenarioFill:
+    """Walk the observed opposing book and fill only displayed, limit-feasible depth.
+
+    ``levels`` must be best-to-worst asks for BUY and bids for SELL. Adverse slippage is
+    applied to each level and rounded against the trader before checking the limit/band.
+    The function makes no queue-position or replenishment assumption: depth not present in
+    this quote cannot fill. A remainder is PARTIAL; zero executable depth is MISSED.
+    """
+    if (side not in {"BUY", "SELL"} or quantity < 1
+            or not isinstance(limit_price, Decimal) or not isinstance(tick_size, Decimal)
+            or not limit_price.is_finite() or not tick_size.is_finite()
+            or limit_price <= 0 or tick_size <= 0):
+        raise ExecutionScenarioError("invalid side, quantity or prices")
+    if (freeze_limit < 1 or slice_size < 1 or not isinstance(adverse_slippage_bps, Decimal)
+            or not adverse_slippage_bps.is_finite()
+            or adverse_slippage_bps < 0 or adverse_slippage_bps >= Decimal(10_000)):
+        raise ExecutionScenarioError("invalid freeze, slice or slippage input")
+    if quantity > freeze_limit:
+        return ScenarioFill("REJECTED", quantity, 0, 0, None, (), "FREEZE_LIMIT_EXCEEDED",
+                            adverse_slippage_bps)
+    if not levels:
+        return ScenarioFill("MISSED", quantity, 0, 0, None, (), "NO_VISIBLE_LIQUIDITY",
+                            adverse_slippage_bps)
+    previous: Decimal | None = None
+    for price, displayed in levels:
+        if not isinstance(price, Decimal) or not price.is_finite() or price <= 0 \
+                or type(displayed) is not int or displayed <= 0:
+            raise ExecutionScenarioError("book levels require finite positive prices and integral quantities")
+        if previous is not None and (price < previous if side == "BUY" else price > previous):
+            raise ExecutionScenarioError("opposing book levels are not ordered best-to-worst")
+        previous = price
+
+    multiplier = (Decimal(1) + adverse_slippage_bps / Decimal(10_000) if side == "BUY"
+                  else Decimal(1) - adverse_slippage_bps / Decimal(10_000))
+    rounding = ROUND_CEILING if side == "BUY" else ROUND_FLOOR
+    remaining = quantity
+    fills: list[tuple[Decimal, int]] = []
+    guard_reason: str | None = None
+    for raw_price, displayed in levels:
+        stressed = (raw_price * multiplier / tick_size).to_integral_value(rounding=rounding) * tick_size
+        if price_band is not None:
+            lower, upper = price_band
+            if (not isinstance(lower, Decimal) or not isinstance(upper, Decimal)
+                    or not lower.is_finite() or not upper.is_finite()
+                    or lower <= 0 or lower > upper):
+                raise ExecutionScenarioError("price band must be finite, positive and ordered")
+            if not lower <= stressed <= upper:
+                guard_reason = "PRICE_BAND"
+                break
+        feasible = stressed <= limit_price if side == "BUY" else stressed >= limit_price
+        if not feasible:
+            guard_reason = "ADVERSE_PRICE_BREACHES_LIMIT"
+            break
+        take = min(remaining, displayed)
+        if take:
+            fills.append((stressed, take))
+            remaining -= take
+        if remaining == 0:
+            break
+
+    filled = quantity - remaining
+    if filled == 0:
+        status = "REJECTED" if guard_reason == "PRICE_BAND" else "MISSED"
+        return ScenarioFill(status, quantity, 0, 0, None, (), guard_reason or "NO_VISIBLE_LIQUIDITY",
+                            adverse_slippage_bps)
+    weighted = sum((price * amount for price, amount in fills), Decimal(0)) / Decimal(filled)
+    children: list[int] = []
+    child_remaining = filled
+    while child_remaining:
+        child = min(child_remaining, slice_size, freeze_limit)
+        children.append(child)
+        child_remaining -= child
+    status = "FILLED" if filled == quantity else "PARTIAL"
+    delta = filled if side == "BUY" else -filled
+    return ScenarioFill(status, quantity, filled, delta, weighted, tuple(children), guard_reason,
+                        adverse_slippage_bps, tuple(fills))
 
 
 def evaluate_passive_scenario(*, side: str, quantity: int, limit_price: Decimal, tick_size: Decimal,
