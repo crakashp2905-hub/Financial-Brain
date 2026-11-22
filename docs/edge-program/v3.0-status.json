@@ -3037,13 +3037,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Forward runner binds decisions to immutable available inputs, enforces signal/order clocks and refuses stale/non-executable quotes; feed supervision marks incomplete sessions.",
-        "A common entry-halt latch for each affected desk on every live-feed staleness, expiry and invalidation path is not connected to all runners."
+        "Forward-session gates already reject selected expired or stale paper intents, but the option-specific route did not previously bind every fill to signal expiry/invalidation or a durable desk-wide stale-feed state.",
+        "Option paper plans now freeze signal_expires_at; entry fills at/after expiry or after a durable SIGNAL_INVALIDATED event are rejected. The invalidation is idempotent and survives restart.",
+        "Stale-feed threshold observations append a hash-chained HALTED event by (paper account, desk); new option entries across plans sharing that desk are blocked until an authorized resume records at least three fresh quote observations with source/hash evidence. Close fills still require fresh executable quotes.",
+        "Still PARTIAL: no live Kite/WebSocket monitor automatically calls the halt; resume quote-count and owner identity are caller-supplied rather than independently attested; option desk state is not connected to the common ForwardSessionRunner or all desks/OMS."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T18:36:48Z",
+      "commit": "ab8ad778",
+      "test_result": "Focused option lifecycle/risk/spread suite: 26 passed in 59.83s; Ruff and targeted mypy passed. Tests cover signal-expiry and invalidation gates, stale-feed halt affecting every plan on the desk, owner/fresh-quote resume gate, persistent hash-chain state and no new entries while halted.",
+      "test_evidence": [
+        "python -m pytest tests/test_paper_options_lifecycle.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 26 passed.",
+        "Ruff and mypy passed for option lifecycle/risk/spread modules; source inventory, capability ownership and forward engine graph freshness checks passed."
+      ]
     },
     {
       "id": "FB-0812",
@@ -15586,7 +15592,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T18:29:03Z",
+    "as_of_utc": "2026-11-22T18:36:48Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
