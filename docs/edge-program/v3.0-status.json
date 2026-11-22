@@ -2524,17 +2524,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "MFOrderAcknowledgement models ACKNOWLEDGED, ACCEPTED and REJECTED states with distinct effective and received timestamps; simulated responses cannot claim source provenance, while observed responses require source identity, reference and SHA-256.",
-        "platform_valid_through uses the sourced scheme business calendar and fails closed for missing coverage; tests cover acceptance evidence separation and business-day validity.",
-        "A durable order transition service, effective permission checks for observed source records, and an actual registrar/platform adapter are still needed before claiming an end-to-end official acceptance lifecycle."
+        "kernel/mf_order.py models REQUESTED, ACKNOWLEDGED, ACCEPTED and REJECTED with distinct effective and received timestamps and an observed/simulated evidence distinction.",
+        "platform_valid_through resolves inclusive order validity from the source-bound scheme business calendar. Durable mf_paper_order_book persists requests and append-only transitions, checks order/account idempotency, requires effective PAPER_SIMULATION permission for observed responses, and rejects receipts outside the validity window.",
+        "Order snapshots preserve the official acceptance event timestamp separately from receipt time. Tests cover transitions, permissions, idempotent replay, terminal rejection and expiry."
       ],
-      "blocker": "No durable MF order transition journal or authorized platform/registrar response adapter is connected; model-level acceptance does not establish receipt by an actual platform.",
+      "blocker": "No authorized registrar/platform adapter is connected to supply real acknowledgement or acceptance receipts; the model and durable paper lifecycle cannot prove actual platform acceptance.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "d3bb909b5a3f18ae4a88c357d86c723bd85964e8",
+      "commit": "25979744bc60c714252e812942ab89125da2aa39",
       "test_evidence": [
-        "python -m pytest tests/test_mf_order.py tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 46 passed",
-        "ruff check src/financial_brain/kernel/mf_order.py tests/test_mf_order.py: passed",
-        "mypy src/financial_brain/kernel/mf_order.py: passed"
+        "python -m pytest tests/test_mf_order_book.py tests/test_migrations.py -q: 7 passed",
+        "ruff check src/financial_brain/paper/mf_order_book.py tests/test_mf_order_book.py: passed",
+        "mypy src/financial_brain/paper/mf_order_book.py: passed",
+        "git diff --check: passed"
       ]
     },
     {
