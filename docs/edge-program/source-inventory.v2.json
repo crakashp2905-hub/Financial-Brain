@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 671,
+  "source_count": 672,
   "sources": [
     {
       "capability_ids": [],
@@ -9048,6 +9048,23 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "datetime",
+        "hashlib",
+        "json",
+        "kernel.mf_sip"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_sip_book.py",
+      "source_sha256": "bdbd89cf440cd2af4d2fae25ce9bd371ff2e85db17594129739774cfbd5e7e50",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "costs.india",
         "dataclasses",
         "datetime"
@@ -11762,6 +11779,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 656,
+  "unassessed_count": 657,
   "unassigned_role_count": 393
 }
