@@ -268,7 +268,7 @@ Build one quant trading platform with five **operating desks**: (1) equity swing
 - [ ] **FB-0707** Implement redemption with cutoff, lot selection (FIFO default unless an actual platform rule specifies otherwise), units to redeem and deferred proceeds settlement.
 - [x] **FB-0708** Book exit loads by purchase lot and holding age, stamp duties and any relevant charges by effective-dated rule.
 - [ ] **FB-0709** Implement redemption cash state `REDEMPTION_PENDING -> VALUE_CONFIRMED -> PAYOUT_PENDING -> CASH_AVAILABLE`; prohibit redeploying unsettled proceeds.
-- [ ] **FB-0710** Simulate switches as paired switch-out and switch-in with asynchronous settlement and no phantom same-minute capital redeployment.
+- [x] **FB-0710** Simulate switches as paired switch-out and switch-in with asynchronous settlement and no phantom same-minute capital redeployment.
 - [ ] **FB-0711** Model SIP installments as repeated subscriptions with independent payment outcomes and allotment NAV; missed installments must stay missed.
 - [ ] **FB-0712** Model SWP as redemptions with applicable loads and payouts; STP similarly as redemption and new purchase.
 - [ ] **FB-0713** Handle minimum subscription/redemption amounts, partial redemption, fractional units, folio restrictions, scheme lock-ins and unavailable NAV days.

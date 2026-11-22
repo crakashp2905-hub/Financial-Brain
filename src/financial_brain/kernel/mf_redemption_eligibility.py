@@ -63,8 +63,10 @@ def resolve_redemption_eligible_nav(
     already be observed by decision time. Observed acceptance requires paper-use rights.
     """
     decision_time = _aware(decision_at, "decision_at")
-    if order.transaction_type is not MFOrderKind.REDEMPTION:
-        raise MFRedemptionEligibilityError("redemption NAV requires a REDEMPTION order")
+    if order.transaction_type not in (MFOrderKind.REDEMPTION, MFOrderKind.SWITCH_OUT):
+        raise MFRedemptionEligibilityError(
+            "redemption NAV requires a REDEMPTION or SWITCH_OUT order"
+        )
     if acceptance.order_id != order.order_id or acceptance.state is not MFOrderState.ACCEPTED:
         raise MFRedemptionEligibilityError("redemption requires acceptance of this exact order")
     if acceptance.effective_at < order.requested_at:

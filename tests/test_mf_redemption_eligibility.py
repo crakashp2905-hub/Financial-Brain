@@ -75,7 +75,7 @@ def test_redemption_nav_date_uses_sourced_redemption_cutoff():
 
 def test_rejects_wrong_order_type_unaccepted_order_and_future_receipt():
     order = _order()
-    with pytest.raises(MFRedemptionEligibilityError, match="REDEMPTION order"):
+    with pytest.raises(MFRedemptionEligibilityError, match="REDEMPTION or SWITCH_OUT order"):
         resolve_redemption_eligible_nav(
             _order(transaction_type=MFOrderKind.PURCHASE), _acceptance(order), _calendar(),
             decision_at=datetime(2026, 11, 23, 10, tzinfo=UTC),
