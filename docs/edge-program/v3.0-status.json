@@ -2997,13 +2997,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Options risk/spread calculations check leg-wise quotes, visible size, defined economic loss, intermediate legging risk and expiry scenarios.",
-        "There is no durable multi-leg order state with partial leg fills, hedge, fee/margin reserve and full exercise/settlement reconciliation."
+        "Existing option risk and spread calculations report per-leg executable quotes, legging loss, bounded debit-spread economic risk, and explicit unverified margin/settlement states.",
+        "Added paper/options_lifecycle.py: frozen source-hashed plan, append-only hash-chained SQLite lifecycle events, idempotent entry/close fill IDs, partial fills, contract/source/availability validation, protective-long-before-short constraints, short-quantity caps, and controls that prevent closing protection before reducing the short leg.",
+        "The ledger freezes positive fee/cash reserves, keeps broker margin NOT_VERIFIED, accounts cash and fees per event, reconstructs state after reopen, and records expiry/physical-delivery as scenario-only. Open positions at expiry remain OPEN_AT_EXPIRY_UNRESOLVED; no settlement or physical order is fabricated.",
+        "Still PARTIAL: the lifecycle journal is not yet integrated into all option desks, OMS or ForwardSessionRunner; fee reserve is caller-supplied; broker margin and actual exercise/assignment/settlement cash/share reconciliation are not verified or implemented."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T18:13:49Z",
+      "commit": "baea63e1",
+      "test_result": "Focused option lifecycle/risk/spread suite: 21 passed in 3.59s; Ruff and targeted mypy passed. New coverage verifies partial entry/close fills, short exposure never exceeds filled protection, close protection ordering, duplicate fill replay after reopen, conflicting replay rejection, reserved cash/fees, and unresolved expiry positions.",
+      "test_evidence": [
+        "python -m pytest tests/test_paper_options_lifecycle.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 21 passed.",
+        "Ruff and mypy passed for the option lifecycle/risk/spread modules; source inventory, capability ownership and forward engine graph freshness checks passed."
+      ]
     },
     {
       "id": "FB-0810",
@@ -15574,7 +15580,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T18:01:41Z",
+    "as_of_utc": "2026-11-22T18:13:49Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15904,7 +15910,9 @@
       "src/financial_brain/forward_edge/options_spread.py",
       "tests/test_forward_edge_options_risk.py",
       "tests/test_forward_edge_options_spread.py",
-      "docs/edge-program/v3.0-status.json"
+      "docs/edge-program/v3.0-status.json",
+      "src/financial_brain/paper/options_lifecycle.py",
+      "tests/test_paper_options_lifecycle.py"
     ],
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing."
   },
