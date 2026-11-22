@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 
 from ..forward_edge.data_permissions import DataPermission, DataUse
@@ -277,6 +278,81 @@ def request_systematic_redemption(
     return {**settlement, **lifecycle, "settlement_id": settlement_id}
 
 
+def release_systematic_payout(
+    con,
+    *,
+    instruction_id: str,
+    available_at: datetime,
+    now: datetime,
+    basis: MFSystematicFlowBasis = MFSystematicFlowBasis.SIMULATED_ASSUMPTION,
+    evidence_ref: str | None = None,
+    source_id: str | None = None,
+    source_sha256: str | None = None,
+    permissions: tuple[DataPermission, ...] = (),
+) -> dict[str, object]:
+    """Release the real paper-book receivable and append the matching SWP/STP event.
+
+    The settlement cash write is idempotent. If a process stops before the
+    systematic-event write, retry observes the same payout receipt and completes
+    the lifecycle without crediting account cash twice.
+    """
+    from .mf_redemption_settlement import make_cash_available, settlement_snapshot
+
+    payout_time = _aware(available_at, "available_at")
+    recorded_at = _aware(now, "now")
+    if recorded_at < payout_time:
+        raise MFSystematicFlowBookError("payout persistence precedes payout availability")
+    try:
+        payout_basis = MFSystematicFlowBasis(basis)
+    except ValueError as exc:
+        raise MFSystematicFlowBookError("unknown payout evidence basis") from exc
+    row = con.execute(f"""SELECT {_I_COLUMNS} FROM mf_paper_systematic_instructions
+        WHERE instruction_id=?""", [instruction_id]).fetchone()
+    if row is None:
+        raise MFSystematicFlowBookError("systematic instruction does not exist")
+    instruction = _instruction_from_row(row)
+    settlement_id = f"systematic:{instruction.instruction_id}"
+    settlement = settlement_snapshot(
+        con, account_id=instruction.account_id, settlement_id=settlement_id,
+    )
+    if settlement["net_inr"] is None:
+        raise MFSystematicFlowBookError("redemption value has not been confirmed")
+
+    raw_events = con.execute("""SELECT event_id, kind, effective_at, basis, amount_inr,
+        gross_inr, exit_load_inr, other_charges_inr, nav_per_unit, units, reason,
+        source_id, source_ref, source_sha256 FROM mf_paper_systematic_events
+        WHERE instruction_id=? ORDER BY sequence""", [instruction_id]).fetchall()
+    events = tuple(_event_from_row(event_row) for event_row in raw_events)
+    _ = MFSystematicFlowLifecycle(instruction, events)
+    if not events or events[-1].kind is not MFSystematicFlowEventKind.VALUE_CONFIRMED:
+        raise MFSystematicFlowBookError(
+            "systematic payout requires a recorded value-confirmation event"
+        )
+    if events[-1].amount != Decimal(settlement["net_inr"]):
+        raise MFSystematicFlowBookError(
+            "MF settlement net value differs from the systematic value-confirmation event"
+        )
+
+    released = make_cash_available(
+        con, account_id=instruction.account_id, settlement_id=settlement_id,
+        available_at=payout_time, basis=payout_basis.value,
+        evidence_ref=evidence_ref, source_id=source_id, source_sha256=source_sha256,
+        permissions=permissions, now=recorded_at,
+    )
+    event = MFSystematicFlowEvent(
+        event_id=f"{instruction.instruction_id}:payout-available",
+        kind=MFSystematicFlowEventKind.PAYOUT_AVAILABLE,
+        effective_at=payout_time, basis=payout_basis,
+        amount_inr=Decimal(released["net_inr"]), source_id=source_id,
+        source_ref=evidence_ref, source_sha256=source_sha256,
+    )
+    lifecycle_result = record_systematic_event(
+        con, instruction_id=instruction_id, event=event, now=recorded_at,
+        permissions=permissions,
+    )
+    return {**released, **lifecycle_result, "settlement_id": settlement_id}
+
+
 def systematic_instruction_snapshot(con, *, instruction_id: str) -> dict[str, object]:
     row = con.execute(f"""SELECT {_I_COLUMNS} FROM mf_paper_systematic_instructions
         WHERE instruction_id=?""", [instruction_id]).fetchone()
@@ -297,5 +373,6 @@ def systematic_instruction_snapshot(con, *, instruction_id: str) -> dict[str, ob
 
 __all__ = [
     "MFSystematicFlowBookError", "create_systematic_plan", "record_systematic_event",
-    "request_systematic_redemption", "systematic_instruction_snapshot",
+    "release_systematic_payout", "request_systematic_redemption",
+    "systematic_instruction_snapshot",
 ]

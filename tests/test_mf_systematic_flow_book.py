@@ -14,7 +14,8 @@ from financial_brain.kernel.mf_systematic_flows import (
 )
 from financial_brain.paper.mf_systematic_flow_book import (
     MFSystematicFlowBookError, create_systematic_plan, record_systematic_event,
-    request_systematic_redemption, systematic_instruction_snapshot,
+    release_systematic_payout, request_systematic_redemption,
+    systematic_instruction_snapshot,
 )
 from financial_brain.paper.mf_redemption_settlement import settlement_snapshot
 from financial_brain.storage.db import Database
@@ -238,3 +239,72 @@ def test_systematic_amount_withdrawal_is_not_silently_converted_to_units(databas
                 con, instruction_id=instruction.instruction_id,
                 requested_at=NOW, now=NOW,
             )
+
+
+def test_systematic_payout_credits_canonical_cash_and_recovers_after_event_failure(
+        database, monkeypatch):
+    import financial_brain.paper.mf_systematic_flow_book as flow_book
+
+    instruction = _instruction(MFSystematicFlowKind.SWP, target_scheme=None,
+        target_plan=None, target_option=None, target_isin=None,
+        amount_inr=None, units=Decimal("1"))
+    payout_at = NOW + timedelta(minutes=2)
+    with database.connect() as con:
+        _create(con, instruction)
+        con.execute("""INSERT INTO mf_paper_lots (
+            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            lock_in_until, units_original, units_remaining, purchase_nav,
+            exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
+            [instruction.account_id, "lot-payout", instruction.source_scheme,
+             instruction.source_plan, instruction.source_option, instruction.source_isin,
+             date(2026, 11, 1), Decimal("1"), Decimal("1"), Decimal("100"),
+             "subscribe-payout", NOW])
+        request_systematic_redemption(
+            con, instruction_id=instruction.instruction_id,
+            requested_at=NOW, now=NOW,
+        )
+        value = _event(instruction, MFSystematicFlowEventKind.VALUE_CONFIRMED, 1,
+            amount_inr=Decimal("90"), gross_inr=Decimal("100"),
+            exit_load_inr=Decimal("10"), other_charges_inr=Decimal("0"))
+        record_systematic_event(con, instruction_id=instruction.instruction_id,
+                                event=value, now=value.effective_at)
+        con.execute("""UPDATE mf_paper_redemption_settlements SET
+            state='PAYOUT_PENDING', gross_inr=?, exit_load_inr=?, net_inr=?,
+            payout_due_date=? WHERE account_id=? AND settlement_id=?""",
+            [Decimal("100"), Decimal("10"), Decimal("90"), date(2026, 11, 23),
+             instruction.account_id, f"systematic:{instruction.instruction_id}"])
+
+        original = flow_book.record_systematic_event
+        calls = 0
+
+        def fail_once(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise RuntimeError("simulated crash after cash release")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(flow_book, "record_systematic_event", fail_once)
+        with pytest.raises(RuntimeError, match="after cash release"):
+            release_systematic_payout(
+                con, instruction_id=instruction.instruction_id,
+                available_at=payout_at, now=payout_at,
+            )
+        cash = con.execute("SELECT cash_inr FROM mf_paper_accounts WHERE account_id=?",
+                            [instruction.account_id]).fetchone()[0]
+        assert Decimal(cash) == Decimal("90")
+
+        replay = release_systematic_payout(
+            con, instruction_id=instruction.instruction_id,
+            available_at=payout_at, now=payout_at,
+        )
+        assert replay["state"] == "CASH_AVAILABLE"
+        snapshot = systematic_instruction_snapshot(
+            con, instruction_id=instruction.instruction_id,
+        )
+        assert snapshot["stage"] == "PAYOUT_AVAILABLE"
+        assert snapshot["available_to_redeploy_inr"] == Decimal("90")
+        cash = con.execute("SELECT cash_inr FROM mf_paper_accounts WHERE account_id=?",
+                            [instruction.account_id]).fetchone()[0]
+        assert Decimal(cash) == Decimal("90")
