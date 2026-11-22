@@ -9092,13 +9092,14 @@
         "json",
         "kernel.mf_systematic_flows",
         "kernel.trading_clock",
+        "mf_redemption_settlement",
         "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_systematic_flow_book.py",
-      "source_sha256": "ee97aec552ac0bd53b4429f3d012ba209d2e4b8e329a7adebb5dd4e732ccd244",
+      "source_sha256": "246c1b7563e846c08a4ecac7e292d6a1088db9c6700e36516504cfe0756a5333",
       "test_paths": []
     },
     {
