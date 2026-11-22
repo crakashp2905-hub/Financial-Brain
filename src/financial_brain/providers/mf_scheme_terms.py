@@ -69,6 +69,7 @@ class SchemeCommercialTerms:
     exit_loads: tuple[ExitLoadBand, ...] | None
     minimum_initial_inr: Decimal | str | int | None
     minimum_additional_inr: Decimal | str | int | None
+    minimum_redemption_inr: Decimal | str | int | None
     exit_restrictions: tuple[ExitRestriction, ...] | None
     source_id: str
     source_ref: str
@@ -83,7 +84,7 @@ class SchemeCommercialTerms:
         if self.effective_to is not None and self.effective_to < self.effective_from:
             raise SchemeTermsError("effective_to precedes effective_from")
         for field_name in ("ter_percent", "aum_inr", "minimum_initial_inr",
-                           "minimum_additional_inr"):
+                           "minimum_additional_inr", "minimum_redemption_inr"):
             value = getattr(self, field_name)
             if value is not None:
                 number = _decimal(value, field_name)
@@ -135,6 +136,7 @@ class SchemeCommercialTerms:
                            if self.exit_loads is not None else None),
             "minimum_initial_inr": decimal_text(self.minimum_initial_inr),
             "minimum_additional_inr": decimal_text(self.minimum_additional_inr),
+            "minimum_redemption_inr": decimal_text(self.minimum_redemption_inr),
             "exit_restrictions": ([x.value for x in self.exit_restrictions]
                                   if self.exit_restrictions is not None else None),
             "source_id": self.source_id, "source_ref": self.source_ref,
