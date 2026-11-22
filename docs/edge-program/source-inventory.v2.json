@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 678,
+  "source_count": 679,
   "sources": [
     {
       "capability_ids": [],
@@ -7708,6 +7708,27 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "forward_edge.data_permissions",
+        "fund_transactions",
+        "hashlib",
+        "json",
+        "mf_order",
+        "trading_clock"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/mf_redemption_eligibility.py",
+      "source_sha256": "a6f4e81e3fc0534fca993967f43aeba6dd7e78b73793f33b60fe2895e6d7d674",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "decimal",
         "enum"
       ],
@@ -9045,7 +9066,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_lot_book.py",
-      "source_sha256": "0e89067d703d5df62bc5dc7c84c1df4ac5c81a9d1b7ed1fcd760d928a4605bac",
+      "source_sha256": "67f4494d94357fe59dce8b579d30aa9d425e8827d4f073b4131b4a83b074ae5a",
       "test_paths": []
     },
     {
@@ -9122,6 +9143,9 @@
         "forward_edge.data_permissions",
         "hashlib",
         "json",
+        "kernel.fund_transactions",
+        "kernel.mf_order",
+        "kernel.mf_redemption_eligibility",
         "kernel.trading_clock",
         "mf_account_ledger",
         "mf_lot_book",
@@ -9132,7 +9156,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_redemption_settlement.py",
-      "source_sha256": "3499aa8d75cae0d095d75d6c0abf64fe7444acea597151903f6705b803a9d99b",
+      "source_sha256": "87bd963a70878f9d5c7d9c7d36e2fdb324b8b829942da4d80362a9c77c6575bf",
       "test_paths": []
     },
     {
@@ -9190,9 +9214,12 @@
         "hashlib",
         "ingest.mfnav",
         "json",
+        "kernel.fund_transactions",
+        "kernel.mf_order",
         "kernel.mf_systematic_flows",
         "kernel.trading_clock",
         "mf_lot_book",
+        "mf_order_book",
         "mf_redemption_settlement",
         "providers.mf_scheme_terms",
         "typing"
@@ -9201,7 +9228,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_systematic_flow_book.py",
-      "source_sha256": "0463afd547102c82e2f317b3ba7a6054103044753fb164f7b5b5b7ae9fe5cc86",
+      "source_sha256": "3e4a6ec8a2a7e68218fe2aaa5de933c0b53845c843af4852004e33f961a7a5d5",
       "test_paths": []
     },
     {
@@ -11626,7 +11653,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/storage/db.py",
-      "source_sha256": "1e93c68a366ba2b2ab36fcb680c334751f746cce7a1155d0cb2d1b8a809780af",
+      "source_sha256": "2148645b3b54b203b5cb4e136147d21dc2fa7aa458310f32998c90fd69034325",
       "test_paths": []
     },
     {
@@ -11925,6 +11952,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 663,
-  "unassigned_role_count": 395
+  "unassessed_count": 664,
+  "unassigned_role_count": 396
 }
