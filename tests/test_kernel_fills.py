@@ -76,6 +76,7 @@ def test_limit_not_reached_no_fill_and_receipt_names_basis() -> None:
     assert fill_bar(BAR, index=3, side="BUY", quantity=10, limit=90.0, tif="GTC", volume_cap=1e9) is None
     f = fill_bar(BAR, index=3, side="BUY", quantity=10, limit=101.0, tif="GTC", volume_cap=1e9)
     assert f is not None and f.receipt()["fidelity"] == "BAR"
+    assert f.receipt()["simulation_fidelity"] == "BAR_PROXY_SIM"
     assert f.receipt()["mode"] == "PAPER_SIMULATED"
 
 

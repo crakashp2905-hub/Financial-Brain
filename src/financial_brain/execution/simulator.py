@@ -66,6 +66,11 @@ class Fill:
     slices: list[dict] = field(default_factory=list)
 
     @property
+    def simulation_fidelity(self) -> str:
+        """This engine executes from OHLCV minute bars, so its price is a bar proxy."""
+        return "BAR_PROXY_SIM"
+
+    @property
     def achieved(self) -> float | None:
         """Volume-weighted average price actually accumulated."""
         return (self.notional / self.filled_shares) if self.filled_shares else None
@@ -101,7 +106,8 @@ class Fill:
                 "first_minute": self.first_minute, "last_minute": self.last_minute,
                 "shortfall_bps": self.shortfall_bps,
                 "participation": self.participation,
-                "notional": self.notional}
+                "notional": self.notional,
+                "simulation_fidelity": self.simulation_fidelity}
 
 
 def session_bars(con, symbol: str, session: date) -> list[dict]:
@@ -208,6 +214,7 @@ def round_trip(con, *, symbol: str, session: date, entry_minute: int,
         gross = sell.achieved / buy.achieved - 1
     return {
         "symbol": symbol, "session": session,
+        "simulation_fidelity": buy.simulation_fidelity,
         "entry": buy.as_dict(), "exit": sell.as_dict(),
         "gross_return": gross,
         "entry_shortfall_bps": buy.shortfall_bps,
