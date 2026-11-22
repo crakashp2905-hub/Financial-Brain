@@ -898,6 +898,7 @@ class ForwardSessionRunner:
                              event_id: str, side: str, quantity: int, limit_price: Decimal,
                              tick_size: Decimal, freeze_limit: int, slice_size: int,
                              adverse_slippage_bps: Decimal, latency_ms: int,
+                             quantity_unit: str | None = None,
                              simulated_at: datetime | None = None, max_wait_ms: int | None = None,
                              price_band: tuple[Decimal, Decimal] | None = None,
                              passive_trade_event_ids: tuple[str, ...] = ()) -> dict[str, Any]:
@@ -951,6 +952,7 @@ class ForwardSessionRunner:
                     or candidate_intent.get("decision_id") != decision_id
                     or candidate_intent.get("side") != side
                     or candidate_intent.get("quantity") != quantity
+                    or candidate_intent.get("quantity_unit") != quantity_unit
                     or candidate_reference_price != limit):
                 raise ForwardSessionRunnerError("paper order differs from its canonical candidate intent")
         risk = self._con.execute("SELECT allowed, record_json FROM runner_risk_verdicts "
@@ -1014,11 +1016,12 @@ class ForwardSessionRunner:
             rulebook = InstrumentRuleBook(rule_data)
             rule = rulebook.validate_order(
                 instrument=event.instrument_id, day=config.exchange_date, session_phase=phase,
-                quantity=quantity, limit_price=limit, tick_size=tick)
+                quantity=quantity, limit_price=limit, tick_size=tick, quantity_unit=quantity_unit)
         except InstrumentRuleError as exc:
             raise ForwardSessionRunnerError(str(exc)) from exc
         if freeze_limit > rule.freeze_quantity:
             raise ForwardSessionRunnerError("requested freeze limit exceeds the effective instrument rule")
+        quantity_unit = rule.quantity_unit
         quote = executable_quote(event)
         if quote is None:
             raise ForwardSessionRunnerError("paper fill requires a two-sided quote with positive visible depth")
@@ -1071,11 +1074,13 @@ class ForwardSessionRunner:
         visible = quote["ask_quantity"] if side == "BUY" else quote["bid_quantity"]
         effective_rule = {"effective_from": rule.effective_from.isoformat(),
                           "tick_size": str(rule.tick_size), "lot_size": rule.lot_size,
+                          "quantity_unit": rule.quantity_unit,
                           "freeze_quantity": rule.freeze_quantity, "expiry":
                           rule.expiry.isoformat() if rule.expiry else None,
                           "status": rule.status, "session_phases": sorted(rule.session_phases)}
         request = {"session_id": session_id, "order_id": order_id, "decision_id": decision_id,
                    "event_id": event_id, "side": side, "quantity": quantity,
+                   "quantity_unit": quantity_unit,
                    "decision_manifest_sha256": manifest_row[0],
                    "instrument_rulebook_sha256": rulebook.digest,
                    "effective_instrument_rule": effective_rule,
@@ -1120,6 +1125,7 @@ class ForwardSessionRunner:
                                              adverse_slippage_bps=slippage, price_band=band)
             body = {"session_id": session_id, "order_id": order_id, "status": scenario.status,
                     "requested_quantity": scenario.requested_quantity,
+                    "quantity_unit": quantity_unit,
                     "filled_quantity": scenario.filled_quantity, "inventory_delta": scenario.inventory_delta,
                     "average_price": str(scenario.average_price) if scenario.average_price is not None else None,
                     "child_quantities": list(scenario.child_quantities), "reject_reason": scenario.reject_reason,
