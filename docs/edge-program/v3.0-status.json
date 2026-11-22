@@ -3017,13 +3017,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "ForwardSessionRunner uses a durable event journal/outbox with restart-safe idempotency and reconciliation; PaperAccount folds a durable journal into OMS and double-entry cash.",
-        "One execution-per-signal/child-order semantics are not shared across all legacy and options books."
+        "The forward paper runner already has durable order/lifecycle state for selected paper fills, with event IDs and idempotent reconciliation at its session boundary.",
+        "Option paper plans now append a frozen plan event and immutable outbox row in one SQLite transaction. The outbox is unique by (account_id, signal_id, child_order_id), also unique by plan ID, and binds the canonical plan payload hash.",
+        "SQLite BEGIN IMMEDIATE serializes plan/position validation with event append; retrying identical fills after restart is idempotent, conflicting event IDs fail, and over-plan concurrent fills are rejected. Append-only triggers protect lifecycle and outbox rows.",
+        "Still PARTIAL: the option outbox has no wired consumer/dispatch acknowledgement; the option lifecycle is not integrated with ForwardSessionRunner or all order paths; cross-desk OMS/accounting reconciliation and end-to-end duplicate P&L proof remain outstanding."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T18:29:03Z",
+      "commit": "d25484a1",
+      "test_result": "Focused option lifecycle/risk/spread suite: 24 passed. Tests cover atomic plan/outbox registration, unique account/signal/child identity, restart recovery, idempotent fill replay, concurrent quantity caps, append-only event/outbox rows and risk-preserving leg transitions.",
+      "test_evidence": [
+        "python -m pytest tests/test_paper_options_lifecycle.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 24 passed.",
+        "Ruff and mypy passed for the option lifecycle/risk/spread modules; source inventory, capability ownership and forward engine graph freshness checks passed."
+      ]
     },
     {
       "id": "FB-0811",
@@ -15580,7 +15586,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T18:24:23Z",
+    "as_of_utc": "2026-11-22T18:29:03Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
