@@ -15,8 +15,8 @@ from financial_brain.kernel.mf_systematic_flows import (
 )
 from financial_brain.paper.mf_systematic_flow_book import (
     MFSystematicFlowBookError, apply_systematic_transfer_purchase,
-    create_systematic_plan, record_systematic_event, release_systematic_payout,
-    request_systematic_redemption,
+    confirm_systematic_redemption_value, create_systematic_plan,
+    record_systematic_event, release_systematic_payout, request_systematic_redemption,
     systematic_instruction_snapshot,
 )
 from financial_brain.providers.mf_scheme_terms import SchemeCommercialTerms
@@ -321,11 +321,14 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
     decision_at = NOW + timedelta(minutes=3)
     allotment_at = NOW + timedelta(minutes=4)
     terms_hash = "a" * 64
+    nav_id = "stp-target-nav-observation"
+    nav_hash = "c" * 64
     permissions = tuple(DataPermission(
-        source_id="AMC", use=use, status=PermissionStatus.USE_ALLOWED,
+        source_id=source_id, use=use, status=PermissionStatus.USE_ALLOWED,
         effective_from=date(2026, 11, 1), effective_through=None,
         evidence_ref="reviewed-terms", reviewer="owner",
-    ) for use in (DataUse.RESEARCH, DataUse.RETENTION, DataUse.PAPER_SIMULATION))
+    ) for source_id in ("AMC", "AMFI")
+        for use in (DataUse.RESEARCH, DataUse.RETENTION, DataUse.PAPER_SIMULATION))
     terms = SchemeCommercialTerms(
         scheme_code=instruction.target_scheme or "", plan=instruction.target_plan or "",
         option=instruction.target_option or "", isin=instruction.target_isin or "",
@@ -367,6 +370,27 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
             available_at=payout_at, now=payout_at,
         )
         persist_scheme_terms(con, terms, permissions=permissions)
+        nav_available_at = decision_at - timedelta(seconds=1)
+        con.execute("""INSERT INTO mf_nav_observations (
+            observation_id, scheme_code, isin_growth, isin_reinvest, scheme_name,
+            fund_house, scheme_type, plan, option, nav, nav_date, lake_key,
+            row_number, row_sha256, source_published_at, observed_at, ingested_at)
+            VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NULL, ?, ?)""",
+            [nav_id, instruction.target_scheme, instruction.target_isin,
+             "Example Target Scheme", "AMC", "EQUITY", instruction.target_plan,
+             instruction.target_option, 10.0, date(2026, 11, 23), "lake-stp-nav",
+             nav_hash, nav_available_at, nav_available_at])
+
+        kwargs = dict(
+            instruction_id=instruction.instruction_id, investment_inr=Decimal("80"),
+            nav_per_unit=Decimal("10"), nav_observation_id=nav_id,
+            terms=terms, permissions=permissions, decision_at=decision_at,
+            allotted_on=date(2026, 11, 23), now=allotment_at,
+        )
+        with pytest.raises(MFSystematicFlowBookError, match="as-known target-scheme"):
+            apply_systematic_transfer_purchase(
+                con, **(kwargs | {"nav_observation_id": "wrong-nav-id"}),
+            )
 
         original = flow_book.record_systematic_event
         calls = 0
@@ -379,11 +403,6 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
             return original(*args, **kwargs)
 
         monkeypatch.setattr(flow_book, "record_systematic_event", fail_once)
-        kwargs = dict(
-            instruction_id=instruction.instruction_id, investment_inr=Decimal("80"),
-            nav_per_unit=Decimal("10"), terms=terms, permissions=permissions,
-            decision_at=decision_at, allotted_on=date(2026, 11, 23), now=allotment_at,
-        )
         with pytest.raises(RuntimeError, match="after target subscription"):
             apply_systematic_transfer_purchase(con, **kwargs)
         cash = con.execute("SELECT cash_inr FROM mf_paper_accounts WHERE account_id=?",
@@ -410,3 +429,99 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
             WHERE account_id=? AND lot_id=?""",
             [instruction.account_id, f"{instruction.instruction_id}:stp-lot"]).fetchall()
         assert len(lots) == 1 and Decimal(lots[0][0]) == Decimal("8")
+
+
+def test_systematic_value_confirmation_uses_fifo_nav_and_recovers_once(database, monkeypatch):
+    import financial_brain.paper.mf_systematic_flow_book as flow_book
+
+    instruction = _instruction(MFSystematicFlowKind.SWP, target_scheme=None,
+        target_plan=None, target_option=None, target_isin=None,
+        amount_inr=None, units=Decimal("1"), source_scheme="111111",
+        source_isin="INF111111111")
+    nav_date = date(2026, 11, 23)
+    decision_at = NOW + timedelta(minutes=3)
+    nav_available_at = NOW + timedelta(minutes=2)
+    nav_id = "systematic-nav-observation"
+    terms_hash = "a" * 64
+    nav_hash = "b" * 64
+    permissions = tuple(DataPermission(
+        source_id=source_id, use=use, status=PermissionStatus.USE_ALLOWED,
+        effective_from=date(2026, 11, 1), effective_through=None,
+        evidence_ref="reviewed-paper-use", reviewer="owner",
+    ) for source_id in ("AMC", "AMFI")
+        for use in (DataUse.RESEARCH, DataUse.RETENTION, DataUse.PAPER_SIMULATION))
+    terms = SchemeCommercialTerms(
+        scheme_code=instruction.source_scheme, plan=instruction.source_plan,
+        option=instruction.source_option, isin=instruction.source_isin,
+        effective_from=date(2026, 11, 1), effective_to=None,
+        ter_percent=None, aum_inr=None, exit_loads=(), minimum_initial_inr=None,
+        minimum_additional_inr=None, exit_restrictions=(), source_id="AMC",
+        source_ref="source-terms", source_sha256=terms_hash,
+        published_at=datetime(2026, 11, 1, 8, tzinfo=timezone.utc),
+        observed_at=datetime(2026, 11, 1, 8, tzinfo=timezone.utc),
+    )
+
+    with database.connect() as con:
+        _create(con, instruction)
+        persist_scheme_terms(con, terms, permissions=permissions)
+        con.execute("""INSERT INTO mf_paper_lots (
+            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            lock_in_until, units_original, units_remaining, purchase_nav,
+            exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)""",
+            [instruction.account_id, "lot-systematic-value", instruction.source_scheme,
+             instruction.source_plan, instruction.source_option, instruction.source_isin,
+             date(2026, 11, 1), Decimal("1"), Decimal("1"), Decimal("100"),
+             "[]", terms_hash, "subscribe-systematic-value", NOW])
+        con.execute("""INSERT INTO mf_nav_observations (
+            observation_id, scheme_code, isin_growth, isin_reinvest, scheme_name,
+            fund_house, scheme_type, plan, option, nav, nav_date, lake_key,
+            row_number, row_sha256, source_published_at, observed_at, ingested_at)
+            VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NULL, ?, ?)""",
+            [nav_id, instruction.source_scheme, instruction.source_isin,
+             "Example Source Scheme", "AMC", "EQUITY", instruction.source_plan,
+             instruction.source_option, 100.0, nav_date, "lake-systematic-nav",
+             nav_hash, nav_available_at, nav_available_at])
+        request_systematic_redemption(
+            con, instruction_id=instruction.instruction_id,
+            requested_at=NOW, now=NOW,
+        )
+
+        original = flow_book.record_systematic_event
+        calls = 0
+
+        def fail_once(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise RuntimeError("simulated crash after FIFO redemption")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(flow_book, "record_systematic_event", fail_once)
+        kwargs = dict(
+            instruction_id=instruction.instruction_id,
+            nav_observation_id=nav_id, redemption_date=nav_date,
+            payout_due_date=nav_date, decision_at=decision_at,
+            terms=terms, permissions=permissions, now=decision_at,
+        )
+        with pytest.raises(RuntimeError, match="after FIFO redemption"):
+            confirm_systematic_redemption_value(con, **kwargs)
+        row = con.execute("""SELECT state, net_inr FROM mf_paper_redemption_settlements
+            WHERE account_id=? AND settlement_id=?""",
+            [instruction.account_id, f"systematic:{instruction.instruction_id}"]).fetchone()
+        assert row[0] == "PAYOUT_PENDING" and Decimal(row[1]) == Decimal("100")
+        remaining = con.execute("""SELECT units_remaining FROM mf_paper_lots
+            WHERE account_id=? AND lot_id=?""",
+            [instruction.account_id, "lot-systematic-value"]).fetchone()[0]
+        assert Decimal(remaining) == Decimal("0")
+
+        result = confirm_systematic_redemption_value(con, **kwargs)
+        assert result["status"] == "recorded"
+        replay = confirm_systematic_redemption_value(con, **kwargs)
+        assert replay["status"] == "already_recorded"
+        snapshot = systematic_instruction_snapshot(
+            con, instruction_id=instruction.instruction_id,
+        )
+        assert snapshot["stage"] == "VALUE_CONFIRMED"
+        assert len(snapshot["events"]) == 2
+        assert snapshot["events"][1][12] == nav_id
