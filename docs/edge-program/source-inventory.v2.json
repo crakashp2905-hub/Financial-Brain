@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 683,
+  "source_count": 684,
   "sources": [
     {
       "capability_ids": [],
@@ -5230,7 +5230,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "e019387f8371865fb43190b2f376b2c39da95f96d51966d4dc5262fbf6b760c6",
+      "source_sha256": "0d2a7b11d72e8175729739fc8405a4f34bde9ac5bfbb91adea9b1e6b9f99061c",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
@@ -5384,6 +5384,26 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "decimal",
+        "financial_brain.forward_edge.session_runner",
+        "financial_brain.forward_edge.strategy_adapter",
+        "financial_brain.kernel.registry",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/strategy_pipeline.py",
+      "source_sha256": "0f6d4d4893dd5bad09e55cc90219f33e98a52fd9a737a691d3dadb65ece6cf4d",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "financial_brain.forward_edge.bootstrap",
         "financial_brain.forward_edge.capacity",
         "hashlib",
@@ -5429,7 +5449,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/tracker.py",
-      "source_sha256": "6e7340409935be0846728b887e9fd011f821deaa7e199b1b0c4e75bf4c5e6842",
+      "source_sha256": "3b173fd7dd1cccbf1cdc1385486a0f2fd1fdb79ac91ff330afdfeefd827c078e",
       "test_paths": []
     },
     {
@@ -12051,6 +12071,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 668,
-  "unassigned_role_count": 398
+  "unassessed_count": 669,
+  "unassigned_role_count": 399
 }
