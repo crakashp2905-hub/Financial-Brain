@@ -806,6 +806,69 @@ CREATE TABLE IF NOT EXISTS mf_paper_sip_transitions (
     UNIQUE (installment_id, event_sha256)
 );
 
+-- Durable SWP/STP instructions; events record settlement and any target purchase
+-- independently so unsettled redemption proceeds are never made spendable early.
+CREATE TABLE IF NOT EXISTS mf_paper_systematic_plans (
+    plan_id VARCHAR PRIMARY KEY,
+    account_id VARCHAR NOT NULL,
+    plan_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_systematic_instructions (
+    instruction_id VARCHAR PRIMARY KEY,
+    plan_id VARCHAR NOT NULL,
+    account_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    kind VARCHAR NOT NULL CHECK (kind IN ('SWP', 'STP')),
+    scheduled_for DATE NOT NULL,
+    source_scheme VARCHAR NOT NULL,
+    source_plan VARCHAR NOT NULL,
+    source_option VARCHAR NOT NULL,
+    source_isin VARCHAR NOT NULL,
+    amount_inr DECIMAL(38, 18),
+    units DECIMAL(38, 18),
+    target_scheme VARCHAR,
+    target_plan VARCHAR,
+    target_option VARCHAR,
+    target_isin VARCHAR,
+    current_stage VARCHAR NOT NULL,
+    state_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    UNIQUE (plan_id, scheduled_for),
+    CHECK ((amount_inr IS NOT NULL AND amount_inr > 0 AND units IS NULL)
+        OR (units IS NOT NULL AND units > 0 AND amount_inr IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_systematic_events (
+    instruction_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    event_id VARCHAR NOT NULL,
+    kind VARCHAR NOT NULL CHECK (kind IN (
+        'REDEMPTION_REQUESTED', 'VALUE_CONFIRMED', 'PAYOUT_AVAILABLE',
+        'PURCHASE_FUNDS_APPLIED', 'ALLOTMENT_CONFIRMED', 'MISSED'
+    )),
+    effective_at TIMESTAMPTZ NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    amount_inr DECIMAL(38, 18),
+    gross_inr DECIMAL(38, 18),
+    exit_load_inr DECIMAL(38, 18),
+    other_charges_inr DECIMAL(38, 18),
+    nav_per_unit DECIMAL(38, 18),
+    units DECIMAL(38, 18),
+    reason VARCHAR,
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (instruction_id, sequence),
+    UNIQUE (instruction_id, event_id),
+    UNIQUE (instruction_id, event_sha256)
+);
+
 CREATE TABLE IF NOT EXISTS mf_paper_lots (
     account_id VARCHAR NOT NULL,
     lot_id VARCHAR NOT NULL,
