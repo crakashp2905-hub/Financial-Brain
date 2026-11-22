@@ -752,6 +752,60 @@ CREATE TABLE IF NOT EXISTS mf_paper_order_transitions (
     UNIQUE (order_id, event_sha256)
 );
 
+-- Scheduled MF SIP debits are independent installments with terminal missed outcomes.
+CREATE TABLE IF NOT EXISTS mf_paper_sip_plans (
+    plan_id VARCHAR PRIMARY KEY,
+    account_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    plan_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_sip_installments (
+    installment_id VARCHAR PRIMARY KEY,
+    plan_id VARCHAR NOT NULL,
+    account_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    scheduled_for DATE NOT NULL,
+    amount_inr DECIMAL(38, 18) NOT NULL CHECK (amount_inr > 0),
+    current_state VARCHAR NOT NULL CHECK (current_state IN (
+        'SCHEDULED', 'PAYMENT_INITIATED', 'FUNDS_AVAILABLE', 'NAV_PENDING', 'MISSED', 'ALLOTTED'
+    )),
+    payment_initiated_at TIMESTAMPTZ,
+    funds_available_at TIMESTAMPTZ,
+    missed_at TIMESTAMPTZ,
+    miss_reason VARCHAR,
+    nav_date DATE,
+    nav_per_unit DECIMAL(38, 18),
+    nav_published_at TIMESTAMPTZ,
+    nav_available_at TIMESTAMPTZ,
+    allotted_at TIMESTAMPTZ,
+    units_allotted DECIMAL(38, 18),
+    state_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    UNIQUE (plan_id, scheduled_for)
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_sip_transitions (
+    installment_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    from_state VARCHAR,
+    to_state VARCHAR NOT NULL,
+    effective_at TIMESTAMPTZ,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (installment_id, sequence),
+    UNIQUE (installment_id, event_sha256)
+);
+
 CREATE TABLE IF NOT EXISTS mf_paper_lots (
     account_id VARCHAR NOT NULL,
     lot_id VARCHAR NOT NULL,

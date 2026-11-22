@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 672,
+  "source_count": 674,
   "sources": [
     {
       "capability_ids": [],
@@ -7692,6 +7692,23 @@
         "dataclasses",
         "datetime",
         "decimal",
+        "enum"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/mf_sip.py",
+      "source_sha256": "b446899f81ddeb97ec763d2db30b95a4cb3512b6fa482776134dac77755dd258",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
         "enum",
         "hashlib",
         "json",
@@ -9046,6 +9063,23 @@
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_scheme_flows.py",
       "source_sha256": "47092bdf16cf79558b1641689fedf9d5e87fe3359e6bb0f8802eb2f01f4a6cf9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "hashlib",
+        "json",
+        "kernel.mf_sip"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_sip_book.py",
+      "source_sha256": "bdbd89cf440cd2af4d2fae25ce9bd371ff2e85db17594129739774cfbd5e7e50",
       "test_paths": []
     },
     {
@@ -11787,6 +11821,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 657,
-  "unassigned_role_count": 394
+  "unassessed_count": 659,
+  "unassigned_role_count": 395
 }
