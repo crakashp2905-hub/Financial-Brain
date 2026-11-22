@@ -222,6 +222,61 @@ def record_systematic_event(
     return {"instruction_id": instruction_id, "stage": next_state.stage, "status": "recorded"}
 
 
+def request_systematic_redemption(
+    con,
+    *,
+    instruction_id: str,
+    requested_at: datetime,
+    now: datetime,
+    permissions: tuple[DataPermission, ...] = (),
+) -> dict[str, object]:
+    """Create the canonical reserved-unit redemption for a periodic MF instruction.
+
+    This first execution adapter supports unit-denominated SWP/STP instructions.
+    INR-denominated instructions still need a scheme-specific amount-to-units
+    conversion at the order date and are rejected instead of guessed.
+    The underlying redemption request is idempotent, so a restart between the
+    settlement write and lifecycle-event write can safely call this again.
+    """
+    requested_time = _aware(requested_at, "requested_at")
+    recorded_at = _aware(now, "now")
+    if recorded_at < requested_time:
+        raise MFSystematicFlowBookError("request persistence precedes request time")
+    row = con.execute(f"""SELECT {_I_COLUMNS} FROM mf_paper_systematic_instructions
+        WHERE instruction_id=?""", [instruction_id]).fetchone()
+    if row is None:
+        raise MFSystematicFlowBookError("systematic instruction does not exist")
+    instruction = _instruction_from_row(row)
+    if instruction.units is None:
+        raise MFSystematicFlowBookError(
+            "amount-denominated systematic redemption needs an explicit amount-to-units adapter"
+        )
+
+    from .mf_redemption_settlement import request_redemption
+
+    settlement_id = f"systematic:{instruction.instruction_id}"
+    settlement = request_redemption(
+        con, account_id=instruction.account_id, settlement_id=settlement_id,
+        scheme_code=instruction.source_scheme, plan=instruction.source_plan,
+        option=instruction.source_option, isin=instruction.source_isin,
+        requested_units=instruction.units,
+        requested_on=requested_time.astimezone(IST).date(),
+        requested_at=requested_time, now=recorded_at,
+    )
+    event = MFSystematicFlowEvent(
+        event_id=f"{instruction.instruction_id}:redemption-requested",
+        kind=MFSystematicFlowEventKind.REDEMPTION_REQUESTED,
+        effective_at=requested_time,
+        basis=MFSystematicFlowBasis.SIMULATED_ASSUMPTION,
+        units=instruction.units,
+    )
+    lifecycle = record_systematic_event(
+        con, instruction_id=instruction_id, event=event, now=recorded_at,
+        permissions=permissions,
+    )
+    return {**settlement, **lifecycle, "settlement_id": settlement_id}
+
+
 def systematic_instruction_snapshot(con, *, instruction_id: str) -> dict[str, object]:
     row = con.execute(f"""SELECT {_I_COLUMNS} FROM mf_paper_systematic_instructions
         WHERE instruction_id=?""", [instruction_id]).fetchone()
@@ -242,5 +297,5 @@ def systematic_instruction_snapshot(con, *, instruction_id: str) -> dict[str, ob
 
 __all__ = [
     "MFSystematicFlowBookError", "create_systematic_plan", "record_systematic_event",
-    "systematic_instruction_snapshot",
+    "request_systematic_redemption", "systematic_instruction_snapshot",
 ]

@@ -14,8 +14,9 @@ from financial_brain.kernel.mf_systematic_flows import (
 )
 from financial_brain.paper.mf_systematic_flow_book import (
     MFSystematicFlowBookError, create_systematic_plan, record_systematic_event,
-    systematic_instruction_snapshot,
+    request_systematic_redemption, systematic_instruction_snapshot,
 )
+from financial_brain.paper.mf_redemption_settlement import settlement_snapshot
 from financial_brain.storage.db import Database
 
 
@@ -173,3 +174,67 @@ def test_systematic_plan_requires_existing_account_and_event_time_not_backdated(
         with pytest.raises(MFSystematicFlowBookError, match="precedes its scheduled date"):
             record_systematic_event(con, instruction_id=instruction.instruction_id,
                                     event=backdated, now=NOW)
+
+
+def test_systematic_redemption_reserves_actual_lots_and_recovers_after_partial_write(
+        database, monkeypatch):
+    instruction = _instruction(amount_inr=None, units=Decimal("150"))
+    with database.connect() as con:
+        _create(con, instruction)
+        con.execute("""INSERT INTO mf_paper_lots (
+            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            lock_in_until, units_original, units_remaining, purchase_nav,
+            exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
+            [instruction.account_id, "lot-source", instruction.source_scheme,
+             instruction.source_plan, instruction.source_option, instruction.source_isin,
+             date(2026, 11, 1), Decimal("150"), Decimal("150"), Decimal("100"),
+             "subscribe-source", NOW])
+
+        original = __import__(
+            "financial_brain.paper.mf_systematic_flow_book", fromlist=["record_systematic_event"]
+        ).record_systematic_event
+        calls = 0
+
+        def fail_once(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise RuntimeError("simulated crash after settlement request")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(
+            "financial_brain.paper.mf_systematic_flow_book.record_systematic_event", fail_once,
+        )
+        with pytest.raises(RuntimeError, match="simulated crash"):
+            request_systematic_redemption(
+                con, instruction_id=instruction.instruction_id,
+                requested_at=NOW, now=NOW,
+            )
+        assert settlement_snapshot(
+            con, account_id=instruction.account_id,
+            settlement_id=f"systematic:{instruction.instruction_id}",
+        )["state"] == "REDEMPTION_PENDING"
+
+        result = request_systematic_redemption(
+            con, instruction_id=instruction.instruction_id,
+            requested_at=NOW, now=NOW,
+        )
+        assert result["status"] == "recorded"
+        assert result["settlement_id"] == f"systematic:{instruction.instruction_id}"
+        snapshot = systematic_instruction_snapshot(
+            con, instruction_id=instruction.instruction_id,
+        )
+        assert snapshot["stage"] == "REDEMPTION_REQUESTED"
+        assert len(snapshot["events"]) == 1
+
+
+def test_systematic_amount_withdrawal_is_not_silently_converted_to_units(database):
+    instruction = _instruction(units=None, amount_inr=Decimal("10000"))
+    with database.connect() as con:
+        _create(con, instruction)
+        with pytest.raises(MFSystematicFlowBookError, match="amount-to-units adapter"):
+            request_systematic_redemption(
+                con, instruction_id=instruction.instruction_id,
+                requested_at=NOW, now=NOW,
+            )
