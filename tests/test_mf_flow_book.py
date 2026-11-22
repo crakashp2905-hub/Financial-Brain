@@ -99,6 +99,12 @@ def test_idcw_payout_updates_canonical_cash_and_is_idempotent(book):
     assert applied["value_before_inr"] == applied["value_after_inr"] == Decimal("1000.00")
     assert applied["total_return_percent"] == 0
     assert account_snapshot(book, "paper-1")["cash_inr"] == Decimal("100")
+    journal = book.execute(
+        "SELECT flow_kind, cash_delta_inr, units_before, units_after "
+        "FROM mf_paper_flow_events WHERE account_id=? AND source_flow_id=?",
+        ["paper-1", flow.event_id],
+    ).fetchone()
+    assert journal == ("IDCW_PAYOUT", Decimal("100"), Decimal("10"), Decimal("10"))
 
     replay = apply_economic_flow(
         book, account_id="paper-1", flow=flow, decision_at=DECISION,
@@ -128,6 +134,17 @@ def test_idcw_reinvestment_creates_an_independently_dated_lot(book):
         "WHERE account_id=? AND lot_id=?", ["paper-1", "idcw-lot-1"],
     ).fetchone()
     assert lot == (date(2026, 1, 3), Decimal("90"), f"MF_FLOW:{flow.event_id}")
+    assert position["cost_basis_inr"] == Decimal("1099.999999999999999990")
+    journal = book.execute(
+        "SELECT flow_kind, cash_delta_inr, units_before, units_after, "
+        "reinvestment_lot_id FROM mf_paper_flow_events "
+        "WHERE account_id=? AND source_flow_id=?",
+        ["paper-1", flow.event_id],
+    ).fetchone()
+    assert journal == (
+        "IDCW_REINVESTMENT", Decimal("0.000000000000000010"), Decimal("10"),
+        Decimal("11.111111111111111111"), "idcw-lot-1",
+    )
 
 
 def test_unit_split_adjusts_open_lots_without_changing_cost_basis(book):

@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -300,6 +300,20 @@ def subscribe(
         ).fetchone()
         if account is None:
             raise MfPaperBookError("paper account does not exist")
+        has_prior_subscription = con.execute(
+            """SELECT 1 FROM mf_paper_events WHERE account_id=? AND scheme_code=?
+            AND plan=? AND option=? AND isin=? AND kind='SUBSCRIBE' LIMIT 1""",
+            [account_id, scheme_code, plan, option, isin],
+        ).fetchone() is not None
+        minimum = (
+            terms.minimum_additional_inr
+            if has_prior_subscription else terms.minimum_initial_inr
+        )
+        if minimum is not None and amount < Decimal(str(minimum)):
+            kind = "additional" if has_prior_subscription else "initial"
+            raise MfPaperBookError(
+                f"subscription is below the sourced {kind} minimum of INR {minimum}"
+            )
         cash = Decimal(account[0])
         if amount > cash:
             raise MfPaperBookError("subscription exceeds available paper cash")
@@ -677,8 +691,22 @@ def redeem(
     }
 
 
-def account_snapshot(con, account_id: str) -> dict[str, Any]:
-    """Return reconciled cash, units, and remaining subscription cost basis by scheme."""
+def account_snapshot(
+    con,
+    account_id: str,
+    *,
+    known_at: datetime | None = None,
+    stale_after: timedelta = timedelta(days=7),
+) -> dict[str, Any]:
+    """Return book balances and optional NAV valuation known by ``known_at``.
+
+    NAV dates alone never imply availability: only append-only observations whose
+    ingestion clock is no later than ``known_at`` may mark a position. Missing or
+    old observations remain visible with explicit flags and no invented value.
+    """
+    if stale_after < timedelta(0):
+        raise MfPaperBookError("stale_after cannot be negative")
+    valuation_time = _aware(known_at) if known_at is not None else None
     row = con.execute(
         "SELECT cash_inr FROM mf_paper_accounts WHERE account_id = ?", [account_id]
     ).fetchone()
@@ -696,8 +724,9 @@ def account_snapshot(con, account_id: str) -> dict[str, Any]:
         units, cost = grouped.get(key, (Decimal(0), Decimal(0)))
         lot_units, purchase_nav = Decimal(raw_units), Decimal(raw_nav)
         grouped[key] = (units + lot_units, cost + lot_units * purchase_nav)
-    positions = [
-        {
+    positions = []
+    for key, values in sorted(grouped.items()):
+        position = {
             "scheme_code": key[0],
             "plan": key[1],
             "option": key[2],
@@ -705,21 +734,68 @@ def account_snapshot(con, account_id: str) -> dict[str, Any]:
             "units": values[0],
             "cost_basis_inr": values[1],
         }
-        for key, values in sorted(grouped.items())
-    ]
+        if valuation_time is not None:
+            isin_column = "isin_growth" if key[2] == "GROWTH" else "isin_reinvest"
+            observation = con.execute(f"""SELECT observation_id, nav, nav_date,
+                COALESCE(ingested_at, observed_at) AS available_at
+                FROM mf_nav_observations WHERE scheme_code=? AND nav_date<=?
+                  AND COALESCE(ingested_at, observed_at)<=?
+                  AND (source_published_at IS NULL OR source_published_at<=?)
+                  AND {isin_column}=? AND plan=? AND option=?
+                ORDER BY nav_date DESC, available_at DESC, lake_key DESC,
+                         row_number DESC LIMIT 1""",
+                [key[0], valuation_time.astimezone(IST).date(), valuation_time,
+                 valuation_time, key[3], key[1], key[2]]).fetchone()
+            if observation is None:
+                position.update(
+                    nav_per_unit=None, nav_date=None, nav_observation_id=None,
+                    nav_available_at=None, market_value_inr=None, unrealized_pnl_inr=None,
+                    stale=True, valuation_status="NAV_UNAVAILABLE",
+                )
+            else:
+                nav = Decimal(str(observation[1]))
+                age = valuation_time.astimezone(IST).date() - observation[2]
+                stale = age > stale_after
+                value = values[0] * nav
+                position.update(
+                    nav_per_unit=nav, nav_date=observation[2],
+                    nav_observation_id=observation[0], nav_available_at=observation[3],
+                    market_value_inr=value,
+                    unrealized_pnl_inr=value - values[1], stale=stale,
+                    valuation_status="STALE" if stale else "CURRENT",
+                )
+        positions.append(position)
     pending = con.execute("""SELECT COALESCE(SUM(net_inr), 0)
         FROM mf_paper_redemption_settlements WHERE account_id=?
           AND state IN ('VALUE_CONFIRMED', 'PAYOUT_PENDING')""",
         [account_id]).fetchone()[0]
     cash = Decimal(row[0])
     pending_receivable = Decimal(pending)
-    return {
+    result = {
         "account_id": account_id,
         "cash_inr": cash,
         "pending_redemption_inr": pending_receivable,
         "cash_plus_pending_redemption_inr": cash + pending_receivable,
         "positions": positions,
     }
+    if valuation_time is not None:
+        valued: list[dict[str, Any]] = [
+            item for item in positions if item["market_value_inr"] is not None
+        ]
+        result["valuation_known_at"] = valuation_time
+        result["market_value_inr"] = sum(
+            (item["market_value_inr"] for item in valued), Decimal(0)
+        )
+        result["unrealized_pnl_inr"] = sum(
+            (item["unrealized_pnl_inr"] for item in valued), Decimal(0)
+        )
+        result["unvalued_position_count"] = sum(
+            item["valuation_status"] == "NAV_UNAVAILABLE" for item in positions
+        )
+        result["stale_position_count"] = sum(
+            bool(item["stale"]) for item in positions
+        )
+    return result
 
 
 __all__ = ["MfPaperBookError", "account_snapshot", "create_account", "redeem", "subscribe"]
