@@ -3003,11 +3003,11 @@
         "Still PARTIAL: the lifecycle journal is not yet integrated into all option desks, OMS or ForwardSessionRunner; fee reserve is caller-supplied; broker margin and actual exercise/assignment/settlement cash/share reconciliation are not verified or implemented."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T18:13:49Z",
-      "commit": "baea63e1",
-      "test_result": "Focused option lifecycle/risk/spread suite: 21 passed in 3.59s; Ruff and targeted mypy passed. New coverage verifies partial entry/close fills, short exposure never exceeds filled protection, close protection ordering, duplicate fill replay after reopen, conflicting replay rejection, reserved cash/fees, and unresolved expiry positions.",
+      "last_audited_at_utc": "2026-11-22T18:18:33Z",
+      "commit": "dde79d09",
+      "test_result": "Focused option lifecycle/risk/spread suite: 23 passed in 9.84s; Ruff and targeted mypy passed. Coverage verifies partial entry/close fills, short exposure never exceeds filled protection, close protection ordering, duplicate fill replay after reopen, conflicting replay rejection, append-only triggers, quote freshness and identity, cancellation idempotency, fee reserve, and unresolved expiry positions.",
       "test_evidence": [
-        "python -m pytest tests/test_paper_options_lifecycle.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 21 passed.",
+        "python -m pytest tests/test_paper_options_lifecycle.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 23 passed.",
         "Ruff and mypy passed for the option lifecycle/risk/spread modules; source inventory, capability ownership and forward engine graph freshness checks passed."
       ]
     },
@@ -15580,7 +15580,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T18:13:49Z",
+    "as_of_utc": "2026-11-22T18:18:33Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
