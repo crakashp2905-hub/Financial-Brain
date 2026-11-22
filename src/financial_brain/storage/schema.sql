@@ -984,6 +984,7 @@ CREATE TABLE IF NOT EXISTS mf_paper_systematic_redemption_eligibility (
 CREATE TABLE IF NOT EXISTS mf_paper_lots (
     account_id VARCHAR NOT NULL,
     lot_id VARCHAR NOT NULL,
+    folio_id VARCHAR,
     scheme_code VARCHAR NOT NULL,
     plan VARCHAR NOT NULL,
     option VARCHAR NOT NULL,
@@ -1001,9 +1002,24 @@ CREATE TABLE IF NOT EXISTS mf_paper_lots (
     UNIQUE (account_id, subscription_event_id)
 );
 
+-- Legacy paper lots keep folio_id NULL until an operator records supporting
+-- ownership evidence. Reconciliation is append-only at the API layer.
+CREATE TABLE IF NOT EXISTS mf_paper_folio_reconciliations (
+    account_id VARCHAR NOT NULL,
+    lot_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    evidence_ref VARCHAR NOT NULL,
+    evidence_sha256 VARCHAR NOT NULL,
+    reconciled_by VARCHAR NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    event_sha256 VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, lot_id)
+);
+
 CREATE TABLE IF NOT EXISTS mf_paper_events (
     account_id VARCHAR NOT NULL,
     event_id VARCHAR NOT NULL,
+    folio_id VARCHAR,
     kind VARCHAR NOT NULL CHECK (kind IN ('SUBSCRIBE', 'REDEEM')),
     scheme_code VARCHAR,
     plan VARCHAR,
@@ -1026,6 +1042,7 @@ CREATE TABLE IF NOT EXISTS mf_paper_events (
 CREATE TABLE IF NOT EXISTS mf_paper_redemption_settlements (
     account_id VARCHAR NOT NULL,
     settlement_id VARCHAR NOT NULL,
+    folio_id VARCHAR,
     scheme_code VARCHAR NOT NULL,
     plan VARCHAR NOT NULL,
     option VARCHAR NOT NULL,

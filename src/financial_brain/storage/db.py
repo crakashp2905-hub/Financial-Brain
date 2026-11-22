@@ -55,6 +55,11 @@ class Database:
         "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'UNKNOWN'",
         "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS option VARCHAR DEFAULT 'UNKNOWN'",
         "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS lock_in_until DATE",
+        # Folio ownership was not stored on legacy paper lots. Leave historical rows
+        # NULL; explicit reconciliation is required before folio-scoped transactions.
+        "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS folio_id VARCHAR",
+        "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS folio_id VARCHAR",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS folio_id VARCHAR",
         "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'UNKNOWN'",
         "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS option VARCHAR DEFAULT 'UNKNOWN'",
         "ALTER TABLE mf_scheme_commercial_terms ADD COLUMN IF NOT EXISTS minimum_redemption_inr VARCHAR",

@@ -291,7 +291,8 @@ def request_systematic_redemption(
     settlement_id = f"systematic:{instruction.instruction_id}"
     if instruction.units is not None:
         settlement = request_redemption(
-            con, account_id=instruction.account_id, settlement_id=settlement_id,
+            con, account_id=instruction.account_id, folio_id=instruction.folio_id,
+            settlement_id=settlement_id,
             scheme_code=instruction.source_scheme, plan=instruction.source_plan,
             option=instruction.source_option, isin=instruction.source_isin,
             requested_units=instruction.units,
@@ -505,7 +506,8 @@ def confirm_systematic_redemption_value(
                 "fixed-INR redemption amount is below one unit at the eligible NAV"
             )
         request_redemption(
-            con, account_id=instruction.account_id, settlement_id=settlement_id,
+            con, account_id=instruction.account_id, folio_id=instruction.folio_id,
+            settlement_id=settlement_id,
             scheme_code=instruction.source_scheme, plan=instruction.source_plan,
             option=instruction.source_option, isin=instruction.source_isin,
             requested_units=requested_units,
@@ -552,7 +554,7 @@ def confirm_systematic_redemption_value(
         raise MFSystematicFlowBookError("reserved units differ from the converted request")
 
     result = redeem(
-        con, account_id=instruction.account_id,
+        con, account_id=instruction.account_id, folio_id=instruction.folio_id,
         event_id=f"{instruction.instruction_id}:systematic-redemption",
         scheme_code=instruction.source_scheme, plan=instruction.source_plan,
         option=instruction.source_option, isin=instruction.source_isin,
