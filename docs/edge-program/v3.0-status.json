@@ -9804,12 +9804,21 @@
     {
       "id": "SL-02-09",
       "text": "Add `FeatureSnapshot` with observation/availability timestamp, feature version, source hashes and missingness masks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/features/snapshot.py defines immutable FeatureSnapshot records with entity/session identity, feature version, cutoff, per-feature observed_at/available_at clocks, source content hashes, feature-to-source references, explicit missingness masks, and deterministic SHA-256 identity.",
+        "FeatureSnapshot.create rejects naive clocks, post-cutoff availability, observation after availability, unresolved/bad source hashes, missing clocks and silent null handling. from_dict revalidates the record and rejects content or mask tampering.",
+        "tests/test_feature_snapshot.py verifies snapshot serialization/hash stability, clock and lineage validation, explicit missingness, and tamper rejection; seven focused tests pass with Ruff and mypy."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T23:23:33Z",
+      "commit": "cc9555dd",
+      "test_evidence": [
+        "python -m pytest -q tests/test_feature_snapshot.py: 7 passed.",
+        "ruff check src/financial_brain/features/snapshot.py tests/test_feature_snapshot.py and mypy src/financial_brain/features/snapshot.py passed; source inventory and forward-engine graph freshness checks passed."
+      ],
+      "test_result": "Seven focused FeatureSnapshot tests passed, including source hash sensitivity, point-in-time cutoffs, missingness and tamper-evident deserialization. Ruff, mypy and generated inventory checks passed."
     },
     {
       "id": "SL-02-10",
@@ -16115,17 +16124,18 @@
       "SL-02-05",
       "SL-02-06",
       "SL-02-07",
-      "SL-02-08"
+      "SL-02-08",
+      "SL-02-09"
     ],
-    "audited_count": 271,
+    "audited_count": 272,
     "status_counts": {
-      "COMPLETE": 47,
+      "COMPLETE": 48,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
       "PARTIAL": 212,
-      "UNASSESSED": 1107
+      "UNASSESSED": 1106
     },
-    "verified_complete_count": 47,
+    "verified_complete_count": 48,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -16257,10 +16267,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated. SL-02-03 COMPLETE: source audit and focused feature/causality suites passed (25 tests); daily, intraday and breadth families are separately implemented. SL-02-04 PARTIAL: point-in-time observed-quote IV/Greeks/skew/term/OI surface and archive coverage tracking implemented; permitted data evidence and paper-pipeline integration remain open. SL-02-05 PARTIAL: aligned point-in-time index breadth, constituent industry-count concentration, Nifty/Bank TRI correlation and sector relative strength implemented; empirical source coverage and trader-pipeline integration remain open. SL-02-06 PARTIAL: availability-timed BSE announcements, NSE results, shareholding and statement revision event panels are integrated into the research feature build; source coverage completeness and forward-paper consumption remain open."
   },
   "counts_by_status": {
-    "COMPLETE": 47,
+    "COMPLETE": 48,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
     "PARTIAL": 212,
-    "UNASSESSED": 1107
+    "UNASSESSED": 1106
   }
 }
