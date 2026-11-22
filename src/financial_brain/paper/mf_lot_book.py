@@ -11,7 +11,7 @@ import hashlib
 import json
 import re
 from datetime import date, datetime, timedelta, timezone
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
 from ..forward_edge.data_permissions import DataPermission, DataUse
@@ -28,6 +28,9 @@ from .mf_redemption_constraints import resolve_redemption_eligibility
 
 class MfPaperBookError(ValueError):
     """The requested paper-book event cannot be reconciled safely."""
+
+
+UNIT_QUANTUM = Decimal("0.000000000000000001")
 
 
 def _decimal(value: Decimal | str | int, name: str, *, positive: bool = True) -> Decimal:
@@ -279,7 +282,7 @@ def subscribe(
         schedule_hash = _sha256(exit_loads_sha256, "exit-load source hash")
         if schedule_hash != terms.source_sha256:
             raise MfPaperBookError("exit-load hash differs from the source terms hash")
-    units = amount / nav
+    units = (amount / nav).quantize(UNIT_QUANTUM, rounding=ROUND_HALF_UP)
     payload = {
         "kind": "SUBSCRIBE",
         "account_id": account_id,
