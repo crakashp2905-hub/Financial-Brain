@@ -2865,11 +2865,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "ForwardSessionRunner plus normalized signal/risk/paper order path and durable PaperAccount exist for cash equity; long-option replay/plans and defined-risk spreads live in separate paper modules.",
-        "No one versioned pipeline routes all existing equity, ETF and option strategies into one OMS and canonical multi-asset account."
+        "src/financial_brain/forward_edge/strategy_pipeline.py exposes a common normalized-candidate route into ForwardSessionRunner decision, frozen manifest, persisted risk verdict, durable paper OMS, fill and account projections.",
+        "The route requires matching frozen PAPER_ELIGIBLE, FROZEN_CHALLENGER or VERIFIED StrategyEligibility and binds the order ID, decision, strategy hash, symbol, side, quantity and reference price to one canonical intent; risk rejection remains WITHHELD and cannot create an order.",
+        "A real-runner integration test confirms a filled candidate reaches paper accounting and a forged order identity is rejected without creating a second intent. Focused adapter/pipeline/session tests: 8 passed; Ruff and targeted mypy passed."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "blocker": "Existing equity/ETF/options strategy implementations have not all been migrated to emit normalized candidates; options still use separate books and multi-leg positions are not yet reconciled through this shared account pipeline.",
+      "last_audited_at_utc": "2026-11-22T13:30:29Z",
       "commit": null,
       "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
