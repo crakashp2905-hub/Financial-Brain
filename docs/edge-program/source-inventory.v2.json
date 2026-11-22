@@ -9000,7 +9000,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_lot_book.py",
-      "source_sha256": "17614e073041eac701d145587ef24b4b37993d61f0aef872afdf36e5c0ad6c0b",
+      "source_sha256": "8e0afcd5711aa9f45c6b37be28f23c2650bfb0f69e3cca395cffce1c20010452",
       "test_paths": []
     },
     {
@@ -9104,18 +9104,23 @@
       "imports": [
         "__future__",
         "datetime",
+        "decimal",
         "forward_edge.data_permissions",
         "hashlib",
+        "ingest.mfnav",
         "json",
         "kernel.mf_systematic_flows",
         "kernel.trading_clock",
+        "mf_lot_book",
+        "mf_redemption_settlement",
+        "providers.mf_scheme_terms",
         "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_systematic_flow_book.py",
-      "source_sha256": "ee97aec552ac0bd53b4429f3d012ba209d2e4b8e329a7adebb5dd4e732ccd244",
+      "source_sha256": "0463afd547102c82e2f317b3ba7a6054103044753fb164f7b5b5b7ae9fe5cc86",
       "test_paths": []
     },
     {

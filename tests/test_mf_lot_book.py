@@ -176,6 +176,46 @@ def _redeem(
     )
 
 
+def test_subscription_enforces_sourced_initial_and_additional_minimums(connection):
+    con = connection
+    create_account(con, "paper-min", 10_000, now=NOW)
+    first_terms = _terms(
+        minimum_initial_inr=500,
+        minimum_additional_inr=250,
+    )
+    persist_scheme_terms(con, first_terms, permissions=_permissions())
+    with pytest.raises(MfPaperBookError, match="below the sourced initial minimum"):
+        subscribe(
+            con, account_id="paper-min", event_id="min-first-small", lot_id="min-lot-0",
+            scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+            allotted_on=date(2026, 1, 1), investment_inr=499, nav_per_unit=100,
+            exit_loads=(), exit_loads_sha256=HASH_A, terms=first_terms,
+            permissions=_permissions(), decision_at=DECISION, now=PAPERED,
+        )
+    subscribe(
+        con, account_id="paper-min", event_id="min-first", lot_id="min-lot-1",
+        scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+        allotted_on=date(2026, 1, 1), investment_inr=500, nav_per_unit=100,
+        exit_loads=(), exit_loads_sha256=HASH_A, terms=first_terms,
+        permissions=_permissions(), decision_at=DECISION, now=PAPERED,
+    )
+    with pytest.raises(MfPaperBookError, match="below the sourced additional minimum"):
+        subscribe(
+            con, account_id="paper-min", event_id="min-add-small", lot_id="min-lot-2",
+            scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+            allotted_on=date(2026, 1, 1), investment_inr=249, nav_per_unit=100,
+            exit_loads=(), exit_loads_sha256=HASH_A, terms=first_terms,
+            permissions=_permissions(), decision_at=DECISION, now=PAPERED,
+        )
+    subscribe(
+        con, account_id="paper-min", event_id="min-add", lot_id="min-lot-3",
+        scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+        allotted_on=date(2026, 1, 1), investment_inr=250, nav_per_unit=100,
+        exit_loads=(), exit_loads_sha256=HASH_A, terms=first_terms,
+        permissions=_permissions(), decision_at=DECISION, now=PAPERED,
+    )
+
+
 def test_partial_redemption_reconciles_fifo_lot_loads_cash_and_idempotency(connection):
     con = connection
     create_account(con, "paper-1", 5000, now=NOW)
@@ -580,6 +620,39 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
     assert settlement_snapshot(
         con, account_id="paper-1", settlement_id="red-settlement",
     )["state"] == "CASH_AVAILABLE"
+
+
+def test_account_valuation_uses_only_as_known_nav_and_flags_stale_or_missing(connection):
+    con = connection
+    create_account(con, "paper-valuation", 1000, now=NOW)
+    _subscribe(
+        con, event_id="valuation-sub", lot_id="valuation-lot", amount=1000,
+        schedule=(), digest=HASH_A, account_id="paper-valuation",
+    )
+    nav_date = date(2026, 1, 15)
+    available = datetime(2026, 1, 15, 12, tzinfo=timezone.utc)
+    _persist_nav_observation(
+        con, observation_id="valuation-nav", nav_date=nav_date,
+        nav=Decimal("125.5"), available_at=available,
+    )
+    before_ingestion = account_snapshot(
+        con, "paper-valuation", known_at=datetime(2026, 1, 15, 11, tzinfo=timezone.utc),
+    )
+    assert before_ingestion["positions"][0]["valuation_status"] == "NAV_UNAVAILABLE"
+    assert before_ingestion["positions"][0]["market_value_inr"] is None
+
+    known = account_snapshot(
+        con, "paper-valuation", known_at=datetime(2026, 1, 15, 13, tzinfo=timezone.utc),
+    )
+    assert known["positions"][0]["valuation_status"] == "CURRENT"
+    assert known["positions"][0]["market_value_inr"] == Decimal("1255.0")
+    assert known["positions"][0]["unrealized_pnl_inr"] == Decimal("255.0")
+
+    stale = account_snapshot(
+        con, "paper-valuation", known_at=datetime(2026, 2, 1, 13, tzinfo=timezone.utc),
+    )
+    assert stale["positions"][0]["valuation_status"] == "STALE"
+    assert stale["stale_position_count"] == 1
 
 
 def test_settlement_value_requires_exact_as_known_nav_observation(connection):
