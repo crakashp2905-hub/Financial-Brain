@@ -21,7 +21,8 @@ class PaperOrderRow:
 
     @property
     def unresolved(self) -> bool:
-        return self.state in {"CREATED", "SUBMITTED", "PARTIAL", "UNKNOWN"}
+        return self.state in {"CREATED", "SUBMITTED", "ACCEPTED", "WORKING", "PARTIAL",
+                              "CANCEL_PENDING", "TIMED_OUT", "UNKNOWN"}
 
     @property
     def confirmed_filled_order(self) -> bool:
@@ -49,7 +50,7 @@ def build_paper_order_blotter(journal: OrderJournal) -> PaperOrderBlotter:
             raise ValueError(f"unknown persisted order state {state!r}")
         quantity = int(latest["quantity"])
         filled = int(latest["filled_quantity"])
-        is_unknown = state == "UNKNOWN"
+        is_unknown = state in {"UNKNOWN", "TIMED_OUT"}
         visible_filled = None if is_unknown else filled
         remaining = None if is_unknown else quantity - filled
         rows.append(PaperOrderRow(order_id, state, quantity, visible_filled, remaining,
@@ -58,7 +59,8 @@ def build_paper_order_blotter(journal: OrderJournal) -> PaperOrderBlotter:
     rows.sort(key=lambda row: (row.occurred_at, row.order_id), reverse=True)
     unresolved = sum(row.unresolved for row in rows)
     filled_rows = [row for row in rows if row.confirmed_filled_order]
-    confirmed_quantity = sum(row.filled_quantity or 0 for row in rows if row.state != "UNKNOWN")
+    confirmed_quantity = sum(row.filled_quantity or 0 for row in rows
+                             if row.state not in {"UNKNOWN", "TIMED_OUT"})
     return PaperOrderBlotter(tuple(rows), unresolved, len(filled_rows), confirmed_quantity)
 
 
@@ -66,7 +68,7 @@ def render_order_blotter(blotter: PaperOrderBlotter, output: Path) -> Path:
     """Write an escaped paper-only blotter; it reports fills without asserting closed trades or P&L."""
     rows = []
     for item in blotter.orders:
-        state_class = " unknown" if item.state == "UNKNOWN" else ""
+        state_class = " unknown" if item.state in {"UNKNOWN", "TIMED_OUT"} else ""
         values = (item.order_id, item.state, str(item.quantity),
                   "Unknown" if item.filled_quantity is None else str(item.filled_quantity),
                   "Unknown" if item.remaining_quantity is None else str(item.remaining_quantity),

@@ -13,7 +13,8 @@ NOW = datetime(2026, 11, 16, 4, tzinfo=timezone.utc)
 def _append(journal, order_id, sequence, state, quantity, filled):
     journal.append(OrderEvent(order_id, f"{order_id}-{sequence}", sequence, state,
                               NOW + timedelta(seconds=sequence), quantity, filled,
-                              "100.00" if filled else None, {}))
+                              "100.00" if filled else None, {},
+                              fill_evidence_id="f" * 64 if filled else None))
 
 
 def test_blotter_keeps_unknown_and_unfilled_out_of_confirmed_fill_counts(tmp_path):

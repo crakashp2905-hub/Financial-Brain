@@ -42,10 +42,12 @@ class CostSchedule:
         return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
                                         allow_nan=False).encode("utf-8")).hexdigest()
 
-    def one_way(self, *, day: date, turnover: float, side: Side, bucket: str) -> dict[str, Any]:
+    def one_way(self, *, day: date, turnover: float, side: Side, bucket: str,
+                include_impact: bool = True) -> dict[str, Any]:
         if day < self.effective_from or (self.effective_to is not None and day > self.effective_to):
             raise CostScheduleError("schedule is not effective on requested trade date")
-        row = self.model.one_way(turnover=turnover, side=side, segment=self.segment, bucket=bucket)
+        row = self.model.one_way(turnover=turnover, side=side, segment=self.segment, bucket=bucket,
+                                 include_impact=include_impact)
         return {**row, "schedule_id": self.schedule_id, "schedule_version": self.version,
                 "schedule_sha256": self.digest(), "trade_date": day.isoformat(),
                 "source_ref": self.source_ref, "source_sha256": self.source_sha256}
