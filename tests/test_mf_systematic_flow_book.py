@@ -23,7 +23,7 @@ from financial_brain.paper.mf_systematic_flow_book import (
     record_systematic_event, release_systematic_payout, request_systematic_redemption,
     systematic_instruction_snapshot,
 )
-from financial_brain.providers.mf_scheme_terms import SchemeCommercialTerms
+from financial_brain.providers.mf_scheme_terms import MFChargeRule, SchemeCommercialTerms
 from financial_brain.paper.mf_redemption_settlement import settlement_snapshot
 from financial_brain.storage.db import Database
 
@@ -358,7 +358,8 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
         scheme_code=instruction.target_scheme or "", plan=instruction.target_plan or "",
         option=instruction.target_option or "", isin=instruction.target_isin or "",
         effective_from=date(2026, 11, 1), effective_to=None,
-        ter_percent=None, aum_inr=None, exit_loads=(), charge_schedule=(), minimum_initial_inr=Decimal("0"),
+        ter_percent=None, aum_inr=None, exit_loads=(), charge_schedule=(),
+        minimum_initial_inr=Decimal("0"),
         minimum_additional_inr=Decimal("0"), minimum_redemption_inr=Decimal("0"),
         exit_restrictions=(), source_id="AMC",
         source_ref="terms-stp", source_sha256=terms_hash,
@@ -480,7 +481,9 @@ def test_systematic_value_confirmation_uses_fifo_nav_and_recovers_once(database,
         scheme_code=instruction.source_scheme, plan=instruction.source_plan,
         option=instruction.source_option, isin=instruction.source_isin,
         effective_from=date(2026, 11, 1), effective_to=None,
-        ter_percent=None, aum_inr=None, exit_loads=(), charge_schedule=(), minimum_initial_inr=Decimal("0"),
+        ter_percent=None, aum_inr=None, exit_loads=(),
+        charge_schedule=(MFChargeRule("redemption-test-fee", "REDEEM", "0.01"),),
+        minimum_initial_inr=Decimal("0"),
         minimum_additional_inr=Decimal("0"), minimum_redemption_inr=Decimal("0"),
         exit_restrictions=(), source_id="AMC",
         source_ref="source-terms", source_sha256=terms_hash,
@@ -536,7 +539,7 @@ def test_systematic_value_confirmation_uses_fifo_nav_and_recovers_once(database,
         row = con.execute("""SELECT state, net_inr FROM mf_paper_redemption_settlements
             WHERE account_id=? AND settlement_id=?""",
             [instruction.account_id, f"systematic:{instruction.instruction_id}"]).fetchone()
-        assert row[0] == "PAYOUT_PENDING" and Decimal(row[1]) == Decimal("100")
+        assert row[0] == "PAYOUT_PENDING" and Decimal(row[1]) == Decimal("99.99")
         remaining = con.execute("""SELECT units_remaining FROM mf_paper_lots
             WHERE account_id=? AND lot_id=?""",
             [instruction.account_id, "lot-systematic-value"]).fetchone()[0]
@@ -544,6 +547,7 @@ def test_systematic_value_confirmation_uses_fifo_nav_and_recovers_once(database,
 
         result = confirm_systematic_redemption_value(con, **kwargs)
         assert result["status"] == "recorded"
+        assert Decimal(result["other_charges_inr"]) == Decimal("0.01")
         replay = confirm_systematic_redemption_value(con, **kwargs)
         assert replay["status"] == "already_recorded"
         snapshot = systematic_instruction_snapshot(
@@ -552,3 +556,4 @@ def test_systematic_value_confirmation_uses_fifo_nav_and_recovers_once(database,
         assert snapshot["stage"] == "VALUE_CONFIRMED"
         assert len(snapshot["events"]) == 2
         assert snapshot["events"][1][12] == nav_id
+        assert Decimal(snapshot["events"][1][7]) == Decimal("0.01")

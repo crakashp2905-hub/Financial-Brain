@@ -2738,16 +2738,18 @@
         "paper/mf_systematic_flow_book.py now exposes an idempotent request_systematic_redemption adapter for unit-denominated periodic instructions; it creates the canonical mf_paper_redemption_settlements reservation before appending the lifecycle event, so retry after interruption recovers without double-reserving units. Amount-denominated requests are explicitly rejected pending a scheme-aware amount-to-units adapter.",
         "request_systematic_redemption() now creates the canonical reserved-unit request for unit-denominated SWP/STP instructions; release_systematic_payout() verifies the MF receivable net against the lifecycle value, credits cash through make_cash_available(), then appends the matching lifecycle event. Both calls are idempotent across a process interruption between the canonical ledger write and lifecycle evidence write. INR-denominated requests are rejected pending a scheme-aware conversion adapter.",
         "request_systematic_redemption(), release_systematic_payout(), and apply_systematic_transfer_purchase() now link unit-denominated SWP/STP requests, payout cash, and STP target subscriptions to the canonical MF reservation, cash, and lot books. Stable IDs and idempotent underlying services recover after interruption between accounting writes and lifecycle-event recording; STP spend cannot exceed its settled net proceeds, and target terms identity is checked.",
-        "The unit-denominated SWP/STP adapter now reserves units in the canonical MF redemption book, confirms value through FIFO/exit-load redemption at the exact persisted AMFI NAV known at decision time, verifies effective AMFI PAPER_SIMULATION permission and records the NAV row hash, releases net payout into canonical paper cash, and applies STP target subscriptions/allotments through the canonical lot/cash book using an as-known target NAV. Stable instruction event IDs plus idempotent canonical operations recover across injected crashes without double redemption, cash credit, subscription debit, or units."
+        "The unit-denominated SWP/STP adapter now reserves units in the canonical MF redemption book, confirms value through FIFO/exit-load redemption at the exact persisted AMFI NAV known at decision time, verifies effective AMFI PAPER_SIMULATION permission and records the NAV row hash, releases net payout into canonical paper cash, and applies STP target subscriptions/allotments through the canonical lot/cash book using an as-known target NAV. Stable instruction event IDs plus idempotent canonical operations recover across injected crashes without double redemption, cash credit, subscription debit, or units.",
+        "confirm_systematic_redemption_value() now carries the canonical FIFO redemption book’s actual effective-dated other_charges_inr into the append-only systematic value event; the event must reconcile gross proceeds less exit load and all booked other charges to net payout."
       ],
-      "blocker": "Amount-denominated SWP/STP instructions still require a source-backed amount-to-units conversion and reservation model. The STP target path currently applies subscription funding and allotment synchronously; it needs a durable pending-cash reservation and asynchronous allotment/cancellation lifecycle. The canonical MF redemption book models exit loads but not all other statutory or platform charges.",
-      "last_audited_at_utc": "2026-11-22T01:34:00Z",
-      "commit": "f2645116a856e33e1751720fcda8d7c9f13e1304",
+      "blocker": "Amount-denominated SWP/STP instructions still need an as-known redemption-NAV conversion and reserved-unit workflow. The STP target purchase currently consumes payout cash synchronously when NAV is supplied; it still needs a durable cash reservation, a separately pending NAV/allotment state, and cancellation/release handling.",
+      "last_audited_at_utc": "2026-11-22T09:00:00Z",
+      "commit": "e6f22e09",
       "test_evidence": [
         "python -m pytest tests/test_mf_systematic_flow_book.py tests/test_mf_systematic_flows.py -q: 13 passed",
         "Ruff check for systematic-flow paper book and tests: passed",
         "mypy src/financial_brain/paper/mf_systematic_flow_book.py: passed",
-        "Checklist audit, capability ownership, source inventory, dependency graph, evidence bundle, and git diff checks passed"
+        "Checklist audit, capability ownership, source inventory, dependency graph, evidence bundle, and git diff checks passed",
+        "python -m pytest tests/test_mf_systematic_flow_book.py tests/test_mf_systematic_flows.py tests/test_mf_lot_book.py tests/test_mf_exit_loads.py tests/test_mf_redemption_eligibility.py tests/test_migrations.py -q: 43 passed; includes non-zero effective-dated redemption charge/event reconciliation regression."
       ]
     },
     {
@@ -15548,7 +15550,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T00:00:00Z",
+    "as_of_utc": "2026-11-22T09:00:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15869,7 +15871,7 @@
       "src/financial_brain/storage/schema.sql",
       "tests/test_mf_scheme_master.py"
     ],
-    "evidence_update": "FB-0710 COMPLETE: paired durable MF switch lifecycle with asynchronous cutoff/NAV/payout, cash reservation and accounting reconciliation; 39 focused/regression tests pass."
+    "evidence_update": "FB-0712 remains PARTIAL: systematic MF redemption value events now reconcile actual effective-dated charges; amount-to-units and asynchronous STP target lifecycle remain open. Full focused regression: 43 passed."
   },
   "counts_by_status": {
     "UNASSESSED": 1132,

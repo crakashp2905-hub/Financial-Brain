@@ -9262,7 +9262,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_systematic_flow_book.py",
-      "source_sha256": "3e4a6ec8a2a7e68218fe2aaa5de933c0b53845c843af4852004e33f961a7a5d5",
+      "source_sha256": "b8a6361a1c89af648877e535127227ae1abcf9af7defd63610bb2c1943ea9464",
       "test_paths": []
     },
     {
