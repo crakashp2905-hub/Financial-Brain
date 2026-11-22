@@ -118,6 +118,37 @@ class OptionQuoteObservation:
 
 
 @dataclass(frozen=True)
+class UnderlyingPriceObservation:
+    """Point-in-time spot input used for contract moneyness ranking."""
+
+    underlying: str
+    price: Decimal
+    observed_at: datetime
+    available_at: datetime
+    source: str
+    exchange: str
+    evidence_sha256: str
+
+    def __post_init__(self) -> None:
+        _aware(self.observed_at, "underlying.observed_at")
+        _aware(self.available_at, "underlying.available_at")
+        if (not self.underlying.strip() or not self.source.strip() or not self.exchange.strip()
+                or not self.price.is_finite() or self.price <= 0):
+            raise OptionRoutingError("underlying, source, exchange and positive finite spot are required")
+        if self.observed_at > self.available_at:
+            raise OptionRoutingError("spot source time cannot follow its availability time")
+        if not _SHA256.fullmatch(self.evidence_sha256):
+            raise OptionRoutingError("spot evidence needs a lowercase SHA-256 hash")
+
+    def provenance_sha256(self) -> str:
+        value = {"underlying": self.underlying.upper(), "price": str(self.price),
+                 "observed_at": self.observed_at.isoformat(),
+                 "available_at": self.available_at.isoformat(), "source": self.source,
+                 "exchange": self.exchange, "evidence_sha256": self.evidence_sha256}
+        return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+@dataclass(frozen=True)
 class OptionRoutingPolicy:
     """Versioned, explicit expiry/strike/liquidity and premium-budget selection rules."""
 
@@ -159,7 +190,8 @@ class OptionRoutingPolicy:
 
 
 def route_long_option(*, underlying: str, direction: OptionType, decision_at: datetime,
-                      underlying_price: Decimal, observations: list[OptionQuoteObservation],
+                      underlying_observation: UnderlyingPriceObservation,
+                      observations: list[OptionQuoteObservation],
                       contracts: list[OptionContractVersion], policy: OptionRoutingPolicy,
                       costs: CostModel | None = None) -> dict:
     """Choose one point-in-time executable CE/PE contract and size within premium risk.
@@ -171,13 +203,19 @@ def route_long_option(*, underlying: str, direction: OptionType, decision_at: da
     _aware(decision_at, "decision_at")
     if not underlying.strip() or direction not in {"CE", "PE"}:
         raise OptionRoutingError("underlying and CE/PE direction are required")
-    if not underlying_price.is_finite() or underlying_price <= 0:
-        raise OptionRoutingError("underlying price must be finite and positive")
+    spot = underlying_observation
+    if spot.underlying.upper() != underlying.upper():
+        raise OptionRoutingError("underlying spot identity does not match option-chain request")
+    if (spot.available_at > decision_at
+            or spot.available_at < decision_at - policy.max_quote_age):
+        raise OptionRoutingError("underlying spot is future-dated or stale at decision time")
 
     by_token: dict[int, list[OptionQuoteObservation]] = {}
     for observation in observations:
         by_token.setdefault(observation.quote.token, []).append(observation)
     model = costs or CostModel()
+    cost_model_sha256 = hashlib.sha256(json.dumps(
+        asdict(model), sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
     candidates: list[tuple[tuple[Decimal | int, ...], OptionContractVersion,
                            OptionQuoteObservation, int, Decimal, Decimal]] = []
     rejected: dict[int, str] = {}
@@ -243,7 +281,7 @@ def route_long_option(*, underlying: str, direction: OptionType, decision_at: da
         if affordable < 1:
             rejected[contract.token] = "PREMIUM_BUDGET_CANNOT_FUND_ONE_LOT"
             continue
-        moneyness_bps = (contract.strike / underlying_price - Decimal(1)) * Decimal(10_000)
+        moneyness_bps = (contract.strike / spot.price - Decimal(1)) * Decimal(10_000)
         rank = (abs(Decimal(dte - policy.target_dte_days)),
                 abs(moneyness_bps - policy.target_moneyness_bps),
                 spread_bps, -quote.ask_qty, contract.token)
@@ -252,6 +290,7 @@ def route_long_option(*, underlying: str, direction: OptionType, decision_at: da
     if not candidates:
         return {"status": "NO_TRADE", "reason": "NO_ELIGIBLE_OPTION_CONTRACT",
                 "simulation_fidelity": "OBSERVED_QUOTE_SIM", "policy_sha256": policy.sha256(),
+                "cost_model_sha256": cost_model_sha256,
                 "rejections": {str(token): reason for token, reason in sorted(rejected.items())}}
 
     _rank, contract, observation, lots, one_lot_premium, _one_lot_charges = min(candidates, key=lambda row: row[0])
@@ -271,6 +310,10 @@ def route_long_option(*, underlying: str, direction: OptionType, decision_at: da
         "estimated_entry_charges_inr": str(charges), "all_in_premium_risk_inr": str(premium + charges),
         "dte_days": (contract.expiry - decision_at.date()).days,
         "spread_bps": str((Decimal(str(quote.ask - quote.bid)) / Decimal(str(quote.ask))) * Decimal(10_000)),
+        "underlying_spot": str(spot.price),
+        "underlying_spot_provenance_sha256": spot.provenance_sha256(),
+        "underlying_spot_source": spot.source, "underlying_spot_exchange": spot.exchange,
+        "underlying_spot_available_at": spot.available_at.isoformat(),
         "contract_version_sha256": contract.version_sha256(),
         "contract_source_sha256": contract.source_sha256,
         "quote_provenance_sha256": observation.provenance_sha256(),
@@ -279,10 +322,11 @@ def route_long_option(*, underlying: str, direction: OptionType, decision_at: da
         "quote_observed_at": quote.observed_at.isoformat(),
         "quote_available_at": observation.available_at.isoformat(),
         "simulation_fidelity": "OBSERVED_QUOTE_SIM",
-        "routing_policy_sha256": policy.sha256(), "broker_order_created": False,
+        "routing_policy_sha256": policy.sha256(), "cost_model_sha256": cost_model_sha256,
+        "broker_order_created": False,
         "settlement_modelled": False,
     }
 
 
 __all__ = ["OptionContractVersion", "OptionQuoteObservation", "OptionRoutingPolicy",
-           "OptionRoutingError", "route_long_option"]
+           "OptionRoutingError", "UnderlyingPriceObservation", "route_long_option"]

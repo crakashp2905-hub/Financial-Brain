@@ -9387,7 +9387,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_routing.py",
-      "source_sha256": "c9d4e273f01bffb49f3de2adec5b9bd65c8b8054dd24b3d6f88dfb7994998daf",
+      "source_sha256": "a9c4d770a99aa6b5911ba338098f10e9153fe732e9bdbe23708ef7c8c26c9488",
       "test_paths": []
     },
     {

@@ -2553,6 +2553,12 @@
       "module_owner": "src/financial_brain/paper/options_plan.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/options_routing.py",
+      "path": "src/financial_brain/paper/options_routing.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/options_routing.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/options_runner.py",
       "path": "src/financial_brain/paper/options_runner.py",
       "module_role": "paper_engine_or_output",
