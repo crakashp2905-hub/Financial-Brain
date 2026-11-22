@@ -2694,14 +2694,21 @@
       "id": "FB-0712",
       "text": "Model SWP as redemptions with applicable loads and payouts; STP similarly as redemption and new purchase.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No recurring SWP/STP redemption-and-purchase lifecycle was found."
+        "kernel/mf_systematic_flows.py models individual SWP/STP instructions as source redemptions followed by explicit NAV value confirmation and payout availability; STP additionally requires a later target purchase funding event and allotment.",
+        "Gross redemption value, exit load and other charges must be stated separately and net proceeds must reconcile. Payout cannot precede value; STP funds cannot be applied until payout is available, cannot exceed proceeds, and target units × NAV must reconcile.",
+        "Events are timestamp-ordered, tied to a scheduled period and source-labelled as observed or simulated. Tests cover SWP payout, STP settlement, charges, no same-time reuse, overspend prevention and target identity."
       ],
-      "blocker": null,
+      "blocker": "This is an in-memory lifecycle model. Recurring schedules are not durable, and redemptions/payouts/purchases are not yet wired to the existing MF lot, settlement and account ledgers or authorized payment/NAV adapters.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "commit": "6f5f9b36818ded72f7f55d138b2eedb0276692bd",
+      "test_evidence": [
+        "python -m pytest tests/test_mf_systematic_flows.py -q: 4 passed",
+        "ruff check src/financial_brain/kernel/mf_systematic_flows.py tests/test_mf_systematic_flows.py: passed",
+        "mypy src/financial_brain/kernel/mf_systematic_flows.py: passed",
+        "git diff --check: passed"
+      ]
     },
     {
       "id": "FB-0713",
@@ -15643,9 +15650,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 30,
-    "PARTIAL": 198,
+    "PARTIAL": 199,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 17,
+    "NOT_STARTED": 16,
     "UNASSESSED": 1132
   }
 }
