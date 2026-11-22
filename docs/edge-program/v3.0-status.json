@@ -9719,12 +9719,23 @@
     {
       "id": "SL-02-05",
       "text": "Construct cross-index breadth, constituent concentration, Nifty/BankNifty co-movement and sector relative-strength features with aligned timestamps.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "features.index_cross_section.build_index_features computes NIFTY 50 and NIFTY BANK constituent breadth (positive 20-session return and above-200-session average) by joining each point-in-time membership ISIN to that exact session's adjusted-price lineage and feature row. It requires adequate member coverage and marks missing/stale membership unavailable.",
+        "The builder computes NIFTY 50/NIFTY BANK TRI return correlation on common session dates and sector-index relative return versus NIFTY 50 from common endpoints. It filters membership effective dates and both membership/TRI observed_at timestamps against the caller's decision_at, excluding future publications.",
+        "Industry concentration is reported using equal constituent counts and is explicitly labelled as not market-cap/index-weighted because index_membership has no constituent weights. NIFTY BANK was added to the existing nightly constituent snapshot source list.",
+        "tests/test_index_cross_section.py plus existing regime/cross-market suites: 15 passed; Ruff, mypy and source-inventory/forward-engine-graph freshness checks passed."
+      ],
+      "blocker": "Partial: point-in-time constituent snapshots are only accumulated prospectively and actual permissioned index membership/TRI coverage has not been audited; the source has no index weights, so concentration is industry member-count based. The features are not yet wired into the trader decision pipeline.",
+      "last_audited_at_utc": "2026-11-22T23:00:42Z",
+      "commit": "415b17db",
+      "test_evidence": [
+        "tests/test_index_cross_section.py",
+        "tests/test_phase1_regime.py",
+        "tests/test_cross_market.py"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-v3index tests/test_index_cross_section.py tests/test_phase1_regime.py tests/test_cross_market.py: 15 passed in 15.28s; Ruff and mypy passed; source inventory and forward-engine graph regenerated and freshness checks passed."
     },
     {
       "id": "SL-02-06",
@@ -15798,7 +15809,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T22:53:40Z",
+    "as_of_utc": "2026-11-22T23:00:42Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16066,15 +16077,16 @@
       "SL-02-01",
       "SL-02-02",
       "SL-02-03",
-      "SL-02-04"
+      "SL-02-04",
+      "SL-02-05"
     ],
-    "audited_count": 267,
+    "audited_count": 268,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 208,
-      "UNASSESSED": 1111
+      "PARTIAL": 209,
+      "UNASSESSED": 1110
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16205,13 +16217,13 @@
       "src/financial_brain/forward_edge/market_data.py",
       "tests/test_forward_edge_kite_market_data.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated. SL-02-03 COMPLETE: source audit and focused feature/causality suites passed (25 tests); daily, intraday and breadth families are separately implemented. SL-02-04 PARTIAL: point-in-time observed-quote IV/Greeks/skew/term/OI surface and archive coverage tracking implemented; permitted data evidence and paper-pipeline integration remain open."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated. SL-02-03 COMPLETE: source audit and focused feature/causality suites passed (25 tests); daily, intraday and breadth families are separately implemented. SL-02-04 PARTIAL: point-in-time observed-quote IV/Greeks/skew/term/OI surface and archive coverage tracking implemented; permitted data evidence and paper-pipeline integration remain open. SL-02-05 PARTIAL: aligned point-in-time index breadth, constituent industry-count concentration, Nifty/Bank TRI correlation and sector relative strength implemented; empirical source coverage and trader-pipeline integration remain open."
   },
   "counts_by_status": {
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 208,
-    "UNASSESSED": 1111
+    "PARTIAL": 209,
+    "UNASSESSED": 1110
   }
 }
