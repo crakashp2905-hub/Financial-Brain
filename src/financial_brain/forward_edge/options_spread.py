@@ -7,7 +7,11 @@ import math
 from dataclasses import dataclass
 from datetime import datetime
 
-from .options_risk import OptionLegQuote
+from .options_risk import (
+    OptionLegQuote,
+    OptionsRiskError,
+    validate_supported_paper_option_structure,
+)
 
 
 class OptionsSpreadError(ValueError):
@@ -51,6 +55,11 @@ def evaluate_executable_spread(*, entry_legs: tuple[OptionLegQuote, ...],
     exits = {leg.leg_id: leg for leg in exit_legs}
     if set(exits) != {leg.leg_id for leg in entry_legs}:
         raise OptionsSpreadError("exit snapshot must match each entry leg exactly once")
+
+    try:
+        structure = validate_supported_paper_option_structure(legs=entry_legs, quantity=lots)
+    except OptionsRiskError as exc:
+        raise OptionsSpreadError(str(exc)) from exc
 
     entry_cash = 0.0
     exit_cash = 0.0
@@ -124,6 +133,8 @@ def evaluate_executable_spread(*, entry_legs: tuple[OptionLegQuote, ...],
     body = {"legs": normalized_entries, "entry_cash_flow_inr": entry_cash,
             "exit_cash_flow_inr": exit_cash, "fees_inr": fees_inr, "net_pnl_inr": net_pnl,
             "legging_loss_bound_inr": legging_loss, "settlement_mode": settlement_mode,
+            "strategy_type": structure["strategy_type"],
+            "strategy_economic_max_loss_inr": structure["economic_max_loss_inr"],
             "expiry_scenarios": scenarios,
             "quote_status": "CALLER_SUPPLIED_NOT_AUTHENTICATED"}
     body["report_hash"] = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),

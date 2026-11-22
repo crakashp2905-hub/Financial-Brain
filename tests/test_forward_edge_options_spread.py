@@ -65,3 +65,22 @@ def test_mid_only_stale_or_nonmatching_exit_data_is_rejected() -> None:
                                    lots=1, entry_as_of=when, exit_as_of=when,
                                    max_quote_age_seconds=300, fees_inr=0,
                                    settlement_mode="CASH_SETTLED", expiry_scenarios=())
+
+
+@pytest.mark.parametrize("entry, exit_legs, reason", [
+    ((_leg("short", "SELL", 100, 9, 10, datetime(2026, 11, 16, 5, tzinfo=timezone.utc)),),
+     (_leg("short", "BUY", 100, 9, 10, datetime(2026, 11, 16, 5, tzinfo=timezone.utc)),),
+     "naked short"),
+    ((_leg("long", "BUY", 100, 4, 5, datetime(2026, 11, 16, 5, tzinfo=timezone.utc)),
+      _leg("short", "SELL", 110, 9, 10, datetime(2026, 11, 16, 5, tzinfo=timezone.utc), token=2)),
+     (_leg("long", "SELL", 100, 4, 5, datetime(2026, 11, 16, 5, tzinfo=timezone.utc)),
+      _leg("short", "BUY", 110, 9, 10, datetime(2026, 11, 16, 5, tzinfo=timezone.utc), token=2)),
+     "positive debit"),
+])
+def test_executable_spread_rejects_unsupported_naked_or_credit_entry(entry, exit_legs, reason) -> None:
+    when = datetime(2026, 11, 16, 5, tzinfo=timezone.utc)
+    with pytest.raises(OptionsSpreadError, match=reason):
+        evaluate_executable_spread(entry_legs=entry, exit_legs=exit_legs, lots=1,
+                                   entry_as_of=when, exit_as_of=when,
+                                   max_quote_age_seconds=300, fees_inr=0,
+                                   settlement_mode="CASH_SETTLED", expiry_scenarios=())
