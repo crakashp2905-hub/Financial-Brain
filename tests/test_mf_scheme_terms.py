@@ -35,6 +35,7 @@ def _terms(**changes):
                        ExitLoadBand(365, Decimal("0.00"))),
         "minimum_initial_inr": Decimal("5000.00"),
         "minimum_additional_inr": Decimal("1000.00"),
+        "minimum_redemption_inr": Decimal("500.00"),
         "exit_restrictions": (ExitRestriction.ELSS_LOCK_IN,),
         "source_id": SOURCE, "source_ref": "sid-2026-01",
         "source_sha256": HASH,
@@ -71,6 +72,7 @@ def test_source_terms_round_trip_exact_values_and_known_at_visibility(tmp_path):
         assert after_observed is not None
         assert after_observed["ter_percent"] == Decimal("0.42")
         assert after_observed["aum_inr"] == Decimal("123456789.125")
+        assert after_observed["minimum_redemption_inr"] == Decimal("500.00")
         assert after_observed["exit_loads_json"] == [
             {"days_from_purchase": 0, "rate_percent": "1.00"},
             {"days_from_purchase": 365, "rate_percent": "0.00"},
