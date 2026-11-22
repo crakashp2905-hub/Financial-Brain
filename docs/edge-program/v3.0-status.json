@@ -9639,12 +9639,20 @@
     {
       "id": "SL-02-01",
       "text": "Create canonical `FeatureDefinition` with formula hash, window, market, horizon, input lineage, lag, leakage tests and data type.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/features/definition.py implements immutable FeatureDefinition with stable feature/version IDs, normalized formula and formula SHA-256, window, market, horizon, explicit input lineage, nonnegative lag, required leakage-test IDs, and constrained data type.",
+        "The canonical JSON includes the formula hash and has its own definition SHA-256; strict deserialization rejects missing/extra fields and formula tampering. The contract is declarative and does not execute formula strings.",
+        "tests/test_feature_definition.py: 10 passed, including canonical determinism, round-trip/tamper rejection, and required-field/type validation; Ruff and targeted mypy passed. Source inventory and forward-engine graph freshness checks passed."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T22:33:39Z",
+      "commit": "5f4a91ff",
+      "test_evidence": [
+        "tests/test_feature_definition.py"
+      ],
+      "test_result": "tests/test_feature_definition.py: 10 passed in 0.78s; Ruff and mypy passed; source inventory, capability ownership and forward-engine graph freshness checks passed."
     },
     {
       "id": "SL-02-02",
@@ -15758,7 +15766,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T22:29:16Z",
+    "as_of_utc": "2026-11-22T22:33:39Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16022,17 +16030,18 @@
       "SL-01-15",
       "SL-01-16",
       "SL-01-17",
-      "SL-01-18"
+      "SL-01-18",
+      "SL-02-01"
     ],
-    "audited_count": 263,
+    "audited_count": 264,
     "status_counts": {
-      "COMPLETE": 45,
+      "COMPLETE": 46,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
       "PARTIAL": 206,
-      "UNASSESSED": 1115
+      "UNASSESSED": 1114
     },
-    "verified_complete_count": 45,
+    "verified_complete_count": 46,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -16164,10 +16173,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated."
   },
   "counts_by_status": {
-    "COMPLETE": 45,
+    "COMPLETE": 46,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
     "PARTIAL": 206,
-    "UNASSESSED": 1115
+    "UNASSESSED": 1114
   }
 }
