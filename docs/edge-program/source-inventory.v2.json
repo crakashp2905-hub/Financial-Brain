@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 673,
+  "source_count": 675,
   "sources": [
     {
       "capability_ids": [],
@@ -7722,6 +7722,27 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "hashlib",
+        "json",
+        "re",
+        "trading_clock"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/mf_systematic_flows.py",
+      "source_sha256": "ff2286f8ae8199c22f3e9d18f16ee8d064218a06afe9d2c410ab1331756280fd",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "decimal",
         "enum"
       ],
@@ -9075,6 +9096,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_sip_book.py",
       "source_sha256": "bdbd89cf440cd2af4d2fae25ce9bd371ff2e85db17594129739774cfbd5e7e50",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "forward_edge.data_permissions",
+        "hashlib",
+        "json",
+        "kernel.mf_systematic_flows",
+        "kernel.trading_clock",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_systematic_flow_book.py",
+      "source_sha256": "ee97aec552ac0bd53b4429f3d012ba209d2e4b8e329a7adebb5dd4e732ccd244",
       "test_paths": []
     },
     {
@@ -11796,6 +11837,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 658,
-  "unassigned_role_count": 393
+  "unassessed_count": 660,
+  "unassigned_role_count": 394
 }
