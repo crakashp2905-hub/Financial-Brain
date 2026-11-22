@@ -119,6 +119,7 @@ def _subscribe(
     charge_schedule=(),
     lock_in_until=None,
     account_id="paper-1",
+    folio_id="synthetic-1",
 ):
     event_day = 2 if digest == HASH_B else 1
     event_date = date(2026, 1, event_day)
@@ -135,6 +136,7 @@ def _subscribe(
     result = subscribe(
         con,
         account_id=account_id,
+        folio_id=folio_id,
         event_id=event_id,
         lot_id=lot_id,
         scheme_code="100001",
@@ -166,6 +168,7 @@ def _redeem(
     decision_at=DECISION,
     nav_per_unit=100,
     account_id="paper-1",
+    folio_id="synthetic-1",
     **kwargs,
 ):
     selected_terms = terms or _terms()
@@ -174,6 +177,7 @@ def _redeem(
     return redeem(
         con,
         account_id=account_id,
+        folio_id=folio_id,
         event_id=event_id,
         scheme_code="100001",
         plan="DIRECT",
@@ -278,14 +282,16 @@ def test_subscription_enforces_sourced_initial_and_additional_minimums(connectio
     persist_scheme_terms(con, first_terms, permissions=_permissions())
     with pytest.raises(MfPaperBookError, match="below the sourced initial minimum"):
         subscribe(
-            con, account_id="paper-min", event_id="min-first-small", lot_id="min-lot-0",
+            con, account_id="paper-min", folio_id="synthetic-min",
+            event_id="min-first-small", lot_id="min-lot-0",
             scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
             allotted_on=date(2026, 1, 1), investment_inr=499, nav_per_unit=100,
             exit_loads=(), exit_loads_sha256=HASH_A, terms=first_terms,
             permissions=_permissions(), decision_at=DECISION, now=PAPERED,
         )
     subscribe(
-        con, account_id="paper-min", event_id="min-first", lot_id="min-lot-1",
+        con, account_id="paper-min", folio_id="synthetic-min",
+        event_id="min-first", lot_id="min-lot-1",
         scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
         allotted_on=date(2026, 1, 1), investment_inr=500, nav_per_unit=100,
         exit_loads=(), exit_loads_sha256=HASH_A, terms=first_terms,
@@ -293,14 +299,16 @@ def test_subscription_enforces_sourced_initial_and_additional_minimums(connectio
     )
     with pytest.raises(MfPaperBookError, match="below the sourced additional minimum"):
         subscribe(
-            con, account_id="paper-min", event_id="min-add-small", lot_id="min-lot-2",
+            con, account_id="paper-min", folio_id="synthetic-min",
+            event_id="min-add-small", lot_id="min-lot-2",
             scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
             allotted_on=date(2026, 1, 1), investment_inr=249, nav_per_unit=100,
             exit_loads=(), exit_loads_sha256=HASH_A, terms=first_terms,
             permissions=_permissions(), decision_at=DECISION, now=PAPERED,
         )
     subscribe(
-        con, account_id="paper-min", event_id="min-add", lot_id="min-lot-3",
+        con, account_id="paper-min", folio_id="synthetic-min",
+        event_id="min-add", lot_id="min-lot-3",
         scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
         allotted_on=date(2026, 1, 1), investment_inr=250, nav_per_unit=100,
         exit_loads=(), exit_loads_sha256=HASH_A, terms=first_terms,
@@ -315,7 +323,8 @@ def test_subscription_with_unknown_minimum_fails_closed(connection):
     persist_scheme_terms(con, terms, permissions=_permissions())
     with pytest.raises(MfPaperBookError, match="subscription minimum is unknown"):
         subscribe(
-            con, account_id="paper-unknown-min", event_id="unknown-min", lot_id="unknown-min-lot",
+            con, account_id="paper-unknown-min", folio_id="synthetic-unknown",
+            event_id="unknown-min", lot_id="unknown-min-lot",
             scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
             allotted_on=date(2026, 1, 1), investment_inr=100, nav_per_unit=100,
             exit_loads=(), exit_loads_sha256=HASH_A, terms=terms,
@@ -675,7 +684,7 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
     )
     request_at = datetime(2026, 1, 10, 12, tzinfo=timezone.utc)
     request = request_redemption(
-        con, account_id="paper-1", settlement_id="red-settlement",
+        con, account_id="paper-1", folio_id="synthetic-1", settlement_id="red-settlement",
         scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
         requested_units=4, requested_on=date(2026, 1, 10), requested_at=request_at,
         now=request_at,
@@ -683,7 +692,7 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
     assert request["state"] == "REDEMPTION_PENDING"
     assert account_snapshot(con, "paper-1")["cash_inr"] == Decimal("0")
     replayed_request = request_redemption(
-        con, account_id="paper-1", settlement_id="red-settlement",
+        con, account_id="paper-1", folio_id="synthetic-1", settlement_id="red-settlement",
         scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
         requested_units=4, requested_on=date(2026, 1, 10), requested_at=request_at,
         now=request_at,
@@ -700,7 +709,7 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
 
     with pytest.raises(MfPaperBookError, match="exceed the paper-book precision"):
         request_redemption(
-            con, account_id="paper-1", settlement_id="red-precision",
+            con, account_id="paper-1", folio_id="synthetic-1", settlement_id="red-precision",
             scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
             requested_units="0.0000000000000000001",
             requested_on=date(2026, 1, 10), requested_at=request_at, now=request_at,
@@ -708,10 +717,16 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
 
     with pytest.raises(MfPaperBookError, match="unreserved open units"):
         request_redemption(
-            con, account_id="paper-1", settlement_id="red-overlap",
+            con, account_id="paper-1", folio_id="synthetic-1", settlement_id="red-overlap",
             scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
             requested_units=7, requested_on=date(2026, 1, 10), requested_at=request_at,
             now=request_at,
+        )
+
+    with pytest.raises(MfPaperBookError, match="available after pending requests"):
+        _redeem(
+            con, event_id="redeem-reservation-bypass", units=7, terms=terms,
+            decision_at=request_at,
         )
 
     nav_date = date(2026, 1, 16)
@@ -870,7 +885,8 @@ def test_mf_terminal_panel_distinguishes_simulated_and_observed_payouts(connecti
     )
     requested_at = datetime(2026, 1, 10, 12, tzinfo=timezone.utc)
     request_redemption(
-        con, account_id="paper-payout-basis", settlement_id="simulated-payout",
+        con, account_id="paper-payout-basis", folio_id="synthetic-1",
+        settlement_id="simulated-payout",
         scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
         requested_units=1, requested_on=date(2026, 1, 10),
         requested_at=requested_at, now=requested_at,
@@ -887,7 +903,8 @@ def test_mf_terminal_panel_distinguishes_simulated_and_observed_payouts(connecti
     )
 
     request_redemption(
-        con, account_id="paper-payout-basis", settlement_id="observed-payout",
+        con, account_id="paper-payout-basis", folio_id="synthetic-1",
+        settlement_id="observed-payout",
         scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
         requested_units=1, requested_on=date(2026, 1, 10),
         requested_at=requested_at, now=requested_at,
@@ -910,6 +927,7 @@ def test_mf_terminal_panel_distinguishes_simulated_and_observed_payouts(connecti
     page = mf_paper_panel(con, date(2026, 1, 12))
     assert "SIMULATED_ASSUMPTION" in page
     assert "OBSERVED_EVIDENCE" in page
+    assert "<th>Folio</th>" in page and "synthetic-1" in page
     assert "statement-row-42" in page and "BANK" in page and HASH_B[:12] in page
     assert page.index("observed-payout") < page.index("simulated-payout")
 
@@ -923,7 +941,7 @@ def test_settlement_value_requires_exact_as_known_nav_observation(connection):
     )
     requested_at = datetime(2026, 1, 10, 12, tzinfo=timezone.utc)
     request_redemption(
-        con, account_id="paper-1", settlement_id="red-nav-gate",
+        con, account_id="paper-1", folio_id="synthetic-1", settlement_id="red-nav-gate",
         scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
         requested_units=1, requested_on=date(2026, 1, 10), requested_at=requested_at,
         now=requested_at,
@@ -947,3 +965,31 @@ def test_settlement_value_requires_exact_as_known_nav_observation(connection):
     assert settlement_snapshot(
         con, account_id="paper-1", settlement_id="red-nav-gate",
     )["state"] == "REDEMPTION_PENDING"
+
+
+def test_redemption_reservation_cannot_borrow_another_folios_lots(connection):
+    con = connection
+    create_account(con, "multi-folio", 2_000, now=NOW)
+    _subscribe(con, event_id="folio-a-sub", lot_id="folio-a-lot", amount=200,
+               schedule=(), digest=HASH_A, account_id="multi-folio", folio_id="folio-a")
+    con.execute("""INSERT INTO mf_paper_lots (
+        account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
+        units_original, units_remaining, purchase_nav, subscription_event_id, created_at)
+        VALUES ('multi-folio', 'folio-b-lot', 'folio-b', '100001', 'DIRECT', 'GROWTH',
+        'INF000000001', DATE '2026-01-01', 80, 80, 100, 'folio-b-subscription', ?)""",
+        [NOW])
+    by_folio = account_snapshot(con, "multi-folio")["positions"]
+    assert {(row["folio_id"], row["units"]) for row in by_folio} == {
+        ("folio-a", Decimal("2")), ("folio-b", Decimal("80")),
+    }
+    requested_at = datetime(2026, 1, 10, 12, tzinfo=timezone.utc)
+    with pytest.raises(MfPaperBookError, match="unreserved open units"):
+        request_redemption(
+            con, account_id="multi-folio", folio_id="folio-a",
+            settlement_id="cross-folio-overdraw", scheme_code="100001",
+            plan="DIRECT", option="GROWTH", isin="INF000000001",
+            requested_units=3, requested_on=date(2026, 1, 10),
+            requested_at=requested_at, now=requested_at,
+        )
+    assert con.execute("""SELECT COUNT(*) FROM mf_paper_redemption_settlements
+        WHERE account_id='multi-folio'""").fetchone()[0] == 0

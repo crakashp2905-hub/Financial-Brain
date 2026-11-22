@@ -464,7 +464,7 @@ def apply_sip_allotment(
             "terms_record_id": terms.record_id,
         }
         subscription = subscribe(
-            con, account_id=installment.account_id,
+            con, account_id=installment.account_id, folio_id=installment.folio_id,
             event_id=f"sip:{installment.installment_id}",
             lot_id=f"sip-lot:{installment.installment_id}",
             scheme_code=installment.scheme_code, plan=installment.plan,

@@ -743,12 +743,14 @@ def mf_paper_panel(con, asof: date) -> str:
             status = position["valuation_status"]
             cls = "warn" if status != "CURRENT" else "ok"
             pnl_class = "pos" if pnl is not None and pnl > 0 else "neg" if pnl is not None and pnl < 0 else ""
+            folio = position["folio_id"] or "UNASSIGNED · reconcile ownership"
             nav_text = f"{nav:,.4f}" if nav is not None else "—"
             value_text = f"Rs {value:,.2f}" if value is not None else "—"
             basis_text = f"Rs {position['cost_basis_inr']:,.2f}"
             pnl_text = f"Rs {pnl:+,.2f}" if pnl is not None else "—"
             position_rows.append(
-                f"<tr><td>{_e(position['scheme_code'])}</td><td>{_e(position['plan'])}</td>"
+                f"<tr><td>{_e(folio)}</td><td>{_e(position['scheme_code'])}</td>"
+                f"<td>{_e(position['plan'])}</td>"
                 f"<td>{_e(position['option'])}</td><td class='r'>{position['units']:,.6f}</td>"
                 f"<td class='r'>{nav_text}</td>"
                 f"<td>{_e(position['nav_date'] or '—')}</td>"
@@ -758,7 +760,7 @@ def mf_paper_panel(con, asof: date) -> str:
                 f"<td><span class='chip {cls}'>{_e(status)}</span></td></tr>"
             )
         out.append(
-            "<div class='wrap'><table><tr><th>Scheme</th><th>Plan</th><th>Option</th>"
+            "<div class='wrap'><table><tr><th>Folio</th><th>Scheme</th><th>Plan</th><th>Option</th>"
             "<th class='r'>Units</th><th class='r'>Last known NAV</th><th>NAV date</th>"
             "<th class='r'>Value</th><th class='r'>Cost basis</th><th class='r'>Unrealized P&amp;L</th>"
             "<th>Mark</th></tr>" + "".join(position_rows) + "</table></div>"

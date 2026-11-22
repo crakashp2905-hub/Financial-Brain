@@ -212,12 +212,16 @@ def apply_economic_flow(
         if account is None:
             raise MfPaperBookError("paper account does not exist")
         lots = con.execute("""SELECT lot_id, plan, option, allotted_on, lock_in_until,
-            units_original, units_remaining, purchase_nav FROM mf_paper_lots
+            units_original, units_remaining, purchase_nav, folio_id FROM mf_paper_lots
             WHERE account_id=? AND scheme_code=? AND isin=? AND units_remaining>0
             ORDER BY allotted_on, lot_id""",
             [account_id, flow.scheme_code, flow.isin]).fetchall()
         if not lots:
             raise MfPaperBookError("no open lots for the economic-flow source scheme")
+        if any(row[8] is None or not str(row[8]).strip() for row in lots):
+            raise MfPaperBookError(
+                "economic flow cannot mutate holdings with unreconciled folio ownership"
+            )
         identities = {(row[1], row[2]) for row in lots}
         if len(identities) != 1:
             raise MfPaperBookError("source flow maps to ambiguous plan/option holdings")
@@ -233,6 +237,7 @@ def apply_economic_flow(
         cash_delta = Decimal(0)
         units_after = units_before
         extra_units = Decimal(0)
+        reinvestment_allocations: list[tuple[str, str, Decimal]] = []
         reinvest_nav = None
         schedule_json = None
         schedule_hash = None
@@ -252,13 +257,29 @@ def apply_economic_flow(
                            decision_at=decision_at, effective_date=flow.effective_date)
             schedule_json = _schedule_json(reinvestment_terms)
             schedule_hash = reinvestment_terms.source_sha256
-            distribution = units_before * Decimal(flow.cash_per_unit)
+            distribution = Decimal(0)
             reinvest_nav = Decimal(flow.reinvestment_nav)
-            extra_units = (distribution / reinvest_nav).quantize(
-                UNIT_QUANTUM, rounding=ROUND_DOWN
-            )
-            if extra_units <= 0:
-                raise MfPaperBookError("reinvestment distribution produces no units")
+            units_by_folio: dict[str, Decimal] = {}
+            for row in lots:
+                folio_id = str(row[8])
+                units_by_folio[folio_id] = units_by_folio.get(folio_id, Decimal(0)) + Decimal(row[6])
+            for folio_id, folio_units in sorted(units_by_folio.items()):
+                folio_distribution = folio_units * Decimal(flow.cash_per_unit)
+                folio_extra_units = (folio_distribution / reinvest_nav).quantize(
+                    UNIT_QUANTUM, rounding=ROUND_DOWN
+                )
+                if folio_extra_units <= 0:
+                    raise MfPaperBookError(
+                        f"reinvestment distribution produces no units for folio {folio_id}"
+                    )
+                if len(units_by_folio) == 1:
+                    folio_lot_id = reinvestment_lot_id
+                else:
+                    suffix = hashlib.sha256(folio_id.encode("utf-8")).hexdigest()[:16]
+                    folio_lot_id = f"{reinvestment_lot_id}:{suffix}"
+                reinvestment_allocations.append((folio_id, folio_lot_id, folio_extra_units))
+                distribution += folio_distribution
+                extra_units += folio_extra_units
             cash_delta = distribution - extra_units * reinvest_nav
             units_after += extra_units
             terms_record_id = reinvestment_terms.record_id
@@ -297,21 +318,23 @@ def apply_economic_flow(
                         [cash_delta, account_id])
         if flow.kind == SchemeFlowKind.IDCW_REINVESTMENT:
             allotted_on = flow.effective_date
-            con.execute("""INSERT INTO mf_paper_lots (
-                account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            con.executemany("""INSERT INTO mf_paper_lots (
+                account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
                 lock_in_until, units_original, units_remaining, purchase_nav,
                 exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                [account_id, reinvestment_lot_id, flow.scheme_code, plan, option,
-                 flow.isin, allotted_on, reinvestment_lock_in_until, extra_units,
-                 extra_units, reinvest_nav, schedule_json, schedule_hash,
-                 f"MF_FLOW:{flow.event_id}", event_at])
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                [[account_id, lot_id, folio_id, flow.scheme_code, plan, option,
+                  flow.isin, allotted_on, reinvestment_lock_in_until, units,
+                  units, reinvest_nav, schedule_json, schedule_hash,
+                  (f"MF_FLOW:{flow.event_id}" if len(reinvestment_allocations) == 1
+                   else f"MF_FLOW:{flow.event_id}:{folio_id}"), event_at]
+                 for folio_id, lot_id, units in reinvestment_allocations])
         if flow.kind in (SchemeFlowKind.UNIT_SPLIT, SchemeFlowKind.SCHEME_MERGER):
             if flow.unit_ratio is None:
                 raise MfPaperBookError("unit transition ratio is missing")
             ratio = Decimal(flow.unit_ratio)
             for row in lots:
-                lot_id, _, _, _, _, original, remaining, purchase_nav = row
+                lot_id, _, _, _, _, original, remaining, purchase_nav, _folio_id = row
                 adjusted_original = (Decimal(original) * ratio).quantize(
                     UNIT_QUANTUM, rounding=ROUND_HALF_UP
                 )

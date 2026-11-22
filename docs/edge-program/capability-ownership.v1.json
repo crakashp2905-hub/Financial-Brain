@@ -42,12 +42,13 @@
       "owner": "src/financial_brain/paper/mf_lot_book.py",
       "owner_symbol": "subscribe/redeem/account_snapshot",
       "implementations": [
+        "src/financial_brain/paper/mf_folio_book.py",
         "src/financial_brain/paper/mf_exit_loads.py",
         "src/financial_brain/paper/mf_redemption_constraints.py",
         "src/financial_brain/providers/mf_scheme_terms.py",
         "src/financial_brain/storage/schema.sql"
       ],
-      "boundary": "Durable paper MF cash and FIFO purchase-lot accounting with event idempotency, source-hashed exit-load schedules, effective-dated terms and fail-closed redemption restrictions. It consumes supplied NAVs and does not model tax, settlement or production orders."
+      "boundary": "Durable folio-scoped paper MF cash and FIFO purchase-lot accounting with event idempotency, source-hashed exit-load schedules, effective-dated terms, evidence-backed legacy-folio reconciliation and fail-closed redemption restrictions. It consumes supplied NAVs and does not verify ownership evidence with a registrar or model tax, live settlement or production orders."
     },
     {
       "id": "algorithm_behavior_spec",
@@ -2466,6 +2467,12 @@
       "path": "src/financial_brain/paper/mf_flow_book.py",
       "module_role": "paper_engine_or_output",
       "module_owner": "src/financial_brain/paper/mf_flow_book.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/mf_folio_book.py",
+      "path": "src/financial_brain/paper/mf_folio_book.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_folio_book.py"
     },
     {
       "capability_id": "module:src/financial_brain/paper/mf_lot_book.py",
