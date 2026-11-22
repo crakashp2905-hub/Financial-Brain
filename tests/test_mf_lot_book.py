@@ -727,6 +727,64 @@ def test_mf_terminal_panel_displays_last_known_nav_with_stale_flag(connection):
     assert "STALE" in page and "NAV date" in page
 
 
+def test_mf_terminal_panel_distinguishes_simulated_and_observed_payouts(connection):
+    from financial_brain.paper.mf_redemption_settlement import (
+        make_cash_available, request_redemption,
+    )
+    from financial_brain.paper.terminal import mf_paper_panel
+
+    con = connection
+    create_account(con, "paper-payout-basis", 1000, now=NOW)
+    _subscribe(
+        con, event_id="payout-basis-sub", lot_id="payout-basis-lot", amount=1000,
+        schedule=(), digest=HASH_A, account_id="paper-payout-basis",
+    )
+    requested_at = datetime(2026, 1, 10, 12, tzinfo=timezone.utc)
+    request_redemption(
+        con, account_id="paper-payout-basis", settlement_id="simulated-payout",
+        scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+        requested_units=1, requested_on=date(2026, 1, 10),
+        requested_at=requested_at, now=requested_at,
+    )
+    # Use a settlement state available to make_cash_available and assert the
+    # terminal does not present assumptions as independently observed evidence.
+    con.execute("""UPDATE mf_paper_redemption_settlements SET state='PAYOUT_PENDING',
+        net_inr=100, payout_due_date=? WHERE account_id=? AND settlement_id=?""",
+        [date(2026, 1, 12), "paper-payout-basis", "simulated-payout"])
+    payout_at = datetime(2026, 1, 12, 12, tzinfo=timezone.utc)
+    make_cash_available(
+        con, account_id="paper-payout-basis", settlement_id="simulated-payout",
+        available_at=payout_at, now=payout_at,
+    )
+
+    request_redemption(
+        con, account_id="paper-payout-basis", settlement_id="observed-payout",
+        scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+        requested_units=1, requested_on=date(2026, 1, 10),
+        requested_at=requested_at, now=requested_at,
+    )
+    con.execute("""UPDATE mf_paper_redemption_settlements SET state='PAYOUT_PENDING',
+        net_inr=100, payout_due_date=? WHERE account_id=? AND settlement_id=?""",
+        [date(2026, 1, 12), "paper-payout-basis", "observed-payout"])
+    permission = DataPermission(
+        source_id="BANK", use=DataUse.PAPER_SIMULATION,
+        status=PermissionStatus.USE_ALLOWED, effective_from=date(2026, 1, 1),
+        effective_through=None, evidence_ref="reviewed-bank-terms", reviewer="owner",
+    )
+    make_cash_available(
+        con, account_id="paper-payout-basis", settlement_id="observed-payout",
+        available_at=payout_at, now=payout_at, basis="OBSERVED_EVIDENCE",
+        evidence_ref="statement-row-42", source_id="BANK", source_sha256=HASH_B,
+        permissions=(permission,),
+    )
+
+    page = mf_paper_panel(con, date(2026, 1, 12))
+    assert "SIMULATED_ASSUMPTION" in page
+    assert "OBSERVED_EVIDENCE" in page
+    assert "statement-row-42" in page and "BANK" in page and HASH_B[:12] in page
+    assert page.index("observed-payout") < page.index("simulated-payout")
+
+
 def test_settlement_value_requires_exact_as_known_nav_observation(connection):
     con = connection
     create_account(con, "paper-1", 1000, now=NOW)
