@@ -2887,9 +2887,9 @@
         "Focused instrument-rule, adapter, pipeline and session-runner suite: 19 passed; Ruff and targeted mypy passed."
       ],
       "blocker": "Authoritative exchange/broker unit and lot data are not yet ingested; existing options and ETF strategies are not all migrated into the shared candidate pipeline, so universal unit-aware position reconciliation is incomplete.",
-      "last_audited_at_utc": "2026-11-22T13:59:24Z",
-      "commit": "1b792aed",
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T14:43:08Z",
+      "commit": "63ef167d",
+      "test_result": "Focused instrument-rule, adapter, pipeline and session-runner tests: 19 passed; Ruff and targeted mypy passed; Windows and Ubuntu full CI passed on the rebased PR head."
     },
     {
       "id": "FB-0803",
@@ -2897,13 +2897,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "kernel/fills.py uses next-bar and adverse-first bar rules; forward runner executes only on causally later, journaled executable quotes with bid/ask/depth and participation constraints; long options use ask-in/bid-out.",
-        "Quote-based and bar-proxy fill families are separate and not every existing algorithm is adapted to a common execution contract."
+        "ForwardSessionRunner uses the journaled, causally eligible, fresh two-sided quote and now walks best-to-worst observed ask levels for buys or bid levels for sells; it applies adverse slippage and exchange-tick rounding per level, then stops at the limit, price band, or displayed-depth boundary.",
+        "The durable receipt records each consumed level and quantity, the full visible opposing depth, source quote event, and simulation time. Missing depth cannot fill; no close-price hindsight, queue position, or book replenishment is assumed.",
+        "Passive execution remains based on strictly-through eligible trade prints and is explicitly distinguished from displayed-book walking; passive queue position is still unknown. Existing strategy families are not all migrated through this shared execution contract."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "blocker": "The canonical paper runner now walks observed opposing quote depth, but queue position, replenishment, and broad migration of every strategy to this common execution contract remain unvalidated; only the displayed book at the eligible quote is executable evidence.",
+      "last_audited_at_utc": "2026-11-22T14:43:08Z",
+      "commit": "49e6fd48",
+      "test_result": "python -m pytest tests/test_forward_edge_execution_scenario.py tests/test_forward_edge_session_runner.py -q: 66 passed in 109.04s. Focused multi-level durable receipt coverage; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-0804",

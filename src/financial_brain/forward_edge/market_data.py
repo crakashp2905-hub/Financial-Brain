@@ -84,7 +84,8 @@ def executable_quote(event: MarketEvent) -> dict[str, Any] | None:
         return None
     return {"bid": bid, "ask": ask, "bid_quantity": bid_quantity,
             "ask_quantity": ask_quantity, "volume": volume,
-            "depth": depth, "source": event.source, "event_id": event.event_id,
+            "depth": depth, "bid_levels": tuple(bid_levels), "ask_levels": tuple(ask_levels),
+            "source": event.source, "event_id": event.event_id,
             "event_time": event.event_time, "received_at": event.received_at,
             "available_at": event.available_at}
 

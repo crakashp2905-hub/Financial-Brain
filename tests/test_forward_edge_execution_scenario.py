@@ -1,7 +1,11 @@
 """FE-0059 deterministic execution scenarios and resulting inventory."""
 from decimal import Decimal
 
-from financial_brain.forward_edge.execution_scenario import evaluate_passive_scenario, evaluate_scenario
+from financial_brain.forward_edge.execution_scenario import (
+    evaluate_depth_scenario,
+    evaluate_passive_scenario,
+    evaluate_scenario,
+)
 
 
 def _run(**changes):
@@ -25,6 +29,35 @@ def test_visible_depth_causes_partial_fill_and_no_liquidity_misses() -> None:
     assert partial.status == "PARTIAL" and partial.filled_quantity == 3 and partial.inventory_delta == 3
     missed = _run(visible_quantity=0)
     assert missed.status == "MISSED" and missed.inventory_delta == 0
+
+
+def test_observed_depth_walks_levels_with_adverse_rounding_and_limit_guard() -> None:
+    walked = evaluate_depth_scenario(
+        side="BUY", quantity=7,
+        levels=((Decimal("100.00"), 2), (Decimal("100.10"), 4),
+                (Decimal("100.20"), 20)),
+        limit_price=Decimal("100.15"), tick_size=Decimal("0.05"),
+        freeze_limit=10, slice_size=3, adverse_slippage_bps=Decimal("0"),
+    )
+    assert walked.status == "PARTIAL"
+    assert walked.filled_quantity == 6 and walked.inventory_delta == 6
+    assert walked.level_fills == ((Decimal("100.00"), 2), (Decimal("100.10"), 4))
+    assert walked.average_price == Decimal("100.0666666666666666666666667")
+    assert walked.reject_reason == "ADVERSE_PRICE_BREACHES_LIMIT"
+    assert walked.child_quantities == (3, 3)
+
+
+def test_depth_walk_uses_sell_bids_and_stops_when_quote_depth_is_exhausted() -> None:
+    walked = evaluate_depth_scenario(
+        side="SELL", quantity=7,
+        levels=((Decimal("99.95"), 2), (Decimal("99.90"), 3)),
+        limit_price=Decimal("99.80"), tick_size=Decimal("0.05"),
+        freeze_limit=10, slice_size=4, adverse_slippage_bps=Decimal("0"),
+    )
+    assert walked.status == "PARTIAL"
+    assert walked.filled_quantity == 5 and walked.inventory_delta == -5
+    assert walked.level_fills == ((Decimal("99.95"), 2), (Decimal("99.90"), 3))
+    assert walked.average_price == Decimal("99.92")
 
 
 def test_adverse_price_limit_and_freeze_limit_reject_without_inventory() -> None:

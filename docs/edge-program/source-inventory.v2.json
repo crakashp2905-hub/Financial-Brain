@@ -4160,7 +4160,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/execution_scenario.py",
-      "source_sha256": "322ea33227caa236b8d168b8841028aa312051e1d84a908b75c81b73e28b39e4",
+      "source_sha256": "876d60d0163773fa0310c821603640667e72c0371ebe6349056795c4757466e6",
       "test_paths": []
     },
     {
@@ -4474,7 +4474,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_data.py",
-      "source_sha256": "0cc00df6add583051e7bc6ea7a4623414abddcf6c47e7c813329c63f4f61bfec",
+      "source_sha256": "90bcfb849e4ac4959341c42dab1b86a172f897662da74d76c7ecb2b295c08069",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"
@@ -5230,7 +5230,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "0ac94f14d91a0384021f0186c014a1d1b42b4ea66aa4b300eda3b52d7187c8c2",
+      "source_sha256": "205a2b7c680ca507dd7b1c0dbb4f31b1951edea14f4653c248d1ae3ab3c2677c",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"

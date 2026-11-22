@@ -15,8 +15,8 @@ from zoneinfo import ZoneInfo
 from financial_brain.evidence.decision_manifest import ManifestError, canonical_bytes
 from financial_brain.forward_edge.execution_scenario import (
     ScenarioFill,
+    evaluate_depth_scenario,
     evaluate_passive_scenario,
-    evaluate_scenario,
 )
 from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
 from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
@@ -1070,8 +1070,7 @@ class ForwardSessionRunner:
             if any(not trade.evidence_id or re.fullmatch(r"[0-9a-f]{64}", trade.evidence_id) is None
                    for trade in passive_events):
                 raise ForwardSessionRunnerError("passive trade print requires immutable payload evidence")
-        touch = quote["ask"] if side == "BUY" else quote["bid"]
-        visible = quote["ask_quantity"] if side == "BUY" else quote["bid_quantity"]
+        opposing_levels = quote["ask_levels"] if side == "BUY" else quote["bid_levels"]
         effective_rule = {"effective_from": rule.effective_from.isoformat(),
                           "tick_size": str(rule.tick_size), "lot_size": rule.lot_size,
                           "quantity_unit": rule.quantity_unit,
@@ -1119,10 +1118,11 @@ class ForwardSessionRunner:
                     freeze_limit=freeze_limit, slice_size=slice_size, adverse_slippage_bps=slippage,
                     trade_prints=prints, price_band=band)
             else:
-                scenario = evaluate_scenario(side=side, quantity=quantity, touch_price=touch,
-                                             limit_price=limit, tick_size=tick, visible_quantity=visible,
-                                             freeze_limit=freeze_limit, slice_size=slice_size,
-                                             adverse_slippage_bps=slippage, price_band=band)
+                scenario = evaluate_depth_scenario(
+                    side=side, quantity=quantity, levels=opposing_levels,
+                    limit_price=limit, tick_size=tick, freeze_limit=freeze_limit,
+                    slice_size=slice_size, adverse_slippage_bps=slippage,
+                    price_band=band)
             body = {"session_id": session_id, "order_id": order_id, "status": scenario.status,
                     "requested_quantity": scenario.requested_quantity,
                     "quantity_unit": quantity_unit,
@@ -1135,6 +1135,13 @@ class ForwardSessionRunner:
                     "quote_event_id": event_id, "source": event.source,
                     "execution_style": request["execution_style"],
                     "execution_evidence_event_ids": [event_id, *passive_trade_event_ids],
+                    "depth_match_mode": "PASSIVE_TRADE_PRINTS" if passive_trade_event_ids
+                        else "OBSERVED_OPPOSING_BOOK_LEVELS",
+                    "visible_depth_fills": [] if passive_trade_event_ids else [
+                        {"price": str(price), "quantity": level_quantity}
+                        for price, level_quantity in scenario.level_fills],
+                    "observed_opposing_depth_quantity": None if passive_trade_event_ids else sum(
+                        level_quantity for _price, level_quantity in opposing_levels),
                     "max_wait_ms": max_wait_ms,
                     "simulated_at": simulated_at.astimezone(timezone.utc).isoformat(),
                     "physical_order_submitted": False}
