@@ -25,7 +25,9 @@ from financial_brain.paper.mf_systematic_flow_book import (
 )
 from financial_brain.providers.mf_scheme_terms import MFChargeRule, SchemeCommercialTerms
 from financial_brain.paper.mf_redemption_settlement import settlement_snapshot
-from financial_brain.paper.mf_account_ledger import ledger_snapshot
+from financial_brain.paper.mf_account_ledger import (
+    ledger_snapshot, mf_instrument_id, post_journal,
+)
 from financial_brain.storage.db import Database
 
 
@@ -382,6 +384,15 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
              instruction.source_plan, instruction.source_option, instruction.source_isin,
              date(2026, 11, 1), Decimal("1"), Decimal("1"), Decimal("100"),
              "subscribe-stp-source", NOW])
+        post_journal(
+            con, account_id=instruction.account_id, transaction_id="opening-stp-source-units",
+            effective_at=NOW, recorded_at=NOW,
+            unit_deltas=((instruction.folio_id, mf_instrument_id(
+                instruction.source_scheme, instruction.source_plan,
+                instruction.source_option, instruction.source_isin,
+            ), Decimal("1")),),
+            evidence={"fixture": "opening source units for STP paper test"},
+        )
         request_systematic_redemption(
             con, instruction_id=instruction.instruction_id, requested_at=NOW,
             now=NOW, scheme_calendar=_scheme_calendar(),
@@ -480,6 +491,16 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
              instruction.source_plan, instruction.source_option, instruction.source_isin,
              date(2026, 11, 1), Decimal("1"), Decimal("1"), Decimal("100"),
              "subscribe-stp-cancel-source", NOW])
+        post_journal(
+            con, account_id=instruction.account_id,
+            transaction_id="opening-stp-cancel-source-units",
+            effective_at=NOW, recorded_at=NOW,
+            unit_deltas=((instruction.folio_id, mf_instrument_id(
+                instruction.source_scheme, instruction.source_plan,
+                instruction.source_option, instruction.source_isin,
+            ), Decimal("1")),),
+            evidence={"fixture": "opening source units for STP cancel paper test"},
+        )
         _create(con, instruction)
         request_systematic_redemption(con, instruction_id=instruction.instruction_id,
             requested_at=NOW, now=NOW, scheme_calendar=_scheme_calendar())

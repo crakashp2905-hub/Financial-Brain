@@ -417,7 +417,7 @@ def subscribe(
                 event_at,
             ],
         )
-        from .mf_account_ledger import post_journal
+        from .mf_account_ledger import mf_instrument_id, post_journal
         post_journal(
             con, account_id=account_id, transaction_id=f"subscription:{event_id}",
             effective_at=event_at, recorded_at=event_at,
@@ -427,6 +427,7 @@ def subscribe(
                   for code, charge in charge_breakdown if charge),
                 (funding_account_code, 0, amount),
             ),
+            unit_deltas=((folio_id, mf_instrument_id(scheme_code, plan, option, isin), units),),
             evidence={"event_id": event_id, "lot_id": lot_id,
                       "nav_per_unit": str(nav), "units": str(units),
                       "charges_inr": str(subscription_charges),
@@ -773,7 +774,7 @@ def redeem(
                 event_at,
             ],
         )
-        from .mf_account_ledger import post_journal
+        from .mf_account_ledger import mf_instrument_id, post_journal
         cash_or_receivable = "REDEMPTION_RECEIVABLE" if settlement_id else "CASH"
         journal_entries: list[tuple[str, Decimal, Decimal]] = [
             (cash_or_receivable, net_redemption, Decimal(0)),
@@ -795,6 +796,9 @@ def redeem(
         post_journal(
             con, account_id=account_id, transaction_id=f"redemption:{event_id}",
             effective_at=event_at, recorded_at=event_at, entries=tuple(journal_entries),
+            unit_deltas=((folio_id,
+                          mf_instrument_id(scheme_code, plan, option, isin),
+                          -result.redeemed_units),),
             evidence={"event_id": event_id, "settlement_id": settlement_id,
                       "nav_per_unit": str(nav), "units": str(result.redeemed_units),
                       "gross_inr": str(result.gross_redemption_inr),
