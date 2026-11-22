@@ -2963,13 +2963,13 @@
       "evidence": [
         "OptionContract paper plan binds CE/PE, underlying, strike, expiry, symbol, provider token, lot size and visible quote depth before eligibility.",
         "Added a deterministic point-in-time option-chain router with effective-dated and publication-time-gated contract versions; it validates symbol/token/expiry/strike/lot identity, quote availability/freshness, bid/ask, depth, spread, target DTE/moneyness and all-in premium budget before returning a long-call/put paper plan.",
-        "Routed plans retain contract-version and quote-evidence hashes, source/exchange clocks, sizing policy hash and OBSERVED_QUOTE_SIM label; no eligible contract returns NO_TRADE.",
+        "Routed plans retain contract-version, option-quote and underlying-spot evidence hashes, source/exchange/availability clocks, routing/cost-model hashes and OBSERVED_QUOTE_SIM label; no eligible contract returns NO_TRADE.",
         "Still PARTIAL: contract versions and quote observations are caller-supplied; durable master ingestion and wiring every existing option strategy/desk through this router remain outstanding."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T17:23:53Z",
-      "commit": "0dab52ee",
-      "test_result": "python -m pytest tests/test_paper_options_routing.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_runner.py tests/test_paper_options_spread.py -q: 23 passed in 3.89s; Ruff passed for the new router/tests and mypy passed on options_routing.py."
+      "last_audited_at_utc": "2026-11-22T17:28:54Z",
+      "commit": "366ebbe5",
+      "test_result": "python -m pytest tests/test_paper_options_routing.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_runner.py tests/test_paper_options_spread.py -q: 24 passed in 3.22s; Ruff passed for the new router/tests and mypy passed on options_routing.py."
     },
     {
       "id": "FB-0808",
