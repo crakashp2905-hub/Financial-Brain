@@ -229,6 +229,15 @@ def make_cash_available(
         _event(con, account_id=account_id, settlement_id=settlement_id,
                state="CASH_AVAILABLE", transitioned_at=payout_time,
                digest=payout_hash, evidence=evidence, sequence=4)
+        from .mf_account_ledger import post_journal
+        post_journal(
+            con, account_id=account_id, transaction_id=f"payout:{settlement_id}",
+            effective_at=payout_time, recorded_at=event_time,
+            entries=(("CASH", net, 0), ("REDEMPTION_RECEIVABLE", 0, net)),
+            basis=basis, source_id=source_id, source_ref=evidence_ref,
+            source_sha256=source_sha256,
+            evidence={"settlement_id": settlement_id, "net_inr": str(net)},
+        )
         con.execute("COMMIT")
     except Exception:
         con.execute("ROLLBACK")

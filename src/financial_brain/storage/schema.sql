@@ -706,6 +706,54 @@ CREATE TABLE IF NOT EXISTS mf_paper_accounts (
     created_at TIMESTAMPTZ NOT NULL
 );
 
+-- Balanced paper MF cash/investment journal. Legacy balances are not backfilled:
+-- their opening source is unknown and must be reconciled explicitly.
+CREATE TABLE IF NOT EXISTS mf_paper_ledger_entries (
+    account_id VARCHAR NOT NULL,
+    transaction_id VARCHAR NOT NULL,
+    line_no INTEGER NOT NULL CHECK (line_no > 0),
+    effective_at TIMESTAMPTZ NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    account_code VARCHAR NOT NULL CHECK (account_code IN (
+        'CASH', 'MF_INVESTMENTS', 'REDEMPTION_RECEIVABLE',
+        'OWNER_EQUITY', 'OWNER_WITHDRAWALS', 'EXIT_LOAD_EXPENSE',
+        'OTHER_CHARGES_EXPENSE', 'IDCW_INCOME', 'REALIZED_GAIN', 'REALIZED_LOSS'
+    )),
+    debit_inr DECIMAL(38, 18) NOT NULL CHECK (debit_inr >= 0),
+    credit_inr DECIMAL(38, 18) NOT NULL CHECK (credit_inr >= 0),
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, transaction_id, line_no),
+    CHECK ((debit_inr > 0 AND credit_inr = 0) OR (credit_inr > 0 AND debit_inr = 0)),
+    CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
+            AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
+        OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
+            AND source_ref IS NULL AND source_sha256 IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_external_cash_events (
+    account_id VARCHAR NOT NULL,
+    event_id VARCHAR NOT NULL,
+    amount_inr DECIMAL(38, 18) NOT NULL CHECK (amount_inr > 0),
+    direction VARCHAR NOT NULL CHECK (direction IN ('CONTRIBUTION', 'WITHDRAWAL')),
+    effective_at TIMESTAMPTZ NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, event_id),
+    CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
+            AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
+        OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
+            AND source_ref IS NULL AND source_sha256 IS NULL))
+);
+
 -- Immutable MF requests and append-only platform/simulation lifecycle receipts.
 CREATE TABLE IF NOT EXISTS mf_paper_orders (
     order_id VARCHAR PRIMARY KEY,
