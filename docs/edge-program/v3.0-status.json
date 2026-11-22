@@ -9544,12 +9544,20 @@
     {
       "id": "SL-01-14",
       "text": "Add controlled redaction/deletion and retention periods for exchange-licensed feeds; delete prohibited data without corrupting historical provenance.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/lake/retention.py adds reviewed source/dataset-scoped RetentionDirective deadlines; redact_payload verifies the payload against immutable metadata, writes a checksummed receipt before deleting only that exact payload, and supports idempotent recovery after interruption.",
+        "src/financial_brain/lake/store.py makes RawLake.read fail closed for redacted payloads while leaving original metadata and tombstone provenance available.",
+        "tests/test_lake_retention.py covers scope/deadline rejection, exact deletion, provenance, interrupted retry, conflicting directives, receipt tampering, payload mismatch and path traversal: 6 passed. Ruff and targeted mypy passed. No real lake payload was deleted."
+      ],
+      "blocker": "No provider-specific retention schedule or permission evidence is loaded, current UNKNOWN_RIGHTS entries are not converted into reviewed deletion directives, and quote archives/other data stores do not yet consume this control. Automated retention scans, backups and production recovery procedures remain open.",
+      "last_audited_at_utc": "2026-11-22T22:19:21Z",
+      "commit": "6776c4b1",
+      "test_evidence": [
+        "tests/test_lake_retention.py"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-short tests/test_lake_retention.py: 6 passed in 1.46s; Ruff and mypy for retention/store passed; git diff --check passed."
     },
     {
       "id": "SL-01-15",
@@ -15719,7 +15727,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T22:12:45Z",
+    "as_of_utc": "2026-11-22T22:19:21Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15979,15 +15987,16 @@
       "SL-01-11",
       "SL-01-12",
       "SL-01-13",
+      "SL-01-14",
       "SL-01-18"
     ],
-    "audited_count": 259,
+    "audited_count": 260,
     "status_counts": {
       "COMPLETE": 45,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 202,
-      "UNASSESSED": 1119
+      "PARTIAL": 203,
+      "UNASSESSED": 1118
     },
     "verified_complete_count": 45,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16124,7 +16133,7 @@
     "COMPLETE": 45,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 202,
-    "UNASSESSED": 1119
+    "PARTIAL": 203,
+    "UNASSESSED": 1118
   }
 }
