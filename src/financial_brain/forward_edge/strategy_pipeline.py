@@ -6,7 +6,7 @@ It is paper-only and never routes to a broker.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -63,6 +63,21 @@ def execute_candidate(
         or eligibility.status not in {"PAPER_ELIGIBLE", "FROZEN_CHALLENGER", "VERIFIED"}
     ):
         raise StrategyPipelineError("candidate requires matching frozen paper eligibility")
+    try:
+        config = runner.state_store.config(session_id)
+    except (AttributeError, KeyError, ValueError) as exc:
+        raise StrategyPipelineError("candidate session has no readable frozen strategy eligibility") from exc
+    frozen_rows = config.constraints.get("strategy_eligibilities", [])
+    if not isinstance(frozen_rows, list):
+        raise StrategyPipelineError("session strategy eligibility must be a frozen list")
+    matching_rows = [
+        row for row in frozen_rows
+        if isinstance(row, dict)
+        and row.get("strategy_id") == spec.strategy_id
+        and row.get("version") == spec.version
+    ]
+    if matching_rows != [asdict(eligibility)]:
+        raise StrategyPipelineError("candidate eligibility does not match the session's frozen eligibility")
     try:
         intent = adapt_candidate(signal, spec)
     except StrategyAdapterError as exc:

@@ -471,6 +471,19 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
 def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path):
     runner = make_runner(tmp_path)
     config = make_config()
+    spec = StrategySpec(
+        "orb", "v1", {"window": 15}, "test-owner", family="session_breakout",
+        code_sha256="a" * 64, asset_scope=("NSE_EQ",), decision_clock="bar_close",
+        direction="LONG", stop_exit="range_low", horizon="intraday",
+        data_requirements=("ohlcv_1m",),
+    )
+    eligibility = StrategyEligibility(
+        "orb", "v1", "PAPER_ELIGIBLE", "tests/frozen-orb.json", "b" * 64,
+        "approved test fixture", spec.hash(),
+    )
+    config = replace(config, constraints={
+        **config.constraints, "strategy_eligibilities": [eligibility.__dict__],
+    })
     opened(runner, config=config)
     signal_event = make_event()
     runner.ingest("s", config, [signal_event])
@@ -484,16 +497,6 @@ def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path)
         "NSE:INFY", quote, received_at=decided_at + timedelta(milliseconds=100)
     )
     runner.ingest("s", config, [fill_event])
-    spec = StrategySpec(
-        "orb", "v1", {"window": 15}, "test-owner", family="session_breakout",
-        code_sha256="a" * 64, asset_scope=("NSE_EQ",), decision_clock="bar_close",
-        direction="LONG", stop_exit="range_low", horizon="intraday",
-        data_requirements=("ohlcv_1m",),
-    )
-    eligibility = StrategyEligibility(
-        "orb", "v1", "PAPER_ELIGIBLE", "tests/frozen-orb.json", "b" * 64,
-        "approved test fixture", spec.hash(),
-    )
     signal = CandidateSignal(
         "orb", "v1", "NSE:INFY", "BUY", 2, "candidate-1",
         decided_at.isoformat(), Decimal("100.1"), {"setup": "opening-range"},

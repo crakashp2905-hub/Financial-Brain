@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -36,8 +37,27 @@ def _eligibility(spec: StrategySpec, status: str = "PAPER_ELIGIBLE") -> Strategy
 
 
 class _Runner:
-    def __init__(self) -> None:
+    def __init__(self, *, frozen_eligibility: StrategyEligibility | None = None,
+                 freeze_eligibility: bool = True) -> None:
         self.calls: list[tuple[str, dict[str, Any]]] = []
+        if freeze_eligibility and frozen_eligibility is None:
+            frozen_eligibility = _eligibility(_spec())
+        frozen_rows = [
+            {
+                "strategy_id": frozen_eligibility.strategy_id,
+                "version": frozen_eligibility.version,
+                "status": frozen_eligibility.status,
+                "source_ref": frozen_eligibility.source_ref,
+                "source_sha256": frozen_eligibility.source_sha256,
+                "exclusion_reason": frozen_eligibility.exclusion_reason,
+                "spec_sha256": frozen_eligibility.spec_sha256,
+            }
+        ] if frozen_eligibility is not None else []
+        self.state_store = SimpleNamespace(
+            config=lambda _session_id: SimpleNamespace(
+                constraints={"strategy_eligibilities": frozen_rows}
+            )
+        )
 
     def decide(self, **kwargs: Any) -> bool:
         self.calls.append(("decide", kwargs))
@@ -118,6 +138,13 @@ def test_candidate_requires_matching_frozen_paper_eligibility() -> None:
     kwargs["eligibility"] = _eligibility(_spec(), status="SHADOW_ONLY")
     with pytest.raises(StrategyPipelineError, match="paper eligibility"):
         execute_candidate(runner, **kwargs)  # type: ignore[arg-type]
+    assert runner.calls == []
+
+
+def test_candidate_must_be_listed_in_the_session_frozen_eligibility() -> None:
+    runner = _Runner(freeze_eligibility=False)
+    with pytest.raises(StrategyPipelineError, match="session's frozen eligibility"):
+        execute_candidate(runner, **_kwargs())  # type: ignore[arg-type]
     assert runner.calls == []
 
 
