@@ -9434,22 +9434,38 @@
     {
       "id": "SL-01-08",
       "text": "Build point-in-time index membership snapshots and survivorship-safe historical corporate action joins for feature training.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/ingest/index_tri.py archives dated constituent downloads and loads point-in-time index_membership snapshots; it explicitly documents that historical membership is only accumulated prospectively from the first captured snapshot and cannot be backfilled from current lists.",
+        "src/financial_brain/universe/snapshot.py records daily traded-universe snapshots by ISIN and supports historical membership/churn; src/financial_brain/corpactions/actions.py keeps raw prices separate from derived action factors.",
+        "tests/test_free_datasets.py and tests/test_phase0_reference.py cover reference ingestion and historical universe/corporate-action behavior; targeted tests/test_free_datasets.py: 10 passed."
+      ],
+      "blocker": "Historical official index membership before first archived snapshots is unavailable in this implementation; constituent snapshots are not yet wired into survivorship-safe corporate-action joins for every feature-training dataset, and permissions/source coverage remain unverified.",
+      "last_audited_at_utc": "2026-11-22T21:50:16Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_free_datasets.py",
+        "tests/test_phase0_reference.py"
+      ],
+      "test_result": "tests/test_free_datasets.py and tests/test_paper_options_routing.py passed together (19 tests); relevant index ingest subset is covered. Full cross-feature survivorship-safe join proof remains outstanding."
     },
     {
       "id": "SL-01-09",
       "text": "Add option strike, side, underlying, lot, expiry and exact token mappings with effective dates; reject reconstructed fictional listed contracts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/options_routing.py defines effective-dated OptionContractVersion records with underlying, CE/PE side, decimal strike, expiry, exact symbol/token, lot size, publication time and source hash; point-in-time routing excludes unpublished, inactive and expired rows.",
+        "tests/test_paper_options_routing.py validates exact contract identity, effective/publication dates, expiry and rejection of malformed or unavailable contracts; it passed as part of a 19-test focused run."
+      ],
+      "blocker": "No verified historical exchange contract-master archive is loaded or bound to the supplied source hash, so comprehensive historical exact-token coverage and proof against fabricated contract rows are incomplete.",
+      "last_audited_at_utc": "2026-11-22T21:50:16Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_paper_options_routing.py"
+      ],
+      "test_result": "tests/test_paper_options_routing.py and tests/test_free_datasets.py passed together: 19 passed in 2.41s."
     },
     {
       "id": "SL-01-10",
@@ -15675,7 +15691,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T21:48:40Z",
+    "as_of_utc": "2026-11-22T21:50:16Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15929,16 +15945,18 @@
       "SL-01-05",
       "SL-01-06",
       "SL-01-07",
+      "SL-01-08",
+      "SL-01-09",
       "SL-01-10",
       "SL-01-18"
     ],
-    "audited_count": 254,
+    "audited_count": 256,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 198,
-      "UNASSESSED": 1124
+      "PARTIAL": 200,
+      "UNASSESSED": 1122
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16075,7 +16093,7 @@
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 198,
-    "UNASSESSED": 1124
+    "PARTIAL": 200,
+    "UNASSESSED": 1122
   }
 }
