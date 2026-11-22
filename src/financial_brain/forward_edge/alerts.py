@@ -147,9 +147,13 @@ def evaluate_desk_alerts(
 
     for row in order_states:
         order_id, state = str(row.get("order_id", "")).strip(), str(row.get("state", "")).upper()
-        if not order_id or state not in {"PARTIAL", "FILLED", "REJECTED", "UNKNOWN", "CANCELED", "MISSED"}:
-            raise AlertError("order alert needs an ID and a recognized terminal or partial state")
-        severity = "HIGH" if state == "UNKNOWN" else "WARNING"
+        if not order_id or state not in {
+            "ACCEPTED", "WORKING", "PARTIAL", "FILLED", "CANCEL_PENDING", "CANCELED",
+            "REJECTED", "MISSED", "TIMED_OUT", "UNKNOWN", "EXPIRED",
+        }:
+            raise AlertError("order alert needs an ID and a recognized lifecycle state")
+        severity = ("HIGH" if state in {"UNKNOWN", "TIMED_OUT"} else
+                    "WARNING" if state in {"PARTIAL", "REJECTED", "MISSED"} else "INFO")
         emit(f"order:{order_id}:{state}", "ORDER_EXECUTION", severity,
              f"Paper order {order_id} state is {state}; reconcile partial or ambiguous outcomes.")
 
@@ -232,3 +236,32 @@ def mutual_fund_pending_rows(connection, *, as_of: datetime) -> tuple[dict, ...]
                      "stage": "UNITS" if state == "REDEMPTION_PENDING" else "PAYOUT",
                      "age_days": max(0, (local_day - requested_on).days)})
     return tuple(rows)
+
+
+def paper_order_state_rows(connection, *, occurred_after: datetime,
+                           occurred_through: datetime) -> tuple[dict, ...]:
+    """Return each paper order's latest lifecycle state observed in an explicit interval."""
+    if any(value.tzinfo is None or value.utcoffset() is None
+           for value in (occurred_after, occurred_through)):
+        raise AlertError("paper order alert interval must be timezone aware")
+    lower, upper = (occurred_after.astimezone(timezone.utc),
+                    occurred_through.astimezone(timezone.utc))
+    if upper < lower:
+        raise AlertError("paper order alert interval is reversed")
+    rows = connection.execute("""SELECT order_id, sequence, state, occurred_at
+        FROM order_events ORDER BY order_id, sequence""").fetchall()
+    latest: dict[str, tuple[int, str]] = {}
+    for order_id, sequence, state, raw_time in rows:
+        try:
+            parsed = datetime.fromisoformat(raw_time)
+        except (TypeError, ValueError) as exc:
+            raise AlertError("paper order journal has an invalid event timestamp") from exc
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise AlertError("paper order journal event timestamp must be timezone aware")
+        occurred = parsed.astimezone(timezone.utc)
+        if lower <= occurred <= upper:
+            previous = latest.get(order_id)
+            if previous is None or sequence > previous[0]:
+                latest[order_id] = (sequence, state)
+    return tuple({"order_id": order_id, "state": state}
+                 for order_id, (_, state) in sorted(latest.items()))

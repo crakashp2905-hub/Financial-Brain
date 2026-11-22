@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import sqlite3
 
 import duckdb
 import pytest
@@ -8,6 +9,7 @@ from financial_brain.forward_edge.alerts import (
     AlertError,
     evaluate_desk_alerts,
     mutual_fund_pending_rows,
+    paper_order_state_rows,
 )
 
 
@@ -102,5 +104,42 @@ def test_mf_pending_adapter_reads_only_point_in_time_unresolved_units_and_payout
             {"item_id": "paper-1:redeem-payout", "stage": "PAYOUT", "age_days": 2},
             {"item_id": "paper-1:redeem-units", "stage": "UNITS", "age_days": 1},
         )
+    finally:
+        con.close()
+
+
+def test_paper_order_adapter_returns_latest_today_state_and_excludes_old_events():
+    con = sqlite3.connect(":memory:")
+    try:
+        con.execute("CREATE TABLE order_events(order_id TEXT, sequence INTEGER, state TEXT, occurred_at TEXT)")
+        con.executemany("INSERT INTO order_events VALUES (?,?,?,?)", [
+            ("o1", 1, "PARTIAL", "2026-11-22T19:00:00+00:00"),
+            ("o1", 2, "FILLED", "2026-11-22T19:05:00+00:00"),
+            ("o2", 1, "UNKNOWN", "2026-11-22T19:10:00+00:00"),
+            ("old", 1, "FILLED", "2026-11-20T19:00:00+00:00"),
+        ])
+        result = paper_order_state_rows(
+            con, occurred_after=datetime(2026, 11, 22, 18, 0, tzinfo=timezone.utc),
+            occurred_through=datetime(2026, 11, 22, 20, 0, tzinfo=timezone.utc),
+        )
+        assert result == (
+            {"order_id": "o1", "state": "FILLED"},
+            {"order_id": "o2", "state": "UNKNOWN"},
+        )
+    finally:
+        con.close()
+
+
+def test_paper_order_adapter_rejects_naive_event_timestamps():
+    con = sqlite3.connect(":memory:")
+    try:
+        con.execute("CREATE TABLE order_events(order_id TEXT, sequence INTEGER, state TEXT, occurred_at TEXT)")
+        con.execute("INSERT INTO order_events VALUES (?, ?, ?, ?)",
+                    ("o1", 1, "WORKING", "2026-11-22T19:00:00"))
+        with pytest.raises(AlertError, match="timezone aware"):
+            paper_order_state_rows(
+                con, occurred_after=datetime(2026, 11, 22, 18, 0, tzinfo=timezone.utc),
+                occurred_through=datetime(2026, 11, 22, 20, 0, tzinfo=timezone.utc),
+            )
     finally:
         con.close()

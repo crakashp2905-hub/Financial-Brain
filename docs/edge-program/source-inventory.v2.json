@@ -258,6 +258,7 @@
         "research.workstation",
         "risk",
         "securities",
+        "sqlite3",
         "storage.db",
         "sys",
         "tomllib",
@@ -270,7 +271,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "a3372dd55fcde3c5baf23663c48a1bc692eba28e12eea2ffc65b7c6778519349",
+      "source_sha256": "e870bb376588c8922c430bd4b71c38c6dacd06f1f5aebcca712a02d3f614b548",
       "test_paths": []
     },
     {
@@ -3375,7 +3376,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/alerts.py",
-      "source_sha256": "d9ff703667a2cd35a1c214b0d50de52dd02e9ada72f4dc8e948a0fa79fba896b",
+      "source_sha256": "860c86bbe33bfeb0a688aec72eeb3a3aeb3c3e60da080c7ad4398cd069df3ef2",
       "test_paths": []
     },
     {

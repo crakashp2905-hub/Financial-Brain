@@ -1868,19 +1868,45 @@ def cmd_journal(args) -> int:
 
 
 def cmd_alerts(args) -> int:
-    """Raise desktop alerts for anything worth acting on (sent once each; nothing leaves this machine)."""
+    """Raise deduplicated desktop alerts and optional Telegram notifications."""
     import datetime as _dt
     import duckdb
+    import sqlite3
     from . import alerts as AL
     from .opportunity import scanners as S
     from .paper import intraday_runner as IR
     from .portfolio import my_book as MB
     from .risk import killswitch as KS
     from datetime import timezone as _timezone
-    from financial_brain.forward_edge.alerts import evaluate_desk_alerts, mutual_fund_pending_rows
+    from financial_brain.forward_edge.alerts import (
+        evaluate_desk_alerts,
+        mutual_fund_pending_rows,
+        paper_order_state_rows,
+    )
     day = _dt.date.today().isoformat()
     now_utc = _dt.datetime.now(_timezone.utc)
     out = []
+    journal_path = load().data_root / "forward-edge" / "journal.sqlite"
+    if journal_path.is_file():
+        order_con = None
+        try:
+            order_con = sqlite3.connect(journal_path.resolve().as_uri() + "?mode=ro", uri=True)
+            latest_order_states = paper_order_state_rows(
+                order_con, occurred_after=now_utc - _dt.timedelta(days=1), occurred_through=now_utc,
+            )
+            for alert in evaluate_desk_alerts(
+                session_id=f"alerts:{day}", occurred_at=now_utc,
+                order_states=latest_order_states,
+            ):
+                state = alert.root_cause_id.rsplit(":", 1)[-1]
+                out.append({"key": alert.root_cause_id,
+                            "title": f"Paper order {state.lower()}", "body": alert.details})
+        except Exception as exc:  # noqa: BLE001 - journal errors must be visible, not silently ignored
+            out.append({"key": f"order-alert-source:{day}", "title": "Paper order alerts unavailable",
+                        "body": f"Could not read paper order lifecycle journal: {str(exc)[:180]}"})
+        finally:
+            if order_con is not None:
+                order_con.close()
     rcon = duckdb.connect(str(load().db_path), read_only=True)
     try:
         asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
