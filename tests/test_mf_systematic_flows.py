@@ -81,6 +81,24 @@ def test_stp_purchase_waits_for_settled_proceeds_and_cannot_overspend():
             ))
 
 
+def test_cancelled_stp_releases_reserved_proceeds_and_requires_a_reason():
+    lifecycle = MFSystematicFlowLifecycle(_instruction(MFSystematicFlowKind.STP),
+                                           _redemption_events())
+    lifecycle = lifecycle.append(_event(
+        MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED, 40,
+        amount_inr=Decimal("9000"),
+    ))
+    cancelled = lifecycle.append(_event(
+        MFSystematicFlowEventKind.PURCHASE_CANCELLED, 50,
+        amount_inr=Decimal("9000"), reason="paper target cancelled",
+    ))
+    assert cancelled.stage == "PURCHASE_CANCELLED"
+    assert cancelled.available_to_redeploy_inr == Decimal("9500")
+    with pytest.raises(MFSystematicFlowError, match="requires a reason"):
+        _event(MFSystematicFlowEventKind.PURCHASE_CANCELLED, 50,
+               amount_inr=Decimal("9000"))
+
+
 def test_stp_rejects_same_time_redeployment_and_value_must_include_loads():
     request, value, _ = _redemption_events()
     with pytest.raises(MFSystematicFlowError, match="explicit load and other-charge"):

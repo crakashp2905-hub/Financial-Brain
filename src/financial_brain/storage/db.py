@@ -82,6 +82,8 @@ class Database:
                 except duckdb.Error:
                     pass  # column already present on this build
             self._migrate_mf_ledger_account_codes(con)
+            self._migrate_mf_purchase_eligibility_cancel(con)
+            self._migrate_mf_systematic_event_cancellation(con)
             self._refresh_views(con)
 
     @staticmethod
@@ -123,6 +125,91 @@ class Database:
             con.execute("DROP TABLE mf_paper_ledger_entries")
             con.execute("""ALTER TABLE mf_paper_ledger_entries_upgrade
                 RENAME TO mf_paper_ledger_entries""")
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")
+            raise
+
+    @staticmethod
+    def _migrate_mf_purchase_eligibility_cancel(con) -> None:
+        """Allow a reserved, unallotted MF purchase to be durably cancelled."""
+        constraints = con.execute("""SELECT constraint_text FROM duckdb_constraints()
+            WHERE table_name='mf_paper_purchase_eligibility'
+            AND constraint_type='CHECK'""").fetchall()
+        if any("CANCELLED" in str(row[0]) for row in constraints):
+            return
+        con.execute("BEGIN TRANSACTION")
+        try:
+            con.execute("""CREATE TABLE mf_paper_purchase_eligibility_upgrade (
+                order_id VARCHAR PRIMARY KEY,
+                state VARCHAR NOT NULL CHECK (state IN ('NAV_PENDING', 'ALLOTTED', 'CANCELLED')),
+                eligible_nav_date DATE NOT NULL,
+                transaction_at TIMESTAMPTZ NOT NULL,
+                decision_at TIMESTAMPTZ NOT NULL,
+                evidence_json VARCHAR NOT NULL,
+                eligibility_sha256 VARCHAR NOT NULL,
+                nav_observation_id VARCHAR,
+                nav_per_unit DECIMAL(38,18),
+                units_allotted DECIMAL(38,18),
+                allotment_sha256 VARCHAR,
+                created_at TIMESTAMPTZ NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL,
+                CHECK ((state='NAV_PENDING' AND nav_observation_id IS NULL
+                    AND nav_per_unit IS NULL AND units_allotted IS NULL
+                    AND allotment_sha256 IS NULL)
+                    OR (state='ALLOTTED' AND nav_observation_id IS NOT NULL
+                    AND nav_per_unit > 0 AND units_allotted > 0
+                    AND allotment_sha256 IS NOT NULL)
+                    OR (state='CANCELLED' AND nav_observation_id IS NULL
+                    AND nav_per_unit IS NULL AND units_allotted IS NULL
+                    AND allotment_sha256 IS NULL))
+            )""")
+            con.execute("""INSERT INTO mf_paper_purchase_eligibility_upgrade
+                SELECT * FROM mf_paper_purchase_eligibility""")
+            con.execute("DROP TABLE mf_paper_purchase_eligibility")
+            con.execute("""ALTER TABLE mf_paper_purchase_eligibility_upgrade
+                RENAME TO mf_paper_purchase_eligibility""")
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")
+            raise
+
+    @staticmethod
+    def _migrate_mf_systematic_event_cancellation(con) -> None:
+        """Permit an immutable terminal cancellation event on older SWP/STP books."""
+        constraints = con.execute("""SELECT constraint_text FROM duckdb_constraints()
+            WHERE table_name='mf_paper_systematic_events'
+            AND constraint_type='CHECK'""").fetchall()
+        if any("PURCHASE_CANCELLED" in str(row[0]) for row in constraints):
+            return
+        con.execute("BEGIN TRANSACTION")
+        try:
+            con.execute("""CREATE TABLE mf_paper_systematic_events_upgrade (
+                instruction_id VARCHAR NOT NULL,
+                sequence INTEGER NOT NULL CHECK (sequence > 0),
+                event_id VARCHAR NOT NULL,
+                kind VARCHAR NOT NULL CHECK (kind IN (
+                    'REDEMPTION_REQUESTED', 'VALUE_CONFIRMED', 'PAYOUT_AVAILABLE',
+                    'PURCHASE_FUNDS_APPLIED', 'ALLOTMENT_CONFIRMED',
+                    'PURCHASE_CANCELLED', 'MISSED')),
+                effective_at TIMESTAMPTZ NOT NULL,
+                recorded_at TIMESTAMPTZ NOT NULL,
+                basis VARCHAR NOT NULL CHECK (basis IN (
+                    'SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+                amount_inr DECIMAL(38,18), gross_inr DECIMAL(38,18),
+                exit_load_inr DECIMAL(38,18), other_charges_inr DECIMAL(38,18),
+                nav_per_unit DECIMAL(38,18), units DECIMAL(38,18), reason VARCHAR,
+                source_id VARCHAR, source_ref VARCHAR, source_sha256 VARCHAR,
+                event_sha256 VARCHAR NOT NULL, evidence_json VARCHAR NOT NULL,
+                PRIMARY KEY (instruction_id, sequence),
+                UNIQUE (instruction_id, event_id),
+                UNIQUE (instruction_id, event_sha256)
+            )""")
+            con.execute("""INSERT INTO mf_paper_systematic_events_upgrade
+                SELECT * FROM mf_paper_systematic_events""")
+            con.execute("DROP TABLE mf_paper_systematic_events")
+            con.execute("""ALTER TABLE mf_paper_systematic_events_upgrade
+                RENAME TO mf_paper_systematic_events""")
             con.execute("COMMIT")
         except Exception:
             con.execute("ROLLBACK")

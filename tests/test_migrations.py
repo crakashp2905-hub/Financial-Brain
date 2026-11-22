@@ -86,3 +86,63 @@ def test_old_mf_journal_accepts_sip_reserve_without_losing_rows(tmp_path):
     assert con.execute("""SELECT COUNT(*) FROM mf_paper_ledger_entries
         WHERE account_code='SIP_PAYMENT_PENDING'""").fetchone()[0] == 1
     con.close()
+
+
+def test_older_systematic_purchase_tables_gain_cancellation_states_without_losing_rows(tmp_path):
+    cfg = Config(data_root=tmp_path).ensure()
+    Database(cfg).migrate()
+    con = duckdb.connect(str(cfg.db_path))
+    con.execute("DROP TABLE mf_paper_purchase_eligibility")
+    con.execute("""CREATE TABLE mf_paper_purchase_eligibility (
+        order_id VARCHAR PRIMARY KEY,
+        state VARCHAR NOT NULL CHECK (state IN ('NAV_PENDING', 'ALLOTTED')),
+        eligible_nav_date DATE NOT NULL, transaction_at TIMESTAMPTZ NOT NULL,
+        decision_at TIMESTAMPTZ NOT NULL, evidence_json VARCHAR NOT NULL,
+        eligibility_sha256 VARCHAR NOT NULL, nav_observation_id VARCHAR,
+        nav_per_unit DECIMAL(38,18), units_allotted DECIMAL(38,18),
+        allotment_sha256 VARCHAR, created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        CHECK ((state='NAV_PENDING' AND nav_observation_id IS NULL
+            AND nav_per_unit IS NULL AND units_allotted IS NULL AND allotment_sha256 IS NULL)
+            OR (state='ALLOTTED' AND nav_observation_id IS NOT NULL
+            AND nav_per_unit > 0 AND units_allotted > 0 AND allotment_sha256 IS NOT NULL))
+    )""")
+    con.execute("""INSERT INTO mf_paper_purchase_eligibility VALUES (
+        'old-purchase', 'NAV_PENDING', DATE '2026-11-23',
+        TIMESTAMPTZ '2026-11-23 00:00:00+00', TIMESTAMPTZ '2026-11-23 00:00:00+00',
+        '{}', 'eligibility-hash', NULL, NULL, NULL, NULL,
+        TIMESTAMPTZ '2026-11-23 00:00:00+00', TIMESTAMPTZ '2026-11-23 00:00:00+00')""")
+    con.execute("DROP TABLE mf_paper_systematic_events")
+    con.execute("""CREATE TABLE mf_paper_systematic_events (
+        instruction_id VARCHAR NOT NULL, sequence INTEGER NOT NULL CHECK (sequence > 0),
+        event_id VARCHAR NOT NULL,
+        kind VARCHAR NOT NULL CHECK (kind IN ('REDEMPTION_REQUESTED', 'VALUE_CONFIRMED',
+            'PAYOUT_AVAILABLE', 'PURCHASE_FUNDS_APPLIED', 'ALLOTMENT_CONFIRMED', 'MISSED')),
+        effective_at TIMESTAMPTZ NOT NULL, recorded_at TIMESTAMPTZ NOT NULL,
+        basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+        amount_inr DECIMAL(38,18), gross_inr DECIMAL(38,18),
+        exit_load_inr DECIMAL(38,18), other_charges_inr DECIMAL(38,18),
+        nav_per_unit DECIMAL(38,18), units DECIMAL(38,18), reason VARCHAR,
+        source_id VARCHAR, source_ref VARCHAR, source_sha256 VARCHAR,
+        event_sha256 VARCHAR NOT NULL, evidence_json VARCHAR NOT NULL,
+        PRIMARY KEY (instruction_id, sequence), UNIQUE (instruction_id, event_id),
+        UNIQUE (instruction_id, event_sha256)
+    )""")
+    con.execute("""INSERT INTO mf_paper_systematic_events VALUES (
+        'old-flow', 1, 'old-event', 'MISSED', TIMESTAMPTZ '2026-11-23 00:00:00+00',
+        TIMESTAMPTZ '2026-11-23 00:00:00+00', 'SIMULATED_ASSUMPTION', NULL, NULL,
+        NULL, NULL, NULL, NULL, 'legacy event', NULL, NULL, NULL, 'event-hash', '{}')""")
+    con.close()
+
+    Database(cfg).migrate()
+    con = duckdb.connect(str(cfg.db_path))
+    assert con.execute("SELECT state FROM mf_paper_purchase_eligibility WHERE order_id='old-purchase'").fetchone() == ('NAV_PENDING',)
+    assert con.execute("SELECT event_id FROM mf_paper_systematic_events WHERE instruction_id='old-flow'").fetchone() == ('old-event',)
+    con.execute("""UPDATE mf_paper_purchase_eligibility SET state='CANCELLED'
+        WHERE order_id='old-purchase'""")
+    con.execute("""INSERT INTO mf_paper_systematic_events VALUES (
+        'old-flow', 2, 'cancel-event', 'PURCHASE_CANCELLED',
+        TIMESTAMPTZ '2026-11-24 00:00:00+00', TIMESTAMPTZ '2026-11-24 00:00:00+00',
+        'SIMULATED_ASSUMPTION', 10, NULL, NULL, NULL, NULL, NULL, 'cancel',
+        NULL, NULL, NULL, 'cancel-hash', '{}')""")
+    con.close()
