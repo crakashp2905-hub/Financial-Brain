@@ -216,7 +216,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-21T12:00:30+00:00",
-      "commit": null,
+      "commit": "2bc597ce",
       "artifact_hash": "03fd2c38c8fca0e3db64a250364adf8464765a33097e2a1c532f1e6e5137bc49"
     },
     {
