@@ -92,10 +92,16 @@ class Fill:
     fill_bar: int
     mode: str = "PAPER_SIMULATED"
 
+    @property
+    def simulation_fidelity(self) -> str:
+        """Canonical label used when reporting execution-simulation evidence."""
+        return "BAR_PROXY_SIM" if self.fidelity == "BAR" else "OBSERVED_QUOTE_SIM"
+
     def receipt(self) -> dict[str, object]:
         return {
             "mode": self.mode,
             "fidelity": self.fidelity,
+            "simulation_fidelity": self.simulation_fidelity,
             "price_basis": self.price_basis,
             "fill_bar": self.fill_bar,
             "quantity": self.quantity,

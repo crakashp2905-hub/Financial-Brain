@@ -2945,12 +2945,14 @@
       "status": "PARTIAL",
       "evidence": [
         "MarketEvent/Kite normalization preserves exchange/source/event/receipt/availability clocks; forward receipts retain quote hashes and execution basis; bar replay is labelled separately.",
-        "A repository-wide fill and performance schema does not require one fidelity/provenance tag for every account and legacy book."
+        "Canonical forward quote fills now emit OBSERVED_QUOTE_SIM plus a SHA-256 hash over the selected quote's availability, bid/ask, displayed sizes, source and exchange; bar-kernel and minute-bar execution fills emit BAR_PROXY_SIM in fill receipts and round-trip performance outputs.",
+        "Execution receipts can report notional partitioned by canonical simulation fidelity, preventing quote-sim and bar-proxy totals from appearing as one unlabeled aggregate.",
+        "Still PARTIAL: all account, options, legacy-book and generic statistical performance reports are not yet forced to carry provenance/fidelity tags; Quote defaults source/exchange to UNSPECIFIED unless the adapter supplies them."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "last_audited_at_utc": "2026-11-22T16:37:28Z",
       "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "test_result": "python -m pytest tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_phase4_execution.py -q: 51 passed in 4.08s; Ruff passed for the six changed Python files."
     },
     {
       "id": "FB-0807",

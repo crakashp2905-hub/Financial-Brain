@@ -112,6 +112,8 @@ def test_the_exit_sells_what_was_bought_not_what_was_wanted():
     r = S.round_trip(con, symbol="TEST", session=SESSION, entry_minute=1,
                      decision_price=100.0, target_shares=100_000)
     assert r["entry"]["filled_shares"] < 100_000
+    assert r["simulation_fidelity"] == "BAR_PROXY_SIM"
+    assert r["entry"]["simulation_fidelity"] == "BAR_PROXY_SIM"
     assert r["exit"]["target_shares"] == r["entry"]["filled_shares"]
     assert r["held_shares"] == r["entry"]["filled_shares"]
 
