@@ -115,6 +115,11 @@ class RawLake:
     # -- read ----------------------------------------------------------------
     def read(self, obj: LakeObject | str) -> bytes:
         key = obj if isinstance(obj, str) else obj.key
+        meta_path = self._meta_path(key)
+        redaction_path = meta_path.with_name(meta_path.name.removesuffix(".meta.json") + ".redacted.json")
+        if redaction_path.exists():
+            from .retention import RedactedPayloadError
+            raise RedactedPayloadError(f"lake payload was redacted under retention control: {key}")
         data = self._path(key).read_bytes()
         meta = self.meta(key)
         if meta and hashlib.sha256(data).hexdigest() != meta.sha256:
