@@ -2881,10 +2881,13 @@
       "status": "PARTIAL",
       "evidence": [
         "Cash PaperAccount enforces whole-integer stock quantities; options plan and spread helpers enforce contract token/lot sizing and multiple legs.",
-        "Quantity and inventory semantics remain split across the cash OMS and options analyzers; ETF and option orders do not share one canonical unit-aware order model."
+        "Quantity and inventory semantics remain split across the cash OMS and options analyzers; ETF and option orders do not share one canonical unit-aware order model.",
+        "Instrument rules and canonical candidate/order/fill records now carry explicit SHARES, ETF_UNITS, OPTION_CONTRACTS or FUTURES_CONTRACTS; the canonical intent hash binds the unit and the runner checks it against the effective-dated rule.",
+        "An absent unit in a legacy instrument rule is preserved as UNSPECIFIED; typed candidate execution fails closed when the effective rule cannot confirm the unit. Lot-size rules still enforce integral exchange quantities and contract multiples.",
+        "Focused instrument-rule, adapter, pipeline and session-runner suite: 19 passed; Ruff and targeted mypy passed."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "blocker": "Authoritative exchange/broker unit and lot data are not yet ingested; existing options and ETF strategies are not all migrated into the shared candidate pipeline, so universal unit-aware position reconciliation is incomplete.",
+      "last_audited_at_utc": "2026-11-22T13:59:24Z",
       "commit": null,
       "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },

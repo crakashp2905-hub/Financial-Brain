@@ -595,10 +595,11 @@
       "wave": "F03",
       "status": "PARTIAL",
       "tests": [
-        "test_dated_instrument_eligibility_fails_closed_on_status_rights_and_ticket_rules"
+        "test_dated_instrument_eligibility_fails_closed_on_status_rights_and_ticket_rules",
+        "test_option_quantity_uses_contract_units_and_effective_lot_size"
       ],
       "blockers": [],
-      "note": "Existing effective-dated instrument master now validates ISIN, expiry, option strike, rights status, tick/lot/freeze rules, lifecycle status and trading phase. No authoritative exchange/broker instrument-master ingestion or mapping is configured."
+      "note": "Effective-dated rules now carry explicit shares, ETF units, option/futures contracts, tick/lot/freeze rules, lifecycle and session phase. Canonical candidates bind their unit into intent identity; the durable runner validates it against the frozen instrument rule and records it on the order and fill. Legacy rules without unit evidence stay UNSPECIFIED and cannot authorize a typed candidate. Authoritative exchange/broker instrument-master ingestion and migration of all strategy/order paths remain outstanding."
     },
     {
       "id": "FE-0040",
