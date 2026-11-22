@@ -2492,6 +2492,12 @@
       "module_owner": "src/financial_brain/paper/mf_scheme_flows.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/mf_sip_book.py",
+      "path": "src/financial_brain/paper/mf_sip_book.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_sip_book.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/options.py",
       "path": "src/financial_brain/paper/options.py",
       "module_role": "paper_engine_or_output",
