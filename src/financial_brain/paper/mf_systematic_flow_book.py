@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any
 
 from ..forward_edge.data_permissions import DataPermission, DataUse
+from ..providers.mf_scheme_terms import SchemeCommercialTerms
 from ..kernel.mf_systematic_flows import (
     MFSystematicFlowBasis, MFSystematicFlowError, MFSystematicFlowEvent,
     MFSystematicFlowEventKind, MFSystematicFlowInstruction,
@@ -353,6 +354,127 @@ def release_systematic_payout(
     return {**released, **lifecycle_result, "settlement_id": settlement_id}
 
 
+def apply_systematic_transfer_purchase(
+    con,
+    *,
+    instruction_id: str,
+    investment_inr: Decimal | str | int,
+    nav_per_unit: Decimal | str | int,
+    terms: SchemeCommercialTerms,
+    permissions: tuple[DataPermission, ...],
+    decision_at: datetime,
+    allotted_on: date,
+    now: datetime,
+    lock_in_until: date | None = None,
+) -> dict[str, object]:
+    """Apply an STP target subscription to the canonical cash and lot book.
+
+    This synchronous paper adapter submits a target purchase only after payout
+    has reached canonical cash. A retry reuses deterministic event/lot IDs and
+    lets the subscription book enforce idempotency before appending lifecycle
+    funding and allotment records.
+    """
+    from .mf_lot_book import subscribe
+
+    decision_time = _aware(decision_at, "decision_at")
+    allotment_time = _aware(now, "now")
+    amount = Decimal(str(investment_inr))
+    nav = Decimal(str(nav_per_unit))
+    if not amount.is_finite() or amount <= 0:
+        raise MFSystematicFlowBookError("STP purchase amount must be positive and finite")
+    if not nav.is_finite() or nav <= 0:
+        raise MFSystematicFlowBookError("STP NAV must be positive and finite")
+    if allotment_time <= decision_time:
+        raise MFSystematicFlowBookError("STP allotment must follow purchase-funds application")
+
+    row = con.execute(f"""SELECT {_I_COLUMNS} FROM mf_paper_systematic_instructions
+        WHERE instruction_id=?""", [instruction_id]).fetchone()
+    if row is None:
+        raise MFSystematicFlowBookError("systematic instruction does not exist")
+    instruction = _instruction_from_row(row)
+    if instruction.kind is not MFSystematicFlowKind.STP:
+        raise MFSystematicFlowBookError("target purchase is only valid for an STP instruction")
+    if (terms.scheme_code, terms.plan, terms.option, terms.isin) != (
+            instruction.target_scheme, instruction.target_plan,
+            instruction.target_option, instruction.target_isin):
+        raise MFSystematicFlowBookError("target purchase terms do not match the STP instruction")
+
+    raw_events = con.execute("""SELECT event_id, kind, effective_at, basis, amount_inr,
+        gross_inr, exit_load_inr, other_charges_inr, nav_per_unit, units, reason,
+        source_id, source_ref, source_sha256 FROM mf_paper_systematic_events
+        WHERE instruction_id=? ORDER BY sequence""", [instruction_id]).fetchall()
+    events = tuple(_event_from_row(event_row) for event_row in raw_events)
+    lifecycle = MFSystematicFlowLifecycle(instruction, events)
+    if len(events) < 3 or events[2].kind is not MFSystematicFlowEventKind.PAYOUT_AVAILABLE:
+        raise MFSystematicFlowBookError("STP target purchase requires settled redemption proceeds")
+    prior_funding = next((event for event in events if
+        event.kind is MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED), None)
+    if prior_funding is None:
+        if amount > lifecycle.available_to_redeploy_inr:
+            raise MFSystematicFlowBookError("STP purchase exceeds settled redemption proceeds")
+    elif prior_funding.amount != amount:
+        raise MFSystematicFlowBookError("STP retry changed the applied purchase amount")
+
+    subscription = subscribe(
+        con, account_id=instruction.account_id,
+        event_id=f"{instruction.instruction_id}:stp-subscription",
+        lot_id=f"{instruction.instruction_id}:stp-lot",
+        scheme_code=instruction.target_scheme or "",
+        plan=instruction.target_plan or "", option=instruction.target_option or "",
+        isin=instruction.target_isin or "", allotted_on=allotted_on,
+        lock_in_until=lock_in_until, investment_inr=amount, nav_per_unit=nav,
+        exit_loads=terms.exit_loads,
+        exit_loads_sha256=terms.source_sha256 if terms.exit_loads is not None else None,
+        terms=terms, permissions=permissions, decision_at=decision_time,
+        now=allotment_time,
+    )
+    funding_event = MFSystematicFlowEvent(
+        event_id=f"{instruction.instruction_id}:purchase-funds-applied",
+        kind=MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED,
+        effective_at=decision_time, basis=MFSystematicFlowBasis.SIMULATED_ASSUMPTION,
+        amount_inr=amount,
+    )
+    if prior_funding is not None:
+        if (prior_funding.effective_at != funding_event.effective_at
+                or prior_funding.basis is not funding_event.basis):
+            raise MFSystematicFlowBookError("STP retry changed purchase-funds evidence")
+        funding_result: dict[str, object] = {
+            "instruction_id": instruction_id, "stage": lifecycle.stage,
+            "status": "already_recorded",
+        }
+    else:
+        funding_result = record_systematic_event(
+            con, instruction_id=instruction_id, event=funding_event,
+            now=allotment_time, permissions=permissions,
+        )
+    units = Decimal(subscription["units"])
+    allotment_event = MFSystematicFlowEvent(
+        event_id=f"{instruction.instruction_id}:allotment-confirmed",
+        kind=MFSystematicFlowEventKind.ALLOTMENT_CONFIRMED,
+        effective_at=allotment_time, basis=MFSystematicFlowBasis.SIMULATED_ASSUMPTION,
+        amount_inr=amount, nav_per_unit=nav, units=units,
+    )
+    prior_allotment = next((event for event in events if
+        event.kind is MFSystematicFlowEventKind.ALLOTMENT_CONFIRMED), None)
+    if prior_allotment is not None:
+        if (prior_allotment.effective_at != allotment_event.effective_at
+                or prior_allotment.amount_inr != allotment_event.amount_inr
+                or prior_allotment.nav_per_unit != allotment_event.nav_per_unit
+                or prior_allotment.units != allotment_event.units
+                or prior_allotment.basis is not allotment_event.basis):
+            raise MFSystematicFlowBookError("STP retry changed allotment evidence")
+        allotment_result: dict[str, object] = {
+            "instruction_id": instruction_id, "stage": lifecycle.stage,
+            "status": "already_recorded",
+        }
+    else:
+        allotment_result = record_systematic_event(
+            con, instruction_id=instruction_id, event=allotment_event,
+            now=allotment_time, permissions=permissions,
+        )
+    return {**subscription, **funding_result, **allotment_result}
+
+
 def systematic_instruction_snapshot(con, *, instruction_id: str) -> dict[str, object]:
     row = con.execute(f"""SELECT {_I_COLUMNS} FROM mf_paper_systematic_instructions
         WHERE instruction_id=?""", [instruction_id]).fetchone()
@@ -373,6 +495,7 @@ def systematic_instruction_snapshot(con, *, instruction_id: str) -> dict[str, ob
 
 __all__ = [
     "MFSystematicFlowBookError", "create_systematic_plan", "record_systematic_event",
-    "release_systematic_payout", "request_systematic_redemption",
+    "apply_systematic_transfer_purchase", "release_systematic_payout",
+    "request_systematic_redemption",
     "systematic_instruction_snapshot",
 ]

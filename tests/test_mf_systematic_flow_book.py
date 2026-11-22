@@ -7,16 +7,19 @@ from financial_brain.config import Config
 from financial_brain.forward_edge.data_permissions import (
     DataPermission, DataUse, PermissionStatus,
 )
+from financial_brain.ingest.mf_scheme_terms import persist as persist_scheme_terms
 from financial_brain.kernel.mf_systematic_flows import (
     MFSystematicFlowBasis, MFSystematicFlowEvent,
     MFSystematicFlowEventKind, MFSystematicFlowInstruction,
     MFSystematicFlowKind,
 )
 from financial_brain.paper.mf_systematic_flow_book import (
-    MFSystematicFlowBookError, create_systematic_plan, record_systematic_event,
-    release_systematic_payout, request_systematic_redemption,
+    MFSystematicFlowBookError, apply_systematic_transfer_purchase,
+    create_systematic_plan, record_systematic_event, release_systematic_payout,
+    request_systematic_redemption,
     systematic_instruction_snapshot,
 )
+from financial_brain.providers.mf_scheme_terms import SchemeCommercialTerms
 from financial_brain.paper.mf_redemption_settlement import settlement_snapshot
 from financial_brain.storage.db import Database
 
@@ -308,3 +311,102 @@ def test_systematic_payout_credits_canonical_cash_and_recovers_after_event_failu
         cash = con.execute("SELECT cash_inr FROM mf_paper_accounts WHERE account_id=?",
                             [instruction.account_id]).fetchone()[0]
         assert Decimal(cash) == Decimal("90")
+
+
+def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeypatch):
+    import financial_brain.paper.mf_systematic_flow_book as flow_book
+
+    instruction = _instruction(amount_inr=None, units=Decimal("1"))
+    payout_at = NOW + timedelta(minutes=2)
+    decision_at = NOW + timedelta(minutes=3)
+    allotment_at = NOW + timedelta(minutes=4)
+    terms_hash = "a" * 64
+    permissions = tuple(DataPermission(
+        source_id="AMC", use=use, status=PermissionStatus.USE_ALLOWED,
+        effective_from=date(2026, 11, 1), effective_through=None,
+        evidence_ref="reviewed-terms", reviewer="owner",
+    ) for use in (DataUse.RESEARCH, DataUse.RETENTION, DataUse.PAPER_SIMULATION))
+    terms = SchemeCommercialTerms(
+        scheme_code=instruction.target_scheme or "", plan=instruction.target_plan or "",
+        option=instruction.target_option or "", isin=instruction.target_isin or "",
+        effective_from=date(2026, 11, 1), effective_to=None,
+        ter_percent=None, aum_inr=None, exit_loads=(), minimum_initial_inr=None,
+        minimum_additional_inr=None, exit_restrictions=(), source_id="AMC",
+        source_ref="terms-stp", source_sha256=terms_hash,
+        published_at=datetime(2026, 11, 1, 8, tzinfo=timezone.utc),
+        observed_at=datetime(2026, 11, 1, 8, tzinfo=timezone.utc),
+    )
+
+    with database.connect() as con:
+        _create(con, instruction)
+        con.execute("""INSERT INTO mf_paper_lots (
+            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            lock_in_until, units_original, units_remaining, purchase_nav,
+            exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
+            [instruction.account_id, "lot-stp-source", instruction.source_scheme,
+             instruction.source_plan, instruction.source_option, instruction.source_isin,
+             date(2026, 11, 1), Decimal("1"), Decimal("1"), Decimal("100"),
+             "subscribe-stp-source", NOW])
+        request_systematic_redemption(
+            con, instruction_id=instruction.instruction_id,
+            requested_at=NOW, now=NOW,
+        )
+        value = _event(instruction, MFSystematicFlowEventKind.VALUE_CONFIRMED, 1,
+            amount_inr=Decimal("90"), gross_inr=Decimal("100"),
+            exit_load_inr=Decimal("10"), other_charges_inr=Decimal("0"))
+        record_systematic_event(con, instruction_id=instruction.instruction_id,
+                                event=value, now=value.effective_at)
+        con.execute("""UPDATE mf_paper_redemption_settlements SET
+            state='PAYOUT_PENDING', gross_inr=?, exit_load_inr=?, net_inr=?,
+            payout_due_date=? WHERE account_id=? AND settlement_id=?""",
+            [Decimal("100"), Decimal("10"), Decimal("90"), date(2026, 11, 23),
+             instruction.account_id, f"systematic:{instruction.instruction_id}"])
+        release_systematic_payout(
+            con, instruction_id=instruction.instruction_id,
+            available_at=payout_at, now=payout_at,
+        )
+        persist_scheme_terms(con, terms, permissions=permissions)
+
+        original = flow_book.record_systematic_event
+        calls = 0
+
+        def fail_once(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise RuntimeError("simulated crash after target subscription")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(flow_book, "record_systematic_event", fail_once)
+        kwargs = dict(
+            instruction_id=instruction.instruction_id, investment_inr=Decimal("80"),
+            nav_per_unit=Decimal("10"), terms=terms, permissions=permissions,
+            decision_at=decision_at, allotted_on=date(2026, 11, 23), now=allotment_at,
+        )
+        with pytest.raises(RuntimeError, match="after target subscription"):
+            apply_systematic_transfer_purchase(con, **kwargs)
+        cash = con.execute("SELECT cash_inr FROM mf_paper_accounts WHERE account_id=?",
+                            [instruction.account_id]).fetchone()[0]
+        assert Decimal(cash) == Decimal("10")
+        lots = con.execute("""SELECT units_remaining FROM mf_paper_lots
+            WHERE account_id=? AND lot_id=?""",
+            [instruction.account_id, f"{instruction.instruction_id}:stp-lot"]).fetchall()
+        assert len(lots) == 1 and Decimal(lots[0][0]) == Decimal("8")
+
+        replay = apply_systematic_transfer_purchase(con, **kwargs)
+        assert replay["status"] == "recorded"
+        second_replay = apply_systematic_transfer_purchase(con, **kwargs)
+        assert second_replay["status"] == "already_recorded"
+        snapshot = systematic_instruction_snapshot(
+            con, instruction_id=instruction.instruction_id,
+        )
+        assert snapshot["stage"] == "ALLOTMENT_CONFIRMED"
+        assert snapshot["available_to_redeploy_inr"] == Decimal("10")
+        cash = con.execute("SELECT cash_inr FROM mf_paper_accounts WHERE account_id=?",
+                            [instruction.account_id]).fetchone()[0]
+        assert Decimal(cash) == Decimal("10")
+        lots = con.execute("""SELECT units_remaining FROM mf_paper_lots
+            WHERE account_id=? AND lot_id=?""",
+            [instruction.account_id, f"{instruction.instruction_id}:stp-lot"]).fetchall()
+        assert len(lots) == 1 and Decimal(lots[0][0]) == Decimal("8")
