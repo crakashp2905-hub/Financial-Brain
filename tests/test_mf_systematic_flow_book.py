@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -13,6 +13,10 @@ from financial_brain.kernel.mf_systematic_flows import (
     MFSystematicFlowEventKind, MFSystematicFlowInstruction,
     MFSystematicFlowKind,
 )
+from financial_brain.kernel.fund_transactions import (
+    SchemeTransactionCalendar, SchemeTransactionRule, TransactionKind,
+)
+from financial_brain.kernel.trading_clock import BusinessCalendar, CalendarDomain
 from financial_brain.paper.mf_systematic_flow_book import (
     MFSystematicFlowBookError, apply_systematic_transfer_purchase,
     confirm_systematic_redemption_value, create_systematic_plan,
@@ -68,6 +72,27 @@ def _permission():
         status=PermissionStatus.USE_ALLOWED, effective_from=date(2026, 11, 23),
         effective_through=None, evidence_ref="paper-sim-approval", reviewer="owner",
     )
+
+
+def _scheme_calendar():
+    start, end = date(2026, 11, 20), date(2026, 12, 31)
+    business = BusinessCalendar(
+        calendar_id="111111", domain=CalendarDomain.SCHEME,
+        coverage_start=start, source_as_of=end,
+        open_days=frozenset(start + timedelta(days=offset)
+                            for offset in range((end - start).days + 1)
+                            if (start + timedelta(days=offset)).weekday() < 5),
+        source_ref="test-scheme-calendar", source_sha256="c" * 64,
+        recorded_at=NOW - timedelta(days=1),
+    )
+    rule = SchemeTransactionRule(
+        scheme_id="111111", transaction_kind=TransactionKind.REDEMPTION,
+        effective_from=start, effective_to=None, cutoff_local=time(14),
+        before_cutoff_lag=0, after_cutoff_lag=1, closed_day_lag=1,
+        published_at=NOW - timedelta(days=1), source_ref="test-redemption-cutoff",
+        source_sha256="d" * 64,
+    )
+    return SchemeTransactionCalendar({"111111": business}, (rule,))
 
 
 def _create(con, instruction):
@@ -213,7 +238,7 @@ def test_systematic_redemption_reserves_actual_lots_and_recovers_after_partial_w
         with pytest.raises(RuntimeError, match="simulated crash"):
             request_systematic_redemption(
                 con, instruction_id=instruction.instruction_id,
-                requested_at=NOW, now=NOW,
+                requested_at=NOW, now=NOW, scheme_calendar=_scheme_calendar(),
             )
         assert settlement_snapshot(
             con, account_id=instruction.account_id,
@@ -222,7 +247,7 @@ def test_systematic_redemption_reserves_actual_lots_and_recovers_after_partial_w
 
         result = request_systematic_redemption(
             con, instruction_id=instruction.instruction_id,
-            requested_at=NOW, now=NOW,
+            requested_at=NOW, now=NOW, scheme_calendar=_scheme_calendar(),
         )
         assert result["status"] == "recorded"
         assert result["settlement_id"] == f"systematic:{instruction.instruction_id}"
@@ -240,7 +265,7 @@ def test_systematic_amount_withdrawal_is_not_silently_converted_to_units(databas
         with pytest.raises(MFSystematicFlowBookError, match="amount-to-units adapter"):
             request_systematic_redemption(
                 con, instruction_id=instruction.instruction_id,
-                requested_at=NOW, now=NOW,
+                requested_at=NOW, now=NOW, scheme_calendar=_scheme_calendar(),
             )
 
 
@@ -265,7 +290,7 @@ def test_systematic_payout_credits_canonical_cash_and_recovers_after_event_failu
              "subscribe-payout", NOW])
         request_systematic_redemption(
             con, instruction_id=instruction.instruction_id,
-            requested_at=NOW, now=NOW,
+            requested_at=NOW, now=NOW, scheme_calendar=_scheme_calendar(),
         )
         value = _event(instruction, MFSystematicFlowEventKind.VALUE_CONFIRMED, 1,
             amount_inr=Decimal("90"), gross_inr=Decimal("100"),
@@ -354,7 +379,7 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
              "subscribe-stp-source", NOW])
         request_systematic_redemption(
             con, instruction_id=instruction.instruction_id,
-            requested_at=NOW, now=NOW,
+            requested_at=NOW, now=NOW, scheme_calendar=_scheme_calendar(),
         )
         value = _event(instruction, MFSystematicFlowEventKind.VALUE_CONFIRMED, 1,
             amount_inr=Decimal("90"), gross_inr=Decimal("100"),
@@ -486,7 +511,7 @@ def test_systematic_value_confirmation_uses_fifo_nav_and_recovers_once(database,
              nav_hash, nav_available_at, nav_available_at])
         request_systematic_redemption(
             con, instruction_id=instruction.instruction_id,
-            requested_at=NOW, now=NOW,
+            requested_at=NOW, now=NOW, scheme_calendar=_scheme_calendar(),
         )
 
         original = flow_book.record_systematic_event

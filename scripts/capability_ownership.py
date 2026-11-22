@@ -175,7 +175,7 @@ def build() -> dict:
             "Provider adapters in providers/ingest are individually scoped; license/effective-use status remains governed by purpose-specific permission objects.",
             "Broker OMS, kernel simulated OMS, forward prospective paper OMS and legacy intraday paper OMS remain separate persistence/execution domains.",
             "Legacy paper books are not yet fully reconciled into canonical portfolio accounting; source gaps are explicitly unresolved.",
-            "The entire 623-file Python inventory remains broader than this trader-core map; generated module inventory is intentionally limited to named trader capability areas."
+            "The repository-wide Python source inventory is broader than this trader-core map; generated module inventory is intentionally limited to named trader capability areas."
         ],
     }
 
