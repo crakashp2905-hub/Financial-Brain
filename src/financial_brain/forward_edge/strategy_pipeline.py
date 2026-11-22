@@ -114,7 +114,7 @@ def execute_candidate(
         if required_execution_fields - execution.keys():
             missing = ", ".join(sorted(required_execution_fields - execution.keys()))
             raise StrategyPipelineError(f"execution controls are missing: {missing}")
-        if {"session_id", "order_id", "decision_id", "side", "quantity"} & execution.keys():
+        if {"session_id", "order_id", "decision_id", "side", "quantity", "quantity_unit"} & execution.keys():
             raise StrategyPipelineError("execution cannot override canonical candidate identity")
         if Decimal(str(execution["limit_price"])) != signal.reference_price:
             raise StrategyPipelineError("paper limit must match the candidate's frozen reference price")
@@ -158,6 +158,7 @@ def execute_candidate(
         decision_id=signal.decision_id,
         side=signal.side,
         quantity=signal.quantity,
+        quantity_unit=signal.quantity_unit,
         **execution,
     )
     return CandidateExecution(intent=intent, receipt=receipt)

@@ -23,6 +23,12 @@ def test_rulebook_resolves_latest_rule_at_or_before_session_date():
     current = book.resolve("NSE:INFY", date(2026, 11, 13))
     assert prior.tick_size == Decimal("0.05") and prior.lot_size == 1
     assert current.tick_size == Decimal("0.10") and current.lot_size == 5
+    assert current.quantity_unit == "UNSPECIFIED"
+    with pytest.raises(InstrumentRuleError, match="quantity unit is unknown"):
+        book.validate_order(instrument="NSE:INFY", day=date(2026, 11, 13),
+                            session_phase="CONTINUOUS", quantity=5,
+                            limit_price=Decimal("100.10"), tick_size=Decimal("0.10"),
+                            quantity_unit="OPTION_CONTRACTS")
 
 
 def test_rulebook_refuses_unknown_instruments_and_dates_before_first_rule():
@@ -63,3 +69,23 @@ def test_status_and_expiry_are_applied_as_of_requested_date():
         expired.validate_order(instrument="NSE:INFY", day=date(2026, 11, 13),
                                session_phase="CONTINUOUS", quantity=1,
                                limit_price=Decimal("100.00"), tick_size=Decimal("0.05"))
+
+
+def test_option_quantity_uses_contract_units_and_effective_lot_size():
+    book = InstrumentRuleBook(fixture_rule_book(
+        "NFO:NIFTY-2026-12-31-26000-CE", lot_size=25,
+        quantity_unit="OPTION_CONTRACTS", freeze_quantity=250,
+    ))
+    arguments = {
+        "instrument": "NFO:NIFTY-2026-12-31-26000-CE", "day": date(2026, 11, 13),
+        "session_phase": "CONTINUOUS", "quantity": 50,
+        "limit_price": Decimal("100.00"), "tick_size": Decimal("0.05"),
+        "quantity_unit": "OPTION_CONTRACTS",
+    }
+    rule = book.validate_order(**arguments)
+    assert rule.quantity_unit == "OPTION_CONTRACTS" and rule.lot_size == 25
+
+    with pytest.raises(InstrumentRuleError, match="multiple of lot size 25"):
+        book.validate_order(**(arguments | {"quantity": 1}))
+    with pytest.raises(InstrumentRuleError, match="differs from effective instrument unit"):
+        book.validate_order(**(arguments | {"quantity_unit": "SHARES"}))

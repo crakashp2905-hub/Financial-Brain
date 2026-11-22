@@ -21,6 +21,7 @@ class EffectiveInstrumentRule:
     effective_from: date
     tick_size: Decimal
     lot_size: int
+    quantity_unit: str
     freeze_quantity: int
     expiry: date | None
     status: str
@@ -59,6 +60,7 @@ class InstrumentRuleBook:
             effective_from = date.fromisoformat(row["effective_from"])
             tick = Decimal(str(row["tick_size"]))
             lot = row["lot_size"]
+            quantity_unit = str(row.get("quantity_unit", "UNSPECIFIED")).strip().upper()
             freeze = row["freeze_quantity"]
             expiry = date.fromisoformat(row["expiry"]) if row.get("expiry") is not None else None
             status = str(row["status"]).strip().upper()
@@ -68,6 +70,10 @@ class InstrumentRuleBook:
         if (not tick.is_finite() or tick <= 0 or type(lot) is not int or lot < 1
                 or type(freeze) is not int or freeze < 1):
             raise InstrumentRuleError("tick, lot and freeze rules must be positive")
+        if quantity_unit not in {
+            "UNSPECIFIED", "SHARES", "ETF_UNITS", "OPTION_CONTRACTS", "FUTURES_CONTRACTS"
+        }:
+            raise InstrumentRuleError("instrument quantity unit is unsupported")
         if status not in {"ACTIVE", "SUSPENDED", "EXPIRED", "DELISTED"}:
             raise InstrumentRuleError("instrument status is unsupported")
         if not isinstance(phases_raw, list) or not phases_raw:
@@ -75,7 +81,7 @@ class InstrumentRuleBook:
         phases = frozenset(str(phase).strip().upper() for phase in phases_raw)
         if "" in phases or not phases <= {"CONTINUOUS", "PREOPEN", "AUCTION", "SETTLEMENT", "CLOSED"}:
             raise InstrumentRuleError("instrument session phase is unsupported")
-        return EffectiveInstrumentRule(effective_from, tick, lot, freeze, expiry, status, phases)
+        return EffectiveInstrumentRule(effective_from, tick, lot, quantity_unit, freeze, expiry, status, phases)
 
     def resolve(self, instrument: str, day: date) -> EffectiveInstrumentRule:
         versions = self._rules.get(instrument)
@@ -87,7 +93,8 @@ class InstrumentRuleBook:
         return eligible[-1]
 
     def validate_order(self, *, instrument: str, day: date, session_phase: str,
-                       quantity: int, limit_price: Decimal, tick_size: Decimal) -> EffectiveInstrumentRule:
+                       quantity: int, limit_price: Decimal, tick_size: Decimal,
+                       quantity_unit: str | None = None) -> EffectiveInstrumentRule:
         rule = self.resolve(instrument, day)
         if rule.expiry is not None and day > rule.expiry:
             raise InstrumentRuleError("instrument expired on the requested session date")
@@ -98,6 +105,12 @@ class InstrumentRuleBook:
             raise InstrumentRuleError(f"instrument is not eligible during {phase or 'UNKNOWN'} session phase")
         if quantity < 1 or quantity % rule.lot_size:
             raise InstrumentRuleError(f"quantity must be a positive multiple of lot size {rule.lot_size}")
+        if quantity_unit is not None and rule.quantity_unit == "UNSPECIFIED":
+            raise InstrumentRuleError("effective instrument quantity unit is unknown")
+        if quantity_unit is not None and quantity_unit != rule.quantity_unit:
+            raise InstrumentRuleError(
+                f"quantity unit {quantity_unit!r} differs from effective instrument unit {rule.quantity_unit!r}"
+            )
         if quantity > rule.freeze_quantity:
             raise InstrumentRuleError(f"quantity exceeds effective freeze limit {rule.freeze_quantity}")
         if tick_size != rule.tick_size:
@@ -109,12 +122,14 @@ class InstrumentRuleBook:
 
 def fixture_rule_book(instrument: str, *, effective_from: date = date(1900, 1, 1),
                       tick_size: str = "0.05", lot_size: int = 1, freeze_quantity: int = 1000,
+                      quantity_unit: str = "SHARES",
                       status: str = "ACTIVE", expiry: date | None = None,
                       session_phases: tuple[str, ...] = ("CONTINUOUS",)) -> dict[str, Any]:
     """Explicit synthetic rule fixture; never suitable as production instrument-master evidence."""
     return {"schema": SCHEMA, "catalogue_id": "synthetic-test-catalogue", "version": "fixture-v1",
             "source_ref": "synthetic test fixture; not exchange rules", "instruments": {
-                instrument: [{"effective_from": effective_from.isoformat(), "tick_size": tick_size,
-                              "lot_size": lot_size, "freeze_quantity": freeze_quantity,
+            instrument: [{"effective_from": effective_from.isoformat(), "tick_size": tick_size,
+                          "lot_size": lot_size, "quantity_unit": quantity_unit,
+                          "freeze_quantity": freeze_quantity,
                               "expiry": expiry.isoformat() if expiry else None, "status": status,
                               "session_phases": list(session_phases)}]}}
