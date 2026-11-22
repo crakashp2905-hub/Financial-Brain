@@ -3633,16 +3633,16 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/alerts.py evaluates typed rules for order state, stale feeds, pending MF units/payouts, ETF premium/discount dislocation, option expiry and risk-budget changes; invalid threshold and event data fail closed.",
-        "mutual_fund_pending_rows reads only time-eligible NAV_PENDING purchase allotments and unresolved redemption/payout settlements from the migrated paper-book database, classifies pending units vs payout, and computes age on the Asia/Kolkata session date.",
-        "src/financial_brain/cli.py cmd_alerts now emits pending MF alerts to the existing deduplicated desktop path and, when the owner configured Telegram credentials, the existing Telegram path. A failed/missing MF source is shown as an alert-source error.",
-        "tests/test_forward_edge_desk_alerts.py, tests/test_forward_edge_alerts.py, tests/test_phase5_account_journal_alerts.py: 22 passed; Ruff and targeted mypy passed.",
-        "Remaining: non-MF live data adapters for order/stale/ETF/options/risk events are not wired to cmd_alerts; durable AlertBook persistence/entry-halt integration is not yet unified with notification outbox."
+        "src/financial_brain/forward_edge/alerts.py evaluates typed alert rules for order lifecycle, stale feeds, pending MF units/payouts, ETF dislocation, options expiry and risk-budget changes; malformed inputs and thresholds fail closed.",
+        "mutual_fund_pending_rows reads time-eligible NAV-pending purchases and unresolved redemption/payout settlements from the migrated paper database, classifies pending units vs payout, and computes age on the Asia/Kolkata session date.",
+        "paper_order_state_rows reads the latest order lifecycle state from the SQLite forward-edge journal within an explicit timezone-aware interval; naive event timestamps are rejected. The alerts CLI opens that journal read-only and routes resulting alerts through deduplicated desktop and configured Telegram transports.",
+        "tests/test_forward_edge_desk_alerts.py, tests/test_forward_edge_alerts.py, tests/test_phase5_account_journal_alerts.py: 24 passed; Ruff and targeted mypy passed.",
+        "Remaining: stale-feed, ETF, options-expiry and risk-budget source adapters are not wired to cmd_alerts; durable AlertBook persistence/entry-halt is not unified with the notification outbox."
       ],
-      "blocker": "Partial: MF pending states are sourced and dispatched; other desk alert sources and unified durable dispatch/entry-halt integration remain outstanding.",
-      "last_audited_at_utc": "2026-11-22T20:27:27Z",
-      "commit": "042a05454d0e5efaac9c8085e93d41690753c00e",
-      "test_result": "Windows local: 22 alert suites passed; Ruff and targeted mypy passed. MF database adapter is covered with point-in-time DuckDB fixtures."
+      "blocker": "Partial: paper-order lifecycle and MF pending states are sourced and dispatched; stale-feed, ETF, options-expiry and risk-budget source adapters plus unified durable dispatch/entry-halt integration remain outstanding.",
+      "last_audited_at_utc": "2026-11-22T20:35:27Z",
+      "commit": "0adf7871",
+      "test_result": "Windows local: 24 focused alert tests passed; Ruff and targeted mypy passed. SQLite order adapter selects the latest state in the explicit interval and rejects naive timestamps; MF database adapter uses point-in-time DuckDB fixtures."
     },
     {
       "id": "FB-1111",
@@ -15621,7 +15621,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T20:27:27Z",
+    "as_of_utc": "2026-11-22T20:35:27Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15873,9 +15873,9 @@
     "audited_count": 246,
     "status_counts": {
       "COMPLETE": 42,
-      "PARTIAL": 192,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
+      "PARTIAL": 192,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -15975,9 +15975,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 42,
-    "PARTIAL": 192,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
+    "PARTIAL": 192,
     "UNASSESSED": 1132
   }
 }
