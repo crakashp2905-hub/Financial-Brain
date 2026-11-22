@@ -4557,7 +4557,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/options_risk.py",
-      "source_sha256": "51cf07fe8a26cd634a9647ac4b7c5b4c9b874d5cceccd25f0a27415aa94570a1",
+      "source_sha256": "791cfc2faf140510cb6fa2a7b089842a4f78f1f2b56b0d16e9e98332916d2179",
       "test_paths": []
     },
     {
@@ -4576,7 +4576,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/options_spread.py",
-      "source_sha256": "114e263a3a74e7f045f2b5941351cd6d37ac8a702a270b0743bb9ea5220b4d52",
+      "source_sha256": "6f34ee0047caf89f706058a5cb6a0023c4458b43471f516de1397ecf0442fd0c",
       "test_paths": []
     },
     {
