@@ -9526,12 +9526,20 @@
     {
       "id": "SL-01-13",
       "text": "Build negative test: introduce future publication revisions and assert no prior features, signals or policy rankings change.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "tests/test_forward_edge_lookahead.py adds a negative regression that first freezes features, LONG/NO_TRADE signals and the production momentum-book selection, then appends a correction published five days after the decision and asserts all earlier outputs remain identical.",
+        "The same test proves the revision is not ignored: after its publication timestamp, the corrected feature changes, A becomes NO_TRADE and the book selects B.",
+        "Uses the production bitemporal Revisions.as_of store and evaluation.momentum_book.choose; targeted test file: 4 passed, Ruff clean."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T22:12:45Z",
+      "commit": "5b1d8317",
+      "test_evidence": [
+        "tests/test_forward_edge_lookahead.py::test_future_published_revision_cannot_change_prior_features_signals_or_book_ranking"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-short tests/test_forward_edge_lookahead.py: 4 passed in 1.71s; ruff check tests/test_forward_edge_lookahead.py passed."
     },
     {
       "id": "SL-01-14",
@@ -15711,7 +15719,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T22:10:11Z",
+    "as_of_utc": "2026-11-22T22:12:45Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15970,17 +15978,18 @@
       "SL-01-10",
       "SL-01-11",
       "SL-01-12",
+      "SL-01-13",
       "SL-01-18"
     ],
-    "audited_count": 258,
+    "audited_count": 259,
     "status_counts": {
-      "COMPLETE": 44,
+      "COMPLETE": 45,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
       "PARTIAL": 202,
-      "UNASSESSED": 1120
+      "UNASSESSED": 1119
     },
-    "verified_complete_count": 44,
+    "verified_complete_count": 45,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -16112,10 +16121,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated."
   },
   "counts_by_status": {
-    "COMPLETE": 44,
+    "COMPLETE": 45,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
     "PARTIAL": 202,
-    "UNASSESSED": 1120
+    "UNASSESSED": 1119
   }
 }
