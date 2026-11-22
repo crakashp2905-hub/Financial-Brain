@@ -2743,7 +2743,7 @@
       ],
       "blocker": "Amount-denominated SWP/STP instructions still need an as-known redemption-NAV conversion and reserved-unit workflow. The STP target purchase currently consumes payout cash synchronously when NAV is supplied; it still needs a durable cash reservation, a separately pending NAV/allotment state, and cancellation/release handling.",
       "last_audited_at_utc": "2026-11-22T09:00:00Z",
-      "commit": null,
+      "commit": "e6f22e09",
       "test_evidence": [
         "python -m pytest tests/test_mf_systematic_flow_book.py tests/test_mf_systematic_flows.py -q: 13 passed",
         "Ruff check for systematic-flow paper book and tests: passed",
