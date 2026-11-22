@@ -9584,12 +9584,20 @@
     {
       "id": "SL-01-16",
       "text": "Provide training/validation/test data manifests with as-of cutoffs, raw file hashes, transforms and explicit unavailable source periods.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/dataset.py now writes versioned per-split manifests with train/validation/out-of-sample range and inclusive as-of cutoff, transformation descriptions, output CSV SHA-256/row/date bounds, optional raw input SHA-256 declarations, and explicit unavailable-source-period declarations.",
+        "the exporter validates declared hash/date formats and preserves a default UNVERIFIED coverage state whenever raw hashes or unavailable periods are not supplied. Out-of-sample export remains separately gated.",
+        "tests/test_phase5_dataset.py: 16 passed, including manifest cutoff/hash/transform/gap declarations, missing-source status, invalid declarations and holdout controls; Ruff and targeted mypy passed."
+      ],
+      "blocker": "Raw source file hashes and unavailable source windows remain optional caller-provided declarations, explicitly marked PROVIDED_NOT_VERIFIED; exporter does not resolve them to the actual raw-lake bytes or independently calculate source-period coverage. Historical gap inventories are not populated automatically for every train/validation/test export.",
+      "last_audited_at_utc": "2026-11-22T22:27:00Z",
+      "commit": "a6fbf024",
+      "test_evidence": [
+        "tests/test_phase5_dataset.py"
+      ],
+      "test_result": "tests/test_phase5_dataset.py: 16 passed in 2.70s; Ruff and targeted mypy passed; git diff --check passed."
     },
     {
       "id": "SL-01-17",
@@ -15739,7 +15747,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T22:23:09Z",
+    "as_of_utc": "2026-11-22T22:27:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16001,15 +16009,16 @@
       "SL-01-13",
       "SL-01-14",
       "SL-01-15",
+      "SL-01-16",
       "SL-01-18"
     ],
-    "audited_count": 261,
+    "audited_count": 262,
     "status_counts": {
       "COMPLETE": 45,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 204,
-      "UNASSESSED": 1117
+      "PARTIAL": 205,
+      "UNASSESSED": 1116
     },
     "verified_complete_count": 45,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16146,7 +16155,7 @@
     "COMPLETE": 45,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 204,
-    "UNASSESSED": 1117
+    "PARTIAL": 205,
+    "UNASSESSED": 1116
   }
 }
