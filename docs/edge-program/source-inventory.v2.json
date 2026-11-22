@@ -7676,7 +7676,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/mf_sip.py",
-      "source_sha256": "b446899f81ddeb97ec763d2db30b95a4cb3512b6fa482776134dac77755dd258",
+      "source_sha256": "602e561f62aa37a1cb8de239fca0346a70b7f797989237cbdb5ab6a8e4f26224",
       "test_paths": []
     },
     {
@@ -9006,7 +9006,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_lot_book.py",
-      "source_sha256": "879814162455253eaf6fc30f452c140b8a499db62beeb3103fa899d080ee7179",
+      "source_sha256": "736f2609f6e1d4000d5d8d93f6a0af7ce5262a2337dd65763394d81984f0462c",
       "test_paths": []
     },
     {
@@ -9094,15 +9094,21 @@
       "imports": [
         "__future__",
         "datetime",
+        "decimal",
+        "forward_edge.data_permissions",
         "hashlib",
+        "ingest.mfnav",
         "json",
-        "kernel.mf_sip"
+        "kernel.mf_sip",
+        "kernel.trading_clock",
+        "mf_account_ledger",
+        "mf_lot_book"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_sip_book.py",
-      "source_sha256": "bdbd89cf440cd2af4d2fae25ce9bd371ff2e85db17594129739774cfbd5e7e50",
+      "source_sha256": "53867c2496137db861b800fccb4cc00563929be7b9842532233ba7a66ade5018",
       "test_paths": []
     },
     {
@@ -11552,7 +11558,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/storage/db.py",
-      "source_sha256": "c355d58e7a726179441faf481ae3ccaf393c76a3b852fd837fa6cf9062464c7e",
+      "source_sha256": "8e85a00aa1e20edc9c353e74735b7ec9ceaef81fdf329c35688f1a955b101419",
       "test_paths": []
     },
     {
