@@ -535,6 +535,8 @@ def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path)
     assert records["intents"][0]["order_id"] == result.intent.intent_id
     assert records["accounting"]["errors"] == []
     assert records["accounting"]["positions"]["NSE:INFY"] == 2
+    assert [row["state"] for row in records["order_events"]] == ["CREATED", "SUBMITTED", "FILLED"]
+    assert records["order_events"][-1]["fill_evidence_id"] is not None
     with pytest.raises(ForwardSessionRunnerError, match="canonical candidate intent"):
         runner.execute_paper_intent(
             session_id="s", order_id="forged-order", decision_id="candidate-1",
@@ -1403,6 +1405,15 @@ def test_partial_missed_and_rejected_scenarios_keep_requested_vs_filled_separate
     assert missed["status"] == "MISSED" and missed["filled_quantity"] == 0
     rejected = execute(runner, event, decided, order_id="freeze", qty=11)
     assert rejected["status"] == "REJECTED" and rejected["filled_quantity"] == 0
+    events = runner.records("s")["order_events"]
+    states_by_order = {}
+    for row in events:
+        states_by_order.setdefault(row["paper_order_id"], []).append(row["state"])
+    assert states_by_order["partial"] == ["CREATED", "SUBMITTED", "PARTIAL"]
+    assert states_by_order["missed"] == ["CREATED", "SUBMITTED", "MISSED"]
+    assert states_by_order["freeze"] == ["CREATED", "SUBMITTED", "REJECTED"]
+    with pytest.raises(ForwardSessionRunnerError, match=r"unresolved paper order states: \['PARTIAL'\]"):
+        runner.close_session("s", complete=True, now=decided + timedelta(seconds=2))
     runner.close()
 
 
@@ -1549,12 +1560,69 @@ def test_unknown_outbox_after_crash_requires_receipt_reconciliation(tmp_path, mo
     assert recovery["unresolved_paper_outbox_keys"] == ["paper:s:order-1"]
     assert runner.reconcile_unknown_paper_intent(session_id="s", order_id="order-1",
                                                   reconciled_by="local-receipt-check") is True
+    assert [row["state"] for row in runner.records("s")["order_events"]] == [
+        "CREATED", "SUBMITTED", "UNKNOWN", "FILLED"]
     receipt = execute(runner, event, decided)
     assert receipt["status"] == "FILLED"
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
     report = runner.close_session("s", now=decided + timedelta(seconds=1), complete=True)
     assert report["status"] == "CLOSED" and report["execution_receipt_count"] == 1
     runner.close()
+
+
+def test_restart_materializes_unknown_order_state_if_process_dies_before_order_ack(tmp_path, monkeypatch):
+    runner, event, decided = trade_setup(tmp_path)
+    persist = runner._persist_paper_receipt
+    append_order_event = runner._append_paper_order_event
+
+    def persist_then_crash(session_id, order_id, body, *, commit=True):
+        persist(session_id, order_id, body, commit=commit)
+        raise RuntimeError("simulated crash before outbox acknowledgement")
+
+    def crash_before_unknown_journal(**kwargs):
+        if kwargs["state"] == "UNKNOWN":
+            raise RuntimeError("simulated process death while recording UNKNOWN")
+        return append_order_event(**kwargs)
+
+    monkeypatch.setattr(runner, "_persist_paper_receipt", persist_then_crash)
+    monkeypatch.setattr(runner, "_append_paper_order_event", crash_before_unknown_journal)
+    with pytest.raises(RuntimeError, match="process death"):
+        execute(runner, event, decided)
+    assert [row["state"] for row in runner.records("s")["order_events"]] == ["CREATED", "SUBMITTED"]
+    runner.close()
+
+    recovered = make_runner(tmp_path)
+    recovery = recovered.resume("s")
+    assert recovery["manual_reconciliation_required"] is True
+    assert [row["state"] for row in recovery["records"]["order_events"]] == [
+        "CREATED", "SUBMITTED", "UNKNOWN"]
+    assert recovered.reconcile_unknown_paper_intent(
+        session_id="s", order_id="order-1", reconciled_by="receipt-row-check") is True
+    assert [row["state"] for row in recovered.records("s")["order_events"]] == [
+        "CREATED", "SUBMITTED", "UNKNOWN", "FILLED"]
+    recovered.close()
+
+
+def test_restart_rebuilds_terminal_order_state_from_dispatched_receipt(tmp_path, monkeypatch):
+    runner, event, decided = trade_setup(tmp_path)
+
+    def crash_before_lifecycle_commit(**_kwargs):
+        raise RuntimeError("simulated crash after outbox dispatch")
+
+    monkeypatch.setattr(runner, "_append_paper_receipt_outcome", crash_before_lifecycle_commit)
+    with pytest.raises(RuntimeError, match="after outbox dispatch"):
+        execute(runner, event, decided)
+    assert runner._con.execute(
+        "SELECT state FROM outbox WHERE key='paper:s:order-1'").fetchone()[0] == "DISPATCHED"
+    assert [row["state"] for row in runner.records("s")["order_events"]] == ["CREATED", "SUBMITTED"]
+    runner.close()
+
+    recovered = make_runner(tmp_path)
+    recovery = recovered.resume("s")
+    assert recovery["unresolved_paper_outbox_keys"] == []
+    assert [row["state"] for row in recovery["records"]["order_events"]] == [
+        "CREATED", "SUBMITTED", "FILLED"]
+    recovered.close()
 
 
 def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receipt(tmp_path, monkeypatch):
@@ -1580,6 +1648,8 @@ def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receip
     assert recovery["manual_reconciliation_required"] is True
     assert runner.reconcile_unknown_paper_intent(session_id="s", order_id="order-1",
                                                   reconciled_by="local-receipt-check") is False
+    assert [row["state"] for row in runner.records("s")["order_events"]] == [
+        "CREATED", "SUBMITTED", "UNKNOWN", "SUBMITTED"]
     receipt = execute(runner, event, decided)
     assert receipt["status"] == "FILLED"
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1

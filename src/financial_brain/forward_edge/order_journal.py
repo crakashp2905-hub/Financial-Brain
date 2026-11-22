@@ -25,9 +25,10 @@ TRANSITIONS = {
                 "MISSED", "TIMED_OUT", "UNKNOWN", "EXPIRED"},
     "PARTIAL": {"PARTIAL", "FILLED", "CANCEL_PENDING", "CANCELED", "TIMED_OUT", "UNKNOWN", "EXPIRED"},
     "CANCEL_PENDING": {"PARTIAL", "FILLED", "CANCELED", "TIMED_OUT", "UNKNOWN"},
-    "TIMED_OUT": {"UNKNOWN", "ACCEPTED", "WORKING", "PARTIAL", "FILLED", "CANCELED",
+    "TIMED_OUT": {"UNKNOWN", "SUBMITTED", "ACCEPTED", "WORKING", "PARTIAL", "FILLED", "CANCELED",
                   "REJECTED", "MISSED", "EXPIRED"},
-    "UNKNOWN": {"ACCEPTED", "WORKING", "PARTIAL", "FILLED", "CANCELED", "REJECTED", "MISSED", "EXPIRED"},
+    "UNKNOWN": {"SUBMITTED", "ACCEPTED", "WORKING", "PARTIAL", "FILLED", "CANCELED",
+                "REJECTED", "MISSED", "EXPIRED"},
     "FILLED": set(), "CANCELED": set(), "REJECTED": set(), "MISSED": set(), "EXPIRED": set(),
 }
 _SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -95,10 +96,15 @@ class OrderEvent:
 
 
 class OrderJournal:
-    def __init__(self, path: Path) -> None:
-        self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._con = sqlite3.connect(str(self.path))
+    def __init__(self, path: Path | None = None, *,
+                 connection: sqlite3.Connection | None = None) -> None:
+        if (path is None) == (connection is None):
+            raise OrderJournalError("provide exactly one journal path or existing SQLite connection")
+        self.path = Path(path) if path is not None else None
+        self._owns_connection = connection is None
+        if self.path is not None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._con = connection or sqlite3.connect(str(self.path))
         self._con.execute("PRAGMA journal_mode=WAL")
         self._con.execute("PRAGMA synchronous=FULL")
         self._con.execute("""CREATE TABLE IF NOT EXISTS order_events (
@@ -106,12 +112,14 @@ class OrderJournal:
             state TEXT NOT NULL, occurred_at TEXT NOT NULL, event_hash TEXT NOT NULL,
             event_json TEXT NOT NULL, PRIMARY KEY(order_id, sequence)
         )""")
-        self._con.commit()
+        if self._owns_connection:
+            self._con.commit()
 
     def close(self) -> None:
-        self._con.close()
+        if self._owns_connection:
+            self._con.close()
 
-    def append(self, event: OrderEvent) -> bool:
+    def append(self, event: OrderEvent, *, commit: bool | None = None) -> bool:
         digest = event.event_hash()
         prior = self._con.execute("SELECT event_hash FROM order_events WHERE event_id=?", [event.event_id]).fetchone()
         if prior:
@@ -132,6 +140,8 @@ class OrderJournal:
                 raise OrderJournalError("order event sequence must be monotonic without gaps")
             if event.state not in TRANSITIONS[prior_state]:
                 raise OrderJournalError(f"illegal order transition {prior_state} -> {event.state}")
+            if event.occurred_at.astimezone(timezone.utc) < datetime.fromisoformat(previous["occurred_at"]):
+                raise OrderJournalError("order event timestamps cannot move backwards")
             if event.filled_quantity < previous["filled_quantity"]:
                 raise OrderJournalError("filled quantity cannot decrease")
             fill_increased = event.filled_quantity > previous["filled_quantity"]
@@ -150,7 +160,9 @@ class OrderJournal:
                           [event.order_id, event.sequence, event.event_id, event.state,
                            body["occurred_at"], digest,
                            json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)])
-        self._con.commit()
+        should_commit = self._owns_connection if commit is None else commit
+        if should_commit:
+            self._con.commit()
         return True
 
     def replay(self, order_id: str) -> list[dict[str, Any]]:
