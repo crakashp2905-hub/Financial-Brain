@@ -14,7 +14,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": "-34.001499999999999",
         "receipt_count": 2,
-        "records_sha256": "6705d100107886306e65798778a3cd04889415e4d876ae4ec636d9a3498db964",
+        "records_sha256": "e6c9d3115daad07b985f6939d15dd2e394b9d7464dfcccfe847e81eac620504f",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -38,7 +38,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 1,
-        "records_sha256": "63a651ec7bcd9e3c6e191660fc1fe3897d962e23162b48baff7ad565be5803f6",
+        "records_sha256": "4e8895c4906fb947bd3cc8ad5f20a49c61b64d40a41a9604ed1f37fd319ed1e7",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -62,7 +62,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": "-209.4401499999999995",
         "receipt_count": 2,
-        "records_sha256": "4e5f981286e8ca22b6ee31bbfa3288486f8b969a5553b8aa99a529693352d968",
+        "records_sha256": "a065134e812ca0b1b88da40c56ad4135576ea2eefc9429f07ee280a2a77c1ee7",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -86,7 +86,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 1,
-        "records_sha256": "5abfb504c777529af1d0daeadec4e896ce460bb1fb9ad822ae00b5c1607893f9",
+        "records_sha256": "3b0c5666a13071985e2920f41786cb9115c559300ba17ef10f1b93250cfea7a5",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -112,7 +112,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 0,
-        "records_sha256": "830a15f750f103c62483186b8d3d146f79fc4037bf1c3e296605bacc0fef16e5",
+        "records_sha256": "124ec90b484cd5d868b0c539b62a79821ed5b054d31f8cf58f15bac70a657f8f",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -136,7 +136,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 1,
-        "records_sha256": "0f84e97981a37cec39113f2c4b27beef82f86da0237d32f2dd4f2d44bbf3de76",
+        "records_sha256": "fadc2748cb7b5b35e9d51f8bc735624511e53f836e9ef9b1fc7663c30d7094d4",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -162,7 +162,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 0,
-        "records_sha256": "b47f856ea2c4365312dfbbeb34a1d5a9fee421917abe4291c61fec227d5e482d",
+        "records_sha256": "f02fae9069f311a63ba62d96f2ab3aa343f980a13bc23df71364ec7255c1478b",
         "report_status": "INCOMPLETE"
       },
       "legacy_pipeline": {
@@ -186,7 +186,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": "190.43985",
         "receipt_count": 2,
-        "records_sha256": "8b0b028591fad42b55cb45012e1675d6e0dc6e28b54128b21e7d74041273844d",
+        "records_sha256": "0192e40cee04a8c07abc7740089f1dd5f6ac142b7f0348e373ded9a61986f669",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
