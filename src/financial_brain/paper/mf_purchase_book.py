@@ -276,6 +276,8 @@ def apply_allotment(
             FROM mf_paper_purchase_eligibility WHERE order_id=?""", [order_id]).fetchone()
         if eligibility is None:
             raise MFPaperPurchaseError("purchase has no frozen eligible NAV date")
+        if eligibility[0] == "CANCELLED":
+            raise MFPaperPurchaseError("purchase was cancelled before allotment")
         if decision < eligibility[2]:
             raise MFPaperPurchaseError("allotment decision precedes NAV eligibility record")
         if eligibility[0] == "ALLOTTED":

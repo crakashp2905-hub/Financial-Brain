@@ -7777,7 +7777,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/mf_systematic_flows.py",
-      "source_sha256": "ff2286f8ae8199c22f3e9d18f16ee8d064218a06afe9d2c410ab1331756280fd",
+      "source_sha256": "35794e7abd9b04f17fde8392b876c7a208b167c0091d6e85e2df18a8ba92407d",
       "test_paths": []
     },
     {
@@ -9113,7 +9113,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_purchase_book.py",
-      "source_sha256": "090b3a4849cc632aea57a869b967b75dd172a84ac6e746e470bffd0287d39629",
+      "source_sha256": "e77fd47ded8ac90b6febf1bedcee8b0754c47f69798ba2bbf0a1cad84f51450e",
       "test_paths": []
     },
     {
@@ -9245,10 +9245,14 @@
         "json",
         "kernel.fund_transactions",
         "kernel.mf_order",
+        "kernel.mf_purchase_payment",
+        "kernel.mf_redemption_eligibility",
         "kernel.mf_systematic_flows",
         "kernel.trading_clock",
+        "mf_account_ledger",
         "mf_lot_book",
         "mf_order_book",
+        "mf_purchase_book",
         "mf_redemption_settlement",
         "providers.mf_scheme_terms",
         "typing"
@@ -9257,7 +9261,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_systematic_flow_book.py",
-      "source_sha256": "b8a6361a1c89af648877e535127227ae1abcf9af7defd63610bb2c1943ea9464",
+      "source_sha256": "2cad0405458c8988d783761548d6058efeb8f8582f1623140c98dd9761dca06d",
       "test_paths": []
     },
     {
@@ -11682,7 +11686,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/storage/db.py",
-      "source_sha256": "add82a5ad26ef9be89c9a4573a5d80a9e95ef618f5c6819c486e0871681d35c0",
+      "source_sha256": "139c4e6515a9628f5e0dcf8d97eddbe418a3faef93a0877cb7a1c2389cf7f085",
       "test_paths": []
     },
     {
