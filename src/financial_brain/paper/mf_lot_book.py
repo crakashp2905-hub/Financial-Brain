@@ -164,6 +164,14 @@ def create_account(
         con.execute(
             "INSERT INTO mf_paper_accounts VALUES (?, ?, ?)", [account_id, cash, created]
         )
+        from .mf_account_ledger import post_journal
+        if cash:
+            post_journal(
+                con, account_id=account_id, transaction_id="opening-balance",
+                effective_at=created, recorded_at=created,
+                entries=(("CASH", cash, 0), ("OWNER_EQUITY", 0, cash)),
+                evidence={"kind": "PAPER_ACCOUNT_OPENING"},
+            )
         con.execute("COMMIT")
     except Exception:
         con.execute("ROLLBACK")
@@ -369,6 +377,15 @@ def subscribe(
                 event_at,
             ],
         )
+        from .mf_account_ledger import post_journal
+        post_journal(
+            con, account_id=account_id, transaction_id=f"subscription:{event_id}",
+            effective_at=event_at, recorded_at=event_at,
+            entries=(("MF_INVESTMENTS", amount, 0), ("CASH", 0, amount)),
+            evidence={"event_id": event_id, "lot_id": lot_id,
+                      "nav_per_unit": str(nav), "units": str(units),
+                      "terms_record_id": terms.record_id},
+        )
         con.execute("COMMIT")
     except Exception:
         con.execute("ROLLBACK")
@@ -532,7 +549,8 @@ def redeem(
             if settlement[5] > redemption_date or settlement[6] > decision_at:
                 raise MfPaperBookError("redemption valuation predates its request")
         rows = con.execute(
-            """SELECT lot_id, allotted_on, units_remaining, exit_loads_json, lock_in_until
+            """SELECT lot_id, allotted_on, units_remaining, exit_loads_json, lock_in_until,
+                purchase_nav
             FROM mf_paper_lots WHERE account_id = ? AND scheme_code = ? AND plan = ?
             AND option = ? AND isin = ? AND units_remaining > 0
             ORDER BY allotted_on, lot_id""",
@@ -600,6 +618,11 @@ def redeem(
             redemption_units=units,
             nav_per_unit=nav,
         )
+        lot_purchase_nav = {row[0]: Decimal(row[5]) for row in rows}
+        redeemed_cost_basis = sum((
+            allocation.units_redeemed * lot_purchase_nav[allocation.lot_id]
+            for allocation in result.allocations
+        ), Decimal(0))
         for allocation in result.allocations:
             con.execute(
                 "UPDATE mf_paper_lots SET units_remaining = ? "
@@ -633,6 +656,29 @@ def redeem(
                 digest,
                 event_at,
             ],
+        )
+        from .mf_account_ledger import post_journal
+        cash_or_receivable = "REDEMPTION_RECEIVABLE" if settlement_id else "CASH"
+        journal_entries = [(cash_or_receivable, result.net_redemption_inr, 0)]
+        if result.exit_load_inr:
+            journal_entries.append(("EXIT_LOAD_EXPENSE", result.exit_load_inr, 0))
+        if redeemed_cost_basis:
+            journal_entries.append(("MF_INVESTMENTS", 0, redeemed_cost_basis))
+        if result.gross_redemption_inr > redeemed_cost_basis:
+            journal_entries.append(("REALIZED_GAIN", 0,
+                                    result.gross_redemption_inr-redeemed_cost_basis))
+        elif redeemed_cost_basis > result.gross_redemption_inr:
+            journal_entries.append(("REALIZED_LOSS",
+                                    redeemed_cost_basis-result.gross_redemption_inr, 0))
+        post_journal(
+            con, account_id=account_id, transaction_id=f"redemption:{event_id}",
+            effective_at=event_at, recorded_at=event_at, entries=tuple(journal_entries),
+            evidence={"event_id": event_id, "settlement_id": settlement_id,
+                      "nav_per_unit": str(nav), "units": str(result.redeemed_units),
+                      "gross_inr": str(result.gross_redemption_inr),
+                      "exit_load_inr": str(result.exit_load_inr),
+                      "redeemed_cost_basis_inr": str(redeemed_cost_basis),
+                      "nav_observation_id": nav_observation_id},
         )
         if settlement_id is not None:
             assert nav_observation is not None and payout_due_date is not None
