@@ -2530,7 +2530,7 @@
       ],
       "blocker": "No authorized registrar/platform adapter is connected to supply real acknowledgement or acceptance receipts; the model and durable paper lifecycle cannot prove actual platform acceptance.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "25979744bc60c714252e812942ab89125da2aa39",
+      "commit": "b5a5f781b9022631bfb033795c3474a4c65b4f98",
       "test_evidence": [
         "python -m pytest tests/test_mf_order_book.py tests/test_migrations.py -q: 7 passed",
         "ruff check src/financial_brain/paper/mf_order_book.py tests/test_mf_order_book.py: passed",
@@ -2662,7 +2662,7 @@
       ],
       "blocker": "The lifecycle is currently an immutable in-memory model; it is not yet persisted in the paper ledger, connected to NAV/cutoff resolution, or wired into account cash and unit reconciliation.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "b79a4e46a7c730da19c64d379ad69612bf537e69",
+      "commit": "eaf6bff58e7866602bd9d928de4b75032fdc61d5",
       "test_evidence": [
         "python -m pytest tests/test_mf_switch.py tests/test_mf_paper_realism.py tests/test_mf_purchase_payment.py tests/test_mf_order.py -q: 28 passed",
         "ruff check src/financial_brain/kernel/mf_switch.py tests/test_mf_switch.py: passed",
@@ -2781,7 +2781,7 @@
       ],
       "blocker": "Weights are explicit design defaults, not empirically calibrated. The score is not yet populated from live account/order/terms/settlement state or validated against realized paper-trading fidelity.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "06369556c7b8610bfcd76568df904b4b171cff3e",
+      "commit": "8aa876a59c6b362375b349aa7c9d031b8de7ec46",
       "test_evidence": [
         "python -m pytest tests/test_mf_paper_realism.py tests/test_mf_purchase_payment.py tests/test_mf_order.py -q: 22 passed",
         "ruff check src/financial_brain/kernel/mf_paper_realism.py tests/test_mf_paper_realism.py: passed",
