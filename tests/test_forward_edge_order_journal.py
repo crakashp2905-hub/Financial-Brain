@@ -11,7 +11,8 @@ NOW = datetime(2026, 11, 15, 4, 0, tzinfo=timezone.utc)
 def _event(seq: int, state: str, filled: int, *, event_id: str | None = None) -> OrderEvent:
     return OrderEvent("ord-1", event_id or f"evt-{seq}", seq, state, NOW + timedelta(seconds=seq),
                       10, filled, "100.00" if filled else None,
-                      {"cash_delta": str(-100 * filled), "inventory_delta": filled})
+                      {"cash_delta": str(-100 * filled), "inventory_delta": filled},
+                      fill_evidence_id="f" * 64 if filled else None)
 
 
 def test_order_lifecycle_is_append_only_and_replay_hash_is_deterministic(tmp_path) -> None:
@@ -56,3 +57,65 @@ def test_order_journal_restores_identical_replay_after_restart(tmp_path) -> None
         assert restarted.replay_hash("ord-1") == expected
     finally:
         restarted.close()
+
+
+def test_accepted_working_cancel_race_and_missed_order_states_are_distinct(tmp_path) -> None:
+    journal = OrderJournal(tmp_path / "orders.sqlite3")
+    try:
+        events = (
+            _event(0, "CREATED", 0), _event(1, "SUBMITTED", 0),
+            _event(2, "ACCEPTED", 0), _event(3, "WORKING", 0),
+            _event(4, "CANCEL_PENDING", 0), _event(5, "PARTIAL", 3),
+            _event(6, "CANCELED", 3),
+        )
+        for event in events:
+            assert journal.append(event)
+        assert [row["state"] for row in journal.replay("ord-1")] == [
+            "CREATED", "SUBMITTED", "ACCEPTED", "WORKING", "CANCEL_PENDING", "PARTIAL", "CANCELED"
+        ]
+        assert journal.replay("ord-1")[-1]["filled_quantity"] == 3
+
+        missed = OrderEvent("missed", "missed-0", 0, "CREATED", NOW, 4, 0, None, {})
+        journal.append(missed)
+        journal.append(OrderEvent("missed", "missed-1", 1, "SUBMITTED", NOW, 4, 0, None, {}))
+        journal.append(OrderEvent("missed", "missed-2", 2, "MISSED", NOW, 4, 0, None,
+                                  {"reason": "NO_EXECUTABLE_DEPTH"}))
+        assert journal.replay("missed")[-1]["state"] == "MISSED"
+    finally:
+        journal.close()
+
+
+def test_unknown_and_timeout_require_evidence_before_resolution_and_never_invent_fill(tmp_path) -> None:
+    journal = OrderJournal(tmp_path / "orders.sqlite3")
+    try:
+        journal.append(_event(0, "CREATED", 0))
+        journal.append(_event(1, "SUBMITTED", 0))
+        journal.append(_event(2, "TIMED_OUT", 0))
+        journal.append(_event(3, "UNKNOWN", 0))
+        with pytest.raises(OrderJournalError, match="reconciliation evidence"):
+            journal.append(_event(4, "FILLED", 10))
+        reconciled = OrderEvent("ord-1", "evt-4-reconciled", 4, "MISSED", NOW + timedelta(seconds=4),
+                                10, 0, None, {"reason": "broker found no order"},
+                                reconciliation_evidence_id="a" * 64)
+        journal.append(reconciled)
+        assert journal.replay("ord-1")[-1]["filled_quantity"] == 0
+    finally:
+        journal.close()
+
+
+def test_fill_increase_without_immutable_receipt_is_rejected(tmp_path) -> None:
+    journal = OrderJournal(tmp_path / "orders.sqlite3")
+    try:
+        journal.append(_event(0, "CREATED", 0))
+        journal.append(_event(1, "SUBMITTED", 0))
+        unsupported = OrderEvent("ord-1", "no-fill-evidence", 2, "FILLED", NOW + timedelta(seconds=2),
+                                 10, 10, "100.00", {"inventory_delta": 10})
+        with pytest.raises(OrderJournalError, match="immutable fill evidence"):
+            journal.append(unsupported)
+    finally:
+        journal.close()
+
+
+def test_new_order_cannot_start_with_a_synthesized_fill() -> None:
+    with pytest.raises(OrderJournalError, match="cannot carry a confirmed fill"):
+        _event(0, "CREATED", 1)
