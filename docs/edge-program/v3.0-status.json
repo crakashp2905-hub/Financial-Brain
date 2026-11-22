@@ -9442,12 +9442,18 @@
     {
       "id": "SL-01-10",
       "text": "Archive quote bid/ask, depth, OI and last trade separately with timestamp/age and entitlement; never make index level a tradable option price.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/market_data.py now normalizes Kite bid/ask, full depth, open interest, source exchange timestamp, distinct last_trade_time, receipt-time quote/last-trade age, and packet hash; malformed OI and future last-trade clocks are rejected.",
+        "QuoteArchive stores and round-trips the complete normalized event payload with source/evidence hash and event/receipt/availability clocks. The paper options router uses an exact published effective contract token and quote observation for option premium; underlying spot is used only for moneyness and is not an option price.",
+        "tests/test_forward_edge_kite_market_data.py and tests/test_forward_edge_quote_archive.py: 25 passed; Ruff and targeted mypy passed; generated source inventory, ownership matrix and forward-engine graph freshness passed.",
+        "Remaining: archive rows do not yet carry the applicable source/use entitlement object; observed options-chain/OI coverage and rights are not verified, and all permitted providers/data products are not wired through one quote/depth/OI archive contract."
+      ],
+      "blocker": "Partial: Kite quote snapshots now preserve OI and separate trade/quote clocks, but archive entitlement attachment, permissioned OI coverage and other provider adapters remain incomplete.",
+      "last_audited_at_utc": "2026-11-22T21:29:52Z",
+      "commit": "4f55bf40",
+      "test_result": "Windows local: 25 market-data normalization and quote archive tests passed; Ruff, targeted mypy and generated architecture freshness checks passed."
     },
     {
       "id": "SL-01-11",
@@ -15657,7 +15663,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T21:24:02Z",
+    "as_of_utc": "2026-11-22T21:29:52Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15910,15 +15916,16 @@
       "SL-01-04",
       "SL-01-05",
       "SL-01-06",
+      "SL-01-10",
       "SL-01-18"
     ],
-    "audited_count": 252,
+    "audited_count": 253,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 196,
-      "UNASSESSED": 1126
+      "PARTIAL": 197,
+      "UNASSESSED": 1125
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16045,7 +16052,9 @@
       "tests/test_forward_edge_data_gate.py",
       "src/financial_brain/forward_edge/data_gate.py",
       "src/financial_brain/paper/intraday_runner.py",
-      "tests/test_phase5_intraday_runner.py"
+      "tests/test_phase5_intraday_runner.py",
+      "src/financial_brain/forward_edge/market_data.py",
+      "tests/test_forward_edge_kite_market_data.py"
     ],
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated."
   },
@@ -16053,7 +16062,7 @@
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 196,
-    "UNASSESSED": 1126
+    "PARTIAL": 197,
+    "UNASSESSED": 1125
   }
 }
