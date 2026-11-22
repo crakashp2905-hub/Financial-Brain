@@ -4,9 +4,9 @@ from decimal import Decimal
 import pytest
 
 from financial_brain.paper.mf_exit_loads import (
-    ExitLoadError, PurchaseLot, calculate_exit_loads,
+    ExitLoadError, PurchaseLot, calculate_exit_loads, calculate_transaction_charges,
 )
-from financial_brain.providers.mf_scheme_terms import ExitLoadBand
+from financial_brain.providers.mf_scheme_terms import ExitLoadBand, MFChargeRule
 
 
 def test_partial_redemption_charges_each_fifo_lot_with_its_own_load():
@@ -65,3 +65,24 @@ def test_explicit_empty_schedule_means_zero_load():
         redemption_units=Decimal("2"), nav_per_unit=Decimal("10"),
     )
     assert result.exit_load_inr == Decimal("0.00")
+
+
+def test_transaction_charges_are_per_rule_paise_rounded_and_unknown_fails_closed():
+    rules = (
+        MFChargeRule("STAMP_DUTY", "SUBSCRIBE", Decimal("0.005")),
+        MFChargeRule("TRANSACTION_FEE", "SUBSCRIBE", Decimal("0.01")),
+        MFChargeRule("REDEMPTION_FEE", "REDEEM", Decimal("0.25")),
+    )
+    amount, breakdown = calculate_transaction_charges(
+        rules, transaction="SUBSCRIBE", notional_inr=Decimal("100000"),
+    )
+    assert amount == Decimal("15.00")
+    assert breakdown == (("STAMP_DUTY", Decimal("5.00")),
+                         ("TRANSACTION_FEE", Decimal("10.00")))
+    assert calculate_transaction_charges(
+        (), transaction="REDEEM", notional_inr=Decimal("1000"),
+    ) == (Decimal(0), ())
+    with pytest.raises(ExitLoadError, match="unknown"):
+        calculate_transaction_charges(
+            None, transaction="SUBSCRIBE", notional_inr=Decimal("1000"),
+        )

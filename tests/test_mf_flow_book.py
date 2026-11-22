@@ -43,6 +43,7 @@ def _terms(*, scheme_code="100001", isin="INF000000001", digest=TERMS_HASH):
         scheme_code=scheme_code, plan="DIRECT", option="GROWTH", isin=isin,
         effective_from=date(2026, 1, 1), effective_to=None,
         ter_percent=None, aum_inr=None, exit_loads=(),
+        charge_schedule=(),
         minimum_initial_inr=Decimal("0"), minimum_additional_inr=Decimal("0"),
         minimum_redemption_inr=Decimal("0"),
         exit_restrictions=(), source_id=SOURCE, source_ref="scheme-terms-2026-01",
