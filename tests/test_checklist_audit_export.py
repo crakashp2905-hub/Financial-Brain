@@ -34,3 +34,13 @@ def test_export_rejects_status_text_that_differs_from_source_checklist() -> None
     status["items"][0]["text"] += " changed"
     with pytest.raises(ValueError, match="source text differs"):
         audit.render_rows(status, audit.SOURCE.read_text(encoding="utf-8"))
+
+
+def test_export_rejects_stale_status_summary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    status = json.loads(audit.STATUS.read_text(encoding="utf-8"))
+    status["counts_by_status"]["COMPLETE"] += 1
+    stale = tmp_path / "status.json"
+    stale.write_text(json.dumps(status), encoding="utf-8")
+    monkeypatch.setattr(audit, "STATUS", stale)
+    with pytest.raises(ValueError, match="counts_by_status"):
+        audit.rendered_text()
