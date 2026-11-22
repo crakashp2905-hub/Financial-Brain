@@ -14,7 +14,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": "-34.001499999999999",
         "receipt_count": 2,
-        "records_sha256": "6f19753e3f5277a02fdf0ca94f976c3ad795fa31a704d5144ca61b052afdf878",
+        "records_sha256": "4004e31453e996f1d6e119bef817531eb2efbdf518ca92cbe529dd44218d7ce1",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -38,7 +38,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 1,
-        "records_sha256": "0571ed13d963167b40060e13550f5e8f881e0e3f14bb9ab03eef3bc7a8f19422",
+        "records_sha256": "25bbd3ade1c562800be5b5d4cf843d2078a1a123ae307f00b0a48f33fffeabe4",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -62,7 +62,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": "-209.4401499999999995",
         "receipt_count": 2,
-        "records_sha256": "c85f4b353961d9bd0c1a662a3dadd229e3b9066ef611054db82b2b14f69eee4a",
+        "records_sha256": "dd815091685385a9e244ab5d6a73d49ec51e308da8eec05fb1e82ba8fff38f80",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -86,7 +86,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 1,
-        "records_sha256": "46abe01fff74d3e720f9248866cbe83534e27aa66d2f4f7a7cc1b3ee46a478df",
+        "records_sha256": "2c5edfff1ff73665c77b72aac1154371f597758b1b70849cec5772a3ec501f01",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -136,7 +136,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 1,
-        "records_sha256": "77aef680ec1c801022995cc53b41aebf4f4c0cfc61275258b0368b2455e417a6",
+        "records_sha256": "15dd88db329c7eb59d7dd7ef881de6964e452a134465c42ef0736f012fd06ffb",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -186,7 +186,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": "190.43985",
         "receipt_count": 2,
-        "records_sha256": "bfc3bc5a776c82a4574faad2dcb65dde84c54a7ebcd6b3ab1df1280fe6a7d136",
+        "records_sha256": "d8b9f0c91b3922fbfa9ba857cc81d35d07cc73cc1983c333b5596b51f1745500",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
