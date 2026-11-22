@@ -530,6 +530,7 @@ def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path)
     records = runner.records("s")
     assert result.receipt is not None
     assert result.receipt["filled_quantity"] == 2
+    assert result.receipt["quantity_unit"] == "SHARES"
     assert records["decisions"][0]["payload"]["candidate_intent"]["intent_id"] == result.intent.intent_id
     assert records["intents"][0]["order_id"] == result.intent.intent_id
     assert records["accounting"]["errors"] == []
@@ -540,7 +541,8 @@ def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path)
             event_id=fill_event.event_id, side="BUY", quantity=2,
             limit_price=Decimal("100.1"), tick_size=Decimal("0.05"),
             freeze_limit=1000, slice_size=1000, adverse_slippage_bps=Decimal("0"),
-            latency_ms=100, simulated_at=decided_at + timedelta(milliseconds=101),
+            latency_ms=100, quantity_unit="SHARES",
+            simulated_at=decided_at + timedelta(milliseconds=101),
             max_wait_ms=5000,
         )
     assert len(runner.records("s")["intents"]) == 1

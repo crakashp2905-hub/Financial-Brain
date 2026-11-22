@@ -29,6 +29,7 @@ def test_same_candidate_produces_equivalent_versioned_engine_intents() -> None:
         kernel["client_id"] and "INFY", kernel["side"], kernel["quantity"], kernel["client_id"])
     assert kernel["limit"] == Decimal("1500.00")
     assert intent_a.adapter_version == "fb-paper-adapter.v1"
+    assert legacy["quantity_unit"] == kernel["quantity_unit"] == "SHARES"
 
 
 def test_adapter_rejects_spec_mismatch_or_missing_forward_contract() -> None:
@@ -49,3 +50,17 @@ def test_intent_identity_changes_with_decision_or_signal_payload() -> None:
                               changed.quantity, changed.decision_id, changed.decision_time_utc,
                               changed.reference_price, {"strength": 0.9})
     assert adapt_candidate(changed, _spec()).intent_id != original.intent_id
+
+
+def test_intent_identity_binds_instrument_quantity_unit() -> None:
+    share_candidate = _signal()
+    option_candidate = CandidateSignal(
+        share_candidate.strategy_id, share_candidate.strategy_version, share_candidate.symbol,
+        share_candidate.side, share_candidate.quantity, share_candidate.decision_id,
+        share_candidate.decision_time_utc, share_candidate.reference_price,
+        share_candidate.signal_payload, "OPTION_CONTRACTS",
+    )
+    shares = adapt_candidate(share_candidate, _spec())
+    contracts = adapt_candidate(option_candidate, _spec())
+    assert shares.intent_id != contracts.intent_id
+    assert contracts.as_dict()["quantity_unit"] == "OPTION_CONTRACTS"
