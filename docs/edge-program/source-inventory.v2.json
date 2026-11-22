@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 669,
+  "source_count": 670,
   "sources": [
     {
       "capability_ids": [],
@@ -8953,6 +8953,26 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "datetime",
+        "forward_edge.data_permissions",
+        "hashlib",
+        "json",
+        "kernel.mf_order",
+        "kernel.trading_clock",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_order_book.py",
+      "source_sha256": "316754b60670583c0658b99760b250ac78787f163d0ab56659043abd3d027126",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "datetime",
         "decimal",
@@ -11725,6 +11745,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 654,
+  "unassessed_count": 655,
   "unassigned_role_count": 392
 }
