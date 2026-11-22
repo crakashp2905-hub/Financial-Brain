@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 import json
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 
 import numpy as np
@@ -670,6 +671,8 @@ def mf_paper_panel(con, asof: date) -> str:
     """Render account-scoped MF values using only NAVs available by the report date."""
     from ..kernel.trading_clock import IST
     from ..kernel.mf_paper_realism import WEIGHTS
+    from ..providers.mf_scheme_terms import ExitLoadBand
+    from .mf_exit_loads import ExitLoadError, PurchaseLot, calculate_exit_loads
     from .mf_lot_book import account_snapshot
     from .mf_paper_realism_book import assess_account_mf_realism
 
@@ -681,7 +684,7 @@ def mf_paper_panel(con, asof: date) -> str:
         return "<h2>Mutual fund paper book</h2><div class='sub'>No MF paper accounts.</div>"
 
     out = ["<h2>Mutual fund paper book</h2>",
-           f"<div class='sub'>Point-in-time valuation as of {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible.</div>"]
+           f"<div class='sub'>NAV and order cutoff: {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible. Exit load is estimated at the displayed NAV; tax is not estimated without an account tax profile and applicable tax-lot rules.</div>"]
     for (account_id,) in rows:
         snapshot = account_snapshot(con, account_id, known_at=known_at)
         realism = assess_account_mf_realism(
@@ -703,6 +706,25 @@ def mf_paper_panel(con, asof: date) -> str:
             f"{snapshot['stale_position_count']} · unavailable NAVs "
             f"{snapshot['unvalued_position_count']}</div>"
         )
+        pending_allotments = con.execute("""SELECT o.order_id, o.scheme_code, o.plan, o.option,
+            o.folio_id, o.amount_inr, o.units, e.eligible_nav_date, e.updated_at
+            FROM mf_paper_orders o JOIN mf_paper_purchase_eligibility e USING (order_id)
+            WHERE o.account_id=? AND o.transaction_type='PURCHASE' AND e.state='NAV_PENDING'
+              AND o.created_at<=? AND e.updated_at<=?
+            ORDER BY e.eligible_nav_date, o.order_id""", [account_id, known_at, known_at]).fetchall()
+        if pending_allotments:
+            pending_rows = []
+            for (order_id, scheme, plan, option, folio, amount, units, eligible_date, updated_at) in pending_allotments:
+                request = f"Rs {amount:,.2f}" if amount is not None else f"{units} units"
+                pending_rows.append(
+                    f"<tr><td>{_e(order_id)}</td><td>{_e(folio)}</td><td>{_e(scheme)}</td>"
+                    f"<td>{_e(plan)}</td><td>{_e(option)}</td><td class='r'>{_e(request)}</td>"
+                    f"<td>{_e(eligible_date)}</td><td>{_e(updated_at)}</td></tr>"
+                )
+            out.append("<h4>Pending purchase allotments</h4><div class='wrap'><table>"
+                       "<tr><th>Order</th><th>Folio</th><th>Scheme</th><th>Plan</th><th>Option</th>"
+                       "<th class='r'>Request</th><th>Eligible NAV date</th><th>State updated</th></tr>"
+                       + "".join(pending_rows) + "</table></div>")
         realism_rows = []
         for dimension, weight in WEIGHTS.items():
             factor = realism_factors.get(dimension)
@@ -780,22 +802,49 @@ def mf_paper_panel(con, asof: date) -> str:
             value_text = f"Rs {value:,.2f}" if value is not None else "—"
             basis_text = f"Rs {position['cost_basis_inr']:,.2f}"
             pnl_text = f"Rs {pnl:+,.2f}" if pnl is not None else "—"
+            available_at = position.get("nav_available_at")
+            available_text = available_at.isoformat() if available_at is not None else "—"
+            load_text = "Unavailable · NAV unavailable"
+            if nav is not None and status == "CURRENT":
+                lot_rows = con.execute("""SELECT lot_id, allotted_on, units_remaining, exit_loads_json
+                    FROM mf_paper_lots WHERE account_id=? AND scheme_code=? AND plan=? AND option=?
+                      AND isin=? AND folio_id IS NOT DISTINCT FROM ? AND units_remaining>0
+                    ORDER BY allotted_on, lot_id""",
+                    [account_id, position["scheme_code"], position["plan"], position["option"],
+                     position["isin"], position["folio_id"]]).fetchall()
+                try:
+                    lots = tuple(PurchaseLot(
+                        lot_id, allotted_on, Decimal(units),
+                        (tuple(ExitLoadBand(int(item["days_from_purchase"]),
+                                            Decimal(item["rate_percent"]))
+                               for item in json.loads(schedule)) if schedule is not None else None),
+                    ) for lot_id, allotted_on, units, schedule in lot_rows)
+                    estimate = calculate_exit_loads(
+                        lots, redemption_date=asof, redemption_units=position["units"],
+                        nav_per_unit=nav,
+                    )
+                    load_text = f"Estimate Rs {estimate.exit_load_inr:,.2f}"
+                except (ExitLoadError, TypeError, ValueError, KeyError, json.JSONDecodeError):
+                    load_text = "Unavailable · lot exit-load evidence incomplete"
+            tax_text = "Not estimated · tax profile/rules unavailable"
             position_rows.append(
                 f"<tr><td>{_e(folio)}</td><td>{_e(position['scheme_code'])}</td>"
                 f"<td>{_e(position['plan'])}</td>"
                 f"<td>{_e(position['option'])}</td><td class='r'>{position['units']:,.6f}</td>"
                 f"<td class='r'>{nav_text}</td>"
                 f"<td>{_e(position['nav_date'] or '—')}</td>"
+                f"<td>{_e(available_text)}</td>"
                 f"<td class='r'>{value_text}</td>"
                 f"<td class='r'>{basis_text}</td>"
                 f"<td class='r {pnl_class}'>{pnl_text}</td>"
+                f"<td>{_e(load_text)}</td><td>{_e(tax_text)}</td>"
                 f"<td><span class='chip {cls}'>{_e(status)}</span></td></tr>"
             )
         out.append(
             "<div class='wrap'><table><tr><th>Folio</th><th>Scheme</th><th>Plan</th><th>Option</th>"
-            "<th class='r'>Units</th><th class='r'>Last known NAV</th><th>NAV date</th>"
+            "<th class='r'>Units</th><th class='r'>Last known NAV</th><th>NAV date</th><th>NAV available at</th>"
             "<th class='r'>Value</th><th class='r'>Cost basis</th><th class='r'>Unrealized P&amp;L</th>"
-            "<th>Mark</th></tr>" + "".join(position_rows) + "</table></div>"
+            "<th>Estimated exit load</th><th>Estimated tax</th><th>Mark</th></tr>" + "".join(position_rows) + "</table></div>"
         )
     return "".join(out)
 

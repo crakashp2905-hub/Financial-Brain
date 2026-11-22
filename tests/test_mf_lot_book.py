@@ -870,7 +870,50 @@ def test_mf_terminal_panel_displays_last_known_nav_with_stale_flag(connection):
     assert "MF PAPER REALISM" in page
     assert "Operational evidence completeness only" in page
     assert "Last known NAV" in page and "125.0000" in page
-    assert "STALE" in page and "NAV date" in page
+    assert "STALE" in page and "NAV date" in page and "NAV available at" in page
+    assert "tax profile/rules unavailable" in page
+
+
+def test_mf_terminal_panel_estimates_source_pinned_exit_load(connection):
+    from financial_brain.paper.terminal import mf_paper_panel
+
+    con = connection
+    create_account(con, "paper-terminal-load", 1000, now=NOW)
+    _subscribe(
+        con, event_id="terminal-load-sub", lot_id="terminal-load-lot", amount=1000,
+        schedule=(ExitLoadBand(0, Decimal("1")),), digest=HASH_A,
+        account_id="paper-terminal-load",
+    )
+    _persist_nav_observation(
+        con, observation_id="terminal-load-nav", nav_date=date(2026, 1, 15), nav=125,
+        available_at=datetime(2026, 1, 15, 12, tzinfo=timezone.utc),
+    )
+    page = mf_paper_panel(con, date(2026, 1, 16))
+    assert "Estimated exit load" in page
+    assert "Estimate Rs 12.50" in page
+
+
+def test_mf_terminal_panel_lists_pending_purchase_allotment(connection):
+    from financial_brain.paper.terminal import mf_paper_panel
+
+    con = connection
+    create_account(con, "paper-terminal-pending", 1000, now=NOW)
+    con.execute("""INSERT INTO mf_paper_orders (
+        order_id, account_id, folio_id, scheme_code, plan, option, transaction_type,
+        requested_at, amount_inr, units, request_basis, request_sha256, valid_through,
+        current_state, created_at, updated_at)
+        VALUES ('pending-order', 'paper-terminal-pending', 'folio-1', '100001', 'DIRECT',
+        'GROWTH', 'PURCHASE', ?, 500, NULL, 'SIMULATED_ASSUMPTION', ?, DATE '2026-01-10',
+        'ACCEPTED', ?, ?)""", [DECISION, HASH_A, DECISION, DECISION])
+    con.execute("""INSERT INTO mf_paper_purchase_eligibility (
+        order_id, state, eligible_nav_date, transaction_at, decision_at, evidence_json,
+        eligibility_sha256, nav_observation_id, nav_per_unit, units_allotted, allotment_sha256,
+        created_at, updated_at)
+        VALUES ('pending-order', 'NAV_PENDING', DATE '2026-01-12', ?, ?, '{}', ?,
+        NULL, NULL, NULL, NULL, ?, ?)""", [DECISION, DECISION, HASH_B, DECISION, DECISION])
+    page = mf_paper_panel(con, date(2026, 1, 11))
+    assert "Pending purchase allotments" in page
+    assert "pending-order" in page and "2026-01-12" in page
 
 
 def test_mf_terminal_panel_distinguishes_simulated_and_observed_payouts(connection):

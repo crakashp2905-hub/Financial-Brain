@@ -9554,6 +9554,7 @@
       "imports": [
         "__future__",
         "datetime",
+        "decimal",
         "decisions",
         "duckdb",
         "evaluation",
@@ -9565,6 +9566,7 @@
         "json",
         "kernel.mf_paper_realism",
         "kernel.trading_clock",
+        "mf_exit_loads",
         "mf_lot_book",
         "mf_paper_realism_book",
         "numpy",
@@ -9572,6 +9574,7 @@
         "pandas",
         "pathlib",
         "portfolio",
+        "providers.mf_scheme_terms",
         "regime",
         "risk"
       ],
@@ -9579,7 +9582,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/terminal.py",
-      "source_sha256": "85e5b00011e5fb09fbaebba307047f1de6ecd7c4977bcae42c6267c9b132ee74",
+      "source_sha256": "6678296e0a2322b337c597fab90bdcad72c9bc96092118d4cef92dca74be1f29",
       "test_paths": []
     },
     {
