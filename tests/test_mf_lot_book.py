@@ -35,6 +35,7 @@ from financial_brain.paper.mf_order_book import record_response, submit_order
 from financial_brain.providers.mf_scheme_terms import (
     ExitLoadBand,
     ExitRestriction,
+    MFChargeRule,
     SchemeCommercialTerms,
 )
 from financial_brain.storage.db import Database
@@ -83,6 +84,7 @@ def _terms(*, restrictions=(), **changes):
         "ter_percent": None,
         "aum_inr": None,
         "exit_loads": (),
+        "charge_schedule": (),
         "minimum_initial_inr": Decimal("0"),
         "minimum_additional_inr": Decimal("0"),
         "minimum_redemption_inr": Decimal("0"),
@@ -114,6 +116,7 @@ def _subscribe(
     amount,
     schedule,
     digest,
+    charge_schedule=(),
     lock_in_until=None,
     account_id="paper-1",
 ):
@@ -122,6 +125,7 @@ def _subscribe(
     decision_at = datetime(2026, 1, event_day, 12, tzinfo=timezone.utc)
     terms = _terms(
         exit_loads=schedule,
+        charge_schedule=charge_schedule,
         source_sha256=digest or HASH_A,
         published_at=datetime(2026, 1, event_day, 8, tzinfo=timezone.utc),
         observed_at=datetime(2026, 1, event_day, 9, tzinfo=timezone.utc),
@@ -230,6 +234,38 @@ def _resolve_redemption_nav(con, *, settlement_id, requested_at, units):
         order_id=order_id, scheme_calendar=scheme_calendar, permissions=(),
         decision_at=datetime(2026, 1, 16, 9, tzinfo=timezone.utc), now=PAPERED,
     )
+
+
+def test_effective_dated_transaction_charges_reduce_units_and_redemption_proceeds(connection):
+    con = connection
+    create_account(con, "paper-charges", 1000, now=NOW)
+    purchase_rules = (MFChargeRule("STAMP_DUTY", "SUBSCRIBE", "1"),)
+    subscribed, _ = _subscribe(
+        con, event_id="sub-charged", lot_id="lot-charged", amount=1000,
+        schedule=(), digest=HASH_A, account_id="paper-charges",
+        charge_schedule=purchase_rules,
+    )
+    assert subscribed["units"] == Decimal("9.9")
+    event = con.execute("""SELECT gross_inr, other_charges_inr, net_inr
+        FROM mf_paper_events WHERE account_id='paper-charges' AND event_id='sub-charged'""").fetchone()
+    assert tuple(Decimal(value) for value in event) == (
+        Decimal("1000"), Decimal("10.00"), Decimal("990.00"),
+    )
+    redemption_terms = _terms(charge_schedule=(
+        MFChargeRule("REDEMPTION_DUTY", "REDEEM", "0.5"),
+    ), published_at=datetime(2026, 1, 9, 8, tzinfo=timezone.utc),
+       observed_at=datetime(2026, 1, 9, 9, tzinfo=timezone.utc))
+    redeemed = _redeem(
+        con, event_id="red-charged", units=Decimal("9.9"),
+        terms=redemption_terms, account_id="paper-charges",
+    )
+    assert redeemed["other_charges_inr"] == Decimal("4.95")
+    assert redeemed["net_inr"] == Decimal("985.05")
+    snapshot = account_snapshot(con, "paper-charges")
+    assert snapshot["cash_inr"] == Decimal("985.05")
+    ledger = con.execute("""SELECT SUM(debit_inr-credit_inr)
+        FROM mf_paper_ledger_entries WHERE account_id='paper-charges'""").fetchone()[0]
+    assert Decimal(ledger) == 0
 
 
 def test_subscription_enforces_sourced_initial_and_additional_minimums(connection):

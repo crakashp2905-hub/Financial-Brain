@@ -58,6 +58,9 @@ class Database:
         "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'UNKNOWN'",
         "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS option VARCHAR DEFAULT 'UNKNOWN'",
         "ALTER TABLE mf_scheme_commercial_terms ADD COLUMN IF NOT EXISTS minimum_redemption_inr VARCHAR",
+        "ALTER TABLE mf_scheme_commercial_terms ADD COLUMN IF NOT EXISTS charge_schedule_json VARCHAR",
+        "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS other_charges_inr DECIMAL(38,18) DEFAULT 0",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS other_charges_inr DECIMAL(38,18) DEFAULT 0",
         # Older MF NAV snapshots have observation time but not a separately recorded
         # local persistence time. Keep those values NULL rather than inventing history.
         "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS ingested_at TIMESTAMPTZ",

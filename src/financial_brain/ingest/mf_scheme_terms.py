@@ -20,18 +20,22 @@ def persist(con, record: SchemeCommercialTerms, *,
     restrictions = None if record.exit_restrictions is None else json.dumps(
         [item.value for item in record.exit_restrictions], separators=(",", ":")
     )
+    charges = None if record.charge_schedule is None else json.dumps([
+        {"code": rule.code, "applies_to": rule.applies_to,
+         "rate_percent": str(rule.rate_percent)} for rule in record.charge_schedule
+    ], sort_keys=True, separators=(",", ":"))
     con.execute("""INSERT INTO mf_scheme_commercial_terms (
         record_id, scheme_code, plan, option, isin, effective_from, effective_to,
-        ter_percent, aum_inr, exit_loads_json, minimum_initial_inr,
+        ter_percent, aum_inr, exit_loads_json, charge_schedule_json, minimum_initial_inr,
         minimum_additional_inr, minimum_redemption_inr, exit_restrictions_json,
         source_id, source_ref,
         source_sha256, published_at, observed_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(record_id) DO NOTHING""",
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(record_id) DO NOTHING""",
         [record.record_id, record.scheme_code, record.plan, record.option, record.isin,
          record.effective_from, record.effective_to,
          str(record.ter_percent) if record.ter_percent is not None else None,
          str(record.aum_inr) if record.aum_inr is not None else None,
-         exit_loads,
+         exit_loads, charges,
          str(record.minimum_initial_inr) if record.minimum_initial_inr is not None else None,
          str(record.minimum_additional_inr)
          if record.minimum_additional_inr is not None else None,
@@ -53,6 +57,7 @@ def as_known_on(con, scheme_code: str, plan: str, option: str, isin: str, *,
         raise ValueError("decision_date cannot be after decision_at in India")
     rows = con.execute("""SELECT record_id, scheme_code, plan, option, isin,
         effective_from, effective_to, ter_percent, aum_inr, exit_loads_json,
+        charge_schedule_json,
         minimum_initial_inr, minimum_additional_inr, minimum_redemption_inr,
         exit_restrictions_json,
         source_id, source_ref, source_sha256, published_at, observed_at
@@ -65,10 +70,11 @@ def as_known_on(con, scheme_code: str, plan: str, option: str, isin: str, *,
          decision_at.astimezone(timezone.utc), decision_at.astimezone(timezone.utc)]).fetchall()
     if not rows:
         return None
-    if len(rows) > 1 and rows[0][17:19] == rows[1][17:19]:
+    if len(rows) > 1 and rows[0][18:20] == rows[1][18:20]:
         raise SchemeTermsError("ambiguous commercial terms at decision timestamp")
     keys = ("record_id", "scheme_code", "plan", "option", "isin", "effective_from",
             "effective_to", "ter_percent", "aum_inr", "exit_loads_json",
+            "charge_schedule_json",
             "minimum_initial_inr", "minimum_additional_inr", "minimum_redemption_inr",
             "exit_restrictions_json",
             "source_id", "source_ref", "source_sha256", "published_at", "observed_at")
@@ -77,7 +83,7 @@ def as_known_on(con, scheme_code: str, plan: str, option: str, isin: str, *,
                  "minimum_redemption_inr"):
         if result[name] is not None:
             result[name] = Decimal(result[name])
-    for name in ("exit_loads_json", "exit_restrictions_json"):
+    for name in ("exit_loads_json", "charge_schedule_json", "exit_restrictions_json"):
         if result[name] is not None:
             result[name] = json.loads(result[name])
     return result
