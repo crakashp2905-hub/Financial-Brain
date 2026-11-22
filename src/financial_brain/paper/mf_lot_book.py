@@ -22,7 +22,9 @@ from ..providers.mf_scheme_terms import (
     ExitRestriction,
     SchemeCommercialTerms,
 )
-from .mf_exit_loads import PurchaseLot, calculate_exit_loads
+from .mf_exit_loads import (
+    PurchaseLot, calculate_exit_loads, calculate_transaction_charges,
+)
 from .mf_redemption_constraints import resolve_redemption_eligibility
 
 
@@ -185,7 +187,7 @@ def create_account(
 def _existing_event(con, account_id: str, event_id: str, digest: str):
     row = con.execute(
         """SELECT kind, scheme_code, plan, option, isin, event_date, nav_per_unit,
-        units, gross_inr, exit_load_inr, net_inr, event_sha256
+        units, gross_inr, exit_load_inr, other_charges_inr, net_inr, event_sha256
         FROM mf_paper_events WHERE account_id = ? AND event_id = ?""",
         [account_id, event_id],
     ).fetchone()
@@ -204,6 +206,7 @@ def _existing_event(con, account_id: str, event_id: str, digest: str):
         "units",
         "gross_inr",
         "exit_load_inr",
+        "other_charges_inr",
         "net_inr",
     )
     result = dict(zip(keys, row[:-1], strict=True))
@@ -270,6 +273,15 @@ def subscribe(
         raise MfPaperBookError("commercial terms are not effective on the allotment date")
     if terms.exit_loads != exit_loads:
         raise MfPaperBookError("lot exit-load schedule differs from commercial terms")
+    try:
+        subscription_charges, charge_breakdown = calculate_transaction_charges(
+            terms.charge_schedule, transaction="SUBSCRIBE", notional_inr=amount,
+        )
+    except ValueError as exc:
+        raise MfPaperBookError(str(exc)) from exc
+    invested_amount = amount - subscription_charges
+    if invested_amount <= 0:
+        raise MfPaperBookError("subscription charges consume the entire investment")
     _require_paper_terms(con, terms, permissions, decision_at)
     schedule = _schedule_json(exit_loads)
     if exit_loads is None:
@@ -282,7 +294,7 @@ def subscribe(
         schedule_hash = _sha256(exit_loads_sha256, "exit-load source hash")
         if schedule_hash != terms.source_sha256:
             raise MfPaperBookError("exit-load hash differs from the source terms hash")
-    units = (amount / nav).quantize(UNIT_QUANTUM, rounding=ROUND_HALF_UP)
+    units = (invested_amount / nav).quantize(UNIT_QUANTUM, rounding=ROUND_HALF_UP)
     payload = {
         "kind": "SUBSCRIBE",
         "account_id": account_id,
@@ -295,6 +307,8 @@ def subscribe(
         "allotted_on": allotted_on,
         "lock_in_until": lock_in_until,
         "investment_inr": amount,
+        "charge_schedule": terms.charge_schedule,
+        "charge_breakdown": charge_breakdown,
         "nav_per_unit": nav,
         "exit_loads_json": schedule,
         "exit_loads_sha256": schedule_hash,
@@ -377,9 +391,10 @@ def subscribe(
         con.execute(
             """INSERT INTO mf_paper_events (
             account_id, event_id, kind, scheme_code, plan, option, isin, event_date,
-            nav_per_unit, units, gross_inr, exit_load_inr, net_inr, event_sha256, created_at)
+            nav_per_unit, units, gross_inr, exit_load_inr, other_charges_inr,
+            net_inr, event_sha256, created_at)
             VALUES (
-            ?, ?, 'SUBSCRIBE', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)""",
+            ?, ?, 'SUBSCRIBE', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)""",
             [
                 account_id,
                 event_id,
@@ -391,7 +406,8 @@ def subscribe(
                 nav,
                 units,
                 amount,
-                amount,
+                subscription_charges,
+                invested_amount,
                 digest,
                 event_at,
             ],
@@ -400,9 +416,17 @@ def subscribe(
         post_journal(
             con, account_id=account_id, transaction_id=f"subscription:{event_id}",
             effective_at=event_at, recorded_at=event_at,
-            entries=(("MF_INVESTMENTS", amount, 0), (funding_account_code, 0, amount)),
+            entries=(
+                ("MF_INVESTMENTS", invested_amount, 0),
+                *(("OTHER_CHARGES_EXPENSE", charge, 0)
+                  for code, charge in charge_breakdown if charge),
+                (funding_account_code, 0, amount),
+            ),
             evidence={"event_id": event_id, "lot_id": lot_id,
                       "nav_per_unit": str(nav), "units": str(units),
+                      "charges_inr": str(subscription_charges),
+                      "charge_breakdown": [(code, str(value))
+                                           for code, value in charge_breakdown],
                       "terms_record_id": terms.record_id,
                       "funding_account_code": funding_account_code},
         )
@@ -425,7 +449,8 @@ def subscribe(
         "units": units,
         "gross_inr": amount,
         "exit_load_inr": Decimal(0),
-        "net_inr": amount,
+        "other_charges_inr": subscription_charges,
+        "net_inr": invested_amount,
         "status": "applied",
     }
 
@@ -546,6 +571,7 @@ def redeem(
         "redemption_units": units,
         "nav_per_unit": nav,
         "terms_record_id": terms.record_id,
+        "charge_schedule": terms.charge_schedule,
         "decision_at": decision_at,
         "redemption_window_open": redemption_window_open,
         "gating_remaining_units": gating_remaining_units,
@@ -665,6 +691,16 @@ def redeem(
             redemption_units=units,
             nav_per_unit=nav,
         )
+        try:
+            other_charges, charge_breakdown = calculate_transaction_charges(
+                terms.charge_schedule, transaction="REDEEM",
+                notional_inr=result.gross_redemption_inr,
+            )
+        except ValueError as exc:
+            raise MfPaperBookError(str(exc)) from exc
+        net_redemption = result.net_redemption_inr - other_charges
+        if net_redemption < 0:
+            raise MfPaperBookError("redemption charges exceed gross proceeds")
         lot_purchase_nav = {row[0]: Decimal(row[5]) for row in rows}
         redeemed_cost_basis = sum((
             allocation.units_redeemed * lot_purchase_nav[allocation.lot_id]
@@ -679,14 +715,15 @@ def redeem(
         if settlement_id is None:
             con.execute(
                 "UPDATE mf_paper_accounts SET cash_inr = cash_inr + ? WHERE account_id = ?",
-                [result.net_redemption_inr, account_id],
+                [net_redemption, account_id],
             )
         con.execute(
             """INSERT INTO mf_paper_events (
             account_id, event_id, kind, scheme_code, plan, option, isin, event_date,
-            nav_per_unit, units, gross_inr, exit_load_inr, net_inr, event_sha256, created_at)
+            nav_per_unit, units, gross_inr, exit_load_inr, other_charges_inr,
+            net_inr, event_sha256, created_at)
             VALUES (
-            ?, ?, 'REDEEM', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            ?, ?, 'REDEEM', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
                 account_id,
                 event_id,
@@ -699,7 +736,8 @@ def redeem(
                 result.redeemed_units,
                 result.gross_redemption_inr,
                 result.exit_load_inr,
-                result.net_redemption_inr,
+                other_charges,
+                net_redemption,
                 digest,
                 event_at,
             ],
@@ -707,10 +745,13 @@ def redeem(
         from .mf_account_ledger import post_journal
         cash_or_receivable = "REDEMPTION_RECEIVABLE" if settlement_id else "CASH"
         journal_entries: list[tuple[str, Decimal, Decimal]] = [
-            (cash_or_receivable, result.net_redemption_inr, Decimal(0)),
+            (cash_or_receivable, net_redemption, Decimal(0)),
         ]
         if result.exit_load_inr:
             journal_entries.append(("EXIT_LOAD_EXPENSE", result.exit_load_inr, Decimal(0)))
+        for _code, charge in charge_breakdown:
+            if charge:
+                journal_entries.append(("OTHER_CHARGES_EXPENSE", charge, Decimal(0)))
         if redeemed_cost_basis:
             journal_entries.append(("MF_INVESTMENTS", Decimal(0), redeemed_cost_basis))
         if result.gross_redemption_inr > redeemed_cost_basis:
@@ -727,6 +768,9 @@ def redeem(
                       "nav_per_unit": str(nav), "units": str(result.redeemed_units),
                       "gross_inr": str(result.gross_redemption_inr),
                       "exit_load_inr": str(result.exit_load_inr),
+                      "other_charges_inr": str(other_charges),
+                      "charge_breakdown": [(code, str(value))
+                                           for code, value in charge_breakdown],
                       "redeemed_cost_basis_inr": str(redeemed_cost_basis),
                       "nav_observation_id": nav_observation_id},
         )
@@ -739,17 +783,19 @@ def redeem(
                 "nav_per_unit": nav,
                 "gross_inr": result.gross_redemption_inr,
                 "exit_load_inr": result.exit_load_inr,
-                "net_inr": result.net_redemption_inr,
+                "other_charges_inr": other_charges,
+                "net_inr": net_redemption,
             }
             value_hash = _event_hash({"state": "VALUE_CONFIRMED", **value_evidence})
             con.execute("""UPDATE mf_paper_redemption_settlements SET
                 state='VALUE_CONFIRMED', redemption_event_id=?, eligible_nav_date=?,
                 nav_observation_id=?, nav_per_unit=?, gross_inr=?, exit_load_inr=?,
+                other_charges_inr=?,
                 net_inr=?, value_sha256=?, updated_at=?
                 WHERE account_id=? AND settlement_id=?""",
                 [event_id, redemption_date, nav_observation_id, nav,
-                 result.gross_redemption_inr, result.exit_load_inr,
-                 result.net_redemption_inr, value_hash, event_at,
+                 result.gross_redemption_inr, result.exit_load_inr, other_charges,
+                 net_redemption, value_hash, event_at,
                  account_id, settlement_id])
             con.execute("""INSERT INTO mf_paper_redemption_transitions (
                 account_id, settlement_id, sequence, state, transitioned_at,
@@ -759,7 +805,7 @@ def redeem(
                             default=str)])
             payout_evidence = {
                 "payout_due_date": payout_due_date,
-                "net_inr": result.net_redemption_inr,
+                "net_inr": net_redemption,
             }
             payout_hash = _event_hash({"state": "PAYOUT_PENDING", **payout_evidence})
             con.execute("""UPDATE mf_paper_redemption_settlements SET
@@ -789,7 +835,8 @@ def redeem(
         "units": result.redeemed_units,
         "gross_inr": result.gross_redemption_inr,
         "exit_load_inr": result.exit_load_inr,
-        "net_inr": result.net_redemption_inr,
+        "other_charges_inr": other_charges,
+        "net_inr": net_redemption,
         "allocations": result.allocations,
         "settlement_id": settlement_id,
         "state": "PAYOUT_PENDING" if settlement_id else None,

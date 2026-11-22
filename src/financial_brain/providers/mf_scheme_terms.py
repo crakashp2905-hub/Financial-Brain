@@ -40,6 +40,30 @@ class ExitLoadBand:
             raise SchemeTermsError("exit-load rate must be between 0 and 100 percent")
 
 
+@dataclass(frozen=True)
+class MFChargeRule:
+    """A source-disclosed percentage charge for a paper MF transaction.
+
+    The containing commercial-terms record supplies the effective interval, source,
+    publication/observation times, and permission evidence. No statutory rate is
+    inferred by this model.
+    """
+
+    code: str
+    applies_to: str
+    rate_percent: Decimal | str | int
+
+    def __post_init__(self) -> None:
+        if not self.code.strip():
+            raise SchemeTermsError("charge code is required")
+        if self.applies_to not in {"SUBSCRIBE", "REDEEM"}:
+            raise SchemeTermsError("charge applies_to must be SUBSCRIBE or REDEEM")
+        rate = _decimal(self.rate_percent, "charge rate")
+        if not Decimal(0) <= rate <= Decimal(100):
+            raise SchemeTermsError("charge rate must be between 0 and 100 percent")
+        object.__setattr__(self, "rate_percent", rate)
+
+
 def _decimal(value: Decimal | str | int, label: str) -> Decimal:
     try:
         result = value if isinstance(value, Decimal) else Decimal(str(value))
@@ -76,6 +100,7 @@ class SchemeCommercialTerms:
     source_sha256: str
     published_at: datetime
     observed_at: datetime
+    charge_schedule: tuple[MFChargeRule, ...] | None = None
 
     def __post_init__(self) -> None:
         for name in ("scheme_code", "plan", "option", "isin", "source_id", "source_ref"):
@@ -95,6 +120,12 @@ class SchemeCommercialTerms:
             days = [band.days_from_purchase for band in self.exit_loads]
             if days != sorted(set(days)):
                 raise SchemeTermsError("exit-load thresholds must be strictly increasing")
+        if self.charge_schedule is not None:
+            rules = tuple(self.charge_schedule)
+            keys = [(rule.code, rule.applies_to) for rule in rules]
+            if len(keys) != len(set(keys)):
+                raise SchemeTermsError("duplicate charge code and transaction type")
+            object.__setattr__(self, "charge_schedule", rules)
         if self.exit_restrictions is not None:
             try:
                 object.__setattr__(self, "exit_restrictions", tuple(
@@ -134,6 +165,10 @@ class SchemeCommercialTerms:
             "exit_loads": ([{"days": x.days_from_purchase,
                              "rate_percent": str(x.rate_percent)} for x in self.exit_loads]
                            if self.exit_loads is not None else None),
+            "charge_schedule": ([{"code": x.code, "applies_to": x.applies_to,
+                                  "rate_percent": str(x.rate_percent)}
+                                 for x in self.charge_schedule]
+                                if self.charge_schedule is not None else None),
             "minimum_initial_inr": decimal_text(self.minimum_initial_inr),
             "minimum_additional_inr": decimal_text(self.minimum_additional_inr),
             "minimum_redemption_inr": decimal_text(self.minimum_redemption_inr),
@@ -148,4 +183,4 @@ class SchemeCommercialTerms:
         return hashlib.sha256(body).hexdigest()
 
 
-__all__ = ["ExitLoadBand", "ExitRestriction", "SchemeCommercialTerms", "SchemeTermsError"]
+__all__ = ["ExitLoadBand", "ExitRestriction", "MFChargeRule", "SchemeCommercialTerms", "SchemeTermsError"]

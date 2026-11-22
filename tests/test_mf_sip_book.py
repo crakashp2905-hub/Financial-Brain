@@ -182,6 +182,7 @@ def test_sip_payment_reserve_and_allotment_reconcile_atomically(connection, monk
         option=installment.option, isin="INF123456789",
         effective_from=date(2026, 11, 1), effective_to=None,
         ter_percent=None, aum_inr=None, exit_loads=(),
+        charge_schedule=(),
         minimum_initial_inr=Decimal("0"), minimum_additional_inr=Decimal("0"),
         minimum_redemption_inr=Decimal("0"), exit_restrictions=(),
         source_id="AMC", source_ref="reviewed-sip-terms",

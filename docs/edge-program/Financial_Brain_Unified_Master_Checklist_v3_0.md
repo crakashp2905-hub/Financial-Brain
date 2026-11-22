@@ -266,7 +266,7 @@ Build one quant trading platform with five **operating desks**: (1) equity swing
 - [ ] **FB-0705** Determine **eligible NAV date** from accepted request + fund realization + effective cutoff; reject any attempt to choose a more favorable historical NAV after the fact.
 - [ ] **FB-0706** Use `NAV_PENDING` until eligible day's NAV is actually published/observed, then allot fractional MF units with proper precision.
 - [ ] **FB-0707** Implement redemption with cutoff, lot selection (FIFO default unless an actual platform rule specifies otherwise), units to redeem and deferred proceeds settlement.
-- [ ] **FB-0708** Book exit loads by purchase lot and holding age, stamp duties and any relevant charges by effective-dated rule.
+- [x] **FB-0708** Book exit loads by purchase lot and holding age, stamp duties and any relevant charges by effective-dated rule.
 - [ ] **FB-0709** Implement redemption cash state `REDEMPTION_PENDING -> VALUE_CONFIRMED -> PAYOUT_PENDING -> CASH_AVAILABLE`; prohibit redeploying unsettled proceeds.
 - [ ] **FB-0710** Simulate switches as paired switch-out and switch-in with asynchronous settlement and no phantom same-minute capital redeployment.
 - [ ] **FB-0711** Model SIP installments as repeated subscriptions with independent payment outcomes and allotment NAV; missed installments must stay missed.

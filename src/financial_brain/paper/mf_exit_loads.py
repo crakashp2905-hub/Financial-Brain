@@ -6,8 +6,31 @@ from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from ..providers.mf_scheme_terms import ExitLoadBand
+from ..providers.mf_scheme_terms import MFChargeRule
 
 PAISE = Decimal("0.01")
+
+
+def calculate_transaction_charges(
+    rules: tuple[MFChargeRule, ...] | None,
+    *,
+    transaction: str,
+    notional_inr: Decimal | str | int,
+) -> tuple[Decimal, tuple[tuple[str, Decimal], ...]]:
+    """Calculate source-disclosed percentage charges; unknown schedules fail closed."""
+    if transaction not in {"SUBSCRIBE", "REDEEM"}:
+        raise ExitLoadError("unsupported MF charge transaction")
+    if rules is None:
+        raise ExitLoadError("effective-dated MF transaction charge schedule is unknown")
+    notional = _positive(notional_inr, "charge notional", allow_zero=True)
+    breakdown: list[tuple[str, Decimal]] = []
+    for rule in rules:
+        if rule.applies_to == transaction:
+            amount = (notional * Decimal(rule.rate_percent) / Decimal(100)).quantize(
+                PAISE, rounding=ROUND_HALF_UP,
+            )
+            breakdown.append((rule.code, amount))
+    return sum((amount for _, amount in breakdown), Decimal(0)), tuple(breakdown)
 
 
 class ExitLoadError(ValueError):
@@ -119,5 +142,5 @@ def calculate_exit_loads(
 
 __all__ = [
     "ExitLoadAllocation", "ExitLoadError", "ExitLoadResult", "PurchaseLot",
-    "calculate_exit_loads",
+    "calculate_exit_loads", "calculate_transaction_charges",
 ]
