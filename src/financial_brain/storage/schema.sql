@@ -830,7 +830,7 @@ CREATE TABLE IF NOT EXISTS mf_paper_purchase_payment_events (
 
 CREATE TABLE IF NOT EXISTS mf_paper_purchase_eligibility (
     order_id VARCHAR PRIMARY KEY,
-    state VARCHAR NOT NULL CHECK (state IN ('NAV_PENDING', 'ALLOTTED')),
+    state VARCHAR NOT NULL CHECK (state IN ('NAV_PENDING', 'ALLOTTED', 'CANCELLED')),
     eligible_nav_date DATE NOT NULL,
     transaction_at TIMESTAMPTZ NOT NULL,
     decision_at TIMESTAMPTZ NOT NULL,
@@ -845,7 +845,9 @@ CREATE TABLE IF NOT EXISTS mf_paper_purchase_eligibility (
     CHECK ((state='NAV_PENDING' AND nav_observation_id IS NULL
         AND nav_per_unit IS NULL AND units_allotted IS NULL AND allotment_sha256 IS NULL)
         OR (state='ALLOTTED' AND nav_observation_id IS NOT NULL
-        AND nav_per_unit > 0 AND units_allotted > 0 AND allotment_sha256 IS NOT NULL))
+        AND nav_per_unit > 0 AND units_allotted > 0 AND allotment_sha256 IS NOT NULL)
+        OR (state='CANCELLED' AND nav_observation_id IS NULL
+        AND nav_per_unit IS NULL AND units_allotted IS NULL AND allotment_sha256 IS NULL))
 );
 
 -- Scheduled MF SIP debits are independent installments with terminal missed outcomes.
@@ -943,7 +945,7 @@ CREATE TABLE IF NOT EXISTS mf_paper_systematic_events (
     event_id VARCHAR NOT NULL,
     kind VARCHAR NOT NULL CHECK (kind IN (
         'REDEMPTION_REQUESTED', 'VALUE_CONFIRMED', 'PAYOUT_AVAILABLE',
-        'PURCHASE_FUNDS_APPLIED', 'ALLOTMENT_CONFIRMED', 'MISSED'
+        'PURCHASE_FUNDS_APPLIED', 'ALLOTMENT_CONFIRMED', 'PURCHASE_CANCELLED', 'MISSED'
     )),
     effective_at TIMESTAMPTZ NOT NULL,
     recorded_at TIMESTAMPTZ NOT NULL,
@@ -963,6 +965,20 @@ CREATE TABLE IF NOT EXISTS mf_paper_systematic_events (
     PRIMARY KEY (instruction_id, sequence),
     UNIQUE (instruction_id, event_id),
     UNIQUE (instruction_id, event_sha256)
+);
+
+-- Fixed-INR SWP/STP requests retain accepted-order NAV eligibility until the
+-- eligible NAV is published and the resulting units can be reserved precisely.
+CREATE TABLE IF NOT EXISTS mf_paper_systematic_redemption_eligibility (
+    instruction_id VARCHAR PRIMARY KEY,
+    order_id VARCHAR NOT NULL UNIQUE,
+    requested_at TIMESTAMPTZ NOT NULL,
+    eligible_nav_date DATE NOT NULL,
+    transaction_at TIMESTAMPTZ NOT NULL,
+    decision_at TIMESTAMPTZ NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    eligibility_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS mf_paper_lots (

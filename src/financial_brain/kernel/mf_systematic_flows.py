@@ -26,6 +26,7 @@ class MFSystematicFlowEventKind(StrEnum):
     PAYOUT_AVAILABLE = "PAYOUT_AVAILABLE"
     PURCHASE_FUNDS_APPLIED = "PURCHASE_FUNDS_APPLIED"
     ALLOTMENT_CONFIRMED = "ALLOTMENT_CONFIRMED"
+    PURCHASE_CANCELLED = "PURCHASE_CANCELLED"
     MISSED = "MISSED"
 
 
@@ -147,8 +148,15 @@ class MFSystematicFlowEvent:
             charges = self.exit_load_inr + self.other_charges_inr
             if (self.gross_inr - charges).quantize(Decimal("0.01")) != self.amount_inr.quantize(Decimal("0.01")):
                 raise MFSystematicFlowError("net redemption value must reconcile to gross less charges")
+            if (self.units is None) != (self.nav_per_unit is None):
+                raise MFSystematicFlowError("redemption unit and NAV evidence must be recorded together")
+            if self.units is not None and self.nav_per_unit is not None:
+                assert self.gross_inr is not None
+                if (self.units * self.nav_per_unit).quantize(Decimal("0.01")) != self.gross_inr.quantize(Decimal("0.01")):
+                    raise MFSystematicFlowError("redeemed units x NAV must reconcile to gross value")
         elif self.kind in (MFSystematicFlowEventKind.PAYOUT_AVAILABLE,
-                           MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED):
+                           MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED,
+                           MFSystematicFlowEventKind.PURCHASE_CANCELLED):
             if self.amount_inr is None:
                 raise MFSystematicFlowError("payout/funding event requires amount")
         elif self.kind is MFSystematicFlowEventKind.ALLOTMENT_CONFIRMED:
@@ -160,6 +168,9 @@ class MFSystematicFlowEvent:
         elif self.kind is MFSystematicFlowEventKind.MISSED:
             if not (self.reason and self.reason.strip()):
                 raise MFSystematicFlowError("missed event requires a reason")
+        if (self.kind is MFSystematicFlowEventKind.PURCHASE_CANCELLED
+                and not (self.reason and self.reason.strip())):
+            raise MFSystematicFlowError("cancelled STP purchase requires a reason")
         provenance = (self.source_id, self.source_ref, self.source_sha256)
         if basis is MFSystematicFlowBasis.OBSERVED_EVIDENCE:
             if not all(provenance) or not re.fullmatch(r"[0-9a-fA-F]{64}", self.source_sha256 or ""):
@@ -190,8 +201,11 @@ class MFSystematicFlowLifecycle:
                     MFSystematicFlowEventKind.VALUE_CONFIRMED,
                     MFSystematicFlowEventKind.PAYOUT_AVAILABLE]
         if self.instruction.kind is MFSystematicFlowKind.STP:
-            expected.extend((MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED,
-                             MFSystematicFlowEventKind.ALLOTMENT_CONFIRMED))
+            expected.append(MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED)
+            if kinds[-1:] == [MFSystematicFlowEventKind.PURCHASE_CANCELLED]:
+                expected.append(MFSystematicFlowEventKind.PURCHASE_CANCELLED)
+            elif len(kinds) >= 5:
+                expected.append(MFSystematicFlowEventKind.ALLOTMENT_CONFIRMED)
         if kinds == [MFSystematicFlowEventKind.MISSED]:
             if events[0].effective_at.astimezone(IST).date() < self.instruction.scheduled_for:
                 raise MFSystematicFlowError("missed event precedes its scheduled date")
@@ -215,6 +229,9 @@ class MFSystematicFlowLifecycle:
             raise MFSystematicFlowError("STP purchase cannot use more than settled proceeds")
         if len(events) >= 5 and events[4].amount != events[3].amount:
             raise MFSystematicFlowError("STP allotment amount must equal applied purchase funds")
+        if (len(events) >= 5 and events[4].kind is MFSystematicFlowEventKind.PURCHASE_CANCELLED
+                and events[4].amount != events[3].amount):
+            raise MFSystematicFlowError("STP cancellation must release the full reserved purchase")
         object.__setattr__(self, "events", events)
 
     def append(self, event: MFSystematicFlowEvent) -> MFSystematicFlowLifecycle:
@@ -229,6 +246,9 @@ class MFSystematicFlowLifecycle:
         if len(self.events) < 3 or self.events[2].kind is not MFSystematicFlowEventKind.PAYOUT_AVAILABLE:
             return Decimal(0)
         if len(self.events) < 4:
+            return self.events[2].amount
+        if (len(self.events) >= 5
+                and self.events[4].kind is MFSystematicFlowEventKind.PURCHASE_CANCELLED):
             return self.events[2].amount
         return self.events[2].amount - self.events[3].amount
 
