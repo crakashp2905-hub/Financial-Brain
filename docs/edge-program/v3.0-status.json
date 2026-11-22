@@ -2977,13 +2977,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Single-leg recommendation is long premium only; paper debit vertical requires feasible long/short leg quotes and reports bounded economic risk; margin and settlement are explicitly unverified.",
-        "These controls are not an all-strategy OMS gate, so universal enforcement against naked writing and unsupported settlement is unproven."
+        "The option plan and paper router only propose long CE/PE positions; the paper debit-vertical entry envelope models a long protective leg and short capped leg.",
+        "Added validate_supported_paper_option_structure and applied it to forward_edge option risk and executable-spread analysis. It permits a long option or one correctly ordered two-leg debit vertical, checks opposite CE/PE strike ordering and debit below maximum payoff width, and requires protective BUY before SELL in risk leg sequencing.",
+        "Naked shorts, credit spreads, reversed verticals, and structures with more than two legs now fail closed. Expiry/physical-delivery calculations remain scenario reports only and do not authorize settlement or orders.",
+        "Still PARTIAL: the strategy-shape gate is not yet enforced by every paper/OMS entry path; durable multi-leg partial-fill, margin, and settlement lifecycle controls remain outstanding."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T17:55:47Z",
+      "commit": "3066358d",
+      "test_result": "Focused option risk/spread and paper spread suite: 18 passed in 1.43s; Ruff and targeted mypy passed. Adversarial cases cover naked short, credit debit, reversed vertical, short-first leg sequence, and unsupported multi-leg structure.",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 18 passed.",
+        "Ruff passed on changed source and tests; mypy passed for forward_edge/options_risk.py and options_spread.py."
+      ]
     },
     {
       "id": "FB-0809",
@@ -15568,7 +15574,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T12:07:03Z",
+    "as_of_utc": "2026-11-22T17:55:47Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15893,7 +15899,12 @@
       "src/financial_brain/paper/mf_redemption_settlement.py",
       "src/financial_brain/paper/mf_order_book.py",
       "src/financial_brain/paper/mf_flow_book.py",
-      "tests/test_mf_folio_book.py"
+      "tests/test_mf_folio_book.py",
+      "src/financial_brain/forward_edge/options_risk.py",
+      "src/financial_brain/forward_edge/options_spread.py",
+      "tests/test_forward_edge_options_risk.py",
+      "tests/test_forward_edge_options_spread.py",
+      "docs/edge-program/v3.0-status.json"
     ],
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing."
   },
