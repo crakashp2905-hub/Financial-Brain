@@ -2734,15 +2734,15 @@
       "id": "FB-0714",
       "text": "Model NAV-related mark-to-market only after publication; earlier performance must display last-known value with a stale flag.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "MF recommendation and scheme master preserve NAV status and observation/publication/availability clocks; MF return accounting uses observed NAV ratios.",
-        "paper/mf_lot_book.py account_snapshot(known_at=...) now values positions only from NAV observations available by that timestamp, matching scheme/ISIN/plan/option, and reports NAV provenance, market value, unrealized P&L, stale status, and unavailable counts."
+        "paper/mf_lot_book.py account_snapshot(known_at=...) values positions only from NAV observations available by that timestamp, matching scheme/ISIN/plan/option, and reports NAV provenance, market value, unrealized P&L, stale status, and unavailable counts.",
+        "paper/terminal.py renders the MF paper book at the report date's India-time cutoff, including last known NAV, NAV date, value, basis, unrealized P&L, and explicit STALE or NAV_UNAVAILABLE marks. A NAV ingested after the cutoff is excluded by the shared as-known valuation path."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest tests/test_mf_lot_book.py tests/test_mf_systematic_flow_book.py tests/test_mf_scheme_terms.py -q: 25 passed; Ruff and mypy passed"
+      "last_audited_at_utc": "2026-11-22T02:57:00Z",
+      "commit": "2f5f6f0c",
+      "test_result": "python -m pytest tests/test_mf_lot_book.py tests/test_mf_scheme_terms.py tests/test_evidence_claims.py tests/test_migrations.py -q: 27 passed; Ruff passed"
     },
     {
       "id": "FB-0715",
