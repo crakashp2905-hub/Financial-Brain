@@ -2903,7 +2903,7 @@
       ],
       "blocker": "The canonical paper runner now walks observed opposing quote depth, but queue position, replenishment, and broad migration of every strategy to this common execution contract remain unvalidated; only the displayed book at the eligible quote is executable evidence.",
       "last_audited_at_utc": "2026-11-22T14:43:08Z",
-      "commit": "92d60fc8",
+      "commit": "49e6fd48",
       "test_result": "python -m pytest tests/test_forward_edge_execution_scenario.py tests/test_forward_edge_session_runner.py -q: 66 passed in 109.04s. Focused multi-level durable receipt coverage; Ruff and targeted mypy passed."
     },
     {
