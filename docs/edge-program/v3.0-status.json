@@ -3603,13 +3603,17 @@
       "id": "FB-1108",
       "text": "Show MF `SUBSCRIBE`, `REDEEM`, `SWITCH`, `SIP`, `HOLD` as decisions, not misleading buy-at-current-price buttons.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No MF decision workflow for SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD found; recommendations remain research primitives"
+        "src/financial_brain/paper/terminal.py displays SUBSCRIBE, REDEEM, SWITCH, SIP and HOLD as distinct MF portfolio decisions, with cutoff, NAV, funding, payout and settlement timing explained; HOLD is explicitly no-order.",
+        "The MF terminal labels the section as decisions, not instant buy-at-current-price controls, and states that no market-price fill is implied.",
+        "tests/test_mf_lot_book.py -k mf_terminal_: 5 passed; Ruff passed.",
+        "Remaining: decisions are explanatory display rows, not yet linked to an operator-choice journal or end-to-end decision capture workflow."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: decision semantics are visible and execution timing is clear, but the MF terminal does not yet persist the chosen decision or link it to a specific proposal.",
+      "last_audited_at_utc": "2026-11-22T20:13:30Z",
+      "commit": "41275e4a6f1c3a703450412c6b259f8aa09fb214",
+      "test_result": "Windows local: five MF terminal tests passed; Ruff passed."
     },
     {
       "id": "FB-1109",
@@ -15612,7 +15616,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T20:09:51Z",
+    "as_of_utc": "2026-11-22T20:13:30Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15864,9 +15868,9 @@
     "audited_count": 246,
     "status_counts": {
       "COMPLETE": 42,
-      "PARTIAL": 191,
+      "PARTIAL": 192,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 12,
+      "NOT_STARTED": 11,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -15959,13 +15963,13 @@
       "src/financial_brain/paper/terminal.py",
       "tests/test_mf_lot_book.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass."
   },
   "counts_by_status": {
     "COMPLETE": 42,
-    "PARTIAL": 191,
+    "PARTIAL": 192,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 12,
+    "NOT_STARTED": 11,
     "UNASSESSED": 1132
   }
 }
