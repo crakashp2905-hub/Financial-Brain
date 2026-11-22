@@ -223,6 +223,7 @@
         "events.classify",
         "evidence",
         "features",
+        "financial_brain.forward_edge.alerts",
         "financial_brain.patterns.cli",
         "forward_edge.cli",
         "graph",
@@ -269,7 +270,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "983f170f1bab9c6764277da9f495190a85bdbbafa1f0b91b5071bc15ab4d2944",
+      "source_sha256": "a3372dd55fcde3c5baf23663c48a1bc692eba28e12eea2ffc65b7c6778519349",
       "test_paths": []
     },
     {
@@ -3367,13 +3368,14 @@
         "json",
         "math",
         "pathlib",
-        "sqlite3"
+        "sqlite3",
+        "zoneinfo"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/alerts.py",
-      "source_sha256": "92bf51c6c76039849b4ffe2f1223b580e117a21b24fd45b1a44c7297ff803439",
+      "source_sha256": "d9ff703667a2cd35a1c214b0d50de52dd02e9ada72f4dc8e948a0fa79fba896b",
       "test_paths": []
     },
     {

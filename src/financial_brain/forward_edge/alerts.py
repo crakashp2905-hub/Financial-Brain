@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import math
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ALERT_TYPES = frozenset({
     "STALE_QUOTE", "STALE_DATA", "TOKEN_EXPIRED", "SESSION_ABORTED", "DUPLICATE_ORDER",
@@ -166,9 +167,9 @@ def evaluate_desk_alerts(
         item_id = str(row.get("item_id", "")).strip()
         stage = str(row.get("stage", "")).strip().upper()
         age_days = row.get("age_days")
-        if (not item_id or stage not in {"ALLOTMENT", "PAYOUT"} or type(age_days) is not int
+        if (not item_id or stage not in {"UNITS", "PAYOUT"} or type(age_days) is not int
                 or age_days < 0):
-            raise AlertError("MF pending alert needs item ID, ALLOTMENT/PAYOUT stage and whole age days")
+            raise AlertError("MF pending alert needs item ID, UNITS/PAYOUT stage and whole age days")
         if age_days >= mf_pending_after_days:
             emit(f"mf:{item_id}:{stage}:pending", "MF_PENDING", "WARNING",
                  f"MF {stage.lower()} {item_id} remains pending for {age_days} days.")
@@ -203,3 +204,31 @@ def evaluate_desk_alerts(
             emit(f"risk-budget:{budget_id}:{old}:{new}", "RISK_BUDGET_CHANGE", "WARNING",
                  f"Risk budget {budget_id} changed from {old:g} to {new:g}.")
     return out
+
+
+def mutual_fund_pending_rows(connection, *, as_of: datetime) -> tuple[dict, ...]:
+    """Read unresolved MF units and payout states from the migrated paper-book database."""
+    if as_of.tzinfo is None or as_of.utcoffset() is None:
+        raise AlertError("MF pending query as_of must be timezone aware")
+    cutoff = as_of.astimezone(timezone.utc)
+    local_day = as_of.astimezone(ZoneInfo("Asia/Kolkata")).date()
+    rows: list[dict] = []
+    purchases = connection.execute("""SELECT o.account_id, e.order_id, e.transaction_at
+        FROM mf_paper_purchase_eligibility e JOIN mf_paper_orders o USING (order_id)
+        WHERE e.state='NAV_PENDING' AND o.transaction_type='PURCHASE'
+          AND e.transaction_at<=? AND e.updated_at<=? AND o.created_at<=?
+        ORDER BY o.account_id, e.order_id""", [cutoff, cutoff, cutoff]).fetchall()
+    for account_id, order_id, transaction_at in purchases:
+        transaction_day = transaction_at.astimezone(ZoneInfo("Asia/Kolkata")).date()
+        rows.append({"item_id": f"{account_id}:{order_id}", "stage": "UNITS",
+                     "age_days": max(0, (local_day - transaction_day).days)})
+    redemptions = connection.execute("""SELECT account_id, settlement_id, state, requested_on
+        FROM mf_paper_redemption_settlements
+        WHERE state IN ('REDEMPTION_PENDING','VALUE_CONFIRMED','PAYOUT_PENDING')
+          AND created_at<=? AND updated_at<=?
+        ORDER BY account_id, settlement_id""", [cutoff, cutoff]).fetchall()
+    for account_id, settlement_id, state, requested_on in redemptions:
+        rows.append({"item_id": f"{account_id}:{settlement_id}",
+                     "stage": "UNITS" if state == "REDEMPTION_PENDING" else "PAYOUT",
+                     "age_days": max(0, (local_day - requested_on).days)})
+    return tuple(rows)
