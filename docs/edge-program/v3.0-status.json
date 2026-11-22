@@ -2740,9 +2740,9 @@
         "paper/terminal.py renders the MF paper book at the report date's India-time cutoff, including last known NAV, NAV date, value, basis, unrealized P&L, and explicit STALE or NAV_UNAVAILABLE marks. A NAV ingested after the cutoff is excluded by the shared as-known valuation path."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T02:32:00Z",
-      "commit": "c2799415",
-      "test_result": "python -m pytest tests/test_mf_lot_book.py tests/test_evidence_claims.py -q: 18 passed; Ruff passed"
+      "last_audited_at_utc": "2026-11-22T02:57:00Z",
+      "commit": "2f5f6f0c",
+      "test_result": "python -m pytest tests/test_mf_lot_book.py tests/test_mf_scheme_terms.py tests/test_evidence_claims.py tests/test_migrations.py -q: 27 passed; Ruff passed"
     },
     {
       "id": "FB-0715",
