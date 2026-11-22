@@ -64,6 +64,9 @@ class Database:
         # Persist the specific effective paper-use grant that authorized each observed
         # purchase-payment milestone so its event hash can be independently reproduced.
         "ALTER TABLE mf_paper_purchase_payment_events ADD COLUMN IF NOT EXISTS permission_evidence_json VARCHAR DEFAULT '[]'",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS order_id VARCHAR",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS eligibility_sha256 VARCHAR",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS eligibility_evidence_json VARCHAR",
     ]
 
     def migrate(self) -> None:

@@ -502,6 +502,20 @@ def redeem(
             raise MfPaperBookError(
                 "settled redemption requires settlement ID, NAV observation ID and payout due date"
             )
+        frozen = con.execute("""SELECT state, eligible_nav_date, order_id,
+            redemption_event_id,
+            eligibility_sha256, eligibility_evidence_json FROM mf_paper_redemption_settlements
+            WHERE account_id=? AND settlement_id=?""", [account_id, settlement_id]).fetchone()
+        if frozen is None or (frozen[0] != "REDEMPTION_PENDING" and frozen[3] != event_id):
+            raise MfPaperBookError("redemption settlement is not pending value confirmation")
+        if frozen[1] is None or frozen[2] is None or frozen[4] is None or frozen[5] is None:
+            raise MfPaperBookError("redemption eligible NAV date has not been frozen")
+        if frozen[1] != redemption_date:
+            raise MfPaperBookError("redemption NAV date differs from frozen eligibility")
+        frozen_evidence = json.loads(frozen[5])
+        frozen_decision_at = _aware(datetime.fromisoformat(frozen_evidence["decision_at"]))
+        if decision_at < frozen_decision_at:
+            raise MfPaperBookError("redemption value decision predates NAV eligibility evidence")
         if payout_due_date < redemption_date:
             raise MfPaperBookError("payout due date precedes the eligible NAV date")
         from ..ingest.mfnav import as_known_on as mf_nav_as_known_on
@@ -556,7 +570,8 @@ def redeem(
         settlement = None
         if settlement_id is not None:
             settlement = con.execute("""SELECT scheme_code, plan, option, isin,
-                requested_units, requested_on, requested_at, state
+                requested_units, requested_on, requested_at, state, eligible_nav_date,
+                order_id, eligibility_sha256, eligibility_evidence_json
                 FROM mf_paper_redemption_settlements
                 WHERE account_id=? AND settlement_id=?""",
                 [account_id, settlement_id]).fetchone()
@@ -570,6 +585,16 @@ def redeem(
                 raise MfPaperBookError("redemption units differ from the pending request")
             if settlement[5] > redemption_date or settlement[6] > decision_at:
                 raise MfPaperBookError("redemption valuation predates its request")
+            if settlement[8] is None or settlement[9] is None or settlement[10] is None:
+                raise MfPaperBookError("redemption eligible NAV date has not been frozen")
+            if settlement[8] != redemption_date:
+                raise MfPaperBookError("redemption NAV date differs from frozen eligibility")
+            eligibility_evidence = json.loads(settlement[11])
+            eligibility_decided_at = _aware(
+                datetime.fromisoformat(eligibility_evidence["decision_at"])
+            )
+            if decision_at < eligibility_decided_at:
+                raise MfPaperBookError("redemption value decision predates NAV eligibility evidence")
         rows = con.execute(
             """SELECT lot_id, allotted_on, units_remaining, exit_loads_json, lock_in_until,
                 purchase_nav

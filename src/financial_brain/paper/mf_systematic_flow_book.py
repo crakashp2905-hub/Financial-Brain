@@ -15,6 +15,10 @@ from ..kernel.mf_systematic_flows import (
     MFSystematicFlowKind, MFSystematicFlowLifecycle,
 )
 from ..kernel.trading_clock import IST
+from ..kernel.fund_transactions import SchemeTransactionCalendar
+from ..kernel.mf_order import (
+    MFOrder, MFOrderAcknowledgement, MFOrderEvidenceBasis, MFOrderKind, MFOrderState,
+)
 
 
 class MFSystematicFlowBookError(ValueError):
@@ -263,6 +267,7 @@ def request_systematic_redemption(
     instruction_id: str,
     requested_at: datetime,
     now: datetime,
+    scheme_calendar: SchemeTransactionCalendar,
     permissions: tuple[DataPermission, ...] = (),
 ) -> dict[str, object]:
     """Create the canonical reserved-unit redemption for a periodic MF instruction.
@@ -286,7 +291,8 @@ def request_systematic_redemption(
         raise MFSystematicFlowBookError(
             "amount-denominated systematic redemption needs an explicit amount-to-units adapter"
         )
-    from .mf_redemption_settlement import request_redemption
+    from .mf_order_book import record_response, submit_order
+    from .mf_redemption_settlement import request_redemption, resolve_redemption_nav_eligibility
 
     settlement_id = f"systematic:{instruction.instruction_id}"
     settlement = request_redemption(
@@ -296,6 +302,28 @@ def request_systematic_redemption(
         requested_units=instruction.units,
         requested_on=requested_time.astimezone(IST).date(),
         requested_at=requested_time, now=recorded_at,
+    )
+    order_id = f"systematic-order:{instruction.instruction_id}"
+    order = MFOrder(
+        order_id=order_id, account_id=instruction.account_id, folio_id=instruction.folio_id,
+        scheme_code=instruction.source_scheme, plan=instruction.source_plan,
+        option=instruction.source_option, transaction_type=MFOrderKind.REDEMPTION,
+        requested_at=requested_time, units=instruction.units,
+    )
+    submit_order(
+        con, order, valid_business_days=1, calendar=scheme_calendar, now=recorded_at,
+    )
+    record_response(
+        con, MFOrderAcknowledgement(
+            order_id=order_id, state=MFOrderState.ACCEPTED,
+            effective_at=requested_time, received_at=requested_time,
+            basis=MFOrderEvidenceBasis.SIMULATED_ASSUMPTION,
+        ), permissions=permissions, now=recorded_at,
+    )
+    resolve_redemption_nav_eligibility(
+        con, account_id=instruction.account_id, settlement_id=settlement_id,
+        order_id=order_id, scheme_calendar=scheme_calendar, permissions=permissions,
+        decision_at=recorded_at, now=recorded_at,
     )
     event = MFSystematicFlowEvent(
         event_id=f"{instruction.instruction_id}:redemption-requested",

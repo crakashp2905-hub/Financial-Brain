@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 import duckdb
@@ -11,6 +11,13 @@ from financial_brain.forward_edge.data_permissions import (
     PermissionStatus,
 )
 from financial_brain.ingest.mf_scheme_terms import persist as persist_scheme_terms
+from financial_brain.kernel.fund_transactions import (
+    SchemeTransactionCalendar, SchemeTransactionRule, TransactionKind,
+)
+from financial_brain.kernel.mf_order import (
+    MFOrder, MFOrderAcknowledgement, MFOrderEvidenceBasis, MFOrderKind, MFOrderState,
+)
+from financial_brain.kernel.trading_clock import BusinessCalendar, CalendarDomain
 from financial_brain.paper.mf_lot_book import (
     MfPaperBookError,
     account_snapshot,
@@ -21,8 +28,10 @@ from financial_brain.paper.mf_lot_book import (
 from financial_brain.paper.mf_redemption_settlement import (
     make_cash_available,
     request_redemption,
+    resolve_redemption_nav_eligibility,
     settlement_snapshot,
 )
+from financial_brain.paper.mf_order_book import record_response, submit_order
 from financial_brain.providers.mf_scheme_terms import (
     ExitLoadBand,
     ExitRestriction,
@@ -174,6 +183,52 @@ def _redeem(
         decision_at=decision_at,
         now=PAPERED,
         **kwargs,
+    )
+
+
+def _resolve_redemption_nav(con, *, settlement_id, requested_at, units):
+    order_id = f"order:{settlement_id}"
+    order = MFOrder(
+        order_id=order_id, account_id="paper-1", folio_id="synthetic-1",
+        scheme_code="100001", plan="DIRECT", option="GROWTH",
+        transaction_type=MFOrderKind.REDEMPTION, requested_at=requested_at,
+        units=str(units),
+    )
+    open_days = frozenset(
+        day for day in (date(2026, 1, 12) + timedelta(days=offset) for offset in range(25))
+        if day.weekday() < 5
+    )
+    calendar = BusinessCalendar(
+        calendar_id="100001", domain=CalendarDomain.SCHEME,
+        coverage_start=date(2026, 1, 1), source_as_of=date(2026, 2, 10),
+        open_days=open_days, source_ref="scheme-calendar", source_sha256=HASH_B,
+        recorded_at=NOW,
+    )
+    nav_rule = SchemeTransactionRule(
+        scheme_id="100001", transaction_kind=TransactionKind.REDEMPTION,
+        effective_from=date(2026, 1, 1), effective_to=None, cutoff_local=time(14),
+        before_cutoff_lag=0, after_cutoff_lag=1, closed_day_lag=1,
+        published_at=NOW, source_ref="redemption-cutoff", source_sha256=HASH_A,
+    )
+    scheme_calendar = SchemeTransactionCalendar({"100001": calendar}, (nav_rule,))
+    submitted = submit_order(
+        con, order, valid_business_days=10, calendar=scheme_calendar,
+        now=requested_at,
+    )
+    assert submitted["state"] in {"REQUESTED", "ACCEPTED"}
+    accepted_at = datetime(2026, 1, 16, 8, tzinfo=timezone.utc)
+    accepted = record_response(
+        con, MFOrderAcknowledgement(
+            order_id=order_id, state=MFOrderState.ACCEPTED,
+            effective_at=accepted_at, received_at=accepted_at + timedelta(seconds=5),
+            basis=MFOrderEvidenceBasis.SIMULATED_ASSUMPTION,
+        ), now=accepted_at + timedelta(seconds=5),
+    )
+    assert accepted["state"] == "ACCEPTED"
+    return resolve_redemption_nav_eligibility(
+        con, account_id="paper-1", settlement_id=settlement_id,
+        order_id=order_id, scheme_calendar=scheme_calendar, permissions=(),
+        decision_at=datetime(2026, 1, 16, 9, tzinfo=timezone.utc), now=PAPERED,
     )
 
 
@@ -598,6 +653,14 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
         now=request_at,
     )
     assert replayed_request["status"] == "already_submitted"
+    eligibility = _resolve_redemption_nav(
+        con, settlement_id="red-settlement", requested_at=request_at, units=4,
+    )
+    assert eligibility["eligible_nav_date"] == date(2026, 1, 16)
+    assert eligibility["status"] == "resolved"
+    assert _resolve_redemption_nav(
+        con, settlement_id="red-settlement", requested_at=request_at, units=4,
+    )["status"] == "already_resolved"
 
     with pytest.raises(MfPaperBookError, match="exceed the paper-book precision"):
         request_redemption(
@@ -622,6 +685,13 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
         available_at=nav_available_at,
     )
     decision_at = datetime(2026, 1, 16, 11, tzinfo=timezone.utc)
+    with pytest.raises(MfPaperBookError, match="differs from frozen eligibility"):
+        _redeem(
+            con, event_id="redeem-wrong-nav-date", redemption_date=date(2026, 1, 19), units=4,
+            terms=terms, decision_at=decision_at, nav_per_unit=120,
+            settlement_id="red-settlement", nav_observation_id="nav-settlement",
+            payout_due_date=date(2026, 1, 19),
+        )
     result = _redeem(
         con, event_id="redeem-settlement", redemption_date=nav_date, units=4,
         terms=terms, decision_at=decision_at, nav_per_unit=120,
@@ -648,6 +718,8 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
     )
     assert settlement["state"] == "PAYOUT_PENDING"
     assert settlement["nav_observation_id"] == "nav-settlement"
+    assert settlement["eligible_nav_date"] == nav_date
+    assert settlement["order_id"] == "order:red-settlement"
     assert [item[0] for item in settlement["transitions"]] == [
         "REDEMPTION_PENDING", "VALUE_CONFIRMED", "PAYOUT_PENDING",
     ]
@@ -819,6 +891,9 @@ def test_settlement_value_requires_exact_as_known_nav_observation(connection):
         scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
         requested_units=1, requested_on=date(2026, 1, 10), requested_at=requested_at,
         now=requested_at,
+    )
+    _resolve_redemption_nav(
+        con, settlement_id="red-nav-gate", requested_at=requested_at, units=1,
     )
     nav_date = date(2026, 1, 16)
     nav_at = datetime(2026, 1, 16, 10, tzinfo=timezone.utc)
