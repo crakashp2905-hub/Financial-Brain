@@ -309,7 +309,9 @@ def subscribe(
             terms.minimum_additional_inr
             if has_prior_subscription else terms.minimum_initial_inr
         )
-        if minimum is not None and amount < Decimal(str(minimum)):
+        if minimum is None:
+            raise MfPaperBookError("sourced subscription minimum is unknown")
+        if amount < Decimal(str(minimum)):
             kind = "additional" if has_prior_subscription else "initial"
             raise MfPaperBookError(
                 f"subscription is below the sourced {kind} minimum of INR {minimum}"
@@ -431,6 +433,14 @@ def redeem(
             raise MfPaperBookError(f"{label} is required")
     units = _decimal(redemption_units, "redemption units")
     nav = _decimal(nav_per_unit, "NAV")
+    minimum_redemption = terms.minimum_redemption_inr
+    if minimum_redemption is None:
+        raise MfPaperBookError("sourced redemption minimum is unknown")
+    if units * nav < Decimal(str(minimum_redemption)):
+        raise MfPaperBookError(
+            "gross redemption value is below the sourced minimum of "
+            f"INR {minimum_redemption}"
+        )
     event_at = _aware(now)
     decision_at = _aware(decision_at)
     if (terms.scheme_code, terms.plan, terms.option, terms.isin) != (

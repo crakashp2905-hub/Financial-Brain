@@ -23,9 +23,10 @@ def persist(con, record: SchemeCommercialTerms, *,
     con.execute("""INSERT INTO mf_scheme_commercial_terms (
         record_id, scheme_code, plan, option, isin, effective_from, effective_to,
         ter_percent, aum_inr, exit_loads_json, minimum_initial_inr,
-        minimum_additional_inr, exit_restrictions_json, source_id, source_ref,
+        minimum_additional_inr, minimum_redemption_inr, exit_restrictions_json,
+        source_id, source_ref,
         source_sha256, published_at, observed_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(record_id) DO NOTHING""",
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(record_id) DO NOTHING""",
         [record.record_id, record.scheme_code, record.plan, record.option, record.isin,
          record.effective_from, record.effective_to,
          str(record.ter_percent) if record.ter_percent is not None else None,
@@ -34,6 +35,8 @@ def persist(con, record: SchemeCommercialTerms, *,
          str(record.minimum_initial_inr) if record.minimum_initial_inr is not None else None,
          str(record.minimum_additional_inr)
          if record.minimum_additional_inr is not None else None,
+         str(record.minimum_redemption_inr)
+         if record.minimum_redemption_inr is not None else None,
          restrictions, record.source_id, record.source_ref, record.source_sha256,
          record.published_at.astimezone(timezone.utc),
          record.observed_at.astimezone(timezone.utc)])
@@ -50,7 +53,8 @@ def as_known_on(con, scheme_code: str, plan: str, option: str, isin: str, *,
         raise ValueError("decision_date cannot be after decision_at in India")
     rows = con.execute("""SELECT record_id, scheme_code, plan, option, isin,
         effective_from, effective_to, ter_percent, aum_inr, exit_loads_json,
-        minimum_initial_inr, minimum_additional_inr, exit_restrictions_json,
+        minimum_initial_inr, minimum_additional_inr, minimum_redemption_inr,
+        exit_restrictions_json,
         source_id, source_ref, source_sha256, published_at, observed_at
         FROM mf_scheme_commercial_terms
         WHERE scheme_code=? AND plan=? AND option=? AND isin=?
@@ -61,14 +65,16 @@ def as_known_on(con, scheme_code: str, plan: str, option: str, isin: str, *,
          decision_at.astimezone(timezone.utc), decision_at.astimezone(timezone.utc)]).fetchall()
     if not rows:
         return None
-    if len(rows) > 1 and rows[0][16:18] == rows[1][16:18]:
+    if len(rows) > 1 and rows[0][17:19] == rows[1][17:19]:
         raise SchemeTermsError("ambiguous commercial terms at decision timestamp")
     keys = ("record_id", "scheme_code", "plan", "option", "isin", "effective_from",
             "effective_to", "ter_percent", "aum_inr", "exit_loads_json",
-            "minimum_initial_inr", "minimum_additional_inr", "exit_restrictions_json",
+            "minimum_initial_inr", "minimum_additional_inr", "minimum_redemption_inr",
+            "exit_restrictions_json",
             "source_id", "source_ref", "source_sha256", "published_at", "observed_at")
     result = dict(zip(keys, rows[0], strict=True))
-    for name in ("ter_percent", "aum_inr", "minimum_initial_inr", "minimum_additional_inr"):
+    for name in ("ter_percent", "aum_inr", "minimum_initial_inr", "minimum_additional_inr",
+                 "minimum_redemption_inr"):
         if result[name] is not None:
             result[name] = Decimal(result[name])
     for name in ("exit_loads_json", "exit_restrictions_json"):

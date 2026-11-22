@@ -31,6 +31,7 @@ def test_an_older_database_gains_the_added_columns(tmp_path):
     con = duckdb.connect(str(cfg.db_path))
     con.execute("ALTER TABLE llm_calls DROP COLUMN cost_usd")
     con.execute("ALTER TABLE announcement_tone DROP COLUMN text_source")
+    con.execute("ALTER TABLE mf_scheme_commercial_terms DROP COLUMN minimum_redemption_inr")
     con.close()
     Database(cfg).migrate()
     assert _schema(cfg.db_path) == fresh

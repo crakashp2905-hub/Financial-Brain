@@ -643,6 +643,7 @@ CREATE TABLE IF NOT EXISTS mf_scheme_commercial_terms (
     exit_loads_json VARCHAR,
     minimum_initial_inr VARCHAR,
     minimum_additional_inr VARCHAR,
+    minimum_redemption_inr VARCHAR,
     exit_restrictions_json VARCHAR,
     source_id       VARCHAR NOT NULL,
     source_ref       VARCHAR NOT NULL,

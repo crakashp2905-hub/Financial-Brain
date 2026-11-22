@@ -2721,13 +2721,14 @@
       "status": "PARTIAL",
       "evidence": [
         "MF redemption constraints handle available units, unknown/closed redemption restrictions, lock-ins, ELSS, windows, gating and segregated assets; MF unit flows support fractional units.",
-        "paper/mf_lot_book.py enforces point-in-time sourced initial and additional subscription minimums when those terms are present; missing source minimums remain explicitly unknown and are not guessed.",
-        "Minimum redemption values, explicit synthetic-folio ownership/restrictions, and fully integrated order availability are not modeled."
+        "Source-pinned MF commercial terms carry initial, additional and redemption minimums through record hashes, storage, migration and as-known resolution. The paper lot book enforces applicable subscription/redemption minimums and refuses unknown minimums without mutating the account.",
+        "The existing settlement path requires an exact persisted AMFI NAV observation available at value-confirmation time; partial and fractional-unit redemptions use available lots and lock-in/window/gating checks.",
+        "Explicit multi-folio ownership/restriction controls and full order-availability integration remain unmodeled."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "last_audited_at_utc": "2026-11-22T02:26:00Z",
+      "commit": "20751d3b",
+      "test_result": "python -m pytest tests/test_mf_scheme_terms.py tests/test_mf_lot_book.py tests/test_mf_flow_book.py tests/test_mf_systematic_flow_book.py tests/test_migrations.py -q: 36 passed; Ruff and mypy passed"
     },
     {
       "id": "FB-0714",
