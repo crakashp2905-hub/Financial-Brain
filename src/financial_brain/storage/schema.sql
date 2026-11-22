@@ -1060,6 +1060,57 @@ CREATE TABLE IF NOT EXISTS mf_paper_redemption_transitions (
     UNIQUE (account_id, settlement_id, state)
 );
 
+-- A switch is a durable link between the source redemption settlement and the target
+-- switch-in purchase. Proceeds are not eligible to fund the target leg until the
+-- source settlement is CASH_AVAILABLE at a strictly earlier timestamp.
+CREATE TABLE IF NOT EXISTS mf_paper_switches (
+    account_id VARCHAR NOT NULL,
+    switch_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    source_scheme VARCHAR NOT NULL,
+    source_plan VARCHAR NOT NULL,
+    source_option VARCHAR NOT NULL,
+    source_isin VARCHAR NOT NULL,
+    target_scheme VARCHAR NOT NULL,
+    target_plan VARCHAR NOT NULL,
+    target_option VARCHAR NOT NULL,
+    target_isin VARCHAR NOT NULL,
+    requested_units DECIMAL(38,18) NOT NULL CHECK (requested_units > 0),
+    requested_at TIMESTAMPTZ NOT NULL,
+    settlement_id VARCHAR NOT NULL,
+    source_order_id VARCHAR,
+    target_order_id VARCHAR,
+    state VARCHAR NOT NULL CHECK (state IN (
+        'REQUESTED', 'SWITCH_OUT_VALUE_CONFIRMED', 'SWITCH_OUT_PROCEEDS_AVAILABLE',
+        'SWITCH_IN_FUNDS_APPLIED', 'SWITCH_IN_ALLOTMENT_CONFIRMED'
+    )),
+    source_net_inr DECIMAL(38,18),
+    proceeds_available_at TIMESTAMPTZ,
+    funds_applied_inr DECIMAL(38,18),
+    target_units DECIMAL(38,18),
+    target_nav DECIMAL(38,18),
+    request_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, switch_id),
+    UNIQUE (account_id, settlement_id)
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_switch_transitions (
+    account_id VARCHAR NOT NULL,
+    switch_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    state VARCHAR NOT NULL,
+    effective_at TIMESTAMPTZ NOT NULL,
+    amount_inr DECIMAL(38,18),
+    related_id VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, switch_id, sequence),
+    UNIQUE (account_id, switch_id, state),
+    UNIQUE (account_id, switch_id, event_sha256)
+);
+
 -- Durable paper-book application of already-attested, point-in-time MF economic
 -- flows. The source event remains in mf_scheme_flows; this account-scoped journal
 -- makes unit/cash adjustments idempotent and auditable across restart.
