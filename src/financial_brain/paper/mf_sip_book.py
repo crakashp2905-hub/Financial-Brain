@@ -7,6 +7,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from ..forward_edge.data_permissions import DataPermission, DataUse
+from ..kernel.fund_transactions import SchemeTransactionCalendar, TransactionKind
 from ..kernel.mf_sip import (
     MFSIPError, MFSIPInstallment, MFSIPSeries, MFSIPState,
     validate_installment_transition,
@@ -285,9 +286,10 @@ def apply_sip_allotment(
     con,
     *,
     installment_id: str,
-    nav_date: date,
+    order_id: str,
     nav_per_unit: Decimal | str | int,
     nav_observation_id: str,
+    scheme_calendar: SchemeTransactionCalendar,
     terms,
     permissions: tuple[DataPermission, ...],
     decision_at: datetime,
@@ -297,11 +299,15 @@ def apply_sip_allotment(
 ) -> dict[str, object]:
     """Atomically consume a reserved SIP payment into an observed NAV lot.
 
-    The NAV must be the exact persisted observation available at the decision time.
+    Acceptance time is read from the durable MF order book, not caller input. The
+    eligible NAV date is derived from the later of accepted-order time and cleared
+    payment time using the source-versioned scheme cutoff/calendar. The NAV must be the
+    exact persisted observation for that date available at the decision time.
     The account journal, FIFO lot, subscription event and ALLOTTED state commit or
     roll back together; replaying the same event is idempotent.
     """
     from ..ingest.mfnav import as_known_on as mf_nav_as_known_on
+    from ..kernel.mf_order import MFOrderKind, MFOrderState
     from .mf_lot_book import subscribe
 
     decision_time = _aware(decision_at, "decision_at")
@@ -315,6 +321,8 @@ def apply_sip_allotment(
         raise MFSIPBookError("NAV must be a positive finite decimal")
     if not nav_observation_id.strip():
         raise MFSIPBookError("SIP allotment requires a NAV observation ID")
+    if not order_id.strip():
+        raise MFSIPBookError("SIP allotment requires its durable accepted order ID")
     if recorded_at < allotment_time or allotment_time < decision_time:
         raise MFSIPBookError("SIP allotment clocks are out of order")
 
@@ -333,18 +341,62 @@ def apply_sip_allotment(
             raise MFSIPBookError("SIP allotment requires cleared installment funds")
         if installment.funds_available_at is None or decision_time < installment.funds_available_at:
             raise MFSIPBookError("SIP decision precedes cleared payment funds")
+        order_row = con.execute("""SELECT account_id, folio_id, scheme_code, plan,
+            option, transaction_type, requested_at, amount_inr, units, current_state
+            FROM mf_paper_orders WHERE order_id=?""", [order_id]).fetchone()
+        if order_row is None:
+            raise MFSIPBookError("SIP paper order does not exist")
+        (order_account, order_folio, order_scheme, order_plan, order_option,
+         order_kind, order_requested_at, order_amount, order_units, order_state) = order_row
+        if (order_account, order_folio, order_scheme, order_plan, order_option) != (
+            installment.account_id, installment.folio_id, installment.scheme_code,
+            installment.plan, installment.option,
+        ) or (order_kind != MFOrderKind.PURCHASE.value or order_amount is None
+             or Decimal(order_amount) != installment.amount_inr or order_units is not None):
+            raise MFSIPBookError("accepted MF order does not match the SIP installment")
+        if order_state != MFOrderState.ACCEPTED.value:
+            raise MFSIPBookError("SIP allotment requires a durably accepted MF order")
+        accepted_receipt = con.execute("""SELECT effective_at, received_at, event_sha256
+            FROM mf_paper_order_transitions WHERE order_id=? AND state='ACCEPTED'
+            ORDER BY sequence DESC LIMIT 1""", [order_id]).fetchone()
+        if accepted_receipt is None:
+            raise MFSIPBookError("accepted MF order has no persisted acceptance receipt")
+        accepted_time = _aware(accepted_receipt[0], "accepted order effective time")
+        accepted_received_at = _aware(accepted_receipt[1], "accepted order receipt time")
+        if decision_time < accepted_received_at:
+            raise MFSIPBookError("SIP decision precedes receipt of the accepted order")
+        if order_requested_at > accepted_time:
+            raise MFSIPBookError("accepted order effective time precedes its request")
+        if (installment.payment_initiated_at is not None
+                and order_requested_at < installment.payment_initiated_at):
+            raise MFSIPBookError("SIP order request precedes payment initiation")
         if (terms.scheme_code, terms.plan, terms.option) != (
             installment.scheme_code, installment.plan, installment.option,
         ):
             raise MFSIPBookError("SIP commercial terms do not match the scheduled scheme")
 
+        transaction_time = max(accepted_time, installment.funds_available_at)
+        try:
+            rule = scheme_calendar.rule_as_known(
+                installment.scheme_code, TransactionKind.PURCHASE,
+                transaction_at=transaction_time,
+            )
+            eligible_nav_date = scheme_calendar.assign_nav_date(
+                installment.scheme_code, TransactionKind.PURCHASE,
+                received_at=transaction_time,
+            )
+            scheme_business_calendar = scheme_calendar.calendars[installment.scheme_code]
+        except (KeyError, ValueError) as exc:
+            raise MFSIPBookError(f"cannot assign SIP eligible NAV date: {exc}") from exc
+        if scheme_business_calendar.recorded_at > transaction_time:
+            raise MFSIPBookError("scheme business calendar was not known at transaction time")
         observation = mf_nav_as_known_on(
-            con, installment.scheme_code, nav_date, known_at=decision_time,
+            con, installment.scheme_code, eligible_nav_date, known_at=decision_time,
         )
         if (observation is None or observation["observation_id"] != nav_observation_id
                 or Decimal(str(observation["nav"])) != nav):
             raise MFSIPBookError(
-                "SIP allotment NAV must match the exact persisted as-known observation"
+                "SIP allotment NAV must match the exact as-known observation for its eligible NAV date"
             )
         available_at = observation["available_at"]
         published_at = observation["source_published_at"]
@@ -372,7 +424,7 @@ def apply_sip_allotment(
             state=MFSIPState.ALLOTTED,
             payment_initiated_at=installment.payment_initiated_at,
             funds_available_at=installment.funds_available_at,
-            nav_date=nav_date,
+            nav_date=eligible_nav_date,
             nav_per_unit=nav,
             nav_published_at=published_at,
             nav_available_at=available_at,
@@ -380,9 +432,31 @@ def apply_sip_allotment(
             units_allotted=units,
         )
         evidence = {
+            "accepted_order_id": order_id,
+            "accepted_order_receipt_sha256": accepted_receipt[2],
+            "accepted_order_effective_at": accepted_time.isoformat(),
+            "accepted_order_received_at": accepted_received_at.isoformat(),
             "nav_observation_id": nav_observation_id,
             "nav_row_sha256": observation["row_sha256"],
             "nav_available_at": available_at.isoformat(),
+            "funds_available_at": installment.funds_available_at.isoformat(),
+            "eligible_nav_date": eligible_nav_date.isoformat(),
+            "transaction_rule_source_ref": rule.source_ref,
+            "transaction_rule_source_sha256": rule.source_sha256,
+            "transaction_rule_effective_from": rule.effective_from.isoformat(),
+            "transaction_rule_effective_to": (rule.effective_to.isoformat()
+                                               if rule.effective_to else None),
+            "transaction_rule_published_at": rule.published_at.isoformat(),
+            "transaction_rule_cutoff_local": rule.cutoff_local.isoformat(),
+            "transaction_rule_lags": {
+                "before_cutoff": rule.before_cutoff_lag,
+                "after_cutoff": rule.after_cutoff_lag,
+                "closed_day": rule.closed_day_lag,
+            },
+            "scheme_calendar_source_ref": scheme_business_calendar.source_ref,
+            "scheme_calendar_source_sha256": scheme_business_calendar.source_sha256,
+            "scheme_calendar_sha256": scheme_business_calendar.sha256(),
+            "scheme_calendar_recorded_at": scheme_business_calendar.recorded_at.isoformat(),
             "terms_record_id": terms.record_id,
         }
         subscription = subscribe(
@@ -390,7 +464,7 @@ def apply_sip_allotment(
             event_id=f"sip:{installment.installment_id}",
             lot_id=f"sip-lot:{installment.installment_id}",
             scheme_code=installment.scheme_code, plan=installment.plan,
-            option=installment.option, isin=terms.isin, allotted_on=nav_date,
+            option=installment.option, isin=terms.isin, allotted_on=eligible_nav_date,
             lock_in_until=lock_in_until, investment_inr=installment.amount_inr,
             nav_per_unit=nav, exit_loads=terms.exit_loads,
             exit_loads_sha256=terms.source_sha256 if terms.exit_loads is not None else None,
