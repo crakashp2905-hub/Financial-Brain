@@ -187,7 +187,7 @@ def resolve_redemption_nav_eligibility(
     )
     if (order.account_id != account_id or order.scheme_code != settlement[0]
             or order.plan != settlement[1] or order.option != settlement[2]
-            or order.transaction_type is not MFOrderKind.REDEMPTION
+            or order.transaction_type not in (MFOrderKind.REDEMPTION, MFOrderKind.SWITCH_OUT)
             or order.units != Decimal(settlement[4])
             or order.requested_at != settlement[5]):
         raise MfPaperBookError("accepted order does not match the pending redemption request")

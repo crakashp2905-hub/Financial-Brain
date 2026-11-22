@@ -286,8 +286,9 @@ def apply_allotment(
                     "eligible_nav_date": eligibility[1], "units": Decimal(eligibility[6]),
                     "status": "already_allotted"}
         order, _acceptance = _order_and_acceptance(con, order_id)
-        if order.transaction_type is not MFOrderKind.PURCHASE or order.amount_inr is None:
-            raise MFPaperPurchaseError("paper allotment currently requires a cash PURCHASE order")
+        if order.transaction_type not in (MFOrderKind.PURCHASE, MFOrderKind.SWITCH_IN) \
+                or order.amount_inr is None:
+            raise MFPaperPurchaseError("paper allotment requires a PURCHASE or SWITCH_IN order")
         observation = mf_nav_as_known_on(
             con, order.scheme_code, eligibility[1], known_at=decision,
         )
@@ -321,6 +322,10 @@ def apply_allotment(
             exit_loads=terms.exit_loads,
             exit_loads_sha256=terms.source_sha256 if terms.exit_loads is not None else None,
             terms=terms, permissions=permissions, decision_at=decision, now=allotted,
+            funding_account_code=(
+                "SIP_PAYMENT_PENDING" if order.transaction_type is MFOrderKind.SWITCH_IN
+                else "CASH"
+            ),
             _transaction_managed=True,
         )
         con.execute("""UPDATE mf_paper_purchase_eligibility SET state='ALLOTTED',
