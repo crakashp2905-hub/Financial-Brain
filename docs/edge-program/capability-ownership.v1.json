@@ -1797,6 +1797,12 @@
       "module_owner": "src/financial_brain/forward_edge/quote_archive.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/raw_observation.py",
+      "path": "src/financial_brain/forward_edge/raw_observation.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/raw_observation.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/refinements.py",
       "path": "src/financial_brain/forward_edge/refinements.py",
       "module_role": "forward_trading_contract_or_support",

@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 686,
+  "source_count": 687,
   "sources": [
     {
       "capability_ids": [],
@@ -5013,6 +5013,25 @@
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"
       ]
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "base64",
+        "dataclasses",
+        "datetime",
+        "financial_brain.forward_edge.data_permissions",
+        "hashlib",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/raw_observation.py",
+      "source_sha256": "1fae07ca916f488a085d3170e06c5bc6f2fdb8b732c0c9bd18371e5ec9634aad",
+      "test_paths": []
     },
     {
       "capability_ids": [],
@@ -12135,6 +12154,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 671,
-  "unassigned_role_count": 398
+  "unassessed_count": 672,
+  "unassigned_role_count": 399
 }
