@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 694,
+  "source_count": 695,
   "sources": [
     {
       "capability_ids": [],
@@ -3218,6 +3218,27 @@
       "parse_status": "ok",
       "source": "src/financial_brain/features/prices.py",
       "source_sha256": "6717b0cd7e7b8a003dd477cf42055e3ad86100846a5fc2854aa5a0600effd2ac",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/snapshot.py",
+      "source_sha256": "8b2c548d0b67adc23433f971c9933a2e1e5071a0693bac7af4257c2b83942627",
       "test_paths": []
     },
     {
@@ -12284,6 +12305,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 679,
+  "unassessed_count": 680,
   "unassigned_role_count": 400
 }
