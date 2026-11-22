@@ -2522,20 +2522,22 @@
       "id": "FB-0702",
       "text": "Model request acknowledgement/accepted/rejected, time-stamping at official acceptance point, and platform business-day validity.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
         "kernel/mf_order.py models REQUESTED, ACKNOWLEDGED, ACCEPTED and REJECTED with distinct effective and received timestamps and an observed/simulated evidence distinction.",
         "platform_valid_through resolves inclusive order validity from the source-bound scheme business calendar. Durable mf_paper_order_book persists requests and append-only transitions, checks order/account idempotency, requires effective PAPER_SIMULATION permission for observed responses, and rejects receipts outside the validity window.",
-        "Order snapshots preserve the official acceptance event timestamp separately from receipt time. Tests cover transitions, permissions, idempotent replay, terminal rejection and expiry."
+        "Order snapshots preserve the official acceptance event timestamp separately from receipt time. Tests cover transitions, permissions, idempotent replay, terminal rejection and expiry.",
+        "Acceptance model is intentionally adapter-neutral: it records the provider-supplied effective timestamp and separate receipt timestamp, and marks acceptance official only for source-backed observed evidence; no connected provider or real acceptance is claimed."
       ],
-      "blocker": "No authorized registrar/platform adapter is connected to supply real acknowledgement or acceptance receipts; the model and durable paper lifecycle cannot prove actual platform acceptance.",
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "b5a5f781b9022631bfb033795c3474a4c65b4f98",
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-22T05:58:14Z",
+      "commit": "439f068bb949f670c8223f4e0d5f44b93644acde",
       "test_evidence": [
         "python -m pytest tests/test_mf_order_book.py tests/test_migrations.py -q: 7 passed",
         "ruff check src/financial_brain/paper/mf_order_book.py tests/test_mf_order_book.py: passed",
         "mypy src/financial_brain/paper/mf_order_book.py: passed",
-        "git diff --check: passed"
+        "git diff --check: passed",
+        "GitHub Actions run 44990234979 for merged main commit 439f068bb949f670c8223f4e0d5f44b93644acde: Ubuntu and Windows full-suite and reproducibility jobs passed."
       ]
     },
     {
@@ -15518,7 +15520,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T05:35:36+00:00",
+    "as_of_utc": "2026-11-22T05:58:14Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15769,13 +15771,13 @@
     ],
     "audited_count": 246,
     "status_counts": {
-      "COMPLETE": 34,
-      "PARTIAL": 195,
+      "COMPLETE": 35,
+      "PARTIAL": 194,
       "NOT_STARTED": 16,
       "EXTERNAL_BLOCKED": 1,
       "UNASSESSED": 1132
     },
-    "verified_complete_count": 34,
+    "verified_complete_count": 35,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -15842,8 +15844,8 @@
     "evidence_update": "FB-0314 and FB-0315 audited PARTIAL after durable MF paper-book integration; source-terms resolution, paper-use permissions and redemption restrictions are tested, while authorized historical source coverage and NAV/settlement integration remain absent."
   },
   "counts_by_status": {
-    "COMPLETE": 34,
-    "PARTIAL": 195,
+    "COMPLETE": 35,
+    "PARTIAL": 194,
     "NOT_STARTED": 16,
     "EXTERNAL_BLOCKED": 1,
     "UNASSESSED": 1132
