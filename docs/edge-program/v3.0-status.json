@@ -2765,16 +2765,15 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "The MF paper book now links the redemption request, exact NAV observation, redeemed lot units, pending proceeds and cash-availability event under an account-scoped settlement ID.",
-        "account_snapshot reports available cash and pending redemption receivables separately; mf_paper_flow_events separately journals IDCW/unit/scheme flows."
+        "New MF paper accounts post opening cash against owner equity; direct subscriptions post investment/cash entries; redemptions post FIFO cost basis, exit load, realized gain/loss and a cash or redemption-receivable entry; payout release moves the receivable to cash in the same transaction as the settlement state change.",
+        "Owner contributions and withdrawals have an idempotent external-cash API, available-cash/overdraft checks, balanced equity/drawings entries, and optional independently observed source provenance gated by PAPER_SIMULATION permission.",
+        "Source-backed IDCW payouts and reinvestments post balanced income/cash/investment journal entries; unit splits and mergers remain in the existing units/lot event journal without inventing monetary flows.",
+        "ledger_snapshot reconciles current paper-account cash to journal cash and reports debit/credit balance. Legacy accounts without trustworthy opening evidence are deliberately left unreconciled rather than backfilled with invented journal rows."
       ],
-      "blocker": "Partial: subscription application/payment, NAV allotment, external contribution/withdrawal and independently evidenced bank payout are not yet reconciled in one canonical double-entry MF account ledger.",
-      "last_audited_at_utc": "2026-11-21T23:11:43+00:00",
-      "commit": "2ea026de",
-      "test_evidence": [
-        "python -m pytest --basetemp .pytest-mf-settlement-final2 tests/test_mf_lot_book.py tests/test_mf_flow_book.py tests/test_migrations.py -q: 18 passed"
-      ],
-      "test_result": "The redemption-side unit/value/receivable/payout path is reconciled, but other cash-in/out, allotment and bank confirmation events remain separate or unmodeled."
+      "blocker": "Partial: SIP payment milestones and allotments are not yet atomically posted through this journal and the FIFO lot book; MF order acknowledgements/application states are not reconciled to account postings; legacy cash/positions lack a verified opening-balance backfill; external contributions/withdrawals are supported but need independently sourced bank feeds for observed use; unit quantities remain in separate lot/flow tables rather than a unified monetary-and-unit general ledger.",
+      "last_audited_at_utc": "2026-11-22T04:02:24Z",
+      "commit": null,
+      "test_result": "python -m pytest tests/test_mf_account_ledger.py tests/test_mf_lot_book.py tests/test_mf_redemption_constraints.py tests/test_migrations.py tests/test_mf_systematic_flow_book.py tests/test_mf_flow_book.py -q: 42 passed; mypy src/financial_brain/paper/mf_account_ledger.py src/financial_brain/paper/mf_flow_book.py: passed; Ruff on changed MF journal modules/tests: passed; git diff --check: passed."
     },
     {
       "id": "FB-0717",

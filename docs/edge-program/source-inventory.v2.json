@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 676,
+  "source_count": 677,
   "sources": [
     {
       "capability_ids": [],
@@ -8945,6 +8945,27 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "datetime",
+        "decimal",
+        "forward_edge.data_permissions",
+        "hashlib",
+        "json",
+        "kernel.trading_clock",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_account_ledger.py",
+      "source_sha256": "c4b88f25c9932d212bc05bca581ed86e1bad00105770b08bb2ff17fbed8be513",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "datetime",
         "decimal",
@@ -8970,6 +8991,7 @@
         "ingest.mf_scheme_terms",
         "json",
         "kernel.trading_clock",
+        "mf_account_ledger",
         "mf_lot_book",
         "providers.mf_scheme_flows",
         "providers.mf_scheme_terms",
@@ -8979,7 +9001,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_flow_book.py",
-      "source_sha256": "a57a49981b30827a2b5d757c6c9f4b33239808f1e98913e10d6ac996a0693c29",
+      "source_sha256": "59d3aebf37ebb39f21a331aea90fe87862b450179d2b7085515b2f0d9ee4efe5",
       "test_paths": []
     },
     {
@@ -8995,6 +9017,7 @@
         "ingest.mfnav",
         "json",
         "kernel.trading_clock",
+        "mf_account_ledger",
         "mf_exit_loads",
         "mf_redemption_constraints",
         "providers.mf_scheme_terms",
@@ -9005,7 +9028,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_lot_book.py",
-      "source_sha256": "8678551a00fa4c4eaf85bb526a60a5b24638cee72eaf2e1eafee047d76496de0",
+      "source_sha256": "879814162455253eaf6fc30f452c140b8a499db62beeb3103fa899d080ee7179",
       "test_paths": []
     },
     {
@@ -9056,6 +9079,7 @@
         "hashlib",
         "json",
         "kernel.trading_clock",
+        "mf_account_ledger",
         "mf_lot_book",
         "re",
         "typing"
@@ -9064,7 +9088,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_redemption_settlement.py",
-      "source_sha256": "a48b67bfc162e22840119dd38c64e208405d9887532d52d548c2b20cf2c6b64b",
+      "source_sha256": "3499aa8d75cae0d095d75d6c0abf64fe7444acea597151903f6705b803a9d99b",
       "test_paths": []
     },
     {
@@ -11869,6 +11893,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 661,
+  "unassessed_count": 662,
   "unassigned_role_count": 396
 }
