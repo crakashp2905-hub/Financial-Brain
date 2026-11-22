@@ -74,8 +74,9 @@ def _terms(*, restrictions=(), **changes):
         "ter_percent": None,
         "aum_inr": None,
         "exit_loads": (),
-        "minimum_initial_inr": None,
-        "minimum_additional_inr": None,
+        "minimum_initial_inr": Decimal("0"),
+        "minimum_additional_inr": Decimal("0"),
+        "minimum_redemption_inr": Decimal("0"),
         "exit_restrictions": restrictions,
         "source_id": "AMC",
         "source_ref": "reviewed-terms-2026-01",
@@ -214,6 +215,57 @@ def test_subscription_enforces_sourced_initial_and_additional_minimums(connectio
         exit_loads=(), exit_loads_sha256=HASH_A, terms=first_terms,
         permissions=_permissions(), decision_at=DECISION, now=PAPERED,
     )
+
+
+def test_subscription_with_unknown_minimum_fails_closed(connection):
+    con = connection
+    create_account(con, "paper-unknown-min", 10_000, now=NOW)
+    terms = _terms(minimum_initial_inr=None)
+    persist_scheme_terms(con, terms, permissions=_permissions())
+    with pytest.raises(MfPaperBookError, match="subscription minimum is unknown"):
+        subscribe(
+            con, account_id="paper-unknown-min", event_id="unknown-min", lot_id="unknown-min-lot",
+            scheme_code="100001", plan="DIRECT", option="GROWTH", isin="INF000000001",
+            allotted_on=date(2026, 1, 1), investment_inr=100, nav_per_unit=100,
+            exit_loads=(), exit_loads_sha256=HASH_A, terms=terms,
+            permissions=_permissions(), decision_at=DECISION, now=PAPERED,
+        )
+
+
+def test_redemption_respects_sourced_minimum_gross_value(connection):
+    con = connection
+    create_account(con, "paper-min-red", 1000, now=NOW)
+    _, terms = _subscribe(
+        con, event_id="sub-min-red", lot_id="lot-min-red", amount=1000,
+        schedule=(), digest=HASH_A, account_id="paper-min-red",
+    )
+    terms = _terms(minimum_redemption_inr=Decimal("500"))
+    persist_scheme_terms(con, terms, permissions=_permissions())
+    with pytest.raises(MfPaperBookError, match="below the sourced minimum"):
+        _redeem(
+            con, event_id="red-minimum", units=4, nav_per_unit=100,
+            terms=terms, account_id="paper-min-red",
+        )
+    snapshot = account_snapshot(con, "paper-min-red")
+    assert snapshot["positions"][0]["units"] == Decimal("10")
+    assert snapshot["cash_inr"] == Decimal("0")
+
+
+def test_redemption_with_unknown_minimum_fails_closed(connection):
+    con = connection
+    create_account(con, "paper-unknown-red", 1000, now=NOW)
+    _subscribe(
+        con, event_id="sub-unknown-red", lot_id="lot-unknown-red", amount=1000,
+        schedule=(), digest=HASH_A, account_id="paper-unknown-red",
+    )
+    with pytest.raises(MfPaperBookError, match="redemption minimum is unknown"):
+        _redeem(
+            con, event_id="red-unknown-min", units=1,
+            terms=_terms(minimum_redemption_inr=None), account_id="paper-unknown-red",
+        )
+    snapshot = account_snapshot(con, "paper-unknown-red")
+    assert snapshot["positions"][0]["units"] == Decimal("10")
+    assert snapshot["cash_inr"] == Decimal("0")
 
 
 def test_partial_redemption_reconciles_fifo_lot_loads_cash_and_idempotency(connection):

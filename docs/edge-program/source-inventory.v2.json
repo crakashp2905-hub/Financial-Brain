@@ -6081,7 +6081,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/mf_scheme_terms.py",
-      "source_sha256": "902a4b4951f95cafa796e50772331eaa4714dd2773719ef55590914df0902745",
+      "source_sha256": "ce67764ddff5e1280fc7094f4361015da2d375906d4b73e11f30c12f267d0964",
       "test_paths": []
     },
     {
@@ -9005,7 +9005,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_lot_book.py",
-      "source_sha256": "8e0afcd5711aa9f45c6b37be28f23c2650bfb0f69e3cca395cffce1c20010452",
+      "source_sha256": "8678551a00fa4c4eaf85bb526a60a5b24638cee72eaf2e1eafee047d76496de0",
       "test_paths": []
     },
     {
@@ -10529,7 +10529,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/mf_scheme_terms.py",
-      "source_sha256": "bde742ad4c3af3eb764c368bf7fb9573463c44973df71cb21cee240298435256",
+      "source_sha256": "155621fdf8919098668fb6e646b5bdddcf2a42f3af8726e0588718822bc5cc07",
       "test_paths": []
     },
     {
@@ -11568,7 +11568,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/storage/db.py",
-      "source_sha256": "f33df0bc7326207f4c64f5ab4779125ed57b26e62c5e3786c0a831817c61cfc0",
+      "source_sha256": "c355d58e7a726179441faf481ae3ccaf393c76a3b852fd837fa6cf9062464c7e",
       "test_paths": []
     },
     {
