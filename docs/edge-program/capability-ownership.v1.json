@@ -1283,7 +1283,7 @@
     {
       "capability_id": "module:src/financial_brain/forward_edge/alerts.py",
       "path": "src/financial_brain/forward_edge/alerts.py",
-      "module_role": "forward_trading_contract_or_support",
+      "module_role": "signal_report_or_trader_renderer",
       "module_owner": "src/financial_brain/forward_edge/alerts.py"
     },
     {

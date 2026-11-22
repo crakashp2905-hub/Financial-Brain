@@ -6,9 +6,14 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import math
 from pathlib import Path
 
-ALERT_TYPES = frozenset({"STALE_QUOTE", "TOKEN_EXPIRED", "SESSION_ABORTED", "DUPLICATE_ORDER", "LEDGER_DIFFERENCE"})
+ALERT_TYPES = frozenset({
+    "STALE_QUOTE", "STALE_DATA", "TOKEN_EXPIRED", "SESSION_ABORTED", "DUPLICATE_ORDER",
+    "LEDGER_DIFFERENCE", "ORDER_EXECUTION", "MF_PENDING", "ETF_DISLOCATION",
+    "OPTIONS_EXPIRY", "RISK_BUDGET_CHANGE",
+})
 SEVERITY_RANK = {"INFO": 0, "WARNING": 1, "HIGH": 2, "CRITICAL": 3}
 
 
@@ -102,3 +107,99 @@ class AlertBook:
                                  [session_id]).fetchall()
         names = ("alert_id", "root_cause_id", "alert_type", "severity", "occurred_at", "details", "acknowledged")
         return [dict(zip(names, row, strict=True)) for row in rows]
+
+
+def evaluate_desk_alerts(
+    *,
+    session_id: str,
+    occurred_at: datetime,
+    order_states: tuple[dict, ...] = (),
+    stale_feeds: tuple[dict, ...] = (),
+    pending_mutual_funds: tuple[dict, ...] = (),
+    etf_premiums: tuple[dict, ...] = (),
+    option_expiries: tuple[dict, ...] = (),
+    risk_budget_changes: tuple[dict, ...] = (),
+    stale_after_seconds: float = 60.0,
+    mf_pending_after_days: int = 1,
+    etf_dislocation_threshold_bps: float = 100.0,
+    option_expiry_window_days: int = 3,
+) -> list[Alert]:
+    """Create deterministic alerts from caller-supplied desk evidence; never fetch or infer data.
+
+    Each input tuple contains normalized evidence rows. This keeps thresholds explicit and
+    leaves data acquisition/identity reconciliation to the owning desk adapters.
+    """
+    if not session_id.strip() or occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+        raise AlertError("desk alerts need a session ID and timezone-aware event time")
+    thresholds = (stale_after_seconds, etf_dislocation_threshold_bps)
+    if any(not math.isfinite(value) or value < 0 for value in thresholds):
+        raise AlertError("desk alert numeric thresholds must be finite and non-negative")
+    if type(mf_pending_after_days) is not int or mf_pending_after_days < 0:
+        raise AlertError("MF pending threshold must be a non-negative whole number of days")
+    if type(option_expiry_window_days) is not int or option_expiry_window_days < 0:
+        raise AlertError("option expiry window must be a non-negative whole number of days")
+    out: list[Alert] = []
+
+    def emit(cause: str, kind: str, severity: str, text: str) -> None:
+        out.append(Alert.create(root_cause_id=cause, session_id=session_id, alert_type=kind,
+                                severity=severity, occurred_at=occurred_at, details=text))
+
+    for row in order_states:
+        order_id, state = str(row.get("order_id", "")).strip(), str(row.get("state", "")).upper()
+        if not order_id or state not in {"PARTIAL", "FILLED", "REJECTED", "UNKNOWN", "CANCELED", "MISSED"}:
+            raise AlertError("order alert needs an ID and a recognized terminal or partial state")
+        severity = "HIGH" if state == "UNKNOWN" else "WARNING"
+        emit(f"order:{order_id}:{state}", "ORDER_EXECUTION", severity,
+             f"Paper order {order_id} state is {state}; reconcile partial or ambiguous outcomes.")
+
+    for row in stale_feeds:
+        feed = str(row.get("feed_id", "")).strip()
+        age = row.get("age_seconds")
+        if not feed or isinstance(age, bool) or not isinstance(age, (int, float)) or not math.isfinite(age) or age < 0:
+            raise AlertError("stale-feed alert needs an ID and finite non-negative age")
+        if age > stale_after_seconds:
+            severity = "HIGH" if bool(row.get("entry_critical")) else "WARNING"
+            emit(f"feed:{feed}:stale", "STALE_DATA", severity,
+                 f"Feed {feed} age {age:.1f}s exceeds {stale_after_seconds:.1f}s threshold.")
+
+    for row in pending_mutual_funds:
+        item_id = str(row.get("item_id", "")).strip()
+        stage = str(row.get("stage", "")).strip().upper()
+        age_days = row.get("age_days")
+        if (not item_id or stage not in {"ALLOTMENT", "PAYOUT"} or type(age_days) is not int
+                or age_days < 0):
+            raise AlertError("MF pending alert needs item ID, ALLOTMENT/PAYOUT stage and whole age days")
+        if age_days >= mf_pending_after_days:
+            emit(f"mf:{item_id}:{stage}:pending", "MF_PENDING", "WARNING",
+                 f"MF {stage.lower()} {item_id} remains pending for {age_days} days.")
+
+    for row in etf_premiums:
+        instrument = str(row.get("instrument_id", "")).strip()
+        premium = row.get("premium_discount_bps")
+        if (not instrument or isinstance(premium, bool) or not isinstance(premium, (int, float))
+                or not math.isfinite(premium)):
+            raise AlertError("ETF alert needs instrument ID and finite premium/discount bps")
+        if abs(premium) > etf_dislocation_threshold_bps:
+            emit(f"etf:{instrument}:dislocation", "ETF_DISLOCATION", "WARNING",
+                 f"ETF {instrument} midquote premium/discount is {premium:+.1f} bps versus fresh iNAV.")
+
+    for row in option_expiries:
+        contract = str(row.get("contract_id", "")).strip()
+        days_left = row.get("days_left")
+        if not contract or type(days_left) is not int:
+            raise AlertError("option expiry alert needs a contract ID and whole days left")
+        if 0 <= days_left <= option_expiry_window_days:
+            emit(f"option:{contract}:expiry", "OPTIONS_EXPIRY", "WARNING",
+                 f"Open option contract {contract} expires in {days_left} calendar days.")
+
+    for row in risk_budget_changes:
+        budget_id = str(row.get("budget_id", "")).strip()
+        old, new = row.get("old_value"), row.get("new_value")
+        if (not budget_id or isinstance(old, bool) or isinstance(new, bool)
+                or not isinstance(old, (int, float)) or not isinstance(new, (int, float))
+                or not math.isfinite(old) or not math.isfinite(new)):
+            raise AlertError("risk-budget alert needs an ID and finite old/new values")
+        if old != new:
+            emit(f"risk-budget:{budget_id}:{old}:{new}", "RISK_BUDGET_CHANGE", "WARNING",
+                 f"Risk budget {budget_id} changed from {old:g} to {new:g}.")
+    return out
