@@ -9823,12 +9823,22 @@
     {
       "id": "SL-02-10",
       "text": "Guard against stale indicator values, forward-filled expired contracts and all market-close-to-open boundary leakage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/snapshot.py provides per-feature observation-age budgets and rejects stale observations or freshness checks before the snapshot cutoff.",
+        "src/financial_brain/features/options_surface.py rejects expired option contracts; tests/test_options_surface.py now explicitly verifies an expired contract produces no surface point.",
+        "src/financial_brain/forward_edge/instrument_rules.py applies effective-dated expiry/status checks; forward_edge.lookahead and intent_timing enforce availability-time and prefix invariance; existing intent timing and kernel fill tests cover after-close execution boundaries.",
+        "Combined freshness, option-surface, lookahead, intent-timing and instrument-rule suites: 29 passed; Ruff, mypy and generated inventory/graph freshness checks passed."
+      ],
+      "blocker": "Partial: component-level stale, expiry, availability and lookahead guards are verified, but every indicator consumer and every close-to-open transition has not been audited or wired to one common freshness policy.",
+      "last_audited_at_utc": "2026-11-22T23:31:23Z",
+      "commit": "c43712ae",
+      "test_evidence": [
+        "python -m pytest -q tests/test_feature_snapshot.py tests/test_options_surface.py tests/test_forward_edge_lookahead.py tests/test_forward_edge_intent_timing.py tests/test_forward_edge_instrument_rules.py: 29 passed.",
+        "Ruff and mypy for changed feature snapshot module passed; source inventory and forward-engine graph freshness checks passed."
+      ],
+      "test_result": "Twenty-nine focused tests passed across feature freshness, expired-option exclusion, point-in-time inputs, intent timing and effective-dated instrument rules. Ruff, mypy and generated inventory checks passed."
     },
     {
       "id": "SL-02-11",
@@ -15852,7 +15862,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T23:23:33Z",
+    "as_of_utc": "2026-11-22T23:31:23Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16125,15 +16135,16 @@
       "SL-02-06",
       "SL-02-07",
       "SL-02-08",
-      "SL-02-09"
+      "SL-02-09",
+      "SL-02-10"
     ],
-    "audited_count": 272,
+    "audited_count": 273,
     "status_counts": {
       "COMPLETE": 48,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 212,
-      "UNASSESSED": 1106
+      "PARTIAL": 213,
+      "UNASSESSED": 1105
     },
     "verified_complete_count": 48,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16270,7 +16281,7 @@
     "COMPLETE": 48,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 212,
-    "UNASSESSED": 1106
+    "PARTIAL": 213,
+    "UNASSESSED": 1105
   }
 }
