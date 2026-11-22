@@ -228,8 +228,10 @@ def subscribe(
     permissions: tuple[DataPermission, ...],
     decision_at: datetime,
     now: datetime | None = None,
+    funding_account_code: str = "CASH",
+    _transaction_managed: bool = False,
 ) -> dict[str, Any]:
-    """Debit cash and create a subscription lot using the explicitly supplied NAV."""
+    """Create a subscription lot, funded by cash or an existing SIP reserve."""
     for label, value in (
         ("account_id", account_id),
         ("event_id", event_id),
@@ -244,6 +246,8 @@ def subscribe(
     if lock_in_until is not None and lock_in_until < allotted_on:
         raise MfPaperBookError("lock_in_until precedes lot allotment")
     amount, nav = _decimal(investment_inr, "investment"), _decimal(nav_per_unit, "NAV")
+    if funding_account_code not in {"CASH", "SIP_PAYMENT_PENDING"}:
+        raise MfPaperBookError("unsupported subscription funding account")
     decision_at = _aware(decision_at)
     event_at = _aware(now)
     if event_at < decision_at:
@@ -295,13 +299,17 @@ def subscribe(
         "decision_at": decision_at,
         "permission_evidence": _permission_evidence(permissions),
     }
+    if funding_account_code != "CASH":
+        payload["funding_account_code"] = funding_account_code
     digest = _event_hash(payload)
 
-    con.execute("BEGIN TRANSACTION")
+    if not _transaction_managed:
+        con.execute("BEGIN TRANSACTION")
     try:
         existing = _existing_event(con, account_id, event_id, digest)
         if existing is not None:
-            con.execute("COMMIT")
+            if not _transaction_managed:
+                con.execute("COMMIT")
             return existing
         account = con.execute(
             "SELECT cash_inr FROM mf_paper_accounts WHERE account_id = ?", [account_id]
@@ -325,8 +333,15 @@ def subscribe(
                 f"subscription is below the sourced {kind} minimum of INR {minimum}"
             )
         cash = Decimal(account[0])
-        if amount > cash:
-            raise MfPaperBookError("subscription exceeds available paper cash")
+        if funding_account_code == "CASH":
+            if amount > cash:
+                raise MfPaperBookError("subscription exceeds available paper cash")
+        else:
+            pending = con.execute("""SELECT COALESCE(SUM(debit_inr-credit_inr),0)
+                FROM mf_paper_ledger_entries WHERE account_id=? AND account_code=?""",
+                [account_id, funding_account_code]).fetchone()[0]
+            if amount > Decimal(pending):
+                raise MfPaperBookError("subscription exceeds reserved SIP payment funds")
         con.execute(
             """INSERT INTO mf_paper_lots (
             account_id, lot_id, scheme_code, plan, option, isin, allotted_on, lock_in_until,
@@ -351,10 +366,11 @@ def subscribe(
                 event_at,
             ],
         )
-        con.execute(
-            "UPDATE mf_paper_accounts SET cash_inr = ? WHERE account_id = ?",
-            [cash - amount, account_id],
-        )
+        if funding_account_code == "CASH":
+            con.execute(
+                "UPDATE mf_paper_accounts SET cash_inr = ? WHERE account_id = ?",
+                [cash - amount, account_id],
+            )
         con.execute(
             """INSERT INTO mf_paper_events (
             account_id, event_id, kind, scheme_code, plan, option, isin, event_date,
@@ -381,14 +397,17 @@ def subscribe(
         post_journal(
             con, account_id=account_id, transaction_id=f"subscription:{event_id}",
             effective_at=event_at, recorded_at=event_at,
-            entries=(("MF_INVESTMENTS", amount, 0), ("CASH", 0, amount)),
+            entries=(("MF_INVESTMENTS", amount, 0), (funding_account_code, 0, amount)),
             evidence={"event_id": event_id, "lot_id": lot_id,
                       "nav_per_unit": str(nav), "units": str(units),
-                      "terms_record_id": terms.record_id},
+                      "terms_record_id": terms.record_id,
+                      "funding_account_code": funding_account_code},
         )
-        con.execute("COMMIT")
+        if not _transaction_managed:
+            con.execute("COMMIT")
     except Exception:
-        con.execute("ROLLBACK")
+        if not _transaction_managed:
+            con.execute("ROLLBACK")
         raise
     return {
         "account_id": account_id,
@@ -659,17 +678,20 @@ def redeem(
         )
         from .mf_account_ledger import post_journal
         cash_or_receivable = "REDEMPTION_RECEIVABLE" if settlement_id else "CASH"
-        journal_entries = [(cash_or_receivable, result.net_redemption_inr, 0)]
+        journal_entries: list[tuple[str, Decimal, Decimal]] = [
+            (cash_or_receivable, result.net_redemption_inr, Decimal(0)),
+        ]
         if result.exit_load_inr:
-            journal_entries.append(("EXIT_LOAD_EXPENSE", result.exit_load_inr, 0))
+            journal_entries.append(("EXIT_LOAD_EXPENSE", result.exit_load_inr, Decimal(0)))
         if redeemed_cost_basis:
-            journal_entries.append(("MF_INVESTMENTS", 0, redeemed_cost_basis))
+            journal_entries.append(("MF_INVESTMENTS", Decimal(0), redeemed_cost_basis))
         if result.gross_redemption_inr > redeemed_cost_basis:
-            journal_entries.append(("REALIZED_GAIN", 0,
+            journal_entries.append(("REALIZED_GAIN", Decimal(0),
                                     result.gross_redemption_inr-redeemed_cost_basis))
         elif redeemed_cost_basis > result.gross_redemption_inr:
             journal_entries.append(("REALIZED_LOSS",
-                                    redeemed_cost_basis-result.gross_redemption_inr, 0))
+                                    redeemed_cost_basis-result.gross_redemption_inr,
+                                    Decimal(0)))
         post_journal(
             con, account_id=account_id, transaction_id=f"redemption:{event_id}",
             effective_at=event_at, recorded_at=event_at, entries=tuple(journal_entries),

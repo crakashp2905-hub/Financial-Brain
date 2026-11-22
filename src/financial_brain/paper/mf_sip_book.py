@@ -3,12 +3,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 
+from ..forward_edge.data_permissions import DataPermission, DataUse
 from ..kernel.mf_sip import (
     MFSIPError, MFSIPInstallment, MFSIPSeries, MFSIPState,
     validate_installment_transition,
 )
+from ..kernel.trading_clock import IST
 
 
 class MFSIPBookError(ValueError):
@@ -127,12 +130,72 @@ def create_sip_series(con, series: MFSIPSeries, *, now: datetime) -> dict[str, o
             "installment_count": len(series.installments)}
 
 
-def advance_installment(con, following: MFSIPInstallment, *, now: datetime) -> dict[str, object]:
-    """Atomically advance one installment; a missed installment cannot be retried."""
+def advance_installment(
+    con,
+    following: MFSIPInstallment,
+    *,
+    now: datetime,
+    payment_basis: str = "SIMULATED_ASSUMPTION",
+    payment_source_id: str | None = None,
+    payment_source_ref: str | None = None,
+    payment_source_sha256: str | None = None,
+    permissions: tuple[DataPermission, ...] = (),
+    transition_evidence: dict[str, object] | None = None,
+    _transaction_managed: bool = False,
+) -> dict[str, object]:
+    """Advance a SIP installment and journal its cleared payment atomically."""
     recorded_at = _aware(now, "now")
     payload = _snapshot_payload(following)
     digest = _state_hash(following)
-    con.execute("BEGIN TRANSACTION")
+    if following.state is MFSIPState.ALLOTTED and transition_evidence is None:
+        raise MFSIPBookError("use apply_sip_allotment to post lots and allotment together")
+    payment_evidence: dict[str, object] | None = None
+    if following.state is MFSIPState.FUNDS_AVAILABLE:
+        if payment_basis not in {"SIMULATED_ASSUMPTION", "OBSERVED_EVIDENCE"}:
+            raise MFSIPBookError("unknown SIP payment evidence basis")
+        if payment_basis == "OBSERVED_EVIDENCE":
+            if not all((payment_source_id, payment_source_ref, payment_source_sha256)):
+                raise MFSIPBookError("observed SIP payment requires source identity, reference and hash")
+            assert payment_source_sha256 is not None
+            if len(payment_source_sha256) != 64 or any(
+                    char not in "0123456789abcdefABCDEF" for char in payment_source_sha256):
+                raise MFSIPBookError("SIP payment source hash must be SHA-256")
+            event_date = following.funds_available_at.astimezone(IST).date()  # type: ignore[union-attr]
+            allowed = [permission for permission in permissions if permission.allows(
+                source_id=payment_source_id or "", use=DataUse.PAPER_SIMULATION,
+                on=event_date,
+            )]
+            if not allowed:
+                raise MFSIPBookError("observed SIP payment lacks PAPER_SIMULATION permission")
+            payment_evidence = {
+                "basis": payment_basis, "source_id": payment_source_id,
+                "source_ref": payment_source_ref,
+                "source_sha256": payment_source_sha256.lower(),
+                "permission_evidence": [{
+                    "source_id": permission.source_id,
+                    "evidence_ref": permission.evidence_ref,
+                    "reviewer": permission.reviewer,
+                    "effective_from": permission.effective_from.isoformat()
+                    if permission.effective_from else None,
+                    "effective_through": permission.effective_through.isoformat()
+                    if permission.effective_through else None,
+                } for permission in allowed],
+            }
+        else:
+            if any((payment_source_id, payment_source_ref, payment_source_sha256)):
+                raise MFSIPBookError("simulated SIP payment cannot claim source evidence")
+            payment_evidence = {"basis": payment_basis}
+    elif any((payment_source_id, payment_source_ref, payment_source_sha256)):
+        raise MFSIPBookError("payment provenance is only valid for funds availability")
+    transition_payload: dict[str, object] = payload
+    if payment_evidence is not None or transition_evidence is not None:
+        transition_payload = {"installment": payload}
+        if payment_evidence is not None:
+            transition_payload["payment_evidence"] = payment_evidence
+        if transition_evidence is not None:
+            transition_payload["transition_evidence"] = transition_evidence
+    if not _transaction_managed:
+        con.execute("BEGIN TRANSACTION")
     try:
         row = con.execute(f"SELECT {_COLUMNS} FROM mf_paper_sip_installments WHERE installment_id=?",
                           [following.installment_id]).fetchone()
@@ -141,7 +204,13 @@ def advance_installment(con, following: MFSIPInstallment, *, now: datetime) -> d
         previous = _from_row(row)
         previous_hash = row[20]
         if previous_hash == digest:
-            con.execute("COMMIT")
+            latest = con.execute("""SELECT evidence_json FROM mf_paper_sip_transitions
+                WHERE installment_id=? ORDER BY sequence DESC LIMIT 1""",
+                [following.installment_id]).fetchone()
+            if latest is None or json.loads(latest[0]) != transition_payload:
+                raise MFSIPBookError("SIP retry changed payment or allotment evidence")
+            if not _transaction_managed:
+                con.execute("COMMIT")
             return {"installment_id": following.installment_id,
                     "state": following.state.value, "status": "already_applied"}
         try:
@@ -157,6 +226,32 @@ def advance_installment(con, following: MFSIPInstallment, *, now: datetime) -> d
         }[following.state]
         if event_at is not None and recorded_at < event_at:
             raise MFSIPBookError("installment transition recorded before event time")
+        if following.state is MFSIPState.FUNDS_AVAILABLE:
+            assert following.funds_available_at is not None
+            account = con.execute("SELECT cash_inr FROM mf_paper_accounts WHERE account_id=?",
+                                  [following.account_id]).fetchone()
+            if account is None:
+                raise MFSIPBookError("paper account does not exist")
+            available_cash = Decimal(account[0])
+            if following.amount_inr > available_cash:
+                raise MFSIPBookError("SIP payment exceeds available paper cash")
+            con.execute("UPDATE mf_paper_accounts SET cash_inr=? WHERE account_id=?",
+                        [available_cash - following.amount_inr, following.account_id])
+            from .mf_account_ledger import post_journal
+            post_journal(
+                con, account_id=following.account_id,
+                transaction_id=f"sip-payment:{following.installment_id}",
+                effective_at=following.funds_available_at,
+                recorded_at=recorded_at,
+                entries=(("SIP_PAYMENT_PENDING", following.amount_inr, 0),
+                         ("CASH", 0, following.amount_inr)),
+                basis=payment_basis, source_id=payment_source_id,
+                source_ref=payment_source_ref, source_sha256=payment_source_sha256,
+                evidence={"installment_id": following.installment_id,
+                          "plan_id": following.plan_id,
+                          "amount_inr": str(following.amount_inr),
+                          "payment_evidence": payment_evidence},
+            )
         sequence = con.execute("""SELECT COALESCE(MAX(sequence),0)+1
             FROM mf_paper_sip_transitions WHERE installment_id=?""",
             [following.installment_id]).fetchone()[0]
@@ -175,13 +270,144 @@ def advance_installment(con, following: MFSIPInstallment, *, now: datetime) -> d
             recorded_at, event_sha256, evidence_json) VALUES (?,?,?,?,?,?,?,?)""",
             [following.installment_id, sequence, previous.state.value,
              following.state.value, event_at, recorded_at, digest,
-             json.dumps(payload, sort_keys=True, separators=(",", ":"))])
+             json.dumps(transition_payload, sort_keys=True, separators=(",", ":"))])
+        if not _transaction_managed:
+            con.execute("COMMIT")
+    except Exception:
+        if not _transaction_managed:
+            con.execute("ROLLBACK")
+        raise
+    return {"installment_id": following.installment_id,
+            "state": following.state.value, "status": "advanced"}
+
+
+def apply_sip_allotment(
+    con,
+    *,
+    installment_id: str,
+    nav_date: date,
+    nav_per_unit: Decimal | str | int,
+    nav_observation_id: str,
+    terms,
+    permissions: tuple[DataPermission, ...],
+    decision_at: datetime,
+    allotted_at: datetime,
+    now: datetime,
+    lock_in_until: date | None = None,
+) -> dict[str, object]:
+    """Atomically consume a reserved SIP payment into an observed NAV lot.
+
+    The NAV must be the exact persisted observation available at the decision time.
+    The account journal, FIFO lot, subscription event and ALLOTTED state commit or
+    roll back together; replaying the same event is idempotent.
+    """
+    from ..ingest.mfnav import as_known_on as mf_nav_as_known_on
+    from .mf_lot_book import subscribe
+
+    decision_time = _aware(decision_at, "decision_at")
+    allotment_time = _aware(allotted_at, "allotted_at")
+    recorded_at = _aware(now, "now")
+    try:
+        nav = Decimal(str(nav_per_unit))
+    except Exception as exc:
+        raise MFSIPBookError("NAV must be a positive finite decimal") from exc
+    if not nav.is_finite() or nav <= 0:
+        raise MFSIPBookError("NAV must be a positive finite decimal")
+    if not nav_observation_id.strip():
+        raise MFSIPBookError("SIP allotment requires a NAV observation ID")
+    if recorded_at < allotment_time or allotment_time < decision_time:
+        raise MFSIPBookError("SIP allotment clocks are out of order")
+
+    con.execute("BEGIN TRANSACTION")
+    try:
+        row = con.execute(
+            f"SELECT {_COLUMNS} FROM mf_paper_sip_installments WHERE installment_id=?",
+            [installment_id],
+        ).fetchone()
+        if row is None:
+            raise MFSIPBookError("SIP installment does not exist")
+        installment = _from_row(row)
+        if installment.state not in {
+            MFSIPState.FUNDS_AVAILABLE, MFSIPState.NAV_PENDING, MFSIPState.ALLOTTED,
+        }:
+            raise MFSIPBookError("SIP allotment requires cleared installment funds")
+        if installment.funds_available_at is None or decision_time < installment.funds_available_at:
+            raise MFSIPBookError("SIP decision precedes cleared payment funds")
+        if (terms.scheme_code, terms.plan, terms.option) != (
+            installment.scheme_code, installment.plan, installment.option,
+        ):
+            raise MFSIPBookError("SIP commercial terms do not match the scheduled scheme")
+
+        observation = mf_nav_as_known_on(
+            con, installment.scheme_code, nav_date, known_at=decision_time,
+        )
+        if (observation is None or observation["observation_id"] != nav_observation_id
+                or Decimal(str(observation["nav"])) != nav):
+            raise MFSIPBookError(
+                "SIP allotment NAV must match the exact persisted as-known observation"
+            )
+        available_at = observation["available_at"]
+        published_at = observation["source_published_at"]
+        if available_at > allotment_time or (published_at is not None
+                                              and published_at > available_at):
+            raise MFSIPBookError("SIP allotment NAV clocks are not causally valid")
+        if not any(permission.allows(
+                source_id="AMFI", use=DataUse.PAPER_SIMULATION,
+                on=decision_time.astimezone(IST).date()) for permission in permissions):
+            raise MFSIPBookError("AMFI SIP NAV lacks effective PAPER_SIMULATION permission")
+
+        units = installment.amount_inr / nav
+        if (units * nav).quantize(Decimal("0.01")) != installment.amount_inr.quantize(Decimal("0.01")):
+            raise MFSIPBookError("SIP units times NAV do not reconcile to the installment")
+        following = MFSIPInstallment(
+            installment_id=installment.installment_id,
+            plan_id=installment.plan_id,
+            account_id=installment.account_id,
+            folio_id=installment.folio_id,
+            scheme_code=installment.scheme_code,
+            plan=installment.plan,
+            option=installment.option,
+            scheduled_for=installment.scheduled_for,
+            amount_inr=installment.amount_inr,
+            state=MFSIPState.ALLOTTED,
+            payment_initiated_at=installment.payment_initiated_at,
+            funds_available_at=installment.funds_available_at,
+            nav_date=nav_date,
+            nav_per_unit=nav,
+            nav_published_at=published_at,
+            nav_available_at=available_at,
+            allotted_at=allotment_time,
+            units_allotted=units,
+        )
+        evidence = {
+            "nav_observation_id": nav_observation_id,
+            "nav_row_sha256": observation["row_sha256"],
+            "nav_available_at": available_at.isoformat(),
+            "terms_record_id": terms.record_id,
+        }
+        subscription = subscribe(
+            con, account_id=installment.account_id,
+            event_id=f"sip:{installment.installment_id}",
+            lot_id=f"sip-lot:{installment.installment_id}",
+            scheme_code=installment.scheme_code, plan=installment.plan,
+            option=installment.option, isin=terms.isin, allotted_on=nav_date,
+            lock_in_until=lock_in_until, investment_inr=installment.amount_inr,
+            nav_per_unit=nav, exit_loads=terms.exit_loads,
+            exit_loads_sha256=terms.source_sha256 if terms.exit_loads is not None else None,
+            terms=terms, permissions=permissions, decision_at=decision_time,
+            now=allotment_time, funding_account_code="SIP_PAYMENT_PENDING",
+            _transaction_managed=True,
+        )
+        transition = advance_installment(
+            con, following, now=recorded_at, transition_evidence=evidence,
+            _transaction_managed=True,
+        )
         con.execute("COMMIT")
     except Exception:
         con.execute("ROLLBACK")
         raise
-    return {"installment_id": following.installment_id,
-            "state": following.state.value, "status": "advanced"}
+    return {**subscription, **transition, "nav_observation_id": nav_observation_id,
+            "units": units, "nav_per_unit": nav}
 
 
 def installment_snapshot(con, *, installment_id: str) -> dict[str, object]:
@@ -197,4 +423,5 @@ def installment_snapshot(con, *, installment_id: str) -> dict[str, object]:
                 [installment_id]).fetchall()}
 
 
-__all__ = ["MFSIPBookError", "advance_installment", "create_sip_series", "installment_snapshot"]
+__all__ = ["MFSIPBookError", "advance_installment", "apply_sip_allotment",
+           "create_sip_series", "installment_snapshot"]
