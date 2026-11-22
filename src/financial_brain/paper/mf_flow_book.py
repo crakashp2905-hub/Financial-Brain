@@ -341,6 +341,37 @@ def apply_economic_flow(
              flow.effective_date, units_before, units_after, cash_delta, nav0, nav1,
              value_before, value_after, total_return, reinvestment_lot_id,
              terms_record_id, digest, event_at])
+        if (flow.kind in (SchemeFlowKind.IDCW_PAYOUT, SchemeFlowKind.IDCW_REINVESTMENT)
+                and (flow.kind is SchemeFlowKind.IDCW_REINVESTMENT or cash_delta > 0)):
+            from .mf_account_ledger import post_journal
+            assert flow.cash_per_unit is not None
+            distribution = units_before * Decimal(flow.cash_per_unit)
+            journal_lines: list[tuple[str, Decimal | int, Decimal | int]] = []
+            if flow.kind is SchemeFlowKind.IDCW_PAYOUT:
+                if cash_delta:
+                    journal_lines.append(("CASH", cash_delta, 0))
+                journal_lines.append(("IDCW_INCOME", 0, distribution))
+            else:
+                assert reinvest_nav is not None
+                invested = extra_units * reinvest_nav
+                if invested:
+                    journal_lines.append(("MF_INVESTMENTS", invested, 0))
+                if cash_delta:
+                    journal_lines.append(("CASH", cash_delta, 0))
+                journal_lines.append(("IDCW_INCOME", 0, distribution))
+            post_journal(
+                con, account_id=account_id, transaction_id=f"scheme-flow:{flow.event_id}",
+                effective_at=datetime.combine(flow.effective_date, datetime.min.time(),
+                                               tzinfo=timezone.utc),
+                recorded_at=event_at, entries=tuple(journal_lines),
+                basis="OBSERVED_EVIDENCE", source_id=flow.source_id,
+                source_ref=flow.source_ref, source_sha256=flow.source_sha256,
+                evidence={"source_flow_id": flow.event_id,
+                          "flow_kind": flow.kind.value,
+                          "distribution_inr": str(distribution),
+                          "units_before": str(units_before),
+                          "units_after": str(units_after)},
+            )
         con.execute("COMMIT")
     except Exception:
         con.execute("ROLLBACK")

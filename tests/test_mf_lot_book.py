@@ -319,6 +319,14 @@ def test_partial_redemption_reconciles_fifo_lot_loads_cash_and_idempotency(conne
     ).fetchone()[0] == Decimal("4686")
     snapshot = account_snapshot(con, "paper-1")
     assert snapshot["positions"][0]["units"] == Decimal("3")
+    from financial_brain.paper.mf_account_ledger import ledger_snapshot
+    journal = ledger_snapshot(con, account_id="paper-1")
+    assert journal["is_reconciled"] is True
+    assert journal["journal_cash_inr"] == Decimal("4686")
+    assert journal["balances_inr"]["MF_INVESTMENTS"] == Decimal("300")
+    totals = con.execute("""SELECT SUM(debit_inr), SUM(credit_inr)
+        FROM mf_paper_ledger_entries WHERE account_id='paper-1'""").fetchone()
+    assert Decimal(totals[0]) == Decimal(totals[1])
 
 
 def test_unknown_lot_schedule_blocks_redemption_without_mutating_book(connection):
@@ -626,6 +634,14 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
     assert snapshot["cash_inr"] == Decimal("0")
     assert snapshot["pending_redemption_inr"] == Decimal("480.00")
     assert snapshot["cash_plus_pending_redemption_inr"] == Decimal("480.00")
+    from financial_brain.paper.mf_account_ledger import ledger_snapshot
+    pending_ledger = ledger_snapshot(con, account_id="paper-1")
+    assert pending_ledger["is_reconciled"] is True
+    assert pending_ledger["journal_balanced"] is True
+    assert pending_ledger["balances_inr"]["CASH"] == 0
+    assert pending_ledger["balances_inr"]["REDEMPTION_RECEIVABLE"] == Decimal("480.00")
+    assert pending_ledger["balances_inr"]["MF_INVESTMENTS"] == Decimal("600")
+    assert pending_ledger["balances_inr"]["REALIZED_GAIN"] == Decimal("-80.00")
 
     settlement = settlement_snapshot(
         con, account_id="paper-1", settlement_id="red-settlement",
@@ -662,6 +678,11 @@ def test_redemption_settlement_keeps_unpaid_proceeds_out_of_available_cash(conne
     assert payout["basis"] == "SIMULATED_ASSUMPTION"
     assert account_snapshot(con, "paper-1")["cash_inr"] == Decimal("480.00")
     assert account_snapshot(con, "paper-1")["pending_redemption_inr"] == Decimal("0")
+    paid_ledger = ledger_snapshot(con, account_id="paper-1")
+    assert paid_ledger["is_reconciled"] is True
+    assert paid_ledger["journal_balanced"] is True
+    assert paid_ledger["balances_inr"]["CASH"] == Decimal("480.00")
+    assert paid_ledger["balances_inr"]["REDEMPTION_RECEIVABLE"] == 0
 
     replay = make_cash_available(
         con, account_id="paper-1", settlement_id="red-settlement",
