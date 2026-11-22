@@ -37,6 +37,7 @@ def test_an_older_database_gains_the_added_columns(tmp_path):
     con.execute("ALTER TABLE mf_paper_redemption_settlements DROP COLUMN order_id")
     con.execute("ALTER TABLE mf_paper_redemption_settlements DROP COLUMN eligibility_sha256")
     con.execute("ALTER TABLE mf_paper_redemption_settlements DROP COLUMN eligibility_evidence_json")
+    con.execute("ALTER TABLE mf_paper_events DROP COLUMN folio_id")
     con.close()
     Database(cfg).migrate()
     assert _schema(cfg.db_path) == fresh
@@ -74,7 +75,6 @@ def test_old_mf_journal_accepts_sip_reserve_without_losing_rows(tmp_path):
          TIMESTAMPTZ '2026-01-01 00:00:00+00', 'CASH', 100, 0,
          'SIMULATED_ASSUMPTION', NULL, NULL, NULL, 'hash', '{}')""")
     con.close()
-
     Database(cfg).migrate()
     con = duckdb.connect(str(cfg.db_path))
     assert con.execute("""SELECT account_code, debit_inr FROM mf_paper_ledger_entries
@@ -85,6 +85,36 @@ def test_old_mf_journal_accepts_sip_reserve_without_losing_rows(tmp_path):
          'SIMULATED_ASSUMPTION', NULL, NULL, NULL, 'hash-2', '{}')""")
     assert con.execute("""SELECT COUNT(*) FROM mf_paper_ledger_entries
         WHERE account_code='SIP_PAYMENT_PENDING'""").fetchone()[0] == 1
+    con.close()
+
+
+def test_legacy_lot_table_migration_adds_unassigned_folio_without_guessing(tmp_path):
+    cfg = Config(data_root=tmp_path).ensure()
+    con = duckdb.connect(str(cfg.db_path))
+    con.execute("""CREATE TABLE mf_paper_lots (
+        account_id VARCHAR NOT NULL, lot_id VARCHAR NOT NULL,
+        scheme_code VARCHAR NOT NULL, plan VARCHAR NOT NULL, option VARCHAR NOT NULL,
+        isin VARCHAR NOT NULL, allotted_on DATE NOT NULL, lock_in_until DATE,
+        units_original DECIMAL(38,18) NOT NULL, units_remaining DECIMAL(38,18) NOT NULL,
+        purchase_nav DECIMAL(38,18) NOT NULL, exit_loads_json VARCHAR,
+        exit_loads_sha256 VARCHAR, subscription_event_id VARCHAR NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL, PRIMARY KEY(account_id, lot_id),
+        UNIQUE(account_id, subscription_event_id))""")
+    con.execute("""INSERT INTO mf_paper_lots VALUES (
+        'paper', 'old-lot', '123456', 'DIRECT', 'GROWTH', 'INF123456789',
+        DATE '2026-01-01', NULL, 2, 2, 10, NULL, NULL,
+        'old-subscription', TIMESTAMPTZ '2026-01-01 00:00:00+00')""")
+    con.close()
+
+    Database(cfg).migrate()
+
+    con = duckdb.connect(str(cfg.db_path), read_only=True)
+    assert "folio_id" in {
+        row[1] for row in con.execute("PRAGMA table_info('mf_paper_lots')").fetchall()
+    }
+    assert con.execute("SELECT lot_id, folio_id FROM mf_paper_lots").fetchone() == (
+        "old-lot", None,
+    )
     con.close()
 
 

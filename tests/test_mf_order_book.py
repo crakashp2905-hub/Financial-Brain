@@ -141,3 +141,33 @@ def test_expired_platform_order_cannot_be_accepted(connection):
     with pytest.raises(MFPaperOrderBookError, match="outside platform business-day validity"):
         record_response(connection, expired, now=expired.received_at)
     assert order_snapshot(connection, order_id=order.order_id)["current_state"] == "REQUESTED"
+
+
+def test_unit_redemption_acceptance_requires_and_links_matching_folio_reservation(connection):
+    from financial_brain.paper.mf_redemption_settlement import request_redemption
+
+    order = _order(transaction_type=MFOrderKind.REDEMPTION,
+                   amount_inr=None, units=Decimal("2"))
+    _submit(connection, order)
+    accepted = _response(MFOrderState.ACCEPTED)
+    with pytest.raises(MFPaperOrderBookError, match="requires one matching folio reservation"):
+        record_response(connection, accepted, now=accepted.received_at)
+    assert order_snapshot(connection, order_id=order.order_id)["current_state"] == "REQUESTED"
+
+    connection.execute("""INSERT INTO mf_paper_lots (
+        account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
+        units_original, units_remaining, purchase_nav, subscription_event_id, created_at)
+        VALUES ('paper-account-1', 'owned-lot', 'SYNTHETIC-FOLIO-1', '123456',
+        'DIRECT', 'GROWTH', 'INF123456789', DATE '2026-11-20', 3, 3, 10,
+        'owned-subscription', ?)""", [REQUESTED_AT])
+    request_redemption(
+        connection, account_id=order.account_id, folio_id=order.folio_id,
+        settlement_id="redemption-reservation", scheme_code=order.scheme_code,
+        plan=order.plan, option=order.option, isin="INF123456789",
+        requested_units=order.units, requested_on=REQUESTED_AT.date(),
+        requested_at=order.requested_at, now=REQUESTED_AT + timedelta(seconds=1),
+    )
+    assert record_response(connection, accepted, now=accepted.received_at)["status"] == "recorded"
+    assert connection.execute("""SELECT order_id FROM mf_paper_redemption_settlements
+        WHERE account_id=? AND settlement_id=?""",
+        [order.account_id, "redemption-reservation"]).fetchone() == (order.order_id,)

@@ -1,6 +1,7 @@
 from dataclasses import replace
 from datetime import date, datetime, timezone
 from decimal import Decimal
+import hashlib
 
 import pytest
 
@@ -75,7 +76,8 @@ def book(tmp_path):
         terms = _terms()
         persist_terms(con, terms, permissions=PERMISSIONS)
         subscribe(
-            con, account_id="paper-1", event_id="sub-1", lot_id="lot-1",
+            con, account_id="paper-1", folio_id="synthetic-1",
+            event_id="sub-1", lot_id="lot-1",
             scheme_code=terms.scheme_code, plan=terms.plan, option=terms.option,
             isin=terms.isin, allotted_on=date(2026, 1, 2), investment_inr=1000,
             nav_per_unit=100, exit_loads=terms.exit_loads,
@@ -156,6 +158,31 @@ def test_unit_split_adjusts_open_lots_without_changing_cost_basis(book):
     assert position["units"] == Decimal("20")
     assert position["cost_basis_inr"] == Decimal("1000")
     assert result["value_before_inr"] == result["value_after_inr"] == Decimal("1000.00")
+
+
+def test_reinvestment_preserves_each_folios_ownership(book):
+    book.execute("""INSERT INTO mf_paper_lots (
+        account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
+        units_original, units_remaining, purchase_nav, subscription_event_id, created_at)
+        VALUES ('paper-1', 'second-folio-source', 'synthetic-2', '100001', 'DIRECT',
+        'GROWTH', 'INF000000001', DATE '2026-01-02', 10, 10, 100,
+        'second-folio-subscription', TIMESTAMPTZ '2026-01-02 12:00:00+00')""")
+    flow = _flow(SchemeFlowKind.IDCW_REINVESTMENT,
+                 cash_per_unit=10, reinvestment_nav=100)
+    terms = _terms()
+    persist_terms(book, terms, permissions=PERMISSIONS)
+
+    _apply(book, flow, reinvestment_lot_id="multi-folio-reinvestment",
+           reinvestment_terms=terms)
+
+    rows = book.execute("""SELECT folio_id, lot_id, units_remaining
+        FROM mf_paper_lots WHERE account_id='paper-1'
+          AND subscription_event_id LIKE ? ORDER BY folio_id""",
+        [f"MF_FLOW:{flow.event_id}:%"]).fetchall()
+    assert rows == [
+        ("synthetic-1", f"multi-folio-reinvestment:{hashlib.sha256(b'synthetic-1').hexdigest()[:16]}", Decimal("1.000000000000000000")),
+        ("synthetic-2", f"multi-folio-reinvestment:{hashlib.sha256(b'synthetic-2').hexdigest()[:16]}", Decimal("1.000000000000000000")),
+    ]
 
 
 def test_merger_transfers_lots_only_with_known_successor_terms(book):

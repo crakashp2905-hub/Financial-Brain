@@ -64,6 +64,7 @@ def request_redemption(
     con,
     *,
     account_id: str,
+    folio_id: str,
     settlement_id: str,
     scheme_code: str,
     plan: str,
@@ -79,7 +80,8 @@ def request_redemption(
     Pending requests count against later request capacity so the same units cannot be
     requested twice while the eligible NAV is not yet known.
     """
-    for label, value in (("account_id", account_id), ("settlement_id", settlement_id),
+    for label, value in (("account_id", account_id), ("folio_id", folio_id),
+                         ("settlement_id", settlement_id),
                          ("scheme_code", scheme_code), ("plan", plan),
                          ("option", option), ("isin", isin)):
         if not value.strip():
@@ -93,6 +95,7 @@ def request_redemption(
         raise MfPaperBookError("requested_on must match the local request date")
     payload = {
         "account_id": account_id, "settlement_id": settlement_id,
+        "folio_id": folio_id,
         "scheme_code": scheme_code, "plan": plan, "option": option,
         "isin": isin, "requested_units": units, "requested_on": requested_on,
         "requested_at": request_time,
@@ -115,23 +118,34 @@ def request_redemption(
             raise MfPaperBookError("paper account does not exist")
         lot_row = con.execute("""SELECT COALESCE(SUM(units_remaining), 0)
             FROM mf_paper_lots WHERE account_id=? AND scheme_code=? AND plan=?
-              AND option=? AND isin=? AND units_remaining>0""",
-            [account_id, scheme_code, plan, option, isin]).fetchone()
+              AND option=? AND isin=? AND folio_id=? AND units_remaining>0""",
+            [account_id, scheme_code, plan, option, isin, folio_id]).fetchone()
         open_units = Decimal(lot_row[0])
         reserved_row = con.execute("""SELECT COALESCE(SUM(requested_units), 0)
             FROM mf_paper_redemption_settlements WHERE account_id=? AND scheme_code=?
-              AND plan=? AND option=? AND isin=? AND state='REDEMPTION_PENDING'""",
-            [account_id, scheme_code, plan, option, isin]).fetchone()
+              AND plan=? AND option=? AND isin=? AND folio_id=?
+              AND state='REDEMPTION_PENDING'""",
+            [account_id, scheme_code, plan, option, isin, folio_id]).fetchone()
         reserved_units = Decimal(reserved_row[0])
         if units > open_units - reserved_units:
+            unassigned_units = con.execute("""SELECT COALESCE(SUM(units_remaining),0)
+                FROM mf_paper_lots WHERE account_id=? AND folio_id IS NULL
+                  AND scheme_code=? AND plan=? AND option=? AND isin=?
+                  AND units_remaining>0""",
+                [account_id, scheme_code, plan, option, isin]).fetchone()[0]
+            if Decimal(unassigned_units) > 0:
+                raise MfPaperBookError(
+                    "legacy lots have unreconciled folio ownership; explicit evidence is "
+                    "required before redemption"
+                )
             raise MfPaperBookError("redemption request exceeds unreserved open units")
 
         con.execute("""INSERT INTO mf_paper_redemption_settlements (
-            account_id, settlement_id, scheme_code, plan, option, isin,
+            account_id, settlement_id, folio_id, scheme_code, plan, option, isin,
             requested_units, requested_on, requested_at, state, request_sha256,
             created_at, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,'REDEMPTION_PENDING',?,?,?)""",
-            [account_id, settlement_id, scheme_code, plan, option, isin, units,
+            VALUES (?,?,?,?,?,?,?,?,?,?,'REDEMPTION_PENDING',?,?,?)""",
+            [account_id, settlement_id, folio_id, scheme_code, plan, option, isin, units,
              requested_on, request_time, request_hash, event_time, event_time])
         _event(con, account_id=account_id, settlement_id=settlement_id,
                state="REDEMPTION_PENDING", transitioned_at=event_time,
@@ -162,7 +176,7 @@ def resolve_redemption_nav_eligibility(
     if not account_id.strip() or not settlement_id.strip() or not order_id.strip():
         raise MfPaperBookError("account_id, settlement_id and order_id are required")
     settlement = con.execute("""SELECT scheme_code, plan, option, isin, requested_units,
-        requested_at, state, eligible_nav_date, order_id, eligibility_sha256
+        requested_at, state, eligible_nav_date, order_id, eligibility_sha256, folio_id
         FROM mf_paper_redemption_settlements WHERE account_id=? AND settlement_id=?""",
         [account_id, settlement_id]).fetchone()
     if settlement is None:
@@ -185,7 +199,8 @@ def resolve_redemption_nav_eligibility(
         amount_inr=order_row[8], units=order_row[9],
         request_basis=MFOrderEvidenceBasis(order_row[10]),
     )
-    if (order.account_id != account_id or order.scheme_code != settlement[0]
+    if (order.account_id != account_id or order.folio_id != settlement[10]
+            or order.scheme_code != settlement[0]
             or order.plan != settlement[1] or order.option != settlement[2]
             or order.transaction_type not in (MFOrderKind.REDEMPTION, MFOrderKind.SWITCH_OUT)
             or order.units != Decimal(settlement[4])
@@ -353,7 +368,7 @@ def make_cash_available(
 
 
 def settlement_snapshot(con, *, account_id: str, settlement_id: str) -> dict[str, Any]:
-    row = con.execute("""SELECT account_id, settlement_id, scheme_code, plan, option,
+    row = con.execute("""SELECT account_id, settlement_id, folio_id, scheme_code, plan, option,
         isin, requested_units, requested_on, requested_at, state, redemption_event_id,
         eligible_nav_date, order_id, eligibility_sha256, eligibility_evidence_json,
         nav_observation_id, nav_per_unit, gross_inr, exit_load_inr,
@@ -364,7 +379,7 @@ def settlement_snapshot(con, *, account_id: str, settlement_id: str) -> dict[str
     if row is None:
         raise MfPaperBookError("redemption settlement does not exist")
     keys = (
-        "account_id", "settlement_id", "scheme_code", "plan", "option", "isin",
+        "account_id", "settlement_id", "folio_id", "scheme_code", "plan", "option", "isin",
         "requested_units", "requested_on", "requested_at", "state",
         "redemption_event_id", "eligible_nav_date", "order_id", "eligibility_sha256",
         "eligibility_evidence_json", "nav_observation_id", "nav_per_unit",

@@ -316,7 +316,8 @@ def apply_allotment(
                                 "amount": str(order.amount_inr)})
         from .mf_lot_book import subscribe
         subscription = subscribe(
-            con, account_id=order.account_id, event_id=f"mf-purchase:{order_id}",
+            con, account_id=order.account_id, folio_id=order.folio_id,
+            event_id=f"mf-purchase:{order_id}",
             lot_id=f"mf-purchase-lot:{order_id}", scheme_code=order.scheme_code,
             plan=order.plan, option=order.option, isin=terms.isin,
             allotted_on=eligibility[1], lock_in_until=lock_in_until,
