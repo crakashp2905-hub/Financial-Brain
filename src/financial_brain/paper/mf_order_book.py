@@ -9,7 +9,7 @@ from typing import Any
 from ..forward_edge.data_permissions import DataPermission, DataUse
 from ..kernel.trading_clock import IST
 from ..kernel.mf_order import (
-    MFOrder, MFOrderAcknowledgement, MFOrderEvidenceBasis, MFOrderState,
+    MFOrder, MFOrderAcknowledgement, MFOrderEvidenceBasis, MFOrderKind, MFOrderState,
     platform_valid_through,
 )
 
@@ -133,12 +133,15 @@ def record_response(
 
     con.execute("BEGIN TRANSACTION")
     try:
-        row = con.execute("""SELECT requested_at, current_state, valid_through
+        row = con.execute("""SELECT requested_at, current_state, valid_through,
+            account_id, folio_id, scheme_code, plan, option, transaction_type, units,
+            amount_inr
             FROM mf_paper_orders
             WHERE order_id=?""", [response.order_id]).fetchone()
         if row is None:
             raise MFPaperOrderBookError("paper order does not exist")
-        requested_at, current, valid_through = row
+        (requested_at, current, valid_through, account_id, folio_id, scheme_code,
+         plan, option, transaction_type, order_units, amount_inr) = row
         if response.effective_at < requested_at:
             raise MFPaperOrderBookError("response effective time precedes order request")
         if response.effective_at.astimezone(IST).date() > valid_through:
@@ -164,6 +167,49 @@ def record_response(
             raise MFPaperOrderBookError("accepted or rejected order is terminal")
         if prior is MFOrderState.ACKNOWLEDGED and response.state is MFOrderState.ACKNOWLEDGED:
             raise MFPaperOrderBookError("duplicate acknowledgement transition")
+        pending_settlement_id = None
+        if (response.state is MFOrderState.ACCEPTED and transaction_type in (
+                MFOrderKind.REDEMPTION.value, MFOrderKind.SWITCH_OUT.value)):
+            if order_units is None:
+                if amount_inr is None:
+                    raise MFPaperOrderBookError(
+                        "unitless redemption requires a fixed INR amount"
+                    )
+                # Fixed-INR redemptions are converted to units only at the eligible
+                # NAV. The folio-scoped reservation is enforced before value booking.
+            else:
+                matches = con.execute("""SELECT settlement_id, isin FROM
+                    mf_paper_redemption_settlements WHERE account_id=? AND folio_id=?
+                      AND scheme_code=? AND plan=? AND option=? AND requested_units=?
+                      AND requested_at=? AND state='REDEMPTION_PENDING'
+                      AND (order_id IS NULL OR order_id=?)
+                    ORDER BY created_at, settlement_id""",
+                    [account_id, folio_id, scheme_code, plan, option, order_units,
+                     requested_at, response.order_id]).fetchall()
+                if len(matches) != 1:
+                    raise MFPaperOrderBookError(
+                        "unit redemption acceptance requires one matching folio reservation"
+                    )
+                pending_settlement_id = matches[0][0]
+                open_units = con.execute("""SELECT COALESCE(SUM(units_remaining),0)
+                    FROM mf_paper_lots WHERE account_id=? AND folio_id=? AND scheme_code=?
+                      AND plan=? AND option=? AND isin=? AND units_remaining>0""",
+                    [account_id, folio_id, scheme_code, plan, option, matches[0][1]]).fetchone()[0]
+                reserved_units = con.execute("""SELECT COALESCE(SUM(requested_units),0)
+                    FROM mf_paper_redemption_settlements WHERE account_id=? AND folio_id=?
+                      AND scheme_code=? AND plan=? AND option=? AND isin=?
+                      AND state='REDEMPTION_PENDING'""",
+                    [account_id, folio_id, scheme_code, plan, option,
+                     matches[0][1]]).fetchone()[0]
+                if reserved_units > open_units:
+                    raise MFPaperOrderBookError(
+                        "folio redemption reservations exceed currently open units"
+                    )
+                con.execute("""UPDATE mf_paper_redemption_settlements
+                    SET order_id=?, updated_at=? WHERE account_id=? AND settlement_id=?
+                      AND (order_id IS NULL OR order_id=?)""",
+                    [response.order_id, observed_at, account_id, pending_settlement_id,
+                     response.order_id])
         sequence = con.execute("""SELECT COALESCE(MAX(sequence),0)+1
             FROM mf_paper_order_transitions WHERE order_id=?""",
             [response.order_id]).fetchone()[0]

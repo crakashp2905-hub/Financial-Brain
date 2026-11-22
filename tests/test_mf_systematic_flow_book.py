@@ -212,11 +212,11 @@ def test_systematic_redemption_reserves_actual_lots_and_recovers_after_partial_w
     with database.connect() as con:
         _create(con, instruction)
         con.execute("""INSERT INTO mf_paper_lots (
-            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
             lock_in_until, units_original, units_remaining, purchase_nav,
             exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
-            [instruction.account_id, "lot-source", instruction.source_scheme,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
+            [instruction.account_id, "lot-source", instruction.folio_id, instruction.source_scheme,
              instruction.source_plan, instruction.source_option, instruction.source_isin,
              date(2026, 11, 1), Decimal("150"), Decimal("150"), Decimal("100"),
              "subscribe-source", NOW])
@@ -287,11 +287,11 @@ def test_systematic_payout_credits_canonical_cash_and_recovers_after_event_failu
     with database.connect() as con:
         _create(con, instruction)
         con.execute("""INSERT INTO mf_paper_lots (
-            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
             lock_in_until, units_original, units_remaining, purchase_nav,
             exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
-            [instruction.account_id, "lot-payout", instruction.source_scheme,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
+            [instruction.account_id, "lot-payout", instruction.folio_id, instruction.source_scheme,
              instruction.source_plan, instruction.source_option, instruction.source_isin,
              date(2026, 11, 1), Decimal("1"), Decimal("1"), Decimal("100"),
              "subscribe-payout", NOW])
@@ -374,11 +374,11 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
     with database.connect() as con:
         _create(con, instruction)
         con.execute("""INSERT INTO mf_paper_lots (
-            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
             lock_in_until, units_original, units_remaining, purchase_nav,
             exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
-            [instruction.account_id, "lot-stp-source", instruction.source_scheme,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
+            [instruction.account_id, "lot-stp-source", instruction.folio_id, instruction.source_scheme,
              instruction.source_plan, instruction.source_option, instruction.source_isin,
              date(2026, 11, 1), Decimal("1"), Decimal("1"), Decimal("100"),
              "subscribe-stp-source", NOW])
@@ -472,11 +472,11 @@ def test_stp_subscription_uses_cash_and_lots_once_after_payout(database, monkeyp
                                amount_inr=None, units=Decimal("1"))
     with database.connect() as con:
         con.execute("""INSERT INTO mf_paper_lots (
-            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
             lock_in_until, units_original, units_remaining, purchase_nav,
             exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
-            [instruction.account_id, "lot-stp-cancel-source", instruction.source_scheme,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)""",
+            [instruction.account_id, "lot-stp-cancel-source", instruction.folio_id, instruction.source_scheme,
              instruction.source_plan, instruction.source_option, instruction.source_isin,
              date(2026, 11, 1), Decimal("1"), Decimal("1"), Decimal("100"),
              "subscribe-stp-cancel-source", NOW])
@@ -606,11 +606,11 @@ def test_systematic_value_confirmation_uses_fifo_nav_and_recovers_once(database,
         _create(con, instruction)
         persist_scheme_terms(con, terms, permissions=permissions)
         con.execute("""INSERT INTO mf_paper_lots (
-            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
             lock_in_until, units_original, units_remaining, purchase_nav,
             exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)""",
-            [instruction.account_id, "lot-systematic-value", instruction.source_scheme,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)""",
+            [instruction.account_id, "lot-systematic-value", instruction.folio_id, instruction.source_scheme,
              instruction.source_plan, instruction.source_option, instruction.source_isin,
              date(2026, 11, 1), Decimal("1"), Decimal("1"), Decimal("100"),
              "[]", terms_hash, "subscribe-systematic-value", NOW])
@@ -705,11 +705,11 @@ def test_fixed_inr_swp_converts_at_frozen_as_known_nav_before_reserving_units(da
         _create(con, instruction)
         persist_scheme_terms(con, terms, permissions=permissions)
         con.execute("""INSERT INTO mf_paper_lots (
-            account_id, lot_id, scheme_code, plan, option, isin, allotted_on,
+            account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
             lock_in_until, units_original, units_remaining, purchase_nav,
             exit_loads_json, exit_loads_sha256, subscription_event_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)""",
-            [instruction.account_id, "lot-fixed-inr-swp", instruction.source_scheme,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)""",
+            [instruction.account_id, "lot-fixed-inr-swp", instruction.folio_id, instruction.source_scheme,
              instruction.source_plan, instruction.source_option, instruction.source_isin,
              date(2026, 11, 1), Decimal("10"), Decimal("10"), Decimal("10"),
              "[]", source_hash, "subscribe-fixed-inr-swp", NOW])

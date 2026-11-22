@@ -218,6 +218,7 @@ def subscribe(
     con,
     *,
     account_id: str,
+    folio_id: str,
     event_id: str,
     lot_id: str,
     scheme_code: str,
@@ -240,6 +241,7 @@ def subscribe(
     """Create a subscription lot, funded by cash or an existing SIP reserve."""
     for label, value in (
         ("account_id", account_id),
+        ("folio_id", folio_id),
         ("event_id", event_id),
         ("lot_id", lot_id),
         ("scheme_code", scheme_code),
@@ -298,6 +300,7 @@ def subscribe(
     payload = {
         "kind": "SUBSCRIBE",
         "account_id": account_id,
+        "folio_id": folio_id,
         "event_id": event_id,
         "lot_id": lot_id,
         "scheme_code": scheme_code,
@@ -361,13 +364,14 @@ def subscribe(
                 raise MfPaperBookError("subscription exceeds reserved SIP payment funds")
         con.execute(
             """INSERT INTO mf_paper_lots (
-            account_id, lot_id, scheme_code, plan, option, isin, allotted_on, lock_in_until,
+            account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on, lock_in_until,
             units_original, units_remaining, purchase_nav, exit_loads_json, exit_loads_sha256,
             subscription_event_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
                 account_id,
                 lot_id,
+                folio_id,
                 scheme_code,
                 plan,
                 option,
@@ -390,14 +394,15 @@ def subscribe(
             )
         con.execute(
             """INSERT INTO mf_paper_events (
-            account_id, event_id, kind, scheme_code, plan, option, isin, event_date,
+            account_id, event_id, folio_id, kind, scheme_code, plan, option, isin, event_date,
             nav_per_unit, units, gross_inr, exit_load_inr, other_charges_inr,
             net_inr, event_sha256, created_at)
             VALUES (
-            ?, ?, 'SUBSCRIBE', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)""",
+            ?, ?, ?, 'SUBSCRIBE', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)""",
             [
                 account_id,
                 event_id,
+                folio_id,
                 scheme_code,
                 plan,
                 option,
@@ -459,6 +464,7 @@ def redeem(
     con,
     *,
     account_id: str,
+    folio_id: str,
     event_id: str,
     scheme_code: str,
     plan: str,
@@ -487,6 +493,7 @@ def redeem(
     """
     for label, value in (
         ("account_id", account_id),
+        ("folio_id", folio_id),
         ("event_id", event_id),
         ("scheme_code", scheme_code),
         ("plan", plan),
@@ -562,6 +569,7 @@ def redeem(
     payload = {
         "kind": "REDEEM",
         "account_id": account_id,
+        "folio_id": folio_id,
         "event_id": event_id,
         "scheme_code": scheme_code,
         "plan": plan,
@@ -597,7 +605,7 @@ def redeem(
         if settlement_id is not None:
             settlement = con.execute("""SELECT scheme_code, plan, option, isin,
                 requested_units, requested_on, requested_at, state, eligible_nav_date,
-                order_id, eligibility_sha256, eligibility_evidence_json
+                order_id, eligibility_sha256, eligibility_evidence_json, folio_id
                 FROM mf_paper_redemption_settlements
                 WHERE account_id=? AND settlement_id=?""",
                 [account_id, settlement_id]).fetchone()
@@ -607,6 +615,8 @@ def redeem(
                 raise MfPaperBookError("redemption settlement is not pending value confirmation")
             if tuple(settlement[:4]) != (scheme_code, plan, option, isin):
                 raise MfPaperBookError("redemption settlement identity does not match request")
+            if settlement[12] != folio_id:
+                raise MfPaperBookError("redemption folio differs from the reserved folio")
             if Decimal(settlement[4]) != units:
                 raise MfPaperBookError("redemption units differ from the pending request")
             if settlement[5] > redemption_date or settlement[6] > decision_at:
@@ -625,12 +635,32 @@ def redeem(
             """SELECT lot_id, allotted_on, units_remaining, exit_loads_json, lock_in_until,
                 purchase_nav
             FROM mf_paper_lots WHERE account_id = ? AND scheme_code = ? AND plan = ?
-            AND option = ? AND isin = ? AND units_remaining > 0
+            AND option = ? AND isin = ? AND folio_id = ? AND units_remaining > 0
             ORDER BY allotted_on, lot_id""",
-            [account_id, scheme_code, plan, option, isin],
+            [account_id, scheme_code, plan, option, isin, folio_id],
         ).fetchall()
         if not rows:
+            unassigned = con.execute("""SELECT COALESCE(SUM(units_remaining),0)
+                FROM mf_paper_lots WHERE account_id=? AND folio_id IS NULL
+                  AND scheme_code=? AND plan=? AND option=? AND isin=?
+                  AND units_remaining>0""",
+                [account_id, scheme_code, plan, option, isin]).fetchone()[0]
+            if Decimal(unassigned) > 0:
+                raise MfPaperBookError(
+                    "legacy lots have unreconciled folio ownership; explicit evidence is "
+                    "required before redemption"
+                )
             raise MfPaperBookError("no open purchase lots for this scheme")
+        reserved = con.execute("""SELECT COALESCE(SUM(requested_units), 0)
+            FROM mf_paper_redemption_settlements WHERE account_id=? AND folio_id=?
+              AND scheme_code=? AND plan=? AND option=? AND isin=?
+              AND state='REDEMPTION_PENDING'
+              AND (? IS NULL OR settlement_id<>?)""",
+            [account_id, folio_id, scheme_code, plan, option, isin,
+             settlement_id, settlement_id]).fetchone()[0]
+        open_units = sum((Decimal(row[2]) for row in rows), Decimal(0))
+        if units > open_units - Decimal(reserved):
+            raise MfPaperBookError("redemption exceeds folio units available after pending requests")
         lots = tuple(
             PurchaseLot(row[0], row[1], Decimal(row[2]), _schedule_from_json(row[3]))
             for row in rows
@@ -719,14 +749,15 @@ def redeem(
             )
         con.execute(
             """INSERT INTO mf_paper_events (
-            account_id, event_id, kind, scheme_code, plan, option, isin, event_date,
+            account_id, event_id, folio_id, kind, scheme_code, plan, option, isin, event_date,
             nav_per_unit, units, gross_inr, exit_load_inr, other_charges_inr,
             net_inr, event_sha256, created_at)
             VALUES (
-            ?, ?, 'REDEEM', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            ?, ?, ?, 'REDEEM', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             [
                 account_id,
                 event_id,
+                folio_id,
                 scheme_code,
                 plan,
                 option,
@@ -866,29 +897,30 @@ def account_snapshot(
     if row is None:
         raise MfPaperBookError("paper account does not exist")
     lots = con.execute(
-        """SELECT scheme_code, plan, option, isin, units_remaining, purchase_nav
+        """SELECT folio_id, scheme_code, plan, option, isin, units_remaining, purchase_nav
         FROM mf_paper_lots WHERE account_id = ? AND units_remaining > 0
-        ORDER BY scheme_code, plan, option, isin, allotted_on, lot_id""",
+        ORDER BY folio_id NULLS FIRST, scheme_code, plan, option, isin, allotted_on, lot_id""",
         [account_id],
     ).fetchall()
-    grouped: dict[tuple[str, str, str, str], tuple[Decimal, Decimal]] = {}
-    for scheme_code, plan, option, isin, raw_units, raw_nav in lots:
-        key = (scheme_code, plan, option, isin)
+    grouped: dict[tuple[str | None, str, str, str, str], tuple[Decimal, Decimal]] = {}
+    for folio_id, scheme_code, plan, option, isin, raw_units, raw_nav in lots:
+        key = (folio_id, scheme_code, plan, option, isin)
         units, cost = grouped.get(key, (Decimal(0), Decimal(0)))
         lot_units, purchase_nav = Decimal(raw_units), Decimal(raw_nav)
         grouped[key] = (units + lot_units, cost + lot_units * purchase_nav)
     positions = []
     for key, values in sorted(grouped.items()):
-        position = {
-            "scheme_code": key[0],
-            "plan": key[1],
-            "option": key[2],
-            "isin": key[3],
+        position: dict[str, Any] = {
+            "folio_id": key[0],
+            "scheme_code": key[1],
+            "plan": key[2],
+            "option": key[3],
+            "isin": key[4],
             "units": values[0],
             "cost_basis_inr": values[1],
         }
         if valuation_time is not None:
-            isin_column = "isin_growth" if key[2] == "GROWTH" else "isin_reinvest"
+            isin_column = "isin_growth" if key[3] == "GROWTH" else "isin_reinvest"
             observation = con.execute(f"""SELECT observation_id, nav, nav_date,
                 COALESCE(ingested_at, observed_at) AS available_at
                 FROM mf_nav_observations WHERE scheme_code=? AND nav_date<=?
@@ -897,8 +929,8 @@ def account_snapshot(
                   AND {isin_column}=? AND plan=? AND option=?
                 ORDER BY nav_date DESC, available_at DESC, lake_key DESC,
                          row_number DESC LIMIT 1""",
-                [key[0], valuation_time.astimezone(IST).date(), valuation_time,
-                 valuation_time, key[3], key[1], key[2]]).fetchone()
+                [key[1], valuation_time.astimezone(IST).date(), valuation_time,
+                 valuation_time, key[4], key[2], key[3]]).fetchone()
             if observation is None:
                 position.update(
                     nav_per_unit=None, nav_date=None, nav_observation_id=None,

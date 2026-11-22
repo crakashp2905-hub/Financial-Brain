@@ -141,11 +141,11 @@ def test_switch_persists_both_legs_and_never_reuses_unsettled_cash(con):
     for identity in (SOURCE, TARGET):
         persist_terms(con, _terms(identity), permissions=permissions)
     con.execute("""INSERT INTO mf_paper_lots (
-        account_id, lot_id, scheme_code, plan, option, isin, allotted_on, lock_in_until,
+        account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on, lock_in_until,
         units_original, units_remaining, purchase_nav, exit_loads_json, exit_loads_sha256,
         subscription_event_id, created_at)
-        VALUES (?, 'source-lot', ?, ?, ?, ?, ?, NULL, 10, 10, 100, '[]', ?, 'source-sub', ?)""",
-        [ACCOUNT, *SOURCE, date(2026, 11, 20), HASH, START])
+        VALUES (?, 'source-lot', ?, ?, ?, ?, ?, ?, NULL, 10, 10, 100, '[]', ?, 'source-sub', ?)""",
+        [ACCOUNT, FOLIO, *SOURCE, date(2026, 11, 20), HASH, START])
 
     request = MFSwitchRequest(
         switch_id="switch-1", account_id=ACCOUNT, folio_id=FOLIO,
@@ -175,7 +175,8 @@ def test_switch_persists_both_legs_and_never_reuses_unsettled_cash(con):
          nav_date=date(2026, 11, 23), available_at=datetime(2026, 11, 23, 12, tzinfo=UTC))
     source_terms = _terms(SOURCE)
     redeemed = redeem(
-        con, account_id=ACCOUNT, event_id="switch-out-value", scheme_code=SOURCE[0],
+        con, account_id=ACCOUNT, folio_id=FOLIO,
+        event_id="switch-out-value", scheme_code=SOURCE[0],
         plan=SOURCE[1], option=SOURCE[2], isin=SOURCE[3],
         redemption_date=date(2026, 11, 23), redemption_units=Decimal(10),
         nav_per_unit=Decimal(100), terms=source_terms, permissions=permissions,

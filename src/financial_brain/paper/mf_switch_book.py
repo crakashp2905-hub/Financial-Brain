@@ -108,7 +108,8 @@ def request_switch(
 
     try:
         request_redemption(
-            con, account_id=request.account_id, settlement_id=settlement_id,
+            con, account_id=request.account_id, folio_id=request.folio_id,
+            settlement_id=settlement_id,
             scheme_code=request.source_scheme, plan=request.source_plan,
             option=request.source_option, isin=request.source_isin,
             requested_units=request.requested_units,
