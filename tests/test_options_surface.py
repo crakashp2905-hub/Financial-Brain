@@ -83,6 +83,17 @@ def test_bad_or_stale_or_unsynchronized_quotes_are_excluded():
     }
 
 
+def test_expired_contract_is_not_forward_filled_into_a_surface():
+    expired = _quote(1000, "CE")
+    expired["expiry"] = AS_OF.date() - timedelta(days=1)
+
+    out = build_surface([expired], as_of=AS_OF, rate=RATE)
+
+    assert out["status"] == "UNAVAILABLE"
+    assert out["contracts"] == []
+    assert out["rejected_counts"] == {"EXPIRED_CONTRACT": 1}
+
+
 def test_missing_open_interest_is_never_fabricated():
     out = build_surface([_quote(1000, "CE", oi=None)], as_of=AS_OF, rate=RATE)
     assert out["contracts"][0]["open_interest"] is None

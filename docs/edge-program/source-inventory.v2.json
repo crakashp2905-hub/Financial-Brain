@@ -3238,7 +3238,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/snapshot.py",
-      "source_sha256": "8b2c548d0b67adc23433f971c9933a2e1e5071a0693bac7af4257c2b83942627",
+      "source_sha256": "709c556b971882b78ef53439a42a86b7514795d58609d30afaa1975bf9e1491f",
       "test_paths": []
     },
     {

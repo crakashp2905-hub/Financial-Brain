@@ -12,7 +12,7 @@ import json
 import math
 import re
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from types import MappingProxyType
 from typing import Any, Mapping
 
@@ -161,6 +161,32 @@ class FeatureSnapshot:
             "missingness_mask": dict(self.missingness_mask),
             "snapshot_sha256": self.snapshot_sha256,
         }
+
+    def validate_freshness(
+        self,
+        *,
+        max_observation_age: Mapping[str, timedelta],
+        as_of: datetime | None = None,
+    ) -> None:
+        """Reject stale or future-observed features under explicit per-feature budgets."""
+        decision = _aware(as_of or self.as_of, "freshness as_of")
+        assert decision is not None
+        decision_utc = decision.astimezone(timezone.utc)
+        if decision_utc < self.as_of.astimezone(timezone.utc):
+            raise FeatureSnapshotError("freshness check cannot precede snapshot cutoff")
+        if set(max_observation_age) != set(self.values):
+            raise FeatureSnapshotError("freshness budgets must cover every snapshot feature")
+        for name, budget in max_observation_age.items():
+            if not isinstance(budget, timedelta) or budget < timedelta(0):
+                raise FeatureSnapshotError(f"freshness budget for {name!r} must be non-negative")
+            observed = self.observed_at[name]
+            if observed is None:
+                continue
+            age = decision_utc - observed.astimezone(timezone.utc)
+            if age < timedelta(0):
+                raise FeatureSnapshotError(f"feature {name!r} was observed after freshness cutoff")
+            if age > budget:
+                raise FeatureSnapshotError(f"feature {name!r} exceeds its freshness budget")
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "FeatureSnapshot":

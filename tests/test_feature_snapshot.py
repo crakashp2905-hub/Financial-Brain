@@ -85,3 +85,19 @@ def test_serialized_snapshot_rejects_tampering() -> None:
 
     with pytest.raises(FeatureSnapshotError, match="hash does not match"):
         FeatureSnapshot.from_dict(payload)
+
+
+def test_explicit_freshness_budgets_reject_stale_indicator_values() -> None:
+    old_observation = CUTOFF - timedelta(days=3)
+    snapshot = _snapshot(
+        observed_at={"momentum_20": old_observation, "sector_event": None},
+        available_at={"momentum_20": old_observation, "sector_event": None},
+    )
+
+    with pytest.raises(FeatureSnapshotError, match="exceeds its freshness budget"):
+        snapshot.validate_freshness(max_observation_age={
+            "momentum_20": timedelta(days=1), "sector_event": timedelta(days=30),
+        })
+    snapshot.validate_freshness(max_observation_age={
+        "momentum_20": timedelta(days=5), "sector_event": timedelta(days=30),
+    })
