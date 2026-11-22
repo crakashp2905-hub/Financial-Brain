@@ -2888,7 +2888,7 @@
       ],
       "blocker": "Authoritative exchange/broker unit and lot data are not yet ingested; existing options and ETF strategies are not all migrated into the shared candidate pipeline, so universal unit-aware position reconciliation is incomplete.",
       "last_audited_at_utc": "2026-11-22T13:59:24Z",
-      "commit": null,
+      "commit": "1b792aed",
       "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
     },
     {
