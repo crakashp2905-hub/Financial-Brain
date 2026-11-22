@@ -2935,8 +2935,8 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-22T16:10:00Z",
-      "commit": "pending",
-      "test_result": "Focused cost-schedule, marketable-fill and passive-fill regression tests passed. Full hosted Windows/Ubuntu validation is pending."
+      "commit": "c2e7b988",
+      "test_result": "Focused cost-schedule, marketable-fill and passive-fill regression tests passed. GitHub Actions run 45039794268 passed Ubuntu (6m40s), Windows (19m56s), and both reproducibility jobs; a fresh uncanceled run is required because the earlier canceled Windows check remains attached to this commit."
     },
     {
       "id": "FB-0806",
