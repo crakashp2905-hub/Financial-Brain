@@ -2766,14 +2766,21 @@
       "id": "FB-0718",
       "text": "Build an explicit **MF PAPER REALISM** score measuring eligible-NAV certainty, payment-time evidence, load completeness and redemption settlement confidence.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No MF PAPER REALISM score aggregating NAV eligibility certainty, payment evidence, load completeness and payout confidence was found."
+        "src/financial_brain/kernel/mf_paper_realism.py scores eligible-NAV certainty (35%), payment-time evidence (25%), exit-load completeness (20%) and redemption-settlement confidence (20%).",
+        "Missing factors contribute zero rather than being excluded; the output separately exposes assessment coverage, observed-evidence coverage and missing dimensions, with a deterministic assessment hash.",
+        "Observed factors require individual source identity/reference/hash; simulated assumptions are labelled separately. Tests verify weighting, missing-input treatment, provenance, duplicate dimensions and future-dated evidence."
       ],
-      "blocker": null,
+      "blocker": "Weights are explicit design defaults, not empirically calibrated. The score is not yet populated from live account/order/terms/settlement state or validated against realized paper-trading fidelity.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "commit": "06369556c7b8610bfcd76568df904b4b171cff3e",
+      "test_evidence": [
+        "python -m pytest tests/test_mf_paper_realism.py tests/test_mf_purchase_payment.py tests/test_mf_order.py -q: 22 passed",
+        "ruff check src/financial_brain/kernel/mf_paper_realism.py tests/test_mf_paper_realism.py: passed",
+        "mypy src/financial_brain/kernel/mf_paper_realism.py: passed",
+        "git diff --check: passed"
+      ]
     },
     {
       "id": "FB-0801",
@@ -15622,9 +15629,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 30,
-    "PARTIAL": 195,
+    "PARTIAL": 196,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 20,
+    "NOT_STARTED": 19,
     "UNASSESSED": 1132
   }
 }
