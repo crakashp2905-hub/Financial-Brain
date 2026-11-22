@@ -707,6 +707,26 @@ def test_account_valuation_uses_only_as_known_nav_and_flags_stale_or_missing(con
     assert stale["stale_position_count"] == 1
 
 
+def test_mf_terminal_panel_displays_last_known_nav_with_stale_flag(connection):
+    from financial_brain.paper.terminal import mf_paper_panel
+
+    con = connection
+    create_account(con, "paper-terminal", 1000, now=NOW)
+    _subscribe(
+        con, event_id="terminal-sub", lot_id="terminal-lot", amount=1000,
+        schedule=(), digest=HASH_A, account_id="paper-terminal",
+    )
+    _persist_nav_observation(
+        con, observation_id="terminal-nav", nav_date=date(2026, 1, 15), nav=125,
+        available_at=datetime(2026, 1, 15, 12, tzinfo=timezone.utc),
+    )
+    page = mf_paper_panel(con, date(2026, 2, 1))
+    assert "NAV value Rs 1,250.00" in page
+    assert "Rs +250.00" in page
+    assert "Last known NAV" in page and "125.0000" in page
+    assert "STALE" in page and "NAV date" in page
+
+
 def test_settlement_value_requires_exact_as_known_nav_observation(connection):
     con = connection
     create_account(con, "paper-1", 1000, now=NOW)
