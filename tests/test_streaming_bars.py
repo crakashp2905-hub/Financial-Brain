@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import duckdb
 import pytest
 
+from financial_brain.features import bars as offline_bars
 from financial_brain.features.streaming_bars import (
     BarWindowStatus,
     MinuteBar,
@@ -85,6 +87,37 @@ def test_exact_duplicates_are_idempotent_but_conflicting_revisions_fail_closed()
     assert not agg.ingest(row)
     with pytest.raises(StreamingBarError, match="conflicting minute revision"):
         agg.ingest(_minute(0, price=999.0))
+
+
+def test_offline_and_streaming_resamplers_match_at_each_market_event_prefix() -> None:
+    con = duckdb.connect(":memory:")
+    con.execute("""CREATE TABLE minute_bars(
+        instrument_token BIGINT, tradingsymbol VARCHAR, isin VARCHAR, ts TIMESTAMPTZ,
+        open DOUBLE, high DOUBLE, low DOUBLE, close DOUBLE, volume BIGINT)""")
+    agg = _aggregate()
+    inserted = []
+    for offset in range(15):
+        minute = _minute(offset)
+        agg.ingest(minute)
+        row = (1, "INFY", "INE009A01021", minute.start_at, minute.open, minute.high,
+               minute.low, minute.close, int(minute.volume))
+        con.execute("INSERT INTO minute_bars VALUES (?,?,?,?,?,?,?,?,?)", row)
+        inserted.append(row)
+        if offset % 5 != 4:
+            continue
+
+        cutoff = minute.available_at
+        streaming = [window for window in agg.snapshot(as_of=cutoff, frequencies=("5m",))
+                     if window.is_complete]
+        offline_bars.resample(con, 5)
+        offline = con.execute(
+            "SELECT ts, open, high, low, close, volume FROM bars_5m ORDER BY ts"
+        ).fetchall()
+        streamed = [(window.start_at, window.open, window.high, window.low,
+                     window.close, window.volume) for window in streaming]
+        assert streamed == offline, f"streaming/offline mismatch after {len(inserted)} minutes"
+
+    con.close()
 
 
 def test_malformed_or_out_of_session_minutes_are_rejected() -> None:
