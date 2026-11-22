@@ -2780,15 +2780,16 @@
       "id": "FB-0717",
       "text": "Distinguish assumed simulated payment realization from independently observed payment realization; forbid fabricated certainty in reports.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
         "MF flow inputs carry source hashes, observed/published clocks and separate research/retention permissions; option/paper evidence labels elsewhere distinguish replay/local prospective records.",
-        "No MF lifecycle report distinguishes simulated payment realization from independently observed bank/scheme payment realization."
+        "The trader terminal's MF paper panel now lists every as-of redemption settlement with state, net payout, availability time, realization basis, evidence reference, source identity and source-hash prefix.",
+        "Only a CASH_AVAILABLE settlement with SIMULATED_ASSUMPTION or OBSERVED_EVIDENCE is labeled realized; all other states display PENDING / NOT REALIZED. No UI language claims a simulated payout is observed."
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
       "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "test_result": "python -m pytest tests/test_mf_lot_book.py -q: 17 passed; ruff check src/financial_brain/paper/terminal.py tests/test_mf_lot_book.py: passed; git diff --check: passed"
     },
     {
       "id": "FB-0718",
