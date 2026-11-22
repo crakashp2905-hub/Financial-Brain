@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 692,
+  "source_count": 693,
   "sources": [
     {
       "capability_ids": [],
@@ -3043,6 +3043,20 @@
       "capability_ids": [],
       "human_owner": null,
       "imports": [
+        "__future__",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/event_availability.py",
+      "source_sha256": "b9602b6afbb0e46d3b456e2a62e61c70cc718ee0cff8dc9700b1a78d46889607",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
         "__future__"
       ],
       "maturity": "unassessed",
@@ -3122,7 +3136,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/indicators.py",
-      "source_sha256": "8d0ccc1e46ad872953fae894e4cf7913a4167aa733050a9da6a41dc1fcc36c8e",
+      "source_sha256": "247b82fc5c08dcc8df2a38d8906ddaf7521849432147e96f713a7dd3a3b46821",
       "test_paths": []
     },
     {
@@ -12249,6 +12263,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 677,
+  "unassessed_count": 678,
   "unassigned_role_count": 400
 }
