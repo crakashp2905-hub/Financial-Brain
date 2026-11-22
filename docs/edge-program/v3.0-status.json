@@ -9562,12 +9562,24 @@
     {
       "id": "SL-01-15",
       "text": "Declare market data ingestion unavailable during outages, holidays or unauthorized periods; expose `NO_DATA` and stop policy decisions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/feed_health.py now reports NO_DATA with decision_status=NO_TRADE when there are no observations or when the caller declares market closed, unauthorized, or provider outage; stale feeds also block decisions.",
+        "the legacy paper/intraday_runner.run_live returns NO_DATA/NO_TRADE for weekends/after close and rights failures, labels detected no-session days MARKET_CLOSED, and its rights gate returns before any quote request. ForwardSessionRunner already requires a frozen sourced calendar plan and blocks out-of-session events.",
+        "tests/test_forward_edge_feed_health.py plus four focused phase5 intraday cases: 12 passed; Ruff and targeted mypy passed."
+      ],
+      "blocker": "The shared availability status is not yet wired to every consumer/desk and source adapters do not all publish calendar, outage and permission state into one common market-availability service. A detected no-session in the legacy poller is conservative but is not a complete official-calendar integration.",
+      "last_audited_at_utc": "2026-11-22T22:23:09Z",
+      "commit": "b11bcb37",
+      "test_evidence": [
+        "tests/test_forward_edge_feed_health.py",
+        "tests/test_phase5_intraday_runner.py::test_live_kite_runner_blocks_missing_permission_before_quote_request",
+        "tests/test_phase5_intraday_runner.py::test_a_holiday_is_detected_and_the_run_ends_quietly",
+        "tests/test_phase5_intraday_runner.py::test_a_failing_feed_aborts_after_the_limit_rather_than_spinning_all_day",
+        "tests/test_phase5_intraday_runner.py::test_started_after_the_close_or_on_a_weekend_it_records_nothing"
+      ],
+      "test_result": "12 focused feed-health/intraday tests passed in 7.15s; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-01-16",
@@ -15727,7 +15739,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T22:19:21Z",
+    "as_of_utc": "2026-11-22T22:23:09Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15988,15 +16000,16 @@
       "SL-01-12",
       "SL-01-13",
       "SL-01-14",
+      "SL-01-15",
       "SL-01-18"
     ],
-    "audited_count": 260,
+    "audited_count": 261,
     "status_counts": {
       "COMPLETE": 45,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 203,
-      "UNASSESSED": 1118
+      "PARTIAL": 204,
+      "UNASSESSED": 1117
     },
     "verified_complete_count": 45,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16133,7 +16146,7 @@
     "COMPLETE": 45,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 203,
-    "UNASSESSED": 1118
+    "PARTIAL": 204,
+    "UNASSESSED": 1117
   }
 }
