@@ -3072,13 +3072,15 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Runner preflight and order paths validate instrument universe, causal timestamps, risk verdict, quote freshness, displayed size, cash/reservations and effective lot rules.",
-        "A common precommit receipt validation across every cash, ETF and options execution adapter is not established."
+        "src/financial_brain/forward_edge/session_runner.py persists a content-hashed precommit receipt joining decision-manifest hash, explicit allowed risk-verdict/policy identity, effective instrument rulebook, selected quantity ceiling, reconciled pre-order cash and position, quote event/evidence hashes and event/received/available clocks, quote-age bound, decision clock, and earliest eligible execution time.",
+        "The execution receipt carries the precommit receipt hash. The repeated-order path compares immutable order parameters without treating a later account snapshot as a new intent.",
+        "tests/test_forward_edge_session_runner.py validates receipt hash and binding to the instrument/risk/quote evidence; tests/test_forward_edge_session_runner.py plus tests/test_forward_edge_f05.py: 81 passed. Ruff and mypy passed.",
+        "This remains a forward cash-paper path; one authenticated validator covering every options, ETF, legacy and OMS adapter, and explicit policy limit values rather than a policy hash/verdict, are not yet established."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "blocker": "Partial: precommit receipt is integrated into ForwardSessionRunner paper execution only. Other paper OMS/asset-class adapters and authenticated policy enforcement remain separate; the receipt records the evaluated policy identity and verdict, not its full risk-limit configuration.",
+      "last_audited_at_utc": "2026-11-22T19:22:15Z",
+      "commit": "2b27ade5",
+      "test_result": "Commit 2b27ade5. Windows focused verification: tests/test_forward_edge_session_runner.py and tests/test_forward_edge_f05.py: 81 passed; Ruff and mypy passed. Hosted cross-platform CI pending."
     },
     {
       "id": "FB-0814",
@@ -15593,7 +15595,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T18:52:46Z",
+    "as_of_utc": "2026-11-22T19:22:15Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15927,7 +15929,8 @@
       "src/financial_brain/paper/options_lifecycle.py",
       "tests/test_paper_options_lifecycle.py",
       "src/financial_brain/kernel/paper_account.py",
-      "tests/test_paper_account.py"
+      "tests/test_paper_account.py",
+      "tests/test_forward_edge_session_runner.py"
     ],
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing."
   },
