@@ -540,7 +540,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/corpactions/actions.py",
-      "source_sha256": "150e0d31b7d4cb4152d225b845db88ece680198f69cc881df0c18a6fd7f7e804",
+      "source_sha256": "1af6975af90de25ca1bdfff72d1a170c7dbbd2ae7aa9a8e3f54a6976c1b9a909",
       "test_paths": []
     },
     {
