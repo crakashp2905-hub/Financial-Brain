@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 691,
+  "source_count": 692,
   "sources": [
     {
       "capability_ids": [],
@@ -3099,6 +3099,23 @@
       "capability_ids": [],
       "human_owner": null,
       "imports": [
+        "__future__",
+        "collections",
+        "datetime",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/index_cross_section.py",
+      "source_sha256": "03abf1a65e57f522d30e76908238f7f8ac250d0f6baef33c0e21aaf3a83b8e49",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
         "__future__"
       ],
       "maturity": "unassessed",
@@ -5947,13 +5964,14 @@
         "json",
         "lake.store",
         "pandas",
+        "typing",
         "urllib.request"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/index_tri.py",
-      "source_sha256": "410beecf35e1a83a556698ff7595de01e320430a485c6934ee405889b2b49a52",
+      "source_sha256": "21e4fc021cfe4590470e5609668d1c4da21626d09960d5a6567d9288a99d6991",
       "test_paths": []
     },
     {
@@ -12231,6 +12249,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 676,
+  "unassessed_count": 677,
   "unassigned_role_count": 400
 }
