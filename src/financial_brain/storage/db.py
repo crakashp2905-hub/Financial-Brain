@@ -72,7 +72,52 @@ class Database:
                     con.execute(stmt)
                 except duckdb.Error:
                     pass  # column already present on this build
+            self._migrate_mf_ledger_account_codes(con)
             self._refresh_views(con)
+
+    @staticmethod
+    def _migrate_mf_ledger_account_codes(con) -> None:
+        """Add the SIP payment-clearing account to older MF paper journals."""
+        constraints = con.execute("""SELECT constraint_text FROM duckdb_constraints()
+            WHERE table_name='mf_paper_ledger_entries' AND constraint_type='CHECK'""").fetchall()
+        if any("SIP_PAYMENT_PENDING" in str(row[0]) for row in constraints):
+            return
+        con.execute("BEGIN TRANSACTION")
+        try:
+            con.execute("""CREATE TABLE mf_paper_ledger_entries_upgrade (
+                account_id VARCHAR NOT NULL,
+                transaction_id VARCHAR NOT NULL,
+                line_no INTEGER NOT NULL CHECK (line_no > 0),
+                effective_at TIMESTAMPTZ NOT NULL,
+                recorded_at TIMESTAMPTZ NOT NULL,
+                account_code VARCHAR NOT NULL CHECK (account_code IN (
+                    'CASH', 'MF_INVESTMENTS', 'REDEMPTION_RECEIVABLE',
+                    'OWNER_EQUITY', 'OWNER_WITHDRAWALS', 'EXIT_LOAD_EXPENSE',
+                    'OTHER_CHARGES_EXPENSE', 'IDCW_INCOME', 'REALIZED_GAIN',
+                    'REALIZED_LOSS', 'SIP_PAYMENT_PENDING')),
+                debit_inr DECIMAL(38,18) NOT NULL CHECK (debit_inr >= 0),
+                credit_inr DECIMAL(38,18) NOT NULL CHECK (credit_inr >= 0),
+                basis VARCHAR NOT NULL CHECK (basis IN (
+                    'SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+                source_id VARCHAR, source_ref VARCHAR, source_sha256 VARCHAR,
+                event_sha256 VARCHAR NOT NULL, evidence_json VARCHAR NOT NULL,
+                PRIMARY KEY (account_id, transaction_id, line_no),
+                CHECK ((debit_inr > 0 AND credit_inr = 0)
+                    OR (credit_inr > 0 AND debit_inr = 0)),
+                CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
+                    AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
+                    OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
+                    AND source_ref IS NULL AND source_sha256 IS NULL))
+            )""")
+            con.execute("""INSERT INTO mf_paper_ledger_entries_upgrade
+                SELECT * FROM mf_paper_ledger_entries""")
+            con.execute("DROP TABLE mf_paper_ledger_entries")
+            con.execute("""ALTER TABLE mf_paper_ledger_entries_upgrade
+                RENAME TO mf_paper_ledger_entries""")
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")
+            raise
 
     def _refresh_views(self, con) -> None:
         """Views over the curated Parquet datasets, plus derived views."""

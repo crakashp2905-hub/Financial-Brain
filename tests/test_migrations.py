@@ -1,4 +1,6 @@
 """Schema migrations: a fresh database, a re-run, and a database from an earlier version all end at the same schema."""
+from decimal import Decimal
+
 import duckdb
 
 from financial_brain.config import Config
@@ -35,3 +37,49 @@ def test_an_older_database_gains_the_added_columns(tmp_path):
     con.close()
     Database(cfg).migrate()
     assert _schema(cfg.db_path) == fresh
+
+
+def test_old_mf_journal_accepts_sip_reserve_without_losing_rows(tmp_path):
+    cfg = Config(data_root=tmp_path).ensure()
+    Database(cfg).migrate()
+    con = duckdb.connect(str(cfg.db_path))
+    con.execute("DROP TABLE mf_paper_ledger_entries")
+    con.execute("""CREATE TABLE mf_paper_ledger_entries (
+        account_id VARCHAR NOT NULL, transaction_id VARCHAR NOT NULL,
+        line_no INTEGER NOT NULL CHECK (line_no > 0),
+        effective_at TIMESTAMPTZ NOT NULL, recorded_at TIMESTAMPTZ NOT NULL,
+        account_code VARCHAR NOT NULL CHECK (account_code IN (
+            'CASH', 'MF_INVESTMENTS', 'REDEMPTION_RECEIVABLE',
+            'OWNER_EQUITY', 'OWNER_WITHDRAWALS', 'EXIT_LOAD_EXPENSE',
+            'OTHER_CHARGES_EXPENSE', 'IDCW_INCOME', 'REALIZED_GAIN', 'REALIZED_LOSS')),
+        debit_inr DECIMAL(38,18) NOT NULL CHECK (debit_inr >= 0),
+        credit_inr DECIMAL(38,18) NOT NULL CHECK (credit_inr >= 0),
+        basis VARCHAR NOT NULL CHECK (basis IN (
+            'SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+        source_id VARCHAR, source_ref VARCHAR, source_sha256 VARCHAR,
+        event_sha256 VARCHAR NOT NULL, evidence_json VARCHAR NOT NULL,
+        PRIMARY KEY (account_id, transaction_id, line_no),
+        CHECK ((debit_inr > 0 AND credit_inr = 0)
+            OR (credit_inr > 0 AND debit_inr = 0)),
+        CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
+            AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
+            OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
+            AND source_ref IS NULL AND source_sha256 IS NULL))
+    )""")
+    con.execute("""INSERT INTO mf_paper_ledger_entries VALUES
+        ('paper', 'legacy-opening', 1, TIMESTAMPTZ '2026-01-01 00:00:00+00',
+         TIMESTAMPTZ '2026-01-01 00:00:00+00', 'CASH', 100, 0,
+         'SIMULATED_ASSUMPTION', NULL, NULL, NULL, 'hash', '{}')""")
+    con.close()
+
+    Database(cfg).migrate()
+    con = duckdb.connect(str(cfg.db_path))
+    assert con.execute("""SELECT account_code, debit_inr FROM mf_paper_ledger_entries
+        WHERE transaction_id='legacy-opening'""").fetchone() == ("CASH", Decimal("100"))
+    con.execute("""INSERT INTO mf_paper_ledger_entries VALUES
+        ('paper', 'sip-reserve', 1, TIMESTAMPTZ '2026-01-02 00:00:00+00',
+         TIMESTAMPTZ '2026-01-02 00:00:00+00', 'SIP_PAYMENT_PENDING', 10, 0,
+         'SIMULATED_ASSUMPTION', NULL, NULL, NULL, 'hash-2', '{}')""")
+    assert con.execute("""SELECT COUNT(*) FROM mf_paper_ledger_entries
+        WHERE account_code='SIP_PAYMENT_PENDING'""").fetchone()[0] == 1
+    con.close()
