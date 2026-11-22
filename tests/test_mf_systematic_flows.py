@@ -83,6 +83,9 @@ def test_stp_purchase_waits_for_settled_proceeds_and_cannot_overspend():
 
 def test_stp_rejects_same_time_redeployment_and_value_must_include_loads():
     request, value, _ = _redemption_events()
+    with pytest.raises(MFSystematicFlowError, match="explicit load and other-charge"):
+        _event(MFSystematicFlowEventKind.VALUE_CONFIRMED, 20,
+               amount_inr=Decimal("10000"), gross_inr=Decimal("10000"))
     with pytest.raises(MFSystematicFlowError, match="gross less charges"):
         _event(MFSystematicFlowEventKind.VALUE_CONFIRMED, 20,
                amount_inr=Decimal("9900"), gross_inr=Decimal("10000"),

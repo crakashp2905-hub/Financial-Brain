@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
+from .trading_clock import IST
 
 
 class MFSystematicFlowError(ValueError):
@@ -141,7 +142,9 @@ class MFSystematicFlowEvent:
         if self.kind is MFSystematicFlowEventKind.VALUE_CONFIRMED:
             if self.amount_inr is None or self.gross_inr is None:
                 raise MFSystematicFlowError("confirmed redemption requires net and gross value")
-            charges = (self.exit_load_inr or Decimal(0)) + (self.other_charges_inr or Decimal(0))
+            if self.exit_load_inr is None or self.other_charges_inr is None:
+                raise MFSystematicFlowError("confirmed redemption requires explicit load and other-charge amounts")
+            charges = self.exit_load_inr + self.other_charges_inr
             if (self.gross_inr - charges).quantize(Decimal("0.01")) != self.amount_inr.quantize(Decimal("0.01")):
                 raise MFSystematicFlowError("net redemption value must reconcile to gross less charges")
         elif self.kind in (MFSystematicFlowEventKind.PAYOUT_AVAILABLE,
@@ -190,10 +193,15 @@ class MFSystematicFlowLifecycle:
             expected.extend((MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED,
                              MFSystematicFlowEventKind.ALLOTMENT_CONFIRMED))
         if kinds == [MFSystematicFlowEventKind.MISSED]:
+            if events[0].effective_at.astimezone(IST).date() < self.instruction.scheduled_for:
+                raise MFSystematicFlowError("missed event precedes its scheduled date")
             object.__setattr__(self, "events", events)
             return
         if kinds != expected[:len(kinds)]:
             raise MFSystematicFlowError("events violate SWP/STP redemption-to-payout ordering")
+        if any(event.effective_at.astimezone(IST).date() < self.instruction.scheduled_for
+               for event in events):
+            raise MFSystematicFlowError("SWP/STP event precedes its scheduled date")
         for prior, following in zip(events, events[1:]):
             if following.effective_at <= prior.effective_at:
                 raise MFSystematicFlowError("SWP/STP settlement stages must be asynchronous")
