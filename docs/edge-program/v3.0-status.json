@@ -2676,17 +2676,17 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "kernel/mf_sip.py models each SIP installment as an independent immutable record with its own scheduled date, amount, payment initiation, funds availability, NAV-pending, missed or allotted outcome.",
-        "The transition validator makes MISSED terminal; successful installments require separate payment timestamps and published/available NAV evidence before fractional units can be allotted.",
-        "MFSIPSeries advances one installment at a time and preserves outcomes of other installments; tests cover independent outcomes, missed-installment terminality, missing NAV, and amount/unit reconciliation."
+        "kernel/mf_sip.py models independent immutable SIP installment outcomes and a per-installment state machine; MISSED is terminal, and successful allotment requires distinct payment and NAV clocks plus unit/NAV reconciliation.",
+        "paper/mf_sip_book.py and mf_paper_sip_* schema tables persist schedules and installment transitions independently and idempotently; restart tests verify missed status survives database reopen.",
+        "Tests verify one installment can progress while a missed neighbor stays unchanged, missed installments cannot be retried, duplicate plan IDs cannot rewrite schedules, and event time is not backdated."
       ],
-      "blocker": "SIP schedules/outcomes are not yet persisted or wired into payment mandate, sourced platform rules, NAV assignment and the canonical MF account ledger.",
+      "blocker": "The durable paper lifecycle is not yet connected to a real payment mandate/authorized source, NAV eligibility assignment, or the canonical MF cash-and-unit ledger.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "1d2f7d4e6c22da2da364992dfee5936381e169df",
+      "commit": "5b7efb8dfa15984e0cabd47074fb7ac7583e955f",
       "test_evidence": [
-        "python -m pytest tests/test_mf_sip.py -q: 9 passed",
-        "ruff check src/financial_brain/kernel/mf_sip.py tests/test_mf_sip.py: passed",
-        "mypy src/financial_brain/kernel/mf_sip.py: passed",
+        "python -m pytest tests/test_mf_sip_book.py tests/test_mf_sip.py tests/test_migrations.py -q: 16 passed",
+        "ruff check src/financial_brain/kernel/mf_sip.py src/financial_brain/paper/mf_sip_book.py tests/test_mf_sip.py tests/test_mf_sip_book.py: passed",
+        "mypy src/financial_brain/kernel/mf_sip.py src/financial_brain/paper/mf_sip_book.py: passed",
         "git diff --check: passed"
       ]
     },
