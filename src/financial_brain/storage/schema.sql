@@ -705,6 +705,53 @@ CREATE TABLE IF NOT EXISTS mf_paper_accounts (
     created_at TIMESTAMPTZ NOT NULL
 );
 
+-- Immutable MF requests and append-only platform/simulation lifecycle receipts.
+CREATE TABLE IF NOT EXISTS mf_paper_orders (
+    order_id VARCHAR PRIMARY KEY,
+    account_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    transaction_type VARCHAR NOT NULL CHECK (transaction_type IN (
+        'PURCHASE', 'REDEMPTION', 'SWITCH_IN', 'SWITCH_OUT'
+    )),
+    requested_at TIMESTAMPTZ NOT NULL,
+    amount_inr DECIMAL(38, 18),
+    units DECIMAL(38, 18),
+    request_basis VARCHAR NOT NULL CHECK (request_basis IN (
+        'SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE'
+    )),
+    request_sha256 VARCHAR NOT NULL,
+    valid_through DATE NOT NULL,
+    current_state VARCHAR NOT NULL CHECK (current_state IN (
+        'REQUESTED', 'ACKNOWLEDGED', 'ACCEPTED', 'REJECTED'
+    )),
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    CHECK ((amount_inr IS NOT NULL AND amount_inr > 0 AND units IS NULL)
+        OR (units IS NOT NULL AND units > 0 AND amount_inr IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_order_transitions (
+    order_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    state VARCHAR NOT NULL CHECK (state IN (
+        'REQUESTED', 'ACKNOWLEDGED', 'ACCEPTED', 'REJECTED'
+    )),
+    effective_at TIMESTAMPTZ NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL,
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    reason VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (order_id, sequence),
+    UNIQUE (order_id, event_sha256)
+);
+
 CREATE TABLE IF NOT EXISTS mf_paper_lots (
     account_id VARCHAR NOT NULL,
     lot_id VARCHAR NOT NULL,
