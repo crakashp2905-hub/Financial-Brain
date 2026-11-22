@@ -119,6 +119,25 @@ class PaperOptionLifecycle:
             BEFORE DELETE ON option_lifecycle_events
             BEGIN SELECT RAISE(ABORT, 'option lifecycle is append-only'); END;
         """)
+        self.connection.execute("""CREATE TABLE IF NOT EXISTS option_desk_control_events (
+            sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id TEXT NOT NULL,
+            desk_id TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            occurred_at TEXT NOT NULL,
+            previous_sha256 TEXT NOT NULL,
+            event_sha256 TEXT NOT NULL,
+            event_json TEXT NOT NULL,
+            UNIQUE(account_id,desk_id,event_id))""")
+        self.connection.executescript("""
+            CREATE TRIGGER IF NOT EXISTS option_desk_controls_no_update
+            BEFORE UPDATE ON option_desk_control_events
+            BEGIN SELECT RAISE(ABORT, 'option desk controls are append-only'); END;
+            CREATE TRIGGER IF NOT EXISTS option_desk_controls_no_delete
+            BEFORE DELETE ON option_desk_control_events
+            BEGIN SELECT RAISE(ABORT, 'option desk controls are append-only'); END;
+        """)
         self.connection.execute("""CREATE TABLE IF NOT EXISTS option_paper_outbox (
             account_id TEXT NOT NULL,
             signal_id TEXT NOT NULL,
@@ -234,14 +253,18 @@ class PaperOptionLifecycle:
         return False
 
     @_atomic
-    def register_plan(self, *, plan_id: str, account_id: str, signal_id: str,
+    def register_plan(self, *, plan_id: str, account_id: str, desk_id: str,
+                      signal_id: str, signal_expires_at: datetime,
                       child_order_id: str, decision_at: datetime,
                       quantity: int, observations: tuple[OptionLegObservation, ...],
                       fee_reserve_inr: Decimal, max_quote_age_seconds: float,
                       cost_model_sha256: str) -> bool:
         """Freeze a long-option/debit-vertical paper plan and its cash reserve."""
         _aware(decision_at, "decision_at")
-        if (not plan_id.strip() or not account_id.strip() or not signal_id.strip()
+        _aware(signal_expires_at, "signal_expires_at")
+        if signal_expires_at <= decision_at:
+            raise OptionLifecycleError("signal expiration must follow its decision time")
+        if (not plan_id.strip() or not account_id.strip() or not desk_id.strip() or not signal_id.strip()
                 or not child_order_id.strip() or type(quantity) is not int
                 or quantity < 1 or not isinstance(fee_reserve_inr, Decimal)):
             raise OptionLifecycleError("paper account, signal/child identity, plan and positive quantity are required")
@@ -279,7 +302,8 @@ class PaperOptionLifecycle:
                 "evidence_sha256": item.evidence_sha256,
             })
         payload = {
-            "account_id": account_id, "signal_id": signal_id,
+            "account_id": account_id, "desk_id": desk_id, "signal_id": signal_id,
+            "signal_expires_at": signal_expires_at.isoformat(),
             "child_order_id": child_order_id, "decision_at": decision_at.isoformat(),
             "target_quantity": quantity, "legs": frozen_legs,
             "strategy_type": structure["strategy_type"],
@@ -307,6 +331,122 @@ class PaperOptionLifecycle:
         return [{"account_id": row[0], "signal_id": row[1], "child_order_id": row[2],
                  "plan_id": row[3], "payload_sha256": row[4], "created_at": row[5],
                  "dispatch_status": "PENDING_PAPER_CONSUMER"} for row in rows]
+
+    @_atomic
+    def invalidate_signal(self, *, plan_id: str, event_id: str,
+                          occurred_at: datetime, reason: str) -> bool:
+        plan = self.state(plan_id)
+        _aware(occurred_at, "invalidation time")
+        if not event_id.strip() or not reason.strip():
+            raise OptionLifecycleError("signal invalidation needs an event ID and reason")
+        payload = {"reason": reason}
+        journal_id = f"SIGNAL_INVALIDATED:{event_id}"
+        duplicate = self._existing_result(plan_id=plan_id, event_id=journal_id,
+                                          event_type="SIGNAL_INVALIDATED", payload=payload)
+        if duplicate is not None:
+            return duplicate
+        if any(event["type"] == "SIGNAL_INVALIDATED" for event in plan["events"]):
+            raise OptionLifecycleError("signal is already invalidated")
+        return self._append(plan_id=plan_id, event_id=journal_id,
+                            event_type="SIGNAL_INVALIDATED", occurred_at=occurred_at,
+                            payload=payload)
+
+    def _desk_control_state(self, account_id: str, desk_id: str) -> str:
+        rows = self.connection.execute(
+            "SELECT event_type,occurred_at,previous_sha256,event_sha256,event_json "
+            "FROM option_desk_control_events WHERE account_id=? AND desk_id=? ORDER BY sequence",
+            [account_id, desk_id]).fetchall()
+        previous = "GENESIS"
+        previous_time: str | None = None
+        state = "ACTIVE"
+        for event_type, occurred_at, stored_previous, digest, encoded in rows:
+            expected = hashlib.sha256((previous + encoded).encode("utf-8")).hexdigest()
+            if stored_previous != previous or digest != expected or (previous_time and occurred_at < previous_time):
+                raise OptionLifecycleError("option desk control hash chain is corrupt")
+            if event_type not in {"HALTED", "RESUMED"}:
+                raise OptionLifecycleError("option desk control event has an unsupported state")
+            state = "HALTED" if event_type == "HALTED" else "ACTIVE"
+            previous, previous_time = digest, occurred_at
+        return state
+
+    def _append_desk_control(self, *, account_id: str, desk_id: str, event_id: str,
+                             event_type: str, occurred_at: datetime,
+                             payload: dict[str, Any]) -> bool:
+        if not account_id.strip() or not desk_id.strip() or not event_id.strip():
+            raise OptionLifecycleError("desk control needs account, desk and event identities")
+        _aware(occurred_at, "desk control time")
+        encoded = _canonical(payload)
+        stamp = occurred_at.astimezone(timezone.utc).isoformat()
+        prior = self.connection.execute(
+            "SELECT event_type,event_json FROM option_desk_control_events "
+            "WHERE account_id=? AND desk_id=? AND event_id=?",
+            [account_id, desk_id, event_id]).fetchone()
+        if prior:
+            if prior != (event_type, encoded):
+                raise OptionLifecycleError("desk control ID conflicts with prior evidence")
+            return False
+        previous_row = self.connection.execute(
+            "SELECT event_sha256,occurred_at FROM option_desk_control_events "
+            "WHERE account_id=? AND desk_id=? ORDER BY sequence DESC LIMIT 1",
+            [account_id, desk_id]).fetchone()
+        previous = previous_row[0] if previous_row else "GENESIS"
+        if previous_row and stamp < previous_row[1]:
+            raise OptionLifecycleError("desk control event time cannot regress")
+        digest = hashlib.sha256((previous + encoded).encode("utf-8")).hexdigest()
+        self.connection.execute(
+            "INSERT INTO option_desk_control_events "
+            "(account_id,desk_id,event_id,event_type,occurred_at,previous_sha256,event_sha256,event_json) "
+            "VALUES(?,?,?,?,?,?,?,?)",
+            [account_id, desk_id, event_id, event_type, stamp, previous, digest, encoded])
+        return True
+
+    @_atomic
+    def halt_desk_on_stale_feed(self, *, account_id: str, desk_id: str,
+                                event_id: str, occurred_at: datetime, reason: str,
+                                source: str, exchange: str, quote_age_seconds: float,
+                                max_quote_age_seconds: float, evidence_sha256: str) -> bool:
+        if (not reason.strip() or not source.strip() or not exchange.strip()
+                or not math.isfinite(quote_age_seconds) or not math.isfinite(max_quote_age_seconds)
+                or quote_age_seconds <= max_quote_age_seconds or max_quote_age_seconds <= 0
+                or not _SHA256.fullmatch(evidence_sha256)):
+            raise OptionLifecycleError("stale-feed halt requires overdue quote and hashed source evidence")
+        return self._append_desk_control(account_id=account_id, desk_id=desk_id,
+            event_id=event_id, event_type="HALTED", occurred_at=occurred_at,
+            payload={"reason": reason, "source": source, "exchange": exchange,
+                     "quote_age_seconds": quote_age_seconds,
+                     "max_quote_age_seconds": max_quote_age_seconds,
+                     "evidence_sha256": evidence_sha256})
+
+    @_atomic
+    def resume_desk(self, *, account_id: str, desk_id: str, event_id: str,
+                    occurred_at: datetime, authorized_by: str, source: str,
+                    exchange: str, healthy_quote_count: int, quote_age_seconds: float,
+                    max_quote_age_seconds: float, evidence_sha256: str) -> bool:
+        payload = {"authorized_by": authorized_by, "source": source, "exchange": exchange,
+                   "healthy_quote_count": healthy_quote_count,
+                   "quote_age_seconds": quote_age_seconds,
+                   "max_quote_age_seconds": max_quote_age_seconds,
+                   "evidence_sha256": evidence_sha256}
+        prior = self.connection.execute(
+            "SELECT event_type,event_json FROM option_desk_control_events "
+            "WHERE account_id=? AND desk_id=? AND event_id=?",
+            [account_id, desk_id, event_id]).fetchone()
+        if prior:
+            if prior != ("RESUMED", _canonical(payload)):
+                raise OptionLifecycleError("desk control ID conflicts with prior evidence")
+            return False
+        if self._desk_control_state(account_id, desk_id) != "HALTED":
+            raise OptionLifecycleError("desk resume requires a recorded HALTED state")
+        if (not authorized_by.strip() or not source.strip() or not exchange.strip()
+                or type(healthy_quote_count) is not int or healthy_quote_count < 3
+                or not math.isfinite(quote_age_seconds) or not math.isfinite(max_quote_age_seconds)
+                or quote_age_seconds < 0 or max_quote_age_seconds <= 0
+                or quote_age_seconds > max_quote_age_seconds
+                or not _SHA256.fullmatch(evidence_sha256)):
+            raise OptionLifecycleError("desk resume requires owner approval and three fresh evidenced quotes")
+        return self._append_desk_control(account_id=account_id, desk_id=desk_id,
+            event_id=event_id, event_type="RESUMED", occurred_at=occurred_at,
+            payload=payload)
 
     @_atomic
     def record_entry_fill(self, *, plan_id: str, fill_id: str, leg_id: str,
@@ -339,6 +479,12 @@ class PaperOptionLifecycle:
                                           event_type="ENTRY_FILL", payload=payload)
         if duplicate is not None:
             return duplicate
+        if occurred_at >= datetime.fromisoformat(plan["signal_expires_at"]):
+            raise OptionLifecycleError("expired signal cannot create a delayed option fill")
+        if any(event["type"] == "SIGNAL_INVALIDATED" for event in plan["events"]):
+            raise OptionLifecycleError("invalidated signal cannot create an option fill")
+        if self._desk_control_state(plan["account_id"], plan["desk_id"]) == "HALTED":
+            raise OptionLifecycleError("option desk is HALTED; new entry fills are blocked")
         if Decimal(plan["entry_fees_inr"]) + fees_inr > Decimal(plan["fee_reserve_inr"]):
             raise OptionLifecycleError("entry fill would exceed the frozen fee reserve")
         if quantity > (ask_qty if leg["side"] == "BUY" else bid_qty):
@@ -459,7 +605,7 @@ class PaperOptionLifecycle:
         cancelled = set()
         for event in events[1:]:
             payload = event["payload"]
-            if event["type"] == "EXPIRY_SCENARIO":
+            if event["type"] in {"EXPIRY_SCENARIO", "SIGNAL_INVALIDATED"}:
                 continue
             leg = self._leg_from_rows(legs, payload["leg_id"])
             quantity = payload.get("quantity", 0)
@@ -495,10 +641,15 @@ class PaperOptionLifecycle:
             raise OptionLifecycleError("journal reconstructs an uncovered short option position")
         expiry_unresolved = any(event["type"] == "EXPIRY_SCENARIO" for event in events) and any(open_by_leg.values())
         total_filled = sum(open_by_leg.values())
+        signal_invalidated = any(event["type"] == "SIGNAL_INVALIDATED" for event in events)
         fees_total = entry_fees + close_fees
         fee_reserve = Decimal(plan["fee_reserve_inr"])
         if expiry_unresolved:
             status = "OPEN_AT_EXPIRY_UNRESOLVED"
+        elif signal_invalidated:
+            status = ("OPEN_SIGNAL_INVALIDATED" if total_filled else
+                      "CLOSED" if any(event["type"] == "CLOSE_FILL" for event in events) else
+                      "INVALIDATED_UNFILLED")
         elif not total_filled:
             status = ("CLOSED" if any(event["type"] == "CLOSE_FILL" for event in events)
                       else "CANCELLED_UNFILLED" if cancelled else "UNFILLED")
@@ -509,6 +660,8 @@ class PaperOptionLifecycle:
         else:
             status = "PARTIALLY_OPEN"
         plan.update({"status": status, "open_quantity_by_leg": open_by_leg,
+                     "signal_invalidated": signal_invalidated,
+                     "desk_state": self._desk_control_state(plan["account_id"], plan["desk_id"]),
                      "entry_fees_inr": str(entry_fees), "close_fees_inr": str(close_fees),
                      "fees_total_inr": str(fees_total),
                      "fee_reserve_remaining_inr": str(max(Decimal(0), fee_reserve - fees_total)),

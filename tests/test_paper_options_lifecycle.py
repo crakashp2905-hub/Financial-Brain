@@ -1,6 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import sqlite3
 
@@ -29,9 +29,12 @@ def _observation(leg_id: str, side: str, strike: float, *, token: int,
 
 
 def _plan(ledger: PaperOptionLifecycle, plan_id: str = "spread", *,
-          signal_id: str | None = None, child_order_id: str | None = None) -> bool:
+          signal_id: str | None = None, child_order_id: str | None = None,
+          signal_expires_at: datetime | None = None) -> bool:
     return ledger.register_plan(
-        plan_id=plan_id, account_id="paper-a", signal_id=signal_id or f"signal-{plan_id}",
+        plan_id=plan_id, account_id="paper-a", desk_id="OPTIONS",
+        signal_id=signal_id or f"signal-{plan_id}",
+        signal_expires_at=signal_expires_at or NOW + timedelta(minutes=30),
         child_order_id=child_order_id or f"child-{plan_id}",
         decision_at=NOW, quantity=150,
         observations=(
@@ -244,3 +247,68 @@ def test_concurrent_partial_fills_cannot_overrun_plan_quantity(tmp_path) -> None
     for worker in workers:
         worker.connection.close()
     primary.close()
+
+
+def test_expired_or_invalidated_signal_cannot_fill_on_delayed_quotes(tmp_path) -> None:
+    ledger = PaperOptionLifecycle(sqlite3.connect(tmp_path / "signal-gates.sqlite"))
+    _plan(ledger, "expires", signal_expires_at=NOW + timedelta(seconds=3))
+    with pytest.raises(OptionLifecycleError, match="expired signal"):
+        _fill(ledger, plan_id="expires", fill_id="late", leg_id="long", side="BUY",
+              token=1, symbol="NIFTY26DEC25000CE", quantity=75, price="101", bid="100",
+              ask="101", at=NOW + timedelta(seconds=3))
+
+    _plan(ledger, "invalidates")
+    at = NOW + timedelta(seconds=1)
+    assert ledger.invalidate_signal(plan_id="invalidates", event_id="reversal",
+                                    occurred_at=at, reason="underlying invalidation") is True
+    assert ledger.invalidate_signal(plan_id="invalidates", event_id="reversal",
+                                    occurred_at=at, reason="underlying invalidation") is False
+    with pytest.raises(OptionLifecycleError, match="invalidated signal"):
+        _fill(ledger, plan_id="invalidates", fill_id="late", leg_id="long", side="BUY",
+              token=1, symbol="NIFTY26DEC25000CE", quantity=75, price="101", bid="100",
+              ask="101", at=NOW + timedelta(seconds=2))
+    assert ledger.state("invalidates")["status"] == "INVALIDATED_UNFILLED"
+
+
+def test_stale_feed_halts_options_desk_until_approved_fresh_data_resume(tmp_path) -> None:
+    ledger = PaperOptionLifecycle(sqlite3.connect(tmp_path / "desk-halt.sqlite"))
+    _plan(ledger, "halted")
+    _plan(ledger, "same-desk")
+    halt_at = NOW + timedelta(seconds=1)
+    assert ledger.halt_desk_on_stale_feed(account_id="paper-a", desk_id="OPTIONS",
+        event_id="stale-1", occurred_at=halt_at, reason="quote feed delayed",
+        source="fixture-feed", exchange="NFO", quote_age_seconds=20,
+        max_quote_age_seconds=5, evidence_sha256=EVIDENCE) is True
+    assert ledger.halt_desk_on_stale_feed(account_id="paper-a", desk_id="OPTIONS",
+        event_id="stale-1", occurred_at=halt_at, reason="quote feed delayed",
+        source="fixture-feed", exchange="NFO", quote_age_seconds=20,
+        max_quote_age_seconds=5, evidence_sha256=EVIDENCE) is False
+    with pytest.raises(OptionLifecycleError, match="HALTED"):
+        _fill(ledger, plan_id="halted", fill_id="blocked", leg_id="long", side="BUY",
+              token=1, symbol="NIFTY26DEC25000CE", quantity=75, price="101", bid="100",
+              ask="101", at=NOW + timedelta(seconds=2))
+    with pytest.raises(OptionLifecycleError, match="HALTED"):
+        _fill(ledger, plan_id="same-desk", fill_id="blocked", leg_id="long", side="BUY",
+              token=1, symbol="NIFTY26DEC25000CE", quantity=75, price="101", bid="100",
+              ask="101", at=NOW + timedelta(seconds=2))
+    with pytest.raises(OptionLifecycleError, match="three fresh evidenced quotes"):
+        ledger.resume_desk(account_id="paper-a", desk_id="OPTIONS", event_id="resume-1",
+            occurred_at=NOW + timedelta(seconds=3), authorized_by="operator",
+            source="fixture-feed", exchange="NFO", healthy_quote_count=2,
+            quote_age_seconds=1, max_quote_age_seconds=5, evidence_sha256=EVIDENCE)
+    resume_at = NOW + timedelta(seconds=4)
+    assert ledger.resume_desk(account_id="paper-a", desk_id="OPTIONS", event_id="resume-1",
+        occurred_at=resume_at, authorized_by="operator", source="fixture-feed",
+        exchange="NFO", healthy_quote_count=3, quote_age_seconds=1,
+        max_quote_age_seconds=5, evidence_sha256=EVIDENCE) is True
+    assert ledger.resume_desk(account_id="paper-a", desk_id="OPTIONS", event_id="resume-1",
+        occurred_at=resume_at, authorized_by="operator", source="fixture-feed",
+        exchange="NFO", healthy_quote_count=3, quote_age_seconds=1,
+        max_quote_age_seconds=5, evidence_sha256=EVIDENCE) is False
+    with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+        ledger.connection.execute("DELETE FROM option_desk_control_events")
+    ledger.connection.rollback()
+    _fill(ledger, plan_id="halted", fill_id="resumed", leg_id="long", side="BUY",
+          token=1, symbol="NIFTY26DEC25000CE", quantity=75, price="101", bid="100",
+          ask="101", at=NOW + timedelta(seconds=5))
+    assert ledger.state("halted")["desk_state"] == "ACTIVE"
