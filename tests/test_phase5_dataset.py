@@ -7,6 +7,7 @@ a per-name split, and a chronological split with no gap at the boundary.
 from __future__ import annotations
 
 import json
+import hashlib
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -208,11 +209,47 @@ def test_a_lineage_with_too_little_history_is_skipped_and_named(tmp_path):
 def test_the_export_leaves_a_manifest_saying_how_the_bars_were_made(tmp_path):
     con = _db()
     p = _plan(con)
-    D.export(con, tmp_path, split=p["train"], lineages=["L0"], min_bars=100)
+    raw_hash = "a" * 64
+    gaps = [{"source_id": "NSE_BHAVCOPY", "start": str(p["train"].start),
+             "end": str(p["train"].start), "reason": "archive not loaded for this session"}]
+    D.export(con, tmp_path, split=p["train"], lineages=["L0"], min_bars=100,
+             raw_file_hashes={"NSE/EQ/source.csv": raw_hash}, unavailable_source_periods=gaps)
     m = json.loads((Path(tmp_path) / "train" / "manifest.json").read_text())
+    file_path = Path(tmp_path) / "train" / "L0.csv"
     assert m["exchange_series"] == "NSE EQ"
     assert "lineage" in m["note"] and "succession" in m["note"]
     assert m["rows"] > 0
+    assert m["as_of_cutoff_inclusive"] == str(p["train"].end)
+    assert m["raw_file_hashes"] == {"NSE/EQ/source.csv": raw_hash}
+    assert m["unavailable_source_periods"] == gaps
+    assert m["raw_file_hashes_status"] == "PROVIDED_NOT_VERIFIED"
+    assert m["unavailable_source_periods_status"] == "PROVIDED_NOT_VERIFIED"
+    assert m["source_coverage_status"] == "DECLARED_NOT_VERIFIED"
+    assert m["files"][0]["sha256"] == hashlib.sha256(file_path.read_bytes()).hexdigest()
+    assert m["files"][0]["last_timestamp"] <= m["as_of_cutoff_inclusive"]
+    assert m["transformations"]
+
+
+def test_dataset_manifest_marks_missing_raw_source_lineage_as_unverified(tmp_path):
+    con = _db()
+    p = _plan(con)
+    D.export(con, tmp_path, split=p["train"], lineages=["L0"], min_bars=100)
+    m = json.loads((Path(tmp_path) / "train" / "manifest.json").read_text())
+    assert m["raw_file_hashes_status"] == "NOT_PROVIDED"
+    assert m["unavailable_source_periods_status"] == "NOT_PROVIDED"
+    assert m["source_coverage_status"] == "UNVERIFIED"
+
+
+def test_dataset_manifest_rejects_malformed_source_hashes_and_periods(tmp_path):
+    con = _db()
+    p = _plan(con)
+    with pytest.raises(ForecastError, match="lowercase SHA-256"):
+        D.export(con, tmp_path, split=p["train"], lineages=["L0"], min_bars=100,
+                 raw_file_hashes={"NSE/file.csv": "not-a-hash"})
+    with pytest.raises(ForecastError, match="end precedes start"):
+        D.export(con, tmp_path, split=p["train"], lineages=["L0"], min_bars=100,
+                 unavailable_source_periods=[{"source_id": "NSE", "start": "2026-12-02",
+                                              "end": "2026-12-01", "reason": "not archived"}])
 
 
 def csv_rows(path):
