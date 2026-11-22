@@ -364,18 +364,52 @@ def apply_economic_flow(
              flow.effective_date, units_before, units_after, cash_delta, nav0, nav1,
              value_before, value_after, total_return, reinvestment_lot_id,
              terms_record_id, digest, event_at])
-        if (flow.kind in (SchemeFlowKind.IDCW_PAYOUT, SchemeFlowKind.IDCW_REINVESTMENT)
-                and (flow.kind is SchemeFlowKind.IDCW_REINVESTMENT or cash_delta > 0)):
+        unit_delta_map: dict[tuple[str, str], Decimal] = {}
+        if flow.kind is SchemeFlowKind.IDCW_REINVESTMENT:
+            from .mf_account_ledger import mf_instrument_id
+            assert reinvest_nav is not None
+            for folio_id, _lot_id, added_units in reinvestment_allocations:
+                key = (folio_id, mf_instrument_id(flow.scheme_code, plan, option, flow.isin))
+                unit_delta_map[key] = unit_delta_map.get(key, Decimal(0)) + added_units
+        elif flow.kind in (SchemeFlowKind.UNIT_SPLIT, SchemeFlowKind.SCHEME_MERGER):
+            from .mf_account_ledger import mf_instrument_id
+            assert flow.unit_ratio is not None
+            ratio = Decimal(flow.unit_ratio)
+            source_instrument = mf_instrument_id(flow.scheme_code, plan, option, flow.isin)
+            target_instrument = mf_instrument_id(
+                target_scheme, target_plan, target_option, target_isin,
+            )
+            for row in lots:
+                folio_id = str(row[8])
+                before_units = Decimal(row[6])
+                after_units = (before_units * ratio).quantize(
+                    UNIT_QUANTUM, rounding=ROUND_HALF_UP,
+                )
+                unit_delta_map[(folio_id, source_instrument)] = (
+                    unit_delta_map.get((folio_id, source_instrument), Decimal(0)) - before_units
+                )
+                unit_delta_map[(folio_id, target_instrument)] = (
+                    unit_delta_map.get((folio_id, target_instrument), Decimal(0)) + after_units
+                )
+        unit_deltas = tuple(
+            (folio, instrument, delta)
+            for (folio, instrument), delta in sorted(unit_delta_map.items()) if delta
+        )
+        if ((flow.kind in (SchemeFlowKind.IDCW_PAYOUT, SchemeFlowKind.IDCW_REINVESTMENT)
+                and (flow.kind is SchemeFlowKind.IDCW_REINVESTMENT or cash_delta > 0))
+                or unit_deltas):
             from .mf_account_ledger import post_journal
-            assert flow.cash_per_unit is not None
-            distribution = units_before * Decimal(flow.cash_per_unit)
             journal_lines: list[tuple[str, Decimal | int, Decimal | int]] = []
+            distribution = Decimal(0)
             if flow.kind is SchemeFlowKind.IDCW_PAYOUT:
+                assert flow.cash_per_unit is not None
+                distribution = units_before * Decimal(flow.cash_per_unit)
                 if cash_delta:
                     journal_lines.append(("CASH", cash_delta, 0))
                 journal_lines.append(("IDCW_INCOME", 0, distribution))
-            else:
-                assert reinvest_nav is not None
+            elif flow.kind is SchemeFlowKind.IDCW_REINVESTMENT:
+                assert reinvest_nav is not None and flow.cash_per_unit is not None
+                distribution = units_before * Decimal(flow.cash_per_unit)
                 invested = extra_units * reinvest_nav
                 if invested:
                     journal_lines.append(("MF_INVESTMENTS", invested, 0))
@@ -387,6 +421,7 @@ def apply_economic_flow(
                 effective_at=datetime.combine(flow.effective_date, datetime.min.time(),
                                                tzinfo=timezone.utc),
                 recorded_at=event_at, entries=tuple(journal_lines),
+                unit_deltas=unit_deltas,
                 basis="OBSERVED_EVIDENCE", source_id=flow.source_id,
                 source_ref=flow.source_ref, source_sha256=flow.source_sha256,
                 evidence={"source_flow_id": flow.event_id,

@@ -79,7 +79,15 @@ def test_old_mf_journal_accepts_sip_reserve_without_losing_rows(tmp_path):
     con = duckdb.connect(str(cfg.db_path))
     assert con.execute("""SELECT account_code, debit_inr FROM mf_paper_ledger_entries
         WHERE transaction_id='legacy-opening'""").fetchone() == ("CASH", Decimal("100"))
-    con.execute("""INSERT INTO mf_paper_ledger_entries VALUES
+    assert con.execute("""SELECT folio_id, instrument_id, debit_units, credit_units
+        FROM mf_paper_ledger_entries WHERE transaction_id='legacy-opening'""").fetchone() == (
+            None, None, Decimal(0), Decimal(0),
+        )
+    con.execute("""INSERT INTO mf_paper_ledger_entries (
+        account_id, transaction_id, line_no, effective_at, recorded_at, account_code,
+        debit_inr, credit_inr, basis, source_id, source_ref, source_sha256,
+        event_sha256, evidence_json)
+        VALUES
         ('paper', 'sip-reserve', 1, TIMESTAMPTZ '2026-01-02 00:00:00+00',
          TIMESTAMPTZ '2026-01-02 00:00:00+00', 'SIP_PAYMENT_PENDING', 10, 0,
          'SIMULATED_ASSUMPTION', NULL, NULL, NULL, 'hash-2', '{}')""")

@@ -93,11 +93,20 @@ class Database:
 
     @staticmethod
     def _migrate_mf_ledger_account_codes(con) -> None:
-        """Add the SIP payment-clearing account to older MF paper journals."""
+        """Upgrade older cash journals to the monetary-and-unit double-entry ledger."""
+        columns = {row[1] for row in con.execute(
+            "PRAGMA table_info('mf_paper_ledger_entries')").fetchall()}
         constraints = con.execute("""SELECT constraint_text FROM duckdb_constraints()
             WHERE table_name='mf_paper_ledger_entries' AND constraint_type='CHECK'""").fetchall()
-        if any("SIP_PAYMENT_PENDING" in str(row[0]) for row in constraints):
+        checks = " ".join(str(row[0]) for row in constraints)
+        required_columns = {"folio_id", "instrument_id", "debit_units", "credit_units"}
+        if (required_columns <= columns and "SIP_PAYMENT_PENDING" in checks
+                and "MF_UNITS" in checks and "UNITS_CLEARING" in checks):
             return
+        folio = "folio_id" if "folio_id" in columns else "NULL"
+        instrument = "instrument_id" if "instrument_id" in columns else "NULL"
+        debit_units = "debit_units" if "debit_units" in columns else "0"
+        credit_units = "credit_units" if "credit_units" in columns else "0"
         con.execute("BEGIN TRANSACTION")
         try:
             con.execute("""CREATE TABLE mf_paper_ledger_entries_upgrade (
@@ -110,23 +119,46 @@ class Database:
                     'CASH', 'MF_INVESTMENTS', 'REDEMPTION_RECEIVABLE',
                     'OWNER_EQUITY', 'OWNER_WITHDRAWALS', 'EXIT_LOAD_EXPENSE',
                     'OTHER_CHARGES_EXPENSE', 'IDCW_INCOME', 'REALIZED_GAIN',
-                    'REALIZED_LOSS', 'SIP_PAYMENT_PENDING')),
+                    'REALIZED_LOSS', 'SIP_PAYMENT_PENDING', 'MF_UNITS',
+                    'UNITS_CLEARING')),
                 debit_inr DECIMAL(38,18) NOT NULL CHECK (debit_inr >= 0),
                 credit_inr DECIMAL(38,18) NOT NULL CHECK (credit_inr >= 0),
+                folio_id VARCHAR, instrument_id VARCHAR,
+                debit_units DECIMAL(38,18) NOT NULL DEFAULT 0 CHECK (debit_units >= 0),
+                credit_units DECIMAL(38,18) NOT NULL DEFAULT 0 CHECK (credit_units >= 0),
                 basis VARCHAR NOT NULL CHECK (basis IN (
                     'SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
                 source_id VARCHAR, source_ref VARCHAR, source_sha256 VARCHAR,
                 event_sha256 VARCHAR NOT NULL, evidence_json VARCHAR NOT NULL,
                 PRIMARY KEY (account_id, transaction_id, line_no),
-                CHECK ((debit_inr > 0 AND credit_inr = 0)
-                    OR (credit_inr > 0 AND debit_inr = 0)),
+                CHECK (
+                    (debit_inr > 0 AND credit_inr = 0 AND debit_units = 0
+                        AND credit_units = 0 AND account_code NOT IN ('MF_UNITS', 'UNITS_CLEARING')
+                        AND folio_id IS NULL AND instrument_id IS NULL)
+                    OR (credit_inr > 0 AND debit_inr = 0 AND debit_units = 0
+                        AND credit_units = 0 AND account_code NOT IN ('MF_UNITS', 'UNITS_CLEARING')
+                        AND folio_id IS NULL AND instrument_id IS NULL)
+                    OR (debit_inr = 0 AND credit_inr = 0 AND debit_units > 0
+                        AND credit_units = 0 AND account_code IN ('MF_UNITS', 'UNITS_CLEARING')
+                        AND folio_id IS NOT NULL AND instrument_id IS NOT NULL)
+                    OR (debit_inr = 0 AND credit_inr = 0 AND debit_units = 0
+                        AND credit_units > 0 AND account_code IN ('MF_UNITS', 'UNITS_CLEARING')
+                        AND folio_id IS NOT NULL AND instrument_id IS NOT NULL)),
                 CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
                     AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
                     OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
                     AND source_ref IS NULL AND source_sha256 IS NULL))
             )""")
-            con.execute("""INSERT INTO mf_paper_ledger_entries_upgrade
-                SELECT * FROM mf_paper_ledger_entries""")
+            con.execute(f"""INSERT INTO mf_paper_ledger_entries_upgrade (
+                account_id, transaction_id, line_no, effective_at, recorded_at,
+                account_code, debit_inr, credit_inr, folio_id, instrument_id,
+                debit_units, credit_units, basis, source_id, source_ref, source_sha256,
+                event_sha256, evidence_json)
+                SELECT account_id, transaction_id, line_no, effective_at, recorded_at,
+                    account_code, debit_inr, credit_inr, {folio}, {instrument},
+                    {debit_units}, {credit_units}, basis, source_id, source_ref,
+                    source_sha256, event_sha256, evidence_json
+                FROM mf_paper_ledger_entries""")
             con.execute("DROP TABLE mf_paper_ledger_entries")
             con.execute("""ALTER TABLE mf_paper_ledger_entries_upgrade
                 RENAME TO mf_paper_ledger_entries""")
