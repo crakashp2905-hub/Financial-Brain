@@ -2524,17 +2524,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "MFOrderAcknowledgement models ACKNOWLEDGED, ACCEPTED and REJECTED states with distinct effective and received timestamps; simulated responses cannot claim source provenance, while observed responses require source identity, reference and SHA-256.",
-        "platform_valid_through uses the sourced scheme business calendar and fails closed for missing coverage; tests cover acceptance evidence separation and business-day validity.",
-        "A durable order transition service, effective permission checks for observed source records, and an actual registrar/platform adapter are still needed before claiming an end-to-end official acceptance lifecycle."
+        "kernel/mf_order.py models REQUESTED, ACKNOWLEDGED, ACCEPTED and REJECTED with distinct effective and received timestamps and an observed/simulated evidence distinction.",
+        "platform_valid_through resolves inclusive order validity from the source-bound scheme business calendar. Durable mf_paper_order_book persists requests and append-only transitions, checks order/account idempotency, requires effective PAPER_SIMULATION permission for observed responses, and rejects receipts outside the validity window.",
+        "Order snapshots preserve the official acceptance event timestamp separately from receipt time. Tests cover transitions, permissions, idempotent replay, terminal rejection and expiry."
       ],
-      "blocker": "No durable MF order transition journal or authorized platform/registrar response adapter is connected; model-level acceptance does not establish receipt by an actual platform.",
+      "blocker": "No authorized registrar/platform adapter is connected to supply real acknowledgement or acceptance receipts; the model and durable paper lifecycle cannot prove actual platform acceptance.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "d3bb909b5a3f18ae4a88c357d86c723bd85964e8",
+      "commit": "b5a5f781b9022631bfb033795c3474a4c65b4f98",
       "test_evidence": [
-        "python -m pytest tests/test_mf_order.py tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 46 passed",
-        "ruff check src/financial_brain/kernel/mf_order.py tests/test_mf_order.py: passed",
-        "mypy src/financial_brain/kernel/mf_order.py: passed"
+        "python -m pytest tests/test_mf_order_book.py tests/test_migrations.py -q: 7 passed",
+        "ruff check src/financial_brain/paper/mf_order_book.py tests/test_mf_order_book.py: passed",
+        "mypy src/financial_brain/paper/mf_order_book.py: passed",
+        "git diff --check: passed"
       ]
     },
     {
@@ -2653,15 +2654,21 @@
       "id": "FB-0710",
       "text": "Simulate switches as paired switch-out and switch-in with asynchronous settlement and no phantom same-minute capital redeployment.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "SWITCH exists as a recommendation action and source-specific cutoffs support switch-out/in date calculation primitives.",
-        "No paired asynchronous switch-out/switch-in settlement lifecycle or capital reuse lock exists."
+        "src/financial_brain/kernel/mf_switch.py models a paired source/target switch request and ordered out-value, proceeds-available, in-funds-applied and allotment events.",
+        "It holds switch proceeds at zero until the explicit proceeds-available event, forbids same-timestamp or earlier capital reuse, prevents funding above available proceeds, and reconciles target units × NAV to applied amount.",
+        "Observed events require source identity/reference/hash; simulated assumptions remain labelled. Tests cover asynchronous transitions, no phantom same-minute redeployment, value reconciliation and fail-closed ordering."
       ],
-      "blocker": null,
+      "blocker": "The lifecycle is currently an immutable in-memory model; it is not yet persisted in the paper ledger, connected to NAV/cutoff resolution, or wired into account cash and unit reconciliation.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "commit": "eaf6bff58e7866602bd9d928de4b75032fdc61d5",
+      "test_evidence": [
+        "python -m pytest tests/test_mf_switch.py tests/test_mf_paper_realism.py tests/test_mf_purchase_payment.py tests/test_mf_order.py -q: 28 passed",
+        "ruff check src/financial_brain/kernel/mf_switch.py tests/test_mf_switch.py: passed",
+        "mypy src/financial_brain/kernel/mf_switch.py: passed",
+        "git diff --check: passed"
+      ]
     },
     {
       "id": "FB-0711",
@@ -2766,14 +2773,21 @@
       "id": "FB-0718",
       "text": "Build an explicit **MF PAPER REALISM** score measuring eligible-NAV certainty, payment-time evidence, load completeness and redemption settlement confidence.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No MF PAPER REALISM score aggregating NAV eligibility certainty, payment evidence, load completeness and payout confidence was found."
+        "src/financial_brain/kernel/mf_paper_realism.py scores eligible-NAV certainty (35%), payment-time evidence (25%), exit-load completeness (20%) and redemption-settlement confidence (20%).",
+        "Missing factors contribute zero rather than being excluded; the output separately exposes assessment coverage, observed-evidence coverage and missing dimensions, with a deterministic assessment hash.",
+        "Observed factors require individual source identity/reference/hash; simulated assumptions are labelled separately. Tests verify weighting, missing-input treatment, provenance, duplicate dimensions and future-dated evidence."
       ],
-      "blocker": null,
+      "blocker": "Weights are explicit design defaults, not empirically calibrated. The score is not yet populated from live account/order/terms/settlement state or validated against realized paper-trading fidelity.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "commit": "8aa876a59c6b362375b349aa7c9d031b8de7ec46",
+      "test_evidence": [
+        "python -m pytest tests/test_mf_paper_realism.py tests/test_mf_purchase_payment.py tests/test_mf_order.py -q: 22 passed",
+        "ruff check src/financial_brain/kernel/mf_paper_realism.py tests/test_mf_paper_realism.py: passed",
+        "mypy src/financial_brain/kernel/mf_paper_realism.py: passed",
+        "git diff --check: passed"
+      ]
     },
     {
       "id": "FB-0801",
@@ -15622,9 +15636,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 30,
-    "PARTIAL": 195,
+    "PARTIAL": 197,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 20,
+    "NOT_STARTED": 18,
     "UNASSESSED": 1132
   }
 }
