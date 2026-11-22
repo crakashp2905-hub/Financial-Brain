@@ -43,18 +43,16 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/capability-ownership.v1.json (21 capability contracts, 430 trader-core modules, 31 strategy candidates with source refs and hashes)",
-        "scripts/capability_ownership.py (deterministic inventory generator and freshness check)",
-        "tests/test_capability_ownership.py (canonical-owner uniqueness, module coverage and path integrity)",
-        ".github/workflows/ci.yml (capability inventory freshness gate)",
-        "GitHub Actions run 44896239124: trader capability owners gate passed on Ubuntu and Windows before a later fixture-equivalence report failure",
-        "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py (fixture provenance no longer depends on Git checkout identity; 66 compatibility/session-runner tests passed)",
-        "Focused verification: 3 tests passed; Ruff, mypy, inventory freshness and git diff --check passed",
-        "docs/edge-program/capability-ownership.v1.json regenerated after shared order-policy integration: 21 contracts, 430 trader-core modules; generator check passes."
+        "docs/edge-program/capability-ownership.v1.json (23 capability contracts, 459 trader-core modules, 31 strategy candidates with source refs and hashes)",
+        "docs/edge-program/source-inventory.v2.json (678 repository Python files; generated snapshot is checked in CI)",
+        "scripts/capability_ownership.py and tests/test_capability_ownership.py (deterministic owner inventory and integrity checks)",
+        ".github/workflows/ci.yml (capability and source inventory freshness gates)",
+        "GitHub Actions run 44995510172 (Linux and Windows full suites and both reproducibility jobs passed on the MF purchase integration head)",
+        "Current artifacts continue to show split AlgorithmSpec/StrategySpec lifecycle and separate broker, kernel, forward-paper and legacy-paper persistence domains."
       ],
-      "blocker": "Partial: AlgorithmSpec and StrategySpec identity/promotion remain split; the inventory intentionally covers trader-core rather than all 623 Python modules, and the broker, kernel, forward-paper and legacy-paper persistence domains remain separate. Its freshness gate passed on both OSes; a separate checkout-specific synthetic fixture provenance issue caused the latest run to fail later and now has an in-house regression fix. Fresh hosted CI remains pending.",
-      "last_audited_at_utc": "2026-11-21T11:39:04+00:00",
-      "commit": "35478c70"
+      "blocker": "Partial: the map covers trader-core modules rather than every repository capability; AlgorithmSpec and StrategySpec identity/promotion remain split; broker, kernel, forward-paper and legacy-paper persistence domains remain separate. Current hosted freshness and test gates pass.",
+      "last_audited_at_utc": "2026-11-22T07:41:12Z",
+      "commit": null
     },
     {
       "id": "FB-0003",
@@ -2616,15 +2614,27 @@
       "id": "FB-0707",
       "text": "Implement redemption with cutoff, lot selection (FIFO default unless an actual platform rule specifies otherwise), units to redeem and deferred proceeds settlement.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "paper/mf_exit_loads.py provides FIFO lot-level partial redemption cost allocation; mf_redemption_constraints.py checks units and sourced restrictions.",
-        "No request/acceptance, eligible NAV, fractional-unit reduction and deferred payout paper redemption lifecycle is integrated."
+        "kernel/mf_redemption_eligibility.py derives the eligible NAV date from the exact accepted redemption order, the effective published redemption cutoff, and the sourced scheme calendar; the caller cannot supply the eligible date.",
+        "paper/mf_redemption_settlement.py persists the frozen NAV date, order identity, evidence hash and receipt details; observed acceptance requires effective PAPER_SIMULATION permission.",
+        "paper/mf_lot_book.py enforces the frozen date before valuation, rejects NAV-date overrides and unavailable NAV, allocates units FIFO, and keeps proceeds in a receivable until payout is available.",
+        "paper/mf_systematic_flow_book.py routes systematic redemption through a durable simulated accepted order and the same cutoff resolver.",
+        "Paper modeling only; no live registrar, AMC, bank or broker service is claimed."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "last_audited_at_utc": "2026-11-22T07:41:12Z",
       "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "test_result": "Seven focused redemption, lot, systematic-flow, order, cutoff, migration and constraint suites: 47 passed. Ruff, targeted mypy, and diff checks passed.",
+      "test_evidence": [
+        "tests/test_mf_redemption_eligibility.py",
+        "tests/test_mf_lot_book.py",
+        "tests/test_mf_systematic_flow_book.py",
+        "tests/test_mf_order_book.py",
+        "tests/test_mf_redemption_constraints.py",
+        "tests/test_kernel_fund_transactions.py",
+        "tests/test_migrations.py"
+      ]
     },
     {
       "id": "FB-0708",
@@ -15530,7 +15540,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T06:41:46Z",
+    "as_of_utc": "2026-11-22T07:41:12Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15781,13 +15791,13 @@
     ],
     "audited_count": 246,
     "status_counts": {
-      "COMPLETE": 37,
-      "PARTIAL": 192,
+      "COMPLETE": 38,
+      "PARTIAL": 191,
       "NOT_STARTED": 16,
       "EXTERNAL_BLOCKED": 1,
       "UNASSESSED": 1132
     },
-    "verified_complete_count": 37,
+    "verified_complete_count": 38,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -15851,11 +15861,11 @@
       "src/financial_brain/storage/schema.sql",
       "tests/test_mf_scheme_master.py"
     ],
-    "evidence_update": "FB-0314 and FB-0315 audited PARTIAL after durable MF paper-book integration; source-terms resolution, paper-use permissions and redemption restrictions are tested, while authorized historical source coverage and NAV/settlement integration remain absent."
+    "evidence_update": "FB-0707 COMPLETE: accepted-order redemption cutoff resolver freezes eligible NAV date; FIFO units and deferred payout stay on the durable paper ledger. FB-0002 counts refreshed from current generated capability and source inventories; PR #73 hosted CI is green."
   },
   "counts_by_status": {
-    "COMPLETE": 37,
-    "PARTIAL": 192,
+    "COMPLETE": 38,
+    "PARTIAL": 191,
     "NOT_STARTED": 16,
     "EXTERNAL_BLOCKED": 1,
     "UNASSESSED": 1132
