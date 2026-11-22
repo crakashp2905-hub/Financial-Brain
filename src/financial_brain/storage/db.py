@@ -61,6 +61,9 @@ class Database:
         # Older MF NAV snapshots have observation time but not a separately recorded
         # local persistence time. Keep those values NULL rather than inventing history.
         "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS ingested_at TIMESTAMPTZ",
+        # Persist the specific effective paper-use grant that authorized each observed
+        # purchase-payment milestone so its event hash can be independently reproduced.
+        "ALTER TABLE mf_paper_purchase_payment_events ADD COLUMN IF NOT EXISTS permission_evidence_json VARCHAR DEFAULT '[]'",
     ]
 
     def migrate(self) -> None:

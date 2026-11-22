@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import date, datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from ..forward_edge.data_permissions import DataPermission, DataUse
 from ..kernel.fund_transactions import SchemeTransactionCalendar, TransactionKind
@@ -13,6 +13,8 @@ from ..kernel.mf_sip import (
     validate_installment_transition,
 )
 from ..kernel.trading_clock import IST
+
+UNIT_QUANTUM = Decimal("0.000000000000000001")
 
 
 class MFSIPBookError(ValueError):
@@ -408,7 +410,9 @@ def apply_sip_allotment(
                 on=decision_time.astimezone(IST).date()) for permission in permissions):
             raise MFSIPBookError("AMFI SIP NAV lacks effective PAPER_SIMULATION permission")
 
-        units = installment.amount_inr / nav
+        units = (installment.amount_inr / nav).quantize(
+            UNIT_QUANTUM, rounding=ROUND_HALF_UP,
+        )
         if (units * nav).quantize(Decimal("0.01")) != installment.amount_inr.quantize(Decimal("0.01")):
             raise MFSIPBookError("SIP units times NAV do not reconcile to the installment")
         following = MFSIPInstallment(

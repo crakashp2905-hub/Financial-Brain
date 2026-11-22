@@ -802,6 +802,51 @@ CREATE TABLE IF NOT EXISTS mf_paper_order_transitions (
     UNIQUE (order_id, event_sha256)
 );
 
+-- Ordinary MF purchase payment milestones and derived, immutable eligible-NAV state.
+CREATE TABLE IF NOT EXISTS mf_paper_purchase_payment_events (
+    order_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    milestone_kind VARCHAR NOT NULL CHECK (milestone_kind IN (
+        'INITIATED', 'CREDITED_TO_SCHEME', 'AVAILABLE_FOR_UTILIZATION'
+    )),
+    effective_at TIMESTAMPTZ NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL,
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    permission_evidence_json VARCHAR NOT NULL DEFAULT '[]',
+    event_sha256 VARCHAR NOT NULL,
+    PRIMARY KEY (order_id, sequence),
+    UNIQUE (order_id, milestone_kind),
+    UNIQUE (order_id, event_sha256),
+    CHECK (received_at >= effective_at),
+    CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
+        AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
+        OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
+        AND source_ref IS NULL AND source_sha256 IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_purchase_eligibility (
+    order_id VARCHAR PRIMARY KEY,
+    state VARCHAR NOT NULL CHECK (state IN ('NAV_PENDING', 'ALLOTTED')),
+    eligible_nav_date DATE NOT NULL,
+    transaction_at TIMESTAMPTZ NOT NULL,
+    decision_at TIMESTAMPTZ NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    eligibility_sha256 VARCHAR NOT NULL,
+    nav_observation_id VARCHAR,
+    nav_per_unit DECIMAL(38, 18),
+    units_allotted DECIMAL(38, 18),
+    allotment_sha256 VARCHAR,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    CHECK ((state='NAV_PENDING' AND nav_observation_id IS NULL
+        AND nav_per_unit IS NULL AND units_allotted IS NULL AND allotment_sha256 IS NULL)
+        OR (state='ALLOTTED' AND nav_observation_id IS NOT NULL
+        AND nav_per_unit > 0 AND units_allotted > 0 AND allotment_sha256 IS NOT NULL))
+);
+
 -- Scheduled MF SIP debits are independent installments with terminal missed outcomes.
 CREATE TABLE IF NOT EXISTS mf_paper_sip_plans (
     plan_id VARCHAR PRIMARY KEY,

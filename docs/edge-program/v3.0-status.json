@@ -2578,29 +2578,39 @@
       "id": "FB-0705",
       "text": "Determine **eligible NAV date** from accepted request + fund realization + effective cutoff; reject any attempt to choose a more favorable historical NAV after the fact.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "SchemeTransactionCalendar assigns a date from received_at using the effective rule that was published and known then.",
-        "It does not incorporate accepted-request status and separate funds-realized/available-to-scheme timestamps; the eligible NAV state is not reconciled against a later NAV revision."
+        "Determine eligible NAV date from durable accepted order, scheme-credit and utilization times, and the effective published scheme cutoff/calendar; reject any attempt to pick a past date.",
+        "kernel/mf_purchase_eligibility.py requires the exact accepted order and separate credit/utilization milestones, uses the latest effective time, and takes no caller-selected NAV date. paper/mf_purchase_book.py persists the derived date and evidence as immutable NAV_PENDING state.",
+        "This completes the paper-model requirement only; no live registrar, AMC or bank feed is claimed."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "last_audited_at_utc": "2026-11-22T06:41:46Z",
+      "commit": "3477ccb0",
+      "test_result": "Focused MF purchase, payment, order, lot, SIP, and migration suites: 41 passed; Ruff and targeted mypy passed.",
+      "test_evidence": [
+        "Focused MF purchase, payment, order, lot, SIP, and migration suites: 41 passed; Ruff and targeted mypy passed.",
+        "python scripts/export_checklist_audit.py --check and git diff --check passed."
+      ]
     },
     {
       "id": "FB-0706",
       "text": "Use `NAV_PENDING` until eligible day's NAV is actually published/observed, then allot fractional MF units with proper precision.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "MFAllocationRecommendation distinguishes confirmed-published NAV from pending, stale and unavailable states and requires causal publication/availability clocks.",
-        "No pending-allotment order lifecycle that later posts fractional units at the actually eligible NAV was found."
+        "Keep a durable purchase NAV_PENDING until the exact eligible-date NAV is available as known, then allot fractional units.",
+        "mf_paper_purchase_eligibility stores NAV_PENDING without units; apply_allotment resolves only the persisted eligible date and exact as-known AMFI NAV observation, then atomically creates the FIFO lot, unit amount and cash journal. Units are quantized to 18 decimals with ROUND_HALF_UP and replay is idempotent.",
+        "This completes the paper-model requirement only; no live registrar, AMC or bank feed is claimed."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "last_audited_at_utc": "2026-11-22T06:41:46Z",
+      "commit": "3477ccb0",
+      "test_result": "Focused MF purchase, payment, order, lot, SIP, and migration suites: 41 passed; Ruff and targeted mypy passed. Tests cover unavailable and wrong-date NAV, exact later NAV, fractional unit precision, cash/lot reconciliation and replay.",
+      "test_evidence": [
+        "Focused MF purchase, payment, order, lot, SIP, and migration suites: 41 passed; Ruff and targeted mypy passed. Tests cover unavailable and wrong-date NAV, exact later NAV, fractional unit precision, cash/lot reconciliation and replay.",
+        "python scripts/export_checklist_audit.py --check and git diff --check passed."
+      ]
     },
     {
       "id": "FB-0707",
@@ -15520,7 +15530,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T05:58:14Z",
+    "as_of_utc": "2026-11-22T06:41:46Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15771,13 +15781,13 @@
     ],
     "audited_count": 246,
     "status_counts": {
-      "COMPLETE": 35,
-      "PARTIAL": 194,
+      "COMPLETE": 37,
+      "PARTIAL": 192,
       "NOT_STARTED": 16,
       "EXTERNAL_BLOCKED": 1,
       "UNASSESSED": 1132
     },
-    "verified_complete_count": 35,
+    "verified_complete_count": 37,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -15844,8 +15854,8 @@
     "evidence_update": "FB-0314 and FB-0315 audited PARTIAL after durable MF paper-book integration; source-terms resolution, paper-use permissions and redemption restrictions are tested, while authorized historical source coverage and NAV/settlement integration remain absent."
   },
   "counts_by_status": {
-    "COMPLETE": 35,
-    "PARTIAL": 194,
+    "COMPLETE": 37,
+    "PARTIAL": 192,
     "NOT_STARTED": 16,
     "EXTERNAL_BLOCKED": 1,
     "UNASSESSED": 1132
