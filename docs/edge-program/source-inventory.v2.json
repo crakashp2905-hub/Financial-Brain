@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 680,
+  "source_count": 681,
   "sources": [
     {
       "capability_ids": [],
@@ -9098,6 +9098,26 @@
         "__future__",
         "datetime",
         "decimal",
+        "hashlib",
+        "json",
+        "kernel.mf_paper_realism",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_paper_realism_book.py",
+      "source_sha256": "a7fcf6d5cce159c6ead97dbd2a0b849a28a022fdcde29d2ee6e19040b584feae",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
         "forward_edge.data_permissions",
         "hashlib",
         "ingest.mfnav",
@@ -9424,8 +9444,10 @@
         "ingest",
         "interfaces",
         "json",
+        "kernel.mf_paper_realism",
         "kernel.trading_clock",
         "mf_lot_book",
+        "mf_paper_realism_book",
         "numpy",
         "opportunity",
         "pandas",
@@ -9438,7 +9460,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/terminal.py",
-      "source_sha256": "f8e341b13ef307d94d812a92dcb069f28563a2fb736ca61c7781246a48c2326a",
+      "source_sha256": "85e5b00011e5fb09fbaebba307047f1de6ecd7c4977bcae42c6267c9b132ee74",
       "test_paths": []
     },
     {
@@ -11987,6 +12009,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 665,
+  "unassessed_count": 666,
   "unassigned_role_count": 396
 }

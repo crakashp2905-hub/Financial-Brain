@@ -2843,16 +2843,20 @@
       "evidence": [
         "src/financial_brain/kernel/mf_paper_realism.py scores eligible-NAV certainty (35%), payment-time evidence (25%), exit-load completeness (20%) and redemption-settlement confidence (20%).",
         "Missing factors contribute zero rather than being excluded; the output separately exposes assessment coverage, observed-evidence coverage and missing dimensions, with a deterministic assessment hash.",
-        "Observed factors require individual source identity/reference/hash; simulated assumptions are labelled separately. Tests verify weighting, missing-input treatment, provenance, duplicate dimensions and future-dated evidence."
+        "Observed factors require individual source identity/reference/hash; simulated assumptions are labelled separately. Tests verify weighting, missing-input treatment, provenance, duplicate dimensions and future-dated evidence.",
+        "New as-of account assessment reads accepted order receipts, frozen eligibility records, received payment milestones, lots matched to effective/as-known commercial terms, and redemption settlement states; future-received or future-updated records are excluded.",
+        "MF terminal now displays the overall score, each factor and fixed weight, simulated/observed basis, assessment and observed coverage, missing dimensions, and a clear warning that the score is operational evidence completeness rather than profitability or calibrated execution fidelity."
       ],
-      "blocker": "Weights are explicit design defaults, not empirically calibrated. The score is not yet populated from live account/order/terms/settlement state or validated against realized paper-trading fidelity.",
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "8aa876a59c6b362375b349aa7c9d031b8de7ec46",
+      "blocker": "Weights are explicit design defaults, not empirically calibrated against prospective paper outcomes. Most current activity is simulated; independent registrar, bank, and settlement evidence is not broadly connected, so execution-fidelity calibration remains unproven.",
+      "last_audited_at_utc": "2026-11-22T13:07:34Z",
+      "commit": "5d48b2f1",
+      "test_result": "python -m pytest tests/test_mf_paper_realism_book.py tests/test_mf_paper_realism.py plus two MF terminal rendering tests: 12 passed; Ruff and targeted mypy on the new assessment module passed. Hosted PR validation pending.",
       "test_evidence": [
         "python -m pytest tests/test_mf_paper_realism.py tests/test_mf_purchase_payment.py tests/test_mf_order.py -q: 22 passed",
         "ruff check src/financial_brain/kernel/mf_paper_realism.py tests/test_mf_paper_realism.py: passed",
         "mypy src/financial_brain/kernel/mf_paper_realism.py: passed",
-        "git diff --check: passed"
+        "git diff --check: passed",
+        "python -m pytest tests/test_mf_paper_realism_book.py tests/test_mf_paper_realism.py plus tests/test_mf_lot_book.py::test_mf_terminal_panel_displays_last_known_nav_with_stale_flag and tests/test_mf_lot_book.py::test_mf_terminal_panel_distinguishes_simulated_and_observed_payouts -q: 12 passed; Ruff passed; targeted mypy passed for mf_paper_realism_book.py."
       ]
     },
     {
