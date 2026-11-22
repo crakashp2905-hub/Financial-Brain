@@ -2962,12 +2962,14 @@
       "status": "PARTIAL",
       "evidence": [
         "OptionContract paper plan binds CE/PE, underlying, strike, expiry, symbol, provider token, lot size and visible quote depth before eligibility.",
-        "No full option-chain selector routes strategy signals through a point-in-time versioned contract master and expiry/strike/lot rules."
+        "Added a deterministic point-in-time option-chain router with effective-dated and publication-time-gated contract versions; it validates symbol/token/expiry/strike/lot identity, quote availability/freshness, bid/ask, depth, spread, target DTE/moneyness and all-in premium budget before returning a long-call/put paper plan.",
+        "Routed plans retain contract-version, option-quote and underlying-spot evidence hashes, source/exchange/availability clocks, routing/cost-model hashes and OBSERVED_QUOTE_SIM label; no eligible contract returns NO_TRADE.",
+        "Still PARTIAL: contract versions and quote observations are caller-supplied; durable master ingestion and wiring every existing option strategy/desk through this router remain outstanding."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T17:28:54Z",
+      "commit": "366ebbe5",
+      "test_result": "python -m pytest tests/test_paper_options_routing.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_runner.py tests/test_paper_options_spread.py -q: 24 passed in 3.22s; Ruff passed for the new router/tests and mypy passed on options_routing.py."
     },
     {
       "id": "FB-0808",
@@ -2975,13 +2977,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Single-leg recommendation is long premium only; paper debit vertical requires feasible long/short leg quotes and reports bounded economic risk; margin and settlement are explicitly unverified.",
-        "These controls are not an all-strategy OMS gate, so universal enforcement against naked writing and unsupported settlement is unproven."
+        "The option plan and paper router only propose long CE/PE positions; the paper debit-vertical entry envelope models a long protective leg and short capped leg.",
+        "Added validate_supported_paper_option_structure and applied it to forward_edge option risk and executable-spread analysis. It permits a long option or one correctly ordered two-leg debit vertical, checks opposite CE/PE strike ordering and debit below maximum payoff width, and requires protective BUY before SELL in risk leg sequencing.",
+        "Naked shorts, credit spreads, reversed verticals, and structures with more than two legs now fail closed. Expiry/physical-delivery calculations remain scenario reports only and do not authorize settlement or orders.",
+        "Still PARTIAL: the strategy-shape gate is not yet enforced by every paper/OMS entry path; durable multi-leg partial-fill, margin, and settlement lifecycle controls remain outstanding."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T17:55:47Z",
+      "commit": "3066358d",
+      "test_result": "Focused option risk/spread and paper spread suite: 18 passed in 1.43s; Ruff and targeted mypy passed. Adversarial cases cover naked short, credit debit, reversed vertical, short-first leg sequence, and unsupported multi-leg structure.",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 18 passed.",
+        "Ruff passed on changed source and tests; mypy passed for forward_edge/options_risk.py and options_spread.py."
+      ]
     },
     {
       "id": "FB-0809",
@@ -2989,13 +2997,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Options risk/spread calculations check leg-wise quotes, visible size, defined economic loss, intermediate legging risk and expiry scenarios.",
-        "There is no durable multi-leg order state with partial leg fills, hedge, fee/margin reserve and full exercise/settlement reconciliation."
+        "Existing option risk and spread calculations report per-leg executable quotes, legging loss, bounded debit-spread economic risk, and explicit unverified margin/settlement states.",
+        "Added paper/options_lifecycle.py: frozen source-hashed plan, append-only hash-chained SQLite lifecycle events, idempotent entry/close fill IDs, partial fills, contract/source/availability validation, protective-long-before-short constraints, short-quantity caps, and controls that prevent closing protection before reducing the short leg.",
+        "The ledger freezes positive fee/cash reserves, keeps broker margin NOT_VERIFIED, accounts cash and fees per event, reconstructs state after reopen, and records expiry/physical-delivery as scenario-only. Open positions at expiry remain OPEN_AT_EXPIRY_UNRESOLVED; no settlement or physical order is fabricated.",
+        "Still PARTIAL: the lifecycle journal is not yet integrated into all option desks, OMS or ForwardSessionRunner; fee reserve is caller-supplied; broker margin and actual exercise/assignment/settlement cash/share reconciliation are not verified or implemented."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T18:24:23Z",
+      "commit": "093b3e04",
+      "test_result": "Focused option lifecycle/risk/spread suite: 24 passed in 5.12s; Ruff and targeted mypy passed. Coverage verifies partial entry/close fills, transactionally serialized concurrent fills cannot exceed plan size, short exposure never exceeds filled protection, close protection ordering, duplicate fill replay after reopen, conflicting replay rejection, append-only triggers, quote freshness and identity, cancellation idempotency, fee reserve, and unresolved expiry positions.",
+      "test_evidence": [
+        "python -m pytest tests/test_paper_options_lifecycle.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 24 passed.",
+        "Ruff and mypy passed for the option lifecycle/risk/spread modules; source inventory, capability ownership and forward engine graph freshness checks passed."
+      ]
     },
     {
       "id": "FB-0810",
@@ -3003,13 +3017,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "ForwardSessionRunner uses a durable event journal/outbox with restart-safe idempotency and reconciliation; PaperAccount folds a durable journal into OMS and double-entry cash.",
-        "One execution-per-signal/child-order semantics are not shared across all legacy and options books."
+        "The forward paper runner already has durable order/lifecycle state for selected paper fills, with event IDs and idempotent reconciliation at its session boundary.",
+        "Option paper plans now append a frozen plan event and immutable outbox row in one SQLite transaction. The outbox is unique by (account_id, signal_id, child_order_id), also unique by plan ID, and binds the canonical plan payload hash.",
+        "SQLite BEGIN IMMEDIATE serializes plan/position validation with event append; retrying identical fills after restart is idempotent, conflicting event IDs fail, and over-plan concurrent fills are rejected. Append-only triggers protect lifecycle and outbox rows.",
+        "Still PARTIAL: the option outbox has no wired consumer/dispatch acknowledgement; the option lifecycle is not integrated with ForwardSessionRunner or all order paths; cross-desk OMS/accounting reconciliation and end-to-end duplicate P&L proof remain outstanding."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T18:29:03Z",
+      "commit": "d25484a1",
+      "test_result": "Focused option lifecycle/risk/spread suite: 24 passed. Tests cover atomic plan/outbox registration, unique account/signal/child identity, restart recovery, idempotent fill replay, concurrent quantity caps, append-only event/outbox rows and risk-preserving leg transitions.",
+      "test_evidence": [
+        "python -m pytest tests/test_paper_options_lifecycle.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 24 passed.",
+        "Ruff and mypy passed for the option lifecycle/risk/spread modules; source inventory, capability ownership and forward engine graph freshness checks passed."
+      ]
     },
     {
       "id": "FB-0811",
@@ -3017,13 +3037,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Forward runner binds decisions to immutable available inputs, enforces signal/order clocks and refuses stale/non-executable quotes; feed supervision marks incomplete sessions.",
-        "A common entry-halt latch for each affected desk on every live-feed staleness, expiry and invalidation path is not connected to all runners."
+        "Forward-session gates already reject selected expired or stale paper intents, but the option-specific route did not previously bind every fill to signal expiry/invalidation or a durable desk-wide stale-feed state.",
+        "Option paper plans now freeze signal_expires_at; entry fills at/after expiry or after a durable SIGNAL_INVALIDATED event are rejected. The invalidation is idempotent and survives restart.",
+        "Stale-feed threshold observations append a hash-chained HALTED event by (paper account, desk); new option entries across plans sharing that desk are blocked until an authorized resume records at least three fresh quote observations with source/hash evidence. Close fills still require fresh executable quotes.",
+        "Still PARTIAL: no live Kite/WebSocket monitor automatically calls the halt; resume quote-count and owner identity are caller-supplied rather than independently attested; option desk state is not connected to the common ForwardSessionRunner or all desks/OMS."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T18:36:48Z",
+      "commit": "ab8ad778",
+      "test_result": "Focused option lifecycle/risk/spread suite: 26 passed in 59.83s; Ruff and targeted mypy passed. Tests cover signal-expiry and invalidation gates, stale-feed halt affecting every plan on the desk, owner/fresh-quote resume gate, persistent hash-chain state and no new entries while halted.",
+      "test_evidence": [
+        "python -m pytest tests/test_paper_options_lifecycle.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_paper_options_spread.py -q: 26 passed.",
+        "Ruff and mypy passed for option lifecycle/risk/spread modules; source inventory, capability ownership and forward engine graph freshness checks passed."
+      ]
     },
     {
       "id": "FB-0812",
@@ -3031,13 +3057,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "PaperAccount accepts stable account identifiers and maintains separate durable ledgers; forward paper intents require explicit risk verdicts.",
-        "There is no shared API workflow proving isolated autonomous and trader-approved accounts across all desks."
+        "src/financial_brain/kernel/paper_account.py: PaperAccount execution_mode preserves the existing submit_intent API; TRADER_APPROVED receipts bind account, approver label, UTC approval/submission times and a SHA-256 fingerprint of the exact order terms; replay rejects missing, cross-account, stale/future or mismatched receipts.",
+        "tests/test_paper_account.py: automated and trader-approved modes use separate durable account journals; approval rejection cases and reopen/account cash-position isolation are covered.",
+        "Approval receipts are local assertions, not cryptographic identity. Forward/options desks, a shared cross-engine OMS, trusted authentication, and authenticated approver identity remain unintegrated."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "blocker": "Partial: only the kernel cash-equity PaperAccount API supports the mode; local approval data is not signed/authenticated and the separate forward/options/legacy OMS domains are not unified.",
+      "last_audited_at_utc": "2026-11-22T18:52:46Z",
+      "commit": "01f15282",
+      "test_result": "Commit 01f15282. Windows focused tests/test_paper_account.py: 9 passed; Ruff and mypy passed. Hosted PR run 45057923435 on descendant head b5d0b5f8 passed test and reproducibility jobs on Ubuntu 24.04 and Windows."
     },
     {
       "id": "FB-0813",
@@ -3045,13 +3072,15 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Runner preflight and order paths validate instrument universe, causal timestamps, risk verdict, quote freshness, displayed size, cash/reservations and effective lot rules.",
-        "A common precommit receipt validation across every cash, ETF and options execution adapter is not established."
+        "src/financial_brain/forward_edge/session_runner.py persists a content-hashed precommit receipt joining decision-manifest hash, explicit allowed risk-verdict/policy identity, effective instrument rulebook, selected quantity ceiling, reconciled pre-order cash and position, quote event/evidence hashes and event/received/available clocks, quote-age bound, decision clock, and earliest eligible execution time.",
+        "The execution receipt carries the precommit receipt hash. The repeated-order path compares immutable order parameters without treating a later account snapshot as a new intent.",
+        "tests/test_forward_edge_session_runner.py validates receipt hash and binding to the instrument/risk/quote evidence; tests/test_forward_edge_session_runner.py plus tests/test_forward_edge_f05.py: 81 passed. Ruff and mypy passed.",
+        "This remains a forward cash-paper path; one authenticated validator covering every options, ETF, legacy and OMS adapter, and explicit policy limit values rather than a policy hash/verdict, are not yet established."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "blocker": "Partial: precommit receipt is integrated into ForwardSessionRunner paper execution only. Other paper OMS/asset-class adapters and authenticated policy enforcement remain separate; the receipt records the evaluated policy identity and verdict, not its full risk-limit configuration.",
+      "last_audited_at_utc": "2026-11-22T19:28:15Z",
+      "commit": "2b27ade5",
+      "test_result": "Commit 2b27ade5. Focused tests/test_forward_edge_session_runner.py and tests/test_forward_edge_f05.py: 81 passed; Ruff and mypy passed. The initial hosted run 45060495407 failed on stale fixture-equivalence snapshots before testing; after regeneration, hosted PR run 45060988560 on descendant head 7b5f2c02 passed full Ubuntu/Windows test and reproducibility jobs."
     },
     {
       "id": "FB-0814",
@@ -3509,61 +3538,82 @@
       "id": "FB-1104",
       "text": "Provide `APPROVE`, `REJECT`, `WATCH`, `NO_TRADE` for manual-approval paper sleeves; no UI action directly authorizes physical cash orders.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "tests/test_decision_first.py and src/financial_brain/paper/terminal.py (read-only display only; no APPROVE/REJECT/WATCH/NO_TRADE workflow for paper sleeves)"
+        "src/financial_brain/forward_edge/manual_paper_decisions.py provides APPROVE, REJECT, WATCH and NO_TRADE; the SQLite journal is append-only, idempotent and requires a named human actor.",
+        "APPROVE requires a fingerprint of exact paper-order terms and can produce only the existing TraderApproval receipt for a TRADER_APPROVED PaperAccount. REJECT, WATCH and NO_TRADE cannot produce order authorization. UI SUBMIT_ORDER remains explicitly denied by ui_actions.py.",
+        "tests/test_manual_paper_decisions.py and tests/test_paper_account.py: 15 passed; Ruff and mypy passed for the new decision module."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: this is a durable decision API, not yet integrated into the trader cockpit UI; actor names are not authenticated identities, and decisions cover the kernel cash PaperAccount rather than every paper desk.",
+      "last_audited_at_utc": "2026-11-22T19:52:22Z",
+      "commit": "ff7fef30",
+      "test_result": "Commit ff7fef30. Windows local: tests/test_manual_paper_decisions.py and tests/test_paper_account.py: 15 passed; Ruff and mypy passed. Hosted cross-platform CI pending."
     },
     {
       "id": "FB-1105",
       "text": "Independent automatic paper and human-approved paper performance, with same quote feed, risk parameters and market conditions.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No paired automatic vs human-approved paper sleeves with matched eligibility, quote feed and risk parameters found"
+        "src/financial_brain/forward_edge/paired_paper.py compares automatic and human choices against one exact frozen eligible-signal set; each signal carries shared quote-stream, risk-policy and cost-model hashes, capital weight, instrument and signal time.",
+        "The evaluator requires complete per-sleeve rows, preserves rejected/watch/no-trade cash outcomes, separates gross from cost contributions, counts unknown outcomes, hashes the report, and always sets promotion_eligible=false.",
+        "tests/test_forward_edge_paired_paper.py: 11 passed. The FB-1104 journal now supplies durable manual choices and exact-order paper approval receipts.",
+        "No adapter yet reconciles these paired rows from the actual automatic and human PaperAccount ledgers or proves prospective operation under shared live quote conditions."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: evaluator is present and tested but disconnected from actual paired books, order/fill attribution and forward quote/risk captures; no prospective comparison results exist.",
+      "last_audited_at_utc": "2026-11-22T19:54:42Z",
+      "commit": "1724d854",
+      "test_result": "Windows local: tests/test_forward_edge_paired_paper.py: 11 passed. Existing paired-sleeve evaluator has not yet been wired to live prospective automatic/manual account books."
     },
     {
       "id": "FB-1106",
       "text": "ETFs display underlying benchmark, bid/ask, quoted premium/discount to fresh iNAV, estimated tracking difference, cost and liquidity.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No ETF desk panel rendering benchmark, live spread, fresh iNAV premium/discount, tracking difference, cost and liquidity found"
+        "src/financial_brain/features/etf_trader_panel.py builds a read-only ETF panel model with benchmark, timestamped bid/ask/spread, freshness-gated iNAV premium/discount, effective-dated tracking difference/error and expense ratio, and liquidity/cost estimate.",
+        "The panel refuses cross-ETF quote/tracking/liquidity inputs and exposes stale, unavailable, missing, and out-of-effective-range evidence without substituting values.",
+        "src/financial_brain/features/etf_liquidity.py now emits source SHA-256 hashes for included daily observations and executable quotes.",
+        "tests/test_etf_trader_panel.py, tests/test_etf_liquidity.py, tests/test_etf_valuation.py: 15 passed; Ruff and targeted mypy passed.",
+        "Still missing: live ETF screen rendering, refresh/orchestration from current reference and quote stores, and end-to-end operator workflow."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: sourced point-in-time display model is implemented; live screen/data orchestration and end-to-end ETF desk workflow are not wired.",
+      "last_audited_at_utc": "2026-11-22T20:02:00Z",
+      "commit": "c31504fdbb748272140508c656c10710f7acf2e1",
+      "test_result": "Windows local: ETF panel, liquidity and valuation suites: 15 passed; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-1107",
       "text": "MFs display scheme/plan/option, current/published NAV, available NAV date, cutoff, pending allotment, units, cost basis, exit load, settlement and tax estimate.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No MF holding panel rendering scheme class, NAV/cutoff, pending units, cost basis, exit load, settlement and tax estimate found"
+        "src/financial_brain/paper/terminal.py already displayed MF scheme, plan, option, units, NAV date, cost basis, P&L, pending redemption and settlement realization; it now also renders the as-of availability cutoff and NAV observation availability timestamp.",
+        "The paper-book screen now lists NAV_PENDING purchase allotments with account, scheme/plan/option/folio, request amount or units and eligible NAV date.",
+        "Open-lot source-pinned exit-load schedules are evaluated against current NAV for a full-position indicative estimate; unknown schedules and stale/unavailable NAVs remain explicitly unavailable.",
+        "Tax estimate is explicitly not computed because a supported account tax profile and MF-specific tax-lot treatment are not available in this screen; no tax number is fabricated.",
+        "tests/test_mf_lot_book.py -k mf_terminal_panel_: 4 passed; Ruff passed. Existing terminal-wide mypy reports six unrelated errors at lines 355, 484, 909, and 984-986; no type-check pass is claimed for that module."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: paper terminal has NAV, cutoff, pending allotment, exit-load and settlement visibility; account-aware MF tax estimate and a tax-profile workflow remain unimplemented.",
+      "last_audited_at_utc": "2026-11-22T20:09:51Z",
+      "commit": "76486362a85006cdbdfb5d76a35aa81ca09bbcb5",
+      "test_result": "Windows local: four MF terminal panel tests passed; Ruff passed. Tax remains explicitly unavailable."
     },
     {
       "id": "FB-1108",
       "text": "Show MF `SUBSCRIBE`, `REDEEM`, `SWITCH`, `SIP`, `HOLD` as decisions, not misleading buy-at-current-price buttons.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No MF decision workflow for SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD found; recommendations remain research primitives"
+        "src/financial_brain/paper/terminal.py displays SUBSCRIBE, REDEEM, SWITCH, SIP and HOLD as distinct MF portfolio decisions, with cutoff, NAV, funding, payout and settlement timing explained; HOLD is explicitly no-order.",
+        "The MF terminal labels the section as decisions, not instant buy-at-current-price controls, and states that no market-price fill is implied.",
+        "tests/test_mf_lot_book.py -k mf_terminal_: 5 passed; Ruff passed.",
+        "Remaining: decisions are explanatory display rows, not yet linked to an operator-choice journal or end-to-end decision capture workflow."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: decision semantics are visible and execution timing is clear, but the MF terminal does not yet persist the chosen decision or link it to a specific proposal.",
+      "last_audited_at_utc": "2026-11-22T20:13:30Z",
+      "commit": "41275e4a6f1c3a703450412c6b259f8aa09fb214",
+      "test_result": "Windows local: five MF terminal tests passed; Ruff passed."
     },
     {
       "id": "FB-1109",
@@ -3583,11 +3633,16 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/alerts.py and src/financial_brain/cli.py:cmd_alerts (opportunity, holding-exit and system/run alerts); checklist-specific MF, ETF, options-expiry and desk risk-budget alert coverage is incomplete"
+        "src/financial_brain/forward_edge/alerts.py evaluates typed alert rules for order lifecycle, stale feeds, pending MF units/payouts, ETF dislocation, options expiry and risk-budget changes; malformed inputs and thresholds fail closed.",
+        "mutual_fund_pending_rows reads time-eligible NAV-pending purchases and unresolved redemption/payout settlements from the migrated paper database, classifies pending units vs payout, and computes age on the Asia/Kolkata session date.",
+        "paper_order_state_rows reads the latest order lifecycle state from the SQLite forward-edge journal within an explicit timezone-aware interval; naive event timestamps are rejected. The alerts CLI opens that journal read-only and routes resulting alerts through deduplicated desktop and configured Telegram transports.",
+        "tests/test_forward_edge_desk_alerts.py, tests/test_forward_edge_alerts.py, tests/test_phase5_account_journal_alerts.py: 24 passed; Ruff and targeted mypy passed.",
+        "Remaining: stale-feed, ETF, options-expiry and risk-budget source adapters are not wired to cmd_alerts; durable AlertBook persistence/entry-halt is not unified with the notification outbox."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: paper-order lifecycle and MF pending states are sourced and dispatched; stale-feed, ETF, options-expiry and risk-budget source adapters plus unified durable dispatch/entry-halt integration remain outstanding.",
+      "last_audited_at_utc": "2026-11-22T20:35:27Z",
+      "commit": "0adf7871",
+      "test_result": "Windows local: 24 focused alert tests passed; Ruff and targeted mypy passed. SQLite order adapter selects the latest state in the explicit interval and rejects naive timestamps; MF database adapter uses point-in-time DuckDB fixtures."
     },
     {
       "id": "FB-1111",
@@ -9248,51 +9303,81 @@
       "id": "SL-01-01",
       "text": "Define immutable `RawObservation(source_id, instrument_id, exchange_ts, received_ts, available_at, published_at, revision_id, checksum, entitlement)`.",
       "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/forward_edge/raw_observation.py defines frozen RawObservation with source/instrument identity, exchange/receipt/availability/publication clocks, revision identity, immutable payload bytes, verified SHA-256, and DataPermission bound to the same source.",
+        "RawObservation.capture computes the payload checksum; construction rejects naive or causally invalid clocks, malformed/mismatched checksums, mutable payloads and mismatched entitlement sources. from_dict enforces exact fields and revalidates payload, checksum, timestamps and permission.",
+        "tests/test_forward_edge_raw_observation.py: 4 passed, covering immutability, digest binding, timezone/causal clocks, permission binding and strict round-trip/tampering.",
+        "Ruff, targeted mypy, source inventory, capability ownership, forward-engine dependency graph and git diff checks passed."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T20:55:57Z",
+      "commit": "76886caa",
+      "test_result": "Windows local: 4 focused tests passed; Ruff and mypy passed. Generated source inventory (687 Python files), capability ownership (23 contracts / 467 modules), and forward-engine graph freshness checks passed."
     },
     {
       "id": "SL-01-02",
       "text": "Create effective-dated instrument universe for NSE/BSE equities, listed ETFs, index options, futures and MF schemes; preserve historical delistings and contract changes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py defines canonical InstrumentId/Instrument/InstrumentMaster with effective identity intervals, effective rule versions, historical status_on(day), expired/delisted state and as-of resolution.",
+        "src/financial_brain/universe/snapshot.py preserves date-specific NSE/BSE cash-equity membership and churn from historical exchange bhavcopy rows; src/financial_brain/kernel/instrument_history.py records append-only, publication-time-visible ticker/ISIN/corporate-action/scheme identity transitions.",
+        "Asset-specific source-backed records exist in providers/etf_reference.py (effective ETF listings), providers/mf_scheme_master.py (effective MF scheme metadata), and paper/options_routing.py (dated listed option contracts). Focused instrument/ETF/MF/options suites: 68 passed.",
+        "Remaining: these asset-specific catalogs are not assembled into one durable point-in-time universe with end-to-end ingestion/coverage evidence for NSE/BSE equities, ETFs, listed options, futures and MF schemes; historical delistings/contract revisions are not comprehensively populated from permissioned source snapshots."
+      ],
+      "blocker": "Partial: effective-dated schemas and historical identity/status components exist, but complete permissioned instrument snapshots and a unified cross-asset catalog with proven historical coverage are absent.",
+      "last_audited_at_utc": "2026-11-22T20:55:57Z",
+      "commit": "74d27804",
+      "test_result": "Windows local: 68 focused tests passed across kernel instrument identity/history, ETF references, MF scheme master, and paper option routing."
     },
     {
       "id": "SL-01-03",
       "text": "Define event-time/availability-time dual indexing; do not use a close, filing, NAV or revised report before it was observable.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/market_events.py preserves event, receipt, availability, publication and optional decision clocks; rejects publication after availability and events unavailable at their declared decision time.",
+        "src/financial_brain/evidence/decision_manifest.py validates source publication <= receipt <= availability <= decision, freezes data watermarks and hashes source identities; forward_edge/lookahead.py provides point-in-time input validation and prefix-invariance checks.",
+        "src/financial_brain/features/fundamentals_pit.py uses filing publication time for as-known fundamental snapshots. ForwardSessionRunner rejects availability before receipt and consumes events according to availability time. Focused lookahead, manifest, market-event, fundamentals and session-runner suites: 98 passed.",
+        "Remaining: no single availability-time contract is enforced across every close, filing, NAV, corporate-action, revised-report and feature/ranking path; broad future-revision perturbation coverage is not complete."
+      ],
+      "blocker": "Partial: several decision-critical paths enforce publication/availability time, but repository-wide integration and cross-domain future-revision invariance evidence are incomplete.",
+      "last_audited_at_utc": "2026-11-22T21:06:21Z",
+      "commit": "02977cbc",
+      "test_result": "Windows local: 98 focused tests passed across lookahead, decision manifest, market-event clocks, point-in-time fundamentals and forward session runner."
     },
     {
       "id": "SL-01-04",
       "text": "Implement provider-specific timezone/holiday/half-day/session/circuit/expiry/cutoff calendars; never infer session endings from a constant alone.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/venue_calendar.py models explicit source-hashed NSE/BSE sessions with date-bounded coverage, provider-local IST open/close and session type; missing/future coverage fails closed.",
+        "src/financial_brain/kernel/trading_clock.py separates exchange, scheme and bank-settlement calendars and source-backed NAV publication clocks; MF scheme terms carry effective-dated transaction cutoffs. Instrument rules and option contracts carry effective expiry/status; quote data gates can reject circuit-limited observations.",
+        "tests/test_forward_edge_venue_calendar.py, tests/test_kernel_trading_clock.py, tests/test_mf_scheme_terms.py: 12 passed, including sourced-horizon and missing-coverage failures.",
+        "Remaining: real current provider/segment calendars and verified holiday/half-day/circuit/expiry/cutoff sources are not comprehensively loaded; provider-specific coverage and operational consumers are not unified."
+      ],
+      "blocker": "Partial: source-bounded calendar contracts exist, but current official calendars for each venue/provider/segment and complete sourced coverage for half-days, circuits, expiries and product cutoffs are missing.",
+      "last_audited_at_utc": "2026-11-22T21:08:03Z",
+      "commit": "34425b66",
+      "test_result": "Windows local: 12 focused venue calendar, trading clock and MF scheme terms tests passed."
     },
     {
       "id": "SL-01-05",
       "text": "Add immutable source snapshots with allowed retention, redistribution status and non-display/licensing provenance for each data class.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/quote_archive.py provides SQLite-WAL market-event snapshots with source/evidence IDs, event clocks, canonical event hashes and integrity checks; RawObservation now binds immutable payload bytes to source, clocks, revision, checksum and DataPermission.",
+        "docs/edge-program/data-permissions.v1.json registers 17 sources across RESEARCH, PAPER_SIMULATION, DISPLAY, RETENTION, REDISTRIBUTION and LIVE_EXECUTION (102 source/use records); data-permission-operations.md defines purpose-scoped fail-closed gates.",
+        "docs/edge-program/market-data-rights-review.v1.md documents source-specific storage, replay, redistribution, display and non-display terms as unresolved where account/exchange/AMC permissions are absent. Quote archive and data gate focused suites: 22 passed.",
+        "Remaining: source-level entitlement states are UNKNOWN_RIGHTS; allowed retention duration, redistribution and non-display/licensing provenance are not approved for each actual provider/data product, and raw snapshot lifecycle/retention operations are not integrated."
+      ],
+      "blocker": "Partial: append-only snapshots and a six-use source permission register exist, but provider/account-specific retention, redistribution, and non-display rights remain unverified and no permitted per-data-class snapshot policy is in force.",
+      "last_audited_at_utc": "2026-11-22T21:08:03Z",
+      "commit": "0f813fa2",
+      "test_result": "Windows local: 22 focused quote archive, archive integration, and data gate tests passed; all current permission register entries remain UNKNOWN_RIGHTS."
     },
     {
       "id": "SL-01-06",
@@ -9327,242 +9412,472 @@
     {
       "id": "SL-01-07",
       "text": "Develop historical availability ledger for price corrections, dividends, splits, symbol/ISIN changes, index constituent changes and futures roll schedules.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/corpactions/actions.py records effective ex-dates, publication time, source tier, observation time and evidence key for corporate actions; raw prices remain unadjusted and adjustment factors are derived from the recorded actions.",
+        "src/financial_brain/kernel/instrument_history.py provides append-only sourced ticker/ISIN transitions with effective and publication times, source hash, and point-in-time visibility.",
+        "src/financial_brain/forward_edge/futures_roll.py models dated front-to-back contract economics, but roll marks are caller-supplied and not source-authenticated.",
+        "Focused tests: tests/test_kernel_instrument_history.py, tests/test_forward_edge_futures_roll.py, tests/test_phase0_reference.py, and tests/test_phase1_corpact.py. 93 passed; five fixture tests failed only because the sandbox temporary path exceeded Windows path limits. Those five cases passed on a short-path rerun (12 passed in aggregate)."
+      ],
+      "blocker": "There is no unified append-only, sourced availability ledger spanning corrected price revisions, corporate actions, symbol/ISIN transitions, historical index constituent changes, and authenticated futures roll schedules. Existing components are separate; comprehensive historical source coverage is not loaded.",
+      "last_audited_at_utc": "2026-11-22T21:48:40Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_kernel_instrument_history.py",
+        "tests/test_forward_edge_futures_roll.py",
+        "tests/test_phase0_reference.py",
+        "tests/test_phase1_corpact.py"
+      ],
+      "test_result": "Focused suite: 93 passed; five Windows MAX_PATH/environment failures. All five failure cases passed when rerun with --basetemp D:\\Finance-Brain\\.pytest-short; targeted rerun total 12 passed in 66.59s."
     },
     {
       "id": "SL-01-08",
       "text": "Build point-in-time index membership snapshots and survivorship-safe historical corporate action joins for feature training.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/ingest/index_tri.py archives dated constituent downloads and loads point-in-time index_membership snapshots; it explicitly documents that historical membership is only accumulated prospectively from the first captured snapshot and cannot be backfilled from current lists.",
+        "src/financial_brain/universe/snapshot.py records daily traded-universe snapshots by ISIN and supports historical membership/churn; src/financial_brain/corpactions/actions.py keeps raw prices separate from derived action factors.",
+        "tests/test_free_datasets.py and tests/test_phase0_reference.py cover reference ingestion and historical universe/corporate-action behavior; targeted tests/test_free_datasets.py: 10 passed."
+      ],
+      "blocker": "Historical official index membership before first archived snapshots is unavailable in this implementation; constituent snapshots are not yet wired into survivorship-safe corporate-action joins for every feature-training dataset, and permissions/source coverage remain unverified.",
+      "last_audited_at_utc": "2026-11-22T21:50:16Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_free_datasets.py",
+        "tests/test_phase0_reference.py"
+      ],
+      "test_result": "tests/test_free_datasets.py and tests/test_paper_options_routing.py passed together (19 tests); relevant index ingest subset is covered. Full cross-feature survivorship-safe join proof remains outstanding."
     },
     {
       "id": "SL-01-09",
       "text": "Add option strike, side, underlying, lot, expiry and exact token mappings with effective dates; reject reconstructed fictional listed contracts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/options_routing.py defines effective-dated OptionContractVersion records with underlying, CE/PE side, decimal strike, expiry, exact symbol/token, lot size, publication time and source hash; point-in-time routing excludes unpublished, inactive and expired rows.",
+        "tests/test_paper_options_routing.py validates exact contract identity, effective/publication dates, expiry and rejection of malformed or unavailable contracts; it passed as part of a 19-test focused run."
+      ],
+      "blocker": "No verified historical exchange contract-master archive is loaded or bound to the supplied source hash, so comprehensive historical exact-token coverage and proof against fabricated contract rows are incomplete.",
+      "last_audited_at_utc": "2026-11-22T21:50:16Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_paper_options_routing.py"
+      ],
+      "test_result": "tests/test_paper_options_routing.py and tests/test_free_datasets.py passed together: 19 passed in 2.41s."
     },
     {
       "id": "SL-01-10",
       "text": "Archive quote bid/ask, depth, OI and last trade separately with timestamp/age and entitlement; never make index level a tradable option price.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/market_data.py now normalizes Kite bid/ask, full depth, open interest, source exchange timestamp, distinct last_trade_time, receipt-time quote/last-trade age, and packet hash; malformed OI and future last-trade clocks are rejected.",
+        "QuoteArchive stores and round-trips the complete normalized event payload with source/evidence hash and event/receipt/availability clocks. The paper options router uses an exact published effective contract token and quote observation for option premium; underlying spot is used only for moneyness and is not an option price.",
+        "tests/test_forward_edge_kite_market_data.py and tests/test_forward_edge_quote_archive.py: 25 passed; Ruff and targeted mypy passed; generated source inventory, ownership matrix and forward-engine graph freshness passed.",
+        "Remaining: archive rows do not yet carry the applicable source/use entitlement object; observed options-chain/OI coverage and rights are not verified, and all permitted providers/data products are not wired through one quote/depth/OI archive contract."
+      ],
+      "blocker": "Partial: Kite quote snapshots now preserve OI and separate trade/quote clocks, but archive entitlement attachment, permissioned OI coverage and other provider adapters remain incomplete.",
+      "last_audited_at_utc": "2026-11-22T21:29:52Z",
+      "commit": "4f55bf40",
+      "test_result": "Windows local: 25 market-data normalization and quote archive tests passed; Ruff, targeted mypy and generated architecture freshness checks passed."
     },
     {
       "id": "SL-01-11",
       "text": "Distinguish exchange tick vs broker receipt and clock-skew uncertainty; derive `decision_available_at=max(all input availability times)`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/market_events.py preserves event, receipt, availability, source, exchange and publication clocks and rejects events published after strategy availability or unavailable at decision time.",
+        "src/financial_brain/forward_edge/market_data.py normalizes Kite exchange timestamps separately from local receipt, calculates quote/last-trade age at receipt and rejects exchange timestamps beyond explicit future-skew tolerance; src/financial_brain/forward_edge/clock.py provides typed exchange/receipt/availability clocks.",
+        "tests/test_forward_edge_clock.py, tests/test_forward_edge_market_events.py, tests/test_forward_edge_lookahead.py, tests/test_forward_edge_kite_market_data.py: 38 passed in 4.21s."
+      ],
+      "blocker": "No shared multi-input decision builder derives and records decision_available_at=max(all input availability times) across every strategy path; exchange clock-skew allowance is caller-configured rather than calibrated/attested per source and clock-health evidence is not attached to all decisions.",
+      "last_audited_at_utc": "2026-11-22T21:52:09Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forward_edge_clock.py",
+        "tests/test_forward_edge_market_events.py",
+        "tests/test_forward_edge_lookahead.py",
+        "tests/test_forward_edge_kite_market_data.py"
+      ],
+      "test_result": "Focused clock, market event, lookahead and Kite normalization suite: 38 passed in 4.21s."
     },
     {
       "id": "SL-01-12",
       "text": "Implement retriable, idempotent ingesters with watermarks, atomic batches, source correction events and data-quality dashboards.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/lake/store.py documents content-hash idempotency for raw objects; src/financial_brain/kernel/events.py persists event ordering/watermarks and quarantines events older than the lateness bound.",
+        "src/financial_brain/providers/base.py and providers/amfi.py implement bounded retries for selected transient provider failures; src/financial_brain/kernel/data_quality.py preserves published/observed revisions for point-in-time reads; the evidence ledger records corrections without erasing prior evidence.",
+        "tests/test_kernel_events.py and tests/test_phase1_evidence.py passed in this audit (6 and 9 tests respectively). This does not verify every ingester or end-to-end batch transaction."
+      ],
+      "blocker": "Retry/idempotency/watermark/correction behavior is implemented in separate components, not a shared ingester contract. Atomic commit and restart recovery are not proven across all providers, and no unified ingestion data-quality dashboard or source-level watermark operations view was found.",
+      "last_audited_at_utc": "2026-11-22T22:10:11Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_kernel_events.py",
+        "tests/test_phase1_evidence.py"
+      ],
+      "test_result": "tests/test_kernel_events.py: 6 passed in 0.73s; tests/test_phase1_evidence.py: 9 passed in 150.86s. Broader ingestion aggregate was interrupted after slow legacy fixtures; no pass is claimed for that aggregate."
     },
     {
       "id": "SL-01-13",
       "text": "Build negative test: introduce future publication revisions and assert no prior features, signals or policy rankings change.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "tests/test_forward_edge_lookahead.py adds a negative regression that first freezes features, LONG/NO_TRADE signals and the production momentum-book selection, then appends a correction published five days after the decision and asserts all earlier outputs remain identical.",
+        "The same test proves the revision is not ignored: after its publication timestamp, the corrected feature changes, A becomes NO_TRADE and the book selects B.",
+        "Uses the production bitemporal Revisions.as_of store and evaluation.momentum_book.choose; targeted test file: 4 passed, Ruff clean."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T22:12:45Z",
+      "commit": "5b1d8317",
+      "test_evidence": [
+        "tests/test_forward_edge_lookahead.py::test_future_published_revision_cannot_change_prior_features_signals_or_book_ranking"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-short tests/test_forward_edge_lookahead.py: 4 passed in 1.71s; ruff check tests/test_forward_edge_lookahead.py passed."
     },
     {
       "id": "SL-01-14",
       "text": "Add controlled redaction/deletion and retention periods for exchange-licensed feeds; delete prohibited data without corrupting historical provenance.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/lake/retention.py adds reviewed source/dataset-scoped RetentionDirective deadlines; redact_payload verifies the payload against immutable metadata, writes a checksummed receipt before deleting only that exact payload, and supports idempotent recovery after interruption.",
+        "src/financial_brain/lake/store.py makes RawLake.read fail closed for redacted payloads while leaving original metadata and tombstone provenance available.",
+        "tests/test_lake_retention.py covers scope/deadline rejection, exact deletion, provenance, interrupted retry, conflicting directives, receipt tampering, payload mismatch and path traversal: 6 passed. Ruff and targeted mypy passed. No real lake payload was deleted."
+      ],
+      "blocker": "No provider-specific retention schedule or permission evidence is loaded, current UNKNOWN_RIGHTS entries are not converted into reviewed deletion directives, and quote archives/other data stores do not yet consume this control. Automated retention scans, backups and production recovery procedures remain open.",
+      "last_audited_at_utc": "2026-11-22T22:19:21Z",
+      "commit": "6776c4b1",
+      "test_evidence": [
+        "tests/test_lake_retention.py"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-short tests/test_lake_retention.py: 6 passed in 1.46s; Ruff and mypy for retention/store passed; git diff --check passed."
     },
     {
       "id": "SL-01-15",
       "text": "Declare market data ingestion unavailable during outages, holidays or unauthorized periods; expose `NO_DATA` and stop policy decisions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/feed_health.py now reports NO_DATA with decision_status=NO_TRADE when there are no observations or when the caller declares market closed, unauthorized, or provider outage; stale feeds also block decisions.",
+        "the legacy paper/intraday_runner.run_live returns NO_DATA/NO_TRADE for weekends/after close and rights failures, labels detected no-session days MARKET_CLOSED, and its rights gate returns before any quote request. ForwardSessionRunner already requires a frozen sourced calendar plan and blocks out-of-session events.",
+        "tests/test_forward_edge_feed_health.py plus four focused phase5 intraday cases: 12 passed; Ruff and targeted mypy passed."
+      ],
+      "blocker": "The shared availability status is not yet wired to every consumer/desk and source adapters do not all publish calendar, outage and permission state into one common market-availability service. A detected no-session in the legacy poller is conservative but is not a complete official-calendar integration.",
+      "last_audited_at_utc": "2026-11-22T22:23:09Z",
+      "commit": "b11bcb37",
+      "test_evidence": [
+        "tests/test_forward_edge_feed_health.py",
+        "tests/test_phase5_intraday_runner.py::test_live_kite_runner_blocks_missing_permission_before_quote_request",
+        "tests/test_phase5_intraday_runner.py::test_a_holiday_is_detected_and_the_run_ends_quietly",
+        "tests/test_phase5_intraday_runner.py::test_a_failing_feed_aborts_after_the_limit_rather_than_spinning_all_day",
+        "tests/test_phase5_intraday_runner.py::test_started_after_the_close_or_on_a_weekend_it_records_nothing"
+      ],
+      "test_result": "12 focused feed-health/intraday tests passed in 7.15s; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-01-16",
       "text": "Provide training/validation/test data manifests with as-of cutoffs, raw file hashes, transforms and explicit unavailable source periods.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/dataset.py now writes versioned per-split manifests with train/validation/out-of-sample range and inclusive as-of cutoff, transformation descriptions, output CSV SHA-256/row/date bounds, optional raw input SHA-256 declarations, and explicit unavailable-source-period declarations.",
+        "the exporter validates declared hash/date formats and preserves a default UNVERIFIED coverage state whenever raw hashes or unavailable periods are not supplied. Out-of-sample export remains separately gated.",
+        "tests/test_phase5_dataset.py: 16 passed, including manifest cutoff/hash/transform/gap declarations, missing-source status, invalid declarations and holdout controls; Ruff and targeted mypy passed."
+      ],
+      "blocker": "Raw source file hashes and unavailable source windows remain optional caller-provided declarations, explicitly marked PROVIDED_NOT_VERIFIED; exporter does not resolve them to the actual raw-lake bytes or independently calculate source-period coverage. Historical gap inventories are not populated automatically for every train/validation/test export.",
+      "last_audited_at_utc": "2026-11-22T22:27:00Z",
+      "commit": "a6fbf024",
+      "test_evidence": [
+        "tests/test_phase5_dataset.py"
+      ],
+      "test_result": "tests/test_phase5_dataset.py: 16 passed in 2.70s; Ruff and targeted mypy passed; git diff --check passed."
     },
     {
       "id": "SL-01-17",
       "text": "Prevent normalization, universe filtering and feature selection from fitting on validation/test periods.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/dataset.py chooses the training universe as of the training start and exports split-specific windows with a purge gap.",
+        "src/financial_brain/research/causal_regime.py fits StandardScaler, KMeans, HMM parameters and regime thresholds on the training array only; inverse_strategy.py splits chronologically, fits model pipelines on train, chooses on validation and evaluates the final segment separately. evaluation/deep_library.py and evaluation/learners.py likewise mask model .fit calls to their training rows.",
+        "tests/test_phase5_dataset.py, tests/test_inverse_strategy.py, tests/test_phase5_learners.py and tests/test_phase5_deep_library.py: 55 passed in 40.73s (warnings only)."
+      ],
+      "blocker": "These are local caller conventions, not a repository-wide fit-scope enforcement contract. Arbitrary feature-selection/normalization code can still be fitted on holdout data without a shared guard, split manifests do not attest model fit row identities, and the full set of estimators has not been audited.",
+      "last_audited_at_utc": "2026-11-22T22:29:16Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_phase5_dataset.py",
+        "tests/test_inverse_strategy.py",
+        "tests/test_phase5_learners.py",
+        "tests/test_phase5_deep_library.py"
+      ],
+      "test_result": "Focused training-boundary suites: 55 passed in 40.73s with 28 dependency/deprecation/convergence warnings; no test failures."
     },
     {
       "id": "SL-01-18",
       "text": "Block paper simulation using broker live data where provider terms prohibit it until written interpretation or a permitted source is obtained.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/forward_edge/data_permissions.py defines source/use-scoped effective permissions; src/financial_brain/forward_edge/data_gate.py rejects missing, UNKNOWN_RIGHTS, denied, expired or mismatched PAPER_SIMULATION permissions.",
+        "ForwardSessionRunner refuses non-fixture Kite market events without current permission before accepting/journaling them. The legacy paper/intraday_runner.run_live path returns rights_blocked before requesting quotes when permission is absent, with zero quote requests and broker_orders=false; CLI integration exposes the permission-file input.",
+        "tests/test_forward_edge_data_gate.py, tests/test_forward_edge_session_runner.py, tests/test_phase5_intraday_runner.py, tests/test_forward_edge_pipeline_compat.py: 98 passed in the aggregate run; two tests failed only because the sandbox temp root exceeded Windows path length, then both passed when rerun under D:\\Finance-Brain\\.t (2 passed).",
+        "This completes the fail-closed engineering gate only. The permission register remains UNKNOWN_RIGHTS until the owner supplies reviewed provider/account terms; no Kite live-data paper session is authorized by this code change."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T21:24:02Z",
+      "commit": "56804f5f",
+      "test_result": "Local Windows: 98/100 tests passed in the focused aggregate; the remaining two had MAX_PATH failures under the sandbox-generated temp path and passed on targeted rerun with a short --basetemp. Hosted CI on the pushed head is the cross-platform acceptance gate."
     },
     {
       "id": "SL-02-01",
       "text": "Create canonical `FeatureDefinition` with formula hash, window, market, horizon, input lineage, lag, leakage tests and data type.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/features/definition.py implements immutable FeatureDefinition with stable feature/version IDs, normalized formula and formula SHA-256, window, market, horizon, explicit input lineage, nonnegative lag, required leakage-test IDs, and constrained data type.",
+        "The canonical JSON includes the formula hash and has its own definition SHA-256; strict deserialization rejects missing/extra fields and formula tampering. The contract is declarative and does not execute formula strings.",
+        "tests/test_feature_definition.py: 10 passed, including canonical determinism, round-trip/tamper rejection, and required-field/type validation; Ruff and targeted mypy passed. Source inventory and forward-engine graph freshness checks passed."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T22:33:39Z",
+      "commit": "5f4a91ff",
+      "test_evidence": [
+        "tests/test_feature_definition.py"
+      ],
+      "test_result": "tests/test_feature_definition.py: 10 passed in 0.78s; Ruff and mypy passed; source inventory, capability ownership and forward-engine graph freshness checks passed."
     },
     {
       "id": "SL-02-02",
       "text": "Implement streaming OHLCV aggregation for 1m/5m/15m/30m/1h/day with missing-minute flags and completed-bar semantics.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/streaming_bars.py implements deterministic in-memory OHLCV aggregation for 1m, 5m, 15m, 30m, 1h and 1D across a caller-supplied sourced session interval.",
+        "Only whole interval windows are emitted after their end. Minute availability is checked as of the requested cutoff; missing-minute timestamps are reported and incomplete windows carry null OHLCV rather than filled prices. Exact duplicate minutes are idempotent and conflicting same-time revisions fail closed.",
+        "tests/test_streaming_bars.py: 6 passed, covering all frequencies, minute gaps, as-of visibility, out-of-order ingestion, duplicate/correction behavior and invalid session/bar inputs. Ruff and targeted mypy passed; generated source inventory and dependency graph checks pass."
+      ],
+      "blocker": "The aggregator is not yet connected to Kite/WebSocket/session runner or a durable feature store; the session interval must be provided by caller. Partial trailing 30m/1h intervals are excluded, and no production latency/coverage or restart replay has been measured.",
+      "last_audited_at_utc": "2026-11-22T22:37:41Z",
+      "commit": "335ba73f",
+      "test_evidence": [
+        "tests/test_streaming_bars.py"
+      ],
+      "test_result": "tests/test_streaming_bars.py: 6 passed in 0.72s; Ruff and targeted mypy passed; source inventory, capability ownership and forward-engine graph checks passed."
     },
     {
       "id": "SL-02-03",
       "text": "Add price-return, volatility, range, trend, volume participation, gap, session VWAP, breadth and liquidity as separate causal feature families.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "Daily price-return, realized-volatility, moving-average trend and average traded-value liquidity features are built as separate columns by features.indicators over split-adjusted security lineages; minimum history gates leave short windows null.",
+        "Intraday opening gap, range, session VWAP deviation and relative volume participation are separate columns in features.intraday; timestamps are evaluated in Asia/Kolkata and input windows stop at 10:30. Market breadth is separately computed by regime.breadth from the as-of feature cross-section.",
+        "Causality evidence includes a daily test that changes only later prices and asserts earlier returns/volatility are unchanged, and an intraday regression that changes all bars after 10:30 and asserts gap, breakout, VWAP deviation, relative volume and range features are unchanged. Breadth uses only the requested business_date."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T22:43:08Z",
+      "commit": "c8ba085b",
+      "test_evidence": [
+        "tests/test_phase2_features.py::test_a_feature_never_sees_a_later_price",
+        "tests/test_phase3_technical.py",
+        "tests/test_phase5_intraday.py::test_no_feature_sees_a_bar_after_the_outcome_starts",
+        "tests/test_phase1_regime.py"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-v3features tests/test_phase2_features.py tests/test_phase3_technical.py tests/test_phase5_intraday.py tests/test_phase1_regime.py: 25 passed in 120.98s."
     },
     {
       "id": "SL-02-04",
       "text": "Add options IV surface, skew, term structure, Greeks and OI features only where observed quotes/contracts support estimation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "features.options_surface.build_surface computes per-contract implied volatility from fresh, synchronized, two-sided observed bid/ask midpoints and reports delta, gamma, vega, theta and moneyness. Future, stale, crossed, missing-clock, unsynchronized and expired quotes are excluded; no last-trade mark or fabricated quote is substituted.",
+        "The builder emits observed strike/expiry IV points, per-expiry ATM IV, a nearest-25-delta put-minus-call risk reversal, open-interest totals/PCR only when OI was observed, and an ordered ATM IV term structure. It does not interpolate/extrapolate missing contracts or expiries.",
+        "The licensed local quote archive now persists option OI/volume and the underlying source timestamp, migrates existing archives additively without inventing historical values, and options_audit reports observed OI, spot-clock and synchronized two-sided coverage. The feature builder reads the archive as of an explicit decision timestamp.",
+        "No current permitted archive coverage was asserted. The module is not yet wired into the paper decision pipeline, and rate/dividend assumptions are supplied by the caller without a source-pinned rates curve."
+      ],
+      "blocker": "Partial: real permitted quote coverage and prospective surface QA are not established; the surface is not yet consumed by paper decision features, and risk-free/dividend inputs are caller supplied rather than source-pinned.",
+      "last_audited_at_utc": "2026-11-22T22:53:40Z",
+      "commit": "ffb52520",
+      "test_evidence": [
+        "tests/test_options_surface.py",
+        "tests/test_options_quotes.py",
+        "tests/test_options_audit.py",
+        "tests/test_options_real.py",
+        "tests/test_kernel_options.py"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-v3options tests/test_options_surface.py tests/test_options_quotes.py tests/test_options_audit.py tests/test_options_real.py tests/test_kernel_options.py: 26 passed in 5.42s; Ruff clean; mypy clean for the surface/archive modules; source inventory and forward-engine graph regenerated and freshness checks passed."
     },
     {
       "id": "SL-02-05",
       "text": "Construct cross-index breadth, constituent concentration, Nifty/BankNifty co-movement and sector relative-strength features with aligned timestamps.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "features.index_cross_section.build_index_features computes NIFTY 50 and NIFTY BANK constituent breadth (positive 20-session return and above-200-session average) by joining each point-in-time membership ISIN to that exact session's adjusted-price lineage and feature row. It requires adequate member coverage and marks missing/stale membership unavailable.",
+        "The builder computes NIFTY 50/NIFTY BANK TRI return correlation on common session dates and sector-index relative return versus NIFTY 50 from common endpoints. It filters membership effective dates and both membership/TRI observed_at timestamps against the caller's decision_at, excluding future publications.",
+        "Industry concentration is reported using equal constituent counts and is explicitly labelled as not market-cap/index-weighted because index_membership has no constituent weights. NIFTY BANK was added to the existing nightly constituent snapshot source list.",
+        "tests/test_index_cross_section.py plus existing regime/cross-market suites: 15 passed; Ruff, mypy and source-inventory/forward-engine-graph freshness checks passed."
+      ],
+      "blocker": "Partial: point-in-time constituent snapshots are only accumulated prospectively and actual permissioned index membership/TRI coverage has not been audited; the source has no index weights, so concentration is industry member-count based. The features are not yet wired into the trader decision pipeline.",
+      "last_audited_at_utc": "2026-11-22T23:00:42Z",
+      "commit": "415b17db",
+      "test_evidence": [
+        "tests/test_index_cross_section.py",
+        "tests/test_phase1_regime.py",
+        "tests/test_cross_market.py"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-v3index tests/test_index_cross_section.py tests/test_phase1_regime.py tests/test_cross_market.py: 15 passed in 15.28s; Ruff and mypy passed; source inventory and forward-engine graph regenerated and freshness checks passed."
     },
     {
       "id": "SL-02-06",
       "text": "Extract event-availability indicators for NSE/BSE filings, corporate announcements, results, shareholding and financial statement revisions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "features.event_availability.build() is called by the standard features.indicators.build pipeline and creates event_availability detail plus an event_availability_features session panel.",
+        "It maps BSE corporate announcements, BSE result announcements, NSE XBRL result filings, NSE shareholding filings, and point-in-time XBRL statement revisions to the first available trading session using the exchange session calendar and the publication clock. It preserves source event IDs, publication times and collector timestamps.",
+        "The panel keeps categories separate and computes 5-session announcement/results counts, 60-session shareholding/revision counts and sessions-since-result; no event is fabricated when its source table or row is absent.",
+        "tests/test_event_availability.py plus announcement, events, result, fundamentals point-in-time tests: 103 passed in 49.73s; Ruff, mypy and source-inventory/forward-engine graph freshness checks passed."
+      ],
+      "blocker": "Partial: the event panel is implemented and in the standard research feature build, but source completeness is not proven for all NSE corporate filings and the indicators are not yet wired into forward/paper strategy inputs. Backfilled historical source coverage and prospective capture need reconciliation.",
+      "last_audited_at_utc": "2026-11-22T23:08:14Z",
+      "commit": "efc64cf1",
+      "test_evidence": [
+        "tests/test_event_availability.py",
+        "tests/test_phase1_events.py",
+        "tests/test_phase5_events.py",
+        "tests/test_phase5_fundamentals_pit.py",
+        "tests/test_phase2_results.py",
+        "tests/test_phase2_features.py"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-v3events tests/test_event_availability.py tests/test_phase1_events.py tests/test_phase5_events.py tests/test_phase5_fundamentals_pit.py tests/test_phase2_results.py tests/test_phase2_features.py: 103 passed in 49.73s; Ruff and mypy passed; source inventory and forward-engine graph regenerated and freshness checks passed."
     },
     {
       "id": "SL-02-07",
       "text": "Implement cross-sectional sector, size, liquidity, beta and corporate-action neutralization fitted on past samples only.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/neutralization.py (past-only normalized OLS exposure model for sector, size, liquidity, beta and corporate-action flag; timestamped row-availability gate; immutable model hash; frozen current-session transform)",
+        "tests/test_feature_neutralization.py (past-session cutoff, unavailable late corrections, current-session availability, exposure removal, model cutoff, and insufficient-history fail-closed cases)",
+        "Generated source inventory and forward-engine dependency graph refreshed; focused checks: 7 passed, Ruff, mypy and git diff --check passed."
+      ],
+      "blocker": "Partial: causal research transform is implemented, but production feature-materialization/strategy integration and source-lineage coverage have not been established.",
+      "last_audited_at_utc": "2026-11-23T00:00:00Z",
+      "commit": "a8fa1d48",
+      "test_evidence": [
+        "python -m pytest -q tests/test_feature_neutralization.py tests/test_phase5_neutral.py: 7 passed.",
+        "ruff check src/financial_brain/features/neutralization.py tests/test_feature_neutralization.py: passed; mypy src/financial_brain/features/neutralization.py: passed; git diff --check: passed."
+      ],
+      "test_result": "Focused neutralization and existing neutralization tests passed (7 total); Ruff, mypy and diff whitespace check passed. Hosted PR CI remains in progress and is not claimed as passing."
     },
     {
       "id": "SL-02-08",
       "text": "Keep raw, adjusted and total-return price series separated; enforce dividend and split correctness by arithmetic reconciliation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/prices.py keeps close_raw separate from close_adj and documents the point-in-time caveat for later-known corporate actions.",
+        "src/financial_brain/corpactions/actions.py now selects the nearest later cumulative action factor, preserving correct arithmetic when factors are not monotonic (e.g. reverse split followed by split).",
+        "tests/test_phase0.py verifies raw closes remain unchanged and adjusted closes reconcile across sequential actions; ETF PRICE_RETURN, ETF_NAV_RETURN and UNDERLYING_TOTAL_RETURN_INDEX remain separate and do not bridge missing sessions in features/etf_prices.py and tests/test_etf_return_series.py.",
+        "Targeted checks: 6 tests passed; Ruff, mypy, source inventory and forward-engine graph freshness checks passed."
+      ],
+      "blocker": "Partial: split/reverse-split arithmetic and separate ETF/NAV/TRI series are covered, but complete permissioned total-return histories and dividend reconciliation across the full stock universe are not available or verified.",
+      "last_audited_at_utc": "2026-11-22T23:23:33Z",
+      "commit": "dd4ecd50",
+      "test_evidence": [
+        "python -m pytest -q tests/test_phase0.py::TestCorporateActions::test_cumulative_adjustments_reconcile_reverse_split_then_split tests/test_phase0.py::TestCorporateActions::test_adjustment_applies_only_before_ex_date tests/test_etf_prices.py tests/test_etf_return_series.py: 6 passed.",
+        "ruff check src/financial_brain/corpactions/actions.py tests/test_phase0.py and mypy src/financial_brain/corpactions/actions.py passed.",
+        "scripts/source_inventory.py and scripts/forward_engine_graph.py freshness checks passed."
+      ],
+      "test_result": "Targeted corporate-action arithmetic and ETF series separation tests passed (6 total); Ruff, mypy, and generated inventory/graph checks passed. No full-suite or hosted-CI result is claimed for this commit yet."
     },
     {
       "id": "SL-02-09",
       "text": "Add `FeatureSnapshot` with observation/availability timestamp, feature version, source hashes and missingness masks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/features/snapshot.py defines immutable FeatureSnapshot records with entity/session identity, feature version, cutoff, per-feature observed_at/available_at clocks, source content hashes, feature-to-source references, explicit missingness masks, and deterministic SHA-256 identity.",
+        "FeatureSnapshot.create rejects naive clocks, post-cutoff availability, observation after availability, unresolved/bad source hashes, missing clocks and silent null handling. from_dict revalidates the record and rejects content or mask tampering.",
+        "tests/test_feature_snapshot.py verifies snapshot serialization/hash stability, clock and lineage validation, explicit missingness, and tamper rejection; seven focused tests pass with Ruff and mypy."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T23:23:33Z",
+      "commit": "cc9555dd",
+      "test_evidence": [
+        "python -m pytest -q tests/test_feature_snapshot.py: 7 passed.",
+        "ruff check src/financial_brain/features/snapshot.py tests/test_feature_snapshot.py and mypy src/financial_brain/features/snapshot.py passed; source inventory and forward-engine graph freshness checks passed."
+      ],
+      "test_result": "Seven focused FeatureSnapshot tests passed, including source hash sensitivity, point-in-time cutoffs, missingness and tamper-evident deserialization. Ruff, mypy and generated inventory checks passed."
     },
     {
       "id": "SL-02-10",
       "text": "Guard against stale indicator values, forward-filled expired contracts and all market-close-to-open boundary leakage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/features/snapshot.py provides per-feature observation-age budgets and rejects stale observations or freshness checks before the snapshot cutoff.",
+        "src/financial_brain/features/options_surface.py rejects expired option contracts; tests/test_options_surface.py now explicitly verifies an expired contract produces no surface point.",
+        "src/financial_brain/forward_edge/instrument_rules.py applies effective-dated expiry/status checks; forward_edge.lookahead and intent_timing enforce availability-time and prefix invariance; existing intent timing and kernel fill tests cover after-close execution boundaries.",
+        "Combined freshness, option-surface, lookahead, intent-timing and instrument-rule suites: 29 passed; Ruff, mypy and generated inventory/graph freshness checks passed."
+      ],
+      "blocker": "Partial: component-level stale, expiry, availability and lookahead guards are verified, but every indicator consumer and every close-to-open transition has not been audited or wired to one common freshness policy.",
+      "last_audited_at_utc": "2026-11-22T23:31:23Z",
+      "commit": "c43712ae",
+      "test_evidence": [
+        "python -m pytest -q tests/test_feature_snapshot.py tests/test_options_surface.py tests/test_forward_edge_lookahead.py tests/test_forward_edge_intent_timing.py tests/test_forward_edge_instrument_rules.py: 29 passed.",
+        "Ruff and mypy for changed feature snapshot module passed; source inventory and forward-engine graph freshness checks passed."
+      ],
+      "test_result": "Twenty-nine focused tests passed across feature freshness, expired-option exclusion, point-in-time inputs, intent timing and effective-dated instrument rules. Ruff, mypy and generated inventory checks passed."
     },
     {
       "id": "SL-02-11",
       "text": "Create streaming/offline parity fixtures: same market event prefix must produce same feature values in replay and forward processing.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_streaming_bars.py compares features.streaming_bars.StreamingBarAggregator with the offline SQL features.bars.resample on identical minute bars after every complete five-minute event prefix.",
+        "The parity fixture checks timestamped open, high, low, close and volume and proves output remains equal through three successive prefixes; streaming bars independently refuse incomplete and unavailable windows.",
+        "Streaming/offline parity plus existing aggregation suite: 8 passed; Ruff and mypy passed."
+      ],
+      "blocker": "Partial: deterministic prefix parity is established for 5-minute OHLCV aggregation, but the full daily/technical/event feature families have no equivalent replay-versus-forward parity fixtures yet.",
+      "last_audited_at_utc": "2026-11-22T23:31:23Z",
+      "commit": "f078913d",
+      "test_evidence": [
+        "python -m pytest -q tests/test_streaming_bars.py tests/test_phase5_trader_layers.py::test_resample_emits_only_complete_buckets: 8 passed.",
+        "ruff check tests/test_streaming_bars.py and mypy tests/test_streaming_bars.py passed."
+      ],
+      "test_result": "Eight streaming/offline aggregation tests passed, including an event-prefix parity comparison after each completed five-minute window. Ruff and mypy passed."
     },
     {
       "id": "SL-02-12",
       "text": "Apply schema migrations with checksummed transformations and automatic feature lineage invalidation when raw source corrections arrive.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/storage/db.py records stable migration IDs and SHA-256 checksums for every additive column migration and the three existing structural MF transformations; reruns verify checksums and retain idempotent repair behavior for missing columns/tables.",
+        "MigrationDriftError fails closed when an applied SQL or structural migration definition no longer matches its recorded checksum. Migration journal rows are unique and validated as lowercase SHA-256.",
+        "tests/test_migrations.py: the migration suite passed (7 tests); the additional structural-transformation drift test passed separately. Ruff, mypy and diff checks passed.",
+        "RawLake preserves corrected payload versions as immutable, hash-suffixed objects; the standard feature build recomputes derived tables. The feature cache has explicit dependency invalidation tests, but no automatic ingest-to-lineage invalidation hook was found."
+      ],
+      "blocker": "Partial: additive and structural transformations are checksummed, but base schema objects are not version-checksummed; raw payload corrections do not yet trigger a durable, automatic feature-lineage invalidation/rebuild workflow.",
+      "last_audited_at_utc": "2026-11-22T23:31:23Z",
+      "commit": "08f30b5a",
+      "test_evidence": [
+        "python -m pytest -q tests/test_migrations.py: 7 passed before adding the structural checksum test; the additional test_changing_an_applied_structural_transform_fails_closed: 1 passed.",
+        "ruff check src/financial_brain/storage/db.py tests/test_migrations.py; mypy src/financial_brain/storage/db.py; git diff --check: passed."
+      ],
+      "test_result": "Seven migration tests passed, followed by a separately passing structural transformation checksum-drift test. Ruff, mypy and diff checks passed. Coverage is not claimed for the full suite."
     },
     {
       "id": "SL-02-13",
@@ -15566,7 +15881,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T12:07:03Z",
+    "as_of_utc": "2026-11-22T23:31:23Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15813,17 +16128,46 @@
       "SL-00-16",
       "SL-00-17",
       "SL-00-18",
-      "SL-01-06"
+      "SL-01-01",
+      "SL-01-02",
+      "SL-01-03",
+      "SL-01-04",
+      "SL-01-05",
+      "SL-01-06",
+      "SL-01-07",
+      "SL-01-08",
+      "SL-01-09",
+      "SL-01-10",
+      "SL-01-11",
+      "SL-01-12",
+      "SL-01-13",
+      "SL-01-14",
+      "SL-01-15",
+      "SL-01-16",
+      "SL-01-17",
+      "SL-01-18",
+      "SL-02-01",
+      "SL-02-02",
+      "SL-02-03",
+      "SL-02-04",
+      "SL-02-05",
+      "SL-02-06",
+      "SL-02-07",
+      "SL-02-08",
+      "SL-02-09",
+      "SL-02-10",
+      "SL-02-11",
+      "SL-02-12"
     ],
-    "audited_count": 246,
+    "audited_count": 275,
     "status_counts": {
-      "COMPLETE": 42,
+      "COMPLETE": 48,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 16,
-      "PARTIAL": 187,
-      "UNASSESSED": 1132
+      "NOT_STARTED": 11,
+      "PARTIAL": 215,
+      "UNASSESSED": 1103
     },
-    "verified_complete_count": 42,
+    "verified_complete_count": 48,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -15891,15 +16235,74 @@
       "src/financial_brain/paper/mf_redemption_settlement.py",
       "src/financial_brain/paper/mf_order_book.py",
       "src/financial_brain/paper/mf_flow_book.py",
-      "tests/test_mf_folio_book.py"
+      "tests/test_mf_folio_book.py",
+      "src/financial_brain/forward_edge/options_risk.py",
+      "src/financial_brain/forward_edge/options_spread.py",
+      "tests/test_forward_edge_options_risk.py",
+      "tests/test_forward_edge_options_spread.py",
+      "docs/edge-program/v3.0-status.json",
+      "src/financial_brain/paper/options_lifecycle.py",
+      "tests/test_paper_options_lifecycle.py",
+      "src/financial_brain/kernel/paper_account.py",
+      "tests/test_paper_account.py",
+      "tests/test_forward_edge_session_runner.py",
+      "src/financial_brain/forward_edge/manual_paper_decisions.py",
+      "tests/test_manual_paper_decisions.py",
+      "src/financial_brain/forward_edge/paired_paper.py",
+      "tests/test_forward_edge_paired_paper.py",
+      "src/financial_brain/features/etf_trader_panel.py",
+      "src/financial_brain/features/etf_liquidity.py",
+      "tests/test_etf_trader_panel.py",
+      "tests/test_etf_liquidity.py",
+      "src/financial_brain/paper/terminal.py",
+      "tests/test_mf_lot_book.py",
+      "src/financial_brain/forward_edge/alerts.py",
+      "tests/test_forward_edge_desk_alerts.py",
+      "src/financial_brain/cli.py",
+      "src/financial_brain/forward_edge/raw_observation.py",
+      "tests/test_forward_edge_raw_observation.py",
+      "src/financial_brain/kernel/instruments.py",
+      "src/financial_brain/kernel/instrument_history.py",
+      "src/financial_brain/universe/snapshot.py",
+      "src/financial_brain/providers/etf_reference.py",
+      "src/financial_brain/paper/options_routing.py",
+      "tests/test_kernel_instruments.py",
+      "tests/test_kernel_instrument_history.py",
+      "tests/test_etf_reference.py",
+      "tests/test_paper_options_routing.py",
+      "src/financial_brain/forward_edge/market_events.py",
+      "src/financial_brain/evidence/decision_manifest.py",
+      "src/financial_brain/forward_edge/lookahead.py",
+      "src/financial_brain/features/fundamentals_pit.py",
+      "tests/test_forward_edge_lookahead.py",
+      "tests/test_decision_manifest.py",
+      "tests/test_forward_edge_market_events.py",
+      "tests/test_phase5_fundamentals_pit.py",
+      "src/financial_brain/forward_edge/venue_calendar.py",
+      "src/financial_brain/kernel/trading_clock.py",
+      "src/financial_brain/providers/mf_scheme_terms.py",
+      "tests/test_forward_edge_venue_calendar.py",
+      "tests/test_kernel_trading_clock.py",
+      "tests/test_mf_scheme_terms.py",
+      "src/financial_brain/forward_edge/quote_archive.py",
+      "src/financial_brain/forward_edge/data_permissions.py",
+      "docs/edge-program/data-permissions.v1.json",
+      "tests/test_forward_edge_quote_archive.py",
+      "tests/test_phase5_quote_archive.py",
+      "tests/test_forward_edge_data_gate.py",
+      "src/financial_brain/forward_edge/data_gate.py",
+      "src/financial_brain/paper/intraday_runner.py",
+      "tests/test_phase5_intraday_runner.py",
+      "src/financial_brain/forward_edge/market_data.py",
+      "tests/test_forward_edge_kite_market_data.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated. SL-02-03 COMPLETE: source audit and focused feature/causality suites passed (25 tests); daily, intraday and breadth families are separately implemented. SL-02-04 PARTIAL: point-in-time observed-quote IV/Greeks/skew/term/OI surface and archive coverage tracking implemented; permitted data evidence and paper-pipeline integration remain open. SL-02-05 PARTIAL: aligned point-in-time index breadth, constituent industry-count concentration, Nifty/Bank TRI correlation and sector relative strength implemented; empirical source coverage and trader-pipeline integration remain open. SL-02-06 PARTIAL: availability-timed BSE announcements, NSE results, shareholding and statement revision event panels are integrated into the research feature build; source coverage completeness and forward-paper consumption remain open."
   },
   "counts_by_status": {
-    "COMPLETE": 42,
+    "COMPLETE": 48,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 16,
-    "PARTIAL": 187,
-    "UNASSESSED": 1132
+    "NOT_STARTED": 11,
+    "PARTIAL": 215,
+    "UNASSESSED": 1103
   }
 }

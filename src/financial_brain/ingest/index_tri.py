@@ -15,6 +15,7 @@ import io
 import json
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
+from typing import Any
 
 from ..lake.store import RawLake
 
@@ -24,7 +25,8 @@ TRI_INDICES = ("NIFTY 50", "NIFTY 500", "NIFTY NEXT 50", "NIFTY MIDCAP 150", "NI
                "NIFTY PSU BANK", "NIFTY REALTY", "NIFTY INFRASTRUCTURE", "NIFTY COMMODITIES",
                "NIFTY INDIA CONSUMPTION", "NIFTY ALPHA QUALITY VALUE LOW-VOLATILITY 30")
 LISTS = {"NIFTY 50": "nifty50", "NIFTY NEXT 50": "niftynext50", "NIFTY 100": "nifty100", "NIFTY 200": "nifty200",
-         "NIFTY 500": "nifty500", "NIFTY MIDCAP 150": "niftymidcap150", "NIFTY SMALLCAP 250": "niftysmallcap250"}
+         "NIFTY 500": "nifty500", "NIFTY MIDCAP 150": "niftymidcap150", "NIFTY SMALLCAP 250": "niftysmallcap250",
+         "NIFTY BANK": "niftybank"}
 UA = "Mozilla/5.0 (financial-brain personal research)"
 
 
@@ -68,7 +70,7 @@ def parse_tri(payload: bytes) -> list[tuple[date, float, float | None]]:
 def prefetch(cfg, start: date, end: date, *, tri_fn=fetch_tri, list_fn=_get) -> dict:
     """Total return in yearly requests (keeps each response small), and today's constituent lists."""
     lake = RawLake(cfg.lake)
-    out = {"tri": {}, "lists": 0, "failed": []}
+    out: dict[str, Any] = {"tri": {}, "lists": 0, "failed": []}
     for name in TRI_INDICES:
         n = 0
         y = start.year

@@ -4,7 +4,7 @@ from decimal import Decimal
 import duckdb
 
 from financial_brain.config import Config
-from financial_brain.storage.db import Database
+from financial_brain.storage.db import Database, MigrationDriftError
 
 
 def _schema(path):
@@ -24,6 +24,60 @@ def test_migrate_twice_is_a_no_op_and_creates_every_table(tmp_path):
     assert _schema(cfg.db_path) == first
     tables = {t for t, _, _ in first}
     assert {"financial_results", "xbrl_facts", "delivery", "insider_disclosures"} <= tables
+
+
+def test_additive_and_structural_migrations_record_stable_checksums(tmp_path):
+    cfg = Config(data_root=tmp_path).ensure()
+    db = Database(cfg)
+    db.migrate()
+    with db.connect() as con:
+        rows = con.execute(
+            "SELECT migration_id, checksum_sha256 FROM schema_migrations ORDER BY migration_id"
+        ).fetchall()
+    assert len(rows) == len(Database.MIGRATIONS) + 3
+    assert len({row[0] for row in rows}) == len(rows)
+    assert all(len(row[1]) == 64 and set(row[1]) <= set("0123456789abcdef") for row in rows)
+    before = rows
+    db.migrate()
+    with db.connect() as con:
+        after = con.execute(
+            "SELECT migration_id, checksum_sha256 FROM schema_migrations ORDER BY migration_id"
+        ).fetchall()
+    assert after == before
+
+
+def test_changing_an_applied_migration_definition_fails_closed(tmp_path, monkeypatch):
+    cfg = Config(data_root=tmp_path).ensure()
+    Database(cfg).migrate()
+    changed = list(Database.MIGRATIONS)
+    changed[0] = changed[0].replace("DEFAULT 0", "DEFAULT 1")
+    assert changed[0] != Database.MIGRATIONS[0]
+    monkeypatch.setattr(Database, "MIGRATIONS", changed)
+
+    try:
+        Database(cfg).migrate()
+    except MigrationDriftError as exc:
+        assert "column:ingest_runs.rows_rejected" in str(exc)
+    else:
+        raise AssertionError("a changed applied migration must fail closed")
+
+
+def test_changing_an_applied_structural_transform_fails_closed(tmp_path):
+    cfg = Config(data_root=tmp_path).ensure()
+    Database(cfg).migrate()
+    with Database(cfg).connect() as con:
+        con.execute(
+            """UPDATE schema_migrations SET checksum_sha256 = ?
+               WHERE migration_id = 'mf-ledger-account-codes-v1'""",
+            ["f" * 64],
+        )
+
+    try:
+        Database(cfg).migrate()
+    except MigrationDriftError as exc:
+        assert "mf-ledger-account-codes-v1" in str(exc)
+    else:
+        raise AssertionError("a changed structural transformation must fail closed")
 
 
 def test_an_older_database_gains_the_added_columns(tmp_path):

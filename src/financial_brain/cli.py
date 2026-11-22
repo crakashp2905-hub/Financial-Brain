@@ -1868,21 +1868,61 @@ def cmd_journal(args) -> int:
 
 
 def cmd_alerts(args) -> int:
-    """Raise desktop alerts for anything worth acting on (sent once each; nothing leaves this machine)."""
+    """Raise deduplicated desktop alerts and optional Telegram notifications."""
     import datetime as _dt
     import duckdb
+    import sqlite3
     from . import alerts as AL
     from .opportunity import scanners as S
     from .paper import intraday_runner as IR
     from .portfolio import my_book as MB
     from .risk import killswitch as KS
+    from datetime import timezone as _timezone
+    from financial_brain.forward_edge.alerts import (
+        evaluate_desk_alerts,
+        mutual_fund_pending_rows,
+        paper_order_state_rows,
+    )
     day = _dt.date.today().isoformat()
+    now_utc = _dt.datetime.now(_timezone.utc)
     out = []
+    journal_path = load().data_root / "forward-edge" / "journal.sqlite"
+    if journal_path.is_file():
+        order_con = None
+        try:
+            order_con = sqlite3.connect(journal_path.resolve().as_uri() + "?mode=ro", uri=True)
+            latest_order_states = paper_order_state_rows(
+                order_con, occurred_after=now_utc - _dt.timedelta(days=1), occurred_through=now_utc,
+            )
+            for alert in evaluate_desk_alerts(
+                session_id=f"alerts:{day}", occurred_at=now_utc,
+                order_states=latest_order_states,
+            ):
+                state = alert.root_cause_id.rsplit(":", 1)[-1]
+                out.append({"key": alert.root_cause_id,
+                            "title": f"Paper order {state.lower()}", "body": alert.details})
+        except Exception as exc:  # noqa: BLE001 - journal errors must be visible, not silently ignored
+            out.append({"key": f"order-alert-source:{day}", "title": "Paper order alerts unavailable",
+                        "body": f"Could not read paper order lifecycle journal: {str(exc)[:180]}"})
+        finally:
+            if order_con is not None:
+                order_con.close()
     rcon = duckdb.connect(str(load().db_path), read_only=True)
     try:
         asof = rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0]
         best = S.best_per_name(S.scan(S.cross_section(rcon, asof), asof))
         out += AL.opportunities(best, str(asof))
+        try:
+            pending_mf = mutual_fund_pending_rows(rcon, as_of=now_utc)
+            for alert in evaluate_desk_alerts(
+                session_id=f"alerts:{day}", occurred_at=now_utc,
+                pending_mutual_funds=pending_mf, mf_pending_after_days=1,
+            ):
+                out.append({"key": alert.root_cause_id, "title": f"Mutual fund {alert.details.split()[1]} pending",
+                            "body": alert.details + " Check the paper-book settlement screen; no order is sent."})
+        except Exception as exc:  # noqa: BLE001 - an absent migration must remain visible to the operator
+            out.append({"key": f"mf-alert-source:{day}", "title": "MF pending alerts unavailable",
+                        "body": f"Could not read MF paper pending states: {str(exc)[:180]}"})
         if MB.PATH.exists():
             con = MB.connect()
             try:
@@ -1903,8 +1943,15 @@ def cmd_alerts(args) -> int:
     out += AL.system(day=day, killswitch_level=KS.load().get("level", "OK"),
                      run_status=(row[0] if row else ("missing" if is_weekday else None)))
     sent = AL.send(out) if not args.dry_run else []
+    mobile_sent = (AL.send(out, notify=AL.telegram, path=AL.TELEGRAM_SENT)
+                   if not args.dry_run and AL.telegram_configured() else [])
     for a in out:
-        print(f"{'SENT ' if a in sent else 'held '} {a['title']} - {a['body']}")
+        channels = []
+        if a in sent:
+            channels.append("desktop")
+        if a in mobile_sent:
+            channels.append("Telegram")
+        print(f"{'SENT [' + ', '.join(channels) + '] ' if channels else 'held '} {a['title']} - {a['body']}")
     if not out:
         print("nothing to alert")
     return 0

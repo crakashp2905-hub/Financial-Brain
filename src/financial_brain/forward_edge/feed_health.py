@@ -88,14 +88,19 @@ class FeedHealthMonitor:
                 self.unchanged_snapshot_count += 1
             self._last_payload_hash[instrument] = digest
 
-    def snapshot(self, *, now: datetime | None = None) -> dict[str, Any]:
+    def snapshot(self, *, now: datetime | None = None,
+                 unavailable_reason: str | None = None) -> dict[str, Any]:
         observed_now = self._utc(now or datetime.now(timezone.utc), "health snapshot time")
+        if unavailable_reason not in {None, "MARKET_CLOSED", "UNAUTHORIZED", "PROVIDER_OUTAGE"}:
+            raise FeedHealthError("unsupported market-data unavailability reason")
         reference = self.last_success_at or self.first_attempt_at
         silence = (observed_now - reference).total_seconds() if reference is not None else None
         if silence is not None and silence < 0:
             raise FeedHealthError("health snapshot clock precedes latest poll")
         stale = silence is not None and silence >= self.stale_after_seconds
-        if stale:
+        if unavailable_reason is not None:
+            status = "NO_DATA"
+        elif stale:
             status = "STALE"
         elif self.successful_polls == 0:
             status = "NO_DATA"
@@ -106,7 +111,8 @@ class FeedHealthMonitor:
         return {
             "provider": "KITE_CONNECT_READ_ONLY_POLL",
             "status": status,
-            "decision_status": "NO_TRADE" if stale else None,
+            "decision_status": "NO_TRADE" if status in {"NO_DATA", "STALE"} else None,
+            "unavailable_reason": unavailable_reason,
             "poll_attempts": self.poll_attempts,
             "successful_polls": self.successful_polls,
             "failed_polls": self.failed_polls,

@@ -50,3 +50,39 @@ def test_non_executable_or_stale_leg_quotes_fail_closed(change) -> None:
     with pytest.raises(OptionsRiskError):
         evaluate_defined_risk_legs(legs=tuple(legs), quantity=75, as_of=as_of,
                                    leg_order=order, max_quote_age_seconds=30)
+
+
+@pytest.mark.parametrize("change, message", [
+    ("naked", "naked short"),
+    ("credit", "positive debit"),
+    ("reversed", "cap the long"),
+    ("sequence", "buy the protective"),
+    ("many", "two-leg debit"),
+])
+def test_risk_gate_rejects_unsupported_option_structures(change, message) -> None:
+    legs = _legs()
+    order = ("long", "short")
+    if change == "naked":
+        legs = (OptionLegQuote("short", "SELL", 2, "NIFTY26NOV25100CE", "NIFTY", "CE", 25100,
+                               date(2026, 11, 26), 75, NOW, 60, 61, 1000, 1000),)
+        order = ("short",)
+    elif change == "credit":
+        legs = (OptionLegQuote("long", "BUY", 1, "NIFTY26NOV25000CE", "NIFTY", "CE", 25000,
+                               date(2026, 11, 26), 75, NOW, 40, 41, 1000, 1000),
+                OptionLegQuote("short", "SELL", 2, "NIFTY26NOV25100CE", "NIFTY", "CE", 25100,
+                               date(2026, 11, 26), 75, NOW, 60, 61, 1000, 1000))
+    elif change == "reversed":
+        legs = (OptionLegQuote("long", "BUY", 2, "NIFTY26NOV25100CE", "NIFTY", "CE", 25100,
+                               date(2026, 11, 26), 75, NOW, 60, 61, 1000, 1000),
+                OptionLegQuote("short", "SELL", 1, "NIFTY26NOV25000CE", "NIFTY", "CE", 25000,
+                               date(2026, 11, 26), 75, NOW, 100, 101, 1000, 1000))
+        order = ("long", "short")
+    elif change == "sequence":
+        order = ("short", "long")
+    else:
+        legs = (*legs, OptionLegQuote("extra", "BUY", 3, "NIFTY26NOV25200CE", "NIFTY", "CE", 25200,
+                                      date(2026, 11, 26), 75, NOW, 30, 31, 1000, 1000))
+        order = ("long", "short", "extra")
+    with pytest.raises(OptionsRiskError, match=message):
+        evaluate_defined_risk_legs(legs=legs, quantity=75, as_of=NOW,
+                                   leg_order=order, max_quote_age_seconds=30)

@@ -234,19 +234,23 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     now = now_fn()
     day = now.date().isoformat()
     if now.time() > CLOSE or now.weekday() >= 5:
-        return {"day": day, "status": "not_a_session", "why": "after the close or a weekend: nothing recorded"}
+        return {"day": day, "status": "not_a_session", "why": "after the close or a weekend: nothing recorded",
+                "market_data_status": "NO_DATA", "decision_status": "NO_TRADE",
+                "unavailable_reason": "MARKET_CLOSED"}
     try:
         permission = (DataPermission.from_dict(data_permission) if isinstance(data_permission, dict)
                       else data_permission)
     except (KeyError, TypeError, ValueError) as exc:
         return {"day": day, "status": "rights_blocked", "reason": f"invalid data permission: {exc}",
-                "quote_requests": 0, "broker_orders": False}
+                "quote_requests": 0, "broker_orders": False, "market_data_status": "NO_DATA",
+                "decision_status": "NO_TRADE", "unavailable_reason": "UNAUTHORIZED"}
     if (not isinstance(permission, DataPermission)
             or not permission.allows(source_id="KITE_CONNECT_READ_ONLY",
                                      use=DataUse.PAPER_SIMULATION, on=now.date())):
         return {"day": day, "status": "rights_blocked",
                 "reason": "a current KITE_CONNECT_READ_ONLY PAPER_SIMULATION permission is required",
-                "quote_requests": 0, "broker_orders": False}
+                "quote_requests": 0, "broker_orders": False, "market_data_status": "NO_DATA",
+                "decision_status": "NO_TRADE", "unavailable_reason": "UNAUTHORIZED"}
     path, fingerprint = cohort_path(path, cohort, strategies, rules)
     con = ledger(path)
     uni = universe(n)
@@ -258,7 +262,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                                     stale_after_seconds=max(90.0, float(poll) * 2))
 
     def feed_health_note(**extra) -> str:
-        body = {"feed_health": feed_health.snapshot(now=now_fn())}
+        unavailable_reason = extra.pop("unavailable_reason", None)
+        body = {"feed_health": feed_health.snapshot(now=now_fn(), unavailable_reason=unavailable_reason)}
         body.update(extra)
         return json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
@@ -396,9 +401,13 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                     prices=last, quote_at=quote_at)
             record_run(con, day, "live", started=started, finished=now.isoformat(), status="closed",
                        symbols=len(syms), polls=polls,
-                       note=feed_health_note(reason="NO_TRADE_NO_MARKET_SESSION"),
+                       note=feed_health_note(reason="NO_TRADE_NO_MARKET_SESSION",
+                                             unavailable_reason="MARKET_CLOSED"),
                        version=fingerprint)
-            return {"day": day, "status": "closed", "feed_health": feed_health.snapshot(now=now_fn())}
+            return {"day": day, "status": "closed", "feed_health": feed_health.snapshot(
+                now=now_fn(), unavailable_reason="MARKET_CLOSED"),
+                "market_data_status": "NO_DATA", "decision_status": "NO_TRADE",
+                "unavailable_reason": "MARKET_CLOSED"}
         if not opened and clock >= I.OR_END:
             if clock > LATE_START:
                 # Started late (the Kite login came after 09:30): take the range from the exact candles.

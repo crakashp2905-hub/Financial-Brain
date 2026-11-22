@@ -134,12 +134,16 @@ def adjusted_prices(con, isin: str, start: date | None = None, end: date | None 
     sql = """
         SELECT p.business_date, p.close_price AS close_unadjusted,
                p.close_price * COALESCE((
-                   SELECT MIN(a.price_factor) FROM adjustment_factors a
+                   SELECT a.price_factor FROM adjustment_factors a
                    WHERE a.isin = p.isin AND a.effective_from > p.business_date
+                   ORDER BY a.effective_from
+                   LIMIT 1
                ), 1.0) AS close_adjusted,
                COALESCE((
-                   SELECT MIN(a.price_factor) FROM adjustment_factors a
+                   SELECT a.price_factor FROM adjustment_factors a
                    WHERE a.isin = p.isin AND a.effective_from > p.business_date
+                   ORDER BY a.effective_from
+                   LIMIT 1
                ), 1.0) AS factor
         FROM universe_snapshots p
         WHERE p.isin = ? AND p.close_price IS NOT NULL

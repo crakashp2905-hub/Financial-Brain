@@ -36,7 +36,10 @@ events.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
+import re
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -124,7 +127,9 @@ def universe(con, *, as_of: date, names: int = 200, min_adv: float = 1e7) -> lis
 
 
 def export(con, out_dir: str | Path, *, split: Split, lineages: list[str],
-           include_out_of_sample: bool = False, min_bars: int = MIN_BARS) -> dict:
+           include_out_of_sample: bool = False, min_bars: int = MIN_BARS,
+           raw_file_hashes: Mapping[str, str] | None = None,
+           unavailable_source_periods: Sequence[Mapping[str, str]] | None = None) -> dict:
     """Write one CSV per lineage for a split, in Kronos' column format.
 
     Refuses to write the out-of-sample split unless ``include_out_of_sample`` is set. A holdout that
@@ -134,10 +139,26 @@ def export(con, out_dir: str | Path, *, split: Split, lineages: list[str],
         raise ForecastError(
             "refusing to export the out-of-sample split. Pass include_out_of_sample=True only when "
             "the model is finished and the number is the last one you will take")
+    raw_hashes = dict(raw_file_hashes or {})
+    if any(not isinstance(name, str) or not name.strip() or not isinstance(digest, str)
+           or not re.fullmatch(r"[0-9a-f]{64}", digest) for name, digest in raw_hashes.items()):
+        raise ForecastError("raw input hashes require nonempty names and lowercase SHA-256 values")
+    unavailable = [dict(row) for row in (unavailable_source_periods or ())]
+    required_period_fields = {"source_id", "start", "end", "reason"}
+    for row in unavailable:
+        if set(row) != required_period_fields or any(not isinstance(value, str) or not value.strip()
+                                                      for value in row.values()):
+            raise ForecastError("unavailable source periods require source_id, start, end and reason")
+        try:
+            period_start, period_end = date.fromisoformat(row["start"]), date.fromisoformat(row["end"])
+        except ValueError as exc:
+            raise ForecastError("unavailable source period dates must use ISO format") from exc
+        if period_end < period_start:
+            raise ForecastError("unavailable source period end precedes start")
     out = Path(out_dir) / split.name
     out.mkdir(parents=True, exist_ok=True)
 
-    written, skipped, rows_total = [], {}, 0
+    written, skipped, rows_total, file_records = [], {}, 0, []
     for lineage in lineages:
         window = [b for b in barmod.history(con, lineage, split.end, length=100_000)
                   if b.session >= split.start]
@@ -154,11 +175,18 @@ def export(con, out_dir: str | Path, *, split: Split, lineages: list[str],
                             f"{b.turnover:.0f}"])
         written.append(str(path))
         rows_total += len(window)
+        file_bytes = path.read_bytes()
+        file_records.append({"path": path.relative_to(Path(out_dir)).as_posix(),
+                             "sha256": hashlib.sha256(file_bytes).hexdigest(),
+                             "rows": len(window), "first_timestamp": window[0].session.isoformat(),
+                             "last_timestamp": window[-1].session.isoformat()})
 
     manifest = {
+        "schema": "financial-brain.training-dataset.v1",
         "split": split.name,
         "start": str(split.start),
         "end": str(split.end),
+        "as_of_cutoff_inclusive": str(split.end),
         "lineages_written": len(written),
         "lineages_skipped": len(skipped),
         "skipped": skipped,
@@ -167,6 +195,17 @@ def export(con, out_dir: str | Path, *, split: Split, lineages: list[str],
         "adjusted": True,
         "keyed_on": "lineage",
         "exchange_series": f"{barmod.EXCHANGE} {barmod.SERIES}",
+        "transformations": [
+            "Use only NSE EQ rows within the declared split and no later than the inclusive cutoff.",
+            "Multiply raw OHLC by the effective adjusted-price factor; divide traded volume by that factor; preserve turnover.",
+            "Drop bars that fail OHLC sanity checks; do not synthesize missing sessions or prices.",
+        ],
+        "files": file_records,
+        "raw_file_hashes": dict(sorted(raw_hashes.items())),
+        "raw_file_hashes_status": "PROVIDED_NOT_VERIFIED" if raw_hashes else "NOT_PROVIDED",
+        "unavailable_source_periods": sorted(unavailable, key=lambda row: (row["source_id"], row["start"], row["end"])),
+        "unavailable_source_periods_status": "PROVIDED_NOT_VERIFIED" if unavailable else "NOT_PROVIDED",
+        "source_coverage_status": "DECLARED_NOT_VERIFIED" if raw_hashes and unavailable else "UNVERIFIED",
         "note": "adjusted NSE EQ closes; every price field carries the same factor as close_adj and "
                 "volume its reciprocal. Keyed on lineage because 12.84% of lineages change ISIN "
                 "inside 2015-2026 and an ISIN-keyed series stops at the first succession.",

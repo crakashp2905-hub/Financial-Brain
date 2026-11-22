@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -144,6 +144,24 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
         raise KiteQuoteNormalizationError("Kite quote contains invalid last price or volume") from exc
     if not math.isfinite(last_price) or last_price <= 0 or volume < 0:
         raise KiteQuoteNormalizationError("Kite quote last price must be positive and volume non-negative")
+    open_interest = None
+    raw_oi = quote.get("oi", quote.get("open_interest"))
+    if raw_oi is not None:
+        if isinstance(raw_oi, bool):
+            raise KiteQuoteNormalizationError("Kite open interest must be a non-negative whole number")
+        try:
+            oi_decimal = Decimal(str(raw_oi))
+            if not oi_decimal.is_finite() or oi_decimal < 0 or oi_decimal != oi_decimal.to_integral_value():
+                raise InvalidOperation
+            open_interest = int(oi_decimal)
+        except (InvalidOperation, TypeError, ValueError, OverflowError) as exc:
+            raise KiteQuoteNormalizationError(
+                "Kite open interest must be a non-negative whole number") from exc
+    last_trade_at = None
+    if quote.get("last_trade_time") is not None:
+        last_trade_at = _exchange_timestamp(quote["last_trade_time"]).astimezone(timezone.utc)
+        if last_trade_at.astimezone(received_at.tzinfo) > received_at + max_future_skew:
+            raise KiteQuoteNormalizationError("Kite last-trade timestamp exceeds the future-skew tolerance")
     depth = quote.get("depth")
     bids = depth.get("buy") if isinstance(depth, dict) else None
     asks = depth.get("sell") if isinstance(depth, dict) else None
@@ -172,6 +190,12 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
                 payload["quantity"] = int(quote["last_quantity"])
             except (TypeError, ValueError, OverflowError) as exc:
                 raise KiteQuoteNormalizationError("Kite last-trade quantity is invalid") from exc
+    if open_interest is not None:
+        payload["open_interest"] = open_interest
+    if last_trade_at is not None:
+        payload["last_trade_time"] = last_trade_at.isoformat()
+        payload["last_trade_age_ms_at_receipt"] = (received_at - last_trade_at).total_seconds() * 1000
+    payload["quote_age_ms_at_receipt"] = (received_at - timestamp).total_seconds() * 1000
     ohlc = quote.get("ohlc") or {}
     if isinstance(ohlc, dict):
         for source_key, payload_key in (("open", "session_open"), ("high", "session_high"),
@@ -234,7 +258,7 @@ def archive_kite_quote_batch_to_path(path: Path, quotes: dict[str, dict[str, Any
 # ---- merged from main (2026-11-18): definitions main's modules depend on; the branch's own
 # ---- definitions above are unchanged.
 from dataclasses import dataclass
-from datetime import date, timezone
+from datetime import date
 
 
 class DataError(ValueError):

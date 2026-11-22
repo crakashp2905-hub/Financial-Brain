@@ -6,14 +6,27 @@ the database file. The data is therefore portable even though the engine is not.
 """
 from __future__ import annotations
 
+import hashlib
+import inspect
+import re
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Callable
 
 import duckdb
 
 from ..config import Config, load
 
 SCHEMA = Path(__file__).with_name("schema.sql")
+_COLUMN_MIGRATION = re.compile(
+    r"^ALTER\s+TABLE\s+([A-Za-z_][A-Za-z0-9_]*)\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+"
+    r"([A-Za-z_][A-Za-z0-9_]*)\b",
+    re.IGNORECASE,
+)
+
+
+class MigrationDriftError(RuntimeError):
+    """A migration ID's content changed after it was recorded."""
 
 
 class Database:
@@ -80,16 +93,77 @@ class Database:
     def migrate(self) -> None:
         """Create any missing objects. Safe to run repeatedly."""
         with self.connect() as con:
+            con.execute("""CREATE TABLE IF NOT EXISTS schema_migrations (
+                migration_id VARCHAR PRIMARY KEY,
+                checksum_sha256 VARCHAR NOT NULL,
+                applied_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
+                CHECK (length(checksum_sha256) = 64)
+            )""")
             con.execute(SCHEMA.read_text(encoding="utf-8"))
             for stmt in self.MIGRATIONS:
-                try:
-                    con.execute(stmt)
-                except duckdb.Error:
-                    pass  # column already present on this build
-            self._migrate_mf_ledger_account_codes(con)
-            self._migrate_mf_purchase_eligibility_cancel(con)
-            self._migrate_mf_systematic_event_cancellation(con)
+                self._apply_column_migration(con, stmt)
+            code_migrations: tuple[tuple[str, Callable], ...] = (
+                ("mf-ledger-account-codes-v1", self._migrate_mf_ledger_account_codes),
+                ("mf-purchase-eligibility-cancel-v1", self._migrate_mf_purchase_eligibility_cancel),
+                ("mf-systematic-event-cancellation-v1", self._migrate_mf_systematic_event_cancellation),
+            )
+            for migration_id, migration in code_migrations:
+                self._apply_code_migration(con, migration_id, migration)
             self._refresh_views(con)
+
+    @staticmethod
+    def _migration_checksum(content: str) -> str:
+        normalized = content.replace("\r\n", "\n").strip()
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _assert_migration_checksum(con, migration_id: str, checksum: str) -> None:
+        existing = con.execute(
+            "SELECT checksum_sha256 FROM schema_migrations WHERE migration_id = ?", [migration_id]
+        ).fetchone()
+        if existing is not None and existing[0] != checksum:
+            raise MigrationDriftError(
+                f"migration {migration_id!r} checksum changed after it was applied"
+            )
+
+    @staticmethod
+    def _record_migration(con, migration_id: str, checksum: str) -> None:
+        Database._assert_migration_checksum(con, migration_id, checksum)
+        con.execute(
+            """INSERT INTO schema_migrations (migration_id, checksum_sha256)
+               VALUES (?, ?) ON CONFLICT (migration_id) DO NOTHING""",
+            [migration_id, checksum],
+        )
+
+    @staticmethod
+    def _apply_column_migration(con, statement: str) -> None:
+        match = _COLUMN_MIGRATION.match(statement.strip())
+        if match is None:
+            raise ValueError(f"unidentified additive schema migration: {statement!r}")
+        table, column = (part.lower() for part in match.groups())
+        migration_id = f"column:{table}.{column}"
+        checksum = Database._migration_checksum(" ".join(statement.split()))
+        # Detect drift before attempting an idempotent DDL statement.
+        Database._assert_migration_checksum(con, migration_id, checksum)
+        present = {row[1].lower() for row in con.execute(f"PRAGMA table_info('{table}')").fetchall()}
+        if column not in present:
+            con.execute(statement)
+        Database._record_migration(con, migration_id, checksum)
+
+    @classmethod
+    def _apply_code_migration(cls, con, migration_id: str, migration: Callable) -> None:
+        source = inspect.getsource(migration)
+        checksum = cls._migration_checksum(source)
+        # Validate immutable transformation identity before any data is changed.
+        existing = con.execute(
+            "SELECT checksum_sha256 FROM schema_migrations WHERE migration_id = ?", [migration_id]
+        ).fetchone()
+        if existing is not None and existing[0] != checksum:
+            raise MigrationDriftError(
+                f"migration {migration_id!r} checksum changed after it was applied"
+            )
+        migration(con)
+        cls._record_migration(con, migration_id, checksum)
 
     @staticmethod
     def _migrate_mf_ledger_account_codes(con) -> None:

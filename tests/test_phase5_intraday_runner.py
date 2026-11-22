@@ -131,6 +131,9 @@ def test_live_kite_runner_blocks_missing_permission_before_quote_request(monkeyp
     assert result["status"] == "rights_blocked"
     assert result["quote_requests"] == 0 and requested == []
     assert result["broker_orders"] is False
+    assert result["market_data_status"] == "NO_DATA"
+    assert result["decision_status"] == "NO_TRADE"
+    assert result["unavailable_reason"] == "UNAUTHORIZED"
 
 
 def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger(setup):
@@ -167,6 +170,9 @@ def test_a_holiday_is_detected_and_the_run_ends_quietly(setup):
     out = R.run_live(quote_fn=fake_quotes(c, day="2026-10-02", traded=False), now_fn=c.now, sleep_fn=c.sleep,
                      path=setup / "l.duckdb")
     assert out["status"] == "closed"
+    assert out["market_data_status"] == "NO_DATA"
+    assert out["decision_status"] == "NO_TRADE"
+    assert out["feed_health"]["unavailable_reason"] == "MARKET_CLOSED"
     assert R.ledger(setup / "l.duckdb").execute("SELECT COUNT(*) FROM trades").fetchone()[0] == 0
 
 
@@ -315,6 +321,8 @@ def test_started_after_the_close_or_on_a_weekend_it_records_nothing(setup):
         c = Clock(start)
         out = R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
         assert out["status"] == "not_a_session"
+        assert out["market_data_status"] == "NO_DATA"
+        assert out["decision_status"] == "NO_TRADE"
     assert not (setup / "l.duckdb").exists()
 
 

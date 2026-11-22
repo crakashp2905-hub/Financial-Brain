@@ -23,3 +23,22 @@ def test_daily_and_quote_coverage_are_separate(tmp_path):
     assert result["fo_daily"]["puts"] == 1
     assert result["live_quotes"]["two_sided_fraction"] == .5
     assert result["historical_bid_ask_backtest_ready"] is False
+
+
+def test_surface_coverage_requires_observed_synchronized_option_and_spot_clocks(tmp_path):
+    path = tmp_path / "quotes.duckdb"
+    with duckdb.connect(str(path)) as con:
+        con.execute("""CREATE TABLE option_quotes (
+            received_at TIMESTAMPTZ, source_at TIMESTAMPTZ, underlying_source_at TIMESTAMPTZ,
+            underlying_ltp DOUBLE, bid DOUBLE, ask DOUBLE, open_interest BIGINT,
+            book_quality VARCHAR)""")
+        con.execute("""INSERT INTO option_quotes VALUES
+            ('2026-10-29T10:00:00Z','2026-10-29T09:59:59Z','2026-10-29T09:59:58Z',100,9,10,50,'TWO_SIDED'),
+            ('2026-10-29T10:01:00Z','2026-10-29T10:00:00Z','2026-10-29T09:58:00Z',100,9,10,NULL,'TWO_SIDED')""")
+    result = report(tmp_path / "missing.duckdb", path)
+    coverage = result["surface_input_coverage"]
+    assert coverage["schema"] == "READY"
+    assert coverage["observed_open_interest"] == 1
+    assert coverage["observed_underlying_clock"] == 2
+    assert coverage["synchronized_two_sided_quotes"] == 1
+    assert coverage["synchronized_two_sided_fraction"] == .5

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS option_quotes (
     tradingsymbol VARCHAR NOT NULL,
     underlying VARCHAR NOT NULL,
     underlying_ltp DOUBLE,
+    underlying_source_at TIMESTAMPTZ,
     expiry DATE NOT NULL,
     strike DOUBLE NOT NULL,
     option_type VARCHAR NOT NULL,
@@ -34,6 +35,8 @@ CREATE TABLE IF NOT EXISTS option_quotes (
     ask_qty BIGINT,
     buy_depth JSON,
     sell_depth JSON,
+    open_interest BIGINT,
+    volume BIGINT,
     book_quality VARCHAR NOT NULL,
     PRIMARY KEY (received_at, instrument_token)
 );
@@ -70,11 +73,13 @@ def records(instruments: list[dict], quotes: dict[str, dict], spots: dict[str, d
         underlying = str(contract["name"])
         spot_quote = spots.get(f"NSE:{underlying}") or {}
         rows.append((received_at, _timestamp(q.get("timestamp")), int(contract["instrument_token"]),
-                     symbol, underlying, spot_quote.get("last_price"), str(contract["expiry"]),
+                     symbol, underlying, spot_quote.get("last_price"),
+                     _timestamp(spot_quote.get("timestamp") or spot_quote.get("last_trade_time")),
+                     str(contract["expiry"]),
                      float(contract["strike"]), contract["instrument_type"], int(contract["lot_size"]),
                      q.get("last_price"), bid or None, ask or None,
                      best_buy.get("quantity"), best_sell.get("quantity"),
-                     json.dumps(buy), json.dumps(sell), quality))
+                     json.dumps(buy), json.dumps(sell), q.get("oi"), q.get("volume"), quality))
     return rows
 
 
@@ -95,7 +100,16 @@ def store(instruments: list[dict], quotes: dict[str, dict], spots: dict[str, dic
     con = duckdb.connect(str(path))
     try:
         con.execute(SCHEMA)
-        con.executemany("INSERT OR IGNORE INTO option_quotes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
+        # Existing local archives predate spot-clock and OI retention. Add nullable fields
+        # in place; historical rows remain explicitly unknown rather than backfilled.
+        con.execute("ALTER TABLE option_quotes ADD COLUMN IF NOT EXISTS underlying_source_at TIMESTAMPTZ")
+        con.execute("ALTER TABLE option_quotes ADD COLUMN IF NOT EXISTS open_interest BIGINT")
+        con.execute("ALTER TABLE option_quotes ADD COLUMN IF NOT EXISTS volume BIGINT")
+        con.executemany("""INSERT OR IGNORE INTO option_quotes (
+            received_at, source_at, instrument_token, tradingsymbol, underlying, underlying_ltp,
+            underlying_source_at, expiry, strike, option_type, lot_size, ltp, bid, ask, bid_qty,
+            ask_qty, buy_depth, sell_depth, open_interest, volume, book_quality
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", rows)
     finally:
         con.close()
     return len(rows)

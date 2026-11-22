@@ -53,7 +53,7 @@ WINDOW w AS (PARTITION BY lineage ORDER BY business_date)
 
 
 def build(con) -> dict:
-    from . import behaviour, candles, event_flags, events, prices, technical
+    from . import behaviour, candles, event_availability, event_flags, events, prices, technical
     out = prices.build(con)
     con.execute(FEATURES_SQL)
     out["feature_rows"] = con.execute("SELECT COUNT(*) FROM features").fetchone()[0]
@@ -62,4 +62,5 @@ def build(con) -> dict:
     out["behaviour"] = behaviour.build(con)  # per-name trend/vol character
     out["candles"] = candles.build(con)      # a separate table: one row per bar
     out["event_flags"] = event_flags.build(con)  # one flag per event type
+    out["event_availability"] = event_availability.build(con)  # filings/results/ownership/revisions
     return out

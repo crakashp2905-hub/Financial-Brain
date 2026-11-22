@@ -7,7 +7,9 @@ from datetime import date, datetime, timezone
 import pytest
 
 from financial_brain.kernel.oms import InsufficientCash, OmsError, State
-from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount, PaperAccountError
+from financial_brain.kernel.paper_account import (
+    FeeSchedule, PaperAccount, PaperAccountError, TraderApproval,
+)
 
 
 def _buy(book: PaperAccount, client_id: str = "buy-1", quantity: int = 10) -> None:
@@ -209,4 +211,71 @@ def test_randomized_partial_fill_cancel_sequences_preserve_buying_power(tmp_path
         assert reopened.cash == book.cash
         assert reopened.available_cash >= 0
         assert reopened.oms.order("buy").state == book.oms.order("buy").state
+
+
+def test_trader_approval_is_order_bound_and_replays_per_account(tmp_path) -> None:
+    from datetime import timedelta
+
+    now = datetime(2026, 11, 23, 10, tzinfo=timezone.utc)
+    path = tmp_path / "approved.jsonl"
+    book = PaperAccount(path, account_id="desk-a", initial_cash=Decimal("5000"),
+                        execution_mode="TRADER_APPROVED")
+    intent = {"t": "INTENT", "client_id": "buy", "symbol": "NSE:ABC", "side": "BUY",
+              "quantity": 5, "limit": "100", "reserve": "500"}
+    receipt = TraderApproval("approval-1", "desk-a", "trader-1", now,
+                             PaperAccount.intent_sha256(intent))
+    with pytest.raises(PaperAccountError, match="requires"):
+        book.submit_intent(client_id="buy", symbol="NSE:ABC", side="BUY", quantity=5,
+                           limit=Decimal("100"), reserve=Decimal("500"))
+    with pytest.raises(PaperAccountError, match="different paper account"):
+        book.submit_intent(client_id="buy", symbol="NSE:ABC", side="BUY", quantity=5,
+                           limit=Decimal("100"), reserve=Decimal("500"),
+                           approval_receipt=TraderApproval("approval-1", "desk-b", "trader-1", now,
+                                                          PaperAccount.intent_sha256(intent)),
+                           submitted_at=now)
+    with pytest.raises(PaperAccountError, match="exact proposed order"):
+        book.submit_intent(client_id="buy", symbol="NSE:ABC", side="BUY", quantity=4,
+                           limit=Decimal("100"), reserve=Decimal("500"),
+                           approval_receipt=receipt, submitted_at=now)
+    with pytest.raises(PaperAccountError, match="cannot follow"):
+        book.submit_intent(client_id="buy", symbol="NSE:ABC", side="BUY", quantity=5,
+                           limit=Decimal("100"), reserve=Decimal("500"),
+                           approval_receipt=TraderApproval("approval-1", "desk-a", "trader-1",
+                                                          now + timedelta(seconds=1),
+                                                          PaperAccount.intent_sha256(intent)),
+                           submitted_at=now)
+
+    book.submit_intent(client_id="buy", symbol="NSE:ABC", side="BUY", quantity=5,
+                       limit=Decimal("100"), reserve=Decimal("500"),
+                       approval_receipt=receipt, submitted_at=now)
+    book.move("buy", State.SUBMITTED)
+    book.move("buy", State.ACCEPTED)
+    book.record_fill("buy", fill_id="fill-a", quantity=2, price=Decimal("90"))
+    other = PaperAccount(tmp_path / "other.jsonl", account_id="desk-b", initial_cash=Decimal("9000"))
+    other.submit_intent(client_id="buy", symbol="NSE:ABC", side="BUY", quantity=5,
+                        limit=Decimal("100"), reserve=Decimal("500"))
+    other.move("buy", State.SUBMITTED)
+    other.move("buy", State.ACCEPTED)
+    other.record_fill("buy", fill_id="fill-b", quantity=1, price=Decimal("80"))
+
+    reopened = PaperAccount(path, account_id="desk-a", initial_cash=Decimal("5000"),
+                            execution_mode="TRADER_APPROVED")
+    assert reopened.execution_mode == "TRADER_APPROVED"
+    assert reopened.cash == Decimal("4820")
+    assert reopened.position("NSE:ABC").quantity == 2
+    assert other.cash == Decimal("8920")
+    with pytest.raises(PaperAccountError, match="execution mode"):
+        PaperAccount(path, account_id="desk-a", initial_cash=Decimal("5000"))
+
+
+def test_automatic_account_rejects_approval_receipt(tmp_path) -> None:
+    book = PaperAccount(tmp_path / "automatic.jsonl", account_id="auto", initial_cash=Decimal("1000"))
+    intent = {"t": "INTENT", "client_id": "buy", "symbol": "NSE:ABC", "side": "BUY",
+              "quantity": 1, "limit": "10", "reserve": "10"}
+    receipt = TraderApproval("approval-1", "auto", "trader", datetime.now(timezone.utc),
+                             PaperAccount.intent_sha256(intent))
+    with pytest.raises(PaperAccountError, match="automatic"):
+        book.submit_intent(client_id="buy", symbol="NSE:ABC", side="BUY", quantity=1,
+                           limit=Decimal("10"), reserve=Decimal("10"),
+                           approval_receipt=receipt, submitted_at=datetime.now(timezone.utc))
 

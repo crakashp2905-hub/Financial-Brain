@@ -57,6 +57,7 @@ def test_liquidity_report_combines_spread_depth_staleness_gaps_and_size_cost() -
     assert report["capacity_participation_fraction"] == pytest.approx(0.01)
     assert report["estimated_all_in_round_trip_cost_bps"] > report["other_round_trip_cost_bps"]
     assert report["limits_met"] is True
+    assert report["source_sha256"] == sorted({row.source_sha256 for row in _daily()} | {_quote().sha256()})
 
 
 def test_missing_sessions_are_reported_and_sparse_history_abstains() -> None:

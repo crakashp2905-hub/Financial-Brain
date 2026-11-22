@@ -491,6 +491,34 @@ class TestCorporateActions:
         assert rows[date(2026, 9, 10)]["close_unadjusted"] == pytest.approx(500.0), \
             "the traded price remains a fact"
 
+    def test_cumulative_adjustments_reconcile_reverse_split_then_split(self, db):
+        isin = "INE000000020"
+        days = [date(2026, 1, 30), date(2026, 2, 2), date(2026, 3, 2)]
+        raw_closes = [100.0, 200.0, 100.0]
+        with db.connect() as con:
+            for day, close in zip(days, raw_closes, strict=True):
+                con.execute(
+                    """INSERT INTO universe_snapshots
+                       (business_date, isin, exchange, ticker, series, instrument_type,
+                        close_price, tradable) VALUES (?, ?, 'NSE', 'T', 'EQ', 'STK', ?, TRUE)""",
+                    [day, isin, close],
+                )
+            # 1:0.5 reverse split doubles the price, then a 1:2 split halves it.
+            # Factors are cumulative from each event onward: 1.0 at the first event,
+            # then 0.5 at the second. Picking MIN incorrectly applies 0.5 to day one.
+            con.execute(
+                """INSERT INTO adjustment_factors
+                   (isin, effective_from, price_factor, volume_factor, derived_from, computed_at)
+                   VALUES (?, ?, 1.0, 1.0, 'test', NOW()),
+                          (?, ?, 0.5, 2.0, 'test', NOW())""",
+                [isin, days[1], isin, days[2]],
+            )
+            rows = ca.adjusted_prices(con, isin)
+
+        assert [row["close_unadjusted"] for row in rows] == raw_closes
+        assert [row["close_adjusted"] for row in rows] == pytest.approx([100.0, 100.0, 100.0])
+        assert [row["factor"] for row in rows] == pytest.approx([1.0, 0.5, 1.0])
+
     def test_suspicious_gap_detection_finds_unrecorded_actions(self, cfg, db):
         isin = "INE000000019"
         with db.connect() as con:

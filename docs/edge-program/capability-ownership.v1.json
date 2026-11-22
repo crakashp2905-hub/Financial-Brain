@@ -1283,7 +1283,7 @@
     {
       "capability_id": "module:src/financial_brain/forward_edge/alerts.py",
       "path": "src/financial_brain/forward_edge/alerts.py",
-      "module_role": "forward_trading_contract_or_support",
+      "module_role": "signal_report_or_trader_renderer",
       "module_owner": "src/financial_brain/forward_edge/alerts.py"
     },
     {
@@ -1629,6 +1629,12 @@
       "module_owner": "src/financial_brain/forward_edge/lookahead.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/manual_paper_decisions.py",
+      "path": "src/financial_brain/forward_edge/manual_paper_decisions.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/manual_paper_decisions.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/market_data.py",
       "path": "src/financial_brain/forward_edge/market_data.py",
       "module_role": "canonical_contract_or_signal_output",
@@ -1789,6 +1795,12 @@
       "path": "src/financial_brain/forward_edge/quote_archive.py",
       "module_role": "canonical_contract_or_signal_output",
       "module_owner": "src/financial_brain/forward_edge/quote_archive.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forward_edge/raw_observation.py",
+      "path": "src/financial_brain/forward_edge/raw_observation.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/raw_observation.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/refinements.py",
@@ -2547,10 +2559,22 @@
       "module_owner": "src/financial_brain/paper/options_forward.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/options_lifecycle.py",
+      "path": "src/financial_brain/paper/options_lifecycle.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/options_lifecycle.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/options_plan.py",
       "path": "src/financial_brain/paper/options_plan.py",
       "module_role": "paper_engine_or_output",
       "module_owner": "src/financial_brain/paper/options_plan.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/options_routing.py",
+      "path": "src/financial_brain/paper/options_routing.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/options_routing.py"
     },
     {
       "capability_id": "module:src/financial_brain/paper/options_runner.py",

@@ -1,6 +1,8 @@
 from datetime import date, datetime, time, timedelta, timezone
 from dataclasses import replace
 from decimal import Decimal
+import hashlib
+import json
 import sqlite3
 
 import duckdb
@@ -583,6 +585,18 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert first["effective_instrument_rule"]["effective_from"] == "1900-01-01"
     assert first["effective_instrument_rule"]["tick_size"] == "0.05"
     assert len(first["instrument_rulebook_sha256"]) == 64
+    intent = runner.records("s")["intents"][0]
+    precommit = intent["precommit_validation"]
+    precommit_body = {key: value for key, value in precommit.items() if key != "receipt_sha256"}
+    precommit_encoded = json.dumps(precommit_body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    assert precommit["schema"] == "fb.paper_precommit_validation.v1"
+    assert precommit["receipt_sha256"] == hashlib.sha256(precommit_encoded.encode("utf-8")).hexdigest()
+    assert precommit["instrument_rulebook_sha256"] == first["instrument_rulebook_sha256"]
+    assert precommit["risk_allowed"] is True and len(precommit["risk_verdict_sha256"]) == 64
+    assert precommit["quote_event_sha256"] == first["quote_provenance"]["event_sha256"]
+    assert precommit["available_at_utc"] == first["quote_provenance"]["available_at_utc"]
+    assert precommit["selected_quantity_ceiling"] >= precommit["quantity"]
+    assert first["precommit_receipt_sha256"] == precommit["receipt_sha256"]
     assert runner.records("s")["execution_receipts"] == [first]
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
     accounting = runner.records("s")["accounting"]
