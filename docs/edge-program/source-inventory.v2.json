@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 690,
+  "source_count": 691,
   "sources": [
     {
       "capability_ids": [],
@@ -3134,6 +3134,25 @@
       "parse_status": "ok",
       "source": "src/financial_brain/features/library.py",
       "source_sha256": "1ae952abd3ea6a71a99e1b3109b956e1c7ddc09196665e41376a357249f43b3a",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections",
+        "datetime",
+        "kernel.options",
+        "math",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/options_surface.py",
+      "source_sha256": "7b03d7618544562bc2040adac038ad41d6e0df0e83b0bf758e1f85b1cf80fbd7",
       "test_paths": []
     },
     {
@@ -6320,7 +6339,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/options_audit.py",
-      "source_sha256": "4ad9dc5f28808e9b4a526b74093e91b6f0d47484bd0a18b9bac69dd470b5fada",
+      "source_sha256": "e129c8d2c0764ec4a620d9c0c851a2dcb4996528251284a3d612f6f58fc1adb7",
       "test_paths": []
     },
     {
@@ -6338,7 +6357,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/options_quotes.py",
-      "source_sha256": "4081787c4d5b87c9115aa5bf55f92fb35e55db368a937bec8a3a32d09986e42d",
+      "source_sha256": "92181601498c35c26e535203a499cb006a4fc5f59ecdd91571a9dce5e4351f68",
       "test_paths": []
     },
     {
@@ -12212,6 +12231,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 675,
+  "unassessed_count": 676,
   "unassigned_role_count": 400
 }
