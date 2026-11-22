@@ -867,6 +867,8 @@ def test_mf_terminal_panel_displays_last_known_nav_with_stale_flag(connection):
     page = mf_paper_panel(con, date(2026, 2, 1))
     assert "NAV value Rs 1,250.00" in page
     assert "Rs +250.00" in page
+    assert "MF PAPER REALISM" in page
+    assert "Operational evidence completeness only" in page
     assert "Last known NAV" in page and "125.0000" in page
     assert "STALE" in page and "NAV date" in page
 

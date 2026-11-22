@@ -669,7 +669,9 @@ def workstation_panel(rcon, asof, shown: pd.DataFrame, *, capital: float, holdin
 def mf_paper_panel(con, asof: date) -> str:
     """Render account-scoped MF values using only NAVs available by the report date."""
     from ..kernel.trading_clock import IST
+    from ..kernel.mf_paper_realism import WEIGHTS
     from .mf_lot_book import account_snapshot
+    from .mf_paper_realism_book import assess_account_mf_realism
 
     known_at = datetime.combine(asof, datetime.max.time(), tzinfo=IST)
     rows = con.execute(
@@ -682,6 +684,10 @@ def mf_paper_panel(con, asof: date) -> str:
            f"<div class='sub'>Point-in-time valuation as of {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible.</div>"]
     for (account_id,) in rows:
         snapshot = account_snapshot(con, account_id, known_at=known_at)
+        realism = assess_account_mf_realism(
+            con, account_id=account_id, assessed_at=known_at,
+        )
+        realism_factors = {factor.dimension: factor for factor in realism.factors}
         settlements = con.execute("""SELECT settlement_id, scheme_code, state,
             net_inr, payout_available_at, payout_basis, payout_evidence_ref,
             payout_source_id, payout_source_sha256
@@ -696,6 +702,32 @@ def mf_paper_panel(con, asof: date) -> str:
             f"{snapshot['pending_redemption_inr']:,.2f} · stale positions "
             f"{snapshot['stale_position_count']} · unavailable NAVs "
             f"{snapshot['unvalued_position_count']}</div>"
+        )
+        realism_rows = []
+        for dimension, weight in WEIGHTS.items():
+            factor = realism_factors.get(dimension)
+            label = dimension.value.replace("_", " ").title()
+            if factor is None:
+                realism_rows.append(
+                    f"<tr><td>{_e(label)}</td><td class='r'>0.0%</td>"
+                    f"<td class='r'>{weight * 100:.0f}%</td>"
+                    "<td>MISSING · contributes zero</td><td>Not assessed as of cutoff</td></tr>"
+                )
+                continue
+            contribution = weight * factor.value * 100
+            realism_rows.append(
+                f"<tr><td>{_e(label)}</td><td class='r'>{factor.value * 100:.1f}%</td>"
+                f"<td class='r'>{weight * 100:.0f}%</td><td>{_e(factor.basis.value)}</td>"
+                f"<td>{_e(factor.rationale)} · contributes {contribution:.1f} points</td></tr>"
+            )
+        out.append(
+            f"<h4>MF PAPER REALISM · {realism.score:.1f}/100 · evidence coverage "
+            f"{realism.evidence_coverage:.0f}% · observed coverage {realism.observed_coverage:.0f}%</h4>"
+            "<div class='sub'>Operational evidence completeness only; not an empirical profitability or execution-fidelity claim. "
+            "Missing dimensions contribute zero. The dimension weights are design defaults, not calibrated weights.</div>"
+            "<div class='wrap'><table><tr><th>Dimension</th><th class='r'>Factor</th>"
+            "<th class='r'>Weight</th><th>Basis</th><th>As-of evidence</th></tr>"
+            + "".join(realism_rows) + "</table></div>"
         )
         if settlements:
             payout_rows = []

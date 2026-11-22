@@ -2487,6 +2487,12 @@
       "module_owner": "src/financial_brain/paper/mf_order_book.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/mf_paper_realism_book.py",
+      "path": "src/financial_brain/paper/mf_paper_realism_book.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_paper_realism_book.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/mf_purchase_book.py",
       "path": "src/financial_brain/paper/mf_purchase_book.py",
       "module_role": "paper_engine_or_output",
