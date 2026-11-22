@@ -3078,9 +3078,9 @@
         "This remains a forward cash-paper path; one authenticated validator covering every options, ETF, legacy and OMS adapter, and explicit policy limit values rather than a policy hash/verdict, are not yet established."
       ],
       "blocker": "Partial: precommit receipt is integrated into ForwardSessionRunner paper execution only. Other paper OMS/asset-class adapters and authenticated policy enforcement remain separate; the receipt records the evaluated policy identity and verdict, not its full risk-limit configuration.",
-      "last_audited_at_utc": "2026-11-22T19:22:15Z",
+      "last_audited_at_utc": "2026-11-22T19:28:15Z",
       "commit": "2b27ade5",
-      "test_result": "Commit 2b27ade5. Windows focused verification: tests/test_forward_edge_session_runner.py and tests/test_forward_edge_f05.py: 81 passed; Ruff and mypy passed. Hosted cross-platform CI pending."
+      "test_result": "Commit 2b27ade5. Windows focused tests/test_forward_edge_session_runner.py and tests/test_forward_edge_f05.py: 81 passed; Ruff and mypy passed. scripts/forward_edge_equivalence_report.py --check passes after regenerating its fixture report. Hosted run 45060495407 stopped on that stale-report check before the full suites; corrected report is queued for a fresh hosted run."
     },
     {
       "id": "FB-0814",
@@ -15595,7 +15595,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T19:22:15Z",
+    "as_of_utc": "2026-11-22T19:28:15Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
