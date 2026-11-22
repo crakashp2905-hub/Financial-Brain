@@ -2674,14 +2674,21 @@
       "id": "FB-0711",
       "text": "Model SIP installments as repeated subscriptions with independent payment outcomes and allotment NAV; missed installments must stay missed.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No scheduled SIP engine with independent installment payment outcomes, misses and per-installment allotment NAVs was found."
+        "kernel/mf_sip.py models each SIP installment as an independent immutable record with its own scheduled date, amount, payment initiation, funds availability, NAV-pending, missed or allotted outcome.",
+        "The transition validator makes MISSED terminal; successful installments require separate payment timestamps and published/available NAV evidence before fractional units can be allotted.",
+        "MFSIPSeries advances one installment at a time and preserves outcomes of other installments; tests cover independent outcomes, missed-installment terminality, missing NAV, and amount/unit reconciliation."
       ],
-      "blocker": null,
+      "blocker": "SIP schedules/outcomes are not yet persisted or wired into payment mandate, sourced platform rules, NAV assignment and the canonical MF account ledger.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "commit": "1d2f7d4e6c22da2da364992dfee5936381e169df",
+      "test_evidence": [
+        "python -m pytest tests/test_mf_sip.py -q: 9 passed",
+        "ruff check src/financial_brain/kernel/mf_sip.py tests/test_mf_sip.py: passed",
+        "mypy src/financial_brain/kernel/mf_sip.py: passed",
+        "git diff --check: passed"
+      ]
     },
     {
       "id": "FB-0712",
@@ -15636,9 +15643,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 30,
-    "PARTIAL": 197,
+    "PARTIAL": 198,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 18,
+    "NOT_STARTED": 17,
     "UNASSESSED": 1132
   }
 }
