@@ -9486,12 +9486,23 @@
     {
       "id": "SL-01-11",
       "text": "Distinguish exchange tick vs broker receipt and clock-skew uncertainty; derive `decision_available_at=max(all input availability times)`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/market_events.py preserves event, receipt, availability, source, exchange and publication clocks and rejects events published after strategy availability or unavailable at decision time.",
+        "src/financial_brain/forward_edge/market_data.py normalizes Kite exchange timestamps separately from local receipt, calculates quote/last-trade age at receipt and rejects exchange timestamps beyond explicit future-skew tolerance; src/financial_brain/forward_edge/clock.py provides typed exchange/receipt/availability clocks.",
+        "tests/test_forward_edge_clock.py, tests/test_forward_edge_market_events.py, tests/test_forward_edge_lookahead.py, tests/test_forward_edge_kite_market_data.py: 38 passed in 4.21s."
+      ],
+      "blocker": "No shared multi-input decision builder derives and records decision_available_at=max(all input availability times) across every strategy path; exchange clock-skew allowance is caller-configured rather than calibrated/attested per source and clock-health evidence is not attached to all decisions.",
+      "last_audited_at_utc": "2026-11-22T21:52:09Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forward_edge_clock.py",
+        "tests/test_forward_edge_market_events.py",
+        "tests/test_forward_edge_lookahead.py",
+        "tests/test_forward_edge_kite_market_data.py"
+      ],
+      "test_result": "Focused clock, market event, lookahead and Kite normalization suite: 38 passed in 4.21s."
     },
     {
       "id": "SL-01-12",
@@ -15691,7 +15702,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T21:50:16Z",
+    "as_of_utc": "2026-11-22T21:52:09Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15948,15 +15959,16 @@
       "SL-01-08",
       "SL-01-09",
       "SL-01-10",
+      "SL-01-11",
       "SL-01-18"
     ],
-    "audited_count": 256,
+    "audited_count": 257,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 200,
-      "UNASSESSED": 1122
+      "PARTIAL": 201,
+      "UNASSESSED": 1121
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16093,7 +16105,7 @@
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 200,
-    "UNASSESSED": 1122
+    "PARTIAL": 201,
+    "UNASSESSED": 1121
   }
 }
