@@ -682,6 +682,48 @@ def mf_paper_panel(con, asof: date) -> str:
            f"<div class='sub'>Point-in-time valuation as of {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible.</div>"]
     for (account_id,) in rows:
         snapshot = account_snapshot(con, account_id, known_at=known_at)
+        settlements = con.execute("""SELECT settlement_id, scheme_code, state,
+            net_inr, payout_available_at, payout_basis, payout_evidence_ref,
+            payout_source_id, payout_source_sha256
+            FROM mf_paper_redemption_settlements WHERE account_id=?
+              AND (created_at<=? AND updated_at<=?)
+            ORDER BY created_at, settlement_id""",
+            [account_id, known_at, known_at]).fetchall()
+        out.append(
+            f"<h3>{_e(account_id)} · NAV value Rs {snapshot['market_value_inr']:,.2f} · "
+            f"unrealized P&amp;L Rs {snapshot['unrealized_pnl_inr']:+,.2f}</h3>"
+            f"<div class='sub'>Cash Rs {snapshot['cash_inr']:,.2f} · pending redemption Rs "
+            f"{snapshot['pending_redemption_inr']:,.2f} · stale positions "
+            f"{snapshot['stale_position_count']} · unavailable NAVs "
+            f"{snapshot['unvalued_position_count']}</div>"
+        )
+        if settlements:
+            payout_rows = []
+            for (settlement_id, scheme_code, state, net_inr, available_at,
+                 basis, evidence_ref, source_id, source_hash) in settlements:
+                if state == "CASH_AVAILABLE" and basis == "OBSERVED_EVIDENCE":
+                    realization = "OBSERVED_EVIDENCE"
+                elif state == "CASH_AVAILABLE" and basis == "SIMULATED_ASSUMPTION":
+                    realization = "SIMULATED_ASSUMPTION"
+                else:
+                    realization = "PENDING / NOT REALIZED"
+                evidence = evidence_ref or "—"
+                source = source_id or "—"
+                digest = source_hash[:12] if source_hash else "—"
+                amount = f"Rs {net_inr:,.2f}" if net_inr is not None else "—"
+                payout_rows.append(
+                    f"<tr><td>{_e(settlement_id)}</td><td>{_e(scheme_code)}</td>"
+                    f"<td>{_e(state)}</td><td>{_e(realization)}</td>"
+                    f"<td class='r'>{amount}</td><td>{_e(available_at.isoformat() if available_at else '—')}</td>"
+                    f"<td>{_e(evidence)}</td><td>{_e(source)}</td><td>{_e(digest)}</td></tr>"
+                )
+            out.append(
+                "<h4>Redemption payout realization</h4><div class='wrap'><table>"
+                "<tr><th>Settlement</th><th>Scheme</th><th>State</th><th>Realization basis</th>"
+                "<th class='r'>Net payout</th><th>Available at</th><th>Evidence reference</th>"
+                "<th>Source</th><th>Source SHA-256</th></tr>" + "".join(payout_rows)
+                + "</table></div>"
+            )
         out.append(
             f"<h3>{_e(account_id)} · NAV value Rs {snapshot['market_value_inr']:,.2f} · "
             f"unrealized P&amp;L Rs {snapshot['unrealized_pnl_inr']:+,.2f}</h3>"
