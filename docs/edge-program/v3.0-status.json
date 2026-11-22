@@ -2541,14 +2541,21 @@
       "id": "FB-0703",
       "text": "Model purchase payment initiation time, credited-to-scheme time and funds-available-for-utilization time separately; never infer one from another.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "COMPLETE",
       "evidence": [
-        "No source module models payment initiation, scheme credit and usable-funds timestamps as separate events."
+        "src/financial_brain/kernel/mf_purchase_payment.py defines distinct immutable INITIATED, CREDITED_TO_SCHEME and AVAILABLE_FOR_UTILIZATION milestones, each with its own effective/received clocks and evidence basis.",
+        "Missing milestones remain absent; the timeline never derives one timestamp from another. It checks ordering only when adjacent events are both known, and observed events require their own source identity, reference and SHA-256.",
+        "tests/test_mf_purchase_payment.py verifies each timestamp remains distinct, partial event evidence is not imputed, observed provenance is independently required, and duplicate/out-of-order events fail closed."
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "commit": "1e70b990",
+      "test_evidence": [
+        "python -m pytest tests/test_mf_purchase_payment.py tests/test_mf_order.py tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py -q: 26 passed",
+        "ruff check src/financial_brain/kernel/mf_purchase_payment.py tests/test_mf_purchase_payment.py: passed",
+        "mypy src/financial_brain/kernel/mf_purchase_payment.py: passed",
+        "git diff --check: passed"
+      ]
     },
     {
       "id": "FB-0704",
@@ -15614,10 +15621,10 @@
     "evidence_update": "FB-0314 and FB-0315 audited PARTIAL after durable MF paper-book integration; source-terms resolution, paper-use permissions and redemption restrictions are tested, while authorized historical source coverage and NAV/settlement integration remain absent."
   },
   "counts_by_status": {
-    "COMPLETE": 29,
+    "COMPLETE": 30,
     "PARTIAL": 195,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 21,
+    "NOT_STARTED": 20,
     "UNASSESSED": 1132
   }
 }
