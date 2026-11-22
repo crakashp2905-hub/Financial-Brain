@@ -163,7 +163,8 @@ class PaperOptionLifecycle:
                       cost_model_sha256: str) -> bool:
         """Freeze a long-option/debit-vertical paper plan and its cash reserve."""
         _aware(decision_at, "decision_at")
-        if not plan_id.strip() or not account_id.strip() or quantity < 1:
+        if (not plan_id.strip() or not account_id.strip() or type(quantity) is not int
+                or quantity < 1 or not isinstance(fee_reserve_inr, Decimal)):
             raise OptionLifecycleError("paper account, plan identity and positive quantity are required")
         if (not fee_reserve_inr.is_finite() or fee_reserve_inr <= 0
                 or not math.isfinite(max_quote_age_seconds) or max_quote_age_seconds < 0):
@@ -226,7 +227,10 @@ class PaperOptionLifecycle:
                                    source=source, exchange=exchange, evidence_sha256=evidence_sha256,
                                    max_age_seconds=plan["max_quote_age_seconds"], token=token,
                                    symbol=symbol, expiry=expiry, lot_size=lot_size, expected_leg=leg)
-        if quantity < 1 or quantity % leg["lot_size"] or price <= 0 or not fees_inr.is_finite() or fees_inr < 0:
+        if (not fill_id.strip() or type(quantity) is not int or type(token) is not int
+                or not isinstance(price, Decimal) or not isinstance(fees_inr, Decimal)
+                or quantity < 1 or quantity % leg["lot_size"]
+                or price <= 0 or not fees_inr.is_finite() or fees_inr < 0):
             raise OptionLifecycleError("entry fill must be positive whole lots with valid price and fees")
         payload = {"leg_id": leg_id, "side": leg["side"], "quantity": quantity,
                    "price": str(price), "fees_inr": str(fees_inr), "bid": str(bid), "ask": str(ask),
@@ -285,7 +289,9 @@ class PaperOptionLifecycle:
         if duplicate is not None:
             return duplicate
         open_qty = plan["open_quantity_by_leg"]
-        if quantity < 1 or quantity % leg["lot_size"] or quantity > open_qty[leg_id]:
+        if (not fill_id.strip() or type(quantity) is not int or type(token) is not int
+                or not isinstance(price, Decimal) or not isinstance(fees_inr, Decimal)
+                or quantity < 1 or quantity % leg["lot_size"] or quantity > open_qty[leg_id]):
             raise OptionLifecycleError("close fill must be positive whole lots within the open leg quantity")
         depth = bid_qty if close_side == "SELL" else ask_qty
         if quantity > depth:
@@ -314,7 +320,7 @@ class PaperOptionLifecycle:
         if any(event["type"] == "ENTRY_CANCELLED" and event["payload"]["leg_id"] == leg_id
                for event in plan["events"]):
             raise OptionLifecycleError("entry leg is already cancelled")
-        if not reason.strip():
+        if not event_id.strip() or not reason.strip():
             raise OptionLifecycleError("cancellation reason is required")
         return self._append(plan_id=plan_id, event_id=journal_id,
                             event_type="ENTRY_CANCELLED", occurred_at=occurred_at,
@@ -327,7 +333,8 @@ class PaperOptionLifecycle:
         _aware(occurred_at, "expiry scenario time")
         if settlement_mode not in {"CASH_SETTLED", "PHYSICAL_DELIVERY"}:
             raise OptionLifecycleError("expiry scenario requires an explicit settlement mode")
-        if not underlying_price.is_finite() or underlying_price <= 0:
+        if (not event_id.strip() or not isinstance(underlying_price, Decimal)
+                or not underlying_price.is_finite() or underlying_price <= 0):
             raise OptionLifecycleError("expiry scenario underlying price must be positive and finite")
         latest_expiry = max(leg["expiry"] for leg in plan["legs"])
         if occurred_at.date().isoformat() < latest_expiry:
@@ -445,7 +452,10 @@ class PaperOptionLifecycle:
                 expected_leg["token"], expected_leg["symbol"],
                 expected_leg["expiry"], expected_leg["lot_size"]):
             raise OptionLifecycleError("fill quote contract identity differs from the frozen option leg")
-        if (not price.is_finite() or not bid.is_finite() or not ask.is_finite()
+        if (type(token) is not int or token <= 0 or type(lot_size) is not int or lot_size < 1
+                or not symbol.strip() or type(bid_qty) is not int or type(ask_qty) is not int
+                or not isinstance(price, Decimal) or not isinstance(bid, Decimal) or not isinstance(ask, Decimal)
+                or not price.is_finite() or not bid.is_finite() or not ask.is_finite()
                 or price <= 0 or bid <= 0 or ask < bid or bid_qty < 0 or ask_qty < 0):
             raise OptionLifecycleError("fill quote and displayed depth must be positive and valid")
 

@@ -83,6 +83,13 @@ def test_partial_leg_fills_are_capped_by_protective_long_and_survive_restart(tmp
     _fill(ledger, fill_id="s2", leg_id="short", side="SELL", token=2,
           symbol="NIFTY26DEC25200CE", quantity=75, price="40", bid="40", ask="41", at=NOW + timedelta(seconds=5))
     assert ledger.state("spread")["status"] == "OPEN"
+    assert ledger.state("spread")["fee_reserve_remaining_inr"] == "46"
+    with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+        con.execute("UPDATE option_lifecycle_events SET event_json='{}' WHERE plan_id='spread'")
+    con.rollback()
+    with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+        con.execute("DELETE FROM option_lifecycle_events WHERE plan_id='spread'")
+    con.rollback()
     con.close()
 
     # Recovery rebuilds quantities from the append-only journal; an exact replay is idempotent.
@@ -160,3 +167,40 @@ def test_expiry_is_scenario_only_and_open_positions_remain_unresolved(tmp_path) 
     state = ledger.state("expiry")
     assert state["status"] == "OPEN_AT_EXPIRY_UNRESOLVED"
     assert state["margin_status"] == "NOT_VERIFIED"
+
+
+def test_stale_or_wrong_contract_quote_cannot_create_a_fill(tmp_path) -> None:
+    ledger = PaperOptionLifecycle(sqlite3.connect(tmp_path / "quote-integrity.sqlite"))
+    _plan(ledger)
+    with pytest.raises(OptionLifecycleError, match="stale"):
+        ledger.record_entry_fill(plan_id="spread", fill_id="stale", leg_id="long",
+            quantity=75, price=Decimal("101"), fees_inr=Decimal("1"),
+            occurred_at=NOW + timedelta(seconds=500), quote_observed_at=NOW,
+            quote_available_at=NOW + timedelta(seconds=1), bid=Decimal("100"), ask=Decimal("101"),
+            bid_qty=1500, ask_qty=1500, source="fixture-feed", exchange="NFO",
+            evidence_sha256=EVIDENCE, token=1, symbol="NIFTY26DEC25000CE",
+            expiry=EXPIRY.isoformat(), lot_size=75)
+    with pytest.raises(OptionLifecycleError, match="identity"):
+        ledger.record_entry_fill(plan_id="spread", fill_id="wrong-contract", leg_id="long",
+            quantity=75, price=Decimal("101"), fees_inr=Decimal("1"),
+            occurred_at=NOW + timedelta(seconds=2), quote_observed_at=NOW,
+            quote_available_at=NOW + timedelta(seconds=1), bid=Decimal("100"), ask=Decimal("101"),
+            bid_qty=1500, ask_qty=1500, source="fixture-feed", exchange="NFO",
+            evidence_sha256=EVIDENCE, token=999, symbol="NIFTY26DEC25000CE",
+            expiry=EXPIRY.isoformat(), lot_size=75)
+    assert ledger.state("spread")["open_quantity_by_leg"] == {"long": 0, "short": 0}
+
+
+def test_cancelled_leg_rejects_late_fill_and_cancel_replay_is_idempotent(tmp_path) -> None:
+    ledger = PaperOptionLifecycle(sqlite3.connect(tmp_path / "cancel.sqlite"))
+    _plan(ledger)
+    at = NOW + timedelta(seconds=1)
+    assert ledger.cancel_entry(plan_id="spread", event_id="cancel-long", leg_id="long",
+                               occurred_at=at, reason="signal expired") is True
+    assert ledger.cancel_entry(plan_id="spread", event_id="cancel-long", leg_id="long",
+                               occurred_at=at, reason="signal expired") is False
+    assert ledger.state("spread")["status"] == "CANCELLED_UNFILLED"
+    with pytest.raises(OptionLifecycleError, match="cancelled"):
+        _fill(ledger, fill_id="late", leg_id="long", side="BUY", token=1,
+              symbol="NIFTY26DEC25000CE", quantity=75, price="101", bid="100",
+              ask="101", at=NOW + timedelta(seconds=2))
