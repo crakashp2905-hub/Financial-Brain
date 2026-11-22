@@ -438,7 +438,7 @@ def confirm_systematic_redemption_value(
         amount_inr=Decimal(result["net_inr"]),
         gross_inr=Decimal(result["gross_inr"]),
         exit_load_inr=Decimal(result["exit_load_inr"]),
-        other_charges_inr=Decimal(0), source_id="AMFI",
+        other_charges_inr=Decimal(result["other_charges_inr"]), source_id="AMFI",
         source_ref=nav_observation_id, source_sha256=observation["row_sha256"],
     )
     lifecycle = _record_event_once(
