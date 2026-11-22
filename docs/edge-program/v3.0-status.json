@@ -9675,12 +9675,23 @@
     {
       "id": "SL-02-03",
       "text": "Add price-return, volatility, range, trend, volume participation, gap, session VWAP, breadth and liquidity as separate causal feature families.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "Daily price-return, realized-volatility, moving-average trend and average traded-value liquidity features are built as separate columns by features.indicators over split-adjusted security lineages; minimum history gates leave short windows null.",
+        "Intraday opening gap, range, session VWAP deviation and relative volume participation are separate columns in features.intraday; timestamps are evaluated in Asia/Kolkata and input windows stop at 10:30. Market breadth is separately computed by regime.breadth from the as-of feature cross-section.",
+        "Causality evidence includes a daily test that changes only later prices and asserts earlier returns/volatility are unchanged, and an intraday regression that changes all bars after 10:30 and asserts gap, breakout, VWAP deviation, relative volume and range features are unchanged. Breadth uses only the requested business_date."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-22T22:43:08Z",
+      "commit": "c8ba085b",
+      "test_evidence": [
+        "tests/test_phase2_features.py::test_a_feature_never_sees_a_later_price",
+        "tests/test_phase3_technical.py",
+        "tests/test_phase5_intraday.py::test_no_feature_sees_a_bar_after_the_outcome_starts",
+        "tests/test_phase1_regime.py"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-v3features tests/test_phase2_features.py tests/test_phase3_technical.py tests/test_phase5_intraday.py tests/test_phase1_regime.py: 25 passed in 120.98s."
     },
     {
       "id": "SL-02-04",
@@ -15774,7 +15785,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T22:37:41Z",
+    "as_of_utc": "2026-11-22T22:43:08Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16040,17 +16051,18 @@
       "SL-01-17",
       "SL-01-18",
       "SL-02-01",
-      "SL-02-02"
+      "SL-02-02",
+      "SL-02-03"
     ],
-    "audited_count": 265,
+    "audited_count": 266,
     "status_counts": {
-      "COMPLETE": 46,
+      "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
       "PARTIAL": 207,
-      "UNASSESSED": 1113
+      "UNASSESSED": 1112
     },
-    "verified_complete_count": 46,
+    "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -16179,13 +16191,13 @@
       "src/financial_brain/forward_edge/market_data.py",
       "tests/test_forward_edge_kite_market_data.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated. SL-02-03 COMPLETE: source audit and focused feature/causality suites passed (25 tests); daily, intraday and breadth families are separately implemented."
   },
   "counts_by_status": {
-    "COMPLETE": 46,
+    "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
     "PARTIAL": 207,
-    "UNASSESSED": 1113
+    "UNASSESSED": 1112
   }
 }
