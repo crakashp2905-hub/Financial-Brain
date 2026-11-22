@@ -2653,15 +2653,21 @@
       "id": "FB-0710",
       "text": "Simulate switches as paired switch-out and switch-in with asynchronous settlement and no phantom same-minute capital redeployment.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "SWITCH exists as a recommendation action and source-specific cutoffs support switch-out/in date calculation primitives.",
-        "No paired asynchronous switch-out/switch-in settlement lifecycle or capital reuse lock exists."
+        "src/financial_brain/kernel/mf_switch.py models a paired source/target switch request and ordered out-value, proceeds-available, in-funds-applied and allotment events.",
+        "It holds switch proceeds at zero until the explicit proceeds-available event, forbids same-timestamp or earlier capital reuse, prevents funding above available proceeds, and reconciles target units × NAV to applied amount.",
+        "Observed events require source identity/reference/hash; simulated assumptions remain labelled. Tests cover asynchronous transitions, no phantom same-minute redeployment, value reconciliation and fail-closed ordering."
       ],
-      "blocker": null,
+      "blocker": "The lifecycle is currently an immutable in-memory model; it is not yet persisted in the paper ledger, connected to NAV/cutoff resolution, or wired into account cash and unit reconciliation.",
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0701-18 tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py tests/test_mf_redemption_constraints.py tests/test_mf_exit_loads.py tests/test_mf_scheme_flows.py tests/test_mf_scheme_master.py tests/test_mf_scheme_terms.py -q: 36 passed"
+      "commit": "b79a4e46a7c730da19c64d379ad69612bf537e69",
+      "test_evidence": [
+        "python -m pytest tests/test_mf_switch.py tests/test_mf_paper_realism.py tests/test_mf_purchase_payment.py tests/test_mf_order.py -q: 28 passed",
+        "ruff check src/financial_brain/kernel/mf_switch.py tests/test_mf_switch.py: passed",
+        "mypy src/financial_brain/kernel/mf_switch.py: passed",
+        "git diff --check: passed"
+      ]
     },
     {
       "id": "FB-0711",
@@ -15629,9 +15635,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 30,
-    "PARTIAL": 196,
+    "PARTIAL": 197,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 19,
+    "NOT_STARTED": 18,
     "UNASSESSED": 1132
   }
 }
