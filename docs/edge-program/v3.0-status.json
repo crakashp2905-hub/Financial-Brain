@@ -2920,7 +2920,7 @@
       ],
       "blocker": "The shared order journal is integrated with ForwardSessionRunner but not yet unified transactionally across cash, options and legacy intraday books. The one-snapshot simulator does not produce broker ACCEPTED/WORKING acknowledgements, and cross-desk OMS failure-recovery drills remain outstanding.",
       "last_audited_at_utc": "2026-11-22T15:23:55Z",
-      "commit": "b2d6e71b",
+      "commit": "5374cab6",
       "test_result": "python -m pytest tests/test_forward_edge_session_runner.py tests/test_forward_edge_order_journal.py tests/test_forward_edge_order_blotter.py -q: 69 passed in 322.85s. Ruff and targeted mypy passed."
     },
     {
