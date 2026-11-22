@@ -1911,6 +1911,12 @@
       "module_owner": "src/financial_brain/forward_edge/strategy_inventory.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/strategy_pipeline.py",
+      "path": "src/financial_brain/forward_edge/strategy_pipeline.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/strategy_pipeline.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/strategy_scorecard.py",
       "path": "src/financial_brain/forward_edge/strategy_scorecard.py",
       "module_role": "signal_report_or_trader_renderer",

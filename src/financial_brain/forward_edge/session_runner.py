@@ -7,7 +7,7 @@ import re
 import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
-from decimal import ROUND_HALF_EVEN, Decimal
+from decimal import InvalidOperation, ROUND_HALF_EVEN, Decimal
 from pathlib import Path
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
@@ -939,6 +939,20 @@ class ForwardSessionRunner:
         if decision_row is None or decision_row[0] != "TRADE":
             raise ForwardSessionRunnerError("paper intent requires a journaled TRADE decision")
         decision = json.loads(decision_row[1])
+        candidate_intent = decision.get("payload", {}).get("candidate_intent")
+        if candidate_intent is not None:
+            if not isinstance(candidate_intent, dict):
+                raise ForwardSessionRunnerError("canonical candidate intent must be an object")
+            try:
+                candidate_reference_price = Decimal(str(candidate_intent.get("reference_price", "0")))
+            except InvalidOperation as exc:
+                raise ForwardSessionRunnerError("canonical candidate reference price is invalid") from exc
+            if (candidate_intent.get("intent_id") != order_id
+                    or candidate_intent.get("decision_id") != decision_id
+                    or candidate_intent.get("side") != side
+                    or candidate_intent.get("quantity") != quantity
+                    or candidate_reference_price != limit):
+                raise ForwardSessionRunnerError("paper order differs from its canonical candidate intent")
         risk = self._con.execute("SELECT allowed, record_json FROM runner_risk_verdicts "
                                   "WHERE session_id=? AND decision_id=?", [session_id, decision_id]).fetchone()
         if risk is None or risk[0] != 1:
@@ -966,6 +980,8 @@ class ForwardSessionRunner:
         if event_row is None:
             raise ForwardSessionRunnerError("paper quote is absent from the session event journal")
         event = MarketEvent.from_dict(json.loads(event_row[0]))
+        if candidate_intent is not None and candidate_intent.get("symbol") != event.instrument_id:
+            raise ForwardSessionRunnerError("paper quote instrument differs from the canonical candidate intent")
         if event_id in decision["input_event_ids"]:
             signal_event = event
         else:
