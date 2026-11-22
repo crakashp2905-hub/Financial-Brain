@@ -28,9 +28,12 @@ def _observation(leg_id: str, side: str, strike: float, *, token: int,
     return OptionLegObservation(leg, NOW, "fixture-feed", "NFO", EVIDENCE)
 
 
-def _plan(ledger: PaperOptionLifecycle, plan_id: str = "spread") -> None:
-    ledger.register_plan(
-        plan_id=plan_id, account_id="paper-a", decision_at=NOW, quantity=150,
+def _plan(ledger: PaperOptionLifecycle, plan_id: str = "spread", *,
+          signal_id: str | None = None, child_order_id: str | None = None) -> bool:
+    return ledger.register_plan(
+        plan_id=plan_id, account_id="paper-a", signal_id=signal_id or f"signal-{plan_id}",
+        child_order_id=child_order_id or f"child-{plan_id}",
+        decision_at=NOW, quantity=150,
         observations=(
             _observation("long", "BUY", 25000, token=1, bid=100, ask=101,
                          symbol="NIFTY26DEC25000CE"),
@@ -67,6 +70,10 @@ def test_partial_leg_fills_are_capped_by_protective_long_and_survive_restart(tmp
     assert initial["strategy_type"] == "DEBIT_VERTICAL"
     assert initial["cash_reserve_inr"] == "9200"
     assert initial["margin_status"] == "NOT_VERIFIED"
+    assert len(ledger.pending_outbox(account_id="paper-a")) == 1
+    assert _plan(ledger) is False  # replaying the exact signal/child plan is idempotent
+    with pytest.raises(OptionLifecycleError, match="signal/child order"):
+        _plan(ledger, "duplicate-plan", signal_id="signal-spread", child_order_id="child-spread")
 
     with pytest.raises(OptionLifecycleError, match="protective long"):
         _fill(ledger, fill_id="s0", leg_id="short", side="SELL", token=2,
@@ -91,6 +98,9 @@ def test_partial_leg_fills_are_capped_by_protective_long_and_survive_restart(tmp
     with pytest.raises(sqlite3.IntegrityError, match="append-only"):
         con.execute("DELETE FROM option_lifecycle_events WHERE plan_id='spread'")
     con.rollback()
+    with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+        con.execute("DELETE FROM option_paper_outbox WHERE plan_id='spread'")
+    con.rollback()
     con.close()
 
     # Recovery rebuilds quantities from the append-only journal; an exact replay is idempotent.
@@ -99,6 +109,7 @@ def test_partial_leg_fills_are_capped_by_protective_long_and_survive_restart(tmp
     state = recovered.state("spread")
     assert state["open_quantity_by_leg"] == {"long": 150, "short": 150}
     assert state["event_count"] == 5
+    assert recovered.pending_outbox(account_id="paper-a")[0]["plan_id"] == "spread"
     assert _fill(recovered, fill_id="s2", leg_id="short", side="SELL", token=2,
                  symbol="NIFTY26DEC25200CE", quantity=75, price="40", bid="40", ask="41",
                  at=NOW + timedelta(seconds=5)) is False

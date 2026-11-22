@@ -9370,7 +9370,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_lifecycle.py",
-      "source_sha256": "1a2ebc29d4a2952c8ba272007612281132cfcf53248984780ab4a3a4c7be2180",
+      "source_sha256": "d202ce088809c9c141a696bd4aa98b2a21926b49957e26d706b3be562174f323",
       "test_paths": []
     },
     {

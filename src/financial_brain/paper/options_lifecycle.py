@@ -119,6 +119,22 @@ class PaperOptionLifecycle:
             BEFORE DELETE ON option_lifecycle_events
             BEGIN SELECT RAISE(ABORT, 'option lifecycle is append-only'); END;
         """)
+        self.connection.execute("""CREATE TABLE IF NOT EXISTS option_paper_outbox (
+            account_id TEXT NOT NULL,
+            signal_id TEXT NOT NULL,
+            child_order_id TEXT NOT NULL,
+            plan_id TEXT NOT NULL UNIQUE,
+            payload_sha256 TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY(account_id, signal_id, child_order_id))""")
+        self.connection.executescript("""
+            CREATE TRIGGER IF NOT EXISTS option_paper_outbox_no_update
+            BEFORE UPDATE ON option_paper_outbox
+            BEGIN SELECT RAISE(ABORT, 'paper option outbox is append-only'); END;
+            CREATE TRIGGER IF NOT EXISTS option_paper_outbox_no_delete
+            BEFORE DELETE ON option_paper_outbox
+            BEGIN SELECT RAISE(ABORT, 'paper option outbox is append-only'); END;
+        """)
 
     def _events(self, plan_id: str) -> list[dict[str, Any]]:
         rows = self.connection.execute(
@@ -139,7 +155,8 @@ class PaperOptionLifecycle:
         return events
 
     def _append(self, *, plan_id: str, event_id: str, event_type: str,
-                occurred_at: datetime, payload: dict[str, Any]) -> bool:
+                occurred_at: datetime, payload: dict[str, Any],
+                outbox_identity: dict[str, str] | None = None) -> bool:
         if not plan_id.strip() or not event_id.strip() or not event_type.strip():
             raise OptionLifecycleError("plan, event and event type identities are required")
         _aware(occurred_at, "occurred_at")
@@ -155,6 +172,16 @@ class PaperOptionLifecycle:
             if prior:
                 if prior != (event_type, encoded):
                     raise OptionLifecycleError("event identity conflicts with previously journaled evidence")
+                if outbox_identity:
+                    outbox_row = self.connection.execute(
+                        "SELECT account_id,signal_id,child_order_id,plan_id,payload_sha256,created_at "
+                        "FROM option_paper_outbox WHERE plan_id=?", [plan_id]).fetchone()
+                    expected_outbox = (
+                        outbox_identity["account_id"], outbox_identity["signal_id"],
+                        outbox_identity["child_order_id"], plan_id,
+                        hashlib.sha256(encoded.encode("utf-8")).hexdigest(), stamp)
+                    if outbox_row != expected_outbox:
+                        raise OptionLifecycleError("plan event is missing or conflicts with its atomic outbox record")
                 if owns_transaction:
                     self.connection.commit()
                 return False
@@ -165,12 +192,28 @@ class PaperOptionLifecycle:
             previous = previous_row[0] if previous_row else "GENESIS"
             if previous_row and stamp < previous_row[1]:
                 raise OptionLifecycleError("option lifecycle event time cannot regress")
+            if outbox_identity:
+                outbox_row = self.connection.execute(
+                    "SELECT account_id,signal_id,child_order_id,plan_id FROM option_paper_outbox "
+                    "WHERE plan_id=? OR (account_id=? AND signal_id=? AND child_order_id=?)",
+                    [plan_id, outbox_identity["account_id"], outbox_identity["signal_id"],
+                     outbox_identity["child_order_id"]]).fetchone()
+                if outbox_row:
+                    raise OptionLifecycleError("signal/child order already has a durable paper execution intent")
             digest = hashlib.sha256((previous + encoded).encode("utf-8")).hexdigest()
             self.connection.execute(
                 "INSERT INTO option_lifecycle_events "
                 "(plan_id,event_id,event_type,occurred_at,previous_sha256,event_sha256,event_json) "
                 "VALUES(?,?,?,?,?,?,?)",
                 [plan_id, event_id, event_type, stamp, previous, digest, encoded])
+            if outbox_identity:
+                self.connection.execute(
+                    "INSERT INTO option_paper_outbox "
+                    "(account_id,signal_id,child_order_id,plan_id,payload_sha256,created_at) "
+                    "VALUES(?,?,?,?,?,?)",
+                    [outbox_identity["account_id"], outbox_identity["signal_id"],
+                     outbox_identity["child_order_id"], plan_id,
+                     hashlib.sha256(encoded.encode("utf-8")).hexdigest(), stamp])
             if owns_transaction:
                 self.connection.commit()
             return True
@@ -191,15 +234,17 @@ class PaperOptionLifecycle:
         return False
 
     @_atomic
-    def register_plan(self, *, plan_id: str, account_id: str, decision_at: datetime,
+    def register_plan(self, *, plan_id: str, account_id: str, signal_id: str,
+                      child_order_id: str, decision_at: datetime,
                       quantity: int, observations: tuple[OptionLegObservation, ...],
                       fee_reserve_inr: Decimal, max_quote_age_seconds: float,
                       cost_model_sha256: str) -> bool:
         """Freeze a long-option/debit-vertical paper plan and its cash reserve."""
         _aware(decision_at, "decision_at")
-        if (not plan_id.strip() or not account_id.strip() or type(quantity) is not int
+        if (not plan_id.strip() or not account_id.strip() or not signal_id.strip()
+                or not child_order_id.strip() or type(quantity) is not int
                 or quantity < 1 or not isinstance(fee_reserve_inr, Decimal)):
-            raise OptionLifecycleError("paper account, plan identity and positive quantity are required")
+            raise OptionLifecycleError("paper account, signal/child identity, plan and positive quantity are required")
         if (not fee_reserve_inr.is_finite() or fee_reserve_inr <= 0
                 or not math.isfinite(max_quote_age_seconds) or max_quote_age_seconds < 0):
             raise OptionLifecycleError("fee reserve must be positive and quote-age policy finite and non-negative")
@@ -234,7 +279,8 @@ class PaperOptionLifecycle:
                 "evidence_sha256": item.evidence_sha256,
             })
         payload = {
-            "account_id": account_id, "decision_at": decision_at.isoformat(),
+            "account_id": account_id, "signal_id": signal_id,
+            "child_order_id": child_order_id, "decision_at": decision_at.isoformat(),
             "target_quantity": quantity, "legs": frozen_legs,
             "strategy_type": structure["strategy_type"],
             "premium_risk_inr": str(premium_risk), "fee_reserve_inr": str(fee_reserve_inr),
@@ -244,7 +290,23 @@ class PaperOptionLifecycle:
             "simulation_fidelity": "OBSERVED_QUOTE_SIM",
         }
         return self._append(plan_id=plan_id, event_id="PLAN", event_type="PLAN_REGISTERED",
-                            occurred_at=decision_at, payload=payload)
+                            occurred_at=decision_at, payload=payload,
+                            outbox_identity={"account_id": account_id, "signal_id": signal_id,
+                                             "child_order_id": child_order_id})
+
+    def pending_outbox(self, *, account_id: str | None = None) -> list[dict[str, str]]:
+        """Return immutable plan intents awaiting a paper consumer; never a broker queue."""
+        if account_id is None:
+            rows = self.connection.execute(
+                "SELECT account_id,signal_id,child_order_id,plan_id,payload_sha256,created_at "
+                "FROM option_paper_outbox ORDER BY created_at,plan_id").fetchall()
+        else:
+            rows = self.connection.execute(
+                "SELECT account_id,signal_id,child_order_id,plan_id,payload_sha256,created_at "
+                "FROM option_paper_outbox WHERE account_id=? ORDER BY created_at,plan_id", [account_id]).fetchall()
+        return [{"account_id": row[0], "signal_id": row[1], "child_order_id": row[2],
+                 "plan_id": row[3], "payload_sha256": row[4], "created_at": row[5],
+                 "dispatch_status": "PENDING_PAPER_CONSUMER"} for row in rows]
 
     @_atomic
     def record_entry_fill(self, *, plan_id: str, fill_id: str, leg_id: str,
