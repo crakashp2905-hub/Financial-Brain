@@ -17,7 +17,9 @@ from financial_brain.kernel.mf_order import (
 )
 from financial_brain.kernel.mf_switch import MFSwitchRequest
 from financial_brain.kernel.trading_clock import BusinessCalendar, CalendarDomain
-from financial_brain.paper.mf_account_ledger import ledger_snapshot
+from financial_brain.paper.mf_account_ledger import (
+    ledger_snapshot, mf_instrument_id, post_journal,
+)
 from financial_brain.paper.mf_lot_book import create_account, redeem
 from financial_brain.paper.mf_order_book import record_response, submit_order
 from financial_brain.paper.mf_purchase_book import resolve_eligible_nav
@@ -146,6 +148,12 @@ def test_switch_persists_both_legs_and_never_reuses_unsettled_cash(con):
         subscription_event_id, created_at)
         VALUES (?, 'source-lot', ?, ?, ?, ?, ?, ?, NULL, 10, 10, 100, '[]', ?, 'source-sub', ?)""",
         [ACCOUNT, FOLIO, *SOURCE, date(2026, 11, 20), HASH, START])
+    post_journal(
+        con, account_id=ACCOUNT, transaction_id="opening-switch-source-units",
+        effective_at=START, recorded_at=START,
+        unit_deltas=((FOLIO, mf_instrument_id(*SOURCE), Decimal(10)),),
+        evidence={"fixture": "opening source units for switch paper test"},
+    )
 
     request = MFSwitchRequest(
         switch_id="switch-1", account_id=ACCOUNT, folio_id=FOLIO,
