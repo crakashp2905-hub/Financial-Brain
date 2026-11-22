@@ -14,7 +14,7 @@ from financial_brain.forward_edge.market_events import EventKind
 
 def quote():
     return {"timestamp": "2026-11-13 10:15:00", "last_trade_time": "2026-11-13 10:14:59",
-            "last_price": 101.5, "volume": 1000,
+            "last_price": 101.5, "volume": 1000, "oi": 2450,
             "ohlc": {"open": 100.0, "high": 102.0, "low": 99.0, "close": 98.5},
             "depth": {"buy": [{"price": 101.4, "quantity": 12}],
                       "sell": [{"price": 101.6, "quantity": 9}]}}
@@ -35,6 +35,10 @@ def test_kite_quote_event_preserves_exchange_and_receipt_clocks_and_source():
     assert event.payload["bid"] == 101.4 and event.payload["ask"] == 101.6
     assert event.payload["session_high"] == 102.0 and event.payload["session_low"] == 99.0
     assert event.payload["previous_close"] == 98.5
+    assert event.payload["open_interest"] == 2450
+    assert event.payload["last_trade_time"] == "2026-11-13T04:44:59+00:00"
+    assert event.payload["last_trade_age_ms_at_receipt"] == 2000
+    assert event.payload["quote_age_ms_at_receipt"] == 1000
 
 
 def test_invalid_previous_close_is_rejected_instead_of_becoming_gap_strategy_input():
@@ -47,6 +51,15 @@ def test_missing_exchange_clock_is_refused():
     with pytest.raises(KiteQuoteNormalizationError, match="timestamp is missing"):
         normalize_kite_quote("NSE:INFY", quote() | {"timestamp": None},
                              received_at=datetime.now(timezone.utc))
+
+
+def test_invalid_open_interest_and_future_last_trade_clock_are_refused():
+    received = datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc)
+    with pytest.raises(KiteQuoteNormalizationError, match="open interest"):
+        normalize_kite_quote("NSE:INFY", quote() | {"oi": 3.5}, received_at=received)
+    with pytest.raises(KiteQuoteNormalizationError, match="last-trade timestamp"):
+        normalize_kite_quote("NSE:INFY", quote() | {"last_trade_time": "2026-11-13 10:15:10"},
+                             received_at=received)
 
 
 def test_naive_kite_exchange_timestamp_uses_documented_ist_clock_not_receipt_clock():

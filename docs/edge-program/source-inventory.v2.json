@@ -4503,7 +4503,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_data.py",
-      "source_sha256": "90bcfb849e4ac4959341c42dab1b86a172f897662da74d76c7ecb2b295c08069",
+      "source_sha256": "1513491f3fcd9628f9e0a416b0446b687077e15fdb5315b8d6abde32e10c6cb1",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"

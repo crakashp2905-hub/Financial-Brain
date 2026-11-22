@@ -9,6 +9,7 @@ import pytest
 
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 from financial_brain.forward_edge.clock import FixedClock
+from financial_brain.forward_edge.market_data import normalize_kite_quote
 from financial_brain.forward_edge.quote_archive import QuoteArchive, QuoteArchiveError
 
 T0 = datetime(2026, 11, 15, 4, 0, tzinfo=timezone.utc)
@@ -64,6 +65,25 @@ def test_archive_recovers_rows_after_close_and_reopen(tmp_path) -> None:
         assert second.get("q-7").sequence == 7
     finally:
         second.close()
+
+
+def test_archive_roundtrips_kite_open_interest_and_distinct_trade_clock(tmp_path) -> None:
+    raw = {"timestamp": "2026-11-15 09:30:00", "last_trade_time": "2026-11-15 09:29:58",
+           "last_price": 100.0, "volume": 500, "oi": 1234,
+           "depth": {"buy": [{"price": 99.95, "quantity": 10}],
+                     "sell": [{"price": 100.05, "quantity": 11}]}}
+    received = T0 + timedelta(seconds=1)
+    event = normalize_kite_quote("NSE:NIFTY26NOV25000CE", raw, received_at=received)
+    archive = QuoteArchive(tmp_path / "options.sqlite3", clock=FixedClock(received))
+    try:
+        assert archive.append(event)
+        restored = archive.get(event.event_id)
+        assert restored.payload["open_interest"] == 1234
+        assert restored.payload["last_trade_time"] == "2026-11-15T03:59:58+00:00"
+        assert restored.payload["last_trade_age_ms_at_receipt"] == 3000
+        assert restored.payload["quote_age_ms_at_receipt"] == 1000
+    finally:
+        archive.close()
 
 
 def test_ingest_timestamp_is_injected_immutable_and_not_part_of_source_event_identity(tmp_path) -> None:
