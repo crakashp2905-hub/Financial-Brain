@@ -9740,12 +9740,26 @@
     {
       "id": "SL-02-06",
       "text": "Extract event-availability indicators for NSE/BSE filings, corporate announcements, results, shareholding and financial statement revisions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "features.event_availability.build() is called by the standard features.indicators.build pipeline and creates event_availability detail plus an event_availability_features session panel.",
+        "It maps BSE corporate announcements, BSE result announcements, NSE XBRL result filings, NSE shareholding filings, and point-in-time XBRL statement revisions to the first available trading session using the exchange session calendar and the publication clock. It preserves source event IDs, publication times and collector timestamps.",
+        "The panel keeps categories separate and computes 5-session announcement/results counts, 60-session shareholding/revision counts and sessions-since-result; no event is fabricated when its source table or row is absent.",
+        "tests/test_event_availability.py plus announcement, events, result, fundamentals point-in-time tests: 103 passed in 49.73s; Ruff, mypy and source-inventory/forward-engine graph freshness checks passed."
+      ],
+      "blocker": "Partial: the event panel is implemented and in the standard research feature build, but source completeness is not proven for all NSE corporate filings and the indicators are not yet wired into forward/paper strategy inputs. Backfilled historical source coverage and prospective capture need reconciliation.",
+      "last_audited_at_utc": "2026-11-22T23:08:14Z",
+      "commit": "efc64cf1",
+      "test_evidence": [
+        "tests/test_event_availability.py",
+        "tests/test_phase1_events.py",
+        "tests/test_phase5_events.py",
+        "tests/test_phase5_fundamentals_pit.py",
+        "tests/test_phase2_results.py",
+        "tests/test_phase2_features.py"
+      ],
+      "test_result": "python -m pytest -q --basetemp D:\\Finance-Brain\\.pytest-v3events tests/test_event_availability.py tests/test_phase1_events.py tests/test_phase5_events.py tests/test_phase5_fundamentals_pit.py tests/test_phase2_results.py tests/test_phase2_features.py: 103 passed in 49.73s; Ruff and mypy passed; source inventory and forward-engine graph regenerated and freshness checks passed."
     },
     {
       "id": "SL-02-07",
@@ -15809,7 +15823,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T23:00:42Z",
+    "as_of_utc": "2026-11-22T23:08:14Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16078,15 +16092,16 @@
       "SL-02-02",
       "SL-02-03",
       "SL-02-04",
-      "SL-02-05"
+      "SL-02-05",
+      "SL-02-06"
     ],
-    "audited_count": 268,
+    "audited_count": 269,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 209,
-      "UNASSESSED": 1110
+      "PARTIAL": 210,
+      "UNASSESSED": 1109
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16217,13 +16232,13 @@
       "src/financial_brain/forward_edge/market_data.py",
       "tests/test_forward_edge_kite_market_data.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated. SL-02-03 COMPLETE: source audit and focused feature/causality suites passed (25 tests); daily, intraday and breadth families are separately implemented. SL-02-04 PARTIAL: point-in-time observed-quote IV/Greeks/skew/term/OI surface and archive coverage tracking implemented; permitted data evidence and paper-pipeline integration remain open. SL-02-05 PARTIAL: aligned point-in-time index breadth, constituent industry-count concentration, Nifty/Bank TRI correlation and sector relative strength implemented; empirical source coverage and trader-pipeline integration remain open."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated. SL-02-03 COMPLETE: source audit and focused feature/causality suites passed (25 tests); daily, intraday and breadth families are separately implemented. SL-02-04 PARTIAL: point-in-time observed-quote IV/Greeks/skew/term/OI surface and archive coverage tracking implemented; permitted data evidence and paper-pipeline integration remain open. SL-02-05 PARTIAL: aligned point-in-time index breadth, constituent industry-count concentration, Nifty/Bank TRI correlation and sector relative strength implemented; empirical source coverage and trader-pipeline integration remain open. SL-02-06 PARTIAL: availability-timed BSE announcements, NSE results, shareholding and statement revision event panels are integrated into the research feature build; source coverage completeness and forward-paper consumption remain open."
   },
   "counts_by_status": {
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 209,
-    "UNASSESSED": 1110
+    "PARTIAL": 210,
+    "UNASSESSED": 1109
   }
 }
