@@ -9087,6 +9087,7 @@
       "imports": [
         "__future__",
         "datetime",
+        "decimal",
         "forward_edge.data_permissions",
         "hashlib",
         "json",
@@ -9099,7 +9100,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_systematic_flow_book.py",
-      "source_sha256": "246c1b7563e846c08a4ecac7e292d6a1088db9c6700e36516504cfe0756a5333",
+      "source_sha256": "208bd7d9625c8ab0dfae64c0b2eded7f100f57a792b544ea0ebffa802ef4e38c",
       "test_paths": []
     },
     {
