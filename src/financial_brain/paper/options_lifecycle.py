@@ -13,6 +13,7 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
+from functools import wraps
 from typing import Any
 
 from financial_brain.forward_edge.options_risk import (
@@ -39,6 +40,33 @@ def _canonical(value: dict[str, Any]) -> str:
         return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
     except (TypeError, ValueError) as exc:
         raise OptionLifecycleError(f"event is not canonical JSON: {exc}") from exc
+
+
+def _atomic(method):
+    """Serialize state validation and journal append in one SQLite transaction."""
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        owns_transaction = not self.connection.in_transaction
+        savepoint = "fb_option_lifecycle_atomic"
+        if owns_transaction:
+            self.connection.execute("BEGIN IMMEDIATE")
+        else:
+            self.connection.execute(f"SAVEPOINT {savepoint}")
+        try:
+            result = method(self, *args, **kwargs)
+            if owns_transaction:
+                self.connection.commit()
+            else:
+                self.connection.execute(f"RELEASE SAVEPOINT {savepoint}")
+            return result
+        except Exception:
+            if owns_transaction:
+                self.connection.rollback()
+            else:
+                self.connection.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                self.connection.execute(f"RELEASE SAVEPOINT {savepoint}")
+            raise
+    return wrapped
 
 
 @dataclass(frozen=True)
@@ -117,7 +145,9 @@ class PaperOptionLifecycle:
         _aware(occurred_at, "occurred_at")
         encoded = _canonical(payload)
         stamp = occurred_at.astimezone(timezone.utc).isoformat()
-        self.connection.execute("BEGIN IMMEDIATE")
+        owns_transaction = not self.connection.in_transaction
+        if owns_transaction:
+            self.connection.execute("BEGIN IMMEDIATE")
         try:
             prior = self.connection.execute(
                 "SELECT event_type,event_json FROM option_lifecycle_events WHERE plan_id=? AND event_id=?",
@@ -125,7 +155,8 @@ class PaperOptionLifecycle:
             if prior:
                 if prior != (event_type, encoded):
                     raise OptionLifecycleError("event identity conflicts with previously journaled evidence")
-                self.connection.commit()
+                if owns_transaction:
+                    self.connection.commit()
                 return False
             previous_row = self.connection.execute(
                 "SELECT event_sha256,occurred_at FROM option_lifecycle_events "
@@ -140,10 +171,12 @@ class PaperOptionLifecycle:
                 "(plan_id,event_id,event_type,occurred_at,previous_sha256,event_sha256,event_json) "
                 "VALUES(?,?,?,?,?,?,?)",
                 [plan_id, event_id, event_type, stamp, previous, digest, encoded])
-            self.connection.commit()
+            if owns_transaction:
+                self.connection.commit()
             return True
         except Exception:
-            self.connection.rollback()
+            if owns_transaction:
+                self.connection.rollback()
             raise
 
     def _existing_result(self, *, plan_id: str, event_id: str,
@@ -157,6 +190,7 @@ class PaperOptionLifecycle:
             raise OptionLifecycleError("event identity conflicts with previously journaled evidence")
         return False
 
+    @_atomic
     def register_plan(self, *, plan_id: str, account_id: str, decision_at: datetime,
                       quantity: int, observations: tuple[OptionLegObservation, ...],
                       fee_reserve_inr: Decimal, max_quote_age_seconds: float,
@@ -212,6 +246,7 @@ class PaperOptionLifecycle:
         return self._append(plan_id=plan_id, event_id="PLAN", event_type="PLAN_REGISTERED",
                             occurred_at=decision_at, payload=payload)
 
+    @_atomic
     def record_entry_fill(self, *, plan_id: str, fill_id: str, leg_id: str,
                           quantity: int, price: Decimal, fees_inr: Decimal,
                           occurred_at: datetime, quote_observed_at: datetime,
@@ -261,6 +296,7 @@ class PaperOptionLifecycle:
         return self._append(plan_id=plan_id, event_id=event_id,
                             event_type="ENTRY_FILL", occurred_at=occurred_at, payload=payload)
 
+    @_atomic
     def record_close_fill(self, *, plan_id: str, fill_id: str, leg_id: str,
                           quantity: int, price: Decimal, fees_inr: Decimal,
                           occurred_at: datetime, quote_observed_at: datetime,
@@ -307,6 +343,7 @@ class PaperOptionLifecycle:
         return self._append(plan_id=plan_id, event_id=event_id,
                             event_type="CLOSE_FILL", occurred_at=occurred_at, payload=payload)
 
+    @_atomic
     def cancel_entry(self, *, plan_id: str, event_id: str, leg_id: str,
                      occurred_at: datetime, reason: str) -> bool:
         plan = self.state(plan_id)
@@ -326,6 +363,7 @@ class PaperOptionLifecycle:
                             event_type="ENTRY_CANCELLED", occurred_at=occurred_at,
                             payload=payload)
 
+    @_atomic
     def record_expiry_scenario(self, *, plan_id: str, event_id: str,
                                occurred_at: datetime, underlying_price: Decimal,
                                settlement_mode: str) -> bool:

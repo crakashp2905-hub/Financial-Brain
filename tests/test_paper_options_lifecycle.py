@@ -1,5 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import sqlite3
 
@@ -204,3 +205,31 @@ def test_cancelled_leg_rejects_late_fill_and_cancel_replay_is_idempotent(tmp_pat
         _fill(ledger, fill_id="late", leg_id="long", side="BUY", token=1,
               symbol="NIFTY26DEC25000CE", quantity=75, price="101", bid="100",
               ask="101", at=NOW + timedelta(seconds=2))
+
+
+def test_concurrent_partial_fills_cannot_overrun_plan_quantity(tmp_path) -> None:
+    path = tmp_path / "concurrent.sqlite"
+    primary = sqlite3.connect(path, check_same_thread=False, timeout=10)
+    ledger = PaperOptionLifecycle(primary)
+    _plan(ledger)
+    workers = [PaperOptionLifecycle(sqlite3.connect(path, check_same_thread=False, timeout=10))
+               for _ in range(3)]
+
+    def submit(index: int, worker: PaperOptionLifecycle) -> str:
+        try:
+            _fill(worker, fill_id=f"parallel-{index}", leg_id="long", side="BUY", token=1,
+                  symbol="NIFTY26DEC25000CE", quantity=75, price="101", bid="100",
+                  ask="101", at=NOW + timedelta(seconds=2))
+            return "accepted"
+        except OptionLifecycleError as exc:
+            assert "exceeds the frozen plan quantity" in str(exc)
+            return "rejected"
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        results = [future.result() for future in
+                   (executor.submit(submit, index, worker) for index, worker in enumerate(workers))]
+    assert sorted(results) == ["accepted", "accepted", "rejected"]
+    assert ledger.state("spread")["open_quantity_by_leg"]["long"] == 150
+    for worker in workers:
+        worker.connection.close()
+    primary.close()

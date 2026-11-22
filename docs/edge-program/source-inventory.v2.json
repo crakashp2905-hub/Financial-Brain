@@ -9358,6 +9358,7 @@
         "datetime",
         "decimal",
         "financial_brain.forward_edge.options_risk",
+        "functools",
         "hashlib",
         "json",
         "math",
@@ -9369,7 +9370,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_lifecycle.py",
-      "source_sha256": "328a9be9a5ab84ec6a28de988e0e3e39947e5496b4d7f2d86941026058e87706",
+      "source_sha256": "1a2ebc29d4a2952c8ba272007612281132cfcf53248984780ab4a3a4c7be2180",
       "test_paths": []
     },
     {
