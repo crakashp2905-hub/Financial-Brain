@@ -1,0 +1,453 @@
+"""Append-only, paper-only option leg fills and recovery accounting.
+
+This journal deliberately separates economic risk reserve from broker margin and
+expiry scenarios from exchange settlement. It never sends orders to a broker.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import re
+import sqlite3
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from decimal import Decimal
+from typing import Any
+
+from financial_brain.forward_edge.options_risk import (
+    OptionLegQuote,
+    OptionsRiskError,
+    validate_supported_paper_option_structure,
+)
+
+
+class OptionLifecycleError(ValueError):
+    """Invalid option paper lifecycle event or unsafe leg transition."""
+
+
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _aware(value: datetime, label: str) -> None:
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise OptionLifecycleError(f"{label} must be timezone aware")
+
+
+def _canonical(value: dict[str, Any]) -> str:
+    try:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise OptionLifecycleError(f"event is not canonical JSON: {exc}") from exc
+
+
+@dataclass(frozen=True)
+class OptionLegObservation:
+    """Entry leg quote with point-in-time source and custody fields."""
+
+    leg: OptionLegQuote
+    available_at: datetime
+    source: str
+    exchange: str
+    evidence_sha256: str
+
+    def validate(self, *, as_of: datetime, max_age_seconds: float) -> None:
+        _aware(as_of, "as_of")
+        _aware(self.leg.observed_at, "quote observed_at")
+        _aware(self.available_at, "quote available_at")
+        if (not self.source.strip() or not self.exchange.strip()
+                or not _SHA256.fullmatch(self.evidence_sha256)):
+            raise OptionLifecycleError("quote source, exchange and lowercase evidence SHA-256 are required")
+        if self.leg.observed_at > self.available_at or self.available_at > as_of:
+            raise OptionLifecycleError("quote is unavailable or has inconsistent source/availability clocks")
+        if (as_of - self.available_at).total_seconds() > max_age_seconds:
+            raise OptionLifecycleError("quote is stale at the option paper decision")
+        try:
+            self.leg.validate(as_of=as_of, quantity=self.leg.lot_size)
+        except OptionsRiskError as exc:
+            raise OptionLifecycleError(str(exc)) from exc
+
+
+class PaperOptionLifecycle:
+    """SQLite event journal for safe partial option fills and crash recovery."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self.connection = connection
+        self.connection.execute("""CREATE TABLE IF NOT EXISTS option_lifecycle_events (
+            sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+            plan_id TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            occurred_at TEXT NOT NULL,
+            previous_sha256 TEXT NOT NULL,
+            event_sha256 TEXT NOT NULL,
+            event_json TEXT NOT NULL,
+            UNIQUE(plan_id, event_id))""")
+        self.connection.executescript("""
+            CREATE TRIGGER IF NOT EXISTS option_lifecycle_no_update
+            BEFORE UPDATE ON option_lifecycle_events
+            BEGIN SELECT RAISE(ABORT, 'option lifecycle is append-only'); END;
+            CREATE TRIGGER IF NOT EXISTS option_lifecycle_no_delete
+            BEFORE DELETE ON option_lifecycle_events
+            BEGIN SELECT RAISE(ABORT, 'option lifecycle is append-only'); END;
+        """)
+
+    def _events(self, plan_id: str) -> list[dict[str, Any]]:
+        rows = self.connection.execute(
+            "SELECT event_id,event_type,occurred_at,previous_sha256,event_sha256,event_json "
+            "FROM option_lifecycle_events WHERE plan_id=? ORDER BY sequence", [plan_id]).fetchall()
+        previous = "GENESIS"
+        previous_time: str | None = None
+        events = []
+        for event_id, kind, occurred_at, stored_previous, digest, encoded in rows:
+            payload = json.loads(encoded)
+            expected = hashlib.sha256((previous + _canonical(payload)).encode("utf-8")).hexdigest()
+            if stored_previous != previous or digest != expected or (previous_time and occurred_at < previous_time):
+                raise OptionLifecycleError("option lifecycle journal hash chain is corrupt")
+            events.append({"event_id": event_id, "type": kind, "occurred_at": occurred_at,
+                           "payload": payload, "sha256": digest})
+            previous = digest
+            previous_time = occurred_at
+        return events
+
+    def _append(self, *, plan_id: str, event_id: str, event_type: str,
+                occurred_at: datetime, payload: dict[str, Any]) -> bool:
+        if not plan_id.strip() or not event_id.strip() or not event_type.strip():
+            raise OptionLifecycleError("plan, event and event type identities are required")
+        _aware(occurred_at, "occurred_at")
+        encoded = _canonical(payload)
+        stamp = occurred_at.astimezone(timezone.utc).isoformat()
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            prior = self.connection.execute(
+                "SELECT event_type,event_json FROM option_lifecycle_events WHERE plan_id=? AND event_id=?",
+                [plan_id, event_id]).fetchone()
+            if prior:
+                if prior != (event_type, encoded):
+                    raise OptionLifecycleError("event identity conflicts with previously journaled evidence")
+                self.connection.commit()
+                return False
+            previous_row = self.connection.execute(
+                "SELECT event_sha256,occurred_at FROM option_lifecycle_events "
+                "WHERE plan_id=? ORDER BY sequence DESC LIMIT 1",
+                [plan_id]).fetchone()
+            previous = previous_row[0] if previous_row else "GENESIS"
+            if previous_row and stamp < previous_row[1]:
+                raise OptionLifecycleError("option lifecycle event time cannot regress")
+            digest = hashlib.sha256((previous + encoded).encode("utf-8")).hexdigest()
+            self.connection.execute(
+                "INSERT INTO option_lifecycle_events "
+                "(plan_id,event_id,event_type,occurred_at,previous_sha256,event_sha256,event_json) "
+                "VALUES(?,?,?,?,?,?,?)",
+                [plan_id, event_id, event_type, stamp, previous, digest, encoded])
+            self.connection.commit()
+            return True
+        except Exception:
+            self.connection.rollback()
+            raise
+
+    def _existing_result(self, *, plan_id: str, event_id: str,
+                         event_type: str, payload: dict[str, Any]) -> bool | None:
+        prior = self.connection.execute(
+            "SELECT event_type,event_json FROM option_lifecycle_events WHERE plan_id=? AND event_id=?",
+            [plan_id, event_id]).fetchone()
+        if prior is None:
+            return None
+        if prior != (event_type, _canonical(payload)):
+            raise OptionLifecycleError("event identity conflicts with previously journaled evidence")
+        return False
+
+    def register_plan(self, *, plan_id: str, account_id: str, decision_at: datetime,
+                      quantity: int, observations: tuple[OptionLegObservation, ...],
+                      fee_reserve_inr: Decimal, max_quote_age_seconds: float,
+                      cost_model_sha256: str) -> bool:
+        """Freeze a long-option/debit-vertical paper plan and its cash reserve."""
+        _aware(decision_at, "decision_at")
+        if not plan_id.strip() or not account_id.strip() or quantity < 1:
+            raise OptionLifecycleError("paper account, plan identity and positive quantity are required")
+        if (not fee_reserve_inr.is_finite() or fee_reserve_inr <= 0
+                or not math.isfinite(max_quote_age_seconds) or max_quote_age_seconds < 0):
+            raise OptionLifecycleError("fee reserve must be positive and quote-age policy finite and non-negative")
+        if not _SHA256.fullmatch(cost_model_sha256):
+            raise OptionLifecycleError("cost model needs a lowercase SHA-256 identity")
+        if not observations:
+            raise OptionLifecycleError("at least one observed option leg is required")
+        for item in observations:
+            item.validate(as_of=decision_at, max_age_seconds=max_quote_age_seconds)
+        legs = tuple(item.leg for item in observations)
+        lot_sizes = {leg.lot_size for leg in legs}
+        if len(lot_sizes) != 1 or quantity % next(iter(lot_sizes)):
+            raise OptionLifecycleError("planned quantity must be whole lots shared by all legs")
+        try:
+            structure = validate_supported_paper_option_structure(legs=legs, quantity=quantity)
+        except OptionsRiskError as exc:
+            raise OptionLifecycleError(str(exc)) from exc
+        premium_risk = Decimal(str(structure["economic_max_loss_inr"]))
+        reserve = premium_risk + fee_reserve_inr
+        frozen_legs = []
+        for item in observations:
+            leg = item.leg
+            frozen_legs.append({
+                "leg_id": leg.leg_id, "side": leg.side, "token": leg.token,
+                "symbol": leg.symbol, "underlying": leg.underlying,
+                "option_type": leg.option_type, "strike": leg.strike,
+                "expiry": leg.expiry.isoformat(), "lot_size": leg.lot_size,
+                "bid": leg.bid, "ask": leg.ask, "bid_qty": leg.bid_qty, "ask_qty": leg.ask_qty,
+                "quote_observed_at": leg.observed_at.isoformat(),
+                "quote_available_at": item.available_at.isoformat(),
+                "source": item.source, "exchange": item.exchange,
+                "evidence_sha256": item.evidence_sha256,
+            })
+        payload = {
+            "account_id": account_id, "decision_at": decision_at.isoformat(),
+            "target_quantity": quantity, "legs": frozen_legs,
+            "strategy_type": structure["strategy_type"],
+            "premium_risk_inr": str(premium_risk), "fee_reserve_inr": str(fee_reserve_inr),
+            "cash_reserve_inr": str(reserve), "margin_status": "NOT_VERIFIED",
+            "cost_model_sha256": cost_model_sha256,
+            "max_quote_age_seconds": max_quote_age_seconds,
+            "simulation_fidelity": "OBSERVED_QUOTE_SIM",
+        }
+        return self._append(plan_id=plan_id, event_id="PLAN", event_type="PLAN_REGISTERED",
+                            occurred_at=decision_at, payload=payload)
+
+    def record_entry_fill(self, *, plan_id: str, fill_id: str, leg_id: str,
+                          quantity: int, price: Decimal, fees_inr: Decimal,
+                          occurred_at: datetime, quote_observed_at: datetime,
+                          quote_available_at: datetime, bid: Decimal, ask: Decimal,
+                          bid_qty: int, ask_qty: int, source: str, exchange: str,
+                          evidence_sha256: str, token: int, symbol: str,
+                          expiry: str, lot_size: int) -> bool:
+        plan = self.state(plan_id)
+        leg = self._leg(plan, leg_id)
+        self._validate_event_quote(occurred_at=occurred_at, quote_observed_at=quote_observed_at,
+                                   quote_available_at=quote_available_at, price=price, bid=bid,
+                                   ask=ask, bid_qty=bid_qty, ask_qty=ask_qty,
+                                   source=source, exchange=exchange, evidence_sha256=evidence_sha256,
+                                   max_age_seconds=plan["max_quote_age_seconds"], token=token,
+                                   symbol=symbol, expiry=expiry, lot_size=lot_size, expected_leg=leg)
+        if quantity < 1 or quantity % leg["lot_size"] or price <= 0 or not fees_inr.is_finite() or fees_inr < 0:
+            raise OptionLifecycleError("entry fill must be positive whole lots with valid price and fees")
+        payload = {"leg_id": leg_id, "side": leg["side"], "quantity": quantity,
+                   "price": str(price), "fees_inr": str(fees_inr), "bid": str(bid), "ask": str(ask),
+                   "quote_observed_at": quote_observed_at.isoformat(),
+                   "quote_available_at": quote_available_at.isoformat(), "source": source,
+                   "exchange": exchange, "evidence_sha256": evidence_sha256}
+        event_id = f"ENTRY_FILL:{fill_id}"
+        duplicate = self._existing_result(plan_id=plan_id, event_id=event_id,
+                                          event_type="ENTRY_FILL", payload=payload)
+        if duplicate is not None:
+            return duplicate
+        if Decimal(plan["entry_fees_inr"]) + fees_inr > Decimal(plan["fee_reserve_inr"]):
+            raise OptionLifecycleError("entry fill would exceed the frozen fee reserve")
+        if quantity > (ask_qty if leg["side"] == "BUY" else bid_qty):
+            raise OptionLifecycleError("entry fill exceeds displayed executable quote depth")
+        if any(event["type"] == "ENTRY_CANCELLED" and event["payload"]["leg_id"] == leg_id
+               for event in plan["events"]):
+            raise OptionLifecycleError("entry fill arrived after the leg remainder was cancelled")
+        if (leg["side"] == "BUY" and price < ask) or (leg["side"] == "SELL" and price > bid):
+            raise OptionLifecycleError("entry fill is better than its executable ask/bid reference")
+        open_qty = plan["open_quantity_by_leg"]
+        if open_qty[leg_id] + quantity > plan["target_quantity"]:
+            raise OptionLifecycleError("entry fill exceeds the frozen plan quantity")
+        protective = next((row["leg_id"] for row in plan["legs"] if row["side"] == "BUY"), None)
+        if leg["side"] == "SELL" and (protective is None or
+                                        open_qty[protective] < open_qty[leg_id] + quantity):
+            raise OptionLifecycleError("short fill exceeds already-filled protective long quantity")
+        return self._append(plan_id=plan_id, event_id=event_id,
+                            event_type="ENTRY_FILL", occurred_at=occurred_at, payload=payload)
+
+    def record_close_fill(self, *, plan_id: str, fill_id: str, leg_id: str,
+                          quantity: int, price: Decimal, fees_inr: Decimal,
+                          occurred_at: datetime, quote_observed_at: datetime,
+                          quote_available_at: datetime, bid: Decimal, ask: Decimal,
+                          bid_qty: int, ask_qty: int, source: str, exchange: str,
+                          evidence_sha256: str, token: int, symbol: str,
+                          expiry: str, lot_size: int) -> bool:
+        plan = self.state(plan_id)
+        leg = self._leg(plan, leg_id)
+        self._validate_event_quote(occurred_at=occurred_at, quote_observed_at=quote_observed_at,
+                                   quote_available_at=quote_available_at, price=price, bid=bid,
+                                   ask=ask, bid_qty=bid_qty, ask_qty=ask_qty,
+                                   source=source, exchange=exchange, evidence_sha256=evidence_sha256,
+                                   max_age_seconds=plan["max_quote_age_seconds"], token=token,
+                                   symbol=symbol, expiry=expiry, lot_size=lot_size, expected_leg=leg)
+        close_side = "SELL" if leg["side"] == "BUY" else "BUY"
+        payload = {"leg_id": leg_id, "entry_side": leg["side"], "close_side": close_side,
+                   "quantity": quantity, "price": str(price), "fees_inr": str(fees_inr),
+                   "bid": str(bid), "ask": str(ask),
+                   "quote_observed_at": quote_observed_at.isoformat(),
+                   "quote_available_at": quote_available_at.isoformat(), "source": source,
+                   "exchange": exchange, "evidence_sha256": evidence_sha256}
+        event_id = f"CLOSE_FILL:{fill_id}"
+        duplicate = self._existing_result(plan_id=plan_id, event_id=event_id,
+                                          event_type="CLOSE_FILL", payload=payload)
+        if duplicate is not None:
+            return duplicate
+        open_qty = plan["open_quantity_by_leg"]
+        if quantity < 1 or quantity % leg["lot_size"] or quantity > open_qty[leg_id]:
+            raise OptionLifecycleError("close fill must be positive whole lots within the open leg quantity")
+        depth = bid_qty if close_side == "SELL" else ask_qty
+        if quantity > depth:
+            raise OptionLifecycleError("close fill exceeds displayed executable quote depth")
+        if (close_side == "SELL" and price > bid) or (close_side == "BUY" and price < ask):
+            raise OptionLifecycleError("close fill is better than its executable bid/ask reference")
+        if not fees_inr.is_finite() or fees_inr < 0 or price <= 0:
+            raise OptionLifecycleError("close fill needs a positive price and non-negative fees")
+        protective = next((row["leg_id"] for row in plan["legs"] if row["side"] == "BUY"), None)
+        short_leg = next((row["leg_id"] for row in plan["legs"] if row["side"] == "SELL"), None)
+        if leg["side"] == "BUY" and short_leg and open_qty[protective] - quantity < open_qty[short_leg]:
+            raise OptionLifecycleError("cannot close protection while an uncovered short leg remains")
+        return self._append(plan_id=plan_id, event_id=event_id,
+                            event_type="CLOSE_FILL", occurred_at=occurred_at, payload=payload)
+
+    def cancel_entry(self, *, plan_id: str, event_id: str, leg_id: str,
+                     occurred_at: datetime, reason: str) -> bool:
+        plan = self.state(plan_id)
+        self._leg(plan, leg_id)
+        payload = {"leg_id": leg_id, "reason": reason}
+        journal_id = f"CANCEL:{event_id}"
+        duplicate = self._existing_result(plan_id=plan_id, event_id=journal_id,
+                                          event_type="ENTRY_CANCELLED", payload=payload)
+        if duplicate is not None:
+            return duplicate
+        if any(event["type"] == "ENTRY_CANCELLED" and event["payload"]["leg_id"] == leg_id
+               for event in plan["events"]):
+            raise OptionLifecycleError("entry leg is already cancelled")
+        if not reason.strip():
+            raise OptionLifecycleError("cancellation reason is required")
+        return self._append(plan_id=plan_id, event_id=journal_id,
+                            event_type="ENTRY_CANCELLED", occurred_at=occurred_at,
+                            payload=payload)
+
+    def record_expiry_scenario(self, *, plan_id: str, event_id: str,
+                               occurred_at: datetime, underlying_price: Decimal,
+                               settlement_mode: str) -> bool:
+        plan = self.state(plan_id)
+        _aware(occurred_at, "expiry scenario time")
+        if settlement_mode not in {"CASH_SETTLED", "PHYSICAL_DELIVERY"}:
+            raise OptionLifecycleError("expiry scenario requires an explicit settlement mode")
+        if not underlying_price.is_finite() or underlying_price <= 0:
+            raise OptionLifecycleError("expiry scenario underlying price must be positive and finite")
+        latest_expiry = max(leg["expiry"] for leg in plan["legs"])
+        if occurred_at.date().isoformat() < latest_expiry:
+            raise OptionLifecycleError("expiry scenario cannot be recorded before the contract expiry date")
+        payload = {"underlying_price": str(underlying_price),
+                   "settlement_mode": settlement_mode, "status": "SCENARIO_ONLY_NOT_SETTLEMENT",
+                   "open_quantity_by_leg": plan["open_quantity_by_leg"]}
+        return self._append(plan_id=plan_id, event_id=f"EXPIRY_SCENARIO:{event_id}",
+                            event_type="EXPIRY_SCENARIO", occurred_at=occurred_at, payload=payload)
+
+    def state(self, plan_id: str) -> dict[str, Any]:
+        events = self._events(plan_id)
+        if not events or events[0]["type"] != "PLAN_REGISTERED":
+            raise OptionLifecycleError("paper option plan is missing its frozen registration event")
+        plan = dict(events[0]["payload"])
+        legs = plan["legs"]
+        open_by_leg = {leg["leg_id"]: 0 for leg in legs}
+        entry_fees = Decimal(0)
+        close_fees = Decimal(0)
+        cash = Decimal(0)
+        fills = set()
+        cancelled = set()
+        for event in events[1:]:
+            payload = event["payload"]
+            if event["type"] == "EXPIRY_SCENARIO":
+                continue
+            leg = self._leg_from_rows(legs, payload["leg_id"])
+            quantity = payload.get("quantity", 0)
+            if event["type"] == "ENTRY_FILL":
+                if payload["side"] != leg["side"] or quantity < 1 or quantity % leg["lot_size"]:
+                    raise OptionLifecycleError("entry fill contradicts the frozen leg or lot size")
+                fill_id = event["event_id"]
+                if fill_id in fills:
+                    raise OptionLifecycleError("duplicate fill event in lifecycle history")
+                fills.add(fill_id)
+                open_by_leg[leg["leg_id"]] += quantity
+                sign = Decimal(-1) if leg["side"] == "BUY" else Decimal(1)
+                fees = Decimal(payload["fees_inr"])
+                cash += sign * Decimal(payload["price"]) * quantity - fees
+                entry_fees += fees
+            elif event["type"] == "CLOSE_FILL":
+                expected_close = "SELL" if leg["side"] == "BUY" else "BUY"
+                if (payload["entry_side"] != leg["side"] or payload["close_side"] != expected_close
+                        or quantity < 1 or quantity % leg["lot_size"]):
+                    raise OptionLifecycleError("close fill contradicts the frozen leg or lot size")
+                if quantity > open_by_leg[leg["leg_id"]]:
+                    raise OptionLifecycleError("close event exceeds preceding open position")
+                open_by_leg[leg["leg_id"]] -= quantity
+                sign = Decimal(1) if payload["close_side"] == "SELL" else Decimal(-1)
+                fees = Decimal(payload["fees_inr"])
+                cash += sign * Decimal(payload["price"]) * quantity - fees
+                close_fees += fees
+            elif event["type"] == "ENTRY_CANCELLED":
+                cancelled.add(leg["leg_id"])
+        short = next((leg["leg_id"] for leg in legs if leg["side"] == "SELL"), None)
+        protective = next((leg["leg_id"] for leg in legs if leg["side"] == "BUY"), None)
+        if short and open_by_leg[short] > open_by_leg[protective]:
+            raise OptionLifecycleError("journal reconstructs an uncovered short option position")
+        expiry_unresolved = any(event["type"] == "EXPIRY_SCENARIO" for event in events) and any(open_by_leg.values())
+        total_filled = sum(open_by_leg.values())
+        fees_total = entry_fees + close_fees
+        fee_reserve = Decimal(plan["fee_reserve_inr"])
+        if expiry_unresolved:
+            status = "OPEN_AT_EXPIRY_UNRESOLVED"
+        elif not total_filled:
+            status = ("CLOSED" if any(event["type"] == "CLOSE_FILL" for event in events)
+                      else "CANCELLED_UNFILLED" if cancelled else "UNFILLED")
+        elif any(leg_id in cancelled for leg_id in open_by_leg):
+            status = "PARTIALLY_OPEN_CANCELLED_REMAINDER"
+        elif all(open_by_leg[leg["leg_id"]] == plan["target_quantity"] for leg in legs):
+            status = "OPEN"
+        else:
+            status = "PARTIALLY_OPEN"
+        plan.update({"status": status, "open_quantity_by_leg": open_by_leg,
+                     "entry_fees_inr": str(entry_fees), "close_fees_inr": str(close_fees),
+                     "fees_total_inr": str(fees_total),
+                     "fee_reserve_remaining_inr": str(max(Decimal(0), fee_reserve - fees_total)),
+                     "fee_reserve_breached": fees_total > fee_reserve,
+                     "net_cashflow_inr": str(cash), "event_count": len(events),
+                     "events": events,
+                     "margin_status": "NOT_VERIFIED",
+                     "simulation_fidelity": "OBSERVED_QUOTE_SIM"})
+        return plan
+
+    @staticmethod
+    def _leg(plan: dict[str, Any], leg_id: str) -> dict[str, Any]:
+        return PaperOptionLifecycle._leg_from_rows(plan["legs"], leg_id)
+
+    @staticmethod
+    def _leg_from_rows(legs: list[dict[str, Any]], leg_id: str) -> dict[str, Any]:
+        found = next((leg for leg in legs if leg["leg_id"] == leg_id), None)
+        if found is None:
+            raise OptionLifecycleError("event references an unknown option leg")
+        return found
+
+    @staticmethod
+    def _validate_event_quote(*, occurred_at: datetime, quote_observed_at: datetime,
+                              quote_available_at: datetime, price: Decimal, bid: Decimal,
+                              ask: Decimal, bid_qty: int, ask_qty: int, source: str,
+                              exchange: str, evidence_sha256: str,
+                              max_age_seconds: float, token: int, symbol: str,
+                              expiry: str, lot_size: int, expected_leg: dict[str, Any]) -> None:
+        _aware(occurred_at, "fill time")
+        _aware(quote_observed_at, "quote source time")
+        _aware(quote_available_at, "quote availability time")
+        if (quote_observed_at > quote_available_at or quote_available_at > occurred_at
+                or not source.strip() or not exchange.strip()
+                or not _SHA256.fullmatch(evidence_sha256)):
+            raise OptionLifecycleError("fill needs chronological quote clocks and hashed source/exchange evidence")
+        if occurred_at.date().isoformat() >= expiry:
+            raise OptionLifecycleError("option fill is invalid on or after its expiry date")
+        if (occurred_at - quote_available_at).total_seconds() > max_age_seconds:
+            raise OptionLifecycleError("fill quote is stale under the frozen plan policy")
+        if (token, symbol, expiry, lot_size) != (
+                expected_leg["token"], expected_leg["symbol"],
+                expected_leg["expiry"], expected_leg["lot_size"]):
+            raise OptionLifecycleError("fill quote contract identity differs from the frozen option leg")
+        if (not price.is_finite() or not bid.is_finite() or not ask.is_finite()
+                or price <= 0 or bid <= 0 or ask < bid or bid_qty < 0 or ask_qty < 0):
+            raise OptionLifecycleError("fill quote and displayed depth must be positive and valid")
+
+
+__all__ = ["OptionLegObservation", "OptionLifecycleError", "PaperOptionLifecycle"]
