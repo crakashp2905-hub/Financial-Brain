@@ -1629,6 +1629,12 @@
       "module_owner": "src/financial_brain/forward_edge/lookahead.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/manual_paper_decisions.py",
+      "path": "src/financial_brain/forward_edge/manual_paper_decisions.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/manual_paper_decisions.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/market_data.py",
       "path": "src/financial_brain/forward_edge/market_data.py",
       "module_role": "canonical_contract_or_signal_output",
