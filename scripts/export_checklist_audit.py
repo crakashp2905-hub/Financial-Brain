@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import re
+from collections import Counter
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -74,6 +75,21 @@ def rendered_text() -> str:
     if source_hash != status.get("source_sha256"):
         raise ValueError("source checklist hash does not match the status ledger")
     rows = render_rows(status, source_text)
+    observed_counts = Counter(item["status"] for item in status["items"])
+    expected_counts = {key: observed_counts.get(key, 0) for key in sorted(STATUSES)}
+    if status.get("counts_by_status") != expected_counts:
+        raise ValueError("status ledger counts_by_status does not match item statuses")
+    summary = status.get("assessment_summary", {})
+    audited_items = [item for item in status["items"] if item["status"] != "UNASSESSED"]
+    audited_ids = [item["id"] for item in audited_items]
+    if summary.get("audited_ids") != audited_ids:
+        raise ValueError("assessment summary audited_ids does not match assessed items")
+    if summary.get("audited_count") != len(audited_items):
+        raise ValueError("assessment summary audited_count does not match item statuses")
+    if summary.get("verified_complete_count") != observed_counts.get("COMPLETE", 0):
+        raise ValueError("assessment summary verified_complete_count does not match item statuses")
+    if summary.get("status_counts") != expected_counts:
+        raise ValueError("assessment summary status_counts does not match item statuses")
     return "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in rows)
 
 
