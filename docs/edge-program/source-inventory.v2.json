@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 672,
+  "source_count": 673,
   "sources": [
     {
       "capability_ids": [],
@@ -7705,6 +7705,27 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "hashlib",
+        "json",
+        "re",
+        "trading_clock"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/mf_systematic_flows.py",
+      "source_sha256": "ff2286f8ae8199c22f3e9d18f16ee8d064218a06afe9d2c410ab1331756280fd",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "decimal",
         "enum"
       ],
@@ -11779,6 +11800,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 657,
-  "unassigned_role_count": 393
+  "unassessed_count": 658,
+  "unassigned_role_count": 394
 }
