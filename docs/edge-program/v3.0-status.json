@@ -2913,13 +2913,15 @@
       "status": "PARTIAL",
       "evidence": [
         "The append-only order journal now distinguishes CREATED, SUBMITTED, ACCEPTED, WORKING, PARTIAL, FILLED, CANCEL_PENDING, CANCELED, REJECTED, MISSED, TIMED_OUT, UNKNOWN and EXPIRED with explicit legal transitions, including fills that race a cancel request.",
-        "Cumulative fill quantity cannot increase outside PARTIAL/FILLED; every new fill increase requires an immutable SHA-256 fill-evidence ID and positive price. New/accepted/working/missed/rejected states cannot invent fills. Ambiguous UNKNOWN/TIMED_OUT resolution requires reconciliation evidence.",
-        "The read-only blotter marks acceptance/working/cancel-pending/partial/timeout/unknown orders unresolved and hides fill quantity where the outcome is ambiguous. The journal remains separate from the canonical session runner, cash PaperAccount, options ledger and legacy adapters."
+        "The ForwardSessionRunner persists order events in the same SQLite journal as its durable outbox and paper receipts. Intents record CREATED/SUBMITTED; successful receipts record PARTIAL/FILLED/MISSED/REJECTED; a durable outbox exception or restart records UNKNOWN. Session records return the canonical per-order event trace.",
+        "Resume reconstructs a missing terminal event only from an already DISPATCHED outbox and its hashed durable receipt. It never turns a PENDING/UNKNOWN key into a fill; receipt-based effect reconciliation or explicit no-effect reconciliation is required first.",
+        "Cumulative fill quantity cannot increase outside PARTIAL/FILLED; every increase requires an immutable SHA-256 fill-evidence ID and positive price. UNKNOWN/TIMED_OUT quantities are not counted as known. Complete session close is blocked while an order remains PARTIAL/WORKING/UNKNOWN or otherwise unresolved.",
+        "The read-only blotter marks accepted/working/cancel-pending/partial/timeout/unknown orders unresolved and hides fill quantity where outcome is ambiguous. Cash PaperAccount, options ledger and legacy intraday OMS adapters retain separate state models."
       ],
-      "blocker": "The lifecycle journal is not yet transactionally integrated with the canonical ForwardSessionRunner receipt/accounting path or unified with cash, options and legacy intraday OMS adapters; broad failure-recovery drills remain outstanding.",
-      "last_audited_at_utc": "2026-11-22T15:00:36Z",
-      "commit": "16017a8c",
-      "test_result": "python -m pytest tests/test_forward_edge_order_journal.py tests/test_forward_edge_order_blotter.py -q: 9 passed in 4.00s. Ruff and targeted mypy passed."
+      "blocker": "The shared order journal is integrated with ForwardSessionRunner but not yet unified transactionally across cash, options and legacy intraday books. The one-snapshot simulator does not produce broker ACCEPTED/WORKING acknowledgements, and cross-desk OMS failure-recovery drills remain outstanding.",
+      "last_audited_at_utc": "2026-11-22T15:23:55Z",
+      "commit": "b2d6e71b",
+      "test_result": "python -m pytest tests/test_forward_edge_session_runner.py tests/test_forward_edge_order_journal.py tests/test_forward_edge_order_blotter.py -q: 69 passed in 322.85s. Ruff and targeted mypy passed."
     },
     {
       "id": "FB-0805",

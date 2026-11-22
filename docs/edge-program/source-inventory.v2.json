@@ -4613,7 +4613,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/order_journal.py",
-      "source_sha256": "4d0e25d28ec32e275c619f5c77e77ed34ebd628d34002c15bd30ed1fbab974f6",
+      "source_sha256": "2f1981131f1fc69bcc572d80a088d5eab837d3901458b567fb123234cdaeaab5",
       "test_paths": []
     },
     {
@@ -5190,6 +5190,7 @@
         "financial_brain.forward_edge.intent_timing",
         "financial_brain.forward_edge.market_data",
         "financial_brain.forward_edge.market_events",
+        "financial_brain.forward_edge.order_journal",
         "financial_brain.forward_edge.paper_accounting",
         "financial_brain.forward_edge.provenance",
         "financial_brain.forward_edge.quote_archive",
@@ -5210,7 +5211,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "205a2b7c680ca507dd7b1c0dbb4f31b1951edea14f4653c248d1ae3ab3c2677c",
+      "source_sha256": "ca9c0a1f8ecd282e8618b32d51c1e199eccad7437ee3e4992041edf7ca6a6f81",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
