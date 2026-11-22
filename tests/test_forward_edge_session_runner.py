@@ -21,6 +21,9 @@ from financial_brain.forward_edge.paper_book_adapter import (
     record_exit_decision,
     reconcile_entry_receipt,
 )
+from financial_brain.forward_edge.strategy_adapter import CandidateSignal
+from financial_brain.forward_edge.strategy_pipeline import execute_candidate
+from financial_brain.kernel.registry import StrategyEligibility, StrategySpec
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
     ForwardSessionStore,
@@ -463,6 +466,85 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
     if persist:
         return runner.record_decision_manifest(session_id=session_id, decision_id=decision_id, manifest=manifest)
     return manifest
+
+
+def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    spec = StrategySpec(
+        "orb", "v1", {"window": 15}, "test-owner", family="session_breakout",
+        code_sha256="a" * 64, asset_scope=("NSE_EQ",), decision_clock="bar_close",
+        direction="LONG", stop_exit="range_low", horizon="intraday",
+        data_requirements=("ohlcv_1m",),
+    )
+    eligibility = StrategyEligibility(
+        "orb", "v1", "PAPER_ELIGIBLE", "tests/frozen-orb.json", "b" * 64,
+        "approved test fixture", spec.hash(),
+    )
+    config = replace(config, constraints={
+        **config.constraints, "strategy_eligibilities": [eligibility.__dict__],
+    })
+    opened(runner, config=config)
+    signal_event = make_event()
+    runner.ingest("s", config, [signal_event])
+    decided_at = NOW + timedelta(milliseconds=10)
+    quote = {
+        "timestamp": "2026-11-13 10:15:00", "last_price": 100.05, "volume": 1000,
+        "depth": {"buy": [{"price": 100.0, "quantity": 20}],
+                  "sell": [{"price": 100.1, "quantity": 3}]},
+    }
+    fill_event = normalize_kite_quote(
+        "NSE:INFY", quote, received_at=decided_at + timedelta(milliseconds=100)
+    )
+    runner.ingest("s", config, [fill_event])
+    signal = CandidateSignal(
+        "orb", "v1", "NSE:INFY", "BUY", 2, "candidate-1",
+        decided_at.isoformat(), Decimal("100.1"), {"setup": "opening-range"},
+    )
+    manifest = record_manifest(
+        runner, session_id="s", decision_id="candidate-1", event=signal_event,
+        decided_at=decided_at, quantity=2, persist=False,
+    )
+    result = execute_candidate(
+        runner,
+        session_id="s",
+        spec=spec,
+        eligibility=eligibility,
+        signal=signal,
+        input_event_ids=(signal_event.event_id,),
+        manifest=manifest,
+        risk={"allowed": True, "policy_id": "risk-v1", "policy_sha256": "c" * 64,
+              "assessed_at": decided_at},
+        execution={
+            "event_id": fill_event.event_id,
+            "limit_price": Decimal("100.1"),
+            "tick_size": Decimal("0.05"),
+            "freeze_limit": 1000,
+            "slice_size": 1000,
+            "adverse_slippage_bps": Decimal("0"),
+            "latency_ms": 100,
+            "simulated_at": decided_at + timedelta(milliseconds=101),
+            "max_wait_ms": 5000,
+        },
+    )
+    records = runner.records("s")
+    assert result.receipt is not None
+    assert result.receipt["filled_quantity"] == 2
+    assert records["decisions"][0]["payload"]["candidate_intent"]["intent_id"] == result.intent.intent_id
+    assert records["intents"][0]["order_id"] == result.intent.intent_id
+    assert records["accounting"]["errors"] == []
+    assert records["accounting"]["positions"]["NSE:INFY"] == 2
+    with pytest.raises(ForwardSessionRunnerError, match="canonical candidate intent"):
+        runner.execute_paper_intent(
+            session_id="s", order_id="forged-order", decision_id="candidate-1",
+            event_id=fill_event.event_id, side="BUY", quantity=2,
+            limit_price=Decimal("100.1"), tick_size=Decimal("0.05"),
+            freeze_limit=1000, slice_size=1000, adverse_slippage_bps=Decimal("0"),
+            latency_ms=100, simulated_at=decided_at + timedelta(milliseconds=101),
+            max_wait_ms=5000,
+        )
+    assert len(runner.records("s")["intents"]) == 1
+    runner.close()
 
 
 def execute(runner, event, decided, *, order_id="order-1", qty=2, limit="100.30",
