@@ -2586,7 +2586,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-22T06:41:46Z",
-      "commit": null,
+      "commit": "3477ccb0",
       "test_result": "Focused MF purchase, payment, order, lot, SIP, and migration suites: 41 passed; Ruff and targeted mypy passed.",
       "test_evidence": [
         "Focused MF purchase, payment, order, lot, SIP, and migration suites: 41 passed; Ruff and targeted mypy passed.",
@@ -2605,7 +2605,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-22T06:41:46Z",
-      "commit": null,
+      "commit": "3477ccb0",
       "test_result": "Focused MF purchase, payment, order, lot, SIP, and migration suites: 41 passed; Ruff and targeted mypy passed. Tests cover unavailable and wrong-date NAV, exact later NAV, fractional unit precision, cash/lot reconciliation and replay.",
       "test_evidence": [
         "Focused MF purchase, payment, order, lot, SIP, and migration suites: 41 passed; Ruff and targeted mypy passed. Tests cover unavailable and wrong-date NAV, exact later NAV, fractional unit precision, cash/lot reconciliation and replay.",
