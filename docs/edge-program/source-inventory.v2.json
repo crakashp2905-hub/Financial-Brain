@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 673,
+  "source_count": 674,
   "sources": [
     {
       "capability_ids": [],
@@ -9086,6 +9086,26 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "datetime",
+        "forward_edge.data_permissions",
+        "hashlib",
+        "json",
+        "kernel.mf_systematic_flows",
+        "kernel.trading_clock",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_systematic_flow_book.py",
+      "source_sha256": "ee97aec552ac0bd53b4429f3d012ba209d2e4b8e329a7adebb5dd4e732ccd244",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "costs.india",
         "dataclasses",
         "datetime"
@@ -11800,6 +11820,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 658,
+  "unassessed_count": 659,
   "unassigned_role_count": 394
 }
