@@ -13,6 +13,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
+import hashlib
+import json
 from pathlib import Path
 import re
 from uuid import uuid4
@@ -73,18 +75,51 @@ class FeeSchedule:
                    Decimal(value["minimum_per_fill"]))
 
 
+@dataclass(frozen=True)
+class TraderApproval:
+    """Local approval receipt bound to one exact paper order intent."""
+
+    approval_id: str
+    account_id: str
+    approved_by: str
+    approved_at: datetime
+    order_sha256: str
+
+    def as_dict(self) -> dict[str, str]:
+        if (not isinstance(self.approval_id, str)
+                or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", self.approval_id)
+                or not isinstance(self.account_id, str)
+                or not re.fullmatch(r"[A-Za-z0-9_.:@-]{1,96}", self.account_id)
+                or not isinstance(self.approved_by, str) or not self.approved_by.strip()
+                or not isinstance(self.order_sha256, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", self.order_sha256)
+                or not isinstance(self.approved_at, datetime)
+                or self.approved_at.tzinfo is None or self.approved_at.utcoffset() is None):
+            raise PaperAccountError("trader approval needs stable identities, an aware time and order hash")
+        return {"approval_id": self.approval_id, "account_id": self.account_id,
+                "approved_by": self.approved_by,
+                "approved_at": self.approved_at.astimezone(timezone.utc).isoformat(),
+                "order_sha256": self.order_sha256}
+
+
 class PaperAccount:
     """Durable paper book for one account and currency; no broker or live-order path exists."""
 
+    EXECUTION_MODES = frozenset({"AUTOMATIC", "TRADER_APPROVED"})
+
     def __init__(self, path: Path, *, account_id: str, initial_cash: Decimal, currency: str = "INR",
-                 fee_schedule: FeeSchedule | None = None) -> None:
+                 fee_schedule: FeeSchedule | None = None,
+                 execution_mode: str = "AUTOMATIC") -> None:
         if not account_id or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", account_id):
             raise PaperAccountError("account_id must be a non-empty stable identifier")
         if not re.fullmatch(r"[A-Z]{3}", currency):
             raise PaperAccountError("currency must be a three-letter uppercase code")
+        if execution_mode not in self.EXECUTION_MODES:
+            raise PaperAccountError("execution_mode must be AUTOMATIC or TRADER_APPROVED")
         self.path = Path(path)
         self.account_id = account_id
         self.currency = currency
+        self.execution_mode = execution_mode
         self.journal = DurableJournal(self.path)
         records = self.journal.records()
         cash = Decimal(initial_cash)
@@ -92,7 +127,8 @@ class PaperAccount:
             raise PaperAccountError("initial_cash must be a positive finite Decimal")
         schedule_data = fee_schedule.as_dict() if fee_schedule is not None else None
         opening = {"t": "ACCOUNT_OPEN", "account": account_id, "cash": format(cash, "f"),
-                   "currency": currency, "fee_schedule": schedule_data}
+                   "currency": currency, "fee_schedule": schedule_data,
+                   "execution_mode": execution_mode}
         if not records:
             self.journal.append(opening)
         else:
@@ -100,6 +136,8 @@ class PaperAccount:
             if (stored.get("t") != "ACCOUNT_OPEN" or stored.get("account") != account_id
                     or stored.get("currency") != currency or Decimal(stored.get("cash", "NaN")) != cash):
                 raise PaperAccountError("existing journal opening does not match account configuration")
+            if stored.get("execution_mode", "AUTOMATIC") != execution_mode:
+                raise PaperAccountError("existing journal execution mode does not match account configuration")
             stored_schedule = stored.get("fee_schedule")
             if fee_schedule is not None and stored_schedule != schedule_data:
                 raise PaperAccountError("existing journal fee schedule does not match configuration")
@@ -166,6 +204,9 @@ class PaperAccount:
         try:
             opening = records[0]
             self.fee_schedule = FeeSchedule.from_dict(opening.get("fee_schedule"))
+            self.execution_mode = opening.get("execution_mode", "AUTOMATIC")
+            if self.execution_mode not in self.EXECUTION_MODES:
+                raise PaperAccountError("paper account journal contains an unsupported execution mode")
             self._initial_cash = Decimal(opening["cash"])
             self.oms = Oms({self.account_id: Decimal(opening["cash"])})
             self.ledger = DoubleEntryLedger()
@@ -190,6 +231,7 @@ class PaperAccount:
             for r in records[1:]:
                 t = r["t"]
                 if t == "INTENT":
+                    self._validate_replayed_approval(r)
                     self.oms.submit_intent(
                         client_id=r["client_id"], account=self.account_id, side=r["side"],
                         quantity=r["quantity"], limit=Decimal(r["limit"]) if r["limit"] is not None else None,
@@ -229,6 +271,37 @@ class PaperAccount:
             raise PaperAccountError(f"cannot replay paper account journal: {exc}") from exc
         self._release_terminal_sell_reserves()
 
+    def _validate_replayed_approval(self, record: dict) -> None:
+        receipt = record.get("approval")
+        submitted_at = record.get("submitted_at")
+        if self.execution_mode == "AUTOMATIC":
+            if receipt is not None or submitted_at is not None:
+                raise PaperAccountError("automatic account journal contains an approval receipt")
+            return
+        try:
+            if not isinstance(receipt, dict) or not isinstance(submitted_at, str):
+                raise PaperAccountError("trader-approved account journal is missing its approval receipt")
+            approved_at = datetime.fromisoformat(receipt["approved_at"])
+            submitted = datetime.fromisoformat(submitted_at)
+            if (approved_at.tzinfo is None or approved_at.utcoffset() is None
+                    or submitted.tzinfo is None or submitted.utcoffset() is None):
+                raise PaperAccountError("durable approval and submission times must be timezone aware")
+            if (receipt.get("account_id") != self.account_id
+                    or not isinstance(receipt.get("approved_by"), str)
+                    or not receipt["approved_by"].strip()
+                    or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", receipt.get("approval_id", ""))
+                    or approved_at > submitted
+                    or receipt.get("order_sha256") != self.intent_sha256({
+                        "t": "INTENT", "client_id": record["client_id"], "symbol": record["symbol"],
+                        "side": record["side"], "quantity": record["quantity"],
+                        "limit": record["limit"], "reserve": record["reserve"],
+                    })):
+                raise PaperAccountError("durable approval does not authorize this account and exact order")
+        except (KeyError, TypeError, ValueError) as exc:
+            if isinstance(exc, PaperAccountError):
+                raise
+            raise PaperAccountError(f"cannot replay paper order approval: {exc}") from exc
+
     def _release_terminal_sell_reserves(self) -> None:
         for cid, order in self.oms._orders.items():
             if order.side == "SELL" and order.state in {State.CANCELED, State.REJECTED, State.EXPIRED, State.FILLED}:
@@ -246,6 +319,7 @@ class PaperAccount:
             candidate_book.path = self.path
             candidate_book.account_id = self.account_id
             candidate_book.currency = self.currency
+            candidate_book.execution_mode = self.execution_mode
             candidate_book.fee_schedule = self.fee_schedule
             candidate_book.journal = candidate
             candidate_book._rebuild()
@@ -257,6 +331,8 @@ class PaperAccount:
     def submit_intent(
         self, *, client_id: str, symbol: str, side: str, quantity: int,
         limit: Decimal | None, reserve: Decimal,
+        approval_receipt: TraderApproval | None = None,
+        submitted_at: datetime | None = None,
     ) -> None:
         if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", symbol or ""):
             raise PaperAccountError("symbol must be a stable identifier")
@@ -269,14 +345,31 @@ class PaperAccount:
             minimum_buffer = self.fee_schedule.calculate(side="BUY", notional=limit * quantity)
             if reserve < limit * quantity + minimum_buffer:
                 raise PaperAccountError("buy reserve must also cover the scheduled fee buffer")
+        proposed = {
+            "t": "INTENT", "client_id": client_id, "symbol": symbol, "side": side,
+            "quantity": quantity, "limit": str(limit) if limit is not None else None,
+            "reserve": str(reserve),
+        }
+        if self.execution_mode == "TRADER_APPROVED":
+            if approval_receipt is None or submitted_at is None:
+                raise PaperAccountError("trader-approved account requires an order-bound approval receipt and submit time")
+            if submitted_at.tzinfo is None or submitted_at.utcoffset() is None:
+                raise PaperAccountError("paper order submit time must be timezone aware")
+            receipt = approval_receipt.as_dict()
+            if receipt["account_id"] != self.account_id:
+                raise PaperAccountError("approval receipt belongs to a different paper account")
+            if datetime.fromisoformat(receipt["approved_at"]) > submitted_at.astimezone(timezone.utc):
+                raise PaperAccountError("order approval cannot follow its submission time")
+            if receipt["order_sha256"] != self.intent_sha256(proposed):
+                raise PaperAccountError("approval receipt does not bind the exact proposed order")
+            proposed.update({"approval": receipt,
+                             "submitted_at": submitted_at.astimezone(timezone.utc).isoformat()})
+        elif approval_receipt is not None or submitted_at is not None:
+            raise PaperAccountError("automatic paper account cannot consume trader approval receipts")
+
         existing = next((r for r in self.journal.records()
                          if r.get("t") == "INTENT" and r.get("client_id") == client_id), None)
         if existing is not None:
-            proposed = {
-                "t": "INTENT", "client_id": client_id, "symbol": symbol, "side": side,
-                "quantity": quantity, "limit": str(limit) if limit is not None else None,
-                "reserve": str(reserve),
-            }
             if existing != proposed:
                 raise PaperAccountError(f"client id {client_id} reused with different content")
             return
@@ -285,12 +378,16 @@ class PaperAccount:
             if self.oms.order(cid).state not in {State.CANCELED, State.REJECTED, State.EXPIRED, State.FILLED}
         ) < quantity:
             raise PaperAccountError("sell quantity exceeds unreserved long inventory")
-        rec = {
-            "t": "INTENT", "client_id": client_id, "symbol": symbol, "side": side,
-            "quantity": quantity, "limit": str(limit) if limit is not None else None,
-            "reserve": str(reserve),
-        }
-        self._validate_and_commit(rec)
+        self._validate_and_commit(proposed)
+
+    @staticmethod
+    def intent_sha256(intent: dict) -> str:
+        """Stable fingerprint used by a trader approval to bind exact order terms."""
+        try:
+            encoded = json.dumps(intent, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise PaperAccountError(f"paper order cannot be fingerprinted: {exc}") from exc
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
     def move(self, client_id: str, state: State) -> None:
         self._validate_and_commit({"t": "STATE", "client_id": client_id, "state": state.value})
