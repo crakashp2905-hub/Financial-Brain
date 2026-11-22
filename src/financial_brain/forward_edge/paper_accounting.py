@@ -182,6 +182,10 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
     )
     has_filled_orders = any(int(receipt.get("filled_quantity", 0)) > 0 for receipt in receipts)
     net_eligible = has_filled_orders and not unresolved and not errors and all_fills_costed
+    fidelity_components = sorted({str(receipt.get("simulation_fidelity") or "UNCLASSIFIED")
+                                  for receipt in receipts})
+    simulation_fidelity = (fidelity_components[0] if len(fidelity_components) == 1
+                           else "MIXED" if fidelity_components else "UNCLASSIFIED")
     return {"schema": "fb.forward-paper-accounting.v1", "account_id": account_id,
             "capital_inr": format(capital, "f"), "cash_inr": format(cash_oms, "f"),
             "ledger_cash_inr": format(cash_ledger, "f"), "positions": positions,
@@ -198,6 +202,8 @@ def rebuild_paper_accounting(*, account_id: str, capital: Decimal,
             "status": "INCOMPLETE" if unresolved or errors else
                      "RECONCILED_NET" if net_eligible else "RECONCILED_GROSS",
             "charges_assessed": net_eligible, "net_pnl_eligible": net_eligible,
+            "simulation_fidelity": simulation_fidelity,
+            "fidelity_components": fidelity_components,
             "accounting_policy": "AVERAGE_COST_NET_OF_VERSIONED_COST_SCHEDULE" if net_eligible else
                                  "AVERAGE_COST_GROSS_OF_FEES_TAXES_AND_FINANCING"}
 

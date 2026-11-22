@@ -535,6 +535,7 @@ def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path)
     assert records["intents"][0]["order_id"] == result.intent.intent_id
     assert records["accounting"]["errors"] == []
     assert records["accounting"]["positions"]["NSE:INFY"] == 2
+    assert records["accounting"]["simulation_fidelity"] == "OBSERVED_QUOTE_SIM"
     assert [row["state"] for row in records["order_events"]] == ["CREATED", "SUBMITTED", "FILLED"]
     assert records["order_events"][-1]["fill_evidence_id"] is not None
     with pytest.raises(ForwardSessionRunnerError, match="canonical candidate intent"):
@@ -637,6 +638,9 @@ def test_passive_paper_receipt_uses_journaled_trade_through_ticks(tmp_path):
     assert receipt["execution_cost_basis"] == "PASSIVE_TRADE_THROUGH_WITH_SEPARATE_ADVERSE_SELECTION"
     assert "charges_inr" not in receipt
     assert receipt["execution_evidence_event_ids"] == [quote.event_id, tick.event_id]
+    assert receipt["simulation_fidelity"] == "OBSERVED_TRADE_SIM"
+    assert receipt["trade_provenance"][0]["event_sha256"] == tick.sha256()
+    assert runner.records("s")["accounting"]["simulation_fidelity"] == "OBSERVED_TRADE_SIM"
     runner.close()
 
 
@@ -681,6 +685,10 @@ def test_fill_uses_a_new_executable_quote_received_after_the_decision(tmp_path):
         simulated_at=decided + timedelta(milliseconds=200))
     assert receipt["status"] == "FILLED"
     assert receipt["quote_event_id"] == fill_event.event_id
+    assert receipt["simulation_fidelity"] == "OBSERVED_QUOTE_SIM"
+    assert receipt["quote_provenance"]["event_sha256"] == fill_event.sha256()
+    assert receipt["quote_provenance"]["exchange"] == "NSE"
+    assert receipt["quote_provenance"]["available_at_utc"] == fill_event.available_at.isoformat()
     decision_inputs = runner.records("s")["decisions"][0]["input_event_ids"]
     assert decision_inputs
     assert signal_event.event_id not in decision_inputs

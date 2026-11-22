@@ -1275,6 +1275,24 @@ class ForwardSessionRunner:
                     "instrument_rulebook_sha256": rulebook.digest,
                     "effective_instrument_rule": effective_rule,
                     "quote_event_id": event_id, "source": event.source,
+                    "simulation_fidelity": "OBSERVED_TRADE_SIM" if passive_trade_event_ids
+                        else "OBSERVED_QUOTE_SIM",
+                    "quote_provenance": {
+                        "event_id": event.event_id, "event_sha256": event.sha256(),
+                        "event_kind": event.kind.value, "exchange": event.venue,
+                        "source": event.source, "evidence_id": event.evidence_id,
+                        "event_time_utc": event.event_time.isoformat(),
+                        "received_at_utc": event.received_at.isoformat(),
+                        "available_at_utc": event.available_at.isoformat(),
+                    },
+                    "trade_provenance": [{
+                        "event_id": trade.event_id, "event_sha256": trade.sha256(),
+                        "exchange": trade.venue, "source": trade.source,
+                        "evidence_id": trade.evidence_id,
+                        "event_time_utc": trade.event_time.isoformat(),
+                        "received_at_utc": trade.received_at.isoformat(),
+                        "available_at_utc": trade.available_at.isoformat(),
+                    } for trade in passive_events],
                     "execution_style": request["execution_style"],
                     "execution_evidence_event_ids": [event_id, *passive_trade_event_ids],
                     "depth_match_mode": "PASSIVE_TRADE_PRINTS" if passive_trade_event_ids
