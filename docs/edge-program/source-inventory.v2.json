@@ -8983,7 +8983,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_lot_book.py",
-      "source_sha256": "17614e073041eac701d145587ef24b4b37993d61f0aef872afdf36e5c0ad6c0b",
+      "source_sha256": "8e0afcd5711aa9f45c6b37be28f23c2650bfb0f69e3cca395cffce1c20010452",
       "test_paths": []
     },
     {
