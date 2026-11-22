@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from ..forward_edge.data_permissions import DataPermission, DataUse
 from ..kernel.trading_clock import IST
 from ..kernel.mf_order import (
     MFOrder, MFOrderAcknowledgement, MFOrderEvidenceBasis, MFOrderState,
+    platform_valid_through,
 )
 
 
@@ -54,19 +55,26 @@ def submit_order(
     con,
     order: MFOrder,
     *,
-    valid_through: date,
+    valid_business_days: int,
+    calendar,
     now: datetime,
 ) -> dict[str, Any]:
     """Persist immutable request and initial transition idempotently."""
     observed_at = _aware(now, "now")
     if observed_at < order.requested_at:
         raise MFPaperOrderBookError("request cannot be persisted before requested_at")
+    valid_through = platform_valid_through(
+        order, valid_business_days=valid_business_days, calendar=calendar,
+    )
     if valid_through < order.requested_at.astimezone(IST).date():
         raise MFPaperOrderBookError("valid_through precedes request date")
     evidence = {"request_sha256": order.request_sha256,
                 "valid_through": valid_through.isoformat()}
     con.execute("BEGIN TRANSACTION")
     try:
+        if con.execute("SELECT 1 FROM mf_paper_accounts WHERE account_id=?",
+                        [order.account_id]).fetchone() is None:
+            raise MFPaperOrderBookError("paper account does not exist")
         old = con.execute("""SELECT request_sha256, valid_through, current_state
             FROM mf_paper_orders WHERE order_id=?""", [order.order_id]).fetchone()
         if old is not None:
@@ -125,13 +133,16 @@ def record_response(
 
     con.execute("BEGIN TRANSACTION")
     try:
-        row = con.execute("""SELECT requested_at, current_state FROM mf_paper_orders
+        row = con.execute("""SELECT requested_at, current_state, valid_through
+            FROM mf_paper_orders
             WHERE order_id=?""", [response.order_id]).fetchone()
         if row is None:
             raise MFPaperOrderBookError("paper order does not exist")
-        requested_at, current = row
+        requested_at, current, valid_through = row
         if response.effective_at < requested_at:
             raise MFPaperOrderBookError("response effective time precedes order request")
+        if response.effective_at.astimezone(IST).date() > valid_through:
+            raise MFPaperOrderBookError("response effective time is outside platform business-day validity")
         prior = MFOrderState(current)
         evidence = {"state": response.state.value, "basis": response.basis.value,
                     "permission_evidence": [list(item) for item in allowed]}

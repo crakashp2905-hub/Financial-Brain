@@ -10,6 +10,8 @@ from financial_brain.forward_edge.data_permissions import (
 from financial_brain.kernel.mf_order import (
     MFOrder, MFOrderAcknowledgement, MFOrderEvidenceBasis, MFOrderKind, MFOrderState,
 )
+from financial_brain.kernel.fund_transactions import SchemeTransactionCalendar
+from financial_brain.kernel.trading_clock import BusinessCalendar, CalendarDomain
 from financial_brain.paper.mf_order_book import (
     MFPaperOrderBookError, order_snapshot, record_response, submit_order,
 )
@@ -24,6 +26,8 @@ def connection(tmp_path):
     db = Database(Config(data_root=tmp_path).ensure())
     db.migrate()
     with db.connect() as con:
+        con.execute("INSERT INTO mf_paper_accounts VALUES (?, ?, ?)",
+                    ["paper-account-1", Decimal(0), REQUESTED_AT])
         yield con
 
 
@@ -45,6 +49,22 @@ def _permission():
     )
 
 
+def _calendar():
+    scheme = BusinessCalendar(
+        calendar_id="123456", domain=CalendarDomain.SCHEME,
+        coverage_start=date(2026, 11, 23), source_as_of=date(2026, 11, 26),
+        open_days=frozenset(date(2026, 11, day) for day in (23, 24, 25, 26)),
+        source_ref="scheme-calendar", source_sha256="e" * 64,
+        recorded_at=REQUESTED_AT,
+    )
+    return SchemeTransactionCalendar({"123456": scheme}, ())
+
+
+def _submit(con, order):
+    return submit_order(con, order, valid_business_days=2, calendar=_calendar(),
+                        now=REQUESTED_AT + timedelta(seconds=2))
+
+
 def _response(state, *, basis=MFOrderEvidenceBasis.SIMULATED_ASSUMPTION, **changes):
     at = REQUESTED_AT + timedelta(minutes=1)
     values = {
@@ -58,24 +78,21 @@ def _response(state, *, basis=MFOrderEvidenceBasis.SIMULATED_ASSUMPTION, **chang
 
 def test_request_persists_immutable_identity_and_is_idempotent(connection):
     order = _order()
-    first = submit_order(connection, order, valid_through=date(2026, 11, 24),
-                         now=REQUESTED_AT + timedelta(seconds=2))
-    again = submit_order(connection, order, valid_through=date(2026, 11, 24),
-                          now=REQUESTED_AT + timedelta(seconds=3))
+    first = _submit(connection, order)
+    again = _submit(connection, order)
     assert first["status"] == "submitted"
     assert again["status"] == "already_submitted"
     snapshot = order_snapshot(connection, order_id=order.order_id)
     assert snapshot["current_state"] == "REQUESTED"
     assert len(snapshot["transitions"]) == 1
     with pytest.raises(MFPaperOrderBookError, match="reused"):
-        submit_order(connection, order, valid_through=date(2026, 11, 25),
+        submit_order(connection, order, valid_business_days=3, calendar=_calendar(),
                      now=REQUESTED_AT + timedelta(seconds=3))
 
 
 def test_ack_then_simulated_acceptance_keeps_official_claim_false_and_replays_idempotently(connection):
     order = _order()
-    submit_order(connection, order, valid_through=date(2026, 11, 24),
-                 now=REQUESTED_AT + timedelta(seconds=2))
+    _submit(connection, order)
     ack = _response(MFOrderState.ACKNOWLEDGED)
     assert record_response(connection, ack, now=ack.received_at)["status"] == "recorded"
     accepted = _response(MFOrderState.ACCEPTED,
@@ -88,8 +105,7 @@ def test_ack_then_simulated_acceptance_keeps_official_claim_false_and_replays_id
 
 def test_observed_acceptance_requires_effective_permission_and_preserves_receipt(connection):
     order = _order()
-    submit_order(connection, order, valid_through=date(2026, 11, 24),
-                 now=REQUESTED_AT + timedelta(seconds=2))
+    _submit(connection, order)
     response = _response(MFOrderState.ACCEPTED, basis=MFOrderEvidenceBasis.OBSERVED_EVIDENCE)
     with pytest.raises(MFPaperOrderBookError, match="lacks PAPER_SIMULATION"):
         record_response(connection, response, now=response.received_at)
@@ -104,11 +120,24 @@ def test_observed_acceptance_requires_effective_permission_and_preserves_receipt
 
 def test_rejection_is_terminal_and_must_include_reason(connection):
     order = _order()
-    submit_order(connection, order, valid_through=date(2026, 11, 24),
-                 now=REQUESTED_AT + timedelta(seconds=2))
+    _submit(connection, order)
     rejected = _response(MFOrderState.REJECTED, reason="invalid folio")
     record_response(connection, rejected, now=rejected.received_at)
     with pytest.raises(MFPaperOrderBookError, match="terminal"):
         record_response(connection, _response(MFOrderState.ACCEPTED),
                         now=REQUESTED_AT + timedelta(minutes=3))
     assert order_snapshot(connection, order_id=order.order_id)["current_state"] == "REJECTED"
+
+
+def test_expired_platform_order_cannot_be_accepted(connection):
+    order = _order()
+    _submit(connection, order)
+    expired_at = datetime(2026, 11, 25, 1, tzinfo=timezone.utc)
+    expired = MFOrderAcknowledgement(
+        order_id=order.order_id, state=MFOrderState.ACCEPTED,
+        effective_at=expired_at, received_at=expired_at + timedelta(seconds=1),
+        basis=MFOrderEvidenceBasis.SIMULATED_ASSUMPTION,
+    )
+    with pytest.raises(MFPaperOrderBookError, match="outside platform business-day validity"):
+        record_response(connection, expired, now=expired.received_at)
+    assert order_snapshot(connection, order_id=order.order_id)["current_state"] == "REQUESTED"
