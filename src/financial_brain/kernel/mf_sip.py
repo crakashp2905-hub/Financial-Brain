@@ -123,16 +123,17 @@ class MFSIPInstallment:
             if self.missed_at is not None or self.miss_reason is not None:
                 raise MFSIPError("allotted installment cannot also be marked missed")
             if any(value is None for value in (self.payment_initiated_at, self.funds_available_at,
-                    self.nav_date, nav, self.nav_published_at, self.nav_available_at,
+                    self.nav_date, nav, self.nav_available_at,
                     self.allotted_at, units)):
-                raise MFSIPError("allotted installment requires payment, NAV and unit evidence")
+                raise MFSIPError("allotted installment requires payment, NAV availability and unit evidence")
             assert self.payment_initiated_at is not None and self.funds_available_at is not None
             assert self.nav_date is not None and nav is not None and units is not None
-            assert self.nav_published_at is not None and self.nav_available_at is not None
+            assert self.nav_available_at is not None
             assert self.allotted_at is not None
             if self.payment_initiated_at > self.funds_available_at:
                 raise MFSIPError("funds cannot be available before payment initiation")
-            if self.nav_published_at > self.nav_available_at or self.nav_available_at > self.allotted_at:
+            if ((self.nav_published_at is not None and self.nav_published_at > self.nav_available_at)
+                    or self.nav_available_at > self.allotted_at):
                 raise MFSIPError("NAV publication, availability and allotment clocks are out of order")
             if (units * nav).quantize(Decimal("0.01")) != amount.quantize(Decimal("0.01")):
                 raise MFSIPError("allotted units x NAV must reconcile to installment amount")
