@@ -666,6 +666,64 @@ def workstation_panel(rcon, asof, shown: pd.DataFrame, *, capital: float, holdin
     return "".join(out)
 
 
+def mf_paper_panel(con, asof: date) -> str:
+    """Render account-scoped MF values using only NAVs available by the report date."""
+    from ..kernel.trading_clock import IST
+    from .mf_lot_book import account_snapshot
+
+    known_at = datetime.combine(asof, datetime.max.time(), tzinfo=IST)
+    rows = con.execute(
+        "SELECT account_id FROM mf_paper_accounts ORDER BY account_id"
+    ).fetchall()
+    if not rows:
+        return "<h2>Mutual fund paper book</h2><div class='sub'>No MF paper accounts.</div>"
+
+    out = ["<h2>Mutual fund paper book</h2>",
+           f"<div class='sub'>Point-in-time valuation as of {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible.</div>"]
+    for (account_id,) in rows:
+        snapshot = account_snapshot(con, account_id, known_at=known_at)
+        out.append(
+            f"<h3>{_e(account_id)} · NAV value Rs {snapshot['market_value_inr']:,.2f} · "
+            f"unrealized P&amp;L Rs {snapshot['unrealized_pnl_inr']:+,.2f}</h3>"
+            f"<div class='sub'>Cash Rs {snapshot['cash_inr']:,.2f} · pending redemption Rs "
+            f"{snapshot['pending_redemption_inr']:,.2f} · stale positions "
+            f"{snapshot['stale_position_count']} · unavailable NAVs "
+            f"{snapshot['unvalued_position_count']}</div>"
+        )
+        if not snapshot["positions"]:
+            out.append("<div class='sub'>No open MF positions.</div>")
+            continue
+        position_rows = []
+        for position in snapshot["positions"]:
+            nav = position["nav_per_unit"]
+            value = position["market_value_inr"]
+            pnl = position["unrealized_pnl_inr"]
+            status = position["valuation_status"]
+            cls = "warn" if status != "CURRENT" else "ok"
+            pnl_class = "pos" if pnl is not None and pnl > 0 else "neg" if pnl is not None and pnl < 0 else ""
+            nav_text = f"{nav:,.4f}" if nav is not None else "—"
+            value_text = f"Rs {value:,.2f}" if value is not None else "—"
+            basis_text = f"Rs {position['cost_basis_inr']:,.2f}"
+            pnl_text = f"Rs {pnl:+,.2f}" if pnl is not None else "—"
+            position_rows.append(
+                f"<tr><td>{_e(position['scheme_code'])}</td><td>{_e(position['plan'])}</td>"
+                f"<td>{_e(position['option'])}</td><td class='r'>{position['units']:,.6f}</td>"
+                f"<td class='r'>{nav_text}</td>"
+                f"<td>{_e(position['nav_date'] or '—')}</td>"
+                f"<td class='r'>{value_text}</td>"
+                f"<td class='r'>{basis_text}</td>"
+                f"<td class='r {pnl_class}'>{pnl_text}</td>"
+                f"<td><span class='chip {cls}'>{_e(status)}</span></td></tr>"
+            )
+        out.append(
+            "<div class='wrap'><table><tr><th>Scheme</th><th>Plan</th><th>Option</th>"
+            "<th class='r'>Units</th><th class='r'>Last known NAV</th><th>NAV date</th>"
+            "<th class='r'>Value</th><th class='r'>Cost basis</th><th class='r'>Unrealized P&amp;L</th>"
+            "<th>Mark</th></tr>" + "".join(position_rows) + "</table></div>"
+        )
+    return "".join(out)
+
+
 def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None) -> str:
     from ..evaluation import champion as C
     from ..opportunity import scanners as S
@@ -688,6 +746,10 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
               f"<div class='sub'>{b['pct_above_ma200']:.0%} above 200d · {b['pct_up_20d']:.0%} up 20d · {b['pct_near_52w_high']:.0%} near high</div></div>"]
     ks = KS.load()
     parts.append(f"<div class='tile'><div class='k'>Kill switch</div><div class='v'>{_chip(ks['level'])}</div><div class='sub'>{_e('; '.join(ks.get('reasons', [])) or 'no trip')}</div></div></div>")
+    try:
+        parts.append(mf_paper_panel(rcon, asof))
+    except Exception as e:                          # noqa: BLE001 - MF books may not be initialized yet
+        parts.append(f"<div class='sub'>MF paper book unavailable: {_e(str(e)[:100])}</div>")
     # ---------------------------------------------------------------- opportunities
     cs = S.cross_section(rcon, asof)
     opps = S.scan(cs, asof, capital=capital)

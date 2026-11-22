@@ -9264,6 +9264,8 @@
         "ingest",
         "interfaces",
         "json",
+        "kernel.trading_clock",
+        "mf_lot_book",
         "numpy",
         "opportunity",
         "pandas",
@@ -9276,7 +9278,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/terminal.py",
-      "source_sha256": "577cd21d49ab513e233884fceb6e39f683cef9ab76fefda434ae5dbacc622be3",
+      "source_sha256": "9cdf9e41cdb8788be6b7203d422dc42c2385adbf9e57550d906af66b5dad3eca",
       "test_paths": []
     },
     {
