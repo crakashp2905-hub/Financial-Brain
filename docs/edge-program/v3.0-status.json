@@ -2692,7 +2692,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "b361fba2",
+      "commit": "c27c48a3",
       "test_evidence": [
         "python -m pytest tests/test_mf_switch_book.py tests/test_mf_switch.py tests/test_mf_lot_book.py tests/test_mf_purchase_book.py tests/test_mf_order_book.py tests/test_mf_redemption_eligibility.py tests/test_migrations.py -q: 39 passed",
         "ruff check src/financial_brain/paper/mf_switch_book.py src/financial_brain/paper/mf_purchase_book.py src/financial_brain/paper/mf_redemption_settlement.py src/financial_brain/kernel/mf_redemption_eligibility.py tests/test_mf_switch_book.py tests/test_mf_redemption_eligibility.py: passed",
