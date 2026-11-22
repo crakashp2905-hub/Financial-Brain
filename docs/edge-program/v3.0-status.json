@@ -2549,7 +2549,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": "442991191ccb8e75f445eb63cdde81eecafe1a38",
+      "commit": "1e70b990",
       "test_evidence": [
         "python -m pytest tests/test_mf_purchase_payment.py tests/test_mf_order.py tests/test_mf_allocation_recommendation.py tests/test_kernel_fund_transactions.py -q: 26 passed",
         "ruff check src/financial_brain/kernel/mf_purchase_payment.py tests/test_mf_purchase_payment.py: passed",
