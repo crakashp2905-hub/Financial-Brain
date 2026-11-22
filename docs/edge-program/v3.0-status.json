@@ -3057,13 +3057,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "PaperAccount accepts stable account identifiers and maintains separate durable ledgers; forward paper intents require explicit risk verdicts.",
-        "There is no shared API workflow proving isolated autonomous and trader-approved accounts across all desks."
+        "src/financial_brain/kernel/paper_account.py: PaperAccount execution_mode preserves the existing submit_intent API; TRADER_APPROVED receipts bind account, approver label, UTC approval/submission times and a SHA-256 fingerprint of the exact order terms; replay rejects missing, cross-account, stale/future or mismatched receipts.",
+        "tests/test_paper_account.py: automated and trader-approved modes use separate durable account journals; approval rejection cases and reopen/account cash-position isolation are covered.",
+        "Approval receipts are local assertions, not cryptographic identity. Forward/options desks, a shared cross-engine OMS, trusted authentication, and authenticated approver identity remain unintegrated."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "blocker": "Partial: only the kernel cash-equity PaperAccount API supports the mode; local approval data is not signed/authenticated and the separate forward/options/legacy OMS domains are not unified.",
+      "last_audited_at_utc": "2026-11-22T18:52:46Z",
+      "commit": "01f15282",
+      "test_result": "Commit 01f15282. Windows: tests/test_paper_account.py (9 passed); Ruff and mypy passed for paper_account.py. Hosted cross-platform CI for this commit is pending."
     },
     {
       "id": "FB-0813",
@@ -15592,7 +15593,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T18:36:48Z",
+    "as_of_utc": "2026-11-22T18:52:46Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15924,7 +15925,9 @@
       "tests/test_forward_edge_options_spread.py",
       "docs/edge-program/v3.0-status.json",
       "src/financial_brain/paper/options_lifecycle.py",
-      "tests/test_paper_options_lifecycle.py"
+      "tests/test_paper_options_lifecycle.py",
+      "src/financial_brain/kernel/paper_account.py",
+      "tests/test_paper_account.py"
     ],
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing."
   },

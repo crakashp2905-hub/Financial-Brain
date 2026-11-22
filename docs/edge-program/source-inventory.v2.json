@@ -7883,6 +7883,8 @@
         "financial_brain.kernel.ledger",
         "financial_brain.kernel.oms",
         "financial_brain.kernel.units",
+        "hashlib",
+        "json",
         "pathlib",
         "re",
         "uuid"
@@ -7891,7 +7893,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/paper_account.py",
-      "source_sha256": "937a7c717814a859b7a8b91fa6de6c1bcfb1c1c836798a219c1b787ae5fd46a5",
+      "source_sha256": "577193d481524e0cd56012b5d522ffbb3ff6412fc5b107ec71352764931c3eae",
       "test_paths": []
     },
     {
