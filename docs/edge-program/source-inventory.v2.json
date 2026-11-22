@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 677,
+  "source_count": 679,
   "sources": [
     {
       "capability_ids": [],
@@ -7672,6 +7672,28 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "forward_edge.data_permissions",
+        "fund_transactions",
+        "hashlib",
+        "json",
+        "mf_order",
+        "mf_purchase_payment",
+        "trading_clock"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/mf_purchase_eligibility.py",
+      "source_sha256": "aeaa942b86f0ff1bc6be81fc6885f3b5341e871aff1b1c487120f723a44712ff",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "enum",
         "hashlib",
         "json",
@@ -9028,7 +9050,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_lot_book.py",
-      "source_sha256": "736f2609f6e1d4000d5d8d93f6a0af7ce5262a2337dd65763394d81984f0462c",
+      "source_sha256": "0e89067d703d5df62bc5dc7c84c1df4ac5c81a9d1b7ed1fcd760d928a4605bac",
       "test_paths": []
     },
     {
@@ -9049,6 +9071,33 @@
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_order_book.py",
       "source_sha256": "316754b60670583c0658b99760b250ac78787f163d0ab56659043abd3d027126",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
+        "forward_edge.data_permissions",
+        "hashlib",
+        "ingest.mfnav",
+        "json",
+        "kernel.fund_transactions",
+        "kernel.mf_order",
+        "kernel.mf_purchase_eligibility",
+        "kernel.mf_purchase_payment",
+        "kernel.trading_clock",
+        "mf_lot_book",
+        "providers.mf_scheme_terms",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_purchase_book.py",
+      "source_sha256": "7e4dd5d2d80a32b0c36bdc010732124cbe3722b5a85d7eb5857566e495ddb7e5",
       "test_paths": []
     },
     {
@@ -9132,7 +9181,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_sip_book.py",
-      "source_sha256": "861a24bdb987637d5ffa2425de925b5dbd1aef80adaac9173235d98433a353ea",
+      "source_sha256": "94191fe8335ea8a1d05148d93efb287ffea6dd83ba252f4923e1cf56baab486e",
       "test_paths": []
     },
     {
@@ -11602,7 +11651,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/storage/db.py",
-      "source_sha256": "8e85a00aa1e20edc9c353e74735b7ec9ceaef81fdf329c35688f1a955b101419",
+      "source_sha256": "1e93c68a366ba2b2ab36fcb680c334751f746cce7a1155d0cb2d1b8a809780af",
       "test_paths": []
     },
     {
@@ -11901,6 +11950,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 662,
-  "unassigned_role_count": 396
+  "unassessed_count": 664,
+  "unassigned_role_count": 397
 }
