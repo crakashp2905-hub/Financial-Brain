@@ -634,6 +634,7 @@ def test_passive_paper_receipt_uses_journaled_trade_through_ticks(tmp_path):
     assert receipt["status"] == "FILLED" and receipt["execution_style"] == "PASSIVE_LIMIT"
     assert receipt["average_price"] == "100"
     assert receipt["simulated_adverse_selection_cost_inr"] == "0.20"
+    assert receipt["execution_cost_basis"] == "PASSIVE_TRADE_THROUGH_WITH_SEPARATE_ADVERSE_SELECTION"
     assert "charges_inr" not in receipt
     assert receipt["execution_evidence_event_ids"] == [quote.event_id, tick.event_id]
     runner.close()
@@ -832,6 +833,10 @@ def test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net(t
         freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
         simulated_at=decided + timedelta(milliseconds=100))
     assert buy["charges_inr"] > "0"
+    assert buy["execution_cost_basis"] == "OBSERVED_DEPTH_WITH_SLIPPAGE_EMBEDDED_IN_FILL_PRICE"
+    assert buy["simulated_adverse_selection_cost_inr"] == "0.00"
+    assert buy["cost_items"][0]["impact"] == 0
+    assert all(item.get("type") != "SIMULATED_ADVERSE_SELECTION" for item in buy["cost_items"])
     sell = runner.execute_paper_intent(
         session_id="s", order_id="sell", decision_id="trade-1", event_id=fill_event.event_id,
         side="SELL", quantity=2, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),

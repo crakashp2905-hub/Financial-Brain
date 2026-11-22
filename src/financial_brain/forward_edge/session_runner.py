@@ -1328,9 +1328,13 @@ class ForwardSessionRunner:
 
         config = self.state_store.config(session_id)
         bucket = config.constraints.get("liquidity_bucket")
+        passive = request.get("execution_style") == "PASSIVE_LIMIT"
         if config.constraints.get("cost_schedule") is None:
             receipt["simulated_adverse_selection_cost_inr"] = self._passive_adverse_cost(
-                session_id, request, price, filled_quantity)
+                session_id, request, price, filled_quantity) if passive else "0.00"
+            receipt["execution_cost_basis"] = ("PASSIVE_TRADE_THROUGH_WITH_SEPARATE_ADVERSE_SELECTION"
+                                                if passive else
+                                                "OBSERVED_DEPTH_WITH_SLIPPAGE_EMBEDDED_IN_FILL_PRICE")
             return
         if price is None or bucket not in {"mega", "large", "mid", "small", "micro"}:
             raise ForwardSessionRunnerError("costed fills require a valid price and declared liquidity bucket")
@@ -1338,16 +1342,21 @@ class ForwardSessionRunner:
             schedule = self._resolved_cost_schedule(session_id)
             side = Side.BUY if request["side"] == "BUY" else Side.SELL
             turnover = float(price * filled_quantity)
-            lines = schedule.one_way(day=config.exchange_date, turnover=turnover, side=side, bucket=bucket)
+            # This runner has an observed opposing book and applies price impact through
+            # depth walking and tick-rounded adverse execution prices. Do not add a second
+            # generic bucket impact estimate to those same fills.
+            lines = schedule.one_way(day=config.exchange_date, turnover=turnover, side=side, bucket=bucket,
+                                     include_impact=False)
         except (KeyError, TypeError, ValueError) as exc:
             raise ForwardSessionRunnerError(f"invalid configured cost schedule: {exc}") from exc
         schedule_charge = Decimal(str(lines["total"]))
-        adverse_bps = Decimal(str(request["adverse_slippage_bps"]))
-        adverse_charge = (price * filled_quantity * adverse_bps / Decimal(10_000)).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_EVEN)
-        if request.get("execution_style") == "PASSIVE_LIMIT":
+        adverse_charge = Decimal("0.00")
+        if passive:
             adverse_charge = Decimal(self._passive_adverse_cost(
                 session_id, request, price, filled_quantity))
+        receipt["execution_cost_basis"] = ("PASSIVE_TRADE_THROUGH_WITH_SEPARATE_ADVERSE_SELECTION"
+                                           if passive else
+                                           "OBSERVED_DEPTH_WITH_SLIPPAGE_EMBEDDED_IN_FILL_PRICE")
         receipt["simulated_adverse_selection_cost_inr"] = format(adverse_charge, "f")
         cost_items = [{"order_id": request["order_id"], **lines}]
         if adverse_charge:

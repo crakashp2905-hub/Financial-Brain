@@ -2930,12 +2930,13 @@
       "status": "PARTIAL",
       "evidence": [
         "Cost schedules, spread/depth impact, tick rounding, adverse gap fills and explicit options fees exist across fill components.",
+        "ForwardSessionRunner cost receipts now identify whether costs are embedded in observed depth-walked fill prices or separately charged for passive trade-throughs. Dated statutory/broker line items exclude a second generic bucket impact and a second adverse-slippage charge when those effects are already embedded in marketable fill prices.",
         "Effective exchange fees/taxes, circuit/halt and close behavior are not measured and enforced uniformly across every instrument and runner."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0801-14 tests/test_paper_account.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f05.py tests/test_kernel_fills.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_spread.py tests/test_forward_edge_options_risk.py tests/test_forward_edge_options_spread.py tests/test_forward_edge_kite_market_data.py -q: 130 passed in 113.15s"
+      "last_audited_at_utc": "2026-11-22T16:10:00Z",
+      "commit": "pending",
+      "test_result": "Focused cost-schedule, marketable-fill and passive-fill regression tests passed. Full hosted Windows/Ubuntu validation is pending."
     },
     {
       "id": "FB-0806",
