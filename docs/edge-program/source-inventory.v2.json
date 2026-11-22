@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 667,
+  "source_count": 668,
   "sources": [
     {
       "capability_ids": [],
@@ -7646,6 +7646,25 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/mf_purchase_payment.py",
+      "source_sha256": "32a45e6bbae5879c9625715b88276a62195cd8dcfcdfeb1ce8de31ce9fb67a14",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "decimal",
         "enum"
       ],
@@ -11683,6 +11702,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 652,
-  "unassigned_role_count": 389
+  "unassessed_count": 653,
+  "unassigned_role_count": 390
 }
