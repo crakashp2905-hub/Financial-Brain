@@ -9412,12 +9412,24 @@
     {
       "id": "SL-01-07",
       "text": "Develop historical availability ledger for price corrections, dividends, splits, symbol/ISIN changes, index constituent changes and futures roll schedules.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/corpactions/actions.py records effective ex-dates, publication time, source tier, observation time and evidence key for corporate actions; raw prices remain unadjusted and adjustment factors are derived from the recorded actions.",
+        "src/financial_brain/kernel/instrument_history.py provides append-only sourced ticker/ISIN transitions with effective and publication times, source hash, and point-in-time visibility.",
+        "src/financial_brain/forward_edge/futures_roll.py models dated front-to-back contract economics, but roll marks are caller-supplied and not source-authenticated.",
+        "Focused tests: tests/test_kernel_instrument_history.py, tests/test_forward_edge_futures_roll.py, tests/test_phase0_reference.py, and tests/test_phase1_corpact.py. 93 passed; five fixture tests failed only because the sandbox temporary path exceeded Windows path limits. Those five cases passed on a short-path rerun (12 passed in aggregate)."
+      ],
+      "blocker": "There is no unified append-only, sourced availability ledger spanning corrected price revisions, corporate actions, symbol/ISIN transitions, historical index constituent changes, and authenticated futures roll schedules. Existing components are separate; comprehensive historical source coverage is not loaded.",
+      "last_audited_at_utc": "2026-11-22T21:48:40Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_kernel_instrument_history.py",
+        "tests/test_forward_edge_futures_roll.py",
+        "tests/test_phase0_reference.py",
+        "tests/test_phase1_corpact.py"
+      ],
+      "test_result": "Focused suite: 93 passed; five Windows MAX_PATH/environment failures. All five failure cases passed when rerun with --basetemp D:\\Finance-Brain\\.pytest-short; targeted rerun total 12 passed in 66.59s."
     },
     {
       "id": "SL-01-08",
@@ -15663,7 +15675,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T21:29:52Z",
+    "as_of_utc": "2026-11-22T21:48:40Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15916,16 +15928,17 @@
       "SL-01-04",
       "SL-01-05",
       "SL-01-06",
+      "SL-01-07",
       "SL-01-10",
       "SL-01-18"
     ],
-    "audited_count": 253,
+    "audited_count": 254,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 11,
-      "PARTIAL": 197,
-      "UNASSESSED": 1125
+      "PARTIAL": 198,
+      "UNASSESSED": 1124
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16062,7 +16075,7 @@
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 11,
-    "PARTIAL": 197,
-    "UNASSESSED": 1125
+    "PARTIAL": 198,
+    "UNASSESSED": 1124
   }
 }
