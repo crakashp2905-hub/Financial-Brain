@@ -3064,7 +3064,7 @@
       "blocker": "Partial: only the kernel cash-equity PaperAccount API supports the mode; local approval data is not signed/authenticated and the separate forward/options/legacy OMS domains are not unified.",
       "last_audited_at_utc": "2026-11-22T18:52:46Z",
       "commit": "01f15282",
-      "test_result": "Commit 01f15282. Windows: tests/test_paper_account.py (9 passed); Ruff and mypy passed for paper_account.py. Hosted cross-platform CI for this commit is pending."
+      "test_result": "Commit 01f15282. Windows focused tests/test_paper_account.py: 9 passed; Ruff and mypy passed. Hosted PR run 45057923435 on descendant head b5d0b5f8 passed test and reproducibility jobs on Ubuntu 24.04 and Windows."
     },
     {
       "id": "FB-0813",
@@ -3080,7 +3080,7 @@
       "blocker": "Partial: precommit receipt is integrated into ForwardSessionRunner paper execution only. Other paper OMS/asset-class adapters and authenticated policy enforcement remain separate; the receipt records the evaluated policy identity and verdict, not its full risk-limit configuration.",
       "last_audited_at_utc": "2026-11-22T19:28:15Z",
       "commit": "2b27ade5",
-      "test_result": "Commit 2b27ade5. Windows focused tests/test_forward_edge_session_runner.py and tests/test_forward_edge_f05.py: 81 passed; Ruff and mypy passed. scripts/forward_edge_equivalence_report.py --check passes after regenerating its fixture report. Hosted run 45060495407 stopped on that stale-report check before the full suites; corrected report is queued for a fresh hosted run."
+      "test_result": "Commit 2b27ade5. Focused tests/test_forward_edge_session_runner.py and tests/test_forward_edge_f05.py: 81 passed; Ruff and mypy passed. The initial hosted run 45060495407 failed on stale fixture-equivalence snapshots before testing; after regeneration, hosted PR run 45060988560 on descendant head 7b5f2c02 passed full Ubuntu/Windows test and reproducibility jobs."
     },
     {
       "id": "FB-0814",
@@ -15595,7 +15595,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T19:28:15Z",
+    "as_of_utc": "2026-11-22T19:47:57Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
