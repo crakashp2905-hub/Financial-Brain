@@ -2772,7 +2772,7 @@
       ],
       "blocker": "Partial: SIP payment milestones and allotments are not yet atomically posted through this journal and the FIFO lot book; MF order acknowledgements/application states are not reconciled to account postings; legacy cash/positions lack a verified opening-balance backfill; external contributions/withdrawals are supported but need independently sourced bank feeds for observed use; unit quantities remain in separate lot/flow tables rather than a unified monetary-and-unit general ledger.",
       "last_audited_at_utc": "2026-11-22T04:02:24Z",
-      "commit": "a4343e08a197024724dc3679dedc4a6aa6a6d2a4",
+      "commit": null,
       "test_result": "python -m pytest tests/test_mf_account_ledger.py tests/test_mf_lot_book.py tests/test_mf_redemption_constraints.py tests/test_migrations.py tests/test_mf_systematic_flow_book.py tests/test_mf_flow_book.py -q: 42 passed; mypy src/financial_brain/paper/mf_account_ledger.py src/financial_brain/paper/mf_flow_book.py: passed; Ruff on changed MF journal modules/tests: passed; git diff --check: passed."
     },
     {
