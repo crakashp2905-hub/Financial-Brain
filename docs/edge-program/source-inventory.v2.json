@@ -9278,7 +9278,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/terminal.py",
-      "source_sha256": "9cdf9e41cdb8788be6b7203d422dc42c2385adbf9e57550d906af66b5dad3eca",
+      "source_sha256": "e5ced8d9580cacdf7cfb5308cfde08c2228917997e288a06d2ca20b37498168e",
       "test_paths": []
     },
     {
