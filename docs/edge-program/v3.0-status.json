@@ -3633,15 +3633,16 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/alerts.py now evaluates order partial/fill/rejection/unknown/cancel states, stale-data age thresholds, pending MF allotments and payouts, ETF premium/discount dislocations, option expiry windows, and risk-budget changes into deduplicable typed Alert records.",
-        "High-severity stale entry-critical feeds and ambiguous order states are compatible with the durable AlertBook entry-halt behavior; thresholds are explicit inputs and invalid thresholds/evidence fail closed.",
-        "tests/test_forward_edge_desk_alerts.py and tests/test_forward_edge_alerts.py: 12 passed; Ruff and targeted mypy passed.",
-        "Remaining: CLI/desk data adapters do not yet source all six event families, and these new domain records are not yet dispatched through the configured instant notification transports."
+        "src/financial_brain/forward_edge/alerts.py evaluates typed rules for order state, stale feeds, pending MF units/payouts, ETF premium/discount dislocation, option expiry and risk-budget changes; invalid threshold and event data fail closed.",
+        "mutual_fund_pending_rows reads only time-eligible NAV_PENDING purchase allotments and unresolved redemption/payout settlements from the migrated paper-book database, classifies pending units vs payout, and computes age on the Asia/Kolkata session date.",
+        "src/financial_brain/cli.py cmd_alerts now emits pending MF alerts to the existing deduplicated desktop path and, when the owner configured Telegram credentials, the existing Telegram path. A failed/missing MF source is shown as an alert-source error.",
+        "tests/test_forward_edge_desk_alerts.py, tests/test_forward_edge_alerts.py, tests/test_phase5_account_journal_alerts.py: 22 passed; Ruff and targeted mypy passed.",
+        "Remaining: non-MF live data adapters for order/stale/ETF/options/risk events are not wired to cmd_alerts; durable AlertBook persistence/entry-halt integration is not yet unified with notification outbox."
       ],
-      "blocker": "Partial: decision rules and typed events are implemented, but live desk adapters and notification dispatch/outbox wiring are not connected.",
-      "last_audited_at_utc": "2026-11-22T20:18:39Z",
-      "commit": "00af507c2a4a85c3fe41f3b7b1b0304f3bcfefba",
-      "test_result": "Windows local: forward desk alert and AlertBook suites: 12 passed; Ruff and targeted mypy passed."
+      "blocker": "Partial: MF pending states are sourced and dispatched; other desk alert sources and unified durable dispatch/entry-halt integration remain outstanding.",
+      "last_audited_at_utc": "2026-11-22T20:27:27Z",
+      "commit": "042a05454d0e5efaac9c8085e93d41690753c00e",
+      "test_result": "Windows local: 22 alert suites passed; Ruff and targeted mypy passed. MF database adapter is covered with point-in-time DuckDB fixtures."
     },
     {
       "id": "FB-1111",
@@ -15620,7 +15621,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T20:18:39Z",
+    "as_of_utc": "2026-11-22T20:27:27Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15967,9 +15968,10 @@
       "src/financial_brain/paper/terminal.py",
       "tests/test_mf_lot_book.py",
       "src/financial_brain/forward_edge/alerts.py",
-      "tests/test_forward_edge_desk_alerts.py"
+      "tests/test_forward_edge_desk_alerts.py",
+      "src/financial_brain/cli.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-1106 PARTIAL: added the point-in-time ETF trader panel model and source hashes for liquidity inputs; 15 focused tests, Ruff, and mypy pass. Live terminal wiring remains open. FB-1107 PARTIAL: MF terminal now shows NAV observation availability, eligible pending purchases and source-pinned full-position exit-load estimates; existing settlement evidence remains visible. Tax estimate is not available without a validated account tax profile and MF-specific tax treatment. Four focused terminal tests and Ruff pass. FB-1108 PARTIAL: the MF terminal now explains SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as scheme/NAV/settlement decisions and explicitly avoids current-price buy claims; choice journaling remains open. Five focused MF terminal tests and Ruff pass. FB-1110 PARTIAL: typed thresholded alert rules now cover order state, stale data, MF pending allotment/payout, ETF dislocation, option expiry and risk-budget change; durable AlertBook halting applies to high severity. CLI source adapters and instant transport dispatch remain open. Twelve focused tests, Ruff and mypy pass. FB-1110 follow-up: pending MF units and payouts are now sourced from point-in-time paper database rows and routed through desktop plus owner-configured Telegram CLI notifications. Twenty-two targeted alert tests, Ruff and targeted mypy pass. Other desk feeds remain unintegrated."
   },
   "counts_by_status": {
     "COMPLETE": 42,
