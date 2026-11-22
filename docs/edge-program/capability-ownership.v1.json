@@ -2504,6 +2504,12 @@
       "module_owner": "src/financial_brain/paper/mf_sip_book.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/mf_switch_book.py",
+      "path": "src/financial_brain/paper/mf_switch_book.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_switch_book.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/mf_systematic_flow_book.py",
       "path": "src/financial_brain/paper/mf_systematic_flow_book.py",
       "module_role": "paper_engine_or_output",

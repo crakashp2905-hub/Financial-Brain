@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 680,
+  "source_count": 681,
   "sources": [
     {
       "capability_ids": [],
@@ -7724,7 +7724,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/mf_redemption_eligibility.py",
-      "source_sha256": "a6f4e81e3fc0534fca993967f43aeba6dd7e78b73793f33b60fe2895e6d7d674",
+      "source_sha256": "e11a6b4123ded9dcccd71ab18855c50f5c912ae2d3e18af6ad6a0dbdbbad215f",
       "test_paths": []
     },
     {
@@ -9118,7 +9118,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_purchase_book.py",
-      "source_sha256": "7e4dd5d2d80a32b0c36bdc010732124cbe3722b5a85d7eb5857566e495ddb7e5",
+      "source_sha256": "090b3a4849cc632aea57a869b967b75dd172a84ac6e746e470bffd0287d39629",
       "test_paths": []
     },
     {
@@ -9161,7 +9161,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_redemption_settlement.py",
-      "source_sha256": "87bd963a70878f9d5c7d9c7d36e2fdb324b8b829942da4d80362a9c77c6575bf",
+      "source_sha256": "209d2e31b4179c6298c0fdd4658b098b8dfcaca378145a10228ed90c9219e3c1",
       "test_paths": []
     },
     {
@@ -9206,6 +9206,35 @@
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_sip_book.py",
       "source_sha256": "94191fe8335ea8a1d05148d93efb287ffea6dd83ba252f4923e1cf56baab486e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
+        "forward_edge.data_permissions",
+        "hashlib",
+        "json",
+        "kernel.fund_transactions",
+        "kernel.mf_order",
+        "kernel.mf_purchase_payment",
+        "kernel.mf_switch",
+        "kernel.trading_clock",
+        "mf_account_ledger",
+        "mf_lot_book",
+        "mf_purchase_book",
+        "mf_redemption_settlement",
+        "providers.mf_scheme_terms",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_switch_book.py",
+      "source_sha256": "75fb42f70b337ca18cf12d9548c296064308468494c4b3d32eb453bce33fd0cb",
       "test_paths": []
     },
     {
@@ -11977,6 +12006,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 665,
+  "unassessed_count": 666,
   "unassigned_role_count": 398
 }
