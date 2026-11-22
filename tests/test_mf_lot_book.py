@@ -874,6 +874,17 @@ def test_mf_terminal_panel_displays_last_known_nav_with_stale_flag(connection):
     assert "tax profile/rules unavailable" in page
 
 
+def test_mf_terminal_explains_decisions_without_instant_price_order_controls(connection):
+    from financial_brain.paper.terminal import mf_paper_panel
+
+    page = mf_paper_panel(connection, date(2026, 1, 16))
+    for action in ("SUBSCRIBE", "REDEEM", "SWITCH", "SIP", "HOLD"):
+        assert f"<td>{action}</td>" in page
+    assert "not instant buy-at-current-price controls" in page
+    assert "No MF market-price fill is implied" in page
+    assert "this choice creates no order" in page
+
+
 def test_mf_terminal_panel_estimates_source_pinned_exit_load(connection):
     from financial_brain.paper.terminal import mf_paper_panel
 

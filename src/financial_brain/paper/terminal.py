@@ -680,11 +680,27 @@ def mf_paper_panel(con, asof: date) -> str:
     rows = con.execute(
         "SELECT account_id FROM mf_paper_accounts ORDER BY account_id"
     ).fetchall()
+    decision_rows = (
+        ("SUBSCRIBE", "Request a scheme purchase; cutoff, payment availability and eligible NAV determine the valuation date."),
+        ("REDEEM", "Request unit redemption; eligible NAV is followed by a separate payout and settlement lifecycle."),
+        ("SWITCH", "Pair a source redemption with a target subscription; each scheme follows its own NAV timing."),
+        ("SIP", "Create a schedule; every installment has separate funding, eligibility and allotment."),
+        ("HOLD", "Keep the current units; this choice creates no order."),
+    )
+    decision_table = (
+        "<h3>Mutual fund decisions</h3><div class='sub'>These are portfolio actions, not instant buy-at-current-price controls. "
+        "No MF market-price fill is implied.</div><div class='wrap'><table>"
+        "<tr><th>Decision</th><th>Meaning and valuation path</th></tr>"
+        + "".join(f"<tr><td>{_e(action)}</td><td>{_e(description)}</td></tr>"
+                  for action, description in decision_rows)
+        + "</table></div>"
+    )
     if not rows:
-        return "<h2>Mutual fund paper book</h2><div class='sub'>No MF paper accounts.</div>"
+        return "<h2>Mutual fund paper book</h2><div class='sub'>No MF paper accounts.</div>" + decision_table
 
     out = ["<h2>Mutual fund paper book</h2>",
-           f"<div class='sub'>NAV and order cutoff: {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible. Exit load is estimated at the displayed NAV; tax is not estimated without an account tax profile and applicable tax-lot rules.</div>"]
+           f"<div class='sub'>NAV and order cutoff: {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible. Exit load is estimated at the displayed NAV; tax is not estimated without an account tax profile and applicable tax-lot rules.</div>",
+           decision_table]
     for (account_id,) in rows:
         snapshot = account_snapshot(con, account_id, known_at=known_at)
         realism = assess_account_mf_realism(
