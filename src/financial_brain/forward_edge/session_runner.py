@@ -1095,7 +1095,7 @@ class ForwardSessionRunner:
                     or candidate_intent.get("quantity_unit") != quantity_unit
                     or candidate_reference_price != limit):
                 raise ForwardSessionRunnerError("paper order differs from its canonical candidate intent")
-        risk = self._con.execute("SELECT allowed, record_json FROM runner_risk_verdicts "
+        risk = self._con.execute("SELECT allowed, record_json, record_sha256 FROM runner_risk_verdicts "
                                   "WHERE session_id=? AND decision_id=?", [session_id, decision_id]).fetchone()
         if risk is None or risk[0] != 1:
             raise ForwardSessionRunnerError("paper intent requires an explicit persisted allow risk verdict")
@@ -1231,12 +1231,57 @@ class ForwardSessionRunner:
                    "passive_trade_event_ids": list(passive_trade_event_ids),
                    "latency_ms": latency_ms, "earliest_fill_time": timed.earliest_fill_time.isoformat(),
                    "simulated_at": simulated_at.astimezone(timezone.utc).isoformat()}
+        precommit = {
+            "schema": "fb.paper_precommit_validation.v1",
+            "session_id": session_id,
+            "order_id": order_id,
+            "decision_id": decision_id,
+            "instrument_id": instrument,
+            "side": side,
+            "quantity": quantity,
+            "quantity_unit": quantity_unit,
+            "limit_price": str(limit),
+            "requested_notional_inr": str(limit * quantity) if side == "BUY" else "0",
+            "reconciled_cash_before_inr": str(accounting["cash_inr"]),
+            "available_position_quantity": int(accounting["positions"].get(instrument, 0)),
+            "selected_quantity_ceiling": int(selected["quantity"]),
+            "decision_manifest_sha256": manifest_row[0],
+            "risk_verdict_sha256": risk[2],
+            "risk_verdict_id": risk_record["verdict_id"],
+            "risk_policy_id": risk_record["policy_id"],
+            "risk_policy_sha256": risk_record["policy_sha256"],
+            "risk_allowed": risk_record["allowed"],
+            "risk_assessed_at": risk_record["assessed_at"],
+            "instrument_rulebook_sha256": rulebook.digest,
+            "effective_instrument_rule": effective_rule,
+            "quote_event_id": event.event_id,
+            "quote_event_sha256": event.sha256(),
+            "quote_evidence_id": event.evidence_id,
+            "exchange": event.venue,
+            "event_time_utc": event.event_time.isoformat(),
+            "received_at_utc": event.received_at.isoformat(),
+            "available_at_utc": event.available_at.isoformat(),
+            "maximum_quote_age_ms": max_quote_age,
+            "decision_at_utc": decision_at.astimezone(timezone.utc).isoformat(),
+            "eligible_after_utc": timed.earliest_fill_time.isoformat(),
+            "validated_at_utc": simulated_at.astimezone(timezone.utc).isoformat(),
+        }
+        precommit_json = json.dumps(precommit, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        precommit["receipt_sha256"] = hashlib.sha256(precommit_json.encode("utf-8")).hexdigest()
+        request["precommit_validation"] = precommit
         request_json = json.dumps(request, sort_keys=True, separators=(",", ":"), allow_nan=False)
         request_sha = hashlib.sha256(request_json.encode("utf-8")).hexdigest()
-        existing = self._con.execute("SELECT request_sha256 FROM paper_intents WHERE session_id=? AND order_id=?",
+        existing = self._con.execute("SELECT request_sha256, request_json FROM paper_intents "
+                                     "WHERE session_id=? AND order_id=?",
                                      [session_id, order_id]).fetchone()
-        if existing and existing[0] != request_sha:
-            raise ForwardSessionRunnerError("order ID reused with different paper intent")
+        if existing:
+            prior_request = json.loads(existing[1])
+            prior_identity = {key: value for key, value in prior_request.items()
+                              if key != "precommit_validation"}
+            current_identity = {key: value for key, value in request.items()
+                                if key != "precommit_validation"}
+            if prior_identity != current_identity:
+                raise ForwardSessionRunnerError("order ID reused with different paper intent")
         if not existing:
             self._con.execute("INSERT INTO paper_intents VALUES (?, ?, ?, ?, ?, ?)",
                               [session_id, order_id, decision_id, event_id, request_sha, request_json])
@@ -1304,6 +1349,7 @@ class ForwardSessionRunner:
                         level_quantity for _price, level_quantity in opposing_levels),
                     "max_wait_ms": max_wait_ms,
                     "simulated_at": simulated_at.astimezone(timezone.utc).isoformat(),
+                    "precommit_receipt_sha256": precommit["receipt_sha256"],
                     "physical_order_submitted": False}
             if scenario.filled_quantity:
                 self._attach_cost_evidence(session_id, request, body, price=scenario.average_price,
