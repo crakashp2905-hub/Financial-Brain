@@ -35,6 +35,21 @@ def test_fill_never_uses_a_quote_before_decision_plus_latency() -> None:
     quotes = [_q(-1000, "1400.00", "1400.05"), _q(100, "1450.00", "1450.05"), _q(300, "1500.00", "1500.05")]
     r = X.marketable_limit(_intent(), quotes, LAT)
     assert r.status == "FILLED" and r.avg_price == D("1500.05")   # the 300 ms quote, not the cheaper earlier ones
+    assert r.simulation_fidelity == "OBSERVED_QUOTE_SIM"
+    assert r.quote_provenance_hash and r.quote_available_utc == T0 + timedelta(milliseconds=300)
+    assert r.as_dict()["simulation_fidelity"] == "OBSERVED_QUOTE_SIM"
+
+
+def test_quote_provenance_hash_changes_when_source_or_exchange_changes() -> None:
+    base = X.Quote(T0 + timedelta(milliseconds=300), D("100"), D("101"), 10, 10,
+                   source="kite", exchange="NSE")
+    changed = X.Quote(T0 + timedelta(milliseconds=300), D("100"), D("101"), 10, 10,
+                      source="archive", exchange="NSE")
+    first = X.marketable_limit(_intent(), [base], LAT)
+    second = X.marketable_limit(_intent(), [changed], LAT)
+    assert first.quote_provenance_hash != second.quote_provenance_hash
+    assert first.as_dict()["quote_source"] == "kite"
+    assert first.as_dict()["quote_exchange"] == "NSE"
 
 
 def test_no_quote_after_latency_is_a_recorded_miss() -> None:
@@ -152,6 +167,8 @@ def test_fx_execution_is_never_allowed() -> None:
 def test_fidelities_are_reported_separately_and_never_summed_together() -> None:
     rs = [X.ExecutionReceipt("o1", "SIMULATED_QUOTE", 10, D("100")), X.ExecutionReceipt("o2", "OBSERVED_BROKER", 5, D("100"))]
     assert X.totals_by_fidelity(rs) == {"SIMULATED_QUOTE": D("1000"), "OBSERVED_BROKER": D("500")}
+    assert X.totals_by_simulation_fidelity(rs) == {"OBSERVED_QUOTE_SIM": D("1000"), "OBSERVED_BROKER": D("500")}
+    assert rs[0].as_dict()["simulation_fidelity"] == "OBSERVED_QUOTE_SIM"
     with pytest.raises(X.MixedFidelity):
         X.combined_total(rs)
     assert X.combined_total(rs[:1]) == D("1000")
