@@ -9099,6 +9099,8 @@
         "hashlib",
         "ingest.mfnav",
         "json",
+        "kernel.fund_transactions",
+        "kernel.mf_order",
         "kernel.mf_sip",
         "kernel.trading_clock",
         "mf_account_ledger",
@@ -9108,7 +9110,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_sip_book.py",
-      "source_sha256": "53867c2496137db861b800fccb4cc00563929be7b9842532233ba7a66ade5018",
+      "source_sha256": "861a24bdb987637d5ffa2425de925b5dbd1aef80adaac9173235d98433a353ea",
       "test_paths": []
     },
     {

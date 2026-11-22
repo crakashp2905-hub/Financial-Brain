@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -7,15 +7,23 @@ from financial_brain.forward_edge.data_permissions import (
     DataPermission, DataUse, PermissionStatus,
 )
 from financial_brain.ingest.mf_scheme_terms import persist as persist_scheme_terms
+from financial_brain.kernel.fund_transactions import (
+    SchemeTransactionCalendar, SchemeTransactionRule, TransactionKind,
+)
 from financial_brain.config import Config
+from financial_brain.kernel.mf_order import (
+    MFOrder, MFOrderAcknowledgement, MFOrderEvidenceBasis, MFOrderKind, MFOrderState,
+)
 from financial_brain.kernel.mf_sip import (
     MFSIPInstallment, MFSIPSeries, MFSIPState,
 )
+from financial_brain.kernel.trading_clock import BusinessCalendar, CalendarDomain
 from financial_brain.paper.mf_sip_book import (
     MFSIPBookError, advance_installment, apply_sip_allotment, create_sip_series,
     installment_snapshot,
 )
 from financial_brain.paper.mf_account_ledger import ledger_snapshot, post_journal
+from financial_brain.paper.mf_order_book import record_response, submit_order
 from financial_brain.providers.mf_scheme_terms import SchemeCommercialTerms
 from financial_brain.storage.db import Database
 
@@ -136,7 +144,7 @@ def test_sip_payment_reserve_and_allotment_reconcile_atomically(connection, monk
         effective_from=date(2026, 11, 1), effective_through=None,
         evidence_ref="bank-feed-use-review", reviewer="account-owner",
     ),)
-    paid_at = NOW + timedelta(minutes=2)
+    paid_at = NOW + timedelta(hours=6)
     paid = _item(11, scheduled_for=date(2026, 11, 23),
                  state=MFSIPState.FUNDS_AVAILABLE,
                  payment_initiated_at=initiated_at, funds_available_at=paid_at)
@@ -184,7 +192,6 @@ def test_sip_payment_reserve_and_allotment_reconcile_atomically(connection, monk
     nav_id = "sip-nav-2026-11-23"
     nav_hash = "b" * 64
     nav_available_at = NOW + timedelta(minutes=10)
-    decision_at = NOW + timedelta(minutes=20)
     con.execute("""INSERT INTO mf_nav_observations (
         observation_id, scheme_code, isin_growth, isin_reinvest, scheme_name,
         fund_house, scheme_type, plan, option, nav, nav_date, lake_key,
@@ -194,13 +201,103 @@ def test_sip_payment_reserve_and_allotment_reconcile_atomically(connection, monk
          "EQUITY", installment.plan, installment.option, 10.0,
          date(2026, 11, 23), "sip-nav-lake", nav_hash,
          nav_available_at, nav_available_at])
-    allotted_at = NOW + timedelta(minutes=25)
-    kwargs = dict(
-        installment_id=installment.installment_id, nav_date=date(2026, 11, 23),
-        nav_per_unit=Decimal("10"), nav_observation_id=nav_id, terms=terms,
-        permissions=permissions, decision_at=decision_at,
-        allotted_at=allotted_at, now=allotted_at + timedelta(seconds=1),
+    scheme_business_calendar = BusinessCalendar(
+        calendar_id=installment.scheme_code, domain=CalendarDomain.SCHEME,
+        coverage_start=date(2026, 11, 23), source_as_of=date(2026, 11, 25),
+        open_days=frozenset(date(2026, 11, day) for day in (23, 24, 25)),
+        source_ref="scheme-calendar-snapshot", source_sha256="d" * 64,
+        recorded_at=NOW - timedelta(hours=1),
     )
+    rule = SchemeTransactionRule(
+        scheme_id=installment.scheme_code,
+        transaction_kind=TransactionKind.PURCHASE,
+        effective_from=date(2026, 11, 1), effective_to=None,
+        cutoff_local=time(15), before_cutoff_lag=0, after_cutoff_lag=1,
+        closed_day_lag=0, published_at=NOW - timedelta(hours=1),
+        source_ref="scheme-purchase-cutoff", source_sha256="e" * 64,
+    )
+    scheme_calendar = SchemeTransactionCalendar(
+        {installment.scheme_code: scheme_business_calendar}, (rule,),
+    )
+    order_id = f"sip-order:{installment.installment_id}"
+    order = MFOrder(
+        order_id=order_id, account_id=installment.account_id,
+        folio_id=installment.folio_id, scheme_code=installment.scheme_code,
+        plan=installment.plan, option=installment.option,
+        transaction_type=MFOrderKind.PURCHASE, requested_at=initiated_at,
+        amount_inr=installment.amount_inr,
+    )
+    submit_order(con, order, valid_business_days=2, calendar=scheme_calendar,
+                 now=initiated_at + timedelta(seconds=1))
+    with pytest.raises(MFSIPBookError, match="durably accepted"):
+        apply_sip_allotment(
+            con, installment_id=installment.installment_id, order_id=order_id,
+            nav_per_unit=Decimal("10"), nav_observation_id="not-yet-valid",
+            scheme_calendar=scheme_calendar, terms=terms, permissions=permissions,
+            decision_at=datetime(2026, 11, 24, 11, tzinfo=timezone.utc),
+            allotted_at=datetime(2026, 11, 24, 11, 5, tzinfo=timezone.utc),
+            now=datetime(2026, 11, 24, 11, 6, tzinfo=timezone.utc),
+        )
+    accepted_at = NOW + timedelta(minutes=5)
+    accepted_receipt_at = accepted_at + timedelta(seconds=1)
+    record_response(
+        con, MFOrderAcknowledgement(
+            order_id=order_id, state=MFOrderState.ACCEPTED,
+            effective_at=accepted_at, received_at=accepted_receipt_at,
+            basis=MFOrderEvidenceBasis.SIMULATED_ASSUMPTION,
+        ), now=accepted_receipt_at,
+    )
+    kwargs = dict(
+        installment_id=installment.installment_id, order_id=order_id,
+        nav_per_unit=Decimal("10"), nav_observation_id=nav_id,
+        scheme_calendar=scheme_calendar,
+        terms=terms, permissions=permissions,
+    )
+    late_calendar = BusinessCalendar(
+        calendar_id=installment.scheme_code, domain=CalendarDomain.SCHEME,
+        coverage_start=date(2026, 11, 23), source_as_of=date(2026, 11, 25),
+        open_days=frozenset(date(2026, 11, day) for day in (23, 24, 25)),
+        source_ref="late-scheme-calendar", source_sha256="1" * 64,
+        recorded_at=paid_at + timedelta(minutes=1),
+    )
+    with pytest.raises(MFSIPBookError, match="calendar was not known"):
+        apply_sip_allotment(con, **(kwargs | {
+            "scheme_calendar": SchemeTransactionCalendar(
+                {installment.scheme_code: late_calendar}, (rule,),
+            ),
+            "decision_at": datetime(2026, 11, 23, 12, tzinfo=timezone.utc),
+            "allotted_at": datetime(2026, 11, 23, 12, 5, tzinfo=timezone.utc),
+            "now": datetime(2026, 11, 23, 12, 6, tzinfo=timezone.utc),
+        }))
+    # Funds cleared after the sourced 15:00 scheme cutoff, so the previous NAV date
+    # cannot be selected even though that NAV was already observed locally.
+    with pytest.raises(MFSIPBookError, match="eligible NAV date"):
+        apply_sip_allotment(con, **(kwargs | {
+            "decision_at": datetime(2026, 11, 23, 12, tzinfo=timezone.utc),
+            "allotted_at": datetime(2026, 11, 23, 12, 5, tzinfo=timezone.utc),
+            "now": datetime(2026, 11, 23, 12, 6, tzinfo=timezone.utc),
+        }))
+    eligible_nav_id = "sip-nav-2026-11-24"
+    eligible_nav_at = datetime(2026, 11, 24, 10, 30, tzinfo=timezone.utc)
+    con.execute("""INSERT INTO mf_nav_observations (
+        observation_id, scheme_code, isin_growth, isin_reinvest, scheme_name,
+        fund_house, scheme_type, plan, option, nav, nav_date, lake_key,
+        row_number, row_sha256, source_published_at, observed_at, ingested_at)
+        VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NULL, ?, ?)""",
+        [eligible_nav_id, installment.scheme_code, terms.isin, "Test SIP Scheme", "AMC",
+         "EQUITY", installment.plan, installment.option, 10.0,
+         date(2026, 11, 24), "sip-nav-lake", "f" * 64,
+         eligible_nav_at, eligible_nav_at])
+    allotted_at = datetime(2026, 11, 24, 11, 5, tzinfo=timezone.utc)
+    kwargs |= {
+        "nav_observation_id": eligible_nav_id,
+        "decision_at": datetime(2026, 11, 24, 10, 15, tzinfo=timezone.utc),
+        "allotted_at": allotted_at, "now": allotted_at + timedelta(seconds=1),
+    }
+    # The eligible-day NAV is not readable to a decision made before its ingestion.
+    with pytest.raises(MFSIPBookError, match="eligible NAV date"):
+        apply_sip_allotment(con, **kwargs)
+    kwargs["decision_at"] = datetime(2026, 11, 24, 11, tzinfo=timezone.utc)
     original_advance = sip_book.advance_installment
 
     def fail_before_sip_transition(*args, **kwargs):
