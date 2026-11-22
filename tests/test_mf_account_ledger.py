@@ -8,7 +8,8 @@ from financial_brain.forward_edge.data_permissions import (
     DataPermission, DataUse, PermissionStatus,
 )
 from financial_brain.paper.mf_account_ledger import (
-    MFPaperLedgerError, ledger_snapshot, post_journal, record_external_cash_flow,
+    MFPaperLedgerError, ledger_snapshot, mf_instrument_id, post_journal,
+    record_external_cash_flow,
 )
 from financial_brain.paper.mf_lot_book import create_account
 from financial_brain.storage.db import Database
@@ -99,3 +100,37 @@ def test_journal_rejects_unbalanced_entries(connection):
             effective_at=NOW, recorded_at=NOW,
             entries=(("CASH", 10, 0), ("OWNER_EQUITY", 0, 9)),
         )
+
+
+def test_unit_journal_reconciles_folio_instrument_to_open_lots(connection):
+    create_account(connection, "unit-account", 0, now=NOW)
+    instrument = mf_instrument_id("scheme", "DIRECT", "GROWTH", "isin")
+    post_journal(
+        connection, account_id="unit-account", transaction_id="unit-opening",
+        effective_at=NOW, recorded_at=NOW,
+        unit_deltas=(("folio-1", instrument, Decimal("2.5")),),
+    )
+    assert connection.execute("""SELECT account_code, debit_units, credit_units,
+        folio_id, instrument_id FROM mf_paper_ledger_entries
+        WHERE account_id='unit-account' AND transaction_id='unit-opening'
+        ORDER BY line_no""").fetchall() == [
+            ("MF_UNITS", Decimal("2.5"), Decimal(0), "folio-1", instrument),
+            ("UNITS_CLEARING", Decimal(0), Decimal("2.5"), "folio-1", instrument),
+        ]
+    mismatched = ledger_snapshot(connection, account_id="unit-account")
+    assert mismatched["cash_is_reconciled"] is True
+    assert mismatched["unit_is_reconciled"] is False
+
+    connection.execute("""INSERT INTO mf_paper_lots (
+        account_id, lot_id, folio_id, scheme_code, plan, option, isin, allotted_on,
+        units_original, units_remaining, purchase_nav, subscription_event_id, created_at)
+        VALUES ('unit-account', 'lot-1', 'folio-1', 'scheme', 'DIRECT', 'GROWTH',
+        'isin', DATE '2026-11-01', 2.5, 2.5, 1, 'opening-event', ?)""", [NOW])
+    reconciled = ledger_snapshot(connection, account_id="unit-account")
+    assert reconciled["unit_is_reconciled"] is True
+    assert reconciled["is_reconciled"] is True
+
+    connection.execute("UPDATE mf_paper_lots SET folio_id=NULL WHERE lot_id='lot-1'")
+    unassigned = ledger_snapshot(connection, account_id="unit-account")
+    assert unassigned["unit_is_reconciled"] is False
+    assert unassigned["unassigned_open_lot_count"] == 1

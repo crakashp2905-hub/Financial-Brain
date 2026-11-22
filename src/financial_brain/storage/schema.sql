@@ -719,10 +719,14 @@ CREATE TABLE IF NOT EXISTS mf_paper_ledger_entries (
         'CASH', 'MF_INVESTMENTS', 'REDEMPTION_RECEIVABLE',
         'OWNER_EQUITY', 'OWNER_WITHDRAWALS', 'EXIT_LOAD_EXPENSE',
         'OTHER_CHARGES_EXPENSE', 'IDCW_INCOME', 'REALIZED_GAIN', 'REALIZED_LOSS',
-        'SIP_PAYMENT_PENDING'
+        'SIP_PAYMENT_PENDING', 'MF_UNITS', 'UNITS_CLEARING'
     )),
     debit_inr DECIMAL(38, 18) NOT NULL CHECK (debit_inr >= 0),
     credit_inr DECIMAL(38, 18) NOT NULL CHECK (credit_inr >= 0),
+    folio_id VARCHAR,
+    instrument_id VARCHAR,
+    debit_units DECIMAL(38, 18) NOT NULL DEFAULT 0 CHECK (debit_units >= 0),
+    credit_units DECIMAL(38, 18) NOT NULL DEFAULT 0 CHECK (credit_units >= 0),
     basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
     source_id VARCHAR,
     source_ref VARCHAR,
@@ -730,7 +734,20 @@ CREATE TABLE IF NOT EXISTS mf_paper_ledger_entries (
     event_sha256 VARCHAR NOT NULL,
     evidence_json VARCHAR NOT NULL,
     PRIMARY KEY (account_id, transaction_id, line_no),
-    CHECK ((debit_inr > 0 AND credit_inr = 0) OR (credit_inr > 0 AND debit_inr = 0)),
+    CHECK (
+        (debit_inr > 0 AND credit_inr = 0 AND debit_units = 0 AND credit_units = 0
+            AND account_code NOT IN ('MF_UNITS', 'UNITS_CLEARING')
+            AND folio_id IS NULL AND instrument_id IS NULL)
+        OR (credit_inr > 0 AND debit_inr = 0 AND debit_units = 0 AND credit_units = 0
+            AND account_code NOT IN ('MF_UNITS', 'UNITS_CLEARING')
+            AND folio_id IS NULL AND instrument_id IS NULL)
+        OR (debit_inr = 0 AND credit_inr = 0 AND debit_units > 0 AND credit_units = 0
+            AND account_code IN ('MF_UNITS', 'UNITS_CLEARING')
+            AND folio_id IS NOT NULL AND instrument_id IS NOT NULL)
+        OR (debit_inr = 0 AND credit_inr = 0 AND debit_units = 0 AND credit_units > 0
+            AND account_code IN ('MF_UNITS', 'UNITS_CLEARING')
+            AND folio_id IS NOT NULL AND instrument_id IS NOT NULL)
+    ),
     CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
             AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
         OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL

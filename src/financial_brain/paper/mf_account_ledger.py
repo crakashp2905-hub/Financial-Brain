@@ -1,15 +1,17 @@
-"""Balanced, append-only journal for the MF paper account cash lifecycle."""
+"""Balanced append-only MF paper journal for cash and folio-scoped units."""
 from __future__ import annotations
 
 import hashlib
 import json
 import re
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation, localcontext
 from typing import Any
 
 from ..forward_edge.data_permissions import DataPermission, DataUse
 from ..kernel.trading_clock import IST
+
+UNIT_QUANTUM = Decimal("0.000000000000000001")
 
 
 class MFPaperLedgerError(ValueError):
@@ -26,6 +28,12 @@ def _canonical(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
 
 
+def mf_instrument_id(scheme_code: str, plan: str, option: str, isin: str) -> str:
+    """Stable MF unit commodity key; identity is opaque and collision resistant."""
+    identity = _canonical([scheme_code, plan, option, isin])
+    return "mf:" + hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+
 def post_journal(
     con,
     *,
@@ -33,7 +41,8 @@ def post_journal(
     transaction_id: str,
     effective_at: datetime,
     recorded_at: datetime,
-    entries: tuple[tuple[str, Decimal | str | int, Decimal | str | int], ...],
+    entries: tuple[tuple[str, Decimal | str | int, Decimal | str | int], ...] = (),
+    unit_deltas: tuple[tuple[str, str, Decimal | str | int], ...] = (),
     basis: str = "SIMULATED_ASSUMPTION",
     source_id: str | None = None,
     source_ref: str | None = None,
@@ -56,8 +65,8 @@ def post_journal(
         source_sha256 = source_sha256.lower()
     elif any((source_id, source_ref, source_sha256)):
         raise MFPaperLedgerError("simulated journal cannot claim source evidence")
-    if not account_id.strip() or not transaction_id.strip() or not entries:
-        raise MFPaperLedgerError("account, transaction and journal entries are required")
+    if not account_id.strip() or not transaction_id.strip() or not (entries or unit_deltas):
+        raise MFPaperLedgerError("account, transaction and monetary or unit journal entries are required")
     normalized = []
     for code, debit_raw, credit_raw in entries:
         debit, credit = Decimal(str(debit_raw)), Decimal(str(credit_raw))
@@ -69,35 +78,93 @@ def post_journal(
     credit_total = sum((line[2] for line in normalized), Decimal(0))
     if debit_total != credit_total:
         raise MFPaperLedgerError("journal debits and credits do not balance")
+    normalized_units: dict[tuple[str, str], Decimal] = {}
+    for folio_id, instrument_id, raw_delta in unit_deltas:
+        if not folio_id.strip() or not instrument_id.strip():
+            raise MFPaperLedgerError("unit journal requires folio and instrument identity")
+        try:
+            delta = Decimal(str(raw_delta))
+        except (InvalidOperation, ValueError) as exc:
+            raise MFPaperLedgerError("unit journal quantity must be decimal") from exc
+        try:
+            with localcontext() as context:
+                context.prec = 38
+                quantized = delta.quantize(UNIT_QUANTUM)
+        except InvalidOperation as exc:
+            raise MFPaperLedgerError("unit journal quantity exceeds DECIMAL(38,18) precision") from exc
+        if not delta.is_finite() or delta == 0 or quantized != delta:
+            raise MFPaperLedgerError("unit journal quantity must be finite, nonzero and precise to 18 decimals")
+        key = (folio_id, instrument_id)
+        normalized_units[key] = normalized_units.get(key, Decimal(0)) + delta
+    normalized_units = {
+        key: value for key, value in sorted(normalized_units.items()) if value != 0
+    }
+    for quantity in normalized_units.values():
+        try:
+            with localcontext() as context:
+                context.prec = 38
+                if quantity.quantize(UNIT_QUANTUM) != quantity:
+                    raise MFPaperLedgerError("aggregated unit quantity exceeds 18-decimal precision")
+        except InvalidOperation as exc:
+            raise MFPaperLedgerError("aggregated unit quantity exceeds DECIMAL(38,18) precision") from exc
+    if not normalized and not normalized_units:
+        raise MFPaperLedgerError("journal has no nonzero monetary or unit entries")
     payload = {
         "account_id": account_id, "transaction_id": transaction_id,
         "effective_at": effective.isoformat(), "basis": basis,
         "source_id": source_id, "source_ref": source_ref,
         "source_sha256": source_sha256,
         "entries": [(code, str(debit), str(credit)) for code, debit, credit in normalized],
+        "unit_deltas": [(folio, instrument, str(delta))
+                        for (folio, instrument), delta in normalized_units.items()],
         "evidence": evidence or {},
     }
     digest = hashlib.sha256(_canonical(payload).encode("utf-8")).hexdigest()
     existing = con.execute("""SELECT COUNT(*), MIN(event_sha256) FROM mf_paper_ledger_entries
         WHERE account_id=? AND transaction_id=?""", [account_id, transaction_id]).fetchone()
     if existing[0]:
-        if existing[0] != len(normalized) or existing[1] != digest:
+        expected_lines = len(normalized) + 2 * len(normalized_units)
+        if existing[0] != expected_lines or existing[1] != digest:
             raise MFPaperLedgerError("transaction ID was reused for different journal evidence")
         return {"account_id": account_id, "transaction_id": transaction_id,
                 "debits_inr": debit_total, "credits_inr": credit_total,
                 "event_sha256": digest, "status": "already_posted"}
     evidence_json = _canonical(evidence or {})
-    for line_no, (code, debit, credit) in enumerate(normalized, 1):
+    rows: list[tuple[str, Decimal, Decimal, str | None, str | None, Decimal, Decimal]] = [
+        (code, debit, credit, None, None, Decimal(0), Decimal(0))
+        for code, debit, credit in normalized
+    ]
+    for (folio_id, instrument_id), delta in normalized_units.items():
+        if delta > 0:
+            rows.extend((
+                ("MF_UNITS", Decimal(0), Decimal(0), folio_id, instrument_id,
+                 delta, Decimal(0)),
+                ("UNITS_CLEARING", Decimal(0), Decimal(0), folio_id, instrument_id,
+                 Decimal(0), delta),
+            ))
+        else:
+            quantity = abs(delta)
+            rows.extend((
+                ("MF_UNITS", Decimal(0), Decimal(0), folio_id, instrument_id,
+                 Decimal(0), quantity),
+                ("UNITS_CLEARING", Decimal(0), Decimal(0), folio_id, instrument_id,
+                 quantity, Decimal(0)),
+            ))
+    for line_no, (code, debit, credit, row_folio_id, row_instrument_id,
+                  debit_units, credit_units) in enumerate(rows, 1):
         con.execute("""INSERT INTO mf_paper_ledger_entries (
             account_id, transaction_id, line_no, effective_at, recorded_at,
-            account_code, debit_inr, credit_inr, basis, source_id, source_ref,
+            account_code, debit_inr, credit_inr, folio_id, instrument_id,
+            debit_units, credit_units, basis, source_id, source_ref,
             source_sha256, event_sha256, evidence_json)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             [account_id, transaction_id, line_no, effective, recorded, code,
-             debit, credit, basis, source_id, source_ref, source_sha256,
-             digest, evidence_json])
+             debit, credit, row_folio_id, row_instrument_id, debit_units, credit_units,
+             basis, source_id, source_ref, source_sha256, digest, evidence_json])
     return {"account_id": account_id, "transaction_id": transaction_id,
             "debits_inr": debit_total, "credits_inr": credit_total,
+            "unit_deltas": {f"{folio}:{instrument}": str(delta)
+                            for (folio, instrument), delta in normalized_units.items()},
             "event_sha256": digest, "status": "posted"}
 
 
@@ -193,7 +260,7 @@ def record_external_cash_flow(
 
 
 def ledger_snapshot(con, *, account_id: str) -> dict[str, Any]:
-    """Reconcile journal cash to the account's canonical cash balance."""
+    """Reconcile cash and known folio units to canonical paper-book balances."""
     account = con.execute("SELECT cash_inr FROM mf_paper_accounts WHERE account_id=?",
                           [account_id]).fetchone()
     if account is None:
@@ -207,10 +274,42 @@ def ledger_snapshot(con, *, account_id: str) -> dict[str, Any]:
     balances = {code: Decimal(value) for code, value in rows}
     journal_cash = balances.get("CASH", Decimal(0))
     cash = Decimal(account[0])
+    unit_rows = con.execute("""SELECT folio_id, instrument_id,
+        COALESCE(SUM(debit_units-credit_units),0) FROM mf_paper_ledger_entries
+        WHERE account_id=? AND account_code='MF_UNITS' AND folio_id IS NOT NULL
+          AND TRIM(folio_id)<>''
+        GROUP BY folio_id, instrument_id ORDER BY folio_id, instrument_id""",
+        [account_id]).fetchall()
+    journal_units = {(str(folio), str(instrument)): Decimal(units)
+                     for folio, instrument, units in unit_rows}
+    lot_rows = con.execute("""SELECT folio_id, scheme_code, plan, option, isin,
+        COALESCE(SUM(units_remaining),0) FROM mf_paper_lots WHERE account_id=?
+        AND folio_id IS NOT NULL AND TRIM(folio_id)<>''
+        GROUP BY folio_id, scheme_code, plan, option, isin""",
+        [account_id]).fetchall()
+    lot_units: dict[tuple[str, str], Decimal] = {}
+    for folio, scheme, plan, option, isin, units in lot_rows:
+        key = (str(folio), mf_instrument_id(str(scheme), str(plan), str(option), str(isin)))
+        lot_units[key] = lot_units.get(key, Decimal(0)) + Decimal(units)
+    unit_differences = {
+        f"{folio}:{instrument}": str(lot_units.get((folio, instrument), Decimal(0)) -
+                                       journal_units.get((folio, instrument), Decimal(0)))
+        for folio, instrument in sorted(set(lot_units) | set(journal_units))
+        if lot_units.get((folio, instrument), Decimal(0)) !=
+        journal_units.get((folio, instrument), Decimal(0))
+    }
+    unassigned_lots = con.execute("""SELECT COUNT(*) FROM mf_paper_lots
+        WHERE account_id=? AND units_remaining>0
+          AND (folio_id IS NULL OR TRIM(folio_id)='')""", [account_id]).fetchone()[0]
+    unit_is_reconciled = not unit_differences and unassigned_lots == 0
     return {"account_id": account_id, "cash_inr": cash,
             "journal_cash_inr": journal_cash,
             "cash_difference_inr": cash - journal_cash,
-            "is_reconciled": cash == journal_cash,
+            "cash_is_reconciled": cash == journal_cash,
+            "unit_is_reconciled": unit_is_reconciled,
+            "unit_differences": unit_differences,
+            "unassigned_open_lot_count": int(unassigned_lots),
+            "is_reconciled": cash == journal_cash and unit_is_reconciled,
             "journal_debits_inr": Decimal(totals[0]),
             "journal_credits_inr": Decimal(totals[1]),
             "journal_balanced": Decimal(totals[0]) == Decimal(totals[1]),
@@ -220,5 +319,5 @@ def ledger_snapshot(con, *, account_id: str) -> dict[str, Any]:
             ]).encode("utf-8")).hexdigest()}
 
 
-__all__ = ["MFPaperLedgerError", "ledger_snapshot", "post_journal",
+__all__ = ["MFPaperLedgerError", "ledger_snapshot", "mf_instrument_id", "post_journal",
            "record_external_cash_flow"]
