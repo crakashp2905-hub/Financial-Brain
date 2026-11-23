@@ -5353,12 +5353,24 @@
     {
       "id": "PA-00-07",
       "text": "Build a capability provenance manifest separating main, PR #34, #36/#37/#38, #39 and #40; include each source's actual commit SHA and dependency graph.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/capability-provenance.v1.json records main and PR #34/#36/#37/#38/#39/#40 as separate exact source nodes, with full base/head/merge SHAs, GitHub state, capability registry snapshots and changed paths.",
+        "The PR dependency edges #37 -> #36 -> #38 are verified by exact base/head SHA equality; PR #40 merge commit is verified as an ancestor of captured main SHA 3c99b5dddc775db888822b4cec1849e5ebca56c8.",
+        "The six changed-path sets match exact local three-dot Git diffs for the captured base/head commits. Current GitHub API reads verified each head/base/status and main ref.",
+        "The manifest reports that PR #36-#39 lack a branch-local capability registry and labels path matches against main as retrospective; unmatched paths remain explicit. It makes no validation-transfer claim."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T16:30:01Z",
+      "commit": null,
+      "artifact_sha256": "a6473da034051f557268b326324338acf5d316c2d508d62c456dbda3f97082cb",
+      "test_evidence": [
+        "python scripts/capability_provenance.py --check: passed for main and all six requested PR sources.",
+        "python -m pytest tests/test_capability_provenance.py -q: 3 passed.",
+        "Exact API metadata and Git ancestry/diff checks passed; Ruff and git diff --check passed."
+      ],
+      "test_result": "The required separate-source manifest, full commit identities and branch dependency graph are reproducible. Historical absence of an owner-authored capability registry on PR #36-#39 is explicitly preserved as such."
     },
     {
       "id": "PA-00-08",
@@ -15276,7 +15288,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T16:18:43Z",
+    "as_of_utc": "2026-11-23T16:30:01Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15511,6 +15523,7 @@
       "PA-00-04",
       "PA-00-05",
       "PA-00-06",
+      "PA-00-07",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15533,15 +15546,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 254,
+    "audited_count": 255,
     "status_counts": {
-      "COMPLETE": 34,
+      "COMPLETE": 35,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
       "PARTIAL": 203,
-      "UNASSESSED": 1124
+      "UNASSESSED": 1123
     },
-    "verified_complete_count": 34,
+    "verified_complete_count": 35,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15632,15 +15645,18 @@
       "tests/test_research_outcome_freeze.py",
       "docs/edge-program/research-search-space-reconciliation.v1.json",
       "scripts/validate_research_search_space.py",
-      "tests/test_research_search_space_reconciliation.py"
+      "tests/test_research_search_space_reconciliation.py",
+      "docs/edge-program/capability-provenance.v1.json",
+      "scripts/capability_provenance.py",
+      "tests/test_capability_provenance.py"
     ],
-    "evidence_update": "PA-00-06 preserves source-hashed trial/search counts and known candidate families; historical 150 vs 151 firewall-trial totals remain unresolved because the raw evaluation_runs ledger is absent."
+    "evidence_update": "PA-00-07 now records exact source commits, current PR states, changed paths, capability-registry presence/mappings and verified dependency ancestry for main and PR #34/#36/#37/#38/#39/#40."
   },
   "counts_by_status": {
-    "COMPLETE": 34,
+    "COMPLETE": 35,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
     "PARTIAL": 203,
-    "UNASSESSED": 1124
+    "UNASSESSED": 1123
   }
 }

@@ -1,0 +1,1844 @@
+{
+  "schema": "fb.capability_source_provenance.v1",
+  "captured_at_utc": "2026-11-23T16:24:48Z",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "main_sha_verified_from_github_api": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+  "source_graph": "docs/edge-program/v3.0-pr-graph-2026-11-23-r3.json",
+  "capability_registry_path": "docs/edge-program/capability-ownership.v1.json",
+  "sources": [
+    {
+      "source_id": "main",
+      "kind": "baseline",
+      "commit_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+      "tree_sha": "b904a44bb83b2b62363c64297b57c47af8d34057",
+      "capability_registry": {
+        "present": true,
+        "sha256": "4377628e0d0c4e7584f8976688931381f7f6cd1905400a6c4808fa1ca5f05110",
+        "capability_ids": [
+          "algorithm_behavior_spec",
+          "api_and_mcp_outputs",
+          "broker_oms",
+          "canonical_portfolio_ledger",
+          "cli_output",
+          "forward_paper_oms",
+          "forward_session_evidence_journal",
+          "kernel_simulated_oms",
+          "kite_provider_adapter",
+          "legacy_intraday_paper_oms",
+          "legacy_paper_book_ledger",
+          "market_data_entitlement",
+          "market_event_normalization",
+          "mf_paper_lot_accounting",
+          "nse_bse_amfi_provider_adapters",
+          "paired_paper_sleeve_evaluation",
+          "paper_signal_renderer",
+          "prospective_strategy_adapter",
+          "quote_archive",
+          "signals_and_opportunities",
+          "strategy_candidate_catalogue",
+          "strategy_identity_lifecycle",
+          "trader_cockpit"
+        ],
+        "module_count": 463
+      },
+      "depends_on": []
+    },
+    {
+      "source_id": "PR-34",
+      "kind": "pull_request",
+      "pr_number": 34,
+      "state": "open",
+      "merged": false,
+      "head_ref": "feature/dynamic-evidence-standard",
+      "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+      "base_ref": "main",
+      "base_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+      "merge_commit_sha": "5ecee8d1556e11efd46cf180bd615b822ea215a2",
+      "depends_on": [],
+      "changed_paths": [
+        "brain/07-Research/PRE-REGISTERED frog-in-the-pan momentum under the dynamic standard.md",
+        "brain/07-Research/PRE-REGISTERED the hundred candidates under the dynamic standard.md",
+        "docs/adr/0007-dynamic-evidence-standard.md",
+        "docs/edge-program/capability-ownership.v1.json",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json",
+        "docs/edge-program/source-inventory.v2.json",
+        "docs/forward-edge/reference-candidates.v1.json",
+        "docs/trials/dynamic/PREREG-momentum-crash-timing.md",
+        "docs/trials/dynamic/RESULTS-2026-11-16.md",
+        "docs/trials/dynamic/bet-recheck-2026-11-18.json",
+        "docs/trials/dynamic/combo-momentum-carry.json",
+        "docs/trials/dynamic/hundred/RESULTS.md",
+        "docs/trials/dynamic/hundred/results.json",
+        "docs/trials/dynamic/hundred/series.parquet",
+        "docs/trials/dynamic/hundred/survivors.parquet",
+        "docs/trials/dynamic/ledger.jsonl",
+        "docs/trials/dynamic/momentum-excess-2026-11-16.json",
+        "docs/trials/dynamic/momentum-excess-series.parquet",
+        "docs/trials/dynamic/momentum-implementation-2026-11-18.json",
+        "docs/trials/dynamic/options-defined-risk-train-trades.parquet",
+        "docs/trials/dynamic/options-defined-risk-train.json",
+        "docs/trials/dynamic/rescore-2026-11-16.json",
+        "docs/trials/dynamic/rescore-2026-11-16.md",
+        "scripts/archive_coverage.py",
+        "scripts/research/bet_recheck.py",
+        "scripts/research/combo_momentum_carry.py",
+        "scripts/research/hundred.py",
+        "scripts/research/hundred_spec.py",
+        "scripts/research/momentum_excess.py",
+        "scripts/research/momentum_implementation.py",
+        "scripts/research/options_defined_risk.py",
+        "scripts/research/rescore_dynamic.py",
+        "src/financial_brain/evaluation/dynamic_standard.py",
+        "src/financial_brain/evaluation/oos_monitor.py",
+        "src/financial_brain/paper/zoo_edges.py",
+        "tests/test_dynamic_standard.py"
+      ],
+      "capability_registry_at_base": {
+        "present": true,
+        "sha256": "4377628e0d0c4e7584f8976688931381f7f6cd1905400a6c4808fa1ca5f05110",
+        "capability_ids": [
+          "algorithm_behavior_spec",
+          "api_and_mcp_outputs",
+          "broker_oms",
+          "canonical_portfolio_ledger",
+          "cli_output",
+          "forward_paper_oms",
+          "forward_session_evidence_journal",
+          "kernel_simulated_oms",
+          "kite_provider_adapter",
+          "legacy_intraday_paper_oms",
+          "legacy_paper_book_ledger",
+          "market_data_entitlement",
+          "market_event_normalization",
+          "mf_paper_lot_accounting",
+          "nse_bse_amfi_provider_adapters",
+          "paired_paper_sleeve_evaluation",
+          "paper_signal_renderer",
+          "prospective_strategy_adapter",
+          "quote_archive",
+          "signals_and_opportunities",
+          "strategy_candidate_catalogue",
+          "strategy_identity_lifecycle",
+          "trader_cockpit"
+        ],
+        "module_count": 463
+      },
+      "capability_registry_at_head": {
+        "present": true,
+        "sha256": "1c3b31d6bb8d60dec3c0fbb23a26cb1f166fe736dc22bf50f17f3ddb8f9f43ed",
+        "capability_ids": [
+          "algorithm_behavior_spec",
+          "api_and_mcp_outputs",
+          "broker_oms",
+          "canonical_portfolio_ledger",
+          "cli_output",
+          "forward_paper_oms",
+          "forward_session_evidence_journal",
+          "kernel_simulated_oms",
+          "kite_provider_adapter",
+          "legacy_intraday_paper_oms",
+          "legacy_paper_book_ledger",
+          "market_data_entitlement",
+          "market_event_normalization",
+          "mf_paper_lot_accounting",
+          "nse_bse_amfi_provider_adapters",
+          "paired_paper_sleeve_evaluation",
+          "paper_signal_renderer",
+          "prospective_strategy_adapter",
+          "quote_archive",
+          "signals_and_opportunities",
+          "strategy_candidate_catalogue",
+          "strategy_identity_lifecycle",
+          "trader_cockpit"
+        ],
+        "module_count": 464
+      },
+      "capability_registry_delta": {
+        "added": [],
+        "removed": [],
+        "modified": []
+      },
+      "module_inventory_delta": {
+        "added": [
+          "src/financial_brain/evaluation/dynamic_standard.py"
+        ],
+        "removed": [],
+        "modified": []
+      },
+      "capability_path_mapping": {
+        "basis_commit": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+        "retrospective_mapping": false,
+        "capabilities_to_changed_paths": {},
+        "module_roles_to_changed_paths": {
+          "paper_engine_or_output": [
+            {
+              "path": "src/financial_brain/paper/zoo_edges.py",
+              "module_owner": "src/financial_brain/paper/zoo_edges.py"
+            }
+          ],
+          "signal_report_or_trader_renderer": [
+            {
+              "path": "src/financial_brain/evaluation/oos_monitor.py",
+              "module_owner": "src/financial_brain/evaluation/oos_monitor.py"
+            }
+          ],
+          "strategy_research_or_evaluation": [
+            {
+              "path": "src/financial_brain/evaluation/dynamic_standard.py",
+              "module_owner": "src/financial_brain/evaluation/dynamic_standard.py"
+            }
+          ]
+        },
+        "changed_paths_without_owner_or_module_mapping": [
+          "brain/07-Research/PRE-REGISTERED frog-in-the-pan momentum under the dynamic standard.md",
+          "brain/07-Research/PRE-REGISTERED the hundred candidates under the dynamic standard.md",
+          "docs/adr/0007-dynamic-evidence-standard.md",
+          "docs/edge-program/capability-ownership.v1.json",
+          "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "docs/edge-program/source-inventory.v2.json",
+          "docs/forward-edge/reference-candidates.v1.json",
+          "docs/trials/dynamic/PREREG-momentum-crash-timing.md",
+          "docs/trials/dynamic/RESULTS-2026-11-16.md",
+          "docs/trials/dynamic/bet-recheck-2026-11-18.json",
+          "docs/trials/dynamic/combo-momentum-carry.json",
+          "docs/trials/dynamic/hundred/RESULTS.md",
+          "docs/trials/dynamic/hundred/results.json",
+          "docs/trials/dynamic/hundred/series.parquet",
+          "docs/trials/dynamic/hundred/survivors.parquet",
+          "docs/trials/dynamic/ledger.jsonl",
+          "docs/trials/dynamic/momentum-excess-2026-11-16.json",
+          "docs/trials/dynamic/momentum-excess-series.parquet",
+          "docs/trials/dynamic/momentum-implementation-2026-11-18.json",
+          "docs/trials/dynamic/options-defined-risk-train-trades.parquet",
+          "docs/trials/dynamic/options-defined-risk-train.json",
+          "docs/trials/dynamic/rescore-2026-11-16.json",
+          "docs/trials/dynamic/rescore-2026-11-16.md",
+          "scripts/archive_coverage.py",
+          "scripts/research/bet_recheck.py",
+          "scripts/research/combo_momentum_carry.py",
+          "scripts/research/hundred.py",
+          "scripts/research/hundred_spec.py",
+          "scripts/research/momentum_excess.py",
+          "scripts/research/momentum_implementation.py",
+          "scripts/research/options_defined_risk.py",
+          "scripts/research/rescore_dynamic.py",
+          "tests/test_dynamic_standard.py"
+        ]
+      }
+    },
+    {
+      "source_id": "PR-36",
+      "kind": "pull_request",
+      "pr_number": 36,
+      "state": "open",
+      "merged": false,
+      "head_ref": "feature/five-desk-d2-data-parity",
+      "head_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+      "base_ref": "feature/five-desk-d1-instruments",
+      "base_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+      "merge_commit_sha": "1a5dda6bda83bfb066d4d65bcec80c11d7160d9c",
+      "depends_on": [
+        "PR-37"
+      ],
+      "changed_paths": [
+        "docs/audits/five-desk-v1_4/AUDIT.md",
+        "docs/audits/five-desk-v1_4/audit.json",
+        "docs/five-desk/CAPABILITY_MATRIX.md",
+        "docs/five-desk/CHARTER.md",
+        "docs/five-desk/DATA_SOURCES.md",
+        "docs/forward-edge/strategy-eligibility.json",
+        "docs/runbooks/five-desk-operator.md",
+        "docs/strategies/four_node/README.md",
+        "docs/strategies/four_node/source/.gitattributes",
+        "docs/strategies/four_node/source/SHA256SUMS",
+        "docs/strategies/four_node/source/original_rules_2025-08-22.txt",
+        "docs/strategies/four_node/source/xauusd_4node_reference.pine",
+        "scripts/audit/five_desk_audit.py",
+        "src/financial_brain/evaluation/reports.py",
+        "src/financial_brain/evaluation/scorecards.py",
+        "src/financial_brain/evaluation/study_tools.py",
+        "src/financial_brain/execution/exchange_paper.py",
+        "src/financial_brain/execution/mf_orders.py",
+        "src/financial_brain/execution/mf_plans.py",
+        "src/financial_brain/execution/option_book.py",
+        "src/financial_brain/forecasting/calibration_tools.py",
+        "src/financial_brain/forecasting/index_15m.py",
+        "src/financial_brain/forecasting/index_extras.py",
+        "src/financial_brain/forecasting/index_ops.py",
+        "src/financial_brain/instruments/etf_reference.py",
+        "src/financial_brain/instruments/market_quality.py",
+        "src/financial_brain/instruments/mf_scheme.py",
+        "src/financial_brain/instruments/pit.py",
+        "src/financial_brain/paper/control_room.py",
+        "src/financial_brain/paper/dashboard_html.py",
+        "src/financial_brain/paper/day_cycle.py",
+        "src/financial_brain/paper/desk_runs.py",
+        "src/financial_brain/paper/five_desk_cli.py",
+        "src/financial_brain/paper/five_desk_engine.py",
+        "src/financial_brain/paper/ops.py",
+        "src/financial_brain/paper/policy.py",
+        "src/financial_brain/paper/router.py",
+        "src/financial_brain/portfolio/multi_asset_ledger.py",
+        "src/financial_brain/portfolio/position_ledger.py",
+        "src/financial_brain/portfolio/tax_lots.py",
+        "src/financial_brain/providers/amfi_history.py",
+        "src/financial_brain/research/cross_asset.py",
+        "src/financial_brain/research/mf_metrics.py",
+        "src/financial_brain/research/mf_portfolio.py",
+        "src/financial_brain/risk/capital_allocator.py",
+        "src/financial_brain/signals/admissibility.py",
+        "src/financial_brain/signals/contracts.py",
+        "src/financial_brain/signals/desk_logic.py",
+        "src/financial_brain/signals/evidence.py",
+        "src/financial_brain/signals/exit_plans.py",
+        "src/financial_brain/signals/exit_triggers.py",
+        "src/financial_brain/signals/index_options.py",
+        "src/financial_brain/strategies/etf_rank.py",
+        "src/financial_brain/strategies/four_node/__init__.py",
+        "src/financial_brain/strategies/four_node/indicators.py",
+        "src/financial_brain/strategies/four_node/nodes.py",
+        "src/financial_brain/strategies/four_node/rules.py",
+        "src/financial_brain/strategies/four_node/spec.py",
+        "tests/test_admissibility_allocator_s16_17.py",
+        "tests/test_adversarial_s13.py",
+        "tests/test_amfi_history.py",
+        "tests/test_broker_isolation_five_desk.py",
+        "tests/test_calibration_ops.py",
+        "tests/test_control_room_s11_23.py",
+        "tests/test_cross_asset_s20.py",
+        "tests/test_dashboard_html.py",
+        "tests/test_day_cycle_s10.py",
+        "tests/test_desk_logic.py",
+        "tests/test_desk_runs.py",
+        "tests/test_etf_mf_s5_s6.py",
+        "tests/test_etf_reference.py",
+        "tests/test_evidence_reports.py",
+        "tests/test_exchange_paper_s8.py",
+        "tests/test_exit_plans.py",
+        "tests/test_exit_triggers_4a.py",
+        "tests/test_five_desk_cli.py",
+        "tests/test_five_desk_engine.py",
+        "tests/test_four_node_edges.py",
+        "tests/test_four_node_s25.py",
+        "tests/test_index_15m_s24.py",
+        "tests/test_index_extras.py",
+        "tests/test_index_ops.py",
+        "tests/test_index_options_s24d.py",
+        "tests/test_lifecycle_tables_4a.py",
+        "tests/test_market_quality.py",
+        "tests/test_mf_journal_folio.py",
+        "tests/test_mf_orders_s7.py",
+        "tests/test_mf_plans.py",
+        "tests/test_mf_portfolio.py",
+        "tests/test_mf_scheme.py",
+        "tests/test_multi_asset_ledger_s9.py",
+        "tests/test_option_book.py",
+        "tests/test_partial_and_timeouts.py",
+        "tests/test_pit_d2.py",
+        "tests/test_policy_and_more_adversarial.py",
+        "tests/test_position_tax.py",
+        "tests/test_router.py",
+        "tests/test_scorecards_s21_22.py",
+        "tests/test_signals_d3.py",
+        "tests/test_study_tools.py"
+      ],
+      "capability_registry_at_base": {
+        "present": false,
+        "sha256": null,
+        "capability_ids": []
+      },
+      "capability_registry_at_head": {
+        "present": false,
+        "sha256": null,
+        "capability_ids": []
+      },
+      "capability_registry_delta": null,
+      "module_inventory_delta": null,
+      "capability_path_mapping": {
+        "basis_commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+        "retrospective_mapping": true,
+        "capabilities_to_changed_paths": {},
+        "module_roles_to_changed_paths": {},
+        "changed_paths_without_owner_or_module_mapping": [
+          "docs/audits/five-desk-v1_4/AUDIT.md",
+          "docs/audits/five-desk-v1_4/audit.json",
+          "docs/five-desk/CAPABILITY_MATRIX.md",
+          "docs/five-desk/CHARTER.md",
+          "docs/five-desk/DATA_SOURCES.md",
+          "docs/forward-edge/strategy-eligibility.json",
+          "docs/runbooks/five-desk-operator.md",
+          "docs/strategies/four_node/README.md",
+          "docs/strategies/four_node/source/.gitattributes",
+          "docs/strategies/four_node/source/SHA256SUMS",
+          "docs/strategies/four_node/source/original_rules_2025-08-22.txt",
+          "docs/strategies/four_node/source/xauusd_4node_reference.pine",
+          "scripts/audit/five_desk_audit.py",
+          "src/financial_brain/evaluation/reports.py",
+          "src/financial_brain/evaluation/scorecards.py",
+          "src/financial_brain/evaluation/study_tools.py",
+          "src/financial_brain/execution/exchange_paper.py",
+          "src/financial_brain/execution/mf_orders.py",
+          "src/financial_brain/execution/mf_plans.py",
+          "src/financial_brain/execution/option_book.py",
+          "src/financial_brain/forecasting/calibration_tools.py",
+          "src/financial_brain/forecasting/index_15m.py",
+          "src/financial_brain/forecasting/index_extras.py",
+          "src/financial_brain/forecasting/index_ops.py",
+          "src/financial_brain/instruments/etf_reference.py",
+          "src/financial_brain/instruments/market_quality.py",
+          "src/financial_brain/instruments/mf_scheme.py",
+          "src/financial_brain/instruments/pit.py",
+          "src/financial_brain/paper/control_room.py",
+          "src/financial_brain/paper/dashboard_html.py",
+          "src/financial_brain/paper/day_cycle.py",
+          "src/financial_brain/paper/desk_runs.py",
+          "src/financial_brain/paper/five_desk_cli.py",
+          "src/financial_brain/paper/five_desk_engine.py",
+          "src/financial_brain/paper/ops.py",
+          "src/financial_brain/paper/policy.py",
+          "src/financial_brain/paper/router.py",
+          "src/financial_brain/portfolio/multi_asset_ledger.py",
+          "src/financial_brain/portfolio/position_ledger.py",
+          "src/financial_brain/portfolio/tax_lots.py",
+          "src/financial_brain/providers/amfi_history.py",
+          "src/financial_brain/research/cross_asset.py",
+          "src/financial_brain/research/mf_metrics.py",
+          "src/financial_brain/research/mf_portfolio.py",
+          "src/financial_brain/risk/capital_allocator.py",
+          "src/financial_brain/signals/admissibility.py",
+          "src/financial_brain/signals/contracts.py",
+          "src/financial_brain/signals/desk_logic.py",
+          "src/financial_brain/signals/evidence.py",
+          "src/financial_brain/signals/exit_plans.py",
+          "src/financial_brain/signals/exit_triggers.py",
+          "src/financial_brain/signals/index_options.py",
+          "src/financial_brain/strategies/etf_rank.py",
+          "src/financial_brain/strategies/four_node/__init__.py",
+          "src/financial_brain/strategies/four_node/indicators.py",
+          "src/financial_brain/strategies/four_node/nodes.py",
+          "src/financial_brain/strategies/four_node/rules.py",
+          "src/financial_brain/strategies/four_node/spec.py",
+          "tests/test_admissibility_allocator_s16_17.py",
+          "tests/test_adversarial_s13.py",
+          "tests/test_amfi_history.py",
+          "tests/test_broker_isolation_five_desk.py",
+          "tests/test_calibration_ops.py",
+          "tests/test_control_room_s11_23.py",
+          "tests/test_cross_asset_s20.py",
+          "tests/test_dashboard_html.py",
+          "tests/test_day_cycle_s10.py",
+          "tests/test_desk_logic.py",
+          "tests/test_desk_runs.py",
+          "tests/test_etf_mf_s5_s6.py",
+          "tests/test_etf_reference.py",
+          "tests/test_evidence_reports.py",
+          "tests/test_exchange_paper_s8.py",
+          "tests/test_exit_plans.py",
+          "tests/test_exit_triggers_4a.py",
+          "tests/test_five_desk_cli.py",
+          "tests/test_five_desk_engine.py",
+          "tests/test_four_node_edges.py",
+          "tests/test_four_node_s25.py",
+          "tests/test_index_15m_s24.py",
+          "tests/test_index_extras.py",
+          "tests/test_index_ops.py",
+          "tests/test_index_options_s24d.py",
+          "tests/test_lifecycle_tables_4a.py",
+          "tests/test_market_quality.py",
+          "tests/test_mf_journal_folio.py",
+          "tests/test_mf_orders_s7.py",
+          "tests/test_mf_plans.py",
+          "tests/test_mf_portfolio.py",
+          "tests/test_mf_scheme.py",
+          "tests/test_multi_asset_ledger_s9.py",
+          "tests/test_option_book.py",
+          "tests/test_partial_and_timeouts.py",
+          "tests/test_pit_d2.py",
+          "tests/test_policy_and_more_adversarial.py",
+          "tests/test_position_tax.py",
+          "tests/test_router.py",
+          "tests/test_scorecards_s21_22.py",
+          "tests/test_signals_d3.py",
+          "tests/test_study_tools.py"
+        ]
+      }
+    },
+    {
+      "source_id": "PR-37",
+      "kind": "pull_request",
+      "pr_number": 37,
+      "state": "open",
+      "merged": false,
+      "head_ref": "feature/five-desk-d1-instruments",
+      "head_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+      "base_ref": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "merge_commit_sha": "c837d1bc4869d88448c43aa5a03c58c01e8fcb61",
+      "depends_on": [],
+      "changed_paths": [
+        "docs/audits/five-desk-v1_4/AUDIT.md",
+        "docs/audits/five-desk-v1_4/audit.json",
+        "scripts/audit/five_desk_audit.py",
+        "src/financial_brain/instruments/__init__.py",
+        "src/financial_brain/instruments/adapters.py",
+        "src/financial_brain/instruments/clocks.py",
+        "src/financial_brain/instruments/corporate_actions.py",
+        "src/financial_brain/instruments/master.py",
+        "src/financial_brain/instruments/store.py",
+        "src/financial_brain/instruments/units.py",
+        "src/financial_brain/storage/schema.sql",
+        "tests/test_instruments_d1.py"
+      ],
+      "capability_registry_at_base": {
+        "present": false,
+        "sha256": null,
+        "capability_ids": []
+      },
+      "capability_registry_at_head": {
+        "present": false,
+        "sha256": null,
+        "capability_ids": []
+      },
+      "capability_registry_delta": null,
+      "module_inventory_delta": null,
+      "capability_path_mapping": {
+        "basis_commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+        "retrospective_mapping": true,
+        "capabilities_to_changed_paths": {
+          "mf_paper_lot_accounting": [
+            "src/financial_brain/storage/schema.sql"
+          ]
+        },
+        "module_roles_to_changed_paths": {},
+        "changed_paths_without_owner_or_module_mapping": [
+          "docs/audits/five-desk-v1_4/AUDIT.md",
+          "docs/audits/five-desk-v1_4/audit.json",
+          "scripts/audit/five_desk_audit.py",
+          "src/financial_brain/instruments/__init__.py",
+          "src/financial_brain/instruments/adapters.py",
+          "src/financial_brain/instruments/clocks.py",
+          "src/financial_brain/instruments/corporate_actions.py",
+          "src/financial_brain/instruments/master.py",
+          "src/financial_brain/instruments/store.py",
+          "src/financial_brain/instruments/units.py",
+          "tests/test_instruments_d1.py"
+        ]
+      }
+    },
+    {
+      "source_id": "PR-38",
+      "kind": "pull_request",
+      "pr_number": 38,
+      "state": "open",
+      "merged": false,
+      "head_ref": "feature/four-node-variants",
+      "head_sha": "bdfb292ae2f45fc83e698084b2ac4fb1d6966842",
+      "base_ref": "feature/five-desk-d2-data-parity",
+      "base_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+      "merge_commit_sha": "ab6eb9027f351d71fe171dc3719354d5b66059b7",
+      "depends_on": [
+        "PR-36"
+      ],
+      "changed_paths": [
+        "docs/audits/five-desk-v1_4/AUDIT.md",
+        "docs/audits/five-desk-v1_4/audit.json",
+        "docs/five-desk/DATA_LICENSING_REVIEW.md",
+        "docs/five-desk/KITE_ENTITLEMENT_CHECK.md",
+        "docs/strategies/four_node/README.md",
+        "docs/strategies/four_node/results/README.md",
+        "docs/strategies/four_node/results/grid.json",
+        "docs/strategies/four_node_v2/PREREGISTRATION.md",
+        "docs/strategies/four_node_v2/README.md",
+        "docs/strategies/four_node_v2/results/run.json",
+        "docs/strategies/four_node_v3/PREREGISTRATION.md",
+        "docs/strategies/four_node_v3/README.md",
+        "docs/strategies/four_node_v3/results/run.json",
+        "scripts/audit/five_desk_audit.py",
+        "scripts/five_desk_nightly.cmd",
+        "scripts/five_desk_nightly.py",
+        "scripts/research/four_node_grid.py",
+        "scripts/research/four_node_v2_run.py",
+        "scripts/research/four_node_v3_run.py",
+        "src/financial_brain/paper/legacy_bridge.py",
+        "src/financial_brain/strategies/four_node/backtest.py",
+        "src/financial_brain/strategies/four_node/spec.py",
+        "src/financial_brain/strategies/four_node_v2/__init__.py",
+        "src/financial_brain/strategies/four_node_v2/backtest.py",
+        "src/financial_brain/strategies/four_node_v3/__init__.py",
+        "src/financial_brain/strategies/four_node_v3/backtest.py",
+        "tests/test_four_node_backtest.py",
+        "tests/test_four_node_v2.py",
+        "tests/test_four_node_v3.py",
+        "tests/test_legacy_bridge.py"
+      ],
+      "capability_registry_at_base": {
+        "present": false,
+        "sha256": null,
+        "capability_ids": []
+      },
+      "capability_registry_at_head": {
+        "present": false,
+        "sha256": null,
+        "capability_ids": []
+      },
+      "capability_registry_delta": null,
+      "module_inventory_delta": null,
+      "capability_path_mapping": {
+        "basis_commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+        "retrospective_mapping": true,
+        "capabilities_to_changed_paths": {},
+        "module_roles_to_changed_paths": {},
+        "changed_paths_without_owner_or_module_mapping": [
+          "docs/audits/five-desk-v1_4/AUDIT.md",
+          "docs/audits/five-desk-v1_4/audit.json",
+          "docs/five-desk/DATA_LICENSING_REVIEW.md",
+          "docs/five-desk/KITE_ENTITLEMENT_CHECK.md",
+          "docs/strategies/four_node/README.md",
+          "docs/strategies/four_node/results/README.md",
+          "docs/strategies/four_node/results/grid.json",
+          "docs/strategies/four_node_v2/PREREGISTRATION.md",
+          "docs/strategies/four_node_v2/README.md",
+          "docs/strategies/four_node_v2/results/run.json",
+          "docs/strategies/four_node_v3/PREREGISTRATION.md",
+          "docs/strategies/four_node_v3/README.md",
+          "docs/strategies/four_node_v3/results/run.json",
+          "scripts/audit/five_desk_audit.py",
+          "scripts/five_desk_nightly.cmd",
+          "scripts/five_desk_nightly.py",
+          "scripts/research/four_node_grid.py",
+          "scripts/research/four_node_v2_run.py",
+          "scripts/research/four_node_v3_run.py",
+          "src/financial_brain/paper/legacy_bridge.py",
+          "src/financial_brain/strategies/four_node/backtest.py",
+          "src/financial_brain/strategies/four_node/spec.py",
+          "src/financial_brain/strategies/four_node_v2/__init__.py",
+          "src/financial_brain/strategies/four_node_v2/backtest.py",
+          "src/financial_brain/strategies/four_node_v3/__init__.py",
+          "src/financial_brain/strategies/four_node_v3/backtest.py",
+          "tests/test_four_node_backtest.py",
+          "tests/test_four_node_v2.py",
+          "tests/test_four_node_v3.py",
+          "tests/test_legacy_bridge.py"
+        ]
+      }
+    },
+    {
+      "source_id": "PR-39",
+      "kind": "pull_request",
+      "pr_number": 39,
+      "state": "open",
+      "merged": false,
+      "head_ref": "feature/momentum-shadow-abort-closeout",
+      "head_sha": "a1cdb2ce7b7b29facbf3da1630dd17e73076ba50",
+      "base_ref": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "merge_commit_sha": "5274b551350e5676e68adcc17434e01661af63da",
+      "depends_on": [],
+      "changed_paths": [
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/paper/zoo.py",
+        "src/financial_brain/paper/zoo_edges.py",
+        "tests/test_phase5_intraday_runner.py",
+        "tests/test_phase5_zoo_edges.py",
+        "tests/test_zoo_h_targets.py"
+      ],
+      "capability_registry_at_base": {
+        "present": false,
+        "sha256": null,
+        "capability_ids": []
+      },
+      "capability_registry_at_head": {
+        "present": false,
+        "sha256": null,
+        "capability_ids": []
+      },
+      "capability_registry_delta": null,
+      "module_inventory_delta": null,
+      "capability_path_mapping": {
+        "basis_commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+        "retrospective_mapping": true,
+        "capabilities_to_changed_paths": {
+          "legacy_intraday_paper_oms": [
+            "src/financial_brain/paper/intraday_runner.py"
+          ],
+          "legacy_paper_book_ledger": [
+            "src/financial_brain/paper/intraday_runner.py"
+          ],
+          "market_data_entitlement": [
+            "src/financial_brain/paper/intraday_runner.py"
+          ],
+          "quote_archive": [
+            "src/financial_brain/paper/intraday_runner.py"
+          ]
+        },
+        "module_roles_to_changed_paths": {
+          "paper_engine_or_output": [
+            {
+              "path": "src/financial_brain/paper/intraday_runner.py",
+              "module_owner": "src/financial_brain/paper/intraday_runner.py"
+            },
+            {
+              "path": "src/financial_brain/paper/zoo.py",
+              "module_owner": "src/financial_brain/paper/zoo.py"
+            },
+            {
+              "path": "src/financial_brain/paper/zoo_edges.py",
+              "module_owner": "src/financial_brain/paper/zoo_edges.py"
+            }
+          ]
+        },
+        "changed_paths_without_owner_or_module_mapping": [
+          "tests/test_phase5_intraday_runner.py",
+          "tests/test_phase5_zoo_edges.py",
+          "tests/test_zoo_h_targets.py"
+        ]
+      }
+    },
+    {
+      "source_id": "PR-40",
+      "kind": "pull_request",
+      "pr_number": 40,
+      "state": "closed",
+      "merged": true,
+      "head_ref": "merge/forward-edge-branch-version",
+      "head_sha": "39817e98dea70640c26d7530dcf51a23d0cce2bb",
+      "base_ref": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "merge_commit_sha": "50248f1474f8f3476d723584da410a6fac7e4219",
+      "depends_on": [],
+      "changed_paths": [
+        ".github/CODEOWNERS",
+        ".github/workflows/ci.yml",
+        "docs/READINESS.md",
+        "docs/RUNBOOK-LIVE.md",
+        "docs/adr/0005-broker-path-behind-stages.md",
+        "docs/audits/capability-matrix.v1.json",
+        "docs/audits/capability-matrix.v2.json",
+        "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
+        "docs/edge-program/MASTER_CHECKLIST_2026-11-12.md",
+        "docs/edge-program/PROGRESS.md",
+        "docs/edge-program/V3.0_PROGRESS.md",
+        "docs/edge-program/authoritative-contracts.v1.json",
+        "docs/edge-program/canonical-migration-audit.v1.json",
+        "docs/edge-program/canonical-portfolio-ledger.v1.md",
+        "docs/edge-program/capability-ownership.v1.json",
+        "docs/edge-program/checklist-baseline.v1.json",
+        "docs/edge-program/current-baseline.json",
+        "docs/edge-program/data-permission-operations.md",
+        "docs/edge-program/data-permissions.v1.json",
+        "docs/edge-program/deviations.v1.json",
+        "docs/edge-program/forward-edge-equivalence-report.v1.json",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json",
+        "docs/edge-program/main-branch-protection.v1.md",
+        "docs/edge-program/market-data-rights-review.v1.md",
+        "docs/edge-program/market-data-sources.v1.json",
+        "docs/edge-program/ownership-map.v1.json",
+        "docs/edge-program/pre-migration-backup-2026-11-15.json",
+        "docs/edge-program/product-charter.v1.json",
+        "docs/edge-program/release-evidence-inputs.v1.json",
+        "docs/edge-program/release-semantics.v1.json",
+        "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip",
+        "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip.sha256",
+        "docs/edge-program/reproducibility-contract.v1.json",
+        "docs/edge-program/source-inventory.v2.json",
+        "docs/edge-program/state-ownership.v1.json",
+        "docs/edge-program/trial-preservation-audit.v1.json",
+        "docs/edge-program/v3.0-baseline-2026-11-21-r2.json",
+        "docs/edge-program/v3.0-baseline-2026-11-21-r2.json.sha256",
+        "docs/edge-program/v3.0-baseline-2026-11-21.json",
+        "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json",
+        "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+        "docs/edge-program/v3.0-status.json",
+        "docs/forward-edge/BLOCKERS.md",
+        "docs/forward-edge/OPERATOR.md",
+        "docs/forward-edge/RUNBOOKS.md",
+        "docs/forward-edge/TRACKER.md",
+        "docs/forward-edge/WAVES.md",
+        "docs/forward-edge/capability-matrix.json",
+        "docs/forward-edge/capital-risk-proposal-template.md",
+        "docs/forward-edge/eligibility-v1.json",
+        "docs/forward-edge/fixtures/session-cases.v1.json",
+        "docs/forward-edge/protected-pins.json",
+        "docs/forward-edge/reference-candidates.v1.json",
+        "docs/forward-edge/trial-program.v1.json",
+        "pyproject.toml",
+        "scripts/audit_canonical_portfolio_migration.py",
+        "scripts/audit_checklist_baseline.py",
+        "scripts/build_checklist_evidence_bundle.py",
+        "scripts/capability_ownership.py",
+        "scripts/ci_test_summary.py",
+        "scripts/forward_edge_capability_matrix.py",
+        "scripts/forward_edge_equivalence_report.py",
+        "scripts/forward_engine_graph.py",
+        "scripts/migrate_legacy_paper_books.py",
+        "scripts/source_inventory.py",
+        "scripts/state_ownership.py",
+        "scripts/trial_preservation_audit.py",
+        "scripts/validate_capability_matrix.py",
+        "scripts/validate_codeowners_map.py",
+        "scripts/validate_deviation_log.py",
+        "scripts/validate_market_data_sources.py",
+        "scripts/validate_product_charter.py",
+        "scripts/validate_reference_candidates.py",
+        "scripts/validate_release_semantics.py",
+        "scripts/validate_trial_program.py",
+        "scripts/verify_reproducibility.py",
+        "src/financial_brain/cli.py",
+        "src/financial_brain/evaluation/champion.py",
+        "src/financial_brain/evaluation/evidence_tiers.py",
+        "src/financial_brain/evaluation/executable.py",
+        "src/financial_brain/evaluation/learned_model.py",
+        "src/financial_brain/execution/oms/__init__.py",
+        "src/financial_brain/execution/oms/engine.py",
+        "src/financial_brain/execution/oms/kite_broker.py",
+        "src/financial_brain/execution/oms/rollout.py",
+        "src/financial_brain/execution/order_policy.py",
+        "src/financial_brain/forward_edge/abstention.py",
+        "src/financial_brain/forward_edge/alerts.py",
+        "src/financial_brain/forward_edge/approvals.py",
+        "src/financial_brain/forward_edge/audit.py",
+        "src/financial_brain/forward_edge/backup_restore.py",
+        "src/financial_brain/forward_edge/bootstrap.py",
+        "src/financial_brain/forward_edge/capacity.py",
+        "src/financial_brain/forward_edge/capital_allocation.py",
+        "src/financial_brain/forward_edge/capital_proposal.py",
+        "src/financial_brain/forward_edge/capital_scaling.py",
+        "src/financial_brain/forward_edge/carry_comparison.py",
+        "src/financial_brain/forward_edge/champion_challenger.py",
+        "src/financial_brain/forward_edge/champion_governance.py",
+        "src/financial_brain/forward_edge/claim_tier.py",
+        "src/financial_brain/forward_edge/cli.py",
+        "src/financial_brain/forward_edge/clock.py",
+        "src/financial_brain/forward_edge/cluster_attribution.py",
+        "src/financial_brain/forward_edge/cockpit.py",
+        "src/financial_brain/forward_edge/cohort_archive.py",
+        "src/financial_brain/forward_edge/cohort_blocks.py",
+        "src/financial_brain/forward_edge/completeness.py",
+        "src/financial_brain/forward_edge/cost_schedule.py",
+        "src/financial_brain/forward_edge/cost_sensitivity.py",
+        "src/financial_brain/forward_edge/data_gate.py",
+        "src/financial_brain/forward_edge/data_permissions.py",
+        "src/financial_brain/forward_edge/decision_journal.py",
+        "src/financial_brain/forward_edge/decision_outcome.py",
+        "src/financial_brain/forward_edge/disaster_stress.py",
+        "src/financial_brain/forward_edge/disposable_ledger.py",
+        "src/financial_brain/forward_edge/durable.py",
+        "src/financial_brain/forward_edge/eligibility.py",
+        "src/financial_brain/forward_edge/evidence_bundle.py",
+        "src/financial_brain/forward_edge/evidence_labels.py",
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "src/financial_brain/forward_edge/execution.py",
+        "src/financial_brain/forward_edge/execution_scenario.py",
+        "src/financial_brain/forward_edge/exposure_limits.py",
+        "src/financial_brain/forward_edge/falsification.py",
+        "src/financial_brain/forward_edge/familywise.py",
+        "src/financial_brain/forward_edge/feed_health.py",
+        "src/financial_brain/forward_edge/fixture_adapter.py",
+        "src/financial_brain/forward_edge/fixtures.py",
+        "src/financial_brain/forward_edge/futures_roll.py",
+        "src/financial_brain/forward_edge/harm_stop.py",
+        "src/financial_brain/forward_edge/horizon_freeze.py",
+        "src/financial_brain/forward_edge/instrument_rules.py",
+        "src/financial_brain/forward_edge/intent_timing.py",
+        "src/financial_brain/forward_edge/intraday_nulls.py",
+        "src/financial_brain/forward_edge/ledger_reconcile.py",
+        "src/financial_brain/forward_edge/lookahead.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/market_events.py",
+        "src/financial_brain/forward_edge/marketable_limit.py",
+        "src/financial_brain/forward_edge/modes.py",
+        "src/financial_brain/forward_edge/operator_decisions.py",
+        "src/financial_brain/forward_edge/options_risk.py",
+        "src/financial_brain/forward_edge/options_spread.py",
+        "src/financial_brain/forward_edge/order_blotter.py",
+        "src/financial_brain/forward_edge/order_journal.py",
+        "src/financial_brain/forward_edge/outage_gate.py",
+        "src/financial_brain/forward_edge/outcome_maturation.py",
+        "src/financial_brain/forward_edge/outperformance.py",
+        "src/financial_brain/forward_edge/paired_controls.py",
+        "src/financial_brain/forward_edge/paper_accounting.py",
+        "src/financial_brain/forward_edge/paper_book_adapter.py",
+        "src/financial_brain/forward_edge/parameter_freeze.py",
+        "src/financial_brain/forward_edge/passive_queue.py",
+        "src/financial_brain/forward_edge/pattern_uplift.py",
+        "src/financial_brain/forward_edge/persistent_killswitch.py",
+        "src/financial_brain/forward_edge/pipeline.py",
+        "src/financial_brain/forward_edge/pnl_dashboard.py",
+        "src/financial_brain/forward_edge/portfolio_alpha.py",
+        "src/financial_brain/forward_edge/precision_gate.py",
+        "src/financial_brain/forward_edge/provenance.py",
+        "src/financial_brain/forward_edge/quote_archive.py",
+        "src/financial_brain/forward_edge/research_separation.py",
+        "src/financial_brain/forward_edge/risk_allocator.py",
+        "src/financial_brain/forward_edge/risk_metrics.py",
+        "src/financial_brain/forward_edge/risk_throttle.py",
+        "src/financial_brain/forward_edge/session_close.py",
+        "src/financial_brain/forward_edge/session_ops.py",
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/session_state.py",
+        "src/financial_brain/forward_edge/session_timeline.py",
+        "src/financial_brain/forward_edge/shadow.py",
+        "src/financial_brain/forward_edge/signal_trace.py",
+        "src/financial_brain/forward_edge/strategy_adapter.py",
+        "src/financial_brain/forward_edge/strategy_attribution.py",
+        "src/financial_brain/forward_edge/strategy_inventory.py",
+        "src/financial_brain/forward_edge/strategy_scorecard.py",
+        "src/financial_brain/forward_edge/stress.py",
+        "src/financial_brain/forward_edge/tracker.py",
+        "src/financial_brain/forward_edge/trials.py",
+        "src/financial_brain/forward_edge/ui_actions.py",
+        "src/financial_brain/forward_edge/venue_calendar.py",
+        "src/financial_brain/ingest/kite_live.py",
+        "src/financial_brain/kernel/events.py",
+        "src/financial_brain/kernel/instruments.py",
+        "src/financial_brain/kernel/ledger.py",
+        "src/financial_brain/kernel/oms.py",
+        "src/financial_brain/kernel/registry.py",
+        "src/financial_brain/learning_audit.py",
+        "src/financial_brain/paper/book.py",
+        "src/financial_brain/paper/daily_results.py",
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/paper/zoo.py",
+        "src/financial_brain/paper/zoo_edges.py",
+        "src/financial_brain/portfolio/canonical_ledger.py",
+        "src/financial_brain/portfolio/legacy_migration.py",
+        "tests/fixtures/forward_edge/golden_signatures.json",
+        "tests/test_authoritative_contracts.py",
+        "tests/test_canonical_portfolio_ledger.py",
+        "tests/test_capability_ownership.py",
+        "tests/test_champion_executable.py",
+        "tests/test_checklist_baseline.py",
+        "tests/test_checklist_evidence_bundle.py",
+        "tests/test_ci_test_summary.py",
+        "tests/test_codeowners_map.py",
+        "tests/test_deviation_log.py",
+        "tests/test_edge_program_baseline.py",
+        "tests/test_evidence_claims.py",
+        "tests/test_evidence_labels.py",
+        "tests/test_executable_outcomes.py",
+        "tests/test_forward_edge_abstention.py",
+        "tests/test_forward_edge_alerts.py",
+        "tests/test_forward_edge_backup_restore.py",
+        "tests/test_forward_edge_bootstrap.py",
+        "tests/test_forward_edge_capacity.py",
+        "tests/test_forward_edge_capital_allocation.py",
+        "tests/test_forward_edge_capital_proposal.py",
+        "tests/test_forward_edge_capital_scaling.py",
+        "tests/test_forward_edge_carry_comparison.py",
+        "tests/test_forward_edge_champion_challenger.py",
+        "tests/test_forward_edge_champion_governance.py",
+        "tests/test_forward_edge_checkpoints.py",
+        "tests/test_forward_edge_claim_tier.py",
+        "tests/test_forward_edge_cli.py",
+        "tests/test_forward_edge_clock.py",
+        "tests/test_forward_edge_cluster_attribution.py",
+        "tests/test_forward_edge_cockpit.py",
+        "tests/test_forward_edge_cohort_archive.py",
+        "tests/test_forward_edge_cohort_blocks.py",
+        "tests/test_forward_edge_completeness.py",
+        "tests/test_forward_edge_cost_schedule.py",
+        "tests/test_forward_edge_cost_sensitivity.py",
+        "tests/test_forward_edge_data_gate.py",
+        "tests/test_forward_edge_decision_journal.py",
+        "tests/test_forward_edge_decision_outcome.py",
+        "tests/test_forward_edge_disaster_stress.py",
+        "tests/test_forward_edge_disposable_ledger.py",
+        "tests/test_forward_edge_eligibility.py",
+        "tests/test_forward_edge_equivalence_report.py",
+        "tests/test_forward_edge_evidence_bundle.py",
+        "tests/test_forward_edge_execution_scenario.py",
+        "tests/test_forward_edge_exposure_limits.py",
+        "tests/test_forward_edge_f00.py",
+        "tests/test_forward_edge_f01.py",
+        "tests/test_forward_edge_f03.py",
+        "tests/test_forward_edge_f13.py",
+        "tests/test_forward_edge_f17.py",
+        "tests/test_forward_edge_falsification.py",
+        "tests/test_forward_edge_familywise.py",
+        "tests/test_forward_edge_feed_health.py",
+        "tests/test_forward_edge_futures_roll.py",
+        "tests/test_forward_edge_harm_stop.py",
+        "tests/test_forward_edge_horizon_freeze.py",
+        "tests/test_forward_edge_instrument_rules.py",
+        "tests/test_forward_edge_integrity_gates.py",
+        "tests/test_forward_edge_intent_timing.py",
+        "tests/test_forward_edge_intraday_nulls.py",
+        "tests/test_forward_edge_kite_market_data.py",
+        "tests/test_forward_edge_ledger_reconcile.py",
+        "tests/test_forward_edge_lookahead.py",
+        "tests/test_forward_edge_market_events.py",
+        "tests/test_forward_edge_marketable_limit.py",
+        "tests/test_forward_edge_operator_decisions.py",
+        "tests/test_forward_edge_options_risk.py",
+        "tests/test_forward_edge_options_spread.py",
+        "tests/test_forward_edge_order_blotter.py",
+        "tests/test_forward_edge_order_journal.py",
+        "tests/test_forward_edge_outage_gate.py",
+        "tests/test_forward_edge_outcome_maturation.py",
+        "tests/test_forward_edge_outperformance.py",
+        "tests/test_forward_edge_paired_controls.py",
+        "tests/test_forward_edge_parameter_freeze.py",
+        "tests/test_forward_edge_passive_queue.py",
+        "tests/test_forward_edge_pattern_uplift.py",
+        "tests/test_forward_edge_persistent_killswitch.py",
+        "tests/test_forward_edge_pipeline_compat.py",
+        "tests/test_forward_edge_pnl_dashboard.py",
+        "tests/test_forward_edge_portfolio_alpha.py",
+        "tests/test_forward_edge_precision_gate.py",
+        "tests/test_forward_edge_provenance.py",
+        "tests/test_forward_edge_quote_archive.py",
+        "tests/test_forward_edge_registry.py",
+        "tests/test_forward_edge_research_separation.py",
+        "tests/test_forward_edge_risk_allocator.py",
+        "tests/test_forward_edge_risk_metrics.py",
+        "tests/test_forward_edge_risk_throttle.py",
+        "tests/test_forward_edge_runbooks.py",
+        "tests/test_forward_edge_session_close.py",
+        "tests/test_forward_edge_session_runner.py",
+        "tests/test_forward_edge_session_state.py",
+        "tests/test_forward_edge_session_timeline.py",
+        "tests/test_forward_edge_shadow.py",
+        "tests/test_forward_edge_signal_trace.py",
+        "tests/test_forward_edge_strategy_adapter.py",
+        "tests/test_forward_edge_strategy_attribution.py",
+        "tests/test_forward_edge_strategy_inventory.py",
+        "tests/test_forward_edge_strategy_scorecard.py",
+        "tests/test_forward_edge_stress.py",
+        "tests/test_forward_edge_tracker.py",
+        "tests/test_forward_edge_ui_actions.py",
+        "tests/test_forward_edge_venue_calendar.py",
+        "tests/test_forward_session_runner.py",
+        "tests/test_kernel_registry_research.py",
+        "tests/test_kite_forward_events.py",
+        "tests/test_kite_live_forward_events.py",
+        "tests/test_learning_audit.py",
+        "tests/test_legacy_portfolio_migration.py",
+        "tests/test_market_data_source_validator.py",
+        "tests/test_oms.py",
+        "tests/test_phase5_book.py",
+        "tests/test_phase5_daily_results.py",
+        "tests/test_phase5_intraday_runner.py",
+        "tests/test_phase5_learned_model.py",
+        "tests/test_phase5_zoo_edges.py",
+        "tests/test_product_charter.py",
+        "tests/test_reference_candidates.py",
+        "tests/test_source_inventory.py",
+        "tests/test_trial_preservation_audit.py",
+        "tests/test_zoo_h_targets.py"
+      ],
+      "capability_registry_at_base": {
+        "present": false,
+        "sha256": null,
+        "capability_ids": []
+      },
+      "capability_registry_at_head": {
+        "present": true,
+        "sha256": "1ad2ec2e9626b381a268ebf15bbbfae86af597440f0b95f342d56c7c87398e6a",
+        "capability_ids": [
+          "algorithm_behavior_spec",
+          "api_and_mcp_outputs",
+          "broker_oms",
+          "canonical_portfolio_ledger",
+          "cli_output",
+          "forward_paper_oms",
+          "forward_session_evidence_journal",
+          "kernel_simulated_oms",
+          "kite_provider_adapter",
+          "legacy_intraday_paper_oms",
+          "legacy_paper_book_ledger",
+          "market_data_entitlement",
+          "market_event_normalization",
+          "nse_bse_amfi_provider_adapters",
+          "paper_signal_renderer",
+          "prospective_strategy_adapter",
+          "quote_archive",
+          "signals_and_opportunities",
+          "strategy_candidate_catalogue",
+          "strategy_identity_lifecycle",
+          "trader_cockpit"
+        ],
+        "module_count": 430
+      },
+      "capability_registry_delta": null,
+      "module_inventory_delta": null,
+      "capability_path_mapping": {
+        "basis_commit": "39817e98dea70640c26d7530dcf51a23d0cce2bb",
+        "retrospective_mapping": false,
+        "capabilities_to_changed_paths": {
+          "broker_oms": [
+            "src/financial_brain/execution/oms/engine.py",
+            "src/financial_brain/execution/oms/kite_broker.py"
+          ],
+          "canonical_portfolio_ledger": [
+            "src/financial_brain/portfolio/canonical_ledger.py",
+            "src/financial_brain/portfolio/legacy_migration.py"
+          ],
+          "cli_output": [
+            "src/financial_brain/cli.py"
+          ],
+          "forward_paper_oms": [
+            "src/financial_brain/forward_edge/durable.py",
+            "src/financial_brain/forward_edge/execution_scenario.py",
+            "src/financial_brain/forward_edge/session_runner.py"
+          ],
+          "forward_session_evidence_journal": [
+            "src/financial_brain/forward_edge/durable.py",
+            "src/financial_brain/forward_edge/session_runner.py",
+            "src/financial_brain/forward_edge/session_state.py"
+          ],
+          "kernel_simulated_oms": [
+            "src/financial_brain/kernel/oms.py"
+          ],
+          "kite_provider_adapter": [
+            "src/financial_brain/ingest/kite_live.py"
+          ],
+          "legacy_intraday_paper_oms": [
+            "src/financial_brain/paper/intraday_runner.py"
+          ],
+          "legacy_paper_book_ledger": [
+            "src/financial_brain/paper/intraday_runner.py"
+          ],
+          "market_data_entitlement": [
+            "src/financial_brain/forward_edge/data_gate.py",
+            "src/financial_brain/forward_edge/data_permissions.py",
+            "src/financial_brain/forward_edge/session_runner.py",
+            "src/financial_brain/paper/intraday_runner.py"
+          ],
+          "market_event_normalization": [
+            "src/financial_brain/forward_edge/market_data.py",
+            "src/financial_brain/forward_edge/market_events.py"
+          ],
+          "prospective_strategy_adapter": [
+            "src/financial_brain/forward_edge/strategy_adapter.py"
+          ],
+          "quote_archive": [
+            "src/financial_brain/forward_edge/market_data.py",
+            "src/financial_brain/forward_edge/quote_archive.py",
+            "src/financial_brain/paper/intraday_runner.py"
+          ],
+          "signals_and_opportunities": [
+            "src/financial_brain/forward_edge/signal_trace.py"
+          ],
+          "strategy_candidate_catalogue": [
+            "src/financial_brain/forward_edge/eligibility.py",
+            "src/financial_brain/forward_edge/strategy_inventory.py"
+          ],
+          "strategy_identity_lifecycle": [
+            "src/financial_brain/forward_edge/parameter_freeze.py",
+            "src/financial_brain/forward_edge/strategy_adapter.py"
+          ],
+          "trader_cockpit": [
+            "src/financial_brain/forward_edge/cockpit.py",
+            "src/financial_brain/forward_edge/order_blotter.py",
+            "src/financial_brain/forward_edge/pnl_dashboard.py",
+            "src/financial_brain/forward_edge/session_timeline.py"
+          ]
+        },
+        "module_roles_to_changed_paths": {
+          "broker_oms_component": [
+            {
+              "path": "src/financial_brain/execution/oms/engine.py",
+              "module_owner": "src/financial_brain/execution/oms/engine.py"
+            },
+            {
+              "path": "src/financial_brain/execution/oms/kite_broker.py",
+              "module_owner": "src/financial_brain/execution/oms/kite_broker.py"
+            },
+            {
+              "path": "src/financial_brain/execution/oms/rollout.py",
+              "module_owner": "src/financial_brain/execution/oms/rollout.py"
+            }
+          ],
+          "canonical_contract_or_signal_output": [
+            {
+              "path": "src/financial_brain/cli.py",
+              "module_owner": "src/financial_brain/cli.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/data_gate.py",
+              "module_owner": "src/financial_brain/forward_edge/data_gate.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/data_permissions.py",
+              "module_owner": "src/financial_brain/forward_edge/data_permissions.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/durable.py",
+              "module_owner": "src/financial_brain/forward_edge/durable.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/execution_scenario.py",
+              "module_owner": "src/financial_brain/forward_edge/execution_scenario.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/market_data.py",
+              "module_owner": "src/financial_brain/forward_edge/market_data.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/market_events.py",
+              "module_owner": "src/financial_brain/forward_edge/market_events.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/parameter_freeze.py",
+              "module_owner": "src/financial_brain/forward_edge/parameter_freeze.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/quote_archive.py",
+              "module_owner": "src/financial_brain/forward_edge/quote_archive.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/session_runner.py",
+              "module_owner": "src/financial_brain/forward_edge/session_runner.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/strategy_adapter.py",
+              "module_owner": "src/financial_brain/forward_edge/strategy_adapter.py"
+            },
+            {
+              "path": "src/financial_brain/kernel/oms.py",
+              "module_owner": "src/financial_brain/kernel/oms.py"
+            },
+            {
+              "path": "src/financial_brain/portfolio/legacy_migration.py",
+              "module_owner": "src/financial_brain/portfolio/legacy_migration.py"
+            }
+          ],
+          "execution_or_cost_model": [
+            {
+              "path": "src/financial_brain/execution/order_policy.py",
+              "module_owner": "src/financial_brain/execution/order_policy.py"
+            }
+          ],
+          "feed_ingester": [
+            {
+              "path": "src/financial_brain/ingest/kite_live.py",
+              "module_owner": "src/financial_brain/ingest/kite_live.py"
+            }
+          ],
+          "forward_trading_contract_or_support": [
+            {
+              "path": "src/financial_brain/forward_edge/abstention.py",
+              "module_owner": "src/financial_brain/forward_edge/abstention.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/alerts.py",
+              "module_owner": "src/financial_brain/forward_edge/alerts.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/approvals.py",
+              "module_owner": "src/financial_brain/forward_edge/approvals.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/audit.py",
+              "module_owner": "src/financial_brain/forward_edge/audit.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/backup_restore.py",
+              "module_owner": "src/financial_brain/forward_edge/backup_restore.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/bootstrap.py",
+              "module_owner": "src/financial_brain/forward_edge/bootstrap.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/capacity.py",
+              "module_owner": "src/financial_brain/forward_edge/capacity.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/capital_allocation.py",
+              "module_owner": "src/financial_brain/forward_edge/capital_allocation.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/capital_scaling.py",
+              "module_owner": "src/financial_brain/forward_edge/capital_scaling.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/carry_comparison.py",
+              "module_owner": "src/financial_brain/forward_edge/carry_comparison.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/champion_challenger.py",
+              "module_owner": "src/financial_brain/forward_edge/champion_challenger.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/champion_governance.py",
+              "module_owner": "src/financial_brain/forward_edge/champion_governance.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/cli.py",
+              "module_owner": "src/financial_brain/forward_edge/cli.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/clock.py",
+              "module_owner": "src/financial_brain/forward_edge/clock.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/cluster_attribution.py",
+              "module_owner": "src/financial_brain/forward_edge/cluster_attribution.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/cohort_archive.py",
+              "module_owner": "src/financial_brain/forward_edge/cohort_archive.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/cohort_blocks.py",
+              "module_owner": "src/financial_brain/forward_edge/cohort_blocks.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/completeness.py",
+              "module_owner": "src/financial_brain/forward_edge/completeness.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/cost_schedule.py",
+              "module_owner": "src/financial_brain/forward_edge/cost_schedule.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/cost_sensitivity.py",
+              "module_owner": "src/financial_brain/forward_edge/cost_sensitivity.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/decision_outcome.py",
+              "module_owner": "src/financial_brain/forward_edge/decision_outcome.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/disaster_stress.py",
+              "module_owner": "src/financial_brain/forward_edge/disaster_stress.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/evidence_bundle.py",
+              "module_owner": "src/financial_brain/forward_edge/evidence_bundle.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/evidence_labels.py",
+              "module_owner": "src/financial_brain/forward_edge/evidence_labels.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/evidence_stats.py",
+              "module_owner": "src/financial_brain/forward_edge/evidence_stats.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/execution.py",
+              "module_owner": "src/financial_brain/forward_edge/execution.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/exposure_limits.py",
+              "module_owner": "src/financial_brain/forward_edge/exposure_limits.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/falsification.py",
+              "module_owner": "src/financial_brain/forward_edge/falsification.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/familywise.py",
+              "module_owner": "src/financial_brain/forward_edge/familywise.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/feed_health.py",
+              "module_owner": "src/financial_brain/forward_edge/feed_health.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/fixture_adapter.py",
+              "module_owner": "src/financial_brain/forward_edge/fixture_adapter.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/fixtures.py",
+              "module_owner": "src/financial_brain/forward_edge/fixtures.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/futures_roll.py",
+              "module_owner": "src/financial_brain/forward_edge/futures_roll.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/harm_stop.py",
+              "module_owner": "src/financial_brain/forward_edge/harm_stop.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/horizon_freeze.py",
+              "module_owner": "src/financial_brain/forward_edge/horizon_freeze.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/instrument_rules.py",
+              "module_owner": "src/financial_brain/forward_edge/instrument_rules.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/intent_timing.py",
+              "module_owner": "src/financial_brain/forward_edge/intent_timing.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/intraday_nulls.py",
+              "module_owner": "src/financial_brain/forward_edge/intraday_nulls.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/lookahead.py",
+              "module_owner": "src/financial_brain/forward_edge/lookahead.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/marketable_limit.py",
+              "module_owner": "src/financial_brain/forward_edge/marketable_limit.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/modes.py",
+              "module_owner": "src/financial_brain/forward_edge/modes.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/options_risk.py",
+              "module_owner": "src/financial_brain/forward_edge/options_risk.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/options_spread.py",
+              "module_owner": "src/financial_brain/forward_edge/options_spread.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/outage_gate.py",
+              "module_owner": "src/financial_brain/forward_edge/outage_gate.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/outcome_maturation.py",
+              "module_owner": "src/financial_brain/forward_edge/outcome_maturation.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/outperformance.py",
+              "module_owner": "src/financial_brain/forward_edge/outperformance.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/paired_controls.py",
+              "module_owner": "src/financial_brain/forward_edge/paired_controls.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/paper_accounting.py",
+              "module_owner": "src/financial_brain/forward_edge/paper_accounting.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/paper_book_adapter.py",
+              "module_owner": "src/financial_brain/forward_edge/paper_book_adapter.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/passive_queue.py",
+              "module_owner": "src/financial_brain/forward_edge/passive_queue.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/pattern_uplift.py",
+              "module_owner": "src/financial_brain/forward_edge/pattern_uplift.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/persistent_killswitch.py",
+              "module_owner": "src/financial_brain/forward_edge/persistent_killswitch.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/pipeline.py",
+              "module_owner": "src/financial_brain/forward_edge/pipeline.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/portfolio_alpha.py",
+              "module_owner": "src/financial_brain/forward_edge/portfolio_alpha.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/precision_gate.py",
+              "module_owner": "src/financial_brain/forward_edge/precision_gate.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/provenance.py",
+              "module_owner": "src/financial_brain/forward_edge/provenance.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/research_separation.py",
+              "module_owner": "src/financial_brain/forward_edge/research_separation.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/risk_allocator.py",
+              "module_owner": "src/financial_brain/forward_edge/risk_allocator.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/risk_metrics.py",
+              "module_owner": "src/financial_brain/forward_edge/risk_metrics.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/risk_throttle.py",
+              "module_owner": "src/financial_brain/forward_edge/risk_throttle.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/session_close.py",
+              "module_owner": "src/financial_brain/forward_edge/session_close.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/session_state.py",
+              "module_owner": "src/financial_brain/forward_edge/session_state.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/shadow.py",
+              "module_owner": "src/financial_brain/forward_edge/shadow.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/strategy_attribution.py",
+              "module_owner": "src/financial_brain/forward_edge/strategy_attribution.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/stress.py",
+              "module_owner": "src/financial_brain/forward_edge/stress.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/trials.py",
+              "module_owner": "src/financial_brain/forward_edge/trials.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/ui_actions.py",
+              "module_owner": "src/financial_brain/forward_edge/ui_actions.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/venue_calendar.py",
+              "module_owner": "src/financial_brain/forward_edge/venue_calendar.py"
+            }
+          ],
+          "ledger_or_journal": [
+            {
+              "path": "src/financial_brain/forward_edge/decision_journal.py",
+              "module_owner": "src/financial_brain/forward_edge/decision_journal.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/disposable_ledger.py",
+              "module_owner": "src/financial_brain/forward_edge/disposable_ledger.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/ledger_reconcile.py",
+              "module_owner": "src/financial_brain/forward_edge/ledger_reconcile.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/order_journal.py",
+              "module_owner": "src/financial_brain/forward_edge/order_journal.py"
+            },
+            {
+              "path": "src/financial_brain/kernel/ledger.py",
+              "module_owner": "src/financial_brain/kernel/ledger.py"
+            },
+            {
+              "path": "src/financial_brain/portfolio/canonical_ledger.py",
+              "module_owner": "src/financial_brain/portfolio/canonical_ledger.py"
+            }
+          ],
+          "paper_engine_or_output": [
+            {
+              "path": "src/financial_brain/paper/daily_results.py",
+              "module_owner": "src/financial_brain/paper/daily_results.py"
+            },
+            {
+              "path": "src/financial_brain/paper/intraday_runner.py",
+              "module_owner": "src/financial_brain/paper/intraday_runner.py"
+            },
+            {
+              "path": "src/financial_brain/paper/zoo.py",
+              "module_owner": "src/financial_brain/paper/zoo.py"
+            },
+            {
+              "path": "src/financial_brain/paper/zoo_edges.py",
+              "module_owner": "src/financial_brain/paper/zoo_edges.py"
+            }
+          ],
+          "signal_report_or_trader_renderer": [
+            {
+              "path": "src/financial_brain/forward_edge/capital_proposal.py",
+              "module_owner": "src/financial_brain/forward_edge/capital_proposal.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/claim_tier.py",
+              "module_owner": "src/financial_brain/forward_edge/claim_tier.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/cockpit.py",
+              "module_owner": "src/financial_brain/forward_edge/cockpit.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/eligibility.py",
+              "module_owner": "src/financial_brain/forward_edge/eligibility.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/operator_decisions.py",
+              "module_owner": "src/financial_brain/forward_edge/operator_decisions.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/order_blotter.py",
+              "module_owner": "src/financial_brain/forward_edge/order_blotter.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/pnl_dashboard.py",
+              "module_owner": "src/financial_brain/forward_edge/pnl_dashboard.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/session_ops.py",
+              "module_owner": "src/financial_brain/forward_edge/session_ops.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/session_timeline.py",
+              "module_owner": "src/financial_brain/forward_edge/session_timeline.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/signal_trace.py",
+              "module_owner": "src/financial_brain/forward_edge/signal_trace.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/strategy_inventory.py",
+              "module_owner": "src/financial_brain/forward_edge/strategy_inventory.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/strategy_scorecard.py",
+              "module_owner": "src/financial_brain/forward_edge/strategy_scorecard.py"
+            },
+            {
+              "path": "src/financial_brain/forward_edge/tracker.py",
+              "module_owner": "src/financial_brain/forward_edge/tracker.py"
+            },
+            {
+              "path": "src/financial_brain/paper/book.py",
+              "module_owner": "src/financial_brain/paper/book.py"
+            }
+          ],
+          "strategy_research_or_evaluation": [
+            {
+              "path": "src/financial_brain/evaluation/champion.py",
+              "module_owner": "src/financial_brain/evaluation/champion.py"
+            },
+            {
+              "path": "src/financial_brain/evaluation/evidence_tiers.py",
+              "module_owner": "src/financial_brain/evaluation/evidence_tiers.py"
+            },
+            {
+              "path": "src/financial_brain/evaluation/executable.py",
+              "module_owner": "src/financial_brain/evaluation/executable.py"
+            },
+            {
+              "path": "src/financial_brain/evaluation/learned_model.py",
+              "module_owner": "src/financial_brain/evaluation/learned_model.py"
+            }
+          ]
+        },
+        "changed_paths_without_owner_or_module_mapping": [
+          ".github/CODEOWNERS",
+          ".github/workflows/ci.yml",
+          "docs/READINESS.md",
+          "docs/RUNBOOK-LIVE.md",
+          "docs/adr/0005-broker-path-behind-stages.md",
+          "docs/audits/capability-matrix.v1.json",
+          "docs/audits/capability-matrix.v2.json",
+          "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
+          "docs/edge-program/MASTER_CHECKLIST_2026-11-12.md",
+          "docs/edge-program/PROGRESS.md",
+          "docs/edge-program/V3.0_PROGRESS.md",
+          "docs/edge-program/authoritative-contracts.v1.json",
+          "docs/edge-program/canonical-migration-audit.v1.json",
+          "docs/edge-program/canonical-portfolio-ledger.v1.md",
+          "docs/edge-program/capability-ownership.v1.json",
+          "docs/edge-program/checklist-baseline.v1.json",
+          "docs/edge-program/current-baseline.json",
+          "docs/edge-program/data-permission-operations.md",
+          "docs/edge-program/data-permissions.v1.json",
+          "docs/edge-program/deviations.v1.json",
+          "docs/edge-program/forward-edge-equivalence-report.v1.json",
+          "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "docs/edge-program/main-branch-protection.v1.md",
+          "docs/edge-program/market-data-rights-review.v1.md",
+          "docs/edge-program/market-data-sources.v1.json",
+          "docs/edge-program/ownership-map.v1.json",
+          "docs/edge-program/pre-migration-backup-2026-11-15.json",
+          "docs/edge-program/product-charter.v1.json",
+          "docs/edge-program/release-evidence-inputs.v1.json",
+          "docs/edge-program/release-semantics.v1.json",
+          "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip",
+          "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip.sha256",
+          "docs/edge-program/reproducibility-contract.v1.json",
+          "docs/edge-program/source-inventory.v2.json",
+          "docs/edge-program/state-ownership.v1.json",
+          "docs/edge-program/trial-preservation-audit.v1.json",
+          "docs/edge-program/v3.0-baseline-2026-11-21-r2.json",
+          "docs/edge-program/v3.0-baseline-2026-11-21-r2.json.sha256",
+          "docs/edge-program/v3.0-baseline-2026-11-21.json",
+          "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json",
+          "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+          "docs/edge-program/v3.0-status.json",
+          "docs/forward-edge/BLOCKERS.md",
+          "docs/forward-edge/OPERATOR.md",
+          "docs/forward-edge/RUNBOOKS.md",
+          "docs/forward-edge/TRACKER.md",
+          "docs/forward-edge/WAVES.md",
+          "docs/forward-edge/capability-matrix.json",
+          "docs/forward-edge/capital-risk-proposal-template.md",
+          "docs/forward-edge/eligibility-v1.json",
+          "docs/forward-edge/fixtures/session-cases.v1.json",
+          "docs/forward-edge/protected-pins.json",
+          "docs/forward-edge/reference-candidates.v1.json",
+          "docs/forward-edge/trial-program.v1.json",
+          "pyproject.toml",
+          "scripts/audit_canonical_portfolio_migration.py",
+          "scripts/audit_checklist_baseline.py",
+          "scripts/build_checklist_evidence_bundle.py",
+          "scripts/capability_ownership.py",
+          "scripts/ci_test_summary.py",
+          "scripts/forward_edge_capability_matrix.py",
+          "scripts/forward_edge_equivalence_report.py",
+          "scripts/forward_engine_graph.py",
+          "scripts/migrate_legacy_paper_books.py",
+          "scripts/source_inventory.py",
+          "scripts/state_ownership.py",
+          "scripts/trial_preservation_audit.py",
+          "scripts/validate_capability_matrix.py",
+          "scripts/validate_codeowners_map.py",
+          "scripts/validate_deviation_log.py",
+          "scripts/validate_market_data_sources.py",
+          "scripts/validate_product_charter.py",
+          "scripts/validate_reference_candidates.py",
+          "scripts/validate_release_semantics.py",
+          "scripts/validate_trial_program.py",
+          "scripts/verify_reproducibility.py",
+          "src/financial_brain/execution/oms/__init__.py",
+          "src/financial_brain/kernel/events.py",
+          "src/financial_brain/kernel/instruments.py",
+          "src/financial_brain/kernel/registry.py",
+          "src/financial_brain/learning_audit.py",
+          "tests/fixtures/forward_edge/golden_signatures.json",
+          "tests/test_authoritative_contracts.py",
+          "tests/test_canonical_portfolio_ledger.py",
+          "tests/test_capability_ownership.py",
+          "tests/test_champion_executable.py",
+          "tests/test_checklist_baseline.py",
+          "tests/test_checklist_evidence_bundle.py",
+          "tests/test_ci_test_summary.py",
+          "tests/test_codeowners_map.py",
+          "tests/test_deviation_log.py",
+          "tests/test_edge_program_baseline.py",
+          "tests/test_evidence_claims.py",
+          "tests/test_evidence_labels.py",
+          "tests/test_executable_outcomes.py",
+          "tests/test_forward_edge_abstention.py",
+          "tests/test_forward_edge_alerts.py",
+          "tests/test_forward_edge_backup_restore.py",
+          "tests/test_forward_edge_bootstrap.py",
+          "tests/test_forward_edge_capacity.py",
+          "tests/test_forward_edge_capital_allocation.py",
+          "tests/test_forward_edge_capital_proposal.py",
+          "tests/test_forward_edge_capital_scaling.py",
+          "tests/test_forward_edge_carry_comparison.py",
+          "tests/test_forward_edge_champion_challenger.py",
+          "tests/test_forward_edge_champion_governance.py",
+          "tests/test_forward_edge_checkpoints.py",
+          "tests/test_forward_edge_claim_tier.py",
+          "tests/test_forward_edge_cli.py",
+          "tests/test_forward_edge_clock.py",
+          "tests/test_forward_edge_cluster_attribution.py",
+          "tests/test_forward_edge_cockpit.py",
+          "tests/test_forward_edge_cohort_archive.py",
+          "tests/test_forward_edge_cohort_blocks.py",
+          "tests/test_forward_edge_completeness.py",
+          "tests/test_forward_edge_cost_schedule.py",
+          "tests/test_forward_edge_cost_sensitivity.py",
+          "tests/test_forward_edge_data_gate.py",
+          "tests/test_forward_edge_decision_journal.py",
+          "tests/test_forward_edge_decision_outcome.py",
+          "tests/test_forward_edge_disaster_stress.py",
+          "tests/test_forward_edge_disposable_ledger.py",
+          "tests/test_forward_edge_eligibility.py",
+          "tests/test_forward_edge_equivalence_report.py",
+          "tests/test_forward_edge_evidence_bundle.py",
+          "tests/test_forward_edge_execution_scenario.py",
+          "tests/test_forward_edge_exposure_limits.py",
+          "tests/test_forward_edge_f00.py",
+          "tests/test_forward_edge_f01.py",
+          "tests/test_forward_edge_f03.py",
+          "tests/test_forward_edge_f13.py",
+          "tests/test_forward_edge_f17.py",
+          "tests/test_forward_edge_falsification.py",
+          "tests/test_forward_edge_familywise.py",
+          "tests/test_forward_edge_feed_health.py",
+          "tests/test_forward_edge_futures_roll.py",
+          "tests/test_forward_edge_harm_stop.py",
+          "tests/test_forward_edge_horizon_freeze.py",
+          "tests/test_forward_edge_instrument_rules.py",
+          "tests/test_forward_edge_integrity_gates.py",
+          "tests/test_forward_edge_intent_timing.py",
+          "tests/test_forward_edge_intraday_nulls.py",
+          "tests/test_forward_edge_kite_market_data.py",
+          "tests/test_forward_edge_ledger_reconcile.py",
+          "tests/test_forward_edge_lookahead.py",
+          "tests/test_forward_edge_market_events.py",
+          "tests/test_forward_edge_marketable_limit.py",
+          "tests/test_forward_edge_operator_decisions.py",
+          "tests/test_forward_edge_options_risk.py",
+          "tests/test_forward_edge_options_spread.py",
+          "tests/test_forward_edge_order_blotter.py",
+          "tests/test_forward_edge_order_journal.py",
+          "tests/test_forward_edge_outage_gate.py",
+          "tests/test_forward_edge_outcome_maturation.py",
+          "tests/test_forward_edge_outperformance.py",
+          "tests/test_forward_edge_paired_controls.py",
+          "tests/test_forward_edge_parameter_freeze.py",
+          "tests/test_forward_edge_passive_queue.py",
+          "tests/test_forward_edge_pattern_uplift.py",
+          "tests/test_forward_edge_persistent_killswitch.py",
+          "tests/test_forward_edge_pipeline_compat.py",
+          "tests/test_forward_edge_pnl_dashboard.py",
+          "tests/test_forward_edge_portfolio_alpha.py",
+          "tests/test_forward_edge_precision_gate.py",
+          "tests/test_forward_edge_provenance.py",
+          "tests/test_forward_edge_quote_archive.py",
+          "tests/test_forward_edge_registry.py",
+          "tests/test_forward_edge_research_separation.py",
+          "tests/test_forward_edge_risk_allocator.py",
+          "tests/test_forward_edge_risk_metrics.py",
+          "tests/test_forward_edge_risk_throttle.py",
+          "tests/test_forward_edge_runbooks.py",
+          "tests/test_forward_edge_session_close.py",
+          "tests/test_forward_edge_session_runner.py",
+          "tests/test_forward_edge_session_state.py",
+          "tests/test_forward_edge_session_timeline.py",
+          "tests/test_forward_edge_shadow.py",
+          "tests/test_forward_edge_signal_trace.py",
+          "tests/test_forward_edge_strategy_adapter.py",
+          "tests/test_forward_edge_strategy_attribution.py",
+          "tests/test_forward_edge_strategy_inventory.py",
+          "tests/test_forward_edge_strategy_scorecard.py",
+          "tests/test_forward_edge_stress.py",
+          "tests/test_forward_edge_tracker.py",
+          "tests/test_forward_edge_ui_actions.py",
+          "tests/test_forward_edge_venue_calendar.py",
+          "tests/test_forward_session_runner.py",
+          "tests/test_kernel_registry_research.py",
+          "tests/test_kite_forward_events.py",
+          "tests/test_kite_live_forward_events.py",
+          "tests/test_learning_audit.py",
+          "tests/test_legacy_portfolio_migration.py",
+          "tests/test_market_data_source_validator.py",
+          "tests/test_oms.py",
+          "tests/test_phase5_book.py",
+          "tests/test_phase5_daily_results.py",
+          "tests/test_phase5_intraday_runner.py",
+          "tests/test_phase5_learned_model.py",
+          "tests/test_phase5_zoo_edges.py",
+          "tests/test_product_charter.py",
+          "tests/test_reference_candidates.py",
+          "tests/test_source_inventory.py",
+          "tests/test_trial_preservation_audit.py",
+          "tests/test_zoo_h_targets.py"
+        ]
+      }
+    }
+  ],
+  "dependency_edges": [
+    {
+      "from": "PR-37",
+      "to": "PR-36",
+      "basis": "PR #36 base SHA equals PR #37 head SHA"
+    },
+    {
+      "from": "PR-36",
+      "to": "PR-38",
+      "basis": "PR #38 base SHA equals PR #36 head SHA"
+    },
+    {
+      "from": "PR-40",
+      "to": "main",
+      "basis": "PR #40 merge commit is an ancestor of current main"
+    }
+  ],
+  "limitations": [
+    "Capability contract mappings on PR heads without their own capability registry are retrospective exact-path matches against the current main registry; they are not historical declarations from those PR authors.",
+    "Changed path membership and ancestry do not transfer CI, review, or behavioral validation between commits.",
+    "PR #39 path overlap and PR #40's description do not establish a commit dependency; the graph records no ancestry edge between them."
+  ]
+}
