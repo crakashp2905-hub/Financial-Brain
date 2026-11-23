@@ -5579,7 +5579,7 @@
       ],
       "blocker": "OMS, forward-session receipts and legacy books do not yet share one canonical transactional order/cash API. Runtime exclusive account/domain ownership, complete opening-cash coverage, and cross-system restart/concurrent-writer reconciliation remain required.",
       "last_audited_at_utc": "2026-11-23T17:19:03Z",
-      "commit": null,
+      "commit": "8a628264f9b91e04fe8973649965995661976cb9",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-tmp-pa0105 tests/test_canonical_portfolio_ledger.py tests/test_legacy_portfolio_migration.py tests/test_forward_edge_ledger_reconcile.py tests/test_forward_edge_session_runner.py::test_restart_restores_risk_positions_and_cash_without_repeating_paper_fill -q: 22 passed."
       ],
