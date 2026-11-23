@@ -1,0 +1,94 @@
+{
+  "schema": "fb.unified_checklist_baseline.v3",
+  "capture_id": "v3.0-baseline-2026-11-23-r3",
+  "captured_at_utc": "2026-11-23T09:32:37Z",
+  "checklist_id": "SL-00-01",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "source_checkout": {
+    "branch": "codex/pr87-main-integration",
+    "pull_request_branch": "feature/forward-edge-f00-f01",
+    "commit": "146f54ed1e09a182d1a2c076a6f41ec5c7dd208c",
+    "tree": "f87b34ba6a765ba79aac797751a393bfe1dbacf5",
+    "worktree_clean_at_capture": true
+  },
+  "main": {
+    "sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+    "tree": "b904a44bb83b2b62363c64297b57c47af8d34057",
+    "evidence": "git fetch origin main; git rev-parse origin/main and origin/main^{tree} at capture time"
+  },
+  "pull_request": {
+    "number": 87,
+    "state": "OPEN",
+    "merged": false,
+    "mergeable": true,
+    "base_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+    "head_sha": "146f54ed1e09a182d1a2c076a6f41ec5c7dd208c",
+    "review_submissions": 0,
+    "requested_reviewers": [],
+    "evidence": "GitHub PR metadata and review-list API at 2026-11-23T09:27Z",
+    "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/87"
+  },
+  "dependencies": {
+    "python": "3.13.5",
+    "pyproject_toml_sha256": "2334ea39854305265b5591f11960279c4e39a22238a604f04ab44e9c6b5b3add",
+    "requirements_lock_sha256_working_copy": "47f613e2e061e88a22a3a2e996c581e7fcf1c42db2f3b468183b915345abf852",
+    "requirements_lock_git_blob": "696c104f65f8f62c8337b6b5655d32ec783a6290"
+  },
+  "data_versions": {
+    "checkout_data_files": {
+      "data/brain_graph.json": {
+        "sha256": "db44d0818ce4c8a82778707bd07ff0fbe0018ff09ccfc8763fad4af0486d9d34",
+        "classification": "research graph; not a market quote archive"
+      }
+    },
+    "market_data": "No quote archive or market-data lake files are present in this isolated checkout. The last previously recorded quote archive snapshot is dated 2026-11-16, is not present here, and had UNVERIFIED source rights; it is not asserted as current data.",
+    "source_inventory": "docs/edge-program/source-inventory.v2.json; 716 Python sources, 701 unassessed, 425 without assigned role"
+  },
+  "active_scheduled_checkout": {
+    "status": "UNVERIFIED",
+    "repository_workflows": [".github/workflows/ci.yml"],
+    "schedule_trigger_found": false,
+    "external_scheduler_checkout_sha": null,
+    "limitation": "The repository has no scheduled paper workflow; no connected external scheduler state identifies the deployed checkout. No schedule or live-paper freshness is inferred."
+  },
+  "ci": {
+    "workflow_sha256": "f69be26f066b420891424da0a9a80104c6b583d9b01b7b160cf3bee594856c79",
+    "run_id": 45147261112,
+    "run_url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45147261112",
+    "head_sha": "146f54ed1e09a182d1a2c076a6f41ec5c7dd208c",
+    "status_at_capture": "IN_PROGRESS",
+    "jobs_at_capture": {
+      "test (ubuntu-24.04)": "IN_PROGRESS; lint and steps 6-16 passed; equivalence report verification in progress",
+      "test (windows-latest)": "IN_PROGRESS; Python setup in progress",
+      "reproducibility (ubuntu-24.04)": "SUCCESS",
+      "reproducibility (windows-2022)": "IN_PROGRESS; Python setup in progress"
+    },
+    "collection": {
+      "command": "PYTHONPATH=src python -m pytest --collect-only -q",
+      "result": "4,323 tests collected in 30.22 seconds"
+    }
+  },
+  "owner_approvals_and_branch_protection": {
+    "current_pr_reviews": 0,
+    "current_requested_reviewers": [],
+    "branch_protection_current": "UNVERIFIED",
+    "last_recorded_branch_protection": {
+      "observed_at": "2026-11-23T00:56:25Z",
+      "protected": true,
+      "required_checks": [
+        "test (ubuntu-24.04)",
+        "test (windows-latest)",
+        "reproducibility (ubuntu-24.04)",
+        "reproducibility (windows-2022)"
+      ],
+      "source": "docs/edge-program/FB-0001-baseline-2026-11-23.json; not re-observed in this capture"
+    },
+    "limitation": "The connected API returned no review submissions for PR #87. Current owner approval requirements and current branch-protection settings were not exposed by the available GitHub endpoint."
+  },
+  "limitations": [
+    "A local manifest hash is not an independent timestamp receipt or external signature.",
+    "Scheduled runner state, current owner approvals, and current branch protection are not verified.",
+    "CI status was in progress at capture and must be updated only from its terminal GitHub state.",
+    "No profitability, data licensing, or live-market coverage claim is made by this baseline."
+  ]
+}

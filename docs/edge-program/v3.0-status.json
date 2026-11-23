@@ -8409,18 +8409,25 @@
     {
       "id": "SL-00-01",
       "text": "Capture `main` SHA, dependencies, data versions, active scheduled checkout, CI jobs and current owner approvals into an immutable baseline manifest.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/current-baseline.json (captured 2026-11-16)",
-        "git rev-parse HEAD at audit: 93acc1b3590c5c557deb9c206634d9ece31bcf13",
-        "pyproject.toml",
-        " .github/workflows/ci.yml",
-        "docs/edge-program/v3.0-baseline-2026-11-21.json (captures local HEAD/tree, dependencies, data inventory, CI and explicit unknowns)"
+        "docs/edge-program/v3.0-baseline-2026-11-23-r3.json records main and feature commit/tree SHAs, lock/dependency hashes, current checkout data hashes and explicit absence of market-data archives, test collection count, PR #87 metadata/reviews and the latest CI job states.",
+        "The manifest records the active scheduled checkout as UNVERIFIED because the repository has no scheduled paper workflow and external scheduler state is unavailable; current branch protection/owner approvals are also UNVERIFIED.",
+        "Captured main SHA 3c99b5dddc775db888822b4cec1849e5ebca56c8 and feature head 146f54ed1e09a182d1a2c076a6f41ec5c7dd208c from fetched refs; PR #87 was OPEN and not merged at capture.",
+        "scripts/audit_checklist_baseline.py::validate_latest_snapshot verifies the snapshot source tree, dependency lock blob, linked PR/source/base SHAs, scheduler attestation rule and all four required CI jobs.",
+        "PR #87 review API returned 0 reviews and no requested reviewers; the latest branch-protection state and actual scheduled-runner checkout remain explicitly UNVERIFIED."
       ],
-      "blocker": "Existing baseline is stale; scheduled checkout, current dependency/data versions and current owner approvals were not captured in one immutable manifest.",
-      "last_audited_at_utc": "2026-11-21T11:32:13.655717+05:30",
-      "commit": null
+      "blocker": "The required immutable snapshot is recorded, but the actual external scheduled checkout and current branch protection/owner approval requirements remain unverified; hosted CI was in progress at capture.",
+      "last_audited_at_utc": "2026-11-23T09:36:07Z",
+      "commit": "146f54ed",
+      "test_evidence": [
+        "tests/test_checklist_baseline.py and tests/test_checklist_audit_export.py: 7 passed",
+        "python scripts/export_checklist_audit.py --check: passed",
+        "python -m ruff check scripts/audit_checklist_baseline.py tests/test_checklist_baseline.py: passed",
+        "git diff --check: passed"
+      ],
+      "test_result": "The current baseline is structurally tied to the captured commit/tree and lock blob; unresolved external scheduler and owner-approval facts remain blockers."
     },
     {
       "id": "SL-00-02",
@@ -15086,7 +15093,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T09:26:12Z",
+    "as_of_utc": "2026-11-23T09:36:07Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15372,11 +15379,13 @@
       "docs/edge-program/v3.0-baseline-2026-11-21-r2.json",
       "docs/edge-program/v3.0-baseline-2026-11-21-r2.json.sha256",
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
+      "docs/edge-program/v3.0-baseline-2026-11-23-r3.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
       "docs/forward-edge/TRACKER.md",
       "docs/forward-edge/capability-matrix.json",
       "docs/forward-edge/reference-candidates.v1.json",
+      "scripts/audit_checklist_baseline.py",
       "scripts/capability_ownership.py",
       "scripts/export_checklist_audit.py",
       "scripts/validate_launch_gates.py",
@@ -15405,6 +15414,7 @@
       "tests/test_canonical_portfolio_ledger.py",
       "tests/test_capability_ownership.py",
       "tests/test_checklist_audit_export.py",
+      "tests/test_checklist_baseline.py",
       "tests/test_decision_availability.py",
       "tests/test_forward_edge_checkpoints.py",
       "tests/test_forward_edge_f00.py",
