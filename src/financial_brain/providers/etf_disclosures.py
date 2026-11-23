@@ -68,20 +68,52 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
                              retryable=False)
 
         fields: dict[str, date | Decimal | None] = {}
-        for name in ("inception_date", "listing_date", "nav_as_of"):
+        for name in ("inception_date", "listing_date", "nav_as_of", "expense_effective_from",
+                     "expense_effective_to", "tracking_period_start", "tracking_period_end"):
             value = row.get(name, "")
             try:
                 fields[name] = date.fromisoformat(value) if value else None
             except ValueError as exc:
                 raise FetchError(f"ETF {isin} has invalid {name}", retryable=False) from exc
-        for name in ("nav", "indicative_nav"):
+        for name in ("nav", "indicative_nav", "expense_ratio_pct", "tracking_error_pct",
+                     "tracking_difference_pct"):
             value = row.get(name, "")
             try:
                 fields[name] = Decimal(value) if value else None
             except InvalidOperation as exc:
                 raise FetchError(f"ETF {isin} has invalid {name}", retryable=False) from exc
-            if fields[name] is not None and fields[name] <= 0:
+            if fields[name] is not None and name in {"nav", "indicative_nav"} \
+                    and fields[name] <= 0:
                 raise FetchError(f"ETF {isin} {name} must be positive", retryable=False)
+            if fields[name] is not None and name in {
+                    "expense_ratio_pct", "tracking_error_pct", "tracking_difference_pct"} \
+                    and abs(fields[name]) >= 100:
+                raise FetchError(f"ETF {isin} {name} must be below 100 percent in magnitude",
+                                 retryable=False)
+        if fields["expense_ratio_pct"] is not None and fields["expense_ratio_pct"] < 0:
+            raise FetchError(f"ETF {isin} expense ratio cannot be negative", retryable=False)
+        if fields["tracking_error_pct"] is not None and fields["tracking_error_pct"] < 0:
+            raise FetchError(f"ETF {isin} tracking error cannot be negative", retryable=False)
+        if fields["expense_ratio_pct"] is not None and fields["expense_effective_from"] is None:
+            raise FetchError(f"ETF {isin} expense ratio requires an effective-from date",
+                             retryable=False)
+        if (fields["expense_ratio_pct"] is None
+                and (fields["expense_effective_from"] or fields["expense_effective_to"])):
+            raise FetchError(f"ETF {isin} cannot have expense dates without an expense ratio",
+                             retryable=False)
+        if (fields["expense_effective_from"] and fields["expense_effective_to"]
+                and fields["expense_effective_to"] < fields["expense_effective_from"]):
+            raise FetchError(f"ETF {isin} expense effective dates are reversed", retryable=False)
+        has_tracking = any(fields[name] is not None for name in
+                           ("tracking_error_pct", "tracking_difference_pct"))
+        has_tracking_window = (fields["tracking_period_start"] is not None
+                               and fields["tracking_period_end"] is not None)
+        if has_tracking != has_tracking_window:
+            raise FetchError(f"ETF {isin} tracking metrics require their full measurement period",
+                             retryable=False)
+        if (fields["tracking_period_start"] and fields["tracking_period_end"]
+                and fields["tracking_period_end"] < fields["tracking_period_start"]):
+            raise FetchError(f"ETF {isin} tracking measurement dates are reversed", retryable=False)
         inav_time = row.get("indicative_nav_at", "")
         try:
             indicative_nav_at = (datetime.fromisoformat(inav_time.replace("Z", "+00:00"))
@@ -95,7 +127,9 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
             raise FetchError(f"ETF {isin} iNAV value and timestamp must be supplied together",
                              retryable=False)
         if any(d is not None and d > observed_on for d in
-               (fields["inception_date"], fields["listing_date"], fields["nav_as_of"])):
+               (fields["inception_date"], fields["listing_date"], fields["nav_as_of"],
+                fields["expense_effective_from"], fields["expense_effective_to"],
+                fields["tracking_period_start"], fields["tracking_period_end"])):
             raise FetchError(f"ETF {isin} has a fact dated after the snapshot date",
                              retryable=False)
         result.append({
@@ -109,6 +143,13 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
             "nav_as_of": fields["nav_as_of"],
             "indicative_nav": fields["indicative_nav"],
             "indicative_nav_at": indicative_nav_at,
+            "expense_ratio_pct": fields["expense_ratio_pct"],
+            "expense_effective_from": fields["expense_effective_from"],
+            "expense_effective_to": fields["expense_effective_to"],
+            "tracking_error_pct": fields["tracking_error_pct"],
+            "tracking_difference_pct": fields["tracking_difference_pct"],
+            "tracking_period_start": fields["tracking_period_start"],
+            "tracking_period_end": fields["tracking_period_end"],
             "source_url": url,
             "source_document_sha256": document_hash,
             "source_published_at": published_at,

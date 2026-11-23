@@ -58,6 +58,13 @@ class Database:
         "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_rule VARCHAR DEFAULT 'NO_EXPOSURE_LABEL'",
         "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_confidence VARCHAR DEFAULT 'UNCLASSIFIED'",
         "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_match VARCHAR",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS expense_ratio_pct DECIMAL(12, 8)",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS expense_effective_from DATE",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS expense_effective_to DATE",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_error_pct DECIMAL(12, 8)",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_difference_pct DECIMAL(12, 8)",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_period_start DATE",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_period_end DATE",
     ]
 
     def migrate(self) -> None:

@@ -5909,7 +5909,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/reference.py",
-      "source_sha256": "b0c2d3642e84f1718c84dfe98c6a68074099ab3305988bfe79becab727cbb761",
+      "source_sha256": "9626587ed5ab60d99eaa7aef51fe497271e9e756774ae66264aa6d11b6253d90",
       "test_paths": []
     },
     {
@@ -9245,7 +9245,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/etf_disclosures.py",
-      "source_sha256": "8d707846332cbf6655affeefb9be4bad7a08ba7887c11f5a1baf12887764ae17",
+      "source_sha256": "ef9c4bcd0944be8566b4000d686bbe475e2de1d1fd31324aa0f85f554cd47489",
       "test_paths": []
     },
     {
@@ -10355,7 +10355,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/storage/db.py",
-      "source_sha256": "f6b435c34d584ceee824ca38891d54f7b220803c4043ab14a72a328bd6c22131",
+      "source_sha256": "b9ebaa79718f9630d0e8faad30f508674d8e0d6f142f053acdd28bb51ef89da9",
       "test_paths": []
     },
     {

@@ -292,14 +292,20 @@ def ingest_etf_product_disclosures(payload: bytes, observed_on: date,
                     """INSERT INTO etf_product_disclosures
                        (observed_on, isin, benchmark_name, benchmark_return_type, fund_house,
                         inception_date, listing_date, nav, nav_as_of, indicative_nav,
-                        indicative_nav_at, source_url, source_document_sha256,
+                        indicative_nav_at, expense_ratio_pct, expense_effective_from,
+                        expense_effective_to, tracking_error_pct, tracking_difference_pct,
+                        tracking_period_start, tracking_period_end, source_url, source_document_sha256,
                         source_published_at, import_sha256, record_sha256, lake_key)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                        ON CONFLICT (observed_on, isin, source_document_sha256) DO NOTHING""",
                     [observed_on, row["isin"], row["benchmark_name"],
                      row["benchmark_return_type"], row["fund_house"], row["inception_date"],
                      row["listing_date"], row["nav"], row["nav_as_of"],
-                     row["indicative_nav"], row["indicative_nav_at"], row["source_url"],
+                     row["indicative_nav"], row["indicative_nav_at"],
+                     row["expense_ratio_pct"], row["expense_effective_from"],
+                     row["expense_effective_to"], row["tracking_error_pct"],
+                     row["tracking_difference_pct"], row["tracking_period_start"],
+                     row["tracking_period_end"], row["source_url"],
                      row["source_document_sha256"], row["source_published_at"], digest,
                      record_hash, obj.key],
                 )

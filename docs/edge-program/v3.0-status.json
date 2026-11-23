@@ -30,8 +30,8 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (613 Python files; 598 unassessed; 361 role-unassigned; regenerated inventory SHA-256 e30b3e3dc6f4fbe72ab8457811a0ae91939ee9ac12225804e90dd819d59613b9)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure, disclosure, history, quote, bar, valuation and liquidity changes)",
+        "docs/edge-program/source-inventory.v2.json (613 Python files; 598 unassessed; 361 role-unassigned; regenerated inventory SHA-256 2f7e28b5688d64116751b77994cf5a73e5ff423912fa37ec3c4fb478420144c4)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF disclosure ingestion updates)",
         "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check both pass; the existing tests/test_source_inventory.py suite passed 5 tests in its previous audit",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
@@ -433,11 +433,15 @@
     {
       "id": "FB-0209",
       "text": "Ingest AMC/exchange ETF disclosed tracking difference, tracking error and total expense ratio when permissioned; keep effective dates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The source-attributed ETF disclosure CSV and `etf_product_disclosures` schema now carry TER with effective dates plus tracking error/difference with explicit measurement windows.",
+        "Parsing rejects negative TER/error, reversed date windows and metrics without the required periods; normalized import bytes and official document URL/hash/publication time are persisted.",
+        "tests/test_etf_disclosures.py, tests/test_etf_reference_provider.py and tests/test_migrations.py (26 passed); scoped Ruff and inventory/graph checks passed."
+      ],
+      "blocker": "No permission-reviewed, populated ETF facts dataset has been imported; licensing/retention basis and broad AMC/exchange coverage remain external evidence requirements.",
+      "last_audited_at_utc": "2026-11-23T03:00:06Z",
       "commit": null
     },
     {
@@ -14039,7 +14043,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T02:55:09Z",
+    "as_of_utc": "2026-11-23T03:00:06Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14071,6 +14075,7 @@
       "FB-0206",
       "FB-0207",
       "FB-0208",
+      "FB-0209",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14090,10 +14095,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 48,
+    "audited_count": 49,
     "status_counts": {
-      "UNASSESSED": 1330,
-      "PARTIAL": 37,
+      "UNASSESSED": 1329,
+      "PARTIAL": 38,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14106,6 +14111,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 48 of 1,378 items audited; 8 COMPLETE, 37 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,330 UNASSESSED. ETF reference, product disclosure, price history, Kite quote, sampled bars, iNAV comparison and liquidity analytics are recorded under FB-0201 through FB-0208; latest implementation commit 77ac95ca. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 49 of 1,378 items audited; 8 COMPLETE, 38 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,329 UNASSESSED. ETF reference, product disclosure metrics, price history, Kite quote, sampled bars, iNAV comparison and liquidity analytics are recorded under FB-0201 through FB-0209; latest implementation commit 77ac95ca. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
