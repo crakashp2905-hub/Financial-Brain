@@ -5736,12 +5736,24 @@
     {
       "id": "PA-01-13",
       "text": "Add a release provenance manifest containing source SHA, test artifact hashes, changelog, strategy-rule hashes and data-rights posture.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "scripts/release_provenance.py creates a manifest bound to full Git HEAD and fails on tracked source changes or missing required test outputs.",
+        "The manifest hashes JUnit results, coverage XML, critical coverage JSON, a changelog, strategy-rule sources, the data-permission register and rights review; it reports per-use permission counts without inferring authorization.",
+        ".github/workflows/ci.yml builds and uploads one release-provenance artifact per OS after test, coverage and dependency-audit steps.",
+        "docs/edge-program/CHANGELOG.md records the manifest behavior and unresolved-rights handling."
+      ],
+      "blocker": "Hosted Linux and Windows CI for the pushed final source commit must pass and publish downloadable release-provenance artifacts; verify their commit SHA and hashes before marking complete.",
+      "last_audited_at_utc": "2026-11-23T17:47:16Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_release_provenance.py -q --basetemp=.pytest-tmp-pa0113: 2 passed, including missing-test-artifact refusal.",
+        "python -m ruff check scripts/release_provenance.py tests/test_release_provenance.py: passed.",
+        "git diff --check: passed.",
+        "Hosted per-platform release artifacts have not yet been generated for the final source commit."
+      ],
+      "test_result": "Manifest generation and fail-closed input requirements are implemented and locally tested; hosted exact-commit artifacts remain pending. Status is PARTIAL."
     },
     {
       "id": "PA-01-14",
@@ -15479,7 +15491,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:42:31Z",
+    "as_of_utc": "2026-11-23T17:47:16Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15732,6 +15744,7 @@
       "PA-01-10",
       "PA-01-11",
       "PA-01-12",
+      "PA-01-13",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15754,13 +15767,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 272,
+    "audited_count": 273,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 211,
-      "UNASSESSED": 1106
+      "PARTIAL": 212,
+      "UNASSESSED": 1105
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15863,15 +15876,18 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py",
       "docs/edge-program/merger-integration-fixture-audit-2026-11-23.md",
-      "docs/edge-program/scheduled-checkout-provenance-audit-2026-11-23.md"
+      "docs/edge-program/scheduled-checkout-provenance-audit-2026-11-23.md",
+      "docs/edge-program/CHANGELOG.md",
+      "scripts/release_provenance.py",
+      "tests/test_release_provenance.py"
     ],
-    "evidence_update": "PA-01-12 audited: source SHA is captured best-effort but no approved SHA or stale/unreviewed checkout refusal is enforced; item is PARTIAL."
+    "evidence_update": "PA-01-13 adds a CI-generated source/test/changelog/strategy/data-rights provenance artifact; hosted exact-commit artifact verification is pending."
   },
   "counts_by_status": {
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 211,
-    "UNASSESSED": 1106
+    "PARTIAL": 212,
+    "UNASSESSED": 1105
   }
 }
