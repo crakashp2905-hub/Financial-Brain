@@ -6121,12 +6121,21 @@
     {
       "id": "PA-02-16",
       "text": "Introduce `DATA_UNUSABLE` and fail-closed trade rejection for a missing source or quality violation; no forward-fill that pretends a quote was tradable.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/data-unusable-fail-closed-audit-2026-11-24.md records existing offline and durable fail-closed checks plus their integration gap.",
+        "DataGateResult.data_status classifies any ineligible market observation as DATA_UNUSABLE; existing detailed reason codes are preserved. ForwardSessionRunner rejects missing, unavailable, stale, non-executable, or unevidenced quotes rather than forward-filling."
+      ],
+      "blocker": "DATA_UNUSABLE is exposed by the offline data gate but not consistently attached to durable candidate decisions or every legacy strategy/output path; repository-wide fail-closed coverage remains unproven.",
+      "last_audited_at_utc": "2026-11-23T20:43:00Z",
+      "commit": "becc437c",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_data_gate.py tests/test_forward_edge_integrity_gates.py tests/test_forward_edge_pipeline_compat.py -q: 26 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/data_gate.py tests/test_forward_edge_data_gate.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/data_gate.py tests/test_forward_edge_data_gate.py: passed."
+      ],
+      "test_result": "Unusable observations now have an explicit coarse DATA_UNUSABLE classification while remaining NO_TRADE with deterministic detailed reasons. The existing durable executor fails closed on absent, stale, invalid-depth, unavailable, or unevidenced quotes. Universal status propagation remains incomplete."
     },
     {
       "id": "PA-03-01",
@@ -15946,6 +15955,7 @@
       "PA-02-13",
       "PA-02-14",
       "PA-02-15",
+      "PA-02-16",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15968,13 +15978,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 291,
+    "audited_count": 292,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 227,
-      "UNASSESSED": 1087
+      "PARTIAL": 228,
+      "UNASSESSED": 1086
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16095,7 +16105,7 @@
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 227,
-    "UNASSESSED": 1087
+    "PARTIAL": 228,
+    "UNASSESSED": 1086
   }
 }
