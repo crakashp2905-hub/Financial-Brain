@@ -35,6 +35,36 @@ def test_the_genetic_weights_favour_the_planted_feature():
     assert abs(g.w[0]) > abs(g.w[1])
 
 
+def test_forest_factory_is_deterministic_and_shallow_enough_for_the_panel():
+    model = LR.forest()
+    assert model.n_estimators == 150
+    assert model.min_samples_leaf == 300
+    assert model.random_state == 0
+    assert model.n_jobs == 4
+
+
+def test_regime_switch_requires_prior_history_and_emits_choice_when_supported():
+    dates = [date(2018, 1, 1) + timedelta(days=14 * i) for i in range(100)]
+    parts = []
+    for i, day in enumerate(dates):
+        x = np.linspace(-1, 1, 100)
+        if i % 2:
+            fwd = -x
+        else:
+            fwd = x
+        parts.append(pd.DataFrame({"d": day, "fwd20": fwd, "mom_12_1": x,
+                                   "roc_20": x, "lineage": [f"L{j}" for j in range(100)]}))
+    p = pd.concat(parts, ignore_index=True)
+    market = pd.DataFrame({"vix": np.linspace(10, 30, len(dates)),
+                           "trend": np.sin(np.arange(len(dates)))}, index=dates)
+    # Too little prior monthly history means no classifier is fitted and no recommendation appears.
+    assert LR.regime_switch(p, market, years=[2018], step=1).empty
+    result = LR.regime_switch(p, market, years=[2020], step=1)
+    assert len(result) > 0
+    assert set(result["choice"]) <= {"momentum", "reversal"}
+    assert np.isfinite(result["chosen"]).all()
+
+
 def test_the_lstm_walk_forward_predicts_only_its_test_years():
     pytest.importorskip("torch")                       # the `forecasting` extra, not `dev`
     p = panel(n_dates=180, n=60)

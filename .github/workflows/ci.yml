@@ -100,7 +100,11 @@ jobs:
           path: pytest-results.xml
           if-no-files-found: warn
       - name: Critical-module coverage
-        run: python -m coverage report --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*"
+        run: python -m coverage report --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/learners.py,*/evaluation/learned_model.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*,*/opportunity/learning.py"
+      - name: Enforce per-service coverage floors
+        run: |
+          python -m coverage json --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/learners.py,*/evaluation/learned_model.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*,*/opportunity/learning.py" -o critical-coverage.json
+          python scripts/check_critical_coverage.py critical-coverage.json
       - name: Chart-pattern package coverage floor
         run: python -m coverage report --include="*/patterns/*" --fail-under=85
       - name: Coverage XML
@@ -109,7 +113,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.os }}
-          path: coverage.xml
+          path: |
+            coverage.xml
+            critical-coverage.json
       - name: Dependency audit
         run: python -m pip_audit --skip-editable
 

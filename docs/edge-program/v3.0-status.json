@@ -8689,18 +8689,20 @@
       "evidence": [
         ".github/workflows/ci.yml runs lint, mypy, migrations, full pytest, critical-module and pattern coverage reports, coverage XML artifacts and dependency audit on Ubuntu and Windows using the exact lock.",
         "Hosted run 45168411373 passed on exact head 197ac5c2f2ff7603c898cd5c6767f0525198c077: 4,334 passed and 3 skipped on both Ubuntu and Windows, coverage artifacts uploaded, and pip-audit reported no known vulnerabilities.",
-        "The critical-module report enumerates coverage per file, but observed gaps include execution/oms/evidence.py 0%, interfaces/mcp_server.py 0%, risk/stress.py 28%, risk/exposure.py 34%, and execution/oms/kite_broker.py 55%; the configured 82% aggregate does not enforce a per-service floor."
+        "The critical-module report enumerates coverage per file, but observed gaps include execution/oms/evidence.py 0%, interfaces/mcp_server.py 0%, risk/stress.py 28%, risk/exposure.py 34%, and execution/oms/kite_broker.py 55%; the configured 82% aggregate does not enforce a per-service floor.",
+        "scripts/check_critical_coverage.py defines explicit floors for 34 decision, learning, OMS, interface, opportunity-learning and risk services; CI now exports JSON coverage and enforces each floor.",
+        "Targeted tests for the previously uncovered and low-coverage services passed locally: 42 passed across the focused coverage, Kite broker, MCP, OMS evidence, risk, opportunity learning and learner suites. Ruff and git diff --check pass locally.",
+        "Hosted CI has not yet run on the change; previous hosted coverage deficiencies remain the baseline until the new Windows/Linux jobs pass."
       ],
-      "blocker": "Add complete coverage scope for critical learning services and explicit per-service coverage floors; current report reveals low or zero coverage for several critical modules despite passing aggregate coverage.",
+      "blocker": "The implemented per-service coverage floors and focused tests are not yet proven by hosted Linux and Windows CI on this change. Await exact-head CI success, then complete this item if all 34 floors pass.",
       "last_audited_at_utc": "2026-11-23T12:06:00Z",
       "commit": "197ac5c2f2ff7603c898cd5c6767f0525198c077",
       "test_evidence": [
-        "python scripts/validate_requirements_lock.py: passed",
-        "tests/test_requirements_lock.py: 3 passed",
-        "Hosted CI run 45168411373: all four Ubuntu/Windows test and reproducibility jobs passed; full suites each 4,334 passed / 3 skipped.",
-        "Coverage report from Ubuntu job 137671279119: selected critical-module files total 82%, but per-file 0-55% results are listed in evidence and show the remaining service-level coverage gap."
+        "python -m pytest tests/test_critical_coverage.py tests/test_kite_broker_readonly.py tests/test_mcp_server.py tests/test_oms_evidence.py tests/test_risk_exposure.py tests/test_risk_stress.py tests/test_opportunity_learning_service.py tests/test_phase5_learners.py tests/test_phase5_learned_model.py -q: 42 passed.",
+        "python -m ruff check src tests: passed.",
+        "Hosted Windows/Linux acceptance: pending."
       ],
-      "test_result": "Cross-platform CI and coverage artifacts are established. Coverage reporting now exposes gaps that aggregate CI does not gate; service-specific coverage work remains incomplete."
+      "test_result": "Focused local tests and a fail-closed per-service CI coverage gate are implemented; full per-module acceptance awaits a green hosted run on the exact change."
     },
     {
       "id": "SL-00-13",
@@ -15170,7 +15172,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T09:52:23Z",
+    "as_of_utc": "2026-11-23T12:45:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
