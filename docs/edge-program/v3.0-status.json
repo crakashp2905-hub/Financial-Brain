@@ -8752,12 +8752,23 @@
     {
       "id": "SL-01-01",
       "text": "Define immutable `RawObservation(source_id, instrument_id, exchange_ts, received_ts, available_at, published_at, revision_id, checksum, entitlement)`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/raw_observation.py::RawObservation is frozen and carries source_id, instrument_id, exchange_ts, received_ts, available_at, published_at, revision_id, raw bytes, checksum and a matching DataPermission entitlement state.",
+        "Raw payload bytes are retained exactly; SHA-256 is computed or verified against those bytes. Timestamps are timezone-aware and normalized to UTC; receipt/publication must precede availability. Unknown rights remain UNKNOWN_RIGHTS and are never upgraded by this container.",
+        "tests/test_raw_observation.py and tests/test_forward_edge_market_events.py: 20 passed; source inventory and dependency graph --check pass."
+      ],
+      "blocker": "Still partial: this raw-observation type is not yet adopted by every provider adapter, immutable raw store, revision/correction workflow, policy consumer or retention/deletion path.",
+      "last_audited_at_utc": "2026-11-23T09:17:51Z",
+      "commit": "f977e265a389e1bd86dc02d904ae226552d2dbae",
+      "test_evidence": [
+        "python -m pytest tests/test_raw_observation.py tests/test_forward_edge_market_events.py -q: 20 passed",
+        "python -m ruff check src tests: passed",
+        "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --output docs/edge-program/forward-engine-dependency-graph.v1.json --check: passed"
+      ],
+      "test_result": "Raw source records retain exact bytes, checksum, revision, explicit availability clocks and permission status; integration across all source pipelines remains outstanding.",
+      "artifact_sha256": "3741864d8687e2456c35fabfcb20db8f030874c3b141abeb227a5c3b93885922"
     },
     {
       "id": "SL-01-02",
@@ -15071,7 +15082,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T09:13:47Z",
+    "as_of_utc": "2026-11-23T09:17:51Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15318,15 +15329,16 @@
       "SL-00-16",
       "SL-00-17",
       "SL-00-18",
+      "SL-01-01",
       "SL-01-06"
     ],
-    "audited_count": 246,
+    "audited_count": 247,
     "status_counts": {
       "COMPLETE": 26,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 203,
-      "UNASSESSED": 1132
+      "PARTIAL": 204,
+      "UNASSESSED": 1131
     },
     "verified_complete_count": 26,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15404,7 +15416,7 @@
     "COMPLETE": 26,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 203,
-    "UNASSESSED": 1132
+    "PARTIAL": 204,
+    "UNASSESSED": 1131
   }
 }
