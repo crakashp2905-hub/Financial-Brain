@@ -5642,7 +5642,7 @@
       ],
       "blocker": "GitHub Actions no longer exposes logs or step summaries for five failed main runs. Their root causes cannot be established from current evidence; do not classify them as runner/billing or application failures without retained logs.",
       "last_audited_at_utc": "2026-11-23T17:29:38Z",
-      "commit": null,
+      "commit": "d89f1809dcd1b4e8b45d933a9492599417b14642",
       "test_evidence": [
         "GitHub Actions workflow run and job APIs inspected for all 12 non-successful main push runs in the captured 90-run result set.",
         "Downloadable job logs inspected for runs 42780156564, 42786408945, 42794170512, 40813818332, 40014754004, 40013707411 and 38854824098.",
