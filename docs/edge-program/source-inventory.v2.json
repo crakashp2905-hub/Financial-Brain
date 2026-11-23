@@ -2797,7 +2797,7 @@
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/kite_broker.py",
-      "source_sha256": "0fcedcbfe9eafbc7b3601d216da70a4bc407e702e90a35bc163c18f8e0cc68a0",
+      "source_sha256": "59170964c1f1a7be156e3b538ef80f1ecbbc78f1e530ca736dc352361b23cf51",
       "test_paths": [
         "tests/test_forward_edge_f00.py"
       ]

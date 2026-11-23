@@ -10150,7 +10150,7 @@
       "kind": "class",
       "line": 40,
       "related_role": "SUPPORTING",
-      "source_sha256": "0fcedcbfe9eafbc7b3601d216da70a4bc407e702e90a35bc163c18f8e0cc68a0"
+      "source_sha256": "59170964c1f1a7be156e3b538ef80f1ecbbc78f1e530ca736dc352361b23cf51"
     },
     {
       "canonical_contract_ids": [],
@@ -10162,7 +10162,7 @@
       "kind": "function",
       "line": 44,
       "related_role": "SUPPORTING",
-      "source_sha256": "0fcedcbfe9eafbc7b3601d216da70a4bc407e702e90a35bc163c18f8e0cc68a0"
+      "source_sha256": "59170964c1f1a7be156e3b538ef80f1ecbbc78f1e530ca736dc352361b23cf51"
     },
     {
       "canonical_contract_ids": [],
@@ -10174,7 +10174,7 @@
       "kind": "class",
       "line": 63,
       "related_role": "SUPPORTING",
-      "source_sha256": "0fcedcbfe9eafbc7b3601d216da70a4bc407e702e90a35bc163c18f8e0cc68a0"
+      "source_sha256": "59170964c1f1a7be156e3b538ef80f1ecbbc78f1e530ca736dc352361b23cf51"
     },
     {
       "canonical_contract_ids": [],
@@ -18385,7 +18385,7 @@
     {
       "domain": "execution",
       "path": "src/financial_brain/execution/oms/kite_broker.py",
-      "source_sha256": "0fcedcbfe9eafbc7b3601d216da70a4bc407e702e90a35bc163c18f8e0cc68a0"
+      "source_sha256": "59170964c1f1a7be156e3b538ef80f1ecbbc78f1e530ca736dc352361b23cf51"
     },
     {
       "domain": "execution",

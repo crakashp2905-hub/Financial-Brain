@@ -148,16 +148,17 @@
       "id": "FB-0009",
       "text": "Establish clean CI on Windows/Linux with pinned dependencies, lint, type checks, per-module coverage and test artifacts.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         ".github/workflows/ci.yml now runs the full Ubuntu/Windows matrix in a pinned Python 3.13.5 environment from requirements-lock.txt, including lint, type checks, migrations, coverage reports/artifacts and dependency audit.",
         "scripts/validate_requirements_lock.py checks every declared runtime/dev direct dependency has an exact lock entry; tests/test_requirements_lock.py covers missing and unpinned packages.",
         "Hosted run 45163583623 failed before pytest because the prior lock omitted cryptography (and direct-dependency audit also found coverage/jsonschema missing); all three and their transitive dependencies are now pinned.",
         "Commit 197ac5c2 pins certifi 2026.10.18, filelock 4.2.1, pypdf 6.21.4, pip 26.2, setuptools 84.1.0 and wheel 0.46.2; the dependency lock fingerprint matches the reproducibility contract.",
         "Hosted run 45168411373 on exact head 197ac5c2f2ff7603c898cd5c6767f0525198c077 succeeded on Ubuntu and Windows: 4,334 tests passed and 3 optional tests skipped on each OS; lint, migration, type, coverage and dependency-audit steps passed; both reproducibility jobs passed.",
-        "Ubuntu CI emitted per-module critical coverage and uploaded coverage XML; pip-audit reported no known vulnerabilities."
+        "Ubuntu CI emitted per-module critical coverage and uploaded coverage XML; pip-audit reported no known vulnerabilities.",
+        "Hosted run 45185235465 on d3dc90e3: Ubuntu reproducibility passed; Ubuntu test job failed at Verify source inventory snapshot before tests because generated inventory snapshots were stale. Source inventory, forward-engine graph and entrypoint inventory have since been regenerated and their checks pass locally."
       ],
-      "blocker": null,
+      "blocker": "The latest change to CI has not yet passed on the exact current head: hosted Ubuntu stopped at stale generated inventory before tests. Inventory snapshots were refreshed; a clean cross-platform run on the repaired head is pending.",
       "last_audited_at_utc": "2026-11-23T12:06:00Z",
       "commit": "197ac5c2f2ff7603c898cd5c6767f0525198c077",
       "artifact_sha256": "cff553de655676e2533e5907f9b8cd24898768923249be1dd5bd7e7f4bd93889",
@@ -165,9 +166,10 @@
         "python scripts/validate_requirements_lock.py: passed",
         "python -m pytest tests/test_requirements_lock.py -q: 3 passed",
         "Hosted GitHub Actions run 45168411373: overall success on head 197ac5c2f2ff7603c898cd5c6767f0525198c077; Ubuntu test job 137671279119 and Windows test job 137671279485 both passed, each with 4,334 passed / 3 skipped; Ubuntu reproducibility job 137671279483 and Windows reproducibility job 137671279589 passed.",
-        "Ubuntu test log: 82% aggregate coverage across the configured critical-module selection; coverage artifact 14816058142 SHA-256 cff553de655676e2533e5907f9b8cd24898768923249be1dd5bd7e7f4bd93889; dependency audit: No known vulnerabilities found."
+        "Ubuntu test log: 82% aggregate coverage across the configured critical-module selection; coverage artifact 14816058142 SHA-256 cff553de655676e2533e5907f9b8cd24898768923249be1dd5bd7e7f4bd93889; dependency audit: No known vulnerabilities found.",
+        "Hosted cross-platform CI on repaired current head: pending."
       ],
-      "test_result": "A clean locked install and complete Ubuntu/Windows CI run passed on the exact current PR head, including full tests, lint, typing, migrations, coverage artifacts, dependency audit and cross-platform reproducibility."
+      "test_result": "The prior exact-head run was green, but the current workflow revision stopped before tests on stale generated snapshots. Snapshots are refreshed; current-head CI acceptance is pending."
     },
     {
       "id": "FB-0010",
@@ -15172,7 +15174,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T12:45:00Z",
+    "as_of_utc": "2026-11-23T13:55:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15425,13 +15427,13 @@
     ],
     "audited_count": 248,
     "status_counts": {
-      "COMPLETE": 31,
+      "COMPLETE": 30,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 200,
+      "PARTIAL": 201,
       "UNASSESSED": 1130
     },
-    "verified_complete_count": 31,
+    "verified_complete_count": 30,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15518,10 +15520,10 @@
     "evidence_update": "Merged feature and main checklist evidence per task using the latest recorded audit timestamp. Counts are recalculated from all 1,378 item rows; only COMPLETE rows count as verified completion."
   },
   "counts_by_status": {
-    "COMPLETE": 31,
+    "COMPLETE": 30,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 200,
+    "PARTIAL": 201,
     "UNASSESSED": 1130
   }
 }
