@@ -279,7 +279,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#A10 published price anomalies (16-anomaly family)",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#A10 published price anomalies (16-anomaly family)",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:B4 index mean reversion and VWAP (9-rule family)",
@@ -287,7 +288,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#B4 index mean reversion and VWAP (9-rule family)",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#B4 index mean reversion and VWAP (9-rule family)",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:BAB betting against beta in futures",
@@ -295,7 +297,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#BAB betting against beta in futures",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#BAB betting against beta in futures",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:C1 rich-basis carry",
@@ -303,7 +306,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#C1 rich-basis carry",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#C1 rich-basis carry",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:D1 delivery share long-short in futures",
@@ -311,7 +315,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#D1 delivery share long-short in futures",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#D1 delivery share long-short in futures",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:EAP earnings-announcement premium in futures",
@@ -319,7 +324,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#EAP earnings-announcement premium in futures",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#EAP earnings-announcement premium in futures",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:F3 short build-up avoid filter",
@@ -327,7 +333,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#F3 short build-up avoid filter",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#F3 short build-up avoid filter",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:I/S intraday and swing family on minute bars (9 rules)",
@@ -335,7 +342,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#I/S intraday and swing family on minute bars (9 rules)",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#I/S intraday and swing family on minute bars (9 rules)",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:K7 chart and candle setups in futures (17-setup family)",
@@ -343,7 +351,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#K7 chart and candle setups in futures (17-setup family)",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#K7 chart and candle setups in futures (17-setup family)",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:M1 cost-aware momentum book",
@@ -351,7 +360,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#M1 cost-aware momentum book",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#M1 cost-aware momentum book",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:MF multi-factor quality value low-risk book",
@@ -359,7 +369,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#MF multi-factor quality value low-risk book",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#MF multi-factor quality value low-risk book",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:N2F rejected results as hedged futures short",
@@ -367,7 +378,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#N2F rejected results as hedged futures short",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#N2F rejected results as hedged futures short",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "trial:X3 earnings surprise drift out of sample",
@@ -375,7 +387,8 @@
       "strategy_class": "historical_trial",
       "source_ref": "docs/trials/ledger.jsonl#X3 earnings surprise drift out of sample",
       "source_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/trials/ledger.jsonl#X3 earnings surprise drift out of sample",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "MQ-001",
@@ -383,7 +396,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-001",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#MQ-001",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "MQ-002",
@@ -391,7 +405,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-002",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#MQ-002",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "MQ-003",
@@ -399,7 +414,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-003",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#MQ-003",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "MQ-004",
@@ -407,7 +423,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-004",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#MQ-004",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "MQ-005",
@@ -415,7 +432,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-005",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#MQ-005",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "MQ-006",
@@ -423,7 +441,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-006",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#MQ-006",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "MQ-007",
@@ -431,7 +450,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-007",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#MQ-007",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "MQ-008",
@@ -439,7 +459,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#MQ-008",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#MQ-008",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-001",
@@ -447,7 +468,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-001",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-001",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-002",
@@ -455,7 +477,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-002",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-002",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-003",
@@ -463,7 +486,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-003",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-003",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-004",
@@ -471,7 +495,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-004",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-004",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-005",
@@ -479,7 +504,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-005",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-005",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-006",
@@ -487,7 +513,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-006",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-006",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-007",
@@ -495,7 +522,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-007",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-007",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-008",
@@ -503,7 +531,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-008",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-008",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-009",
@@ -511,7 +540,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-009",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-009",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     },
     {
       "strategy_id": "TV-010",
@@ -519,7 +549,8 @@
       "strategy_class": "external_reference",
       "source_ref": "docs/sources/algorithm-source-registry.json#TV-010",
       "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
-      "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
+      "canonical_owner": "docs/sources/algorithm-source-registry.json#TV-010",
+      "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"
     }
   ],
   "strategy_catalogue_sha256": "92764e72bad129a784a6b7d761b971c2b0e1e69e98d4c6d8a4c3369ab713beb6",
@@ -1271,7 +1302,7 @@
     {
       "capability_id": "module:src/financial_brain/execution/order_policy.py",
       "path": "src/financial_brain/execution/order_policy.py",
-      "module_role": "execution_or_cost_model",
+      "module_role": "order_management_or_order_contract",
       "module_owner": "src/financial_brain/execution/order_policy.py"
     },
     {
@@ -1691,13 +1722,13 @@
     {
       "capability_id": "module:src/financial_brain/forward_edge/order_blotter.py",
       "path": "src/financial_brain/forward_edge/order_blotter.py",
-      "module_role": "signal_report_or_trader_renderer",
+      "module_role": "order_management_or_order_contract",
       "module_owner": "src/financial_brain/forward_edge/order_blotter.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/order_journal.py",
       "path": "src/financial_brain/forward_edge/order_journal.py",
-      "module_role": "ledger_or_journal",
+      "module_role": "order_management_or_order_contract",
       "module_owner": "src/financial_brain/forward_edge/order_journal.py"
     },
     {
@@ -1907,37 +1938,37 @@
     {
       "capability_id": "module:src/financial_brain/forward_edge/signal_trace.py",
       "path": "src/financial_brain/forward_edge/signal_trace.py",
-      "module_role": "signal_report_or_trader_renderer",
+      "module_role": "signal_contract_or_generation",
       "module_owner": "src/financial_brain/forward_edge/signal_trace.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/strategy_adapter.py",
       "path": "src/financial_brain/forward_edge/strategy_adapter.py",
-      "module_role": "canonical_contract_or_signal_output",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/forward_edge/strategy_adapter.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/strategy_attribution.py",
       "path": "src/financial_brain/forward_edge/strategy_attribution.py",
-      "module_role": "forward_trading_contract_or_support",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/forward_edge/strategy_attribution.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/strategy_inventory.py",
       "path": "src/financial_brain/forward_edge/strategy_inventory.py",
-      "module_role": "signal_report_or_trader_renderer",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/forward_edge/strategy_inventory.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/strategy_pipeline.py",
       "path": "src/financial_brain/forward_edge/strategy_pipeline.py",
-      "module_role": "forward_trading_contract_or_support",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/forward_edge/strategy_pipeline.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/strategy_scorecard.py",
       "path": "src/financial_brain/forward_edge/strategy_scorecard.py",
-      "module_role": "signal_report_or_trader_renderer",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/forward_edge/strategy_scorecard.py"
     },
     {
@@ -2271,15 +2302,21 @@
       "module_owner": "src/financial_brain/interfaces/trader_core.py"
     },
     {
+      "capability_id": "module:src/financial_brain/kernel/batch20b_orders.py",
+      "path": "src/financial_brain/kernel/batch20b_orders.py",
+      "module_role": "order_management_or_order_contract",
+      "module_owner": "src/financial_brain/kernel/batch20b_orders.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/kernel/batch20c_strategies.py",
       "path": "src/financial_brain/kernel/batch20c_strategies.py",
-      "module_role": "signal_report_or_trader_renderer",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/kernel/batch20c_strategies.py"
     },
     {
       "capability_id": "module:src/financial_brain/kernel/batch20e_strategies.py",
       "path": "src/financial_brain/kernel/batch20e_strategies.py",
-      "module_role": "canonical_contract_or_signal_output",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/kernel/batch20e_strategies.py"
     },
     {
@@ -2319,9 +2356,15 @@
       "module_owner": "src/financial_brain/kernel/ledger.py"
     },
     {
+      "capability_id": "module:src/financial_brain/kernel/mf_order.py",
+      "path": "src/financial_brain/kernel/mf_order.py",
+      "module_role": "order_management_or_order_contract",
+      "module_owner": "src/financial_brain/kernel/mf_order.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/kernel/oms.py",
       "path": "src/financial_brain/kernel/oms.py",
-      "module_role": "canonical_contract_or_signal_output",
+      "module_role": "order_management_or_order_contract",
       "module_owner": "src/financial_brain/kernel/oms.py"
     },
     {
@@ -2331,22 +2374,40 @@
       "module_owner": "src/financial_brain/kernel/paper_account.py"
     },
     {
+      "capability_id": "module:src/financial_brain/kernel/position_signals.py",
+      "path": "src/financial_brain/kernel/position_signals.py",
+      "module_role": "signal_contract_or_generation",
+      "module_owner": "src/financial_brain/kernel/position_signals.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/kernel/strategy_economics_gate.py",
+      "path": "src/financial_brain/kernel/strategy_economics_gate.py",
+      "module_role": "strategy_source_or_contract",
+      "module_owner": "src/financial_brain/kernel/strategy_economics_gate.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/kernel/strategy_primitives.py",
       "path": "src/financial_brain/kernel/strategy_primitives.py",
-      "module_role": "canonical_contract_or_signal_output",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/kernel/strategy_primitives.py"
     },
     {
       "capability_id": "module:src/financial_brain/kernel/strategy_sdk.py",
       "path": "src/financial_brain/kernel/strategy_sdk.py",
-      "module_role": "canonical_contract_or_signal_output",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/kernel/strategy_sdk.py"
     },
     {
       "capability_id": "module:src/financial_brain/kernel/strategy_state.py",
       "path": "src/financial_brain/kernel/strategy_state.py",
-      "module_role": "canonical_contract_or_signal_output",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/kernel/strategy_state.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/kernel/trader_signal.py",
+      "path": "src/financial_brain/kernel/trader_signal.py",
+      "module_role": "signal_contract_or_generation",
+      "module_owner": "src/financial_brain/kernel/trader_signal.py"
     },
     {
       "capability_id": "module:src/financial_brain/opportunity/conditions.py",
@@ -2525,7 +2586,7 @@
     {
       "capability_id": "module:src/financial_brain/paper/mf_order_book.py",
       "path": "src/financial_brain/paper/mf_order_book.py",
-      "module_role": "paper_engine_or_output",
+      "module_role": "order_management_or_order_contract",
       "module_owner": "src/financial_brain/paper/mf_order_book.py"
     },
     {
@@ -2621,7 +2682,7 @@
     {
       "capability_id": "module:src/financial_brain/paper/signals.py",
       "path": "src/financial_brain/paper/signals.py",
-      "module_role": "signal_report_or_trader_renderer",
+      "module_role": "signal_contract_or_generation",
       "module_owner": "src/financial_brain/paper/signals.py"
     },
     {
@@ -2879,7 +2940,7 @@
     {
       "capability_id": "module:src/financial_brain/portfolio/signals.py",
       "path": "src/financial_brain/portfolio/signals.py",
-      "module_role": "portfolio_allocation_or_accounting",
+      "module_role": "signal_contract_or_generation",
       "module_owner": "src/financial_brain/portfolio/signals.py"
     },
     {
@@ -3117,6 +3178,12 @@
       "module_owner": "src/financial_brain/research/execution_compare.py"
     },
     {
+      "capability_id": "module:src/financial_brain/research/external_strategies/registry.py",
+      "path": "src/financial_brain/research/external_strategies/registry.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/external_strategies/registry.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/research/history_audit.py",
       "path": "src/financial_brain/research/history_audit.py",
       "module_role": "research_or_strategy_research",
@@ -3125,7 +3192,7 @@
     {
       "capability_id": "module:src/financial_brain/research/inverse_strategy.py",
       "path": "src/financial_brain/research/inverse_strategy.py",
-      "module_role": "research_or_strategy_research",
+      "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/research/inverse_strategy.py"
     },
     {
@@ -3329,7 +3396,7 @@
     {
       "capability_id": "module:src/financial_brain/signals/position_signals.py",
       "path": "src/financial_brain/signals/position_signals.py",
-      "module_role": "signal_generation",
+      "module_role": "signal_contract_or_generation",
       "module_owner": "src/financial_brain/signals/position_signals.py"
     },
     {

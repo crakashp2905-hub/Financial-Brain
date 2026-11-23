@@ -94,7 +94,7 @@ def module_inventory() -> list[dict[str, str]]:
         if path.name != "__init__.py" and path.is_file():
             rows[relative] = role
 
-    for path in (ROOT / "src/financial_brain/strategies").glob("*.py"):
+    for path in (ROOT / "src/financial_brain/strategies").rglob("*.py"):
         add(path, "strategy_source_or_contract")
     for folder, role in (("providers", "provider_adapter"), ("ingest", "feed_ingester"),
                          ("evaluation", "strategy_research_or_evaluation"),
@@ -112,7 +112,7 @@ def module_inventory() -> list[dict[str, str]]:
                          ("execution/oms", "broker_oms_component"), ("paper", "paper_engine_or_output"),
                          ("interfaces", "api_or_mcp_output"), ("api", "api_output"),
                          ("commands", "command_output")):
-        for path in (ROOT / "src/financial_brain" / folder).glob("*.py"):
+        for path in (ROOT / "src/financial_brain" / folder).rglob("*.py"):
             add(path, role)
     explicit = [
         "src/financial_brain/forward_edge/registry.py", "src/financial_brain/forward_edge/strategy_adapter.py",
@@ -152,6 +152,12 @@ def module_inventory() -> list[dict[str, str]]:
         name = path.name.lower()
         if "ledger" in name or "journal" in name:
             add(path, "ledger_or_journal")
+        if "oms" in name or "order" in name:
+            add(path, "order_management_or_order_contract")
+        if "signal" in name:
+            add(path, "signal_contract_or_generation")
+        if "strateg" in name:
+            add(path, "strategy_source_or_contract")
     return [{"capability_id": f"module:{path}", "path": path,
              "module_role": role, "module_owner": path} for path, role in sorted(rows.items())]
 
@@ -163,9 +169,24 @@ def build() -> dict:
     strategy_candidates = [
         {"strategy_id": row.strategy_id, "status": row.eligibility, "strategy_class": row.strategy_class,
          "source_ref": row.source_ref, "source_sha256": row.source_sha256,
-         "canonical_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"}
+         "canonical_owner": row.source_ref,
+         "catalogue_owner": "src/financial_brain/forward_edge/eligibility.py::build_catalogue"}
         for row in strategy_inventory.rows
     ]
+    if len({item["id"] for item in CAPABILITIES}) != len(CAPABILITIES):
+        raise ValueError("capability contracts must have unique IDs")
+    required_categories = {"strategy", "feed", "oms", "ledger", "signals", "renderer", "output"}
+    present_categories = {item["category"] for item in CAPABILITIES}
+    if missing := sorted(required_categories - present_categories):
+        raise ValueError("capability owner missing for required category: " + ", ".join(missing))
+    if any(not item.get("owner") or not item.get("owner_symbol") for item in CAPABILITIES):
+        raise ValueError("every capability needs one canonical owner and owner symbol")
+    modules = module_inventory()
+    paths = [item["path"] for item in modules]
+    if len(paths) != len(set(paths)):
+        raise ValueError("trader capability module inventory contains duplicate paths")
+    if any(not item.get("module_owner") or not item.get("module_role") for item in modules):
+        raise ValueError("every trader capability module needs one owner and role")
     return {
         "schema": "fb.capability_ownership.v1",
         "scope": "Trader-core capabilities and implementation modules; human review routing is recorded separately in CODEOWNERS.",
@@ -173,7 +194,7 @@ def build() -> dict:
         "capabilities": CAPABILITIES,
         "strategy_candidates": strategy_candidates,
         "strategy_catalogue_sha256": strategy_inventory.catalogue_sha256,
-        "module_inventory": module_inventory(),
+        "module_inventory": modules,
         "known_unresolved_boundaries": [
             "AlgorithmSpec and StrategySpec identities, hashes, clocks and promotion states are not synchronized by one registry.",
             "Provider adapters in providers/ingest are individually scoped; license/effective-use status remains governed by purpose-specific permission objects.",
