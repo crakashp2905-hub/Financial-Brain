@@ -6054,12 +6054,26 @@
     {
       "id": "PA-02-13",
       "text": "Add deterministic, low-cost synthetic fixture and delayed/replay feed modes for engineering tests; visually and cryptographically distinguish fixture rows from true market observations.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/deterministic-delayed-fixture-replay-audit-2026-11-24.md records the deterministic fixture, delayed replay, provenance, verification, and UI limits.",
+        "src/financial_brain/forward_edge/market_data.py::delayed_fixture_replay accepts explicit synthetic source labels only, refuses provider events, preserves source clocks, delays receipt/availability clocks, deterministically sorts, and stamps SYNTHETIC_FIXTURE_REPLAY with a replay evidence SHA-256 and deterministic event ID.",
+        "src/financial_brain/forward_edge/evidence_labels.py keeps fixture_replay classified as DETERMINISTIC_FIXTURE even if caller flags market observation or complete session.",
+        "tests/test_forward_edge_fixture_replay.py verifies delayed clock behavior, deterministic identity/evidence, ordering, synthetic evidence class, market-source refusal, and invalid/duplicate input rejection.",
+        "Implementation commit: f0da34a1."
+      ],
+      "blocker": "The fixture replay is an engineering API and its explicit source/evidence markers are persisted, but no operator-facing CLI/dashboard rendering test verifies the marker in every consumer. It proves plumbing only, not market performance.",
+      "last_audited_at_utc": "2026-11-23T20:24:01Z",
+      "commit": "f0da34a1",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_fixture_replay.py tests/test_forward_edge_pipeline_compat.py: 14 passed.",
+        "python -m pytest tests/test_forward_edge_fixture_replay.py tests/test_forward_edge_pipeline_compat.py tests/test_forward_edge_kite_market_data.py tests/test_forward_edge_market_events.py -q: 47 passed in 117.51s.",
+        "python -m ruff check src/financial_brain/forward_edge/market_data.py tests/test_forward_edge_fixture_replay.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/market_data.py: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Delayed synthetic replay preserves source clocks, delays receipt/availability, emits deterministic synthetic identifiers and evidence hashes, and cannot accept provider source labels. Operator-facing visibility remains unverified."
     },
     {
       "id": "PA-02-14",
@@ -15637,7 +15651,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T20:15:09Z",
+    "as_of_utc": "2026-11-23T20:24:01Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15906,6 +15920,7 @@
       "PA-02-10",
       "PA-02-11",
       "PA-02-12",
+      "PA-02-13",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15928,13 +15943,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 288,
+    "audited_count": 289,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 224,
-      "UNASSESSED": 1090
+      "PARTIAL": 225,
+      "UNASSESSED": 1089
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16055,7 +16070,7 @@
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 224,
-    "UNASSESSED": 1090
+    "PARTIAL": 225,
+    "UNASSESSED": 1089
   }
 }
