@@ -4737,6 +4737,7 @@
         "financial_brain.forward_edge.market_data",
         "financial_brain.forward_edge.market_events",
         "financial_brain.forward_edge.session_runner",
+        "financial_brain.kernel.units",
         "hashlib",
         "json",
         "math",
@@ -4746,7 +4747,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/paper_book_adapter.py",
-      "source_sha256": "d82d63b55295219be5819b906ee85a011f237faa77f97b2a09e23ebe3ff764fa",
+      "source_sha256": "e957947480e7aa9798b5997128bb14d2dee5e43c195ef7331258ce0efece4360",
       "test_paths": []
     },
     {

@@ -14,6 +14,7 @@ from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunnerError,
 )
 from financial_brain.forward_edge.paper_book_adapter import (
+    PaperBookSignal,
     due_exits,
     pending_signals,
     reconcile_exit_receipt,
@@ -24,6 +25,7 @@ from financial_brain.forward_edge.paper_book_adapter import (
 from financial_brain.forward_edge.strategy_adapter import CandidateSignal
 from financial_brain.forward_edge.strategy_pipeline import execute_candidate
 from financial_brain.kernel.registry import StrategyEligibility, StrategySpec
+from financial_brain.kernel.units import BasisPoints, Price, WholeUnits
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
     ForwardSessionStore,
@@ -1195,6 +1197,23 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
     runner.close_session("book-adapter", complete=False, now=decision_at + timedelta(seconds=1),
                          reason="adapter contract test")
     runner.close()
+
+
+def test_forward_paper_book_signal_accepts_typed_prices_units_and_rate_bps():
+    signal = PaperBookSignal(
+        version="swing-v1", mode="live", signal_day=date(2026, 11, 13), rank=1,
+        ticker="INFY", lineage="INFY-LINEAGE", signal_type="swing",
+        horizon_sessions=7, shares=WholeUnits(Decimal("2")),
+        stop_price=Price(Decimal("95"), "INR"),
+        reference_price=Price(Decimal("100"), "INR"),
+        expected_net=BasisPoints(Decimal("200")),
+        estimated_cost=BasisPoints(Decimal("30")), instrument_id="NSE:INFY",
+    )
+    assert signal.shares == 2
+    assert signal.stop_price == 95.0
+    assert signal.reference_price == 100.0
+    assert signal.expected_net == 0.02
+    assert signal.estimated_cost == 0.003
 
 
 @pytest.mark.parametrize("with_cost_schedule", [False, True])
