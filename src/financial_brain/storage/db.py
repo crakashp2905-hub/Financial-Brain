@@ -65,6 +65,11 @@ class Database:
         "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_difference_pct DECIMAL(12, 8)",
         "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_period_start DATE",
         "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_period_end DATE",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS creation_units BIGINT",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS redemption_units BIGINT",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS creation_unit_size BIGINT",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS flow_period_start DATE",
+        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS flow_period_end DATE",
     ]
 
     def migrate(self) -> None:

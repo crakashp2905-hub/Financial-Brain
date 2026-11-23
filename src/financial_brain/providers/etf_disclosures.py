@@ -2,7 +2,9 @@
 
 This adapter intentionally does not infer benchmark variant, AMC, inception, NAV or iNAV
 from a ticker/name. Each populated row carries the official document URL, its SHA-256 and
-publication time so human-transcribed facts remain auditable.
+publication time so human-transcribed facts remain auditable. Creation/redemption figures
+are issuer/market-maker primary-market context only; they do not describe a retail holder's
+redemption entitlement or create a broker order path.
 """
 from __future__ import annotations
 
@@ -76,7 +78,8 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
             except ValueError as exc:
                 raise FetchError(f"ETF {isin} has invalid {name}", retryable=False) from exc
         for name in ("nav", "indicative_nav", "expense_ratio_pct", "tracking_error_pct",
-                     "tracking_difference_pct"):
+                     "tracking_difference_pct", "creation_units", "redemption_units",
+                     "creation_unit_size"):
             value = row.get(name, "")
             try:
                 fields[name] = Decimal(value) if value else None
@@ -114,6 +117,31 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
         if (fields["tracking_period_start"] and fields["tracking_period_end"]
                 and fields["tracking_period_end"] < fields["tracking_period_start"]):
             raise FetchError(f"ETF {isin} tracking measurement dates are reversed", retryable=False)
+        for name in ("creation_units", "redemption_units", "creation_unit_size"):
+            value = fields[name]
+            if value is not None and (value < 0 or value != value.to_integral_value()):
+                raise FetchError(f"ETF {isin} {name} must be a non-negative integer",
+                                 retryable=False)
+        has_flow = any(fields[name] is not None for name in
+                       ("creation_units", "redemption_units"))
+        for name in ("flow_period_start", "flow_period_end"):
+            value = row.get(name, "")
+            try:
+                fields[name] = date.fromisoformat(value) if value else None
+            except ValueError as exc:
+                raise FetchError(f"ETF {isin} has invalid {name}", retryable=False) from exc
+        has_flow_window = fields["flow_period_start"] is not None and fields["flow_period_end"] is not None
+        if has_flow != has_flow_window:
+            raise FetchError(f"ETF {isin} creation/redemption units require a full measurement period",
+                             retryable=False)
+        if has_flow and fields["creation_unit_size"] is None:
+            raise FetchError(f"ETF {isin} creation/redemption units require creation_unit_size",
+                             retryable=False)
+        if fields["creation_unit_size"] is not None and fields["creation_unit_size"] <= 0:
+            raise FetchError(f"ETF {isin} creation_unit_size must be positive", retryable=False)
+        if (fields["flow_period_start"] and fields["flow_period_end"]
+                and fields["flow_period_end"] < fields["flow_period_start"]):
+            raise FetchError(f"ETF {isin} flow measurement dates are reversed", retryable=False)
         inav_time = row.get("indicative_nav_at", "")
         try:
             indicative_nav_at = (datetime.fromisoformat(inav_time.replace("Z", "+00:00"))
@@ -129,7 +157,8 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
         if any(d is not None and d > observed_on for d in
                (fields["inception_date"], fields["listing_date"], fields["nav_as_of"],
                 fields["expense_effective_from"], fields["expense_effective_to"],
-                fields["tracking_period_start"], fields["tracking_period_end"])):
+                fields["tracking_period_start"], fields["tracking_period_end"],
+                fields["flow_period_start"], fields["flow_period_end"])):
             raise FetchError(f"ETF {isin} has a fact dated after the snapshot date",
                              retryable=False)
         result.append({
@@ -150,6 +179,11 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
             "tracking_difference_pct": fields["tracking_difference_pct"],
             "tracking_period_start": fields["tracking_period_start"],
             "tracking_period_end": fields["tracking_period_end"],
+            "creation_units": fields["creation_units"],
+            "redemption_units": fields["redemption_units"],
+            "creation_unit_size": fields["creation_unit_size"],
+            "flow_period_start": fields["flow_period_start"],
+            "flow_period_end": fields["flow_period_end"],
             "source_url": url,
             "source_document_sha256": document_hash,
             "source_published_at": published_at,

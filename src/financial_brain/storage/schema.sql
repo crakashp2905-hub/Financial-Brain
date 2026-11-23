@@ -108,6 +108,12 @@ CREATE TABLE IF NOT EXISTS etf_product_disclosures (
     tracking_difference_pct DECIMAL(12, 8),
     tracking_period_start   DATE,
     tracking_period_end     DATE,
+    -- Issuer/market-maker primary-market context only; never a retail redemption route.
+    creation_units          BIGINT,
+    redemption_units        BIGINT,
+    creation_unit_size      BIGINT,
+    flow_period_start       DATE,
+    flow_period_end         DATE,
     source_url              VARCHAR NOT NULL,
     source_document_sha256  VARCHAR NOT NULL,
     source_published_at     TIMESTAMPTZ NOT NULL,

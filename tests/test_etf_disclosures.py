@@ -17,11 +17,13 @@ _CSV = (
     "nav,nav_as_of,indicative_nav,indicative_nav_at,expense_ratio_pct,"
     "expense_effective_from,expense_effective_to,tracking_error_pct,"
     "tracking_difference_pct,tracking_period_start,tracking_period_end,"
+    "creation_units,redemption_units,creation_unit_size,flow_period_start,flow_period_end,"
     "source_url,source_document_sha256,"
     "source_published_at\n"
     f"INF000A01010,Nifty 50 TRI,TRI,Nippon India Mutual Fund,2002-01-08,2002-01-08,"
     f"251.25,2026-11-20,250.90,2026-11-23T10:15:00+05:30,0.25,2026-01-01,,"
-    f"0.07,-0.01,2025-11-20,2026-11-20,{_URL},{_DOC_HASH},"
+    f"0.07,-0.01,2025-11-20,2026-11-20,2,1,50000,2026-10-01,2026-10-31,"
+    f"{_URL},{_DOC_HASH},"
     "2026-11-20T18:00:00+05:30\n"
 ).encode()
 
@@ -40,6 +42,11 @@ def test_etf_disclosure_parser_preserves_source_backed_product_fields() -> None:
     assert str(row["tracking_difference_pct"]) == "-0.01"
     assert row["tracking_period_start"] == date(2025, 11, 20)
     assert row["tracking_period_end"] == date(2026, 11, 20)
+    assert row["creation_units"] == 2
+    assert row["redemption_units"] == 1
+    assert row["creation_unit_size"] == 50000
+    assert row["flow_period_start"] == date(2026, 10, 1)
+    assert row["flow_period_end"] == date(2026, 10, 31)
     assert row["source_url"] == _URL
     assert row["source_document_sha256"] == _DOC_HASH
 
@@ -53,6 +60,8 @@ def test_etf_disclosure_parser_preserves_source_backed_product_fields() -> None:
         lambda text: text.replace("250.90,2026-11-23T10:15:00+05:30", ",2026-11-23T10:15:00+05:30"),
         lambda text: text.replace("0.25,2026-01-01,,", "-0.25,2026-01-01,,"),
         lambda text: text.replace("2025-11-20,2026-11-20", "2026-11-20,2025-11-20"),
+        lambda text: text.replace(",2,1,50000,", ",-2,1,50000,"),
+        lambda text: text.replace(",2,1,50000,", ",2,1,,"),
     ],
 )
 def test_etf_disclosure_parser_rejects_unverifiable_facts(change) -> None:
@@ -69,7 +78,9 @@ def test_etf_disclosure_import_is_archived_and_idempotent(tmp_path) -> None:
         rows = con.execute(
             """SELECT benchmark_name, benchmark_return_type, fund_house, nav,
                       indicative_nav, expense_ratio_pct, tracking_error_pct,
-                      tracking_difference_pct, source_url, source_document_sha256, lake_key
+                      tracking_difference_pct, creation_units, redemption_units,
+                      creation_unit_size, flow_period_start, flow_period_end,
+                      source_url, source_document_sha256, lake_key
                FROM etf_product_disclosures"""
         ).fetchall()
     assert len(rows) == 1
@@ -79,5 +90,7 @@ def test_etf_disclosure_import_is_archived_and_idempotent(tmp_path) -> None:
     assert str(rows[0][5]) == "0.25000000"
     assert str(rows[0][6]) == "0.07000000"
     assert str(rows[0][7]) == "-0.01000000"
-    assert rows[0][8:10] == (_URL, _DOC_HASH)
-    assert rows[0][10].startswith("LOCAL_IMPORT/etf_product_disclosures/")
+    assert rows[0][8:11] == (2, 1, 50000)
+    assert rows[0][11:13] == (date(2026, 10, 1), date(2026, 10, 31))
+    assert rows[0][13:15] == (_URL, _DOC_HASH)
+    assert rows[0][15].startswith("LOCAL_IMPORT/etf_product_disclosures/")

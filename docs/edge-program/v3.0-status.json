@@ -461,11 +461,15 @@
     {
       "id": "FB-0211",
       "text": "Track ETF creations/redemptions only as issuer/market-maker reference context, not as retail trader's instant redemption pathway.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The source-attributed ETF disclosure parser/schema now accept creation and redemption unit counts, creation-unit size, and an explicit measurement window.",
+        "The importer archives the original source document and persists its URL, hash and publication time. Documentation states these are issuer/market-maker reference figures, not a retail redemption entitlement or broker order path.",
+        "tests/test_etf_disclosures.py, tests/test_etf_reference_provider.py and tests/test_migrations.py: 28 passed with a workspace-local Windows temp directory; scoped Ruff passed."
+      ],
+      "blocker": "No permission-reviewed issuer/market-maker creation-redemption dataset has been imported; broad source coverage and period semantics remain to be validated against official disclosures.",
+      "last_audited_at_utc": "2026-11-23T05:00:00Z",
       "commit": null
     },
     {
@@ -14081,6 +14085,7 @@
       "FB-0208",
       "FB-0209",
       "FB-0210",
+      "FB-0211",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14100,10 +14105,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 50,
+    "audited_count": 51,
     "status_counts": {
-      "UNASSESSED": 1328,
-      "PARTIAL": 39,
+      "UNASSESSED": 1327,
+      "PARTIAL": 40,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14116,6 +14121,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 50 of 1,378 items audited; 8 COMPLETE, 39 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,328 UNASSESSED. ETF reference, product disclosures, price history, Kite quotes, sampled bars, valuation health and liquidity analytics are recorded under FB-0201 through FB-0210; latest implementation commit c8a450c0. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 51 of 1,378 items audited; 8 COMPLETE, 40 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,327 UNASSESSED. ETF reference, product disclosures, primary-market flow context, price history, Kite quotes, sampled bars, valuation health and liquidity analytics are recorded under FB-0201 through FB-0211; latest implementation commit to be recorded after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
