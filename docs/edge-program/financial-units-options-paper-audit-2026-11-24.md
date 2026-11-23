@@ -1,7 +1,7 @@
 # Option lot typing in paper plans and replay
 
-Date: 2026-11-24  
-Checklist item: FB-0103  
+Date: 2026-11-24
+Checklist item: FB-0103
 Status: PARTIAL
 
 ## Change
