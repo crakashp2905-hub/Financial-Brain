@@ -5653,12 +5653,23 @@
     {
       "id": "PA-01-09",
       "text": "Eliminate duplicate chart-pattern CI steps; maintain an explicit `ruff`, `mypy`, migration, invariant, unit, integration, coverage, dependency-audit matrix.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The current .github/workflows/ci.yml has one chart-pattern completion-matrix step and one offline-demo step; scripts/validate_ci_matrix.py now rejects duplicate occurrences.",
+        "docs/edge-program/ci-validation-matrix.v1.json explicitly maps Ruff, mypy, migrations, invariants, tests, coverage and dependency audit to workflow commands; CI validates the matrix against the actual workflow.",
+        "The unit and integration matrix rows both reference the complete pytest suite; the suite has no unit/integration markers and does not run those categories as distinct gates."
+      ],
+      "blocker": "Unit and integration tests remain a single unclassified full-suite invocation. To complete the requested explicit matrix, classify the test collection (without mislabeling existing tests) and run the unit and integration groups as distinct CI gates.",
+      "last_audited_at_utc": "2026-11-23T17:32:39Z",
+      "commit": null,
+      "test_evidence": [
+        "python scripts/validate_ci_matrix.py: passed.",
+        "python -m pytest tests/test_ci_matrix.py -q: 2 passed, including a mutation that adds a duplicate chart-pattern step.",
+        "python -m ruff check scripts/validate_ci_matrix.py tests/test_ci_matrix.py: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Duplicate chart-pattern workflow steps are prevented and the requested quality categories are mapped explicitly. Unit/integration tests remain combined, so the checklist item is PARTIAL."
     },
     {
       "id": "PA-01-10",
@@ -15436,7 +15447,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:29:38Z",
+    "as_of_utc": "2026-11-23T17:32:39Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15685,6 +15696,7 @@
       "PA-01-06",
       "PA-01-07",
       "PA-01-08",
+      "PA-01-09",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15707,13 +15719,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 268,
+    "audited_count": 269,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 207,
-      "UNASSESSED": 1110
+      "PARTIAL": 208,
+      "UNASSESSED": 1109
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15816,13 +15828,13 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-01-08 classifies available main CI failures as actual lint/test failures and keeps five expired-log cases undetermined; the latest captured main workflow is green."
+    "evidence_update": "PA-01-09 adds a validated CI quality matrix and prevents duplicate chart-pattern gates; unit/integration test separation remains open."
   },
   "counts_by_status": {
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 207,
-    "UNASSESSED": 1110
+    "PARTIAL": 208,
+    "UNASSESSED": 1109
   }
 }
