@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 import pytest
 from financial_brain.research.mf_peer_comparison import MfPeerComparisonError, MfPeerPeriod, compare_same_category_equal_risk
-from datetime import date, timedelta
+from datetime import timedelta
 from financial_brain.mf_peer_comparison import compare_same_category
 
 def _period(scheme: str, category: str, ret: str, vol: str) -> MfPeerPeriod:

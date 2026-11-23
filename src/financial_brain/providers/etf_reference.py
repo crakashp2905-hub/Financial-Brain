@@ -522,7 +522,6 @@ __all__ = [
 import csv
 import io
 import re
-from decimal import InvalidOperation
 from .base import FetchError, FetchResult, Provider
 
 NSE_ETF_LIST_URL = "https://nsearchives.nseindia.com/content/equities/eq_etfseclist.csv"

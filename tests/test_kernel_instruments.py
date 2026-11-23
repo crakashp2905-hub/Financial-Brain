@@ -3,8 +3,8 @@ from datetime import date
 from decimal import Decimal
 import pytest
 from financial_brain.kernel.instruments import AssetClass, Desk, Instrument, InstrumentError, InstrumentId, InstrumentMaster, Phase, RuleVersion, Status, desk_supports_asset_class, fx_pip_size, fx_pip_value
-from datetime import date, datetime, timedelta, timezone
-from financial_brain.kernel.instruments import AssetClass, Desk, Instrument, InstrumentError, InstrumentIdentityVersion, InstrumentId, InstrumentMaster, InstrumentMetadataVersion, InstrumentObservation, Phase, RuleVersion, Status, fx_pip_size, fx_pip_value
+from datetime import datetime, timedelta, timezone
+from financial_brain.kernel.instruments import InstrumentIdentityVersion, InstrumentMetadataVersion, InstrumentObservation
 from financial_brain.kernel.clock import MarketFactTimes
 
 def _equity() -> Instrument:

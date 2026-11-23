@@ -4,7 +4,6 @@ import pytest
 from financial_brain.features.etf_bars import aggregate_session_bars
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 from financial_brain.forward_edge.venue_calendar import CalendarError, Session, VenueCalendar
-from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from financial_brain.etf_bars import completed_bars
 DAY = date(2026, 11, 13)
