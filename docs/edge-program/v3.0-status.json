@@ -150,14 +150,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        ".github/workflows/ci.yml (Ubuntu 24.04 and Windows 2022, pinned-lock and full-suite jobs)",
-        "GitHub Actions run 45092672230 (both reproducibility jobs passed; both test jobs failed at protected-trial pin validation before lint/type/full-suite acceptance could be established)",
-        "docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json (committed-tree snapshots refreshed)",
-        "Commit 0b82c53be1d06196375b1d992c2a27f374921e4d normalizes protected pin hashes across CRLF/LF; clean committed-tree validator passed and tests/test_forward_edge_f00.py passed 55 tests locally; hosted rerun pending."
+        ".github/workflows/ci.yml now runs the full Ubuntu/Windows matrix in a pinned Python 3.13.5 environment from requirements-lock.txt, including lint, type checks, migrations, coverage reports/artifacts and dependency audit.",
+        "scripts/validate_requirements_lock.py checks every declared runtime/dev direct dependency has an exact lock entry; tests/test_requirements_lock.py covers missing and unpinned packages.",
+        "Hosted run 45163583623 failed before pytest because the prior lock omitted cryptography (and direct-dependency audit also found coverage/jsonschema missing); all three and their transitive dependencies are now pinned. A green hosted rerun remains outstanding."
       ],
-      "blocker": "The latest hosted run is not green; cross-platform canonical pin fixes are now in the worktree and require a new hosted run. Critical-module coverage and full suite status remain unverified.",
-      "last_audited_at_utc": "2026-11-23T01:13:32Z",
-      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
+      "blocker": "The newest hosted run used the incomplete lock and failed before pytest. A fresh Ubuntu and Windows run on the corrected lock must pass.",
+      "last_audited_at_utc": "2026-11-23T11:27:38Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd",
+      "test_evidence": [
+        "python scripts/validate_requirements_lock.py: passed",
+        "python -m pytest tests/test_requirements_lock.py -q: 3 passed",
+        "Hosted run 45163583623 test jobs failed at reproducible evidence bundle import: ModuleNotFoundError for cryptography; no full suite result was produced."
+      ],
+      "test_result": "The previously floating full suite now has a pinned, completeness-checked environment. Cross-platform green test, lint, type, migration and coverage results remain unverified after the lock correction."
     },
     {
       "id": "FB-0010",
@@ -8677,23 +8682,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        ".github/workflows/ci.yml (Ubuntu 24.04 and Windows 2022 matrix; lint, mypy, migrations, full tests, coverage and integrity snapshots)",
-        "GitHub Actions run 45089617902: Ubuntu reproducibility passed; Ubuntu test job could not install pinned Python 3.13.5 on ubuntu-latest because the image had moved to Ubuntu 26.04",
-        "01a3bffb pins the supported runner images and prevents the summary step from masking a skipped test suite",
-        "Clean committed-tree source inventory suite: 5 passed; local newline-normalized hash tests: 2 passed",
-        "GitHub Actions run 45091533639: Ubuntu and Windows reproducibility passed; Ubuntu test failed because dev install omitted cryptography; Windows test failed because generated paper-equivalence check did not normalize CRLF; both issues fixed locally, retest pending.",
-        "GitHub Actions run 45092672230: reproducibility passed on both platforms; both test jobs reached trial-program validation and failed because protected-pins hashed mixed checkout newlines differently. ADR-0007 and canonical LF-normalized protected hashes now address this without modifying the ledger; hosted retest pending.",
-        "Commit 0b82c53be1d06196375b1d992c2a27f374921e4d: canonical CRLF_TO_LF hash contract, revised pin manifests, and tests/test_forward_edge_f00.py (55 passed); clean-tree source inventory, dependency graph and trial-program validator pass locally. Hosted rerun pending."
+        ".github/workflows/ci.yml runs lint, mypy, migrations, full pytest, critical-module and pattern coverage reports, coverage XML artifacts and dependency audit on Ubuntu and Windows using the exact lock.",
+        "The new lock completeness validator found missing coverage, jsonschema and cryptography pins; those packages and their transitives are now pinned in requirements-lock.txt.",
+        "Hosted run 45163583623 failed before tests because cryptography was absent from the lock. The corrected lock and validator require fresh hosted proof."
       ],
-      "blocker": "Latest hosted run 45092672230 failed at protected-trial pin validation on both OSes due checkout-specific newline hashing. Commit 0b82c53be1d06196375b1d992c2a27f374921e4d fixes the hash contract and passes local clean-tree validation; a new green hosted run is still required. Full-suite, critical-module coverage and remaining adversarial/property acceptance are not yet verified.",
-      "last_audited_at_utc": "2026-11-23T06:07:27+05:30",
+      "blocker": "No green hosted Windows and Linux run exists yet for the corrected full-suite lock; critical learning-service coverage acceptance also needs confirmation.",
+      "last_audited_at_utc": "2026-11-23T11:27:38Z",
       "commit": "01a3bffb",
       "test_evidence": [
-        "tests/test_source_inventory.py (5 passed in clean committed-tree fixture checkout)",
-        "tests/test_source_inventory.py::test_text_hash_is_checkout_line_ending_independent",
-        "tests/test_reproduce.py::test_reproducibility_hash_is_independent_of_checkout_line_endings",
-        "python scripts/verify_reproducibility.py --integrity-only"
-      ]
+        "python scripts/validate_requirements_lock.py: passed",
+        "tests/test_requirements_lock.py: 3 passed",
+        "Hosted CI run 45163583623 failed before pytest; corrected rerun is pending."
+      ],
+      "test_result": "Pinned install requirements are now validated against project metadata, but full green cross-platform CI and per-critical-service coverage still need hosted evidence."
     },
     {
       "id": "SL-00-13",
@@ -8816,10 +8817,10 @@
         "python -m pytest tests/test_forward_edge_evidence_bundle.py -q (3 passed)",
         ".github/workflows/ci.yml (cross-platform bundle reproducibility check)",
         "Cross-platform CRLF simulation reproduced the LF evidence bundle byte-for-byte; implementation commit ac5942360477ede0dde906fb8d5b833a51c09b46",
-        "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip (reproduced after the CI workflow update; SHA-256 c7d910118ae799c69eb38d2a5d2f60dc22f7e5eb6b5a10ac9e099f2abf0bcbaa; adjacent .sha256 file matches)"
+        "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip (reproduced after the pinned full-suite CI and lock-validation updates; SHA-256 8ee1e8ee753a52ba31dd6ee9764c0c4e292964ebd7636f119f1881bf1ddf3de2; adjacent .sha256 file matches)"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-23T11:03:00Z",
+      "last_audited_at_utc": "2026-11-23T11:27:38Z",
       "commit": "ac5942360477ede0dde906fb8d5b833a51c09b46",
       "test_evidence": [
         "python scripts/build_checklist_evidence_bundle.py --check: passed; archive reproduced byte-for-byte",

@@ -25,6 +25,8 @@ jobs:
           python-version: "3.13.5"
           cache: pip
           cache-dependency-path: requirements-lock.txt
+      - name: Validate direct dependencies are pinned
+        run: python scripts/validate_requirements_lock.py
       - name: Install pinned full-test environment
         run: |
           python -m pip install --upgrade pip==25.2 setuptools==80.9.0 wheel==0.45.1
@@ -124,6 +126,8 @@ jobs:
           python-version: "3.13.5"
           cache: pip
           cache-dependency-path: requirements-lock.txt
+      - name: Validate direct dependencies are pinned
+        run: python scripts/validate_requirements_lock.py
       - name: Install pinned build tools and locked environment
         run: |
           python -m pip install --upgrade pip==25.2 setuptools==80.9.0 wheel==0.45.1
