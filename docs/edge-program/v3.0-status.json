@@ -7471,15 +7471,23 @@
     {
       "id": "SL-00-12",
       "text": "Require CI on Windows and Linux: source lint, mypy critical modules, unit tests, integration, property/adversarial tests and code coverage per critical learning service.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        ".github/workflows/ci.yml",
-        "docs/edge-program/v3.0-baseline-2026-11-21.json (fresh PR CI evidence: #36 failed both OS jobs; #34/#37–#40 latest observed runs passed)"
+        ".github/workflows/ci.yml (Ubuntu 24.04 and Windows 2022 matrix; lint, mypy, migrations, full tests, coverage and integrity snapshots)",
+        "GitHub Actions run 45089617902: Ubuntu reproducibility passed; Ubuntu test job could not install pinned Python 3.13.5 on ubuntu-latest because the image had moved to Ubuntu 26.04",
+        "01a3bffb pins the supported runner images and prevents the summary step from masking a skipped test suite",
+        "Clean committed-tree source inventory suite: 5 passed; local newline-normalized hash tests: 2 passed"
       ],
-      "blocker": "Workflow config covers both OSes, lint, type checks, migrations, full suite and coverage. Hosted green status for the present head and all required property/adversarial coverage is unverified.",
-      "last_audited_at_utc": "2026-11-21T06:02:13.655717+00:00",
-      "commit": null
+      "blocker": "Hosted CI has not completed on the newly pinned runner images; full Windows/Linux test, adversarial/property coverage, and critical-module coverage remain unverified.",
+      "last_audited_at_utc": "2026-11-23T00:37:27+00:00",
+      "commit": "01a3bffb",
+      "test_evidence": [
+        "tests/test_source_inventory.py (5 passed in clean committed-tree fixture checkout)",
+        "tests/test_source_inventory.py::test_text_hash_is_checkout_line_ending_independent",
+        "tests/test_reproduce.py::test_reproducibility_hash_is_independent_of_checkout_line_endings",
+        "python scripts/verify_reproducibility.py --integrity-only"
+      ]
     },
     {
       "id": "SL-00-13",
@@ -7566,15 +7574,26 @@
     {
       "id": "SL-00-17",
       "text": "Pin initial reference strategies H005, H003 and P3 as historical candidates; never label them confirmed prospective edges.",
-      "source_checked": false,
-      "status": "PARTIAL",
+      "source_checked": true,
+      "status": "COMPLETE",
       "evidence": [
-        "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md (historical-candidate framing)",
-        "docs/edge-program/current-baseline.json"
+        "docs/edge-program/historical-strategy-pins.v1.json (separate immutable H003, H005, and P3 versions, formula summaries, evidence classes, and no-promotion policy)",
+        "snapshot commit bb84d5cb69cd6f26503d393cb293cfd40023d276 with SHA-256 pins for code and historical preregistration/results",
+        "P3 historical result retains FAIL at the registered two-period t-statistic gate; H003/H005 source labels remain candidate-small and are not treated as verified shadow outcomes",
+        "scripts/validate_historical_strategy_pins.py (checks source hashes, exact candidate set, and historical/non-promotable labels)",
+        "tests/test_historical_strategy_pins.py (1 passed)",
+        ".github/workflows/ci.yml (validator runs in CI)",
+        "6623197a"
       ],
-      "blocker": "The source checklist names H005/H003/P3 as historical candidates, but exact registered strategy versions and immutable reference pins were not verified.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-23T00:35:34+00:00",
+      "commit": "6623197a",
+      "test_evidence": [
+        "tests/test_historical_strategy_pins.py (1 passed)",
+        "python scripts/validate_historical_strategy_pins.py",
+        "python -m ruff check scripts/validate_historical_strategy_pins.py tests/test_historical_strategy_pins.py"
+      ],
+      "artifact_sha256": "b941be12697fe8acde8c8066da0cee28d19962f908037a5991eda491df0ca49a"
     },
     {
       "id": "SL-00-18",
@@ -13892,7 +13911,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T00:17:45+00:00",
+    "as_of_utc": "2026-11-23T00:37:27+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13916,17 +13935,17 @@
     "audited_count": 18,
     "status_counts": {
       "UNASSESSED": 1360,
-      "PARTIAL": 15,
+      "PARTIAL": 14,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 1,
-      "COMPLETE": 1
+      "COMPLETE": 2
     },
-    "verified_complete_count": 1,
+    "verified_complete_count": 2,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "SL-00-16 PARTIAL: eight deterministic fixture sessions match legacy outcome labels; report explains no-trade, unknown-order, P&L representation and one-paise adverse-selection differences. Independent per-strategy dual-engine execution remains absent."
+    "evidence_update": "SL-00-17 COMPLETE: immutable historical pins for H003/H005/P3 are validated. SL-00-12 remains PARTIAL: runner drift identified and pinned; awaiting hosted CI on supported images."
   }
 }
