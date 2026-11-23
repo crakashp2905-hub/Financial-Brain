@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 720,
+  "source_count": 721,
   "sources": [
     {
       "capability_ids": [],
@@ -4690,7 +4690,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_events.py",
-      "source_sha256": "1428b5939ecb9dcf83d274b9518521b27a15a9b8457c71c5af877c66849a6968",
+      "source_sha256": "ac579c640c9a71e4af4d46a43842320603f822423247b3454e53081e726e8257",
       "test_paths": []
     },
     {
@@ -5383,6 +5383,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_close.py",
       "source_sha256": "03bc1aefe9db8f04c9f1c7717c663caa0a230a0523e6ec59d2c5321a405f65c4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "financial_brain.forward_edge.market_events",
+        "financial_brain.forward_edge.session_runner",
+        "financial_brain.forward_edge.session_state",
+        "financial_brain.forward_edge.venue_calendar",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/session_event_loop.py",
+      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d",
       "test_paths": []
     },
     {
@@ -12740,6 +12760,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 705,
-  "unassigned_role_count": 322
+  "unassessed_count": 706,
+  "unassigned_role_count": 323
 }

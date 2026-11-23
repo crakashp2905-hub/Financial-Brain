@@ -1,6 +1,6 @@
 {
   "authority_map": "docs/edge-program/authoritative-contracts.v1.json",
-  "candidate_count": 1635,
+  "candidate_count": 1639,
   "candidates": [
     {
       "canonical_contract_ids": [],
@@ -3659,7 +3659,7 @@
       "kind": "class",
       "line": 16,
       "related_role": "SUPPORTING",
-      "source_sha256": "1428b5939ecb9dcf83d274b9518521b27a15a9b8457c71c5af877c66849a6968"
+      "source_sha256": "ac579c640c9a71e4af4d46a43842320603f822423247b3454e53081e726e8257"
     },
     {
       "canonical_contract_ids": [],
@@ -3671,7 +3671,7 @@
       "kind": "class",
       "line": 20,
       "related_role": "SUPPORTING",
-      "source_sha256": "1428b5939ecb9dcf83d274b9518521b27a15a9b8457c71c5af877c66849a6968"
+      "source_sha256": "ac579c640c9a71e4af4d46a43842320603f822423247b3454e53081e726e8257"
     },
     {
       "canonical_contract_ids": [],
@@ -3681,9 +3681,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_events.py::MarketEvent",
       "kind": "class",
-      "line": 47,
+      "line": 48,
       "related_role": "SUPPORTING",
-      "source_sha256": "1428b5939ecb9dcf83d274b9518521b27a15a9b8457c71c5af877c66849a6968"
+      "source_sha256": "ac579c640c9a71e4af4d46a43842320603f822423247b3454e53081e726e8257"
     },
     {
       "canonical_contract_ids": [],
@@ -5696,6 +5696,46 @@
       "line": 137,
       "related_role": "UNREVIEWED",
       "source_sha256": "03bc1aefe9db8f04c9f1c7717c663caa0a230a0523e6ec59d2c5321a405f65c4"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/session_event_loop.py::SessionEventLoopError",
+      "kind": "class",
+      "line": 23,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/session_event_loop.py::SessionLoopHandlers",
+      "kind": "class",
+      "line": 28,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/session_event_loop.py::ordered_session_events",
+      "kind": "function",
+      "line": 60,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/session_event_loop.py::run_forward_session",
+      "kind": "function",
+      "line": 75,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
     },
     {
       "canonical_contract_ids": [],
@@ -16764,7 +16804,7 @@
     "evaluation": 387,
     "execution": 91,
     "forecasting": 41,
-    "forward_edge": 644,
+    "forward_edge": 648,
     "paper": 244,
     "portfolio": 48,
     "risk": 63,
@@ -17617,7 +17657,7 @@
       "name": "write"
     }
   ],
-  "module_count": 303,
+  "module_count": 304,
   "modules": [
     {
       "domain": "forward_edge",
@@ -17947,7 +17987,7 @@
     {
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/market_events.py",
-      "source_sha256": "1428b5939ecb9dcf83d274b9518521b27a15a9b8457c71c5af877c66849a6968"
+      "source_sha256": "ac579c640c9a71e4af4d46a43842320603f822423247b3454e53081e726e8257"
     },
     {
       "domain": "forward_edge",
@@ -18128,6 +18168,11 @@
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/session_close.py",
       "source_sha256": "03bc1aefe9db8f04c9f1c7717c663caa0a230a0523e6ec59d2c5321a405f65c4"
+    },
+    {
+      "domain": "forward_edge",
+      "path": "src/financial_brain/forward_edge/session_event_loop.py",
+      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
     },
     {
       "domain": "forward_edge",
@@ -19138,5 +19183,5 @@
   "schema": "fb.entrypoint-inventory.v1",
   "scope": "Public top-level Python functions/classes only across the seven checklist domains plus portfolio accounting. Static candidates are not proof of shared semantics. Private names, methods, dynamically registered callables and external schedulers are excluded.",
   "unresolved_contract_owner_ids": [],
-  "unreviewed_candidate_count": 1477
+  "unreviewed_candidate_count": 1481
 }

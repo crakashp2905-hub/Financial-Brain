@@ -6140,12 +6140,21 @@
     {
       "id": "PA-03-01",
       "text": "Build one deterministic event loop for session open, completed bars, quotes, corporate actions, margin changes, decisions, protective exits and closeout.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/deterministic-forward-session-loop-audit-2026-11-24.md records implementation, ordering rules, verification, and remaining integration work.",
+        "forward_edge.session_event_loop.run_forward_session orchestrates sourced-calendar open, deterministic availability/priority ordering, durable event ingestion, protective/strategy handler dispatch, corporate action and margin change handling, and close report; EventKind.MARGIN_CHANGE has an explicit INR contract."
+      ],
+      "blocker": "Strategy, protective-exit, corporate-action accounting, margin accounting, and closeout handlers are injected but not bound as a standard production registry. Handler effects lack atomic dispatch receipts and durable replay offsets.",
+      "last_audited_at_utc": "2026-11-23T21:06:00Z",
+      "commit": "00d74e95",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_session_event_loop.py tests/test_forward_edge_market_events.py tests/test_forward_edge_session_runner.py -q: 87 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/session_event_loop.py src/financial_brain/forward_edge/market_events.py tests/test_forward_edge_session_event_loop.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/session_event_loop.py src/financial_brain/forward_edge/market_events.py tests/test_forward_edge_session_event_loop.py: passed."
+      ],
+      "test_result": "The driver now enforces deterministic chronological dispatch and durable open/ingest/close lifecycle, prioritizes protective market updates before completed-bar strategy callbacks, retains but does not dispatch partial bars, and marks failures INCOMPLETE. Domain handler integration and restart-safe dispatch offsets remain incomplete."
     },
     {
       "id": "PA-03-02",
@@ -15956,6 +15965,7 @@
       "PA-02-14",
       "PA-02-15",
       "PA-02-16",
+      "PA-03-01",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15978,13 +15988,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 292,
+    "audited_count": 293,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 228,
-      "UNASSESSED": 1086
+      "PARTIAL": 229,
+      "UNASSESSED": 1085
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16105,7 +16115,7 @@
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 228,
-    "UNASSESSED": 1086
+    "PARTIAL": 229,
+    "UNASSESSED": 1085
   }
 }

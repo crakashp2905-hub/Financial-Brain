@@ -1924,6 +1924,12 @@
       "module_owner": "src/financial_brain/forward_edge/session_close.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/session_event_loop.py",
+      "path": "src/financial_brain/forward_edge/session_event_loop.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/session_event_loop.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/session_ops.py",
       "path": "src/financial_brain/forward_edge/session_ops.py",
       "module_role": "signal_report_or_trader_renderer",
