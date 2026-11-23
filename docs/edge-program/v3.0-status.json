@@ -5330,12 +5330,25 @@
     {
       "id": "PA-00-06",
       "text": "Record the original strategy families, scanned indicators, rule permutations, failed candidates and the total research look budget for future multiple-testing control.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/research-search-space-reconciliation.v1.json preserves SHA-256 fingerprints and claims from nine source files without rewriting historical reports.",
+        "The documented family table sums to 150; ADR-0004, the ninety-indicator preregistration and a later event-census note cite 151 prior trials. The raw historical evaluation_runs data and complete candidate/parameter archive are not present in the checked-in tree, so 150 vs 151 cannot be reconciled.",
+        "Known search declarations include 90 indicators expanded to 113 candidate columns (with recorded replication, multiplicity and sign-flip counts), a 100-algorithm survey (including refusals and unavailable candidates), and 13 failed Q4-2026 protected trial records.",
+        "docs/forward-edge/trial-program.v1.json currently records Q4-2026 budget 13/13 EXHAUSTED and Q1-2027 NOT_AUTHORIZED; this only governs protected confirmatory trials, not a global exploratory look budget.",
+        "scripts/validate_research_search_space.py and CI verify the cited source fingerprints, reported 150-trial family arithmetic and the explicitly unresolved historical totals."
+      ],
+      "blocker": "The full candidate-level historical evaluation ledger, all scanned/failed permutations and a reconciled global research-look denominator are absent. Do not infer missing trials or add nested candidates to registered-trial counts.",
+      "last_audited_at_utc": "2026-11-23T16:18:43Z",
+      "commit": null,
+      "artifact_sha256": "4b91406b6c44ea8cc79b060fdefa9cb9733c89a723dd1cbdd42fd02d998c638d",
+      "test_evidence": [
+        "python scripts/validate_research_search_space.py: passed; historical 150/151 total remains explicitly unreconciled.",
+        "python -m pytest tests/test_research_search_space_reconciliation.py -q: 3 passed.",
+        "Ruff and git diff --check: passed."
+      ],
+      "test_result": "Recorded search-space claims and preserved their source hashes. The complete historic trial/search ledger is unavailable and the authoritative total conflicts between 150 and 151; status remains PARTIAL."
     },
     {
       "id": "PA-00-07",
@@ -15263,7 +15276,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T16:13:53Z",
+    "as_of_utc": "2026-11-23T16:18:43Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15497,6 +15510,7 @@
       "PA-00-03",
       "PA-00-04",
       "PA-00-05",
+      "PA-00-06",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15519,13 +15533,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 253,
+    "audited_count": 254,
     "status_counts": {
       "COMPLETE": 34,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 202,
-      "UNASSESSED": 1125
+      "PARTIAL": 203,
+      "UNASSESSED": 1124
     },
     "verified_complete_count": 34,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15615,15 +15629,18 @@
       "docs/edge-program/trial-count-reconciliation.v1.json",
       "docs/edge-program/research-outcome-freeze.v1.json",
       "scripts/research_outcome_freeze.py",
-      "tests/test_research_outcome_freeze.py"
+      "tests/test_research_outcome_freeze.py",
+      "docs/edge-program/research-search-space-reconciliation.v1.json",
+      "scripts/validate_research_search_space.py",
+      "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "PA-00-05 now hash-freezes 42 research result notes and checks drift in CI; historical run provenance remains partial because each required field is missing from the structured records."
+    "evidence_update": "PA-00-06 preserves source-hashed trial/search counts and known candidate families; historical 150 vs 151 firewall-trial totals remain unresolved because the raw evaluation_runs ledger is absent."
   },
   "counts_by_status": {
     "COMPLETE": 34,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 202,
-    "UNASSESSED": 1125
+    "PARTIAL": 203,
+    "UNASSESSED": 1124
   }
 }

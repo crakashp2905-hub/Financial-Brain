@@ -63,6 +63,8 @@ jobs:
         run: python scripts/validate_v1_4_traceability_index.py
       - name: Verify frozen historical research result notes
         run: python scripts/research_outcome_freeze.py --check
+      - name: Verify historical search-space reconciliation
+        run: python scripts/validate_research_search_space.py
       - name: Verify domain entry-point inventory and authority bindings
         run: python scripts/entrypoint_inventory.py --check
       - name: Verify fixed-fixture legacy/integrated paper equivalence report
