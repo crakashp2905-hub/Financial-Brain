@@ -651,7 +651,7 @@
       ],
       "blocker": "Effective-dated benchmark/category observations and populated scheme NAV/benchmark series are not yet connected to this comparison policy; TRI identities and peer coverage remain external data requirements.",
       "last_audited_at_utc": "2026-11-23T17:00:00Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0311",
@@ -665,7 +665,7 @@
       ],
       "blocker": "Portfolio-disclosure coverage is not measured against the complete scheme universe; source-format adapters, holdings concentration/style aggregations, and real AMC data import remain outstanding.",
       "last_audited_at_utc": "2026-11-23T04:15:35Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0312",
@@ -679,7 +679,7 @@
       ],
       "blocker": "Debt metrics are accepted as source fields only; temporal downgrade tracking, maturity ladder/credit mix aggregation, liquidity risk analytics, and populated historical debt disclosures remain outstanding.",
       "last_audited_at_utc": "2026-11-23T04:15:35Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0313",
@@ -693,7 +693,7 @@
       ],
       "blocker": "The calculation is not yet wired to historical database snapshots or a populated, complete FoF underlying-scheme mapping; coverage quality and overlap outputs have not been validated against official AMC data.",
       "last_audited_at_utc": "2026-11-23T04:18:01Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0314",
@@ -707,7 +707,7 @@
       ],
       "blocker": "AMC schedule text is not parsed into verified structured terms, terms are not automatically snapshotted onto the purchase-lot ledger, and redemption allocations are returned but not durably recorded or reconciled to an account.",
       "last_audited_at_utc": "2026-11-23T04:25:08Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0315",
@@ -721,7 +721,7 @@
       ],
       "blocker": "Eligibility is not wired to imported AMC restriction disclosures or the portfolio/lot ledger; restriction changes, SEBI-specific scheme terms, and gated redemption execution have no populated evidence path.",
       "last_audited_at_utc": "2026-11-23T04:26:15Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0316",
@@ -735,7 +735,7 @@
       ],
       "blocker": "Event facts are not ingested into a persistent MF corporate-action ledger, source publication/availability is not modeled, and total-return output is not joined to historical AMFI NAV data or validated on actual IDCW/merger cases.",
       "last_audited_at_utc": "2026-11-23T04:28:27Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0317",
@@ -749,7 +749,7 @@
       ],
       "blocker": "TER facts are not yet retrieved as-of each comparison date from effective-dated scheme disclosures, and future cost projection UI/reporting is not implemented.",
       "last_audited_at_utc": "2026-11-23T04:29:23Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0318",
@@ -763,7 +763,7 @@
       ],
       "blocker": "Coverage classification is currently a helper over an expected-scheme list; stale/unavailable status is not persisted or published in routine daily ingestion, and full universe data coverage remains unverified.",
       "last_audited_at_utc": "2026-11-23T04:34:01Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0401",
@@ -777,7 +777,7 @@
       ],
       "blocker": "Existing strategy and scanner signal types are not yet adapted to this contract; source hashes and strategy identity are not auto-derived from each generating pipeline, and no persistence/event lifecycle integration exists.",
       "last_audited_at_utc": "2026-11-23T04:35:19Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0402",
@@ -791,7 +791,7 @@
       ],
       "blocker": "Assessment is not yet automatically built from the feature store, calibrated forecast distributions, benchmark series, execution costs or portfolio risk engine; evidence lineage has not been validated end-to-end.",
       "last_audited_at_utc": "2026-11-23T04:36:23Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0403",
@@ -805,7 +805,7 @@
       ],
       "blocker": "Intent types are not yet produced by signal lifecycle adapters or consumed by the unified OMS/MF paper order simulator; price/units precision and eligibility remain downstream integration requirements.",
       "last_audited_at_utc": "2026-11-23T04:37:29Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0404",
@@ -819,7 +819,7 @@
       ],
       "blocker": "Plans are not yet generated from existing strategy adapters or validated against exchange/derivative instrument master precision and OMS fill/exit behavior.",
       "last_audited_at_utc": "2026-11-23T04:38:38Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0405",
@@ -833,7 +833,7 @@
       ],
       "blocker": "Lifecycle remains an in-memory model; it is not persisted to the durable event store or wired to paper OMS fills, signal expiry scheduler, or exit manager.",
       "last_audited_at_utc": "2026-11-23T04:39:45Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0406",
@@ -847,7 +847,7 @@
       ],
       "blocker": "Deduplication is a pure in-memory policy and is not integrated with persisted alert/signal history, exchange event sequencing, or alert delivery retries.",
       "last_audited_at_utc": "2026-11-23T04:40:46Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0407",
@@ -861,7 +861,7 @@
       ],
       "blocker": "Policy is not wired to production scanners or an alert scheduler; rankings are policy outputs only and no prospective usefulness/freshness metrics are recorded.",
       "last_audited_at_utc": "2026-11-23T04:42:02Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0408",
@@ -875,7 +875,7 @@
       ],
       "blocker": "Recommendation contract is not populated from cutoff calendars, effective-dated fees, lot loads, benchmark TRI or NAV services, and no daily/weekly allocation scheduler or consumer view is integrated.",
       "last_audited_at_utc": "2026-11-23T04:43:01Z",
-      "commit": null
+      "commit": "97936a2f"
     },
     {
       "id": "FB-0409",
@@ -14265,6 +14265,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 80 of 1,378 items audited; 9 COMPLETE, 68 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,298 UNASSESSED. MF allocation recommendations now have a separate cutoff/NAV/cost contract but are not populated or scheduled from live sources."
+    "evidence_update": "Current snapshot: 80 of 1,378 items audited; 9 COMPLETE, 68 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,298 UNASSESSED. MF allocation recommendations now have a separate cutoff/NAV/cost contract but are not populated or scheduled from live sources. Latest implementation commit: 97936a2f."
   }
 }
