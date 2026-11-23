@@ -228,7 +228,7 @@
       ],
       "blocker": "The clock contract is implemented, but verified source-backed holiday data and effective-dated scheme-specific calendar maintenance remain absent.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
-      "commit": null
+      "commit": "42bef3a0ea4fa199553557f02b50c51bfc191533"
     },
     {
       "id": "FB-0105",
