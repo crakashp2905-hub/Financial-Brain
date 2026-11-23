@@ -222,10 +222,11 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/kernel/clock.py normalizes aware instants to UTC and validates event/ingest/availability/decision ordering.",
-        "src/financial_brain/kernel/closures_n.py::MarketCalendar is weekday-minus-holidays only."
+        "src/financial_brain/kernel/clock.py::TradingClock uses Asia/Kolkata, keeps exchange, scheme and bank calendars separate, requires explicit scheme calendars, supports exchange hours, and returns timezone-aware NAV publication instants.",
+        "Calendar instances are supplied by callers; no verified, maintained exchange/bank/scheme holiday source or effective-dated scheme override is included.",
+        "tests/test_kernel_units_clock.py: 31 passed; scoped Ruff passed."
       ],
-      "blocker": "No unified Asia/Kolkata TradingClock separates exchange sessions, scheme business days, bank settlement days and NAV publication times; scheme and exchange holiday calendars are not complete.",
+      "blocker": "The clock contract is implemented, but verified source-backed holiday data and effective-dated scheme-specific calendar maintenance remain absent.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },

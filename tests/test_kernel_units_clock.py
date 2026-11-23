@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import math
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 import pytest
 
-from financial_brain.kernel.clock import ClockError, Instants, assert_not_future, utc
+from financial_brain.kernel.clock import ClockError, Instants, TradingClock, assert_not_future, utc
+from financial_brain.kernel.closures_n import MarketCalendar
 from financial_brain.kernel.units import (
     BasisPoints,
     CurrencyCode,
@@ -120,3 +121,35 @@ def test_whole_share_and_option_lot_units_reject_non_integers(constructor, bad) 
 def test_inr_notional_rejects_negative_amount() -> None:
     with pytest.raises(UnitError, match="cannot be negative"):
         INRNotional("-0.01")
+
+
+def test_trading_clock_separates_exchange_scheme_and_bank_calendars() -> None:
+    holiday = date(2026, 11, 9)
+    clock = TradingClock(
+        exchange_calendar=MarketCalendar(frozenset({holiday})),
+        bank_settlement_calendar=MarketCalendar(),
+        scheme_calendars={"scheme-1": MarketCalendar()},
+        exchange_hours={"NSE": (time(9, 15), time(15, 30))},
+    )
+    assert not clock.is_exchange_session(holiday)
+    assert clock.is_bank_settlement_day(holiday)
+    assert clock.is_scheme_business_day("scheme-1", holiday)
+    assert clock.timezone.key == "Asia/Kolkata"
+    nav_time = clock.nav_publication_at("scheme-1", holiday, time(20, 0))
+    assert nav_time.tzinfo is not None and nav_time.hour == 20
+
+
+def test_trading_clock_refuses_missing_scheme_calendar_and_exchange_hours() -> None:
+    clock = TradingClock()
+    with pytest.raises(ClockError, match="no reviewed business calendar"):
+        clock.is_scheme_business_day("unknown", date(2026, 11, 9))
+    with pytest.raises(ClockError, match="no session hours configured"):
+        clock.exchange_is_open("NSE", datetime(2026, 11, 9, 10, tzinfo=IST))
+
+
+def test_trading_clock_uses_exchange_hours_in_kolkata() -> None:
+    clock = TradingClock(exchange_hours={"NSE": (time(9, 15), time(15, 30))})
+    at_open = datetime(2026, 11, 9, 9, 15, tzinfo=IST)
+    at_close = datetime(2026, 11, 9, 15, 30, tzinfo=IST)
+    assert clock.exchange_is_open("NSE", at_open)
+    assert not clock.exchange_is_open("NSE", at_close)
