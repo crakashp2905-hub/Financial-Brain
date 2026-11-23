@@ -6031,22 +6031,25 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/instrument-session-feed-quality-metrics-audit-2026-11-24.md describes the metrics, denominators, validity rules, fixture evidence, and production-integration gaps.",
+        "docs/edge-program/instrument-session-feed-quality-metrics-audit-2026-11-24.md describes the metrics, denominators, integration, fixture evidence, and remaining production gaps.",
         "src/financial_brain/forward_edge/feed_quality.py::audit_feed returns session-keyed coverage, late-tick rate, quote-age percentiles, depth validity, OHLC consistency, and relative strike-selection error; unavailable events are excluded from metric denominators.",
-        "tests/test_forward_edge_feed_quality.py includes a fixture covering all new metrics and invalid OHLC exclusion from coverage.",
-        "Implementation/audit commit: d0d1d466."
+        "ForwardSessionRunner.session_feed_quality computes reports from persisted market events and sourced calendar bounds; close_session embeds per-instrument metrics, bounded findings, and source-event digest in the hashed durable close report. Sessions without sourced calendar bounds record UNAVAILABLE.",
+        "tests/test_forward_edge_feed_quality.py covers the new metric fields; tests/test_forward_edge_session_runner.py::test_close_report_binds_feed_quality_metrics_to_persisted_market_events verifies durable close-report integration and retry idempotency.",
+        "Implementation commits: d0d1d466 (metrics), 94e62af7 (persist feed quality in close evidence)."
       ],
-      "blocker": "The report remains an in-memory helper, is not persisted or enforced by ForwardSessionRunner or provider adapters, and lacks representative authorized market/depth data. Invalid raw packets rejected before MarketEvent creation must be counted at ingestion; strike error requires explicit selected_strike and target_strike metadata.",
-      "last_audited_at_utc": "2026-11-23T20:04:07Z",
-      "commit": "d0d1d466",
+      "blocker": "Quality metrics are persisted in the paper session close report but are not yet a trading-readiness gate. Invalid raw packets rejected before MarketEvent creation are not summarized; no representative authorized provider/depth archive validates the rates. Strike error requires explicit, defensible selected_strike and target_strike metadata.",
+      "last_audited_at_utc": "2026-11-23T20:15:09Z",
+      "commit": "94e62af7",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_feed_quality.py -q: 8 passed.",
-        "python -m pytest tests/test_forward_edge_feed_quality.py tests/test_forward_edge_market_events.py tests/test_forward_edge_quote_archive.py -q: 37 passed.",
-        "python -m ruff check src/financial_brain/forward_edge/feed_quality.py tests/test_forward_edge_feed_quality.py: passed.",
-        "python -m mypy src/financial_brain/forward_edge/feed_quality.py: passed.",
+        "python -m pytest tests/test_forward_edge_feed_quality.py tests/test_forward_edge_market_events.py tests/test_forward_edge_quote_archive.py -q: 37 passed before runner integration.",
+        "python -m pytest tests/test_forward_edge_session_runner.py -k close_report_binds_feed_quality_metrics -q: 1 passed, 61 deselected.",
+        "python -m pytest tests/test_forward_edge_session_runner.py tests/test_forward_edge_feed_quality.py tests/test_forward_edge_market_events.py tests/test_forward_edge_quote_archive.py -q: 99 passed in 241.04s.",
+        "python -m ruff check src/financial_brain/forward_edge/feed_quality.py src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_feed_quality.py tests/test_forward_edge_session_runner.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/feed_quality.py src/financial_brain/forward_edge/session_runner.py: passed.",
+        "python scripts/forward_engine_graph.py --check; python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check; python scripts/capability_ownership.py --check; python scripts/entrypoint_inventory.py --check: passed.",
         "git diff --check: passed."
       ],
-      "test_result": "Instrument/session summary metrics and existing feed-integrity behavior pass scoped tests, lint, and typing; live integration and sourced data evidence remain incomplete."
+      "test_result": "Per-instrument/session quality summaries are now embedded in hashed durable session close reports, with 99 scoped integration/regression tests and static checks passing. No production readiness gate or authorized live-source quality study is claimed."
     },
     {
       "id": "PA-02-13",
@@ -15634,7 +15637,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T20:04:07Z",
+    "as_of_utc": "2026-11-23T20:15:09Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
