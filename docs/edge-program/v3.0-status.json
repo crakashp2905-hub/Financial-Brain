@@ -8490,20 +8490,21 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/portfolio/legacy_migration.py::option_outcome_row_events migrates hash-verified CLOSED quote outcomes as option entry/exit fills plus persisted charges; NO_EXIT_QUOTE records preserve the entry and unresolved position; no-entry/cost-rejected outcomes create no position.",
-        "scripts/migrate_legacy_paper_books.py and scripts/audit_canonical_portfolio_migration.py include the optional options_paper_forward.duckdb source, opened read-only; repeated imports are idempotent and source events are hash-verified.",
-        "docs/edge-program/canonical-portfolio-ledger.v1.md documents mapped fields and unresolved desk coverage. Local read-only data inventory found no options-forward database, ETF-specific paper book, or MF order book in the scanned data directory."
+        "src/financial_brain/portfolio/legacy_migration.py::option_outcome_row_events maps hash-reconciled CLOSED outcomes to option fills/charges and NO_EXIT_QUOTE outcomes to an entry plus unresolved position; no-entry/cost-rejected results do not create positions.",
+        "src/financial_brain/portfolio/legacy_migration.py::mf_paper_event_row_events maps persisted SUBSCRIBE/REDEEM unit events to MF fills and fee flows only when NAV × units, gross, loads, charges and net cash reconcile.",
+        "Optional options_paper_forward.duckdb and financial_brain.duckdb sources are opened read-only; the migration is idempotent and audit re-derives source events. docs/edge-program/canonical-portfolio-ledger.v1.md documents source mappings and limitations.",
+        "Read-only inventory of the local data folder found no options-forward database or mf_paper_events table, and no ETF-specific paper book. No real options/MF migration is claimed; the five-desk migration remains partial."
       ],
-      "blocker": "Still partial: no persisted ETF-specific or MF order-book adapters/data source are available; the options adapter has fixture coverage but has not been run against a real options_paper_forward.duckdb; opening balances, broader account reconciliation and desk-wide migration remain outstanding.",
-      "last_audited_at_utc": "2026-11-23T08:48:33Z",
-      "commit": "a0832dc88e6f88dafcc322dc3e8a75ed07b815c5",
+      "blocker": "Still partial: no persisted ETF-specific book is available; fixture-only options and MF adapters have not been verified against local real-book records; opening balances, broad accounting reconciliation and desk-wide migration remain outstanding.",
+      "last_audited_at_utc": "2026-11-23T08:55:00Z",
+      "commit": "4b836dd2bc24d457d1e3d62f3b45cb2a7b1e6e41",
       "test_evidence": [
-        "python -m pytest tests/test_legacy_portfolio_migration.py tests/test_canonical_portfolio_ledger.py tests/test_paper_options_runner.py tests/test_paper_options_forward.py -q: 21 passed",
-        "python -m ruff check src tests: passed",
+        "python -m pytest tests/test_legacy_portfolio_migration.py tests/test_canonical_portfolio_ledger.py tests/test_paper_options_runner.py tests/test_paper_options_forward.py -q: 22 passed",
+        "python -m ruff check src tests scripts/migrate_legacy_paper_books.py scripts/audit_canonical_portfolio_migration.py: passed",
         "git diff --check: passed"
       ],
-      "test_result": "Option migration fixtures verify closed and missing-exit outcomes, exact charges, hash reconciliation, idempotency and source-to-ledger audit; five-desk migration is not complete.",
-      "artifact_sha256": "63810767954fbce19812611baaa8d93c4522ec70c4774212a5199a707328254a"
+      "test_result": "Fixture migration verifies option quote outcomes, MF NAV subscriptions/redemptions, charges, hash reconciliation, idempotency and source-to-ledger audit; no real options/MF or ETF book was migrated.",
+      "artifact_sha256": "db4a6e61b77c1b9dc7f6e15d546c85fd83834a1742bb9211921d2da4340a23dd"
     },
     {
       "id": "SL-00-07",
