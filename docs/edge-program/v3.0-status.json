@@ -165,12 +165,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/FB-0001-baseline-2026-11-23.json (GitHub API confirmed main protected and listed required checks)",
-        "GitHub main branch required contexts at capture include test (windows-latest), while the current workflow job is test (windows-2022)"
+        "docs/edge-program/FB-0001-baseline-2026-11-23.json records a successful GitHub API observation that main was protected and lists required status contexts.",
+        ".github/workflows/ci.yml currently defines test contexts for ubuntu-24.04 and windows-latest, and reproducibility contexts for ubuntu-24.04 and windows-2022; these match the previously captured required contexts.",
+        "A fresh read of https://api.github.com/repos/crakashp2905-hub/Financial-Brain/branches/main/protection/required_status_checks returned 403 Resource not accessible by integration, so current protection and approval settings cannot be independently reverified from this connection."
       ],
-      "blocker": "Branch protection exists, but at least one required status context does not match the pinned Windows runner name; owner/admin correction and fresh API verification remain.",
-      "last_audited_at_utc": "2026-11-23T01:13:32Z",
-      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
+      "blocker": "Current branch-protection verification and the previously authorized approval-requirement change require GitHub administration access; the connected GitHub integration returns 403 for the protection endpoint.",
+      "last_audited_at_utc": "2026-11-23T11:00:40Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd",
+      "test_evidence": [
+        "GitHub branch-protection API read attempted; returned 403 Resource not accessible by integration.",
+        ".github/workflows/ci.yml manually checked against the last captured required contexts."
+      ],
+      "test_result": "The workflow context names match the prior capture, but current branch protection and approval settings remain unverified."
     },
     {
       "id": "FB-0011",
@@ -197,12 +203,17 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/v3.0-status.json (machine-readable per-item ID, source_checked, status, evidence, blocker, audit time and commit fields)",
-        "Current v3 ledger audit summary: 30 of 1,378 tasks audited; 1,348 remain UNASSESSED"
+        "docs/edge-program/v3.0-audit.jsonl publishes exactly 1,378 rows with {id,status,source,test,artifact_hash,blocker,commit}; unproven fields remain empty/null rather than fabricated.",
+        "scripts/export_checklist_audit.py validates source IDs and task text, status totals and assessed-item counts against the supplied checklist and ledger.",
+        "docs/edge-program/v3.0-status.json now records 248 individually assessed tasks; the remaining 1,130 rows are explicitly UNASSESSED."
       ],
-      "blocker": "The ledger has no dedicated per-item source, test, artifact_hash fields, and most checklist tasks remain unaudited; free-text evidence is not a complete task audit record.",
-      "last_audited_at_utc": "2026-11-23T01:13:32Z",
-      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
+      "blocker": "1,130 checklist items remain UNASSESSED; a complete requirement-by-requirement audit is not yet published.",
+      "last_audited_at_utc": "2026-11-23T11:00:40Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd",
+      "test_evidence": [
+        "python scripts/export_checklist_audit.py --check: passed; 1,378 records validated."
+      ],
+      "test_result": "The published audit has the required per-row schema and avoids invented evidence, but most requirements still have not received an individual evidence review."
     },
     {
       "id": "FB-0101",
