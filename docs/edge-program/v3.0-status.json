@@ -252,9 +252,11 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/kernel/instruments.py::RuleVersion and Instrument provide effective-from rules, expiry, ISIN and strike; tests/test_kernel_instruments.py covers dated rule lookup."
+        "src/financial_brain/kernel/instruments.py::RuleVersion supports explicit effective_to with start-inclusive/end-exclusive lookup; legacy omitted ends are bounded by the next version.",
+        "src/financial_brain/kernel/instruments.py::InstrumentMetadataVersion captures dated ISIN, expiry, strike, ETF underlying index, mutual-fund scheme and plan; overlap and missing-as-of metadata fail closed.",
+        "tests/test_kernel_instruments.py: 22 passed; scoped Ruff passed."
       ],
-      "blocker": "Listings, rules and contract metadata lack a complete point-in-time version model with effective-to intervals; ETF index and MF scheme/plan metadata are not covered end to end.",
+      "blocker": "Versioned metadata is an in-memory contract only; authoritative listing/contract/ETF/MF master ingestion and persistence/consumer integration remain incomplete.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },

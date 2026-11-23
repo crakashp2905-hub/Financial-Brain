@@ -12,6 +12,7 @@ from financial_brain.kernel.instruments import (
     InstrumentError,
     InstrumentId,
     InstrumentMaster,
+    InstrumentMetadataVersion,
     Phase,
     RuleVersion,
     Status,
@@ -35,6 +36,64 @@ def test_rule_lookup_is_effective_dated() -> None:
     item = _equity()
     assert item.rule_on(date(2026, 3, 1)).tick == Decimal("0.05")
     assert item.rule_on(date(2026, 7, 1)).tick == Decimal("0.10")
+
+
+def test_explicit_rule_effective_interval_is_end_exclusive() -> None:
+    item = Instrument(
+        InstrumentId("NSE", "ETF", "FUND"),
+        rules=[
+            RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"), effective_to=date(2026, 6, 1)),
+            RuleVersion(date(2026, 6, 1), tick=Decimal("0.10")),
+        ],
+    )
+    assert item.rule_on(date(2026, 5, 31)).tick == Decimal("0.05")
+    assert item.rule_on(date(2026, 6, 1)).tick == Decimal("0.10")
+
+
+def test_effective_dated_metadata_preserves_etf_and_fund_versions() -> None:
+    item = Instrument(
+        InstrumentId("NSE", "ETF", "TRACKER"),
+        rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
+        metadata_versions=[
+            InstrumentMetadataVersion(
+                date(2026, 1, 1),
+                effective_to=date(2026, 7, 1),
+                isin="INF123A01010",
+                underlying_index="INDEX-A",
+                scheme_id="SCHEME-1",
+                plan="DIRECT_GROWTH",
+            ),
+            InstrumentMetadataVersion(
+                date(2026, 7, 1),
+                isin="INF123A01010",
+                underlying_index="INDEX-B",
+                scheme_id="SCHEME-1",
+                plan="DIRECT_GROWTH",
+            ),
+        ],
+    )
+    assert item.metadata_on(date(2026, 6, 30)).underlying_index == "INDEX-A"
+    assert item.metadata_on(date(2026, 7, 1)).underlying_index == "INDEX-B"
+    assert item.metadata_on(date(2026, 7, 1)).plan == "DIRECT_GROWTH"
+
+
+def test_metadata_lookup_refuses_pre_effective_and_overlap() -> None:
+    item = Instrument(
+        InstrumentId("NSE", "OPTION", "CONTRACT"),
+        rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
+        metadata_versions=[InstrumentMetadataVersion(date(2026, 2, 1), expiry=date(2026, 3, 26))],
+    )
+    with pytest.raises(InstrumentError, match="refusing to guess"):
+        item.metadata_on(date(2026, 1, 31))
+    with pytest.raises(InstrumentError, match="overlapping metadata"):
+        Instrument(
+            InstrumentId("NSE", "ETF", "BAD"),
+            rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
+            metadata_versions=[
+                InstrumentMetadataVersion(date(2026, 1, 1), effective_to=date(2026, 5, 1)),
+                InstrumentMetadataVersion(date(2026, 4, 1)),
+            ],
+        )
 
 
 def test_day_before_first_rule_refuses() -> None:

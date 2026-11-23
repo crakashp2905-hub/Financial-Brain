@@ -6848,7 +6848,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/instruments.py",
-      "source_sha256": "f7e37d819c97eca904d1e1e0f20147ebdb6b060d3327fb16713f4dc3a1edee93",
+      "source_sha256": "d508442ecaa34b09f67b13e2d759d3a04a1a31c19dcfdb6810f2be94f91cc31b",
       "test_paths": []
     },
     {

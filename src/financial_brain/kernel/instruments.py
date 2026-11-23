@@ -91,12 +91,43 @@ class RuleVersion:
     multiplier: Decimal = Decimal(1)
     settlement_lag_days: int = 1
     max_order_quantity: int | None = None
+    effective_to: date | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "tick", to_decimal(self.tick))
         object.__setattr__(self, "multiplier", to_decimal(self.multiplier))
         if self.tick <= 0 or self.lot < 1 or self.multiplier <= 0 or self.settlement_lag_days < 0:
             raise InstrumentError("tick, lot and multiplier must be positive; settlement lag non-negative")
+        if self.effective_to is not None and self.effective_to <= self.effective_from:
+            raise InstrumentError("rule effective_to must be later than effective_from")
+
+
+@dataclass(frozen=True)
+class InstrumentMetadataVersion:
+    """Effective-dated contract, ETF and fund metadata; intervals are start-inclusive/end-exclusive."""
+
+    effective_from: date
+    effective_to: date | None = None
+    isin: str | None = None
+    expiry: date | None = None
+    strike: Decimal | None = None
+    underlying_index: str | None = None
+    scheme_id: str | None = None
+    plan: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.effective_to is not None and self.effective_to <= self.effective_from:
+            raise InstrumentError("metadata effective_to must be later than effective_from")
+        if self.isin is not None and (len(self.isin) != 12 or not self.isin.isalnum()):
+            raise InstrumentError("ISIN must be 12 alphanumeric characters")
+        if self.strike is not None:
+            object.__setattr__(self, "strike", to_decimal(self.strike))
+            if self.strike <= 0:
+                raise InstrumentError("strike must be positive")
+        for name in ("underlying_index", "scheme_id", "plan"):
+            value = getattr(self, name)
+            if value is not None and not value.strip():
+                raise InstrumentError(f"{name} cannot be blank")
 
 
 @dataclass
@@ -108,6 +139,7 @@ class Instrument:
     isin: str | None = None
     strike: Decimal | None = None
     rights_status: str = "unverified"
+    metadata_versions: list[InstrumentMetadataVersion] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.rules:
@@ -115,6 +147,15 @@ class Instrument:
         self.rules = sorted(self.rules, key=lambda r: r.effective_from)
         if len({r.effective_from for r in self.rules}) != len(self.rules):
             raise InstrumentError("duplicate rule effective dates")
+        for previous, current in zip(self.rules, self.rules[1:]):
+            if previous.effective_to is not None and current.effective_from < previous.effective_to:
+                raise InstrumentError("overlapping rule effective intervals")
+        self.metadata_versions = sorted(self.metadata_versions, key=lambda item: item.effective_from)
+        if len({item.effective_from for item in self.metadata_versions}) != len(self.metadata_versions):
+            raise InstrumentError("duplicate metadata effective dates")
+        for previous, current in zip(self.metadata_versions, self.metadata_versions[1:]):
+            if previous.effective_to is not None and current.effective_from < previous.effective_to:
+                raise InstrumentError("overlapping metadata effective intervals")
         if not self.status_history:
             self.status_history = [(self.rules[0].effective_from, Status.ACTIVE)]
         self.status_history.sort(key=lambda s: s[0])
@@ -157,10 +198,22 @@ class Instrument:
         return not reasons, tuple(reasons)
 
     def rule_on(self, day: date) -> RuleVersion:
-        applicable = [r for r in self.rules if r.effective_from <= day]
-        if not applicable:
-            raise InstrumentError(f"no rule effective on {day.isoformat()}; refusing to guess")
-        return applicable[-1]
+        for index, rule in enumerate(self.rules):
+            effective_to = rule.effective_to
+            if effective_to is None and index + 1 < len(self.rules):
+                effective_to = self.rules[index + 1].effective_from
+            if rule.effective_from <= day and (effective_to is None or day < effective_to):
+                return rule
+        raise InstrumentError(f"no rule effective on {day.isoformat()}; refusing to guess")
+
+    def metadata_on(self, day: date) -> InstrumentMetadataVersion:
+        for index, version in enumerate(self.metadata_versions):
+            effective_to = version.effective_to
+            if effective_to is None and index + 1 < len(self.metadata_versions):
+                effective_to = self.metadata_versions[index + 1].effective_from
+            if version.effective_from <= day and (effective_to is None or day < effective_to):
+                return version
+        raise InstrumentError(f"no metadata effective on {day.isoformat()}; refusing to guess")
 
     def status_on(self, day: date) -> Status:
         current = None
