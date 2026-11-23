@@ -5402,7 +5402,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_event_loop.py",
-      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d",
+      "source_sha256": "69ee41eefb8b40f9099a23275a335f246153dc1227661a28fe42c8e696be7d69",
       "test_paths": []
     },
     {

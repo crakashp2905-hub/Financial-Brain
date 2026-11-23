@@ -6159,12 +6159,21 @@
     {
       "id": "PA-03-02",
       "text": "Separate forecasting frequency (e.g., every completed 15-minute index bar) from continuous exit evaluation; never wait 15 minutes to check a protective exit.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/continuous-protective-exit-cadence-audit-2026-11-24.md records independent protective-update and completed-bar dispatch cadences.",
+        "SessionLoopHandlers.on_protective_update is called for each tick/quote/depth/halt and before completed-bar strategy evaluation; incomplete bars reach neither callback."
+      ],
+      "blocker": "The event loop proves callback cadence only. A production exit evaluator wired to the durable exit-protection ledger and paper execution is not yet supplied; policy correctness and end-to-end exit latency remain unverified.",
+      "last_audited_at_utc": "2026-11-23T21:12:00Z",
+      "commit": "140a6857",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_session_event_loop.py tests/test_forward_edge_market_events.py -q: 25 passed after the cadence-specific multi-update/15-minute-bar test was added.",
+        "Before this cadence-specific change, event-loop, market-event, and durable session-runner suites: 87 passed.",
+        "Scoped Ruff and mypy passed."
+      ],
+      "test_result": "Three quote/tick events are each delivered to the protective-update handler before the completed 15-minute bar invokes the strategy handler. Incomplete bars are not dispatched. This verifies scheduling separation, not the production exit policy or fill response."
     },
     {
       "id": "PA-03-03",
@@ -15966,6 +15975,7 @@
       "PA-02-15",
       "PA-02-16",
       "PA-03-01",
+      "PA-03-02",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15988,13 +15998,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 293,
+    "audited_count": 294,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 229,
-      "UNASSESSED": 1085
+      "PARTIAL": 230,
+      "UNASSESSED": 1084
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16115,7 +16125,7 @@
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 229,
-    "UNASSESSED": 1085
+    "PARTIAL": 230,
+    "UNASSESSED": 1084
   }
 }

@@ -5705,7 +5705,7 @@
       "kind": "class",
       "line": 23,
       "related_role": "UNREVIEWED",
-      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
+      "source_sha256": "69ee41eefb8b40f9099a23275a335f246153dc1227661a28fe42c8e696be7d69"
     },
     {
       "canonical_contract_ids": [],
@@ -5715,7 +5715,7 @@
       "kind": "class",
       "line": 28,
       "related_role": "UNREVIEWED",
-      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
+      "source_sha256": "69ee41eefb8b40f9099a23275a335f246153dc1227661a28fe42c8e696be7d69"
     },
     {
       "canonical_contract_ids": [],
@@ -5725,7 +5725,7 @@
       "kind": "function",
       "line": 60,
       "related_role": "UNREVIEWED",
-      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
+      "source_sha256": "69ee41eefb8b40f9099a23275a335f246153dc1227661a28fe42c8e696be7d69"
     },
     {
       "canonical_contract_ids": [],
@@ -5735,7 +5735,7 @@
       "kind": "function",
       "line": 75,
       "related_role": "UNREVIEWED",
-      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
+      "source_sha256": "69ee41eefb8b40f9099a23275a335f246153dc1227661a28fe42c8e696be7d69"
     },
     {
       "canonical_contract_ids": [],
@@ -18172,7 +18172,7 @@
     {
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/session_event_loop.py",
-      "source_sha256": "30376ebd8e14056cf34a1035ab9e9e337cdf2d35c9a22118ceb6050d0592583d"
+      "source_sha256": "69ee41eefb8b40f9099a23275a335f246153dc1227661a28fe42c8e696be7d69"
     },
     {
       "domain": "forward_edge",
