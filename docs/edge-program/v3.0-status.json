@@ -5513,7 +5513,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T17:08:45Z",
-      "commit": null,
+      "commit": "3d7bfe834ef5b40de2af9e2e44cd7feb1d669331",
       "test_evidence": [
         "python scripts/validate_pr40_main_contract_reconciliation.py: passed; all ten contract owner blobs match pinned PR #40 and main Git objects.",
         "python -m pytest tests/test_pr40_main_contract_reconciliation.py -q: 2 passed.",
