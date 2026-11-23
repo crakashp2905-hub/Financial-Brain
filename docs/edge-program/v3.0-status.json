@@ -5548,12 +5548,23 @@
     {
       "id": "PA-01-04",
       "text": "Reconcile trial governance: retain mandatory experiment charter, cohort registry, immutable trials and owner-authorized quarter budget when reconciling PR #40's branch trial policy.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/pr40-trial-governance-reconciliation-2026-11-23.md reconciles the original Q4 budget and amendments, exhausted state, Q1 authorization gate, trial charter/cohort scope and immutable ledger.",
+        "docs/adr/0004-one-evidence-standard.md records owner decisions raising Q4-2026 budget 8 -> 9 -> 10 -> 11 -> 13; docs/forward-edge/trial-program.v1.json and src/financial_brain/forward_edge/trials.py enforce the explicit 13 cap and amendment protocol.",
+        "The ledger remains at 13 failed trials, protected pins are unchanged, and Q1-2027 stays NOT_AUTHORIZED. A new trial requires exact-scope human approval and frozen charter/schedule; amendments require configured-owner approval.",
+        "The reconciliation adds no trials and does not reconstruct missing historical read windows."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T17:15:46Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-tmp-pa0104 tests/test_forward_edge_f00.py tests/test_trial_preservation_audit.py -q: 60 passed.",
+        "python scripts/validate_trial_program.py: passed; Q1-2027 remains unauthorized.",
+        "python scripts/trial_preservation_audit.py --check: passed; protected ledger and manifests match pins."
+      ],
+      "test_result": "The owner-authorized Q4 budget and fail-closed charter/cohort/approval governance are retained. Capacity remains exhausted; no new quarter or trials are authorized."
     },
     {
       "id": "PA-01-05",
@@ -15381,7 +15392,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:12:50Z",
+    "as_of_utc": "2026-11-23T17:15:46Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15625,6 +15636,7 @@
       "PA-01-01",
       "PA-01-02",
       "PA-01-03",
+      "PA-01-04",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15647,15 +15659,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 263,
+    "audited_count": 264,
     "status_counts": {
-      "COMPLETE": 41,
+      "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
       "PARTIAL": 205,
-      "UNASSESSED": 1115
+      "UNASSESSED": 1114
     },
-    "verified_complete_count": 41,
+    "verified_complete_count": 42,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15756,13 +15768,13 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-01-03 confirms the current branch retains F17 instrument/data integrity gates and F13 generated capability renderer with 66 focused tests and passing contract validators."
+    "evidence_update": "PA-01-04 confirms the ADR-authorized Q4 13-trial budget, exhausted-cap refusal, exact charter/cohort scope and owner-gated amendments; Q1 remains unauthorized."
   },
   "counts_by_status": {
-    "COMPLETE": 41,
+    "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
     "PARTIAL": 205,
-    "UNASSESSED": 1115
+    "UNASSESSED": 1114
   }
 }
