@@ -5259,12 +5259,26 @@
     {
       "id": "PA-00-03",
       "text": "Copy the 405 v1.4 tasks into a read-only traceability index; label each code path DONE/PARTIAL/FOOTHOLD/NOT_STARTED/EXTERNAL and include tests and concrete SHA.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/v1.4-traceability-index.json copies all 405 v1.4 FB task IDs and historical DONE/PARTIAL/FOOTHOLD/NOT_STARTED plus EXTERNAL dependency labels; IDs exactly match the 405 FB rows in the canonical v3 checklist.",
+        "The source audit is pinned to commit 8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8 and blob d696c6fd66ebda1e153e032d5d7f4e0428faf1fc. Full commit and blob/tree SHAs verify for 354 source/test references.",
+        "The copied audit records 6 DONE, 97 PARTIAL, 102 FOOTHOLD and 200 NOT_STARTED; 86 task rows cite unmerged evidence. It explicitly states this is a module survey and per-task acceptance tests were not run.",
+        "Index SHA-256: ab3bd9cba7306f4013362d0ddcd5db69bc3c62333cbcf9f6d6d4bd6418580955."
+      ],
+      "blocker": "25 source/test references in the original audit were labeled worktree and have only legacy 12-character object prefixes; their uncommitted bytes are absent from available Git objects, so no full commit/object SHA can be recovered. The source audit cites test files for only 15 tasks and ran no task-specific acceptance tests.",
+      "last_audited_at_utc": "2026-11-23T16:02:00+00:00",
+      "commit": "69a5cba0",
+      "artifact_sha256": "ab3bd9cba7306f4013362d0ddcd5db69bc3c62333cbcf9f6d6d4bd6418580955",
+      "test_evidence": [
+        "python scripts/validate_v1_4_traceability_index.py: passed; 405 IDs and 354 full source/test object bindings verified, 25 worktree-only references explicitly unresolved.",
+        "python -m pytest tests/test_v1_4_traceability_index.py -q: 3 passed.",
+        "python -m ruff check scripts/validate_v1_4_traceability_index.py tests/test_v1_4_traceability_index.py: passed.",
+        "python -m mypy scripts/validate_v1_4_traceability_index.py --ignore-missing-imports: passed.",
+        "CI workflow runs the traceability-index validator in the existing checklist validation job."
+      ],
+      "test_result": "The 405-row historical index and IDs validate. It does not claim current per-task test success; incomplete commit bindings and absent task-level tests keep PA-00-03 partial."
     },
     {
       "id": "PA-00-04",
@@ -15222,7 +15236,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T15:51:23Z",
+    "as_of_utc": "2026-11-23T16:02:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15453,6 +15467,7 @@
       "FB-1216",
       "PA-00-01",
       "PA-00-02",
+      "PA-00-03",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15475,13 +15490,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 250,
+    "audited_count": 251,
     "status_counts": {
       "COMPLETE": 33,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 200,
-      "UNASSESSED": 1128
+      "PARTIAL": 201,
+      "UNASSESSED": 1127
     },
     "verified_complete_count": 33,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15569,13 +15584,13 @@
       "src/financial_brain/kernel/evidence.py",
       "src/financial_brain/forward_edge/evidence_labels.py"
     ],
-    "evidence_update": "PA-00-02 snapshot and validator committed as c394d5f6; 13 open PRs and protected artifact changes are recorded without promoting unmerged code."
+    "evidence_update": "PA-00-03 traceability index and CI validator committed as 69a5cba0; 25 uncommitted historical worktree references and the lack of per-task acceptance tests remain explicit."
   },
   "counts_by_status": {
     "COMPLETE": 33,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 200,
-    "UNASSESSED": 1128
+    "PARTIAL": 201,
+    "UNASSESSED": 1127
   }
 }
