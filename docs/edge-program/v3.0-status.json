@@ -5696,12 +5696,22 @@
     {
       "id": "PA-01-11",
       "text": "Add merger integration fixtures exercising all five desks, existing zoos, closed trade reconciliation, event custody, and negative physical-order probes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/merger-integration-fixture-audit-2026-11-23.md maps existing evidence for swing, intraday, options, ETF and mutual-fund desks, zoo examples, closed-trade accounting, event custody and physical-order denial.",
+        "The listed tests are separate component tests and separate stores; no shared merger-level fixture composes the five desks, zoo strategies, event custody, closed-trade reconciliation and physical-order denial.",
+        "The product charter lists all five desks as SCOPE_ONLY, confirming the tests do not establish integrated desk implementations."
+      ],
+      "blocker": "Implement and run deterministic merger integration fixture(s) that exercise all five desks and existing zoos through the integrated event/custody path, reconcile closed trades, and prove physical order submission is refused at the combined boundary.",
+      "last_audited_at_utc": "2026-11-23T17:39:59Z",
+      "commit": null,
+      "test_evidence": [
+        "Source audit: tests/test_phase5_swing.py; tests/test_phase5_intraday_runner.py; tests/test_forward_edge_options_spread.py; tests/test_paper_options_runner.py; tests/test_etf_execution.py; tests/test_mf_order_book.py.",
+        "Source audit: tests/test_phase5_zoo.py; tests/test_phase5_zoo_edges.py; tests/test_forward_edge_ledger_reconcile.py; tests/test_decision_manifest.py; tests/test_forward_edge_market_events.py; tests/test_forward_edge_f00.py; tests/test_decision_journal.py; tests/test_oms.py; tests/test_forward_edge_session_runner.py.",
+        "No tests were run for this audit update; existing tests are cited as repository evidence, not as a combined integration pass."
+      ],
+      "test_result": "Component test evidence exists for the listed domains; the required cross-desk merger fixture is missing. Status is PARTIAL."
     },
     {
       "id": "PA-01-12",
@@ -15459,7 +15469,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:34:47Z",
+    "as_of_utc": "2026-11-23T17:39:59Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15710,6 +15720,7 @@
       "PA-01-08",
       "PA-01-09",
       "PA-01-10",
+      "PA-01-11",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15732,13 +15743,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 270,
+    "audited_count": 271,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 209,
-      "UNASSESSED": 1108
+      "PARTIAL": 210,
+      "UNASSESSED": 1107
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15839,15 +15850,16 @@
       "tests/test_canonical_portfolio_ledger.py",
       "docs/edge-program/product-charter.v1.json",
       "scripts/validate_product_charter.py",
-      "tests/test_product_charter.py"
+      "tests/test_product_charter.py",
+      "docs/edge-program/merger-integration-fixture-audit-2026-11-23.md"
     ],
-    "evidence_update": "PA-01-10 records the last known zero-approval protection settings and current GitHub API 403; CODEOWNERS passes, but active protection cannot be freshly verified."
+    "evidence_update": "PA-01-11 audited: separate test suites cover requested component areas, but no integrated merger fixture joins them; item is PARTIAL."
   },
   "counts_by_status": {
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 209,
-    "UNASSESSED": 1108
+    "PARTIAL": 210,
+    "UNASSESSED": 1107
   }
 }
