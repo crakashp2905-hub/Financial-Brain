@@ -136,10 +136,11 @@ def test_trading_clock_uses_exchange_hours_in_kolkata() -> None:
 
 def test_market_fact_times_preserve_all_provenance_instants() -> None:
     received = datetime(2026, 11, 9, 3, 45, tzinfo=timezone.utc)
-    fact_times = MarketFactTimes(received_at=received, available_at=received + timedelta(milliseconds=20), ingested_at=received + timedelta(seconds=1), source_at=received - timedelta(milliseconds=50), exchange_at=received - timedelta(milliseconds=100), published_at=received)
+    fact_times = MarketFactTimes(received_at=received, available_at=received + timedelta(milliseconds=20), ingested_at=received + timedelta(seconds=1), source_at=received - timedelta(milliseconds=50), exchange_at=received - timedelta(milliseconds=100), published_at=received, computed_at=received + timedelta(milliseconds=10))
     fact_times.assert_usable_at(received + timedelta(seconds=2))
     assert fact_times.exchange_at == received - timedelta(milliseconds=100)
     assert fact_times.source_at == received - timedelta(milliseconds=50)
+    assert fact_times.computed_at == received + timedelta(milliseconds=10)
 
 def test_market_fact_times_reject_impossible_or_not_yet_usable_data() -> None:
     received = datetime(2026, 11, 9, 3, 45, tzinfo=timezone.utc)
@@ -150,6 +151,8 @@ def test_market_fact_times_reject_impossible_or_not_yet_usable_data() -> None:
         future_published.assert_usable_at(received + timedelta(milliseconds=500))
     with pytest.raises(ClockError, match='cannot precede publication'):
         MarketFactTimes(received_at=received, available_at=received + timedelta(milliseconds=500), ingested_at=received + timedelta(seconds=1), published_at=received + timedelta(seconds=1))
+    with pytest.raises(ClockError, match='cannot precede computation'):
+        MarketFactTimes(received_at=received, available_at=received + timedelta(milliseconds=20), ingested_at=received + timedelta(seconds=1), computed_at=received + timedelta(milliseconds=30))
 
 def test_fund_transaction_cutoffs_are_scheme_and_action_specific() -> None:
     day = date(2026, 11, 9)

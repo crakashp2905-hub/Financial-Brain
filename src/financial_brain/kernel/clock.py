@@ -131,6 +131,7 @@ class MarketFactTimes:
     source_at: datetime | None = None
     exchange_at: datetime | None = None
     published_at: datetime | None = None
+    computed_at: datetime | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -140,6 +141,7 @@ class MarketFactTimes:
             "source_at",
             "exchange_at",
             "published_at",
+            "computed_at",
         ):
             value = getattr(self, name)
             if value is not None:
@@ -150,6 +152,8 @@ class MarketFactTimes:
             raise ClockError("strategy availability cannot precede receipt")
         if self.published_at is not None and self.available_at < self.published_at:
             raise ClockError("strategy availability cannot precede publication")
+        if self.computed_at is not None and self.available_at < self.computed_at:
+            raise ClockError("strategy availability cannot precede computation")
 
     def assert_usable_at(self, decision_time: datetime) -> None:
         """Reject an observation not yet available or published at decision time."""

@@ -42,7 +42,9 @@ def test_eligible_etf_symbols_use_latest_reference_row_asof() -> None:
 
 def test_collect_once_archives_full_quotes_with_event_and_receipt_times(tmp_path) -> None:
     calls: list[tuple[list[str], str]] = []
-    receipt = datetime.now(IST).replace(microsecond=0)
+    # Keep the exchange session date deterministic; wall-clock dates make this
+    # fixture fail as soon as UTC crosses into the next Asia/Kolkata session.
+    receipt = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
 
     def quote_fn(keys: list[str], kind: str) -> dict:
         calls.append((keys, kind))
