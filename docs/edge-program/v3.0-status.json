@@ -5976,12 +5976,17 @@
     {
       "id": "PA-02-09",
       "text": "Model survivorship: delisted/suspended stocks, expired option tokens, historical scheme closures, futures contract roll and ETF listing changes remain in past universes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/point-in-time-universe-audit-2026-11-24.md maps dated alias/status and instrument-master support and records the missing complete historical universes.",
+        "src/financial_brain/kernel/instruments.py resolves date-specific status and refuses trading unless ACTIVE or LISTED; unknown historical status defaults to DELISTED.",
+        "src/financial_brain/forward_edge/instrument_master.py preserves effective-dated source token history and exact option expiries; ETF reference lookup is date-keyed in src/financial_brain/etf_feed.py.",
+        "tests/test_forward_edge_instrument_master.py, tests/test_kernel_instruments.py, and tests/test_etf_feed.py: 53 passed on fixtures."
+      ],
+      "blocker": "Complete historical source-backed universes and lifecycle reconciliation for all listed asset classes are missing; fixture lookup tests do not prove historical universe completeness, and retained-history rights remain unverified.",
+      "last_audited_at_utc": "2026-11-23T19:42:10Z",
+      "commit": "578fe6ea1bd1c94d73b7c1166742a2b19e784799"
     },
     {
       "id": "PA-02-10",
@@ -15599,7 +15604,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T19:38:01Z",
+    "as_of_utc": "2026-11-23T19:42:10Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15864,6 +15869,7 @@
       "PA-02-06",
       "PA-02-07",
       "PA-02-08",
+      "PA-02-09",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15886,13 +15892,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 284,
+    "audited_count": 285,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 220,
-      "UNASSESSED": 1094
+      "PARTIAL": 221,
+      "UNASSESSED": 1093
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16013,7 +16019,7 @@
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 220,
-    "UNASSESSED": 1094
+    "PARTIAL": 221,
+    "UNASSESSED": 1093
   }
 }
