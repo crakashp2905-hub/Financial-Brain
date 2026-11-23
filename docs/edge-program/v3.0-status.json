@@ -2245,13 +2245,14 @@
       ],
       "blocker": "Partial: the v1.1.0 pre-registered ranker is implemented and contract-tested with point-in-time sourced inputs, but no decisive backtest or prospective paper cohort has been run. Transaction costs, liquidity/capacity, turnover, drawdown and passive controls remain unevaluated; FB-0004 research authorization is required before performance evaluation or strategy promotion.",
       "last_audited_at_utc": "2026-11-23T23:32:39+00:00",
-      "commit": "1ce81e1b",
+      "commit": "7911102f",
       "test_result": "Five focused contract tests pass for fixed horizons, deterministic ordering, exposure/index grouping, point-in-time reference and close availability, source hashes, duplicate-session rejection, missing-data refusal and invalid prices. Tests establish implementation behavior only and provide no evidence of profitable alpha.",
       "test_evidence": [
         "tests/test_etf_momentum.py covers fixed horizons, tie-stable ranking, point-in-time reference and close availability, exposure grouping, endpoint source hashes, missing data, invalid prices, duplicate/future sessions and deterministic hashes.",
         "python -m pytest tests/test_etf_momentum.py -q --basetemp=.pytest-checklist-etf-momentum-v1_1-final: 5 passed.",
         "Ruff and scoped mypy passed for etf_momentum.py and tests/test_etf_momentum.py.",
-        "Repeatability test verifies v1.1.0 fixed strategy-spec and endpoint-input hashes on the same sourced inputs."
+        "Repeatability test verifies v1.1.0 fixed strategy-spec and endpoint-input hashes on the same sourced inputs.",
+        "Commit 7911102f pins the v1.1.0 point-in-time availability and endpoint-source-hash safeguards."
       ]
     },
     {
