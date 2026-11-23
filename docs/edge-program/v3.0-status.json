@@ -8583,13 +8583,21 @@
       "source_checked": false,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/modes.py (PHYSICAL_ORDERS_ENABLED=False)",
-        "tests/test_forward_edge_f00.py",
-        "tests/test_algo_final.py"
+        "src/financial_brain/execution/order_policy.py::deny_physical_order is unconditional, independent of PHYSICAL_ORDERS_ENABLED.",
+        "tests/test_oms.py::test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open verifies forged env/rollout/kill-switch flags, place/cancel and POST/PUT/PATCH/DELETE denial before the transport opener.",
+        "tests/test_oms.py::test_oms_auto_submit_cannot_escape_physical_order_lock exercises OMS.submit through the legacy KiteBroker with forged live flags; the order is cancelled and no transport is invoked.",
+        "tests/test_forward_edge_session_runner.py::test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags independently checks the new paper runner against Kite and urllib transports."
       ],
-      "blocker": "Build-time disablement and selected isolation tests exist; the full import/runtime/network-transport/integration-test acceptance was not established.",
-      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
-      "commit": null
+      "blocker": "Still partial: full suite evidence across every service/API entry point and import/runtime/network isolation is incomplete. The combined local Windows run had 134 passes and 3 unrelated fixture failures caused by writes to the redirected sandbox temp path; a hosted clean CI run is pending.",
+      "last_audited_at_utc": "2026-11-23T09:13:47Z",
+      "commit": "4bc382f5e10e896e83997037765118ce38480ca1",
+      "test_evidence": [
+        "python -m pytest tests/test_oms.py::test_oms_auto_submit_cannot_escape_physical_order_lock -q: 1 passed",
+        "python -m pytest tests/test_oms.py tests/test_forward_edge_session_runner.py tests/test_forward_edge_f00.py -q: 134 passed, 3 failed; the three failures were Windows fixture filesystem errors under the redirected sandbox temp path.",
+        "python -m ruff check src tests: passed"
+      ],
+      "test_result": "The legacy OMS submit route cannot reach Kite physical writes even with live flags and rollout enabled; remaining entry-point coverage and clean hosted CI are not yet established.",
+      "artifact_sha256": "48af3ae82556f9457395efd39cfc86371e07d8da12e174ce1c31ad393dc87d8d"
     },
     {
       "id": "SL-00-12",
@@ -15063,7 +15071,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T09:05:00Z",
+    "as_of_utc": "2026-11-23T09:13:47Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
