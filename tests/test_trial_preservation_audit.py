@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from scripts.trial_preservation_audit import build_report, verify_baseline_blobs
+import subprocess
+from pathlib import Path
+
+from scripts.trial_preservation_audit import build_report, comparison_commit, verify_baseline_blobs
 
 
 def test_audit_confirms_pins_and_does_not_invent_missing_trial_provenance() -> None:
@@ -25,3 +28,16 @@ def test_all_protected_sources_match_original_main_blobs() -> None:
     assert verify_baseline_blobs() == []
     assert report["main_baseline"]["protected_source_count"] == 9
     assert report["main_baseline"]["blob_mismatches"] == []
+
+
+def test_pull_request_audit_uses_the_pr_head_of_github_merge_checkout(monkeypatch) -> None:
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=Path(__file__).resolve().parents[1],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    monkeypatch.setattr(
+        "scripts.trial_preservation_audit.subprocess.run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, 0, head + "\n", ""),
+    )
+    assert comparison_commit() == head

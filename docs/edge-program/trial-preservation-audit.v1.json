@@ -18,6 +18,7 @@
   "main_baseline": {
     "blob_mismatches": [],
     "commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+    "compared_commit": "31ac87547c1af4a357cb244d07c53aa963583944",
     "protected_source_count": 9
   },
   "schema": "fb.trial_preservation_audit.v1",

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -20,13 +21,25 @@ OUTPUT = ROOT / "docs/edge-program/trial-preservation-audit.v1.json"
 BASELINE = ROOT / "docs/edge-program/trial-preservation-baseline.v1.json"
 
 
+def comparison_commit() -> str:
+    """Return the PR source commit when Actions checked out a synthetic merge ref."""
+    ref = "HEAD^2" if os.environ.get("GITHUB_EVENT_NAME") == "pull_request" else "HEAD"
+    result = subprocess.run(
+        ["git", "rev-parse", ref], cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"unable to resolve protected-source comparison commit {ref}")
+    return result.stdout.strip()
+
+
 def verify_baseline_blobs() -> list[dict[str, str]]:
     """Compare protected source paths to immutable blob IDs captured from main."""
     baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
+    commit = comparison_commit()
     errors = []
     for path, expected in baseline.get("files", {}).items():
         result = subprocess.run(
-            ["git", "rev-parse", f"HEAD:{path}"], cwd=ROOT, capture_output=True,
+            ["git", "rev-parse", f"{commit}:{path}"], cwd=ROOT, capture_output=True,
             text=True, check=False,
         )
         actual = result.stdout.strip() if result.returncode == 0 else ""
@@ -96,6 +109,7 @@ def build_report() -> dict:
         },
         "main_baseline": {
             "commit": json.loads(BASELINE.read_text(encoding="utf-8"))["source_commit"],
+            "compared_commit": comparison_commit(),
             "protected_source_count": len(json.loads(BASELINE.read_text(encoding="utf-8"))["files"]),
             "blob_mismatches": verify_baseline_blobs(),
         },
