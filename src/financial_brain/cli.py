@@ -405,6 +405,17 @@ def cmd_etf_disclosures(args) -> int:
     return 0
 
 
+def cmd_mf_scheme_profile(args) -> int:
+    """Import source-attributed AMC/SID scheme facts from CSV."""
+    from pathlib import Path
+
+    from .ingest.mf_scheme_profile import ingest
+
+    result = ingest(Path(args.file).read_bytes(), _d(args.observed_on), load())
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def cmd_etf_feed(args) -> int:
     """Poll full read-only Kite ETF quotes into the timestamped forward-event archive."""
     from pathlib import Path
@@ -3202,6 +3213,11 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("mfnav", help="mutual-fund NAVs from AMFI (public feed)")
     g.add_argument("--date")
     g.set_defaults(fn=cmd_mfnav)
+
+    g = sub.add_parser("mf-scheme-profile", help="import official AMC/SID scheme profile facts")
+    g.add_argument("--file", required=True)
+    g.add_argument("--observed-on", required=True, help="repository observation date YYYY-MM-DD")
+    g.set_defaults(fn=cmd_mf_scheme_profile)
 
     g = sub.add_parser("newsref", help="news a filing refers to, from the filing's own text")
     g.add_argument("--date", required=True)

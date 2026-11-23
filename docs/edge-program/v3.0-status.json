@@ -545,11 +545,15 @@
     {
       "id": "FB-0303",
       "text": "Map fund house, riskometer, benchmark index TRI, manager and objective; preserve actual dates of classification changes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added an AMC/SID profile disclosure parser and `fb mf-scheme-profile --file ... --observed-on ...` importer for source-attributed scheme identity, riskometer, benchmark name/return type, manager, objective and declared effective dates.",
+        "Rows retain source URL, published timestamp, source-document hash, raw lake key, import hash and repository observation date; benchmark facts require an explicit return-type value.",
+        "tests/test_mf_scheme_profile.py: 5 passed; scoped Ruff and CLI help passed."
+      ],
+      "blocker": "No permission-reviewed populated AMC/SID profile dataset has been imported or reconciled across classification changes; the importer does not itself prove a benchmark is TRI beyond the attributed source declaration.",
+      "last_audited_at_utc": "2026-11-23T11:00:00Z",
       "commit": null
     },
     {
@@ -14111,6 +14115,7 @@
       "FB-0214",
       "FB-0301",
       "FB-0302",
+      "FB-0303",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14130,10 +14135,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 56,
+    "audited_count": 57,
     "status_counts": {
-      "UNASSESSED": 1322,
-      "PARTIAL": 45,
+      "UNASSESSED": 1321,
+      "PARTIAL": 46,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14146,6 +14151,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 56 of 1,378 items audited; 8 COMPLETE, 45 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,322 UNASSESSED. ETF capabilities through FB-0214 and AMFI scheme identity/classification snapshots under FB-0301/FB-0302 have evidence; latest implementation commit 31022186. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 57 of 1,378 items audited; 8 COMPLETE, 46 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,321 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, classification and source-attributed profile facts under FB-0301/FB-0303 have evidence; latest implementation commit to be recorded after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }

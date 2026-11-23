@@ -644,6 +644,31 @@ CREATE TABLE IF NOT EXISTS mf_scheme_master_observations (
     PRIMARY KEY (identity_key, observed_on, source_document_sha256)
 );
 
+-- AMC/SID facts retain both declared validity and when the repository observed them.
+CREATE TABLE IF NOT EXISTS mf_scheme_profile_disclosures (
+    identity_key            VARCHAR NOT NULL,
+    scheme_code             VARCHAR NOT NULL,
+    plan                    VARCHAR,
+    option                  VARCHAR,
+    isin                    VARCHAR,
+    riskometer              VARCHAR,
+    benchmark_name          VARCHAR,
+    benchmark_return_type   VARCHAR NOT NULL,
+    manager                 VARCHAR,
+    objective               VARCHAR,
+    effective_from          DATE,
+    effective_to            DATE,
+    observed_on             DATE NOT NULL,
+    observed_at             TIMESTAMPTZ NOT NULL,
+    source_url              VARCHAR NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    source_published_at     TIMESTAMPTZ NOT NULL,
+    import_sha256           VARCHAR NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    lake_key                VARCHAR NOT NULL,
+    PRIMARY KEY (identity_key, observed_on, source_document_sha256)
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
