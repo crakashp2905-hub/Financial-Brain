@@ -5801,12 +5801,26 @@
     {
       "id": "PA-01-16",
       "text": "Keep live broker order routing physically disabled at build, config, CLI, API and integration-test layers throughout the entire profitability program.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/execution/order_policy.py has an unconditional build-policy deny with no runtime enable switch; src/financial_brain/execution/oms/kite_broker.py refuses all non-GET requests before credentials/transport.",
+        "Product charter and launch gates keep physical orders false; resolve_mode rejects LIVE_CASH and SessionMode always denies physical sends.",
+        "Forward CLI reports broker/physical orders disabled; API route regression test rejects broker adapter imports, order operations and physical order routes.",
+        "Focused negative-path tests prove forged environment/config/rollout flags cannot submit a physical order and paper fills occur without broker/network calls.",
+        "docs/edge-program/physical-order-routing-lock-audit-2026-11-23.md records the layer-by-layer evidence and current boundary."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T18:02:47Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_api_broker_isolation.py plus eight focused OMS, forward-mode, paper-runner, intraday and CLI probes: 9 passed.",
+        "python scripts/validate_product_charter.py --check: passed.",
+        "python scripts/validate_launch_gates.py --check: passed.",
+        "python scripts/forward_engine_graph.py --check: passed; paper runner import closures exclude the physical Kite broker.",
+        "python -m ruff check tests/test_api_broker_isolation.py and git diff --check: passed."
+      ],
+      "test_result": "The central lock, execution mode, configuration, CLI, API and integration boundaries fail closed under forged enable flags. Item is COMPLETE for the paper profitability program."
     },
     {
       "id": "PA-02-01",
@@ -15514,7 +15528,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:55:38Z",
+    "as_of_utc": "2026-11-23T18:02:47Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15770,6 +15784,7 @@
       "PA-01-13",
       "PA-01-14",
       "PA-01-15",
+      "PA-01-16",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15792,15 +15807,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 275,
+    "audited_count": 276,
     "status_counts": {
-      "COMPLETE": 44,
+      "COMPLETE": 45,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
       "PARTIAL": 214,
-      "UNASSESSED": 1103
+      "UNASSESSED": 1102
     },
-    "verified_complete_count": 44,
+    "verified_complete_count": 45,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15909,15 +15924,17 @@
       "docs/edge-program/clean-release-candidate-audit-2026-11-23.md",
       "scripts/release_candidate_audit.py",
       "tests/test_release_candidate_audit.py",
-      "scripts/run_hidden.vbs"
+      "scripts/run_hidden.vbs",
+      "docs/edge-program/physical-order-routing-lock-audit-2026-11-23.md",
+      "tests/test_api_broker_isolation.py"
     ],
-    "evidence_update": "PA-01-15 adds a path scan and always-uploaded candidate audit with JUnit counts and unresolved prerequisite reporting; final hosted platform acceptance is pending."
+    "evidence_update": "PA-01-16 verified complete across build policy, modes/configuration, CLI, API and paper integration tests; write requests remain unconditionally denied."
   },
   "counts_by_status": {
-    "COMPLETE": 44,
+    "COMPLETE": 45,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
     "PARTIAL": 214,
-    "UNASSESSED": 1103
+    "UNASSESSED": 1102
   }
 }

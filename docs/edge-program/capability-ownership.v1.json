@@ -1576,6 +1576,12 @@
       "module_owner": "src/financial_brain/forward_edge/execution.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/execution_charter.py",
+      "path": "src/financial_brain/forward_edge/execution_charter.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/execution_charter.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/execution_scenario.py",
       "path": "src/financial_brain/forward_edge/execution_scenario.py",
       "module_role": "canonical_contract_or_signal_output",
