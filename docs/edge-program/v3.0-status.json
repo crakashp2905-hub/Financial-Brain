@@ -2242,7 +2242,7 @@
       ],
       "blocker": "Partial: the pre-registered candidate ranker is implemented and contract-tested, but no decisive backtest or prospective paper cohort has been run. Transaction costs, liquidity/capacity, turnover, drawdown and passive controls remain unevaluated; FB-0004 research authorization is required before performance evaluation or strategy promotion.",
       "last_audited_at_utc": "2026-11-24T00:00:00Z",
-      "commit": null,
+      "commit": "1ce81e1b",
       "test_result": "Four focused tests pass for the frozen ranker contract, including deterministic ordering, exposure/index grouping, no data filling and no use of future metadata. These are implementation tests only; they provide no evidence of profitable alpha.",
       "test_evidence": [
         "tests/test_etf_momentum.py covers fixed horizons, tie-stable deterministic ranking, point-in-time reference eligibility, exposure grouping, missing endpoint exclusion, invalid price refusal and future-session rejection.",
