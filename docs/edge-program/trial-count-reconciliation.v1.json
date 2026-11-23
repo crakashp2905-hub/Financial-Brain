@@ -1,0 +1,42 @@
+{
+  "schema": "fb.edge_program.trial_count_reconciliation.v1",
+  "question": "Why does the v1.4 survey say 14 failed Q4-2026 trials while the protected checklist and trial program say 13?",
+  "finding": "The count of 14 is the number of non-empty JSONL records, not the number of trials. One record is a history note with kind=history; the remaining 13 are kind=trial and all have verdict=FAIL.",
+  "authoritative_trial_count": 13,
+  "q4_2026_budget": 13,
+  "budget_status": "EXHAUSTED",
+  "historical_source": {
+    "audit_repository_ref": "origin/feature/five-desk-d1-instruments",
+    "audit_commit": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+    "audit_path": "docs/audits/five-desk-v1_4/audit.json",
+    "audit_blob_sha": "d696c6fd66ebda1e153e032d5d7f4e0428faf1fc",
+    "audit_sha256": "70b80cf1e2353b8f6916a62e548dbc060219aeb1d3b212183851c3d492641c82",
+    "contradictory_note": "ledger untouched; it now holds 14 failed 2026Q4 trials (the checklist says 13)",
+    "ledger_commit": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
+    "ledger_blob_sha": "2a2b54ae0d54f882bad6f21dbfad307f847db882",
+    "ledger_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+    "record_counts": {
+      "all_nonempty_jsonl_records": 14,
+      "history_records": 1,
+      "trial_records": 13,
+      "q4_2026_trial_records": 13,
+      "failed_trial_records": 13
+    }
+  },
+  "current_protected_source": {
+    "ledger_path": "docs/trials/ledger.jsonl",
+    "head_blob_sha": "2a2b54ae0d54f882bad6f21dbfad307f847db882",
+    "origin_main_blob_sha": "2a2b54ae0d54f882bad6f21dbfad307f847db882",
+    "sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+    "record_counts": {
+      "all_nonempty_jsonl_records": 14,
+      "history_records": 1,
+      "trial_records": 13,
+      "q4_2026_trial_records": 13,
+      "failed_trial_records": 13
+    },
+    "protected_pin_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c"
+  },
+  "decision": "Retain the protected ledger and its pin byte-for-byte. Annotate the v1.4 survey note as a record-count/trial-count confusion; do not change the historical source audit or ledger.",
+  "verified_at_utc": "2026-11-23T16:07:26Z"
+}
