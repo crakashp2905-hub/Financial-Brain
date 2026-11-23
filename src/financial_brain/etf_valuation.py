@@ -23,6 +23,68 @@ class ETFValuationComparison:
     reason: str | None
 
 
+@dataclass(frozen=True)
+class ETFValuationHealth:
+    """Operational NAV/iNAV health; closure context is never inferred from price staleness."""
+    status: str
+    nav_age_days: int | None
+    inav_age: timedelta | None
+    premium_discount_pct: Decimal | None
+    premium_flag: str | None
+    international_market_context: str
+    reasons: tuple[str, ...]
+
+
+def assess_valuation_health(*, nav: Decimal | None, nav_as_of,
+                            indicative_nav: Decimal | None,
+                            indicative_nav_at: datetime | None,
+                            market_mid: Decimal | None,
+                            decision_time: datetime,
+                            large_premium_pct: Decimal = Decimal("1.0"),
+                            nav_stale_after_days: int = 3,
+                            inav_stale_after: timedelta = timedelta(seconds=5),
+                            international_market_closed: bool | None = None
+                            ) -> ETFValuationHealth:
+    """Flag stale values and large premiums; unknown closure calendars stay UNKNOWN."""
+    if decision_time.tzinfo is None or decision_time.utcoffset() is None:
+        raise ValueError("decision_time must be timezone-aware")
+    if large_premium_pct < 0 or nav_stale_after_days < 0 or inav_stale_after < timedelta(0):
+        raise ValueError("health thresholds cannot be negative")
+    local_date = decision_time.astimezone(ZoneInfo("Asia/Kolkata")).date()
+    nav_age_days = (local_date - nav_as_of).days if nav_as_of is not None else None
+    inav_age = decision_time - indicative_nav_at if indicative_nav_at else None
+    reasons: list[str] = []
+    if nav is None or nav_as_of is None:
+        reasons.append("NAV_MISSING")
+    elif nav_age_days < 0:
+        reasons.append("NAV_FUTURE_DATED")
+    elif nav_age_days > nav_stale_after_days:
+        reasons.append("NAV_STALE_MULTIDAY")
+    if indicative_nav is None or indicative_nav_at is None:
+        reasons.append("INAV_MISSING")
+    elif indicative_nav_at.tzinfo is None or indicative_nav_at.utcoffset() is None:
+        reasons.append("INAV_TIMEZONE_MISSING")
+    elif inav_age < timedelta(0):
+        reasons.append("INAV_FUTURE_DATED")
+    elif inav_age > inav_stale_after:
+        reasons.append("INAV_STALE")
+    premium = None
+    if market_mid is not None and indicative_nav is not None and indicative_nav > 0:
+        premium = (market_mid / indicative_nav - Decimal(1)) * Decimal(100)
+    premium_flag = None
+    if premium is not None and abs(premium) >= large_premium_pct:
+        premium_flag = "LARGE_PREMIUM" if premium > 0 else "LARGE_DISCOUNT"
+        reasons.append(premium_flag)
+    closure = ("CLOSED" if international_market_closed is True else
+               "OPEN" if international_market_closed is False else "UNKNOWN")
+    if closure == "CLOSED":
+        reasons.append("UNDERLYING_MARKET_CLOSED")
+    return ETFValuationHealth(
+        status="ALERT" if reasons else "HEALTHY", nav_age_days=nav_age_days,
+        inav_age=inav_age, premium_discount_pct=premium, premium_flag=premium_flag,
+        international_market_context=closure, reasons=tuple(reasons))
+
+
 def latest_inav_for_symbol(con, instrument_id: str, decision_time: datetime) -> dict | None:
     """Resolve the latest published source-attributed iNAV for an NSE ETF symbol."""
     if decision_time.tzinfo is None or decision_time.utcoffset() is None:

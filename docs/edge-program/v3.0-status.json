@@ -447,11 +447,15 @@
     {
       "id": "FB-0210",
       "text": "Detect NAV/iNAV gaps, large premiums/discounts, stale iNAV, known international underlying market closures and multi-day stale NAVs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/etf_valuation.py::assess_valuation_health reports missing/future/stale NAV, stale iNAV and large premium/discount thresholds from timestamped observations.",
+        "The report exposes international underlying-market context as OPEN/CLOSED/UNKNOWN; unknown calendars are never inferred from stale prices. It does not manufacture arbitrage signals.",
+        "tests/test_etf_valuation.py: 8 passed; scoped Ruff passed."
+      ],
+      "blocker": "The iNAV feed and daily NAV history are not yet populated/continuously monitored, and no permissioned international-exchange holiday calendar is integrated; closure state therefore remains UNKNOWN unless explicitly supplied.",
+      "last_audited_at_utc": "2026-11-23T04:00:00Z",
       "commit": null
     },
     {
@@ -14076,6 +14080,7 @@
       "FB-0207",
       "FB-0208",
       "FB-0209",
+      "FB-0210",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14095,10 +14100,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 49,
+    "audited_count": 50,
     "status_counts": {
-      "UNASSESSED": 1329,
-      "PARTIAL": 38,
+      "UNASSESSED": 1328,
+      "PARTIAL": 39,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14111,6 +14116,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 49 of 1,378 items audited; 8 COMPLETE, 38 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,329 UNASSESSED. ETF reference, product disclosure metrics, price history, Kite quote, sampled bars, iNAV comparison and liquidity analytics are recorded under FB-0201 through FB-0209; latest implementation commit 8ca47e03. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 50 of 1,378 items audited; 8 COMPLETE, 39 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,328 UNASSESSED. ETF reference, product disclosures, price history, Kite quotes, sampled bars, valuation health and liquidity analytics are recorded under FB-0201 through FB-0210; latest implementation commit to be recorded after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }

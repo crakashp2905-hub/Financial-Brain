@@ -7,7 +7,9 @@ from zoneinfo import ZoneInfo
 import pytest
 import duckdb
 
-from financial_brain.etf_valuation import compare_latest_for_quote, compare_quote_to_inav
+from financial_brain.etf_valuation import (
+    assess_valuation_health, compare_latest_for_quote, compare_quote_to_inav,
+)
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -106,3 +108,28 @@ def test_latest_database_inav_is_resolved_asof_before_comparison() -> None:
         con.close()
     assert result.status == "COMPARABLE"
     assert result.indicative_nav == Decimal("100.00000000")
+
+
+def test_health_flags_multiday_nav_stale_inav_and_large_premium() -> None:
+    now = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
+    result = assess_valuation_health(
+        nav=Decimal("100"), nav_as_of=now.date() - timedelta(days=5),
+        indicative_nav=Decimal("100"), indicative_nav_at=now - timedelta(seconds=10),
+        market_mid=Decimal("102"), decision_time=now,
+    )
+    assert result.status == "ALERT"
+    assert result.nav_age_days == 5
+    assert result.premium_discount_pct == Decimal("2.00")
+    assert result.premium_flag == "LARGE_PREMIUM"
+    assert {"NAV_STALE_MULTIDAY", "INAV_STALE", "LARGE_PREMIUM"} <= set(result.reasons)
+
+
+def test_unknown_international_closure_calendar_is_not_inferred() -> None:
+    now = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
+    result = assess_valuation_health(
+        nav=None, nav_as_of=None, indicative_nav=None, indicative_nav_at=None,
+        market_mid=None, decision_time=now,
+    )
+    assert result.international_market_context == "UNKNOWN"
+    assert "UNDERLYING_MARKET_CLOSED" not in result.reasons
+    assert "NAV_MISSING" in result.reasons and "INAV_MISSING" in result.reasons
