@@ -5363,7 +5363,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T16:30:01Z",
-      "commit": null,
+      "commit": "8884ca59",
       "artifact_sha256": "a6473da034051f557268b326324338acf5d316c2d508d62c456dbda3f97082cb",
       "test_evidence": [
         "python scripts/capability_provenance.py --check: passed for main and all six requested PR sources.",
