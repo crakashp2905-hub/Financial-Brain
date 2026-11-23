@@ -2267,7 +2267,7 @@
       ],
       "blocker": "Partial: candidate family is frozen and contract-tested, but no authorized performance evaluation, realistic cost/capacity/tax/benchmark controls, or prospective paper evidence exists. The protected Q4-2026 budget is exhausted and Q1-2027 is not authorized.",
       "last_audited_at_utc": "2026-11-24T10:00:00+00:00",
-      "commit": null,
+      "commit": "4b9c81cf",
       "test_result": "Four focused contract tests pass for deterministic rules and hashes, exact sourced history/no-fill policy, calendar and SHA validation, volatility sizing bounds, and the no-order candidate boundary. These are software tests only; profitability is untested.",
       "test_evidence": [
         "python -m pytest tests/test_etf_trend_rules.py -q: 4 passed.",
