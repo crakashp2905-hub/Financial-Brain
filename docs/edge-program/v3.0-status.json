@@ -6102,12 +6102,21 @@
     {
       "id": "PA-02-15",
       "text": "Prove no look-ahead by mutating all source rows published after the decision and requiring byte-identical features and intended orders.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/future-source-mutation-lookahead-audit-2026-11-24.md documents the two-database future-publication mutation study and its limits.",
+        "Production QuoteArchive.snapshot excludes late-available source rows; the test compares canonical feature bytes and execution.intent_from_signal order bytes after mutating historical-event-time rows published after the decision."
+      ],
+      "blocker": "The check exercises the point-in-time archive, one production feature function, and the canonical order adapter. All strategy implementations and external data pipelines have not yet been evaluated with a source-publication mutation matrix.",
+      "last_audited_at_utc": "2026-11-23T20:41:00Z",
+      "commit": "a8a38631",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_future_source_mutation.py -q: 1 passed; related lookahead and quote archive suite: 15 passed before tightening late-publication timestamps.",
+        "python -m ruff check tests/test_forward_edge_future_source_mutation.py: passed.",
+        "python -m mypy tests/test_forward_edge_future_source_mutation.py: passed."
+      ],
+      "test_result": "Mutating two bars published after the decision, including rows with historical event timestamps, leaves the production point-in-time snapshot-derived moving average feature and canonical intended order byte-identical. This focused path is proven; full strategy-wide look-ahead coverage remains incomplete."
     },
     {
       "id": "PA-02-16",
@@ -15936,6 +15945,7 @@
       "PA-02-12",
       "PA-02-13",
       "PA-02-14",
+      "PA-02-15",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15958,13 +15968,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 290,
+    "audited_count": 291,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 226,
-      "UNASSESSED": 1088
+      "PARTIAL": 227,
+      "UNASSESSED": 1087
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16085,7 +16095,7 @@
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 226,
-    "UNASSESSED": 1088
+    "PARTIAL": 227,
+    "UNASSESSED": 1087
   }
 }
