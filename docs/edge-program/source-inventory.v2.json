@@ -1959,7 +1959,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/momentum_book.py",
-      "source_sha256": "fffa2c3e9c43ebc92128e21d84b1986d86a75f36bec91ccd74f6bdaf5f3de59d",
+      "source_sha256": "9717e7c6dd96b963de54c790cf6c2a1ad1ea363272809775cdfd58c6d4177a27",
       "test_paths": []
     },
     {
@@ -4938,7 +4938,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "c7655d0835b983067bef1b850b7b68f1a9269bf2edd9e3e68bae3fbee792f111",
+      "source_sha256": "5cf3ffc2c1a38e6064faa87a80d452ad1305e632dba61e2f144ae0f15c4d778e",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
@@ -4963,7 +4963,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_state.py",
-      "source_sha256": "2b9f5f8a6d16677c10da277168f3d45e67e45e74759065a505d1a70749a4a490",
+      "source_sha256": "b7a6fd700a8fde97d5b0998e7cc7dab3023c49661fb240141f05b7813ea35d92",
       "test_paths": []
     },
     {
@@ -8227,7 +8227,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/intraday.py",
-      "source_sha256": "928cf558e8928473082d675e6d577511883b1ef61849ea4b759c5072f20854e4",
+      "source_sha256": "05b305dc34c4ffe4df0cb6a765817e65d83e7f46349320a492b70cfb17bef599",
       "test_paths": []
     },
     {
@@ -8263,7 +8263,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/intraday_runner.py",
-      "source_sha256": "cae015517ba1d7035e1f3093d9aa9816fc894684eae71c44bd8f16014e682477",
+      "source_sha256": "c9e2ffa53afbd5a3a9acf471b84b441d7accbacf9808f8a03beec38ccfaf0742",
       "test_paths": [
         "tests/test_forward_edge_cli.py",
         "tests/test_phase5_intraday_runner.py"
@@ -8529,7 +8529,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "247793aebcb774ca84c5a2407649d3b7fe4f765bb7de013f6490d53a1b779f2e",
+      "source_sha256": "c32586be0ea0c4e61cfd33a773a5b4b5d3355abcf4c8a564d908500020da5cba",
       "test_paths": []
     },
     {
@@ -8552,7 +8552,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/zoo_edges.py",
-      "source_sha256": "4a4047d07f07fb94e9301ac672407f0df4b79840cdbf1cf52fe4449c87c816fe",
+      "source_sha256": "c08485ecc18c05d942a43ba7bad866b9ad243828e71d73123dbcd10fd47a46a8",
       "test_paths": []
     },
     {
