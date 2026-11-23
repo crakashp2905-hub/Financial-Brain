@@ -3597,7 +3597,7 @@
       "kind": "class",
       "line": 16,
       "related_role": "SUPPORTING",
-      "source_sha256": "e14b54137372eccaf85fd35004f824ed5d6dca3a5b67de14fc4994e565fcf6c0"
+      "source_sha256": "cb012fcc4bd3aa2210152ce6f8cae879c1f3826334901563c34ccd8836512c3d"
     },
     {
       "canonical_contract_ids": [],
@@ -3609,7 +3609,7 @@
       "kind": "class",
       "line": 20,
       "related_role": "SUPPORTING",
-      "source_sha256": "e14b54137372eccaf85fd35004f824ed5d6dca3a5b67de14fc4994e565fcf6c0"
+      "source_sha256": "cb012fcc4bd3aa2210152ce6f8cae879c1f3826334901563c34ccd8836512c3d"
     },
     {
       "canonical_contract_ids": [],
@@ -3621,7 +3621,7 @@
       "kind": "class",
       "line": 47,
       "related_role": "SUPPORTING",
-      "source_sha256": "e14b54137372eccaf85fd35004f824ed5d6dca3a5b67de14fc4994e565fcf6c0"
+      "source_sha256": "cb012fcc4bd3aa2210152ce6f8cae879c1f3826334901563c34ccd8836512c3d"
     },
     {
       "canonical_contract_ids": [],
@@ -4697,7 +4697,7 @@
       "kind": "class",
       "line": 19,
       "related_role": "UNREVIEWED",
-      "source_sha256": "b8ffcf7a7b7e2acfac6ac1baf07672c5dd73d2c2e7546aacdcc5427521306a2d"
+      "source_sha256": "1b0846df6c1d4eb5282182adfbfdd007f3f48c348a3af8d57698740aa1a70aa4"
     },
     {
       "canonical_contract_ids": [],
@@ -4707,7 +4707,7 @@
       "kind": "class",
       "line": 24,
       "related_role": "UNREVIEWED",
-      "source_sha256": "b8ffcf7a7b7e2acfac6ac1baf07672c5dd73d2c2e7546aacdcc5427521306a2d"
+      "source_sha256": "1b0846df6c1d4eb5282182adfbfdd007f3f48c348a3af8d57698740aa1a70aa4"
     },
     {
       "canonical_contract_ids": [],
@@ -4717,7 +4717,7 @@
       "kind": "class",
       "line": 33,
       "related_role": "UNREVIEWED",
-      "source_sha256": "b8ffcf7a7b7e2acfac6ac1baf07672c5dd73d2c2e7546aacdcc5427521306a2d"
+      "source_sha256": "1b0846df6c1d4eb5282182adfbfdd007f3f48c348a3af8d57698740aa1a70aa4"
     },
     {
       "canonical_contract_ids": [],
@@ -4727,7 +4727,7 @@
       "kind": "class",
       "line": 50,
       "related_role": "UNREVIEWED",
-      "source_sha256": "b8ffcf7a7b7e2acfac6ac1baf07672c5dd73d2c2e7546aacdcc5427521306a2d"
+      "source_sha256": "1b0846df6c1d4eb5282182adfbfdd007f3f48c348a3af8d57698740aa1a70aa4"
     },
     {
       "canonical_contract_ids": [],
@@ -17880,7 +17880,7 @@
     {
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/market_events.py",
-      "source_sha256": "e14b54137372eccaf85fd35004f824ed5d6dca3a5b67de14fc4994e565fcf6c0"
+      "source_sha256": "cb012fcc4bd3aa2210152ce6f8cae879c1f3826334901563c34ccd8836512c3d"
     },
     {
       "domain": "forward_edge",
@@ -18005,7 +18005,7 @@
     {
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/quote_archive.py",
-      "source_sha256": "b8ffcf7a7b7e2acfac6ac1baf07672c5dd73d2c2e7546aacdcc5427521306a2d"
+      "source_sha256": "1b0846df6c1d4eb5282182adfbfdd007f3f48c348a3af8d57698740aa1a70aa4"
     },
     {
       "domain": "forward_edge",

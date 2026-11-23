@@ -4673,7 +4673,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_events.py",
-      "source_sha256": "e14b54137372eccaf85fd35004f824ed5d6dca3a5b67de14fc4994e565fcf6c0",
+      "source_sha256": "cb012fcc4bd3aa2210152ce6f8cae879c1f3826334901563c34ccd8836512c3d",
       "test_paths": []
     },
     {
@@ -5156,7 +5156,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/quote_archive.py",
-      "source_sha256": "b8ffcf7a7b7e2acfac6ac1baf07672c5dd73d2c2e7546aacdcc5427521306a2d",
+      "source_sha256": "1b0846df6c1d4eb5282182adfbfdd007f3f48c348a3af8d57698740aa1a70aa4",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"

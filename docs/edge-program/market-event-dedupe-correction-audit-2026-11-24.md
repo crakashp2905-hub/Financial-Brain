@@ -2,6 +2,8 @@
 
 Checklist item: `PA-02-06` — deduplicate quote and candle records using source identity while retaining corrections and late arrivals.
 
+Implementation commit: `7e0ade23` (`Add source-aware market event revisions`).
+
 ## Implemented
 
 - `MarketEvent.dedupe_sha256()` binds event ID, event kind, venue, instrument, source, sequence, source clock, canonical payload hash, and optional correction parent. It excludes local receipt and strategy-availability clocks so a redelivered source record is idempotent.
