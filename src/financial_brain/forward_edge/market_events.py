@@ -25,6 +25,7 @@ class EventKind(StrEnum):
     HALT = "halt"
     AUCTION = "auction"
     CORPORATE_ACTION = "corporate_action"
+    MARGIN_CHANGE = "margin_change"
     BROKER_UPDATE = "broker_update"
 
 
@@ -132,6 +133,15 @@ class MarketEvent:
             halt_state = str(p.get("state", p.get("status", ""))).strip().upper()
             if halt_state not in {"HALTED", "RESUMED"}:
                 raise MarketEventError("halt event state/status must be HALTED or RESUMED")
+        elif self.kind == EventKind.MARGIN_CHANGE:
+            if not isinstance(p.get("change_id"), str) or not p["change_id"].strip():
+                raise MarketEventError("margin change requires a non-empty change_id")
+            before = _finite_number(p.get("margin_before_inr"), "margin_before_inr")
+            after = _finite_number(p.get("margin_after_inr"), "margin_after_inr")
+            if before < 0 or after < 0:
+                raise MarketEventError("margin values must be non-negative")
+            if p.get("currency") != "INR":
+                raise MarketEventError("margin change currency must be INR")
         elif self.kind in (EventKind.AUCTION, EventKind.CORPORATE_ACTION, EventKind.BROKER_UPDATE):
             if not p:
                 raise MarketEventError(f"{self.kind.value} payload cannot be empty")
