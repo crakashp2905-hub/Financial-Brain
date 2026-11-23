@@ -30,14 +30,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (613 Python files; 598 unassessed; 361 role-unassigned; regenerated inventory SHA-256 2f7e28b5688d64116751b77994cf5a73e5ff423912fa37ec3c4fb478420144c4)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF disclosure ingestion updates)",
-        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check both pass; the existing tests/test_source_inventory.py suite passed 5 tests in its previous audit",
+        "docs/edge-program/source-inventory.v2.json (638 Python files; 623 unassessed; 381 role-unassigned; regenerated inventory SHA-256 898bf422d8b1f15a7c667128e8e7f2c6bee1f7e90fb20727a8a1a7fa2de9b273; commit a0eb11ed)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json regenerated and passes scripts/forward_engine_graph.py --check (commit a0eb11ed)",
+        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check passes; tests/test_source_inventory.py: 5 passed",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
       "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
-      "last_audited_at_utc": "2026-11-23T02:29:15Z",
-      "commit": "8ca47e03"
+      "last_audited_at_utc": "2026-11-23T05:14:56Z",
+      "commit": "a0eb11ed"
     },
     {
       "id": "FB-0003",
@@ -14186,7 +14186,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T05:01:01Z",
+    "as_of_utc": "2026-11-23T05:14:56Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14285,11 +14285,11 @@
     "verified_complete_count": 9,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
-      "docs/edge-program/v3.0-baseline-2026-11-21.json",
-      "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+      "docs/edge-program/forward-engine-dependency-graph.v1.json",
       "docs/edge-program/source-inventory.v2.json",
-      "docs/edge-program/forward-engine-dependency-graph.v1.json"
+      "docs/edge-program/v3.0-baseline-2026-11-21.json",
+      "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "Current snapshot: 85 of 1,378 items audited; 9 COMPLETE, 73 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,293 UNASSESSED. This turn adds source-hashed read-only context, persistent separate paper-sleeve routing, counterfactual outcome storage and independent signal/execution/calendar evidence; production integration remains. Latest implementation commit: b3c842b3."
+    "evidence_update": "Current snapshot: 85 of 1,378 items audited; 9 COMPLETE, 73 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,293 UNASSESSED. Source inventory and forward-engine graph snapshots were regenerated; their freshness checks pass. FB-0002 remains PARTIAL because reviewed canonical capability ownership is incomplete."
   }
 }
