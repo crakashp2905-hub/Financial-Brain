@@ -190,7 +190,7 @@
       ],
       "blocker": "Canonical fields and aliases are not yet mandatory, persisted, or integrated with every feed and order/position consumer.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
-      "commit": null
+      "commit": "af002ba2d17184002b2c360fa723de5a1a518352"
     },
     {
       "id": "FB-0102",
@@ -287,7 +287,7 @@
       ],
       "blocker": "Corporate-action and MF merger records are not ingested into this identity history; portfolio holdings, tax lots and cost basis are not yet transformed or verified across those events.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
-      "commit": null
+      "commit": "af002ba2d17184002b2c360fa723de5a1a518352"
     },
     {
       "id": "FB-0109",
