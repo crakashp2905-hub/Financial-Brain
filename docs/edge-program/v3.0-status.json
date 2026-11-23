@@ -5746,7 +5746,7 @@
       ],
       "blocker": "Hosted Linux and Windows CI for the pushed final source commit must pass and publish downloadable release-provenance artifacts; verify their commit SHA and hashes before marking complete.",
       "last_audited_at_utc": "2026-11-23T17:47:16Z",
-      "commit": null,
+      "commit": "6283a19261603d02511ca00f5920793ea8a53e8a",
       "test_evidence": [
         "python -m pytest tests/test_release_provenance.py -q --basetemp=.pytest-tmp-pa0113: 2 passed, including missing-test-artifact refusal.",
         "python -m ruff check scripts/release_provenance.py tests/test_release_provenance.py: passed.",
@@ -5758,12 +5758,23 @@
     {
       "id": "PA-01-14",
       "text": "Add deterministic replay-before-release and rollback rehearsal; restore the prior known-good release if any net-P&L or ledger consistency invariant fails.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/replay-release-rollback-audit-2026-11-23.md distinguishes existing deterministic replay and champion rollback controls from the missing release transaction.",
+        ".github/workflows/ci.yml runs the deterministic fixture-pack test in the reproducibility job and checks the forward-edge equivalence report.",
+        "docs/edge-program/forward-edge-equivalence-report.v1.json records per-fixture closed outcomes, cash reconciliation, ledger balance and net-P&L eligibility.",
+        "src/financial_brain/forward_edge/champion_governance.py provides an automatic SAFE_HOLD champion rollback primitive; it is not an application-release restore mechanism."
+      ],
+      "blocker": "No integrated release activation path binds replay and net-P&L/ledger gates to restoration of a prior known-good release; no injected-failure rollback rehearsal is recorded.",
+      "last_audited_at_utc": "2026-11-23T17:49:33Z",
+      "commit": null,
+      "test_evidence": [
+        "Source audit: .github/workflows/ci.yml; scripts/forward_edge_equivalence_report.py; docs/edge-program/forward-edge-equivalence-report.v1.json; src/financial_brain/forward_edge/champion_governance.py.",
+        "Existing focused test names: tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl; tests/test_forward_edge_equivalence_report.py::test_equivalence_report_covers_every_fixed_fixture_and_explains_no_trade; tests/test_forward_edge_champion_governance.py::test_automatic_rollback_enters_safe_hold_and_blocks_new_orders.",
+        "No tests were run for this source audit update."
+      ],
+      "test_result": "Deterministic replay and a paper-champion SAFE_HOLD rollback primitive exist, but end-to-end release restore on P&L/ledger failure is not implemented or rehearsed. Status is PARTIAL."
     },
     {
       "id": "PA-01-15",
@@ -15491,7 +15502,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:47:16Z",
+    "as_of_utc": "2026-11-23T17:49:33Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15745,6 +15756,7 @@
       "PA-01-11",
       "PA-01-12",
       "PA-01-13",
+      "PA-01-14",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15767,13 +15779,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 273,
+    "audited_count": 274,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 212,
-      "UNASSESSED": 1105
+      "PARTIAL": 213,
+      "UNASSESSED": 1104
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15879,15 +15891,16 @@
       "docs/edge-program/scheduled-checkout-provenance-audit-2026-11-23.md",
       "docs/edge-program/CHANGELOG.md",
       "scripts/release_provenance.py",
-      "tests/test_release_provenance.py"
+      "tests/test_release_provenance.py",
+      "docs/edge-program/replay-release-rollback-audit-2026-11-23.md"
     ],
-    "evidence_update": "PA-01-13 adds a CI-generated source/test/changelog/strategy/data-rights provenance artifact; hosted exact-commit artifact verification is pending."
+    "evidence_update": "PA-01-14 audit: deterministic replay and champion SAFE_HOLD rollback exist, but release restore on P&L/ledger failure is neither integrated nor rehearsed; item is PARTIAL."
   },
   "counts_by_status": {
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 212,
-    "UNASSESSED": 1105
+    "PARTIAL": 213,
+    "UNASSESSED": 1104
   }
 }
