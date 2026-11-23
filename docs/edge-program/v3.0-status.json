@@ -301,7 +301,7 @@
       ],
       "blocker": "No verified SID/KIM/AMC source documents or persisted per-scheme transaction calendar records are available; fixture tests prove the contract, not actual scheme terms.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
-      "commit": null
+      "commit": "0593698961eeaf97578a4c039b08225962b61780"
     },
     {
       "id": "FB-0110",
