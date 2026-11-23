@@ -418,6 +418,30 @@ def cmd_etf_feed(args) -> int:
     return 1 if result.get("rejected") or result.get("missing") else 0
 
 
+def cmd_etf_bars(args) -> int:
+    """Build completed ETF sample bars from the timestamped quote archive."""
+    from dataclasses import asdict
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    from .etf_bars import completed_bars
+    from .forward_edge.quote_archive import QuoteArchive
+
+    ist = ZoneInfo("Asia/Kolkata")
+    session = _d(args.date)
+    as_of = (datetime.fromisoformat(args.as_of) if args.as_of
+             else datetime.now(ist))
+    archive = QuoteArchive(Path(args.archive))
+    try:
+        events = archive.events_for_session(session, venue="NSE",
+                                            source="KITE_CONNECT_READ_ONLY")
+    finally:
+        archive.close()
+    bars = completed_bars(events, as_of=as_of, minutes=args.minutes)
+    print(json.dumps([asdict(bar) for bar in bars], indent=2, default=str))
+    return 0
+
+
 def cmd_index(args) -> int:
     """Ingest NSE index closes - the benchmark history."""
     Database(load()).migrate()
@@ -3200,6 +3224,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--poll-seconds", type=int, default=60)
     g.add_argument("--archive", default="data/etf-market-events.sqlite")
     g.set_defaults(fn=cmd_etf_feed)
+
+    g = sub.add_parser("etf-bars", help="aggregate complete session bars from ETF quote events")
+    g.add_argument("--date", required=True, help="NSE session date, YYYY-MM-DD")
+    g.add_argument("--minutes", type=int, default=5, choices=[1, 5, 15, 30])
+    g.add_argument("--as-of", help="timezone-aware ISO timestamp; defaults to current IST time")
+    g.add_argument("--archive", default="data/etf-market-events.sqlite")
+    g.set_defaults(fn=cmd_etf_bars)
 
     g = sub.add_parser("index", help="ingest NSE index closes (benchmark history)")
     g.add_argument("--start", required=True)

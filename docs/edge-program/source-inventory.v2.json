@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 610,
+  "source_count": 611,
   "sources": [
     {
       "capability_ids": [],
@@ -214,10 +214,12 @@
         "costs",
         "costs.india",
         "costs.tax",
+        "dataclasses",
         "datetime",
         "decisions",
         "docintel",
         "duckdb",
+        "etf_bars",
         "evaluation",
         "events",
         "events.classify",
@@ -225,6 +227,7 @@
         "features",
         "financial_brain.patterns.cli",
         "forward_edge.cli",
+        "forward_edge.quote_archive",
         "graph",
         "ingest",
         "ingest.announcements",
@@ -263,13 +266,14 @@
         "traceback",
         "universe",
         "webbrowser",
-        "worldstate"
+        "worldstate",
+        "zoneinfo"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "df8c36f43cadb39d1c549744919a6e2818b132d0f272e8b36f950fa26a4b4a77",
+      "source_sha256": "e5cf30d2ae2ad279e889b1d7be3dfb14d52532f1d6b88be7825ed608d470f70d",
       "test_paths": []
     },
     {
@@ -1084,6 +1088,24 @@
       "parse_status": "ok",
       "source": "src/financial_brain/env.py",
       "source_sha256": "f8ece39f79347de3586ecd4b95ac11e4666fd12a15d5303d84b519880e37e961",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "forward_edge.market_events",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/etf_bars.py",
+      "source_sha256": "b8559eeefd51c45e1a97c75b155e7201987e038e1cc5e58f02000c8e8a277401",
       "test_paths": []
     },
     {
@@ -10588,6 +10610,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 595,
-  "unassigned_role_count": 358
+  "unassessed_count": 596,
+  "unassigned_role_count": 359
 }
