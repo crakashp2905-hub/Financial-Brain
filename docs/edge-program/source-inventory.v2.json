@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 608,
+  "source_count": 609,
   "sources": [
     {
       "capability_ids": [],
@@ -1084,6 +1084,21 @@
       "parse_status": "ok",
       "source": "src/financial_brain/env.py",
       "source_sha256": "f8ece39f79347de3586ecd4b95ac11e4666fd12a15d5303d84b519880e37e961",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/etf_history.py",
+      "source_sha256": "7fa568f6edbcb1f9a7494b127265c2b4fc9df7e2ba77c56cbcb5e27e184acc7e",
       "test_paths": []
     },
     {
@@ -10553,6 +10568,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 593,
-  "unassigned_role_count": 356
+  "unassessed_count": 594,
+  "unassigned_role_count": 357
 }

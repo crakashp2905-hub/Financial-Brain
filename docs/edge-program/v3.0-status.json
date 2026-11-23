@@ -30,14 +30,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (608 Python source files; 593 remain unassessed; 356 role-unassigned; regenerated inventory SHA-256 a930925ce6f8a1dbfc86ae34e2025f2a58217cfa989fab0ac1efbdfd58788a31)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure and disclosure ingestion changes)",
+        "docs/edge-program/source-inventory.v2.json (609 Python source files; 594 remain unassessed; 357 role-unassigned; regenerated inventory SHA-256 3be540c0d1f1feba98a551bc071253b6bf3289ddf708dc52f79e0e6f5ef5b82c)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure, disclosure and historical price changes)",
         "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check both pass; the existing tests/test_source_inventory.py suite passed 5 tests in its previous audit",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
       "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
-      "last_audited_at_utc": "2026-11-23T02:22:32Z",
-      "commit": "05968a32"
+      "last_audited_at_utc": "2026-11-23T02:29:15Z",
+      "commit": null
     },
     {
       "id": "FB-0003",
@@ -363,11 +363,15 @@
     {
       "id": "FB-0204",
       "text": "Import historic ETF EOD OHLCV, adjusted close and trading days through existing ingestion with source hashes and corrections.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The existing NSE/BSE bhavcopy pipeline writes source-keyed EOD OHLCV Parquet; NSE EQ prices flow through adjustment_factors into adjusted_prices.",
+        "src/financial_brain/etf_history.py::history verifies an as-of NSE ETF reference, returns adjusted OHLCV with no synthetic sessions, and carries each raw bar's lake evidence key.",
+        "tests/test_etf_history.py: 2 passed; scoped Ruff and source inventory/dependency graph checks passed."
+      ],
+      "blocker": "ETF-specific historical exchange identity snapshots are not backfilled; delisted ETF coverage, point-in-time listing transitions, adjustment coverage, data-source correction history and real dataset coverage remain unverified.",
+      "last_audited_at_utc": "2026-11-23T02:29:15Z",
       "commit": null
     },
     {
@@ -14019,7 +14023,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T02:22:32Z",
+    "as_of_utc": "2026-11-23T02:29:15Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14046,6 +14050,7 @@
       "FB-0201",
       "FB-0202",
       "FB-0203",
+      "FB-0204",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14065,10 +14070,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 43,
+    "audited_count": 44,
     "status_counts": {
-      "UNASSESSED": 1335,
-      "PARTIAL": 32,
+      "UNASSESSED": 1334,
+      "PARTIAL": 33,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14081,6 +14086,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 43 of 1,378 items audited; 8 COMPLETE, 32 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,335 UNASSESSED. FB-0202 was implemented in 8ba69024 and FB-0203 in 05968a32. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 44 of 1,378 items audited; 8 COMPLETE, 33 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,334 UNASSESSED. FB-0202 was implemented in 8ba69024 and FB-0203 in 05968a32; FB-0204 ETF historical price query work is in progress. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
