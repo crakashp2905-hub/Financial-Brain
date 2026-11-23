@@ -7607,11 +7607,12 @@
         "docs/edge-program/checklist-release-bundle-report.v1.json (unsigned; no external timestamp or signature claim)",
         "python scripts/build_checklist_evidence_bundle.py --check (reproducible byte-for-byte output)",
         "python -m pytest tests/test_forward_edge_evidence_bundle.py -q (3 passed)",
-        ".github/workflows/ci.yml (cross-platform bundle reproducibility check)"
+        ".github/workflows/ci.yml (cross-platform bundle reproducibility check)",
+        "Cross-platform CRLF simulation reproduced the LF evidence bundle byte-for-byte; implementation commit ac5942360477ede0dde906fb8d5b833a51c09b46"
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T00:37:27+00:00",
-      "commit": "f247bcf55ec3542f6bf659ccff7759b0c28422ac"
+      "commit": "ac5942360477ede0dde906fb8d5b833a51c09b46"
     },
     {
       "id": "SL-01-01",
